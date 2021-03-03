@@ -84,8 +84,9 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
                                      uint64_t max_gas,
                                      int go_over_gas);
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
-                                            ByteSliceArray bytes,
-                                            int final_message_of_block);
+                                            ByteSliceArray bytes);
+void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
+                                              void* next_block_height);
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
                                         ByteSliceArray bytes);
 void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,

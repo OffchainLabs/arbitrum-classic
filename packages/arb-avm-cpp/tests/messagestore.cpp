@@ -30,10 +30,10 @@ TEST_CASE("MessageStore tests") {
         REQUIRE(!store->getNextMessage());
         REQUIRE(!store->getLastMessage());
 
-        std::vector<uint256_t> inbox_hashes;
-        inbox_hashes.emplace_back(20);
-        inbox_hashes.emplace_back(21);
-        inbox_hashes.emplace_back(22);
+        std::vector<uint256_t> inbox_accumulators;
+        inbox_accumulators.emplace_back(20);
+        inbox_accumulators.emplace_back(21);
+        inbox_accumulators.emplace_back(22);
 
         std::vector<std::vector<unsigned char>> messages;
         messages.emplace_back(std::vector<unsigned char>(5, 1));
@@ -41,22 +41,21 @@ TEST_CASE("MessageStore tests") {
         messages.emplace_back(std::vector<unsigned char>(5, 3));
 
         auto tx = Transaction::makeTransaction(storage);
-        REQUIRE(store->addMessages(*tx, 5, 12, messages, inbox_hashes).ok());
-        tx->commit();
-        tx = nullptr;
+        REQUIRE(store->addMessages(*tx, 5, 12, messages,
+    inbox_accumulators).ok()); tx->commit(); tx = nullptr;
 
         auto entry5 = store->getNextMessage();
         REQUIRE(entry5);
         REQUIRE(entry5->sequence_number == 5);
         REQUIRE(entry5->message == messages[0]);
-        REQUIRE(entry5->inbox_hash == inbox_hashes[0]);
+        REQUIRE(entry5->inbox_acc == inbox_accumulators[0]);
         REQUIRE(entry5->last_message_in_block == false);
 
         auto entry7 = store->getLastMessage();
         REQUIRE(entry7);
         REQUIRE(entry7->sequence_number == 7);
         REQUIRE(entry7->message == messages[2]);
-        REQUIRE(entry7->inbox_hash == inbox_hashes[2]);
+        REQUIRE(entry7->inbox_acc == inbox_accumulators[2]);
         REQUIRE(entry7->last_message_in_block == true);
 
         tx = Transaction::makeTransaction(storage);
@@ -68,14 +67,14 @@ TEST_CASE("MessageStore tests") {
         REQUIRE(entry5);
         REQUIRE(entry5->sequence_number == 5);
         REQUIRE(entry5->message == messages[0]);
-        REQUIRE(entry5->inbox_hash == inbox_hashes[0]);
+        REQUIRE(entry5->inbox_acc == inbox_accumulators[0]);
         REQUIRE(entry5->last_message_in_block == false);
 
         entry5 = store->getLastMessage();
         REQUIRE(entry5);
         REQUIRE(entry5->sequence_number == 5);
         REQUIRE(entry5->message == messages[0]);
-        REQUIRE(entry5->inbox_hash == inbox_hashes[0]);
+        REQUIRE(entry5->inbox_acc == inbox_accumulators[0]);
         REQUIRE(entry5->last_message_in_block == false);
 
         tx = Transaction::makeTransaction(storage);
@@ -88,9 +87,9 @@ TEST_CASE("MessageStore tests") {
     }
 
     SECTION("ArbCore sequence check and inbox hash check") {
-        std::vector<uint256_t> inbox_hashes;
-        inbox_hashes.emplace_back(20);
-        inbox_hashes.emplace_back(21);
+        std::vector<uint256_t> inbox_accumulators;
+        inbox_accumulators.emplace_back(20);
+        inbox_accumulators.emplace_back(21);
 
         std::vector<std::vector<unsigned char>> messages;
         messages.emplace_back(std::vector<unsigned char>(5, 4));
@@ -99,29 +98,29 @@ TEST_CASE("MessageStore tests") {
         // Add initial messages
         auto tx = Transaction::makeTransaction(storage);
         REQUIRE(
-            addMessagesWithoutCheck(*tx, 5, 12, messages, inbox_hashes).ok());
-        tx->commit();
-        tx = nullptr;
+            addMessagesWithoutCheck(*tx, 5, 12, messages,
+    inbox_accumulators).ok()); tx->commit(); tx = nullptr;
 
-        std::vector<uint256_t> inbox_hashes2;
-        inbox_hashes2.emplace_back(20);
+        std::vector<uint256_t> inbox_accumulators;
+        inbox_accumulators.emplace_back(20);
 
         std::vector<std::vector<unsigned char>> messages2;
         messages2.emplace_back(std::vector<unsigned char>(5, 6));
 
         // Attempt to add message with non-contiguous sequence number
         REQUIRE(!store
-                     ->addMessages(8, 13, messages2, inbox_hashes2,
-                                   inbox_hashes[1] + 1)
+                     ->addMessages(8, 13, messages2, inbox_accumulators,
+                                   inbox_accumulators[1] + 1)
                      ->ok());
 
         // Attempt to add message with incorrect previous hash
-        REQUIRE(store->addMessages(7, 13, messages2, inbox_hashes2,
-                                   inbox_hashes[1] + 1) == std::nullopt);
+        REQUIRE(store->addMessages(7, 13, messages2, inbox_accumulators,
+                                   inbox_accumulators[1] + 1) == std::nullopt);
 
         // Add message with correct previous hash
         REQUIRE(
-            store->addMessages(7, 13, messages2, inbox_hashes2, inbox_hashes[1])
+            store->addMessages(7, 13, messages2, inbox_accumulators,
+    inbox_accumulators[1])
                 ->ok());
 
         tx = Transaction::makeTransaction(storage);
@@ -131,8 +130,8 @@ TEST_CASE("MessageStore tests") {
     }
 
     SECTION("ArbCore endian sort") {
-        std::vector<uint256_t> inbox_hashes;
-        inbox_hashes.emplace_back(20);
+        std::vector<uint256_t> inbox_accumulators;
+        inbox_accumulators.emplace_back(20);
 
         uint256_t sequence5 = intx::from_string<uint256_t>(
             "0x000000000000000000000000000000007F7F7F7F7F7F7F7F7F7F7F7F7F7F7F7"
@@ -147,26 +146,22 @@ TEST_CASE("MessageStore tests") {
         messages2.emplace_back(std::vector<unsigned char>(5, 8));
         auto tx = Transaction::makeTransaction(storage);
         REQUIRE(
-            addMessagesWithoutCheck(*tx, sequence5, 12, messages, inbox_hashes)
-                .ok());
-        REQUIRE(
-            addMessagesWithoutCheck(*tx, sequence6, 42, messages2, inbox_hashes)
-                .ok());
-        tx->commit();
-        tx = nullptr;
+            addMessagesWithoutCheck(*tx, sequence5, 12, messages,
+    inbox_accumulators) .ok()); REQUIRE( addMessagesWithoutCheck(*tx, sequence6,
+    42, messages2, inbox_accumulators) .ok()); tx->commit(); tx = nullptr;
 
         auto entry5 = store->getNextMessage();
         REQUIRE(entry5);
         REQUIRE(entry5->sequence_number == sequence5);
         REQUIRE(entry5->message == messages[0]);
-        REQUIRE(entry5->inbox_hash == inbox_hashes[0]);
+        REQUIRE(entry5->inbox_acc == inbox_accumulators[0]);
         REQUIRE(entry5->last_message_in_block == true);
 
         auto entry6 = store->getLastMessage();
         REQUIRE(entry6);
         REQUIRE(entry6->sequence_number == sequence6);
         REQUIRE(entry6->message == messages2[0]);
-        REQUIRE(entry6->inbox_hash == inbox_hashes[0]);
+        REQUIRE(entry6->inbox_acc == inbox_accumulators[0]);
         REQUIRE(entry6->last_message_in_block == true);
 
         REQUIRE(store->deleteMessage(*entry5));
@@ -175,7 +170,7 @@ TEST_CASE("MessageStore tests") {
         REQUIRE(entry6);
         REQUIRE(entry6->sequence_number == sequence6);
         REQUIRE(entry6->message == messages2[0]);
-        REQUIRE(entry6->inbox_hash == inbox_hashes[0]);
+        REQUIRE(entry6->inbox_acc == inbox_accumulators[0]);
         REQUIRE(entry6->last_message_in_block == true);
 
         REQUIRE(store->deleteMessage(*entry6));

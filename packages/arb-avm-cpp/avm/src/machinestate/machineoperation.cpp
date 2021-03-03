@@ -923,6 +923,7 @@ BlockReason inboxPeekOp(MachineState& m) {
             m.stack[0] =
                 m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
             ++m.pc;
+            m.context.inbox_messages_consumed += 1;
             m.total_messages_consumed += 1;
             return NotBlocked{};
         } else {
@@ -947,6 +948,13 @@ BlockReason inboxOp(MachineState& m) {
     if (!has_staged_message && m.context.inboxEmpty()) {
         return InboxBlocked();
     }
+
+    if (has_staged_message &&
+        !std::holds_alternative<Tuple>(m.staged_message)) {
+        // We have a staged message, but it needs to actually be resolved
+        return InboxBlocked();
+    }
+
     if (has_staged_message) {
         m.stack.push(Tuple(std::get<Tuple>(m.staged_message)));
         m.staged_message = Tuple();

@@ -34,7 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.AbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
@@ -44,7 +43,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 	}
 
 	createTx := message.Transaction{
-		MaxGas:      big.NewInt(10000000000),
+		MaxGas:      big.NewInt(1000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -55,7 +54,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 	var param common.Hash
 	copy(param[12:], connAddress1.Bytes())
 	createTx2 := message.Transaction{
-		MaxGas:      big.NewInt(10000000000),
+		MaxGas:      big.NewInt(1000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.Address{},
@@ -77,7 +76,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message2,
 	})
 
-	logs, _, mach, _ := runAssertion(t, messages, 4, 0)
+	logs, _, snap, _ := runAssertion(t, messages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -108,19 +107,13 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 
 		msgs = append(msgs, l2Message)
 	}
-
-	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}, message.ChainAddressToID(chain), big.NewInt(4))
-
 	return msgs, snap
 }
 
 func TestCallTx(t *testing.T) {
 	tx := message.Call{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.RandAddress(),
 			Payment:     big.NewInt(10),
@@ -130,7 +123,7 @@ func TestCallTx(t *testing.T) {
 
 	tx2 := message.Call{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress2,
 			Payment:     big.NewInt(10),
@@ -178,12 +171,23 @@ func TestCallTx(t *testing.T) {
 	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Storage was updated")
 	}
+
+	_, err = snap.Call(message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(100000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: common.Address{},
+			Payment:     big.NewInt(0),
+			Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
+		},
+	}, sender)
+	failIfError(t, err)
 }
 
 func TestContractTx(t *testing.T) {
 	tx := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.RandAddress(),
 			Payment:     big.NewInt(10),
@@ -193,7 +197,7 @@ func TestContractTx(t *testing.T) {
 
 	tx2 := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress2,
 			Payment:     big.NewInt(10),
@@ -247,14 +251,14 @@ func TestSignedTx(t *testing.T) {
 	failIfError(t, err)
 	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 
-	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
+	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 1000000, big.NewInt(0), []byte{})
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 
 	l2msg, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
 	failIfError(t, err)
 
-	tx2 := types.NewContractCreation(1, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	tx2 := types.NewContractCreation(1, big.NewInt(0), 1000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 
@@ -309,7 +313,7 @@ func TestUnsignedTx(t *testing.T) {
 	}
 
 	tx1 := message.Transaction{
-		MaxGas:      big.NewInt(100000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.RandAddress(),
@@ -318,7 +322,7 @@ func TestUnsignedTx(t *testing.T) {
 	}
 
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(100000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.RandAddress(),
@@ -377,7 +381,7 @@ func TestBatch(t *testing.T) {
 	batchSenderSeq := int64(0)
 	for i := 0; i < 10; i++ {
 		tx := message.Transaction{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			SequenceNum: big.NewInt(batchSenderSeq),
 			DestAddress: dest,
@@ -390,7 +394,7 @@ func TestBatch(t *testing.T) {
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {
-		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
+		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 10000000, big.NewInt(0), []byte{})
 		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 		failIfError(t, err)
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
@@ -446,15 +450,15 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	pk, err := crypto.GenerateKey()
 	failIfError(t, err)
 
-	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 100000000000, big.NewInt(0), []byte{})
+	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 10000000, big.NewInt(0), []byte{})
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 
-	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 100000000000, big.NewInt(0), []byte{})
+	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 1000000, big.NewInt(0), []byte{})
 	signedTx2, err := types.SignTx(tx2, types.HomesteadSigner{}, pk)
 	failIfError(t, err)
 
-	tx3 := types.NewContractCreation(2, big.NewInt(0), 100000000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	tx3 := types.NewContractCreation(2, big.NewInt(0), 1000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 	return []*types.Transaction{signedTx, signedTx2, signedTx3}

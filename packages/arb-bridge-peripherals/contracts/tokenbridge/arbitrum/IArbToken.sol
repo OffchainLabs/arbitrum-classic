@@ -18,13 +18,11 @@
 
 pragma solidity ^0.6.11;
 
-interface IArbERC20 {
+interface IArbToken {
+    function initialize(address _bridge, address _l1Address, uint8 _decimals) external;
+
     function bridgeMint(address account, uint256 amount) external;
 
     /// @dev This function is optional. If it's not enabled, this data won't be updatable based on its paired L1 contract
-    function updateInfo(
-        string calldata newName,
-        string calldata newSymbol,
-        uint8 newDecimals
-    ) external;
+    function updateInfo(string calldata newName, string calldata newSymbol) external;
 }

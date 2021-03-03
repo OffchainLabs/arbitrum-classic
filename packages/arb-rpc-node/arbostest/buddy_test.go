@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"math/big"
 	"testing"
 
@@ -37,6 +36,11 @@ func TestBuddyContract(t *testing.T) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
+	}
+
+	laterChainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocksInt(1),
+		Timestamp: big.NewInt(1),
 	}
 
 	simpleCode := hexutil.MustDecode(arbostestcontracts.SimpleBin)
@@ -60,15 +64,15 @@ func TestBuddyContract(t *testing.T) {
 	contractCreation2 := makeSimpleConstructorTx(fibCode, big.NewInt(1))
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(buddyConstructor, connAddress1, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(noOpTx), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress1, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation), sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(noOpTx), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(contractCreation2), sender, big.NewInt(4), big.NewInt(0), chainTime),
+		message.NewInboxMessage(buddyConstructor, connAddress2, big.NewInt(5), big.NewInt(0), laterChainTime),
 	}
 
-	logs, _, mach, _ := runAssertion(t, messages, 6, 0)
+	logs, _, snap, _ := runAssertion(t, messages, 8, 1)
 	results := processResults(t, logs)
 
 	buddyConRes, ok := results[0].(*evm.TxResult)
@@ -76,27 +80,27 @@ func TestBuddyContract(t *testing.T) {
 		t.Fatal("expected tx res")
 	}
 
-	buddySendRes, ok := results[1].(*evm.SendResult)
+	contractConRes, ok := results[1].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	noOpRes, ok := results[2].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	contractCon2Res, ok := results[3].(*evm.TxResult)
+	if !ok {
+		t.Fatal("expected tx res")
+	}
+
+	buddySendRes, ok := results[4].(*evm.SendResult)
 	if !ok {
 		t.Fatal("expected send res")
 	}
 
-	contractConRes, ok := results[2].(*evm.TxResult)
-	if !ok {
-		t.Fatal("expected tx res")
-	}
-
-	noOpRes, ok := results[3].(*evm.TxResult)
-	if !ok {
-		t.Fatal("expected tx res")
-	}
-
-	contractCon2Res, ok := results[4].(*evm.TxResult)
-	if !ok {
-		t.Fatal("expected tx res")
-	}
-
-	buddyCon2Res, ok := results[5].(*evm.TxResult)
+	buddyCon2Res, ok := results[7].(*evm.TxResult)
 	if !ok {
 		t.Fatal("expected tx res")
 	}
@@ -121,11 +125,6 @@ func TestBuddyContract(t *testing.T) {
 	succeededTxCheck(t, noOpRes)
 	checkConstructorResult(t, contractCon2Res, connAddress2)
 	txResultCheck(t, buddyCon2Res, evm.ContractAlreadyExists)
-
-	snap := snapshot.NewSnapshot(mach.Clone(), inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(0),
-		Timestamp: big.NewInt(0),
-	}, message.ChainAddressToID(chain), big.NewInt(5))
 
 	conn1Code, err := snap.GetCode(connAddress1)
 	failIfError(t, err)

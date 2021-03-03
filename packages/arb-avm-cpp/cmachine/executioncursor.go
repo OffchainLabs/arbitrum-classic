@@ -25,23 +25,25 @@ package cmachine
 */
 import "C"
 import (
+	"math/big"
+	"runtime"
+	"unsafe"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
-	"math/big"
-	"runtime"
-	"unsafe"
 )
 
 type ExecutionCursor struct {
 	c                 unsafe.Pointer
 	machineHash       common.Hash
 	totalMessagesRead *big.Int
-	inboxHash         common.Hash
+	inboxAcc          common.Hash
 	totalGasConsumed  *big.Int
 	totalSendCount    *big.Int
 	totalLogCount     *big.Int
+	totalSteps        *big.Int
 }
 
 func deleteExecutionCursor(ac *ExecutionCursor) {
@@ -65,10 +67,11 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		c:                 C.executionCursorClone(ec.c),
 		machineHash:       ec.machineHash,
 		totalMessagesRead: ec.totalMessagesRead,
-		inboxHash:         ec.inboxHash,
+		inboxAcc:          ec.inboxAcc,
 		totalGasConsumed:  ec.totalGasConsumed,
 		totalSendCount:    ec.totalSendCount,
 		totalLogCount:     ec.totalLogCount,
+		totalSteps:        ec.totalSteps,
 	}
 }
 
@@ -89,9 +92,9 @@ func (ec *ExecutionCursor) updateValues() error {
 		return errors.New("failed to load machine hash")
 	}
 
-	status = C.executionCursorInboxHash(ec.c, unsafe.Pointer(&ec.inboxHash[0]))
+	status = C.executionCursorInboxAcc(ec.c, unsafe.Pointer(&ec.inboxAcc[0]))
 	if status == 0 {
-		return errors.New("failed to load inbox hash")
+		return errors.New("failed to load inbox acc")
 	}
 
 	result := C.executionCursorTotalMessagesRead(ec.c)
@@ -106,9 +109,9 @@ func (ec *ExecutionCursor) updateValues() error {
 	}
 	ec.totalGasConsumed = receiveBigInt(result.value)
 
-	result = C.executionCursorTotalMessagesRead(ec.c)
+	result = C.executionCursorTotalSendCount(ec.c)
 	if result.found == 0 {
-		return errors.New("failed to get NextInboxMessageIndex")
+		return errors.New("failed to get TotalSendCount")
 	}
 	ec.totalSendCount = receiveBigInt(result.value)
 
@@ -118,6 +121,12 @@ func (ec *ExecutionCursor) updateValues() error {
 	}
 	ec.totalLogCount = receiveBigInt(result.value)
 
+	result = C.executionCursorTotalSteps(ec.c)
+	if result.found == 0 {
+		return errors.New("failed to get TotalSteps")
+	}
+	ec.totalSteps = receiveBigInt(result.value)
+
 	return nil
 }
 
@@ -125,8 +134,8 @@ func (ec *ExecutionCursor) MachineHash() common.Hash {
 	return ec.machineHash
 }
 
-func (ec *ExecutionCursor) InboxHash() common.Hash {
-	return ec.inboxHash
+func (ec *ExecutionCursor) InboxAcc() common.Hash {
+	return ec.inboxAcc
 }
 
 func (ec *ExecutionCursor) TotalMessagesRead() *big.Int {
@@ -143,4 +152,8 @@ func (ec *ExecutionCursor) TotalSendCount() *big.Int {
 
 func (ec *ExecutionCursor) TotalLogCount() *big.Int {
 	return ec.totalLogCount
+}
+
+func (ec *ExecutionCursor) TotalSteps() *big.Int {
+	return ec.totalSteps
 }

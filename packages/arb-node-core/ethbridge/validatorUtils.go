@@ -2,6 +2,8 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -9,7 +11,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"math/big"
 )
 
 type ConfirmType uint8
@@ -54,6 +55,28 @@ func (v *ValidatorUtils) RefundableStakers(ctx context.Context) ([]common.Addres
 	return common.AddressArrayFromEth(addresses), nil
 }
 
+func (v *ValidatorUtils) TimedOutChallenges(ctx context.Context, max int) ([]common.Address, error) {
+	i := big.NewInt(0)
+	count := big.NewInt(1024)
+	addresses := make([]ethcommon.Address, 0)
+	for {
+		newAddrs, hasMore, err := v.con.TimedOutChallenges(&bind.CallOpts{Context: ctx}, v.rollupAddress, i, count)
+		addresses = append(addresses, newAddrs...)
+		if err != nil {
+			return nil, err
+		}
+		if !hasMore {
+			break
+		}
+		if len(addresses) >= max {
+			break
+		}
+		i = i.Add(i, count)
+	}
+	addresses = addresses[:max]
+	return common.AddressArrayFromEth(addresses), nil
+}
+
 type RollupConfig struct {
 	ConfirmPeriodBlocks      *big.Int
 	ExtraChallengeTimeBlocks *big.Int
@@ -77,15 +100,15 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 }
 
 func (v *ValidatorUtils) GetStakers(ctx context.Context) ([]common.Address, error) {
-	addresses, err := v.con.GetStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress, big.NewInt(0), math.MaxBig256)
+	addresses, _, err := v.con.GetStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress, big.NewInt(0), math.MaxBig256)
 	if err != nil {
 		return nil, err
 	}
 	return common.AddressArrayFromEth(addresses), nil
 }
 
-func (v *ValidatorUtils) SuccessorNodes(ctx context.Context, node core.NodeID) ([]*big.Int, error) {
-	return v.con.SuccessorNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, node)
+func (v *ValidatorUtils) LatestStaked(ctx context.Context, staker common.Address) (*big.Int, [32]byte, error) {
+	return v.con.LatestStaked(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
 }
 
 func (v *ValidatorUtils) StakedNodes(ctx context.Context, staker common.Address) ([]*big.Int, error) {

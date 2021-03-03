@@ -1,8 +1,9 @@
 package core
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -27,7 +28,7 @@ func (e *ExecutionCursorMock) TotalMessagesRead() *big.Int {
 	return big.NewInt(0)
 }
 
-func (e *ExecutionCursorMock) InboxHash() common.Hash {
+func (e *ExecutionCursorMock) InboxAcc() common.Hash {
 	return common.Hash{}
 }
 
@@ -40,6 +41,10 @@ func (e *ExecutionCursorMock) TotalSendCount() *big.Int {
 }
 
 func (e *ExecutionCursorMock) TotalLogCount() *big.Int {
+	return big.NewInt(0)
+}
+
+func (e *ExecutionCursorMock) TotalSteps() *big.Int {
 	return big.NewInt(0)
 }
 
@@ -68,7 +73,7 @@ func (v *ValidatorLookupMock) GetMessageCount() (*big.Int, error) {
 	return big.NewInt(int64(len(v.Messages))), nil
 }
 
-func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
+func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgHeight *big.Int) bool {
 	panic("implement me")
 }
 
@@ -146,9 +151,17 @@ func (v *ValidatorLookupMock) GetLogAcc(startAcc common.Hash, startIndex *big.In
 	panic("implement me")
 }
 
+func (v *ValidatorLookupMock) GetInboxAcc(index *big.Int) (common.Hash, error) {
+	panic("implement me")
+}
+
 func (v *ValidatorLookupMock) GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error) {
 	if totalGasUsed.Cmp(big.NewInt(0)) == 0 {
 		return &ExecutionCursorMock{mach: v.startMachine}, nil
 	}
+	panic("implement me")
+}
+
+func (v *ValidatorLookupMock) GetMachineForSideload(blockNumber uint64) (machine.Machine, error) {
 	panic("implement me")
 }

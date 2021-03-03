@@ -37,7 +37,7 @@ The `ArbCore::core_thread` processes message entries, performs reorgs on databas
 
   - `ArbCore::message_data_status`
   - `ArbCore::message_data.messages`
-  - `ArbCore::message_data.previous_inbox_hash`
+  - `ArbCore::message_data.previous_inbox_acc`
   - `ArbCore::message_data.last_block_complete`
 
 - `ArbCore::deliverMessages` must only be called when `messagesEmpty` returns true

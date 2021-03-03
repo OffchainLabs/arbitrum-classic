@@ -2,16 +2,13 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
-	"math/big"
 )
-
-// TODO: Fill this in
-var opcodeProver map[uint8]uint8
 
 func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *big.Int) *big.Int {
 	size := new(big.Int).Div(totalLength, big.NewInt(int64(segmentCount)))
@@ -85,34 +82,65 @@ func (c *Challenge) OneStepProveExecution(
 	ctx context.Context,
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
-	beforeExecInfo *core.ExecutionInfo,
+	challengedSegment *core.ChallengeSegment,
+	beforeCut core.ExecutionCut,
 	executionProof []byte,
 	bufferProof []byte,
 	opcode uint8,
 ) error {
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
-	prover, ok := opcodeProver[opcode]
-	if !ok {
-		return errors.New("no prover for opcode")
+	var prover uint8
+	if (opcode >= 0xa1 && opcode <= 0xa6) || opcode == 0x70 {
+		// OSP2 (covers buffer related stuff)
+		prover = 1
+	} else if opcode >= 0x20 && opcode <= 0x24 {
+		// OSPHash
+		prover = 2
+	} else {
+		// OSP
+		prover = 0
 	}
 	_, err := c.builderCon.OneStepProveExecution(
 		authWithContext(ctx, c.builderAuth),
 		nodes,
 		path,
-		prevBisection.ChallengedSegment.Start,
+		challengedSegment.Start,
+		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		beforeExecInfo.Before.TotalMessagesRead,
-		beforeExecInfo.SendAcc,
-		beforeExecInfo.LogAcc,
+		beforeCut.TotalMessagesRead,
+		beforeCut.SendAcc,
+		beforeCut.LogAcc,
 		[3]*big.Int{
-			beforeExecInfo.GasUsed(),
-			beforeExecInfo.SendCount(),
-			beforeExecInfo.LogCount(),
+			beforeCut.GasUsed,
+			beforeCut.SendCount,
+			beforeCut.LogCount,
 		},
 		executionProof,
 		bufferProof,
 		prover,
+	)
+	return err
+}
+
+func (c *Challenge) ProveContinuedExecution(
+	ctx context.Context,
+	prevBisection *core.Bisection,
+	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
+	beforeCut core.ExecutionCut,
+) error {
+	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
+	nodes, path := prevTree.GetProof(segmentToChallenge)
+	_, err := c.builderCon.ProveContinuedExecution(
+		authWithContext(ctx, c.builderAuth),
+		nodes,
+		path,
+		challengedSegment.Start,
+		challengedSegment.Length,
+		prevCutHashes[segmentToChallenge+1],
+		beforeCut.GasUsed,
+		beforeCut.RestHash(),
 	)
 	return err
 }

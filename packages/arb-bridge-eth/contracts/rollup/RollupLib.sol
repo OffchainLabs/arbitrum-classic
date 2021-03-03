@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../challenge/ChallengeLib.sol";
+import "./INode.sol";
 
 library RollupLib {
     struct Config {
@@ -126,7 +127,7 @@ library RollupLib {
             );
     }
 
-    function executionHash(Assertion memory assertion) private pure returns (bytes32) {
+    function executionHash(Assertion memory assertion) internal pure returns (bytes32) {
         return
             ChallengeLib.bisectionChunkHash(
                 0,
@@ -156,14 +157,14 @@ library RollupLib {
             );
     }
 
-    function challengeRoot(Assertion memory assertion, uint256 blockProposed)
-        internal
-        pure
-        returns (bytes32)
-    {
+    function challengeRoot(
+        Assertion memory assertion,
+        bytes32 assertionExecHash,
+        uint256 blockProposed
+    ) internal pure returns (bytes32) {
         return
             challengeRootHash(
-                executionHash(assertion),
+                assertionExecHash,
                 blockProposed,
                 assertion.beforeInboxCount + assertion.inboxMessagesRead
             );
@@ -206,5 +207,19 @@ library RollupLib {
         }
         require(offset == dataLength, "DATA_LENGTH");
         return messageAcc;
+    }
+
+    function nodeHash(
+        bool hasSibling,
+        bytes32 lastHash,
+        bytes32 assertionExecHash,
+        bytes32 inboxAcc
+    ) internal pure returns (bytes32) {
+        uint8 hasSiblingInt = hasSibling ? 1 : 0;
+        return keccak256(abi.encodePacked(hasSiblingInt, lastHash, assertionExecHash, inboxAcc));
+    }
+
+    function nodeAccumulator(bytes32 prevAcc, bytes32 newNodeHash) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(prevAcc, newNodeHash));
     }
 }

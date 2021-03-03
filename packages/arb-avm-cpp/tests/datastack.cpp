@@ -134,7 +134,7 @@ TEST_CASE("Initialize datastack") {
     SECTION("push num, tuple") {
         CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         data_stack.push(num);
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
@@ -146,7 +146,7 @@ TEST_CASE("Initialize datastack") {
     SECTION("push codepoint, tuple") {
         CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         data_stack.push(code_point_stub);
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
@@ -166,7 +166,7 @@ TEST_CASE("Save datastack") {
     SECTION("save with values") {
         uint256_t num = 1;
         uint256_t intVal = 5435;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
@@ -177,7 +177,7 @@ TEST_CASE("Save datastack") {
     SECTION("save with values, twice") {
         uint256_t num = 1;
         uint256_t intVal = 5435;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
@@ -196,7 +196,7 @@ TEST_CASE("Save and get datastack") {
         uint256_t intVal = 5435;
         auto transaction = storage.makeTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
@@ -208,7 +208,7 @@ TEST_CASE("Save and get datastack") {
         uint256_t intVal = 5435;
         auto transaction = storage.makeTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;

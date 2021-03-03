@@ -60,6 +60,7 @@ TEST_CASE("ARBOS test vectors") {
             for (auto& send_json : sends_json) {
                 sends.push_back(send_from_json(send_json));
             }
+            auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
@@ -68,6 +69,7 @@ TEST_CASE("ARBOS test vectors") {
             config.inbox_messages = messages;
             auto assertion = mach->run(config);
             INFO("Machine ran for " << assertion.stepCount << " steps");
+            REQUIRE(assertion.gasCount == total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 REQUIRE(assertion.logs[k] == logs[k]);

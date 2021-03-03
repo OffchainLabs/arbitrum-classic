@@ -30,7 +30,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -71,7 +70,7 @@ func TestCreate2(t *testing.T) {
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	failIfError(t, err)
 	create2Tx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(factoryConnAddress),
@@ -83,7 +82,7 @@ func TestCreate2(t *testing.T) {
 	failIfError(t, err)
 	existsABI := simpleABI.Methods["exists"]
 	existsCloneTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: common.NewAddressFromEth(cloneConnAddress),
@@ -93,14 +92,14 @@ func TestCreate2(t *testing.T) {
 
 	sender := common.NewAddressFromEth(auth.From)
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(simpleConstructorTx), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(create2Tx), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(simpleConstructorTx), sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(create2Tx), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
-	logs, _, mach, _ := runAssertion(t, inboxMessages, 4, 0)
+	logs, _, snap, _ := runAssertion(t, inboxMessages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -129,7 +128,6 @@ func TestCreate2(t *testing.T) {
 		t.Fatal("wrong exists clone output")
 	}
 
-	snap := snapshot.NewSnapshot(mach, chainTime, message.ChainAddressToID(chain), big.NewInt(4))
 	cloneCode, err := snap.GetCode(common.NewAddressFromEth(cloneConnAddress))
 	failIfError(t, err)
 	if len(cloneCode) != 45 {

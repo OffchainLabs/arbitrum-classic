@@ -78,12 +78,12 @@ func TestOwner(t *testing.T) {
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
 	logs, _, _, _ := runAssertion(t, messages, 5, 0)

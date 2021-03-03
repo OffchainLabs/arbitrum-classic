@@ -75,31 +75,6 @@ contract RollupCreator is Ownable, CloneFactory {
             );
     }
 
-    function createRollupNoProxy(
-        bytes32 _machineHash,
-        uint256 _confirmPeriodBlocks,
-        uint256 _extraChallengeTimeBlocks,
-        uint256 _arbGasSpeedLimitPerBlock,
-        uint256 _baseStake,
-        address _stakeToken,
-        address _owner,
-        bytes calldata _extraConfig
-    ) external returns (IRollup) {
-        return
-            createRollupNoProxy(
-                RollupLib.Config(
-                    _machineHash,
-                    _confirmPeriodBlocks,
-                    _extraChallengeTimeBlocks,
-                    _arbGasSpeedLimitPerBlock,
-                    _baseStake,
-                    _stakeToken,
-                    _owner,
-                    _extraConfig
-                )
-            );
-    }
-
     struct CreateRollupFrame {
         ProxyAdmin admin;
         Bridge bridge;
@@ -139,39 +114,6 @@ contract RollupCreator is Ownable, CloneFactory {
             config.extraConfig,
             [
                 address(frame.admin),
-                address(frame.bridge),
-                address(frame.outbox),
-                address(frame.rollupEventBridge),
-                challengeFactory,
-                nodeFactory
-            ]
-        );
-        emit RollupCreated(frame.rollup);
-        return IRollup(frame.rollup);
-    }
-
-    function createRollupNoProxy(RollupLib.Config memory config) private returns (IRollup) {
-        CreateRollupFrame memory frame;
-        frame.rollup = createClone(rollupTemplate);
-
-        frame.bridge = new Bridge();
-        frame.inbox = new Inbox(IBridge(frame.bridge));
-        frame.rollupEventBridge = new RollupEventBridge(address(frame.bridge), frame.rollup);
-        frame.bridge.setInbox(address(frame.inbox), true);
-        frame.outbox = new Outbox(frame.rollup, IBridge(frame.bridge));
-
-        frame.bridge.transferOwnership(frame.rollup);
-        IRollup(frame.rollup).initialize(
-            config.machineHash,
-            config.confirmPeriodBlocks,
-            config.extraChallengeTimeBlocks,
-            config.arbGasSpeedLimitPerBlock,
-            config.baseStake,
-            config.stakeToken,
-            config.owner,
-            config.extraConfig,
-            [
-                address(0),
                 address(frame.bridge),
                 address(frame.outbox),
                 address(frame.rollupEventBridge),

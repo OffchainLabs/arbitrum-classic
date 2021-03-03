@@ -2,17 +2,18 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
-	"math/big"
-	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -32,7 +33,6 @@ func init() {
 	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
-	messageDeliveredID = parsedRollup.Events["MessageDelivered"].ID
 	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
 }
 
@@ -103,26 +103,60 @@ func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts
 	return r.con.ParseRollupCreated(logs[0])
 }
 
-func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*core.NodeInfo, error) {
-	var nodeQuery []ethcommon.Hash
-	for _, node := range nodes {
-		var nd ethcommon.Hash
-		copy(nd[:], math.U256Bytes(node))
-		nodeQuery = append(nodeQuery, nd)
-	}
+func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.NodeInfo, error) {
+	var numberAsHash ethcommon.Hash
+	copy(numberAsHash[:], math.U256Bytes(number))
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: nil,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, nodeQuery},
+		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {numberAsHash}},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	if len(logs) == 0 {
+		return nil, errors.New("Couldn't find requested node")
+	}
+	if len(logs) > 1 {
+		return nil, errors.New("Found multiple instances of requested node")
+	}
+	ethLog := logs[0]
+	parsedLog, err := r.con.ParseNodeCreated(ethLog)
+	if err != nil {
+		return nil, err
+	}
+	proposed := &common.BlockId{
+		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
+		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
+	}
+	return &core.NodeInfo{
+		NodeNum:       parsedLog.NodeNum,
+		BlockProposed: proposed,
+		Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
+		InboxMaxCount: parsedLog.InboxMaxCount,
+		AfterInboxAcc: parsedLog.AfterInboxAcc,
+		NodeHash:      parsedLog.NodeHash,
+	}, nil
+}
+
+func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]byte) ([]*core.NodeInfo, error) {
+	var query = ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: nil,
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {}, {parentHash}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	infos := make([]*core.NodeInfo, 0, len(logs))
-	for _, ethLog := range logs {
+	lastHash := parentHash
+	for i, ethLog := range logs {
 		parsedLog, err := r.con.ParseNodeCreated(ethLog)
 		if err != nil {
 			return nil, err
@@ -131,11 +165,18 @@ func (r *RollupWatcher) LookupNodes(ctx context.Context, nodes []*big.Int) ([]*c
 			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
 			HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 		}
+		lastHashIsSibling := [1]byte{0}
+		if i > 0 {
+			lastHashIsSibling[0] = 1
+		}
+		lastHash = hashing.SoliditySHA3(lastHashIsSibling[:], lastHash[:], parsedLog.ExecutionHash[:], parsedLog.AfterInboxAcc[:])
 		infos = append(infos, &core.NodeInfo{
 			NodeNum:       parsedLog.NodeNum,
 			BlockProposed: proposed,
 			Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
 			InboxMaxCount: parsedLog.InboxMaxCount,
+			AfterInboxAcc: parsedLog.AfterInboxAcc,
+			NodeHash:      lastHash,
 		})
 	}
 	return infos, nil

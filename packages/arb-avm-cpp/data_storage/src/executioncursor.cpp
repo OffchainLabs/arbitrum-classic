@@ -25,7 +25,7 @@ void ExecutionCursor::resetExecutionCursor() {
     machine = nullptr;
     first_message_sequence_number = 0;
     messages.clear();
-    inbox_hashes.clear();
+    inbox_accumulators.clear();
     messages_to_skip = 0;
 }
 

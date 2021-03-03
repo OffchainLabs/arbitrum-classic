@@ -30,8 +30,9 @@ char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
-                           void* previous_inbox_hash_ptr,
-                           int last_block_complete);
+                           void* previous_inbox_acc_ptr,
+                           int last_block_complete,
+                           void* reorg_message_count_ptr);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
 
@@ -51,6 +52,12 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
 
+int arbCoreGetInboxAcc(CArbCore* arbcore_ptr, const void* index_ptr, void* ret);
+int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
+                           const void* index1_ptr,
+                           const void* index2_ptr,
+                           void* ret1,
+                           void* ret2);
 int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
                       const void* start_acc_hash,
                       const void* start_index_ptr,
@@ -65,10 +72,11 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
 int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
                              const void* cursor_index,
                              const void* count);
-ByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                              const void* cursor_index);
-ByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(CArbCore* arbcore_ptr,
-                                                     const void* cursor_index);
+IndexedByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
+                                                     const void* index_ptr);
+IndexedByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(
+    CArbCore* arbcore_ptr,
+    const void* index_ptr);
 int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
                                      const void* cursor_index);
 int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr,

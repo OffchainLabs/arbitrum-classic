@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "../rollup/Rollup.sol";
+import "../challenge/IChallenge.sol";
 
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, INVALID }
@@ -196,25 +197,13 @@ contract ValidatorUtils {
         return stakers;
     }
 
-    function successorNodes(Rollup rollup, uint256 nodeNum)
-        external
-        view
-        returns (uint256[] memory)
-    {
-        uint256[] memory nodes = new uint256[](100000);
-        uint256 index = 0;
-        for (uint256 i = nodeNum + 1; i <= rollup.latestNodeCreated(); i++) {
-            INode node = rollup.getNode(i);
-            if (node.prev() == nodeNum) {
-                nodes[index] = i;
-                index++;
-            }
+    function latestStaked(Rollup rollup, address staker) external view returns (uint256, bytes32) {
+        uint256 node = rollup.latestStakedNode(staker);
+        if (node == 0) {
+            node = rollup.latestConfirmed();
         }
-        // Shrink array down to real size
-        assembly {
-            mstore(nodes, index)
-        }
-        return nodes;
+        bytes32 acc = rollup.getNodeHash(node);
+        return (node, acc);
     }
 
     function stakedNodes(Rollup rollup, address staker) external view returns (uint256[] memory) {
@@ -297,13 +286,14 @@ contract ValidatorUtils {
             max = maxNodeCount;
         }
 
+        (address[] memory stakers, ) = getStakers(rollup, startStakerIndex, maxStakerCount);
         return
             findRejectableExampleImpl(
                 rollup,
                 startNodeOffset,
                 rollup.latestConfirmed(),
                 max,
-                getStakers(rollup, startStakerIndex, maxStakerCount)
+                stakers
             );
     }
 
@@ -342,16 +332,44 @@ contract ValidatorUtils {
         Rollup rollup,
         uint256 startIndex,
         uint256 max
-    ) public view returns (address[] memory) {
+    ) public view returns (address[] memory, bool hasMore) {
         uint256 maxStakers = rollup.stakerCount();
-        if (startIndex + max < maxStakers) {
+        if (startIndex + max <= maxStakers) {
             maxStakers = startIndex + max;
+            hasMore = true;
         }
 
         address[] memory stakers = new address[](maxStakers);
         for (uint256 i = 0; i < maxStakers; i++) {
             stakers[i] = rollup.getStakerAddress(startIndex + i);
         }
-        return stakers;
+        return (stakers, hasMore);
+    }
+
+    function timedOutChallenges(
+        Rollup rollup,
+        uint256 startIndex,
+        uint256 max
+    ) external view returns (IChallenge[] memory, bool hasMore) {
+        (address[] memory stakers, bool hasMoreStakers) = getStakers(rollup, startIndex, max);
+        IChallenge[] memory challenges = new IChallenge[](stakers.length);
+        uint256 index = 0;
+        for (uint256 i = 0; i < stakers.length; i++) {
+            address staker = stakers[i];
+            address challengeAddr = rollup.currentChallenge(staker);
+            if (challengeAddr != address(0)) {
+                IChallenge challenge = IChallenge(challengeAddr);
+                uint256 timeSinceLastMove = block.number - challenge.lastMoveBlock();
+                if (timeSinceLastMove > challenge.currentResponderTimeLeft()) {
+                    challenges[index] = IChallenge(challenge);
+                    index++;
+                }
+            }
+        }
+        // Shrink array down to real size
+        assembly {
+            mstore(challenges, index)
+        }
+        return (challenges, hasMoreStakers);
     }
 }
