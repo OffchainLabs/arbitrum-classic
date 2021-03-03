@@ -678,6 +678,7 @@ void ArbCore::operator()() {
     uint256_t message_count_in_machine = 0;
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
+    uint256_t max_message_batch_size = 10;
 
     while (!arbcore_abort) {
         if (message_data_status == MESSAGES_READY) {
@@ -795,27 +796,26 @@ void ArbCore::operator()() {
             std::vector<std::vector<unsigned char>> messages;
             if (messages_count.data > total_messages_read) {
                 // New messages to process
-                auto next_message_result =
-                    getMessageEntry(*tx, total_messages_read);
-                if (!next_message_result.status.ok()) {
-                    core_error_string = next_message_result.status.ToString();
+                auto message_batch_size = max_message_batch_size;
+                if (message_batch_size > messages_count.data) {
+                    message_batch_size = messages_count.data;
+                }
+                auto next_messages_result = getMessagesImpl(
+                    *tx, total_messages_read, message_batch_size);
+                if (!next_messages_result.status.ok()) {
+                    core_error_string = next_messages_result.status.ToString();
                     machine_error = true;
                     std::cerr << "ArbCore failed getting message entry: "
                               << core_error_string << "\n";
                     break;
                 }
-                if (next_message_result.data.sequence_number !=
-                    total_messages_read) {
-                    core_error_string =
-                        "sequence number in message different than expected";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << "\n";
-                    break;
+                for (const auto& message_entry :
+                     next_messages_result.data.first) {
+                    messages.push_back(message_entry);
                 }
-                messages.push_back(next_message_result.data.data);
-                if (next_message_result.data.last_message_in_block) {
+                if (next_messages_result.data.second) {
                     execConfig.next_block_height =
-                        next_message_result.data.block_height + 1;
+                        *next_messages_result.data.second;
                 } else {
                     execConfig.next_block_height = std::nullopt;
                 }
@@ -1020,12 +1020,22 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t count) const {
     auto tx = Transaction::makeTransaction(data_storage);
 
+    auto result = getMessagesImpl(*tx, index, count);
+
+    return {result.status, result.data.first};
+}
+
+ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
+                      std::optional<uint256_t>>>
+ArbCore::getMessagesImpl(Transaction& tx,
+                         uint256_t index,
+                         uint256_t count) const {
     if (count == 0) {
         return {rocksdb::Status::OK(), {}};
     }
 
     // Check if attempting to get entries past current valid messages
-    auto message_count = messageEntryInsertedCountImpl(*tx);
+    auto message_count = messageEntryInsertedCountImpl(tx);
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
     }
@@ -1042,7 +1052,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     auto key_slice = vecToSlice(key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
+        *tx.transaction, data_storage->messageentry_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
     if (!results.status.ok()) {
         return {results.status, {}};
@@ -1050,13 +1060,19 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
 
     std::vector<std::vector<unsigned char>> messages;
     messages.reserve(results.data.size());
-    for (const auto& data : results.data) {
-        auto message_entry = extractMessageEntry(0, vecToSlice(data));
+    std::optional<uint256_t> next_block_height;
+    auto last_index = results.data.size();
+    for (size_t i = 0; i < last_index; i++) {
+        auto message_entry =
+            extractMessageEntry(0, vecToSlice(results.data[i]));
 
         messages.push_back(message_entry.data);
+        if (i == last_index && message_entry.last_message_in_block) {
+            next_block_height = message_entry.block_height + 1;
+        }
     }
 
-    return {rocksdb::Status::OK(), std::move(messages)};
+    return {rocksdb::Status::OK(), {std::move(messages), next_block_height}};
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(

@@ -233,6 +233,9 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
+                          std::optional<uint256_t>>>
+    getMessagesImpl(Transaction& tx, uint256_t index, uint256_t count) const;
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
