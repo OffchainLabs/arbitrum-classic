@@ -1,5 +1,6 @@
 import { task } from 'hardhat/config'
 import 'dotenv/config'
+import * as fs from 'fs'
 
 import 'hardhat-deploy'
 
@@ -24,6 +25,8 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
 
 task('create-chain', 'Creates a rollup chain').setAction(
   async (taskArguments, hre) => {
+    const machineHash = fs.readFileSync('../MACHINEHASH').toString()
+    console.log(`Creating chain for machine with hash ${machineHash}`)
     const { deployments, ethers } = hre
     const [deployer] = await ethers.getSigners()
     const rollupCreatorDep = await deployments.get('RollupCreator')
@@ -32,7 +35,7 @@ task('create-chain', 'Creates a rollup chain').setAction(
       rollupCreatorDep.address
     ).connect(deployer)
     const tx = await rollupCreator.createRollup(
-      '0x7ef409f713e348cc95db45c22341495a1965097539d66b6010b0a04b0b820efe',
+      machineHash,
       900,
       0,
       2000000000,
