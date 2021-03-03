@@ -150,7 +150,7 @@ func main() {
 	}
 	defer monitor.Close()
 
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address)
+	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}

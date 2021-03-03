@@ -21,6 +21,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -70,13 +71,14 @@ func New(
 	arbCore core.ArbCore,
 	as machine.NodeStore,
 	chain common.Address,
+	updateFrequency time.Duration,
 ) (*TxDB, error) {
 	db := &TxDB{
 		lookup: arbCore,
 		as:     as,
 		chain:  chain,
 	}
-	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10))
+	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
 	go func() {
 		err := <-errChan
