@@ -74,7 +74,7 @@ contract Validator {
         }
     }
 
-    function timeoutChallenges(IRollup rollup, IChallenge[] calldata challenges) external {
+    function timeoutChallenges(IChallenge[] calldata challenges) external {
         uint256 challengesCount = challenges.length;
         for (uint256 i = 0; i < challengesCount; i++) {
             try challenges[i].timeout() {} catch {}

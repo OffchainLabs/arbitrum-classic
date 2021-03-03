@@ -19,16 +19,19 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"io/ioutil"
 	golog "log"
 	"net/http"
 	"os"
 	"path"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
@@ -46,17 +49,8 @@ func init() {
 	http.DefaultServeMux = http.NewServeMux()
 }
 
-type ContractAddresses struct {
-	validatorWallet string
-	rollup          string
-	validatorUtils  string
-}
-
-type Config struct {
-	arbStorageDir     string
-	contractAddresses ContractAddresses
-	privateKey        string
-	rpc               string
+type ChainState struct {
+	ValidatorWallet string `json:"validatorWallet"`
 }
 
 func main() {
@@ -72,40 +66,67 @@ func main() {
 	logger = log.With().Caller().Str("component", "arb-validator").Logger()
 
 	if len(os.Args) < 2 {
-		logger.Fatal().Msg("Usage: arb-validator [folder]")
+		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] " + cmdhelp.WalletArgsString
+		logger.Fatal().Msg(usageStr)
 	}
-	folder := os.Args[1]
-	configPath := path.Join(folder, "config.json")
-	configFile, err := os.Open(configPath)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Failed to open config.json in specified path")
-	}
-	configData, err := ioutil.ReadAll(configFile)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Failed to read config")
-	}
-	config := Config{
-		arbStorageDir: path.Join(folder, "storage"),
-	}
-	err = json.Unmarshal(configData, &config)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Failed to unmarshal config")
-	}
+	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
+	walletFlags := cmdhelp.AddWalletFlags(flagSet)
+	flagSet.Parse(os.Args[5:])
 
-	validatorAddress := ethcommon.HexToAddress(config.contractAddresses.validatorWallet)
-	rollupAddr := ethcommon.HexToAddress(config.contractAddresses.rollup)
-	validatorUtilsAddr := ethcommon.HexToAddress(config.contractAddresses.validatorUtils)
-	auth := bind.NewKeyedTransactor(nil) // TODO
-	client, err := ethutils.NewRPCEthClient(config.rpc)
+	folder := os.Args[1]
+
+	rollupAddr := ethcommon.HexToAddress(os.Args[3])
+	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
+	auth, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error loading wallet keystore")
+	}
+	fmt.Printf("Loaded wallet with address %v\n", auth.From.String())
+	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error creating Ethereum RPC client")
+	}
+
+	chainState := ChainState{}
+	chainStatePath := path.Join(folder, "chainState.json")
+	chainStateFile, err := os.Open(chainStatePath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			logger.Fatal().Stack().Err(err).Msg("Failed to open chainState.json")
+		}
+	} else {
+		chainStateData, err := ioutil.ReadAll(chainStateFile)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Msg("Failed to read chain state")
+		}
+		err = json.Unmarshal(chainStateData, &chainState)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Msg("Failed to unmarshal chain state")
+		}
+	}
+
+	validatorAddress := ethcommon.Address{}
+	if chainState.ValidatorWallet == "" {
+		validatorAddress, _, _, err = ethbridgecontracts.DeployValidator(auth, client)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Msg("Failed to deploy validator wallet")
+		}
+		chainState.ValidatorWallet = validatorAddress.String()
+
+		newChainStateData, err := json.Marshal(chainState)
+		if err != nil {
+			logger.Fatal().Stack().Err(err).Msg("Failed to marshal chain state")
+		}
+		ioutil.WriteFile(chainStatePath, newChainStateData, 0644)
+	} else {
+		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
 	strategy := staker.MakeNodesStrategy
 
 	ctx := context.Background()
 
-	storage, err := cmachine.NewArbStorage(config.arbStorageDir)
+	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"))
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error creating ArbStorage")
 	}
