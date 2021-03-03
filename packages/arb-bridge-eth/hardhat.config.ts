@@ -1,5 +1,6 @@
 import { task } from 'hardhat/config'
 import 'dotenv/config'
+import * as fs from 'fs'
 
 import 'hardhat-deploy'
 
@@ -21,6 +22,35 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
     console.log(await account.getAddress())
   }
 })
+
+task('create-chain', 'Creates a rollup chain').setAction(
+  async (taskArguments, hre) => {
+    const machineHash = fs.readFileSync('../MACHINEHASH').toString()
+    console.log(`Creating chain for machine with hash ${machineHash}`)
+    const { deployments, ethers } = hre
+    const [deployer] = await ethers.getSigners()
+    const rollupCreatorDep = await deployments.get('RollupCreator')
+    const RollupCreator = await ethers.getContractFactory('RollupCreator')
+    const rollupCreator = RollupCreator.attach(
+      rollupCreatorDep.address
+    ).connect(deployer)
+    const tx = await rollupCreator.createRollup(
+      machineHash,
+      900,
+      0,
+      2000000000,
+      ethers.utils.parseEther('.1'),
+      ethers.constants.AddressZero,
+      await deployer.getAddress(),
+      '0x'
+    )
+    const receipt = await tx.wait()
+    const ev = rollupCreator.interface.parseLog(
+      receipt.logs[receipt.logs.length - 1]
+    )
+    console.log(ev)
+  }
+)
 
 task('deposit', 'Deposit coins into ethbridge')
   .addPositionalParam('chain', "The rollup chain's address")
@@ -76,6 +106,12 @@ const config = {
     },
     parity: {
       url: 'http://127.0.0.1:7545',
+    },
+    devnet: {
+      url: 'https://devnet.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
     },
   },
   etherscan: {
