@@ -91,8 +91,20 @@ inline std::vector<std::vector<unsigned char>> receiveByteSliceArray(
     const ByteSliceArray& bsa) {
     std::vector<std::vector<unsigned char>> data;
     auto slices = reinterpret_cast<ByteSlice*>(bsa.slices);
+    data.reserve(bsa.count);
     for (int i = 0; i < bsa.count; ++i) {
         data.emplace_back(receiveByteSlice(slices[i]));
+    }
+    return data;
+}
+
+inline std::vector<uint256_t> receiveUint256Array(
+    const ByteSliceArray& bsa) {
+    std::vector<uint256_t> data;
+    auto slices = reinterpret_cast<ByteSlice*>(bsa.slices);
+    data.reserve(bsa.count);
+    for (int i = 0; i < bsa.count; ++i) {
+        data.emplace_back(receiveUint256(slices[i].data));
     }
     return data;
 }
