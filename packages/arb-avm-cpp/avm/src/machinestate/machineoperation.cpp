@@ -663,6 +663,7 @@ void tset(MachineState& m) {
     auto index = assumeInt64(bigIndex);
     auto& tup = assumeTuple(m.stack[1]);
     tup.set_element(index, std::move(m.stack[2]));
+    hash(tup);
     m.stack[2] = std::move(tup);
     m.stack.popClear();
     m.stack.popClear();
@@ -685,6 +686,7 @@ void xset(MachineState& m) {
     auto index = assumeInt64(bigIndex);
     auto& tup = assumeTuple(m.auxstack[0]);
     tup.set_element(index, std::move(m.stack[1]));
+    hash(tup);
     m.auxstack[0] = std::move(tup);
     m.stack.popClear();
     m.stack.popClear();
@@ -1102,7 +1104,7 @@ void setbuffer8(MachineState& m) {
     auto val = static_cast<uint8_t>(val_int);
     Buffer& md = assumeBuffer(m.stack[2]);
     auto res = md.set(offset, val);
-    // res.hash();
+    res.hash();
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();
