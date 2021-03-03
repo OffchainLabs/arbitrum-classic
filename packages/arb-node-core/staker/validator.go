@@ -2,6 +2,7 @@ package staker
 
 import (
 	"context"
+	"encoding/hex"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -136,7 +137,7 @@ type existingNodeAction struct {
 
 type nodeAction interface{}
 
-func (v *Validator) generateNodeAction(ctx context.Context, address common.Address, active bool, proactiveNewNodes bool) (nodeAction, bool, error) {
+func (v *Validator) generateNodeAction(ctx context.Context, address common.Address, strategy Strategy) (nodeAction, bool, error) {
 	base, baseHash, err := v.validatorUtils.LatestStaked(ctx, address)
 	if err != nil {
 		return nil, false, err
@@ -156,14 +157,14 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	}
 
 	// Not necessarily successors
-	successorsNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash)
+	successorNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash)
 	if err != nil {
 		return nil, false, err
 	}
 
-	gasesUsed := make([]*big.Int, 0, len(successorsNodes)+1)
+	gasesUsed := make([]*big.Int, 0, len(successorNodes)+1)
 	gasesUsed = append(gasesUsed, startState.TotalGasConsumed)
-	for _, nd := range successorsNodes {
+	for _, nd := range successorNodes {
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
 
@@ -192,7 +193,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
 	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 
-	if active {
+	if strategy > WatchtowerStrategy {
 		gasesUsed = append(gasesUsed, maximumGasToConsume)
 	}
 
@@ -200,7 +201,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 
 	var correctNode nodeAction
 	wrongNodesExist := false
-	for _, nd := range successorsNodes {
+	if len(successorNodes) > 0 {
+		logger.Info().Int("count", len(successorNodes)).Msg("Examining existing potential successors")
+	}
+	for _, nd := range successorNodes {
 		if correctNode != nil && wrongNodesExist {
 			// We've found everything we could hope to find
 			break
@@ -211,19 +215,23 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 				return nil, false, err
 			}
 			if valid {
-				id := core.NodeID(nd.NodeNum)
+				logger.Info().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found correct node")
 				correctNode = existingNodeAction{
-					number: id,
+					number: nd.NodeNum,
 					hash:   nd.NodeHash,
 				}
 				continue
+			} else {
+				logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found node with incorrect assertion")
 			}
+		} else {
+			logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found younger sibling to correct node")
 		}
 		// If we've hit this point, the node is "wrong"
 		wrongNodesExist = true
 	}
 
-	if !active || correctNode != nil || (!proactiveNewNodes && !wrongNodesExist) {
+	if strategy == WatchtowerStrategy || correctNode != nil || (strategy < MakeNodesStrategy && !wrongNodesExist) {
 		return correctNode, wrongNodesExist, nil
 	}
 
@@ -240,8 +248,8 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	inboxAcc := execInfo.After.InboxAcc
 	hasSiblingByte := [1]byte{0}
 	lastHash := baseHash
-	if len(successorsNodes) > 0 {
-		lastHash = successorsNodes[len(successorsNodes)-1].NodeHash
+	if len(successorNodes) > 0 {
+		lastHash = successorNodes[len(successorNodes)-1].NodeHash
 		hasSiblingByte[0] = 1
 	}
 	assertion := &core.Assertion{
@@ -260,6 +268,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		assertion: assertion,
 		hash:      newNodeHash,
 	}
+	lastNum := base
+	if len(successorNodes) > 0 {
+		lastNum = successorNodes[len(successorNodes)-1].NodeNum
+	}
+	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("node", int(lastNum.Int64())+1).Int("parentNode", int(base.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
 }
 

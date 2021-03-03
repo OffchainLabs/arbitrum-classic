@@ -2,7 +2,6 @@ package staker
 
 import (
 	"context"
-	"encoding/hex"
 	"math/big"
 	"time"
 
@@ -183,7 +182,7 @@ func (s *Staker) newStake(ctx context.Context) error {
 
 func (s *Staker) advanceStake(ctx context.Context) error {
 	active := s.strategy > WatchtowerStrategy
-	action, wrongNodesExist, err := s.generateNodeAction(ctx, s.wallet.Address(), active, s.strategy == MakeNodesStrategy)
+	action, _, err := s.generateNodeAction(ctx, s.wallet.Address(), s.strategy)
 	if err != nil {
 		return err
 	}
@@ -194,15 +193,9 @@ func (s *Staker) advanceStake(ctx context.Context) error {
 
 	switch action := action.(type) {
 	case createNodeAction:
-		if !wrongNodesExist && s.strategy < MakeNodesStrategy {
-			return nil
-		}
-		logger.Info().Str("hash", hex.EncodeToString(action.hash[:])).Msg("Creating node")
+		// Already logged with more details in generateNodeAction
 		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion)
 	case existingNodeAction:
-		if !wrongNodesExist && s.strategy < StakeLatestStrategy {
-			return nil
-		}
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
 	default:
