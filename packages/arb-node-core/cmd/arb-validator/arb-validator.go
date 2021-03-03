@@ -66,12 +66,12 @@ func main() {
 	logger = log.With().Caller().Str("component", "arb-validator").Logger()
 
 	if len(os.Args) < 2 {
-		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] " + cmdhelp.WalletArgsString
+		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] [strategy] " + cmdhelp.WalletArgsString
 		logger.Fatal().Msg(usageStr)
 	}
 	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
-	flagSet.Parse(os.Args[5:])
+	flagSet.Parse(os.Args[6:])
 
 	folder := os.Args[1]
 
@@ -85,6 +85,15 @@ func main() {
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error creating Ethereum RPC client")
+	}
+	strategyString := os.Args[5]
+	var strategy staker.Strategy
+	if strategyString == "MakeNodes" {
+		strategy = staker.MakeNodesStrategy
+	} else if strategyString == "StakeLatest" {
+		strategy = staker.StakeLatestStrategy
+	} else {
+		logger.Fatal().Msg("Unsupported strategy specified. Currently supported: MakeNdoes, StakeLatest")
 	}
 
 	chainState := ChainState{}
@@ -121,8 +130,6 @@ func main() {
 	} else {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
-
-	strategy := staker.MakeNodesStrategy
 
 	ctx := context.Background()
 
