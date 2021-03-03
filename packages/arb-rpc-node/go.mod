@@ -10,12 +10,11 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
-	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
+	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03 // indirect
 	github.com/rs/zerolog v1.20.0

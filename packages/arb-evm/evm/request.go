@@ -225,8 +225,8 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 
 	// Tuple size already verified above, so error can be ignored
 	kind, _ := tup.GetByInt64(0)
-	l2BlockNumber, _ := tup.GetByInt64(1)
-	l1BlockNumber, _ := tup.GetByInt64(2)
+	l1BlockNumber, _ := tup.GetByInt64(1)
+	l2BlockNumber, _ := tup.GetByInt64(2)
 	l2Timestamp, _ := tup.GetByInt64(3)
 	sender, _ := tup.GetByInt64(4)
 	inboxSeqNum, _ := tup.GetByInt64(5)

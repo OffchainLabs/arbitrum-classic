@@ -48,21 +48,17 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
+
 	defer C.free(unsafe.Pointer(cFilename))
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
-
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
-
 	}
-
 	return WrapCMachine(cMachine), nil
 }
 
 func cdestroyVM(cMachine *Machine) {
-
 	C.machineDestroy(cMachine.c)
-
 }
 
 func WrapCMachine(cMachine unsafe.Pointer) *Machine {

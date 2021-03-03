@@ -17,6 +17,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func deployRollup(
@@ -126,7 +127,7 @@ func TestStaker(t *testing.T) {
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, ethbridge.NewTransactAuth(auth2))
 	test.FailIfError(t, err)
 
-	core, shutdown := test.PrepareArbCore(t, nil)
+	core, shutdown := challenge.PrepareTestArbCore(t, []inbox.InboxMessage{})
 	defer shutdown()
 
 	staker, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)

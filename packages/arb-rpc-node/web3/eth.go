@@ -1,19 +1,3 @@
-/*
- * Copyright 2020-2021, Offchain Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package web3
 
 import (
@@ -71,10 +55,7 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if blockCount == 0 {
-		return 0, errors.New("no blocks")
-	}
-	return hexutil.Uint64(blockCount - 1), nil
+	return hexutil.Uint64(blockCount), nil
 }
 
 func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
@@ -134,7 +115,7 @@ func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil
 }
 
 func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	height, err := s.srv.BlockNum(blockNum)
+	height, err := s.blockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +240,7 @@ func (s *Server) GetBlockByHash(blockHashRaw hexutil.Bytes, includeTxData bool) 
 }
 
 func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
-	height, err := s.srv.BlockNum(blockNum)
+	height, err := s.blockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -273,10 +254,16 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	res, err := s.srv.GetRequestResult(requestId)
-	if err != nil || res == nil {
+	val, err := s.srv.GetRequestResult(requestId)
+	if err != nil || val == nil {
 		return nil, nil, err
 	}
+
+	res, err := evm.NewTxResultFromValue(val)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
 		return nil, nil, err
@@ -312,7 +299,7 @@ func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index 
 }
 
 func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, index hexutil.Uint64) (*TransactionResult, error) {
-	height, err := s.srv.BlockNum(blockNum)
+	height, err := s.blockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -359,11 +346,16 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 }
 
 func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
-	info, err := s.srv.BlockLogFromInfo(block)
+	if block.BlockLog == nil {
+		// No arbitrum block at this height
+		return (*hexutil.Big)(big.NewInt(0)), nil
+	}
+
+	arbBlock, err := evm.NewBlockResultFromValue(block.BlockLog)
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(info.BlockStats.TxCount), nil
+	return (*hexutil.Big)(arbBlock.BlockStats.TxCount), nil
 }
 
 func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint64) (*TransactionResult, error) {
@@ -371,11 +363,18 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil || block == nil {
 		return nil, err
 	}
-	info, err := s.srv.BlockLogFromInfo(block)
+
+	if block.BlockLog == nil {
+		// No arbitrum block at this height
+		return nil, nil
+	}
+
+	blockInfo, err := evm.NewBlockResultFromValue(block.BlockLog)
 	if err != nil {
 		return nil, err
 	}
-	txRes, err := s.srv.GetTxInBlockAtIndexResults(info, uint64(index))
+
+	txRes, err := s.srv.GetTxInBlockAtIndexResults(blockInfo, uint64(index))
 	if err != nil {
 		return nil, err
 	}
@@ -556,10 +555,7 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		pending, err := s.srv.PendingSnapshot()
-		if err != nil {
-			return nil, err
-		}
+		pending := s.srv.PendingSnapshot()
 		if pending != nil {
 			return pending, nil
 		}
@@ -569,10 +565,7 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {
-		snap, err := s.srv.LatestSnapshot()
-		if err != nil {
-			return nil, err
-		}
+		snap := s.srv.LatestSnapshot()
 		if snap == nil {
 			return nil, errors.New("couldn't fetch latest snapshot")
 		}
@@ -587,4 +580,20 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 		return nil, errors.New("unsupported block number")
 	}
 	return snap, nil
+}
+
+func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
+	if *block == rpc.EarliestBlockNumber {
+		height, err := s.srv.InitialBlockHeight()
+		if err != nil {
+			return 0, err
+		}
+		return height.Uint64(), err
+	} else if *block == rpc.LatestBlockNumber {
+		return s.srv.GetBlockCount()
+	} else if *block >= 0 {
+		return uint64(*block), nil
+	} else {
+		return 0, errors.New("unsupported block num")
+	}
 }

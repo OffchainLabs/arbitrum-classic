@@ -9,7 +9,7 @@ import (
 )
 
 func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
-	arbCore, shutdown := test.PrepareArbCore(t, messages)
+	arbCore, shutdown := PrepareTestArbCore(t, messages)
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 
@@ -44,7 +44,7 @@ func TestChallengeToUnreachable(t *testing.T) {
 
 func TestChallengeToUnreachableSmall(t *testing.T) {
 	messages := []inbox.InboxMessage{MakeTestInitMsg()}
-	arbCore, shutdown := test.PrepareArbCore(t, messages)
+	arbCore, shutdown := PrepareTestArbCore(t, messages)
 	defer shutdown()
 	cursor, err := arbCore.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)

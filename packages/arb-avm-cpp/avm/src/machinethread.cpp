@@ -35,19 +35,6 @@ bool MachineThread::runMachine(MachineExecutionConfig config) {
     return true;
 }
 
-bool MachineThread::continueRunningMachine() {
-    if (machine_status != MACHINE_NONE) {
-        return false;
-    }
-
-    machine_status = MACHINE_RUNNING;
-
-    machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)));
-
-    return true;
-}
-
 void MachineThread::abortMachine() {
     if (machine_thread) {
         machine_abort = true;
@@ -80,10 +67,5 @@ void MachineThread::clearError() {
 
 void MachineThread::operator()(MachineExecutionConfig config) {
     last_assertion = run(std::move(config));
-    machine_status = MACHINE_SUCCESS;
-}
-
-void MachineThread::operator()() {
-    last_assertion = continueRunning();
     machine_status = MACHINE_SUCCESS;
 }

@@ -739,7 +739,9 @@ void ArbCore::operator()() {
 
                 // Machine was stopped to save sideload, update execConfig
                 // and start machine back up where it stopped
-                auto machine_success = machine->continueRunningMachine();
+                execConfig.messages_to_skip +=
+                    last_assertion.inbox_messages_consumed;
+                auto machine_success = machine->runMachine(execConfig);
                 if (!machine_success) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
@@ -769,10 +771,35 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
-            auto total_messages_read = pending_checkpoint.total_messages_read;
-            bool resolved_staged = false;
-            if (std::holds_alternative<uint256_t>(
-                    machine->machine_state.staged_message)) {
+
+            if (messages_count.data > pending_checkpoint.total_messages_read) {
+                // New messages to process
+                auto next_message_result = getMessageEntry(
+                    *tx, pending_checkpoint.total_messages_read);
+                if (!next_message_result.status.ok()) {
+                    core_error_string = next_message_result.status.ToString();
+                    machine_error = true;
+                    std::cerr << "ArbCore failed getting message entry: "
+                              << core_error_string << "\n";
+                    break;
+                }
+                if (next_message_result.data.sequence_number !=
+                    pending_checkpoint.total_messages_read) {
+                    core_error_string =
+                        "sequence number in message different than expected";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << "\n";
+                    break;
+                }
+                std::vector<std::vector<unsigned char>> messages;
+                messages.push_back(next_message_result.data.data);
+                message_count_in_machine =
+                    pending_checkpoint.total_messages_read + 1;
+
+                execConfig.setInboxMessagesFromBytes(messages);
+                execConfig.final_message_of_block =
+                    next_message_result.data.last_message_in_block;
+
                 // Resolve staged message if possible.  If message not found,
                 // machine will just be blocked
                 auto resolve_status = resolveStagedMessage(
@@ -784,42 +811,6 @@ void ArbCore::operator()() {
                               << resolve_status.ToString() << "\n";
                     break;
                 }
-                if (resolve_status.ok()) {
-                    resolved_staged = true;
-                }
-            }
-
-            std::vector<std::vector<unsigned char>> messages;
-            if (messages_count.data > total_messages_read) {
-                // New messages to process
-                auto next_message_result =
-                    getMessageEntry(*tx, total_messages_read);
-                if (!next_message_result.status.ok()) {
-                    core_error_string = next_message_result.status.ToString();
-                    machine_error = true;
-                    std::cerr << "ArbCore failed getting message entry: "
-                              << core_error_string << "\n";
-                    break;
-                }
-                if (next_message_result.data.sequence_number !=
-                    total_messages_read) {
-                    core_error_string =
-                        "sequence number in message different than expected";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << "\n";
-                    break;
-                }
-                messages.push_back(next_message_result.data.data);
-                execConfig.final_message_of_block =
-                    next_message_result.data.last_message_in_block;
-            } else {
-                execConfig.final_message_of_block = false;
-            }
-
-            if (messages.size() > 0 || resolved_staged) {
-                message_count_in_machine =
-                    pending_checkpoint.total_messages_read + messages.size();
-                execConfig.setInboxMessagesFromBytes(messages);
 
                 auto status = machine->runMachine(execConfig);
                 if (!status) {

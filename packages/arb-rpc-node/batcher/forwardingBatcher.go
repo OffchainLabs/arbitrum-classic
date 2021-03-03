@@ -51,8 +51,8 @@ func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) 
 	return b.client.SendTransaction(ctx, tx)
 }
 
-func (b *Forwarder) PendingSnapshot() (*snapshot.Snapshot, error) {
-	return nil, nil
+func (b *Forwarder) PendingSnapshot() *snapshot.Snapshot {
+	return nil
 }
 
 func (b *Forwarder) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {

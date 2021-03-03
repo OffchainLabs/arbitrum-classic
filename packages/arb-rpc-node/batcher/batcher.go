@@ -62,7 +62,7 @@ type batch interface {
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
 	addIncludedTx(tx *types.Transaction) error
-	updateCurrentSnap(pendingSentBatches *list.List) error
+	updateCurrentSnap(pendingSentBatches *list.List)
 	getLatestSnap() *snapshot.Snapshot
 }
 
@@ -75,7 +75,7 @@ type TransactionBatcher interface {
 	SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription
 
 	// Return nil if no pending snapshot is available
-	PendingSnapshot() (*snapshot.Snapshot, error)
+	PendingSnapshot() *snapshot.Snapshot
 }
 
 type pendingSentBatch struct {
@@ -101,20 +101,16 @@ func NewStatefulBatcher(
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
-) (*Batcher, error) {
+) *Batcher {
 	signer := types.NewEIP155Signer(chainId)
-	batch, err := newStatefulBatch(db, maxBatchSize, signer)
-	if err != nil {
-		return nil, err
-	}
 	return newBatcher(
 		ctx,
 		chainId,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
-		batch,
-	), nil
+		newStatefulBatch(db, maxBatchSize, signer),
+	)
 }
 
 func NewStatelessBatcher(
@@ -260,13 +256,11 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 	})
 }
 
-func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
 	m.Lock()
 	defer m.Unlock()
-	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {
-		return nil, err
-	}
-	return m.pendingBatch.getLatestSnap(), nil
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
+	return m.pendingBatch.getLatestSnap()
 }
 
 func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Address) *uint64 {
@@ -297,9 +291,7 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return errors.Wrap(err, "transaction rejected")
 	}
 
-	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {
-		return err
-	}
+	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
 
 	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
 		return err
