@@ -23,7 +23,6 @@ import (
 var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
-var l2MessageFromOriginCallABI abi.Method
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupABI))
@@ -33,7 +32,6 @@ func init() {
 	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
-	l2MessageFromOriginCallABI = parsedRollup.Methods["sendL2MessageFromOrigin"]
 }
 
 type StakerInfo struct {

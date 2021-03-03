@@ -21,7 +21,8 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/pkg/errors"
@@ -55,10 +56,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 var logger zerolog.Logger
@@ -81,7 +80,7 @@ func init() {
 	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Str("component", "arb-dev-aggregator").Logger()
+	logger = log.With().Caller().Str("component", "arb-dev-node").Logger()
 }
 
 func main() {
@@ -119,22 +118,6 @@ func main() {
 			panic(err)
 		}
 	}()
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening ArbStorage")
-	}
-	defer storage.CloseArbStorage()
-
-	err = storage.Initialize(arbos.Path())
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error initializing ArbStorage")
-	}
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		logger.Fatal().Msg("failed to start thread")
-	}
 
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(10),
@@ -151,16 +134,20 @@ func main() {
 		ExtraConfig: nil,
 	}
 
-	as := storage.GetAggregatorStore()
+	monitor, err := staker.NewMonitor(tmpDir, arbos.Path())
+	if err != nil {
+		logger.Fatal().Err(err).Msg("error opening monitor")
+	}
+	defer monitor.Close()
 
-	db, err := txdb.New(arbCore, as, rollupAddress)
+	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	l1 := NewL1Emulator()
-	backend, err := NewBackend(arbCore, db, l1, signer)
+	backend, err := NewBackend(monitor.Core, db, l1, signer)
 	if err != nil {
 		logger.Fatal().Err(err).Send()
 	}
@@ -259,9 +246,9 @@ func main() {
 	}()
 
 	plugins := make(map[string]interface{})
-	plugins["evm"] = &EVM{backend: backend, as: as}
+	plugins["evm"] = &EVM{backend: backend}
 
-	if err := rpc.LaunchAggregatorAdvanced(
+	if err := rpc.LaunchNodeAdvanced(
 		db,
 		rollupAddress,
 		"8547",
@@ -272,13 +259,12 @@ func main() {
 		true,
 		plugins,
 	); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error running LaunchAggregator")
+		logger.Fatal().Stack().Err(err).Msg("Error running LaunchNode")
 	}
 }
 
 type EVM struct {
 	backend *Backend
-	as      machine.AggregatorStore
 }
 
 func (s *EVM) Snapshot() (hexutil.Uint64, error) {
@@ -328,7 +314,6 @@ type Backend struct {
 	sync.Mutex
 	arbcore    core.ArbCore
 	db         *txdb.TxDB
-	logReader  *core.LogReader
 	l1Emulator *L1Emulator
 	signer     types.Signer
 
@@ -336,16 +321,9 @@ type Backend struct {
 }
 
 func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) (*Backend, error) {
-	logReader := core.NewLogReader(db, arbcore, big.NewInt(0), big.NewInt(10), 10*time.Millisecond)
-	errChan := logReader.Start(context.Background())
-	go func() {
-		err := <-errChan
-		log.Fatal().Err(err).Msg("error reading logs")
-	}()
 	return &Backend{
 		arbcore:    arbcore,
 		db:         db,
-		logReader:  logReader,
 		l1Emulator: l1,
 		signer:     signer,
 	}, nil

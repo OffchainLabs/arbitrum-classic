@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
 #include "../cavm/caggregator.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,17 +38,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-type AggregatorStore struct {
+type NodeStore struct {
 	c unsafe.Pointer
 }
 
-func deleteAggregatorStore(bs *AggregatorStore) {
+func deleteNodeStore(bs *NodeStore) {
 	C.deleteAggregatorStore(bs.c)
 }
 
-func NewAggregatorStore(c unsafe.Pointer) *AggregatorStore {
-	as := &AggregatorStore{c: c}
-	runtime.SetFinalizer(as, deleteAggregatorStore)
+func NewNodeStore(c unsafe.Pointer) *NodeStore {
+	as := &NodeStore{c: c}
+	runtime.SetFinalizer(as, deleteNodeStore)
 	return as
 }
 
@@ -79,7 +79,7 @@ func serializeBlockData(header *types.Header, logIndex uint64) ([]byte, error) {
 	return append(blockData, headerJSON...), nil
 }
 
-func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64, requests []machine.EVMRequestInfo) error {
+func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, requests []machine.EVMRequestInfo) error {
 	blockData, err := serializeBlockData(header, logIndex)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64, requ
 	return nil
 }
 
-func (as *AggregatorStore) BlockCount() (uint64, error) {
+func (as *NodeStore) BlockCount() (uint64, error) {
 	result := C.aggregatorBlockCount(as.c)
 	if result.found == 0 {
 		return 0, errors.New("failed to load block count")
@@ -112,7 +112,7 @@ func (as *AggregatorStore) BlockCount() (uint64, error) {
 	return uint64(result.value), nil
 }
 
-func (as *AggregatorStore) GetBlockInfo(height uint64) (*machine.BlockInfo, error) {
+func (as *NodeStore) GetBlockInfo(height uint64) (*machine.BlockInfo, error) {
 	blockData := C.aggregatorGetBlock(as.c, C.uint64_t(height))
 	if blockData.found == 0 {
 		return nil, nil
@@ -120,15 +120,15 @@ func (as *AggregatorStore) GetBlockInfo(height uint64) (*machine.BlockInfo, erro
 	return parseBlockData(receiveByteSlice(blockData.data))
 }
 
-func (as *AggregatorStore) Reorg(height uint64) error {
+func (as *NodeStore) Reorg(height uint64) error {
 	status := C.aggregatorReorg(as.c, C.uint64_t(height))
 	if status == 0 {
-		return errors.New("failed to reset aggregator height")
+		return errors.New("failed to reset node height")
 	}
 	return nil
 }
 
-func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64 {
+func (as *NodeStore) GetPossibleRequestInfo(requestId common.Hash) *uint64 {
 	result := C.aggregatorGetPossibleRequestInfo(as.c, unsafeDataPointer(requestId.Bytes()))
 	if result.found == 0 {
 		return nil
@@ -137,7 +137,7 @@ func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64
 	return &index
 }
 
-func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
+func (as *NodeStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 	result := C.aggregatorGetPossibleBlock(as.c, unsafeDataPointer(blockHash.Bytes()))
 	if result.found == 0 {
 		return nil
@@ -146,7 +146,7 @@ func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 	return &index
 }
 
-func (as *AggregatorStore) CurrentLogCount() (*big.Int, error) {
+func (as *NodeStore) CurrentLogCount() (*big.Int, error) {
 	result := C.aggregatorLogsProcessedCount(as.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to get processed log count")
@@ -154,7 +154,7 @@ func (as *AggregatorStore) CurrentLogCount() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
-func (as *AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
+func (as *NodeStore) UpdateCurrentLogCount(count *big.Int) error {
 	countData := math.U256Bytes(count)
 	status := C.aggregatorUpdateLogsProcessedCount(as.c, unsafeDataPointer(countData))
 	if status == 0 {

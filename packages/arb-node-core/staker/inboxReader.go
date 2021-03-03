@@ -93,7 +93,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				return err
 			}
 			if len(newMessages) == 0 {
-				if !reorging {
+				if reorging {
 					from, err = ir.getPrevBlockForReorg(from)
 					if err != nil {
 						return err
@@ -102,12 +102,12 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					from = to
 				}
 			} else {
-				needOlder, err := ir.addMessages(newMessages)
+				success, err := ir.addMessages(newMessages)
 				if err != nil {
 					return err
 				}
-				reorging = needOlder
-				if needOlder {
+				reorging = !success
+				if !success {
 					from, err = ir.getPrevBlockForReorg(from)
 					if err != nil {
 						return err
