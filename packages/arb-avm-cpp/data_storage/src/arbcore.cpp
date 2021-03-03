@@ -1240,7 +1240,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 // If placeholder message not found, machine will just be
                 // blocked
                 auto resolve_status = resolveStagedMessage(
-                    tx, execution_cursor.machine->machine_state.staged_message);
+                    tx, execution_cursor.machine->machine_state.staged_message,
+                    execution_cursor.inbox_acc);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
                     core_error_string = "error resolving staged message";
                     machine_error = true;
@@ -1278,7 +1279,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 }
 
 rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
-                                              value& message) const {
+                                              value& message,
+                                              uint256_t& inbox_acc) const {
     if (std::holds_alternative<uint256_t>(message)) {
         auto sequence_number = std::get<uint256_t>(message);
         auto message_lookup = getMessageEntry(tx, sequence_number);
@@ -1286,6 +1288,7 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
             // Unable to resolve cursor, no valid message found
             return message_lookup.status;
         }
+        inbox_acc = message_lookup.data.inbox_acc;
         auto inbox_message = extractInboxMessage(message_lookup.data.data);
         message = inbox_message.toTuple();
     }
@@ -1350,7 +1353,8 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
         }
 
         if (!is_for_sideload) {
-            auto resolve_status = resolveStagedMessage(tx, staged_message.data);
+            auto resolve_status = resolveStagedMessage(
+                tx, staged_message.data, checkpoint_result.data.inbox_acc);
             if (!resolve_status.ok()) {
                 // Unable to resolve staged_message, try earlier checkpoint
                 if (checkpoint_result.data.arb_gas_used == 0) {

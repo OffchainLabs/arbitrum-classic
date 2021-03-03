@@ -125,7 +125,9 @@ class ArbCore {
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
-    rocksdb::Status resolveStagedMessage(Transaction& tx, value& message) const;
+    rocksdb::Status resolveStagedMessage(Transaction& tx,
+                                         value& message,
+                                         uint256_t& inbox_acc) const;
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
                                                   bool after_gas);
