@@ -45,8 +45,6 @@ task('create-chain', 'Creates a rollup chain').setAction(
       '0x'
     )
     const receipt = await tx.wait()
-    console.log(receipt)
-    console.log(receipt.logs)
     const ev = rollupCreator.interface.parseLog(
       receipt.logs[receipt.logs.length - 1]
     )
