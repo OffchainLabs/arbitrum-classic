@@ -19,6 +19,8 @@
 
 #include <ethash/keccak.hpp>
 
+const uint256_t zero_h = hash(0);
+
 uint256_t zero_hash(uint64_t sz) {
     if (sz == 5) {
         return hash(0);
@@ -191,7 +193,7 @@ uint256_t RawBuffer::hash_fast() {
         // std::cerr << "At level " << level << " \n";
         if (!leaf || leaf->size() == 0)
             // return zero_hash(0);
-            return hash2(0, 0);
+            return zero_h;
         else
             return hash_buf_fast(leaf->data(), 0, LEAF_SIZE2);
     } else {
@@ -199,7 +201,7 @@ uint256_t RawBuffer::hash_fast() {
         if (!node) {
             // std::cerr << "Found default " << level << "\n";
             // return zero_hash(calc_height(level));
-            return hash2(0,0);
+            return zero_h;
         }
         else {
             return hash_node_fast(node->data(), 0, NODE_SIZE, calc_height(level));
