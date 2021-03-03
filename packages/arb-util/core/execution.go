@@ -141,7 +141,7 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 }
 
 func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targetInboxAcc [32]byte) (bool, error) {
-	localExecutionInfo, _, err := execTracker.GetExecutionInfo(assertion.GasUsed())
+	localExecutionInfo, _, err := execTracker.GetExecutionInfo(assertion.After.TotalGasConsumed)
 	if err != nil {
 		return false, err
 	}
