@@ -49,7 +49,8 @@ int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
         auto request_ids = receiveUint256Array(requests_data);
         auto block_ptr = reinterpret_cast<const char*>(block_data);
 
-        agg->saveBlock(height, block_hash, request_ids, log_indexes, {block_ptr, block_ptr + block_data_length});
+        agg->saveBlock(height, block_hash, request_ids, log_indexes,
+                       {block_ptr, block_ptr + block_data_length});
 
         return true;
     } catch (const std::exception& e) {

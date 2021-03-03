@@ -83,7 +83,7 @@ func encodeByteSliceList(goSlices [][]byte) []C.ByteSlice {
 func encodeHashArray(hashes []common.Hash) C.ByteSliceArray {
 	byteSlices := make([]C.ByteSlice, 0, len(hashes))
 	for _, hash := range hashes {
-		byteSlices = append(byteSlices, hash.Bytes())
+		byteSlices = append(byteSlices, toByteSliceView(hash.Bytes()))
 	}
 
 	return toByteSliceArrayView(byteSlices)

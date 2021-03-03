@@ -43,7 +43,8 @@ class AggregatorStore {
 
     [[nodiscard]] std::optional<uint64_t> getPossibleRequestInfo(
         const uint256_t& request_id) const;
-    [[nodiscard]] std::optional<uint64_t> getPossibleBlock(const uint256_t& block_hash) const;
+    [[nodiscard]] std::optional<uint64_t> getPossibleBlock(
+        const uint256_t& block_hash) const;
 
     void reorg(uint64_t block_height);
     [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
