@@ -98,8 +98,7 @@ inline std::vector<std::vector<unsigned char>> receiveByteSliceArray(
     return data;
 }
 
-inline std::vector<uint256_t> receiveUint256Array(
-    const ByteSliceArray& bsa) {
+inline std::vector<uint256_t> receiveUint256Array(const ByteSliceArray& bsa) {
     std::vector<uint256_t> data;
     auto slices = reinterpret_cast<ByteSlice*>(bsa.slices);
     data.reserve(bsa.count);
