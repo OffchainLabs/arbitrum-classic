@@ -2,8 +2,8 @@ package core
 
 import (
 	"context"
-	"errors"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
@@ -22,13 +22,13 @@ type LogReader struct {
 	cancelFunc context.CancelFunc
 }
 
-func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int, maxCount *big.Int) (*LogReader, error) {
+func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int, maxCount *big.Int) *LogReader {
 	return &LogReader{
 		consumer:    consumer,
 		cursor:      cursor,
 		cursorIndex: cursorIndex,
 		maxCount:    maxCount,
-	}, nil
+	}
 }
 
 func (lr *LogReader) Start(parentCtx context.Context) <-chan error {
@@ -117,19 +117,21 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 
 			currentLogCount = firstDeletedIndex
-			err = lr.consumer.UpdateCurrentLogCount(currentLogCount)
-			if err != nil {
+			if err := lr.consumer.UpdateCurrentLogCount(currentLogCount); err != nil {
 				return err
 			}
 		}
 
 		if len(logs) > 0 {
-			cmp := firstIndex.Cmp(currentLogCount)
-			if cmp == 1 {
-				return errors.New("logscursor skipped log entries")
+			if firstIndex.Cmp(currentLogCount) > 0 {
+				return errors.Errorf("logscursor skipped log entries - firstIndex: %v, currentLogCount: %v", firstIndex, currentLogCount)
 			}
 
 			if err = lr.consumer.AddLogs(logs); err != nil {
+				return err
+			}
+
+			if err := lr.consumer.UpdateCurrentLogCount(new(big.Int).Add(currentLogCount, big.NewInt(int64(len(logs))))); err != nil {
 				return err
 			}
 		}

@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
 
     MachineExecutionConfig execConfig;
     execConfig.inbox_messages = inbox_messages;
-    execConfig.final_message_of_block = true;
+    execConfig.next_block_height = 100000000;
     auto assertion = mach->run(execConfig);
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";

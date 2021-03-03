@@ -77,9 +77,15 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgMessageCount *big.Int) bool {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
+
+	var cReorgMessageCount unsafe.Pointer
+	if reorgMessageCount != nil {
+		reorgMessageCount := math.U256Bytes(reorgMessageCount)
+		cReorgMessageCount = unsafeDataPointer(reorgMessageCount)
+	}
 
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
 	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
@@ -94,7 +100,7 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxA
 		cLastBlockComplete = 1
 	}
 
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete))
+	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete), cReorgMessageCount)
 	return status == 1
 }
 
@@ -183,7 +189,7 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
-		err = errors.New("failed to get inbox acc")
+		err = errors.Errorf("failed to get inbox acc for %v", index)
 	}
 
 	return

@@ -162,73 +162,80 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	}
 }
 
+type FeeSet struct {
+	L1Transaction *big.Int
+	L1Calldata    *big.Int
+	L2Storage     *big.Int
+	L2Computation *big.Int
+}
+
+func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 4 {
+		return nil, errors.Errorf("expected fee set tuple of length 4, but recieved %v", val)
+	}
+	l1Transaction, _ := tup.GetByInt64(0)
+	l1Calldata, _ := tup.GetByInt64(1)
+	l2Storage, _ := tup.GetByInt64(2)
+	l2Computation, _ := tup.GetByInt64(3)
+
+	l1TransactionInt, ok := l1Transaction.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1Transaction must be an int")
+	}
+	l1CalldataInt, ok := l1Calldata.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1Calldata must be an int")
+	}
+	l2StorageInt, ok := l2Storage.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l2Storage must be an int")
+	}
+	l2ComputationInt, ok := l2Computation.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l2Computation must be an int")
+	}
+
+	return &FeeSet{
+		L1Transaction: l1TransactionInt.BigInt(),
+		L1Calldata:    l1CalldataInt.BigInt(),
+		L2Storage:     l2StorageInt.BigInt(),
+		L2Computation: l2ComputationInt.BigInt(),
+	}, nil
+}
+
 type FeeStats struct {
-	WeiPerTx        *big.Int
-	WeiPerCalldata  *big.Int
-	WeiPerStorage   *big.Int
-	WeiPerArbGas    *big.Int
-	PaidForTx       *big.Int
-	PaidForCalldata *big.Int
-	PaidForStorage  *big.Int
-	PaidForCompute  *big.Int
+	Price     *FeeSet
+	UnitsUsed *FeeSet
+	Paid      *FeeSet
 }
 
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 8 {
-		return nil, errors.Errorf("expected gas fee tuple of length 8, but recieved %v", val)
+	if !ok || tup.Len() != 3 {
+		return nil, errors.Errorf("expected gas fee tuple of length 3, but recieved %v", val)
 	}
-	weiPerTx, _ := tup.GetByInt64(0)
-	weiPerCalldata, _ := tup.GetByInt64(1)
-	weiPerStorage, _ := tup.GetByInt64(2)
-	weiPerArbGas, _ := tup.GetByInt64(3)
-	paidForTx, _ := tup.GetByInt64(4)
-	paidForCalldata, _ := tup.GetByInt64(5)
-	paidForStorage, _ := tup.GetByInt64(6)
-	paidForCompute, _ := tup.GetByInt64(7)
+	pricesVal, _ := tup.GetByInt64(0)
+	unitsVal, _ := tup.GetByInt64(1)
+	paidVal, _ := tup.GetByInt64(2)
 
-	weiPerTxInt, ok := weiPerTx.(value.IntValue)
-	if !ok {
-		return nil, errors.New("weiPerTx must be an int")
+	prices, err := NewFeeSetFromValue(pricesVal)
+	if err != nil {
+		return nil, err
 	}
-	weiPerCalldataInt, ok := weiPerCalldata.(value.IntValue)
-	if !ok {
-		return nil, errors.New("weiPerCalldata must be an int")
+	units, err := NewFeeSetFromValue(unitsVal)
+	if err != nil {
+		return nil, err
 	}
-	weiPerStorageInt, ok := weiPerStorage.(value.IntValue)
-	if !ok {
-		return nil, errors.New("weiPerStorage must be an int")
-	}
-	weiPerArbGasInt, ok := weiPerArbGas.(value.IntValue)
-	if !ok {
-		return nil, errors.New("weiPerArbGas must be an int")
-	}
-	paidForTxInt, ok := paidForTx.(value.IntValue)
-	if !ok {
-		return nil, errors.New("paidForTx must be an int")
-	}
-	paidForCalldataInt, ok := paidForCalldata.(value.IntValue)
-	if !ok {
-		return nil, errors.New("paidForCalldata must be an int")
-	}
-	paidForStorageInt, ok := paidForStorage.(value.IntValue)
-	if !ok {
-		return nil, errors.New("paidForStorage must be an int")
-	}
-	paidForComputeInt, ok := paidForCompute.(value.IntValue)
-	if !ok {
-		return nil, errors.New("paidForCompute must be an int")
+	paid, err := NewFeeSetFromValue(paidVal)
+	if err != nil {
+		return nil, err
 	}
 
 	return &FeeStats{
-		WeiPerTx:        weiPerTxInt.BigInt(),
-		WeiPerCalldata:  weiPerCalldataInt.BigInt(),
-		WeiPerStorage:   weiPerStorageInt.BigInt(),
-		WeiPerArbGas:    weiPerArbGasInt.BigInt(),
-		PaidForTx:       paidForTxInt.BigInt(),
-		PaidForCalldata: paidForCalldataInt.BigInt(),
-		PaidForStorage:  paidForStorageInt.BigInt(),
-		PaidForCompute:  paidForComputeInt.BigInt(),
+		Price:     prices,
+		UnitsUsed: units,
+		Paid:      paid,
 	}, nil
 }
 

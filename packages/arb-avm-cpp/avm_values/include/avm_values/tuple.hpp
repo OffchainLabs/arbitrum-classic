@@ -21,6 +21,7 @@
 #include <avm_values/exceptions.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/value.hpp>
+#include <utility>
 
 #include <memory>
 
@@ -31,6 +32,8 @@ struct ValueBeingParsed;
 class Tuple {
    private:
     std::shared_ptr<RawTuple> tpl;
+
+    explicit Tuple(std::shared_ptr<RawTuple> tpl) : tpl(std::move(tpl)){};
 
     void calculateHashPreImage() const;
 
@@ -49,18 +52,15 @@ class Tuple {
    public:
     Tuple() : tpl(nullptr) {}
 
-    uint256_t getSize() const { return getHashPreImage().getSize(); }
-
-    explicit Tuple(size_t size) {
-        if (size > 0) {
-            tpl = TuplePool::get_impl().getResource(size);
-            for (size_t i = 0; i < size; i++) {
-                tpl->data.push_back(Tuple{});
-            }
-        }
+    [[nodiscard]] uint256_t getSize() const {
+        return getHashPreImage().getSize();
     }
 
-    explicit Tuple(value val);
+    static Tuple createSizedTuple(size_t size);
+
+    static Tuple createTuple(std::vector<value> values);
+
+    static Tuple createTuple(value val);
 
     Tuple(value val1, value val2);
 
@@ -94,9 +94,7 @@ class Tuple {
           value val7,
           value val8);
 
-    Tuple(std::vector<value> values);
-
-    uint64_t tuple_size() const {
+    [[nodiscard]] uint64_t tuple_size() const {
         if (tpl) {
             return tpl->data.size();
         } else {
@@ -117,18 +115,18 @@ class Tuple {
         tpl->deferredHashing = true;
     }
 
-    value get_element(uint64_t pos) const {
+    [[nodiscard]] value get_element(uint64_t pos) const {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
         return tpl->data[pos];
     }
 
-    const value& get_element_unsafe(uint64_t pos) const {
+    [[nodiscard]] const value& get_element_unsafe(uint64_t pos) const {
         return tpl->data[pos];
     }
 
-    HashPreImage getHashPreImage() const {
+    [[nodiscard]] HashPreImage getHashPreImage() const {
         if (!tpl) {
             return zeroPreimage();
         }

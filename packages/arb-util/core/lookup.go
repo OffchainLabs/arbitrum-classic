@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package core
 
 import (
@@ -38,14 +54,7 @@ type ExecutionCursor interface {
 }
 
 type ArbCoreLookup interface {
-	GetLogCount() (*big.Int, error)
-	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
-
-	GetSendCount() (*big.Int, error)
-	GetSends(startIndex, count *big.Int) ([][]byte, error)
-
-	GetMessageCount() (*big.Int, error)
-	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
+	ArbOutputLookup
 
 	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
@@ -59,39 +68,20 @@ type ArbCoreLookup interface {
 	// Advance executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
-
-	GetMachineForSideload(uint64) (machine.Machine, error)
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgHeight *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
 func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) (bool, error) {
-	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete) {
+	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete, nil) {
 		return false, errors.New("unable to deliver messages")
 	}
-
-	start := time.Now()
-	var status MessageStatus
-	var err error
-	for {
-		status, err = db.MessagesStatus()
-		if err != nil {
-			return false, err
-		}
-
-		if status == MessagesEmpty {
-			return false, errors.New("should have messages")
-		}
-		if status != MessagesReady {
-			break
-		}
-		if time.Since(start) > time.Second*30 {
-			return false, errors.New("timed out adding messages")
-		}
-		<-time.After(time.Millisecond * 200)
+	status, err := waitForMessages(db)
+	if err != nil {
+		return false, err
 	}
 	if status == MessagesSuccess {
 		return true, nil
@@ -102,15 +92,54 @@ func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, prev
 	return false, errors.New("Unexpected status")
 }
 
+func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
+	if !db.DeliverMessages(nil, common.Hash{}, false, reorgMessageCount) {
+		return errors.New("unable to deliver messages")
+	}
+	status, err := waitForMessages(db)
+	if err != nil {
+		return err
+	}
+	if status == MessagesSuccess {
+		return nil
+	}
+	return errors.New("Unexpected status")
+}
+
+func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
+	start := time.Now()
+	var status MessageStatus
+	var err error
+	for {
+		status, err = db.MessagesStatus()
+		if err != nil {
+			return 0, err
+		}
+
+		if status == MessagesEmpty {
+			return 0, errors.New("should have messages")
+		}
+		if status != MessagesReady {
+			break
+		}
+		if time.Since(start) > time.Second*30 {
+			return 0, errors.New("timed out adding messages")
+		}
+		<-time.After(time.Millisecond * 50)
+	}
+	return status, nil
+}
+
 type ArbCore interface {
 	ArbCoreLookup
 	ArbCoreInbox
+	LogsCursor
 	StartThread() bool
 	StopThread()
 	MachineIdle() bool
 }
 
-func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage, error) {
+func GetSingleMessage(lookup ArbOutputLookup, index *big.Int) (inbox.InboxMessage, error) {
 	messages, err := lookup.GetMessages(index, big.NewInt(1))
 	if err != nil {
 		return inbox.InboxMessage{}, err
@@ -124,7 +153,7 @@ func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage,
 	return messages[0], nil
 }
 
-func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
+func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	sends, err := lookup.GetSends(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
@@ -138,7 +167,7 @@ func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
+func GetSingleLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
@@ -222,6 +251,6 @@ type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
 	LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
-	LogsCursorClearError(cursorIndex *big.Int) error
+	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 }

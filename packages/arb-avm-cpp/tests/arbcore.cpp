@@ -87,7 +87,7 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false));
+        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false, std::nullopt));
 
         ArbCore::message_status_enum status;
         while (true) {
@@ -143,7 +143,9 @@ TEST_CASE("ArbCore tests") {
             REQUIRE(sendsRes.data[k] == sends[k]);
         }
 
-        while (logs_count < logs.size()) {
+        tries = 0;
+        bool done = false;
+        while (!done) {
             auto log_request_count = 3;
             REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
             while (true) {
@@ -163,10 +165,15 @@ TEST_CASE("ArbCore tests") {
                     }
                     logs_count += result->second.size();
                     REQUIRE(arbCore->logsCursorConfirmReceived(0));
+                    if (result->first == logs.size()) {
+                        done = true;
+                    }
                     break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
+            REQUIRE(tries < 20);
+            tries++;
         }
         REQUIRE(logs_count == logs.size());
 
@@ -185,4 +192,19 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
     }
+
+    // Reorg to first message
+    std::vector<std::vector<unsigned char>> empty_messages;
+    REQUIRE(arbCore->deliverMessages(empty_messages, 0, false, 1));
+
+    ArbCore::message_status_enum status;
+    while (true) {
+        status = arbCore->messagesStatus();
+        if (status != ArbCore::MESSAGES_EMPTY &&
+            status != ArbCore::MESSAGES_READY) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
 }

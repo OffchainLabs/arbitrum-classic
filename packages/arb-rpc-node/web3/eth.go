@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020-2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package web3
 
 import (
@@ -55,7 +71,10 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return hexutil.Uint64(blockCount), nil
+	if blockCount == 0 {
+		return 0, errors.New("no blocks")
+	}
+	return hexutil.Uint64(blockCount - 1), nil
 }
 
 func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
@@ -115,7 +134,7 @@ func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil
 }
 
 func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	height, err := s.blockNum(blockNum)
+	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +259,7 @@ func (s *Server) GetBlockByHash(blockHashRaw hexutil.Bytes, includeTxData bool) 
 }
 
 func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
-	height, err := s.blockNum(blockNum)
+	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -254,16 +273,10 @@ func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool)
 func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, *machine.BlockInfo, error) {
 	var requestId arbcommon.Hash
 	copy(requestId[:], txHash)
-	val, err := s.srv.GetRequestResult(requestId)
-	if err != nil || val == nil {
+	res, err := s.srv.GetRequestResult(requestId)
+	if err != nil || res == nil {
 		return nil, nil, err
 	}
-
-	res, err := evm.NewTxResultFromValue(val)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	info, err := s.srv.BlockInfoByNumber(res.IncomingRequest.L2BlockNumber.Uint64())
 	if err != nil || info == nil {
 		return nil, nil, err
@@ -299,7 +312,7 @@ func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index 
 }
 
 func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, index hexutil.Uint64) (*TransactionResult, error) {
-	height, err := s.blockNum(blockNum)
+	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -342,20 +355,29 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 
 		ReturnCode: hexutil.Uint64(res.ResultCode),
 		ReturnData: res.ReturnData,
+		FeeStats: &FeeStatsResult{
+			Prices:    feeSetToFeeSetResult(res.FeeStats.Price),
+			UnitsUsed: feeSetToFeeSetResult(res.FeeStats.UnitsUsed),
+			Paid:      feeSetToFeeSetResult(res.FeeStats.Paid),
+		},
 	}, nil
 }
 
-func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
-	if block.BlockLog == nil {
-		// No arbitrum block at this height
-		return (*hexutil.Big)(big.NewInt(0)), nil
+func feeSetToFeeSetResult(feeset *evm.FeeSet) *FeeSetResult {
+	return &FeeSetResult{
+		L1Transaction: (*hexutil.Big)(feeset.L1Transaction),
+		L1Calldata:    (*hexutil.Big)(feeset.L1Calldata),
+		L2Storage:     (*hexutil.Big)(feeset.L2Storage),
+		L2Computation: (*hexutil.Big)(feeset.L2Computation),
 	}
+}
 
-	arbBlock, err := evm.NewBlockResultFromValue(block.BlockLog)
+func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
+	info, err := s.srv.BlockLogFromInfo(block)
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(arbBlock.BlockStats.TxCount), nil
+	return (*hexutil.Big)(info.BlockStats.TxCount), nil
 }
 
 func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint64) (*TransactionResult, error) {
@@ -363,18 +385,11 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 	if err != nil || block == nil {
 		return nil, err
 	}
-
-	if block.BlockLog == nil {
-		// No arbitrum block at this height
-		return nil, nil
-	}
-
-	blockInfo, err := evm.NewBlockResultFromValue(block.BlockLog)
+	info, err := s.srv.BlockLogFromInfo(block)
 	if err != nil {
 		return nil, err
 	}
-
-	txRes, err := s.srv.GetTxInBlockAtIndexResults(blockInfo, uint64(index))
+	txRes, err := s.srv.GetTxInBlockAtIndexResults(info, uint64(index))
 	if err != nil {
 		return nil, err
 	}
@@ -528,6 +543,12 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 	}
 	from, msg := buildCallMsg(args)
 	msg = s.srv.AdjustGas(msg)
+	log.Debug().
+		Uint64("gaslimit", msg.MaxGas.Uint64()).
+		Uint64("gasPriceBid", msg.GasPriceBid.Uint64()).
+		Str("sender", from.Hex()).
+		Str("dest", msg.DestAddress.Hex()).
+		Msg("executing call")
 	res, err := snap.Call(msg, from)
 	if err != nil {
 		logMsg := logger.Warn().Err(err)
@@ -540,11 +561,9 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 		return nil, err
 	}
 	log.Debug().
-		Uint64("gaslimit", msg.MaxGas.Uint64()).
 		Uint64("gasused", res.GasUsed.Uint64()).
 		Hex("returndata", res.ReturnData).
 		Int("resultcode", int(res.ResultCode)).
-		Str("dest", msg.DestAddress.Hex()).
 		Msg("executed call")
 
 	if res.ResultCode != evm.ReturnCode && res.ResultCode != evm.RevertCode {
@@ -555,7 +574,10 @@ func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.T
 
 func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, error) {
 	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
-		pending := s.srv.PendingSnapshot()
+		pending, err := s.srv.PendingSnapshot()
+		if err != nil {
+			return nil, err
+		}
 		if pending != nil {
 			return pending, nil
 		}
@@ -565,7 +587,10 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 	}
 
 	if *blockNum == rpc.LatestBlockNumber {
-		snap := s.srv.LatestSnapshot()
+		snap, err := s.srv.LatestSnapshot()
+		if err != nil {
+			return nil, err
+		}
 		if snap == nil {
 			return nil, errors.New("couldn't fetch latest snapshot")
 		}
@@ -580,20 +605,4 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 		return nil, errors.New("unsupported block number")
 	}
 	return snap, nil
-}
-
-func (s *Server) blockNum(block *rpc.BlockNumber) (uint64, error) {
-	if *block == rpc.EarliestBlockNumber {
-		height, err := s.srv.InitialBlockHeight()
-		if err != nil {
-			return 0, err
-		}
-		return height.Uint64(), err
-	} else if *block == rpc.LatestBlockNumber {
-		return s.srv.GetBlockCount()
-	} else if *block >= 0 {
-		return uint64(*block), nil
-	} else {
-		return 0, errors.New("unsupported block num")
-	}
 }

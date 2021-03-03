@@ -17,6 +17,7 @@
 #include <avm/machinestate/datastack.hpp>
 
 #include <iostream>
+#include <utility>
 
 uint256_t Datastack::hash() const {
     auto h_value = getHashPreImage();
@@ -43,7 +44,7 @@ DataStackProof Datastack::marshalForProof(
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
-    std::vector<value> values;
+    std::vector<value> val;
 
     // If the stack is underflowing, just send what's left
     uint8_t items_to_pop = stackInfo.size();
@@ -54,12 +55,12 @@ DataStackProof Datastack::marshalForProof(
     }
 
     for (size_t i = 0; i < items_to_pop; ++i) {
-        values.push_back(c.pop());
+        val.push_back(c.pop());
     }
 
     // Marshal the values from deepest to most shallow in the stack
-    for (size_t i = 0; i < values.size(); ++i) {
-        auto index = values.size() - 1 - i;
+    for (size_t i = 0; i < val.size(); ++i) {
+        auto index = val.size() - 1 - i;
         // Only marshal a stub if we are underflowing
         auto level = underflow ? MarshalLevel::STUB : stackInfo[index];
         ::marshalForProof(values[index], level, buf, code);
@@ -89,7 +90,7 @@ Tuple Datastack::getTupleRepresentation() const {
 }
 
 Datastack::Datastack(Tuple tuple_rep) : Datastack() {
-    Tuple ret = tuple_rep;
+    Tuple ret = std::move(tuple_rep);
     while (ret.tuple_size() == 2) {
         push(ret.get_element(0));
         ret = std::get<Tuple>(ret.get_element(1));
@@ -98,7 +99,7 @@ Datastack::Datastack(Tuple tuple_rep) : Datastack() {
 
 void Datastack::addHash() const {
     HashPreImage prev = [&]() {
-        if (hashes.size() > 0) {
+        if (!hashes.empty()) {
             return hashes.back();
         } else {
             return Tuple().getHashPreImage();

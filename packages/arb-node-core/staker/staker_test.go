@@ -127,7 +127,7 @@ func TestStaker(t *testing.T) {
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, ethbridge.NewTransactAuth(auth2))
 	test.FailIfError(t, err)
 
-	core, shutdown := challenge.PrepareTestArbCore(t, []inbox.InboxMessage{})
+	core, shutdown := test.PrepareArbCore(t, []inbox.InboxMessage{})
 	defer shutdown()
 
 	staker, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)

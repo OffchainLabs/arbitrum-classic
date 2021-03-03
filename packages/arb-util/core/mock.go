@@ -73,7 +73,7 @@ func (v *ValidatorLookupMock) GetMessageCount() (*big.Int, error) {
 	return big.NewInt(int64(len(v.Messages))), nil
 }
 
-func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) bool {
+func (v *ValidatorLookupMock) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgHeight *big.Int) bool {
 	panic("implement me")
 }
 

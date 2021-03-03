@@ -38,11 +38,11 @@ import (
 func initMsg() message.Init {
 	return message.Init{
 		ChainParams: protocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			StakeToken:              common.Address{},
-			GracePeriod:             common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 1000000000,
+			StakeRequirement:          big.NewInt(0),
+			StakeToken:                common.Address{},
+			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
+			MaxExecutionSteps:         0,
+			ArbGasSpeedLimitPerSecond: 1000000000,
 		},
 		Owner:       owner,
 		ExtraConfig: []byte{},

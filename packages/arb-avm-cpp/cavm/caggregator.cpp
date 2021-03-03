@@ -26,12 +26,13 @@ void deleteAggregatorStore(CAggregatorStore* agg) {
     delete static_cast<AggregatorStore*>(agg);
 }
 
-CBlockData aggregatorLatestBlock(const CAggregatorStore* agg) {
+Uint64Result aggregatorBlockCount(const CAggregatorStore* agg) {
     try {
-        auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
-        return {true, latest.first, returnCharVector(latest.second)};
+        auto count = static_cast<const AggregatorStore*>(agg)->blockCount();
+        return {count, true};
     } catch (const std::exception& e) {
-        return {false, 0, ByteSlice{nullptr, 0}};
+        std::cerr << "Exception loading block count: " << e.what() << std::endl;
+        return {0, false};
     }
 }
 
@@ -136,9 +137,11 @@ int aggregatorUpdateLogsProcessedCount(CAggregatorStore* agg, void* count_ptr) {
     auto store = static_cast<AggregatorStore*>(agg);
 
     try {
-        auto status = store->updateLogsProcessedCount(count);
-        return status.ok();
+        store->updateLogsProcessedCount(count);
+        return true;
     } catch (const std::exception& e) {
+        std::cerr << "Failed to update log processed count: " << e.what()
+                  << std::endl;
         return false;
     }
 }

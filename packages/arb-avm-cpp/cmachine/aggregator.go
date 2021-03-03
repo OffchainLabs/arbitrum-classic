@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,29 +26,20 @@ package cmachine
 import "C"
 import (
 	"encoding/binary"
-	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
 	"math/big"
 	"runtime"
 	"unsafe"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
 type AggregatorStore struct {
 	c unsafe.Pointer
-}
-
-func (as *AggregatorStore) SaveLog(val value.Value) error {
-	panic("implement me")
-}
-
-func (as *AggregatorStore) SaveMessage(val value.Value) error {
-	panic("implement me")
 }
 
 func deleteAggregatorStore(bs *AggregatorStore) {
@@ -61,40 +52,21 @@ func NewAggregatorStore(c unsafe.Pointer) *AggregatorStore {
 	return as
 }
 
-func parseBlockData(data []byte) (*types.Header, *uint64, error) {
-	blockType := data[0]
-	data = data[1:]
-	var logIndex *uint64
-	if blockType == 1 {
-		index := binary.BigEndian.Uint64(data)
-		logIndex = &index
-		data = data[8:]
-	}
+func parseBlockData(data []byte) (*machine.BlockInfo, error) {
+	index := binary.BigEndian.Uint64(data)
+	data = data[8:]
 	header := &types.Header{}
 	if err := header.UnmarshalJSON(data); err != nil {
-		return nil, nil, err
-	}
-	return header, logIndex, nil
-}
-
-func (as *AggregatorStore) LatestBlock() (*common.BlockId, error) {
-	result := C.aggregatorLatestBlock(as.c)
-	if result.found == 0 {
-		return nil, errors.New("failed to load block count")
-	}
-
-	header, _, err := parseBlockData(receiveByteSlice(result.data))
-	if err != nil {
 		return nil, err
 	}
-	return &common.BlockId{
-		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(uint64(result.height))),
-		HeaderHash: common.NewHashFromEth(header.Hash()),
+	return &machine.BlockInfo{
+		BlockLog: index,
+		Header:   header,
 	}, nil
 }
 
-func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64) error {
-	blockData := []byte{1}
+func serializeBlockData(header *types.Header, logIndex uint64) ([]byte, error) {
+	var blockData []byte
 
 	logIndexData := make([]byte, 8)
 	binary.BigEndian.PutUint64(logIndexData[:], logIndex)
@@ -102,53 +74,50 @@ func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64) erro
 
 	headerJSON, err := header.MarshalJSON()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	blockData = append(blockData, headerJSON...)
-
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), unsafeDataPointer(blockData), C.int(len(blockData))) == 0 {
-		return errors.New("failed to save block")
-	}
-	return nil
+	return append(blockData, headerJSON...), nil
 }
 
-func (as *AggregatorStore) SaveEmptyBlock(header *types.Header) error {
-	blockData := []byte{0}
-	headerJSON, err := header.MarshalJSON()
+func (as *AggregatorStore) SaveBlock(header *types.Header, logIndex uint64, requests []machine.EVMRequestInfo) error {
+	blockData, err := serializeBlockData(header, logIndex)
 	if err != nil {
 		return err
 	}
-	blockData = append(blockData, headerJSON...)
 
 	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), unsafeDataPointer(blockData), C.int(len(blockData))) == 0 {
 		return errors.New("failed to save block")
 	}
+
+	for _, request := range requests {
+		if C.aggregatorSaveRequest(as.c, unsafeDataPointer(request.RequestId.Bytes()), C.uint64_t(request.LogIndex)) == 0 {
+			return errors.New("failed to save request")
+		}
+	}
+
+	headerHash := header.Hash()
+	if C.aggregatorSaveBlockHash(as.c, unsafeDataPointer(headerHash.Bytes()), C.uint64_t(header.Number.Uint64())) == 0 {
+		return errors.New("failed to save request")
+	}
+
 	return nil
 }
 
-func (as *AggregatorStore) GetBlock(height uint64) (*machine.BlockInfo, error) {
+func (as *AggregatorStore) BlockCount() (uint64, error) {
+	result := C.aggregatorBlockCount(as.c)
+	if result.found == 0 {
+		return 0, errors.New("failed to load block count")
+
+	}
+	return uint64(result.value), nil
+}
+
+func (as *AggregatorStore) GetBlockInfo(height uint64) (*machine.BlockInfo, error) {
 	blockData := C.aggregatorGetBlock(as.c, C.uint64_t(height))
 	if blockData.found == 0 {
 		return nil, nil
 	}
-	header, logIndex, err := parseBlockData(receiveByteSlice(blockData.data))
-	if err != nil {
-		return nil, err
-	}
-	info := &machine.BlockInfo{
-		Header: header,
-	}
-	_ = logIndex
-	/* TODO
-	if logIndex != nil {
-		avmLog, err := as.GetLog(*logIndex)
-		if err != nil {
-			return nil, err
-		}
-		info.BlockLog = avmLog
-	}
-	*/
-	return info, nil
+	return parseBlockData(receiveByteSlice(blockData.data))
 }
 
 func (as *AggregatorStore) Reorg(height uint64) error {
@@ -156,7 +125,6 @@ func (as *AggregatorStore) Reorg(height uint64) error {
 	if status == 0 {
 		return errors.New("failed to reset aggregator height")
 	}
-
 	return nil
 }
 
@@ -169,13 +137,6 @@ func (as *AggregatorStore) GetPossibleRequestInfo(requestId common.Hash) *uint64
 	return &index
 }
 
-func (as *AggregatorStore) SaveRequest(requestId common.Hash, logIndex uint64) error {
-	if C.aggregatorSaveRequest(as.c, unsafeDataPointer(requestId.Bytes()), C.uint64_t(logIndex)) == 0 {
-		return errors.New("failed to save request")
-	}
-	return nil
-}
-
 func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 	result := C.aggregatorGetPossibleBlock(as.c, unsafeDataPointer(blockHash.Bytes()))
 	if result.found == 0 {
@@ -185,28 +146,19 @@ func (as *AggregatorStore) GetPossibleBlock(blockHash common.Hash) *uint64 {
 	return &index
 }
 
-func (as *AggregatorStore) SaveBlockHash(blockHash common.Hash, blockHeight uint64) error {
-	if C.aggregatorSaveBlockHash(as.c, unsafeDataPointer(blockHash.Bytes()), C.uint64_t(blockHeight)) == 0 {
-		return errors.New("failed to save request")
-	}
-	return nil
-}
-
 func (as *AggregatorStore) CurrentLogCount() (*big.Int, error) {
 	result := C.aggregatorLogsProcessedCount(as.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to get processed log count")
 	}
-
 	return receiveBigInt(result.value), nil
 }
 
-func (as AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
+func (as *AggregatorStore) UpdateCurrentLogCount(count *big.Int) error {
 	countData := math.U256Bytes(count)
 	status := C.aggregatorUpdateLogsProcessedCount(as.c, unsafeDataPointer(countData))
 	if status == 0 {
 		return errors.New("failed to update processed log count")
 	}
-
 	return nil
 }

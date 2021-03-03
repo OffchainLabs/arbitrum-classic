@@ -1,91 +1,11 @@
 package challenge
 
 import (
-	"io/ioutil"
 	"math/big"
-	"os"
-	"testing"
-	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
-
-func PrepareTestArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
-	test.FailIfError(t, err)
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	if err != nil {
-		os.RemoveAll(tmpDir)
-	}
-	test.FailIfError(t, err)
-	shutdown := func() {
-		storage.CloseArbStorage()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}
-	returning := false
-	defer (func() {
-		if !returning {
-			shutdown()
-		}
-	})()
-
-	err = storage.Initialize(arbos.Path())
-	test.FailIfError(t, err)
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		t.Fatal("failed to start thread")
-	}
-
-	if len(messages) > 0 {
-		_, err = core.DeliverMessagesAndWait(arbCore, messages, common.Hash{}, false)
-		test.FailIfError(t, err)
-	}
-	for {
-		if arbCore.MachineIdle() {
-			break
-		}
-		<-time.After(time.Millisecond * 200)
-	}
-
-	returning = true
-	return arbCore, shutdown
-}
-
-func MakeTestInitMsg() inbox.InboxMessage {
-	owner := common.RandAddress()
-	chain := common.RandAddress()
-	return message.NewInboxMessage(
-		message.Init{
-			ChainParams: protocol.ChainParams{
-				StakeRequirement:        big.NewInt(0),
-				StakeToken:              common.Address{},
-				GracePeriod:             common.NewTimeBlocks(big.NewInt(3)),
-				MaxExecutionSteps:       0,
-				ArbGasSpeedLimitPerTick: 0,
-			},
-			Owner:       owner,
-			ExtraConfig: []byte{},
-		},
-		chain,
-		big.NewInt(0),
-		big.NewInt(0),
-		inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
-	)
-}
 
 func distortHash(hash common.Hash) common.Hash {
 	hash[0] = 0xde

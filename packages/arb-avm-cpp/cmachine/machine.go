@@ -27,6 +27,8 @@ package cmachine
 import "C"
 
 import (
+	"github.com/ethereum/go-ethereum/common/math"
+	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -48,17 +50,21 @@ type Machine struct {
 
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
-
 	defer C.free(unsafe.Pointer(cFilename))
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
+
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
+
 	}
+
 	return WrapCMachine(cMachine), nil
 }
 
 func cdestroyVM(cMachine *Machine) {
+
 	C.machineDestroy(cMachine.c)
+
 }
 
 func WrapCMachine(cMachine unsafe.Pointer) *Machine {
@@ -187,14 +193,16 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
 
-	finalMessageOfBlockInt := C.int(0)
-	if finalMessageOfBlock {
-		finalMessageOfBlockInt = 1
-	}
-
 	msgData := inboxMessagesToByteSliceArray(messages)
 	defer C.free(msgData.slices)
-	C.machineExecutionConfigSetInboxMessages(conf, msgData, finalMessageOfBlockInt)
+	C.machineExecutionConfigSetInboxMessages(conf, msgData)
+
+	C.machineExecutionConfigSetInboxMessages(conf, msgData)
+	if finalMessageOfBlock && len(messages) > 0 {
+		nextBlockHeight := new(big.Int).Add(messages[len(messages)-1].ChainTime.BlockNum.AsInt(), big.NewInt(1))
+		nextBlockHeightData := math.U256Bytes(nextBlockHeight)
+		C.machineExecutionConfigSetNextBlockHeight(conf, unsafeDataPointer(nextBlockHeightData))
+	}
 
 	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
 	defer C.free(sideloadsData.slices)
