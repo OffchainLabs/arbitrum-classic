@@ -2,8 +2,10 @@ package staker
 
 import (
 	"context"
+	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/rs/zerolog"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -34,15 +36,50 @@ func NewStaker(
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
-) (*Staker, error) {
+) (*Staker, *ethbridge.BridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &Staker{
 		Validator: val,
 		strategy:  strategy,
-	}, nil
+	}, val.bridge, nil
+}
+
+func (s *Staker) RunInBackground(ctx context.Context, logger zerolog.Logger) chan bool {
+	done := make(chan bool)
+	go func() {
+		defer func() {
+			done <- true
+		}()
+		for {
+			tx, err := s.Act(ctx)
+			backoff := time.Second
+			if tx != nil {
+				// Note: methodName isn't accurate, it's just used for logging
+				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")
+			}
+			if err != nil {
+				logger.Warn().Err(err).Msg("Staking error (possible reorg?)")
+				<-time.After(backoff)
+				if backoff < 60*time.Second {
+					backoff *= 2
+				}
+				continue
+			} else {
+				backoff = time.Second
+			}
+			if tx != nil {
+				// We did something, there's probably something else to do
+				<-time.After(time.Second)
+			} else {
+				// Nothing to do for now
+				<-time.After(time.Minute)
+			}
+		}
+	}()
+	return done
 }
 
 func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {

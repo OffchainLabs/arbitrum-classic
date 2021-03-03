@@ -130,18 +130,14 @@ func TestStaker(t *testing.T) {
 	core, shutdown := test.PrepareArbCore(t, []inbox.InboxMessage{})
 	defer shutdown()
 
-	staker, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
+	staker, bridge, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
 	faultyCore := challenge.NewFaultyCore(core, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)})
 
-	faultyStaker, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
+	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
-	bridgeAddr, err := staker.rollup.Bridge(ctx)
-	test.FailIfError(t, err)
-	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddr.ToEthAddress(), client)
-	test.FailIfError(t, err)
 	reader, err := NewInboxReader(ctx, bridge, core)
 	test.FailIfError(t, err)
 	reader.Start(ctx)

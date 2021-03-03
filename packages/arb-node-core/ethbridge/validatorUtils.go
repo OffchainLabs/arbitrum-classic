@@ -32,6 +32,8 @@ const (
 
 type ValidatorUtils struct {
 	con           *ethbridgecontracts.ValidatorUtils
+	client        ethutils.EthClient
+	address       ethcommon.Address
 	rollupAddress ethcommon.Address
 }
 
@@ -43,6 +45,8 @@ func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils
 
 	return &ValidatorUtils{
 		con:           con,
+		client:        client,
+		address:       address,
 		rollupAddress: rollupAddress,
 	}, nil
 }
