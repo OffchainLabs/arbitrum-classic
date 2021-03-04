@@ -23,7 +23,7 @@ import "../ethereum/BuddyBridge.sol";
 // TODO: get from arb-os submodule
 interface ArbSys {
     function sendTxToL1(address destAddr, bytes calldata calldataForL1) external payable;
-    function calledFromL1() external view returns (bool);
+    function isTopLevelCall() external view returns (bool);
 }
 
 contract L2Deployer {
@@ -36,7 +36,7 @@ contract L2Deployer {
         payable
     {
         // we don't want nasty address clashes
-        require(ArbSys(100).calledFromL1(), "Function must be called from L1");
+        require(ArbSys(100).isTopLevelCall(), "Function must be called from L1");
         address user = msg.sender;
         uint256 salt = uint256(user);
         address addr;
