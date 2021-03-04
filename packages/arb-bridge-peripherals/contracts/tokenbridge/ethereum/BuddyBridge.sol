@@ -43,12 +43,8 @@ abstract contract BuddyContract {
         bytes calldata deployCode
     ) external payable {
         require(!connected, "already connected");
-        // TODO: check if called by contract
-        // TODO: check if contract adheres to interface?
-        address user = msg.sender;
-
         // deployCode == type(ArbSymmetricTokenBridge).creationCode
-        bytes memory data = abi.encodeWithSelector(L2Deployer.executeBuddyDeploy.selector, user, deployCode);
+        bytes memory data = abi.encodeWithSelector(L2Deployer.executeBuddyDeploy.selector, deployCode);
 
         if(msg.value > 0) {
             // gas paid in L1
