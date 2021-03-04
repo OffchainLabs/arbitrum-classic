@@ -61,17 +61,16 @@ abstract contract BuddyContract {
     ) external {
         // get sender from outbox
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
-
-        address expectedL2Address = calculateL2Address(
-            address(l2Deployer),
-            address(this),
-            codeHash
-        );
-        require(outbox.l2ToL1Sender() == expectedL2Address, "Wrong L2 address triggering outbox");
-
         if(success) {
+            address expectedL2Address = calculateL2Address(
+                address(l2Deployer),
+                address(this),
+                codeHash
+            );
+            require(outbox.l2ToL1Sender() == expectedL2Address, "Wrong L2 address triggering outbox");
             handleDeploySuccess();
         } else {
+            require(outbox.l2ToL1Sender() == address(l2Deployer), "Wrong L2 address triggering outbox");
             handleDeployFail();
         }
     }

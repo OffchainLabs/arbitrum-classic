@@ -28,13 +28,16 @@ interface ArbSys {
 contract L2Deployer {
 
     constructor() public {}
+    event DeployedSuccess(address _sender, address _contract);
+    event DeployedFail(address _sender);
 
     function executeBuddyDeploy(bytes memory deployCode)
         external
     {
+        address user = msg.sender;
         // we don't want nasty address clashes
-        require(msg.sender == tx.origin, "Can't be called by L2 contract");
-        uint256 salt = uint256(msg.sender);
+        require(user == tx.origin, "Can't be called by L2 contract");
+        uint256 salt = uint256(user);
         address addr;
         bool deployFail;
         // TODO: is there any time we don't want callvalue() to be 0?
@@ -49,7 +52,19 @@ contract L2Deployer {
         }
 
         // L1 callback to buddy
-        bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, !deployFail);
+        if(deployFail) {
+            bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, false);
+            ArbSys(100).sendTxToL1(user, calldataForL1);
+            emit DeployedFail(user);
+        } else {
+            emit DeployedSuccess(user, addr);
+        }
+    }
+}
+
+abstract contract L2Buddy {
+    constructor() public {
+        bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, true);
         ArbSys(100).sendTxToL1(msg.sender, calldataForL1);
     }
 }
