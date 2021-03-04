@@ -145,7 +145,7 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(
-    std::vector<std::vector<unsigned char>>& messages,
+    std::vector<std::vector<unsigned char>> messages,
     const uint256_t& previous_inbox_acc,
     bool last_block_complete,
     const std::optional<uint256_t>& reorg_message_count) {

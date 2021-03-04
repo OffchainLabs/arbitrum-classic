@@ -169,7 +169,7 @@ class ArbCore {
 
    public:
     // Sending messages to core thread
-    bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
+    bool deliverMessages(std::vector<std::vector<unsigned char>> messages,
                          const uint256_t& previous_inbox_acc,
                          bool last_block_complete,
                          const std::optional<uint256_t>& reorg_height);
