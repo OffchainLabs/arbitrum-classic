@@ -92,7 +92,7 @@ abstract contract BuddyContract {
         */
 
         // instead the L2 bridge can tell us if the deploy worked
-        require(outbox.l2ToL1Sender() == address(buddyBridge), "Only L2 buddy bridge");
+        require(outbox.l2ToL1Sender() == address(buddyBridge.l2Deployer()), "Only L2 buddy bridge");
 
         if(success) {
             handleDeploySuccess();
