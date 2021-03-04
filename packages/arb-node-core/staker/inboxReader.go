@@ -83,7 +83,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			if from.Cmp(currentHeight) >= 0 {
 				break
 			}
-			to := new(big.Int).Add(from, big.NewInt(10))
+			to := new(big.Int).Add(from, big.NewInt(100))
 			if to.Cmp(currentHeight) > 0 {
 				to = currentHeight
 			}
