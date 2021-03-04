@@ -29,8 +29,7 @@ interface ArbSys {
 contract L2Deployer {
     constructor() public {}
 
-    event DeployedSuccess(address _sender, address _contract);
-    event DeployedFail(address _sender);
+    event Deployed(address _sender, bool _success);
 
     function executeBuddyDeploy(bytes memory deployCode)
         external
@@ -41,7 +40,7 @@ contract L2Deployer {
         address user = msg.sender;
         uint256 salt = uint256(user);
         address addr;
-        bool deployFail;
+        bool success;
         assembly {
             addr := create2(
                 callvalue(), // wei sent in call
@@ -49,17 +48,13 @@ contract L2Deployer {
                 mload(deployCode),
                 salt
             )
-            deployFail := iszero(extcodesize(addr))
+            success := not(iszero(extcodesize(addr)))
         }
 
         // L1 callback to buddy
-        if(deployFail) {
-            bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, false);
-            ArbSys(100).sendTxToL1(user, calldataForL1);
-            emit DeployedFail(user);
-        } else {
-            emit DeployedSuccess(user, addr);
-        }
+        bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, success);
+        ArbSys(100).sendTxToL1(user, calldataForL1);
+        emit Deployed(user, success);
     }
 }
 
