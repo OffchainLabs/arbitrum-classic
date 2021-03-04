@@ -23,28 +23,29 @@ import "../ethereum/BuddyBridge.sol";
 // TODO: get from arb-os submodule
 interface ArbSys {
     function sendTxToL1(address destAddr, bytes calldata calldataForL1) external payable;
+    function calledFromL1() external view returns (bool);
 }
 
 contract L2Deployer {
-
     constructor() public {}
+
     event DeployedSuccess(address _sender, address _contract);
     event DeployedFail(address _sender);
 
     function executeBuddyDeploy(bytes memory deployCode)
         external
+        payable
     {
-        address user = msg.sender;
         // we don't want nasty address clashes
-        require(user == tx.origin, "Can't be called by L2 contract");
+        require(ArbSys(100).calledFromL1(), "Function must be called from L1");
+        address user = msg.sender;
         uint256 salt = uint256(user);
         address addr;
         bool deployFail;
-        // TODO: is there any time we don't want callvalue() to be 0?
         assembly {
             addr := create2(
                 callvalue(), // wei sent in call
-                add(deployCode, 0x20),
+                add(deployCode, 0x20), // do we need to actually skip this?
                 mload(deployCode),
                 salt
             )

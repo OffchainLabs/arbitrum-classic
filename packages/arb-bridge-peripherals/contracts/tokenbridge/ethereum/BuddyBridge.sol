@@ -43,6 +43,10 @@ abstract contract BuddyContract {
         bytes calldata deployCode
     ) external payable {
         require(!connected, "already connected");
+        require(
+            codeHash == bytes32(0) || codeHash == keccak256(deployCode),
+            "Only retry if same deploy code"
+        );
         // deployCode == type(ArbSymmetricTokenBridge).creationCode
         bytes memory data = abi.encodeWithSelector(L2Deployer.executeBuddyDeploy.selector, deployCode);
 
