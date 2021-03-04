@@ -250,10 +250,10 @@ contract ValidatorUtils {
             if (node1Prev == node2Prev) {
                 return (NodeConflict.FOUND, node1, node2);
             }
-            if (node1Prev < firstUnresolvedNode || node2Prev < firstUnresolvedNode) {
+            if (node1Prev < firstUnresolvedNode && node2Prev < firstUnresolvedNode) {
                 return (NodeConflict.INDETERMINATE, 0, 0);
             }
-            if (node1 < node2) {
+            if (node1Prev < node2Prev) {
                 node2 = node2Prev;
                 node2Prev = rollup.getNode(node2).prev();
             } else {
