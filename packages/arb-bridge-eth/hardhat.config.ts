@@ -113,6 +113,16 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
+    arbitrum: {
+      url: 'http://127.0.0.1:8547',
+      gas: 999999999999999,
+      accounts: {
+        mnemonic: 'jar deny prosper gasp flush glass core corn alarm treat leg smart',
+        path: "m/44'/60'/0'/0",
+        initialIndex: 0,
+        count: 10,
+      },
+    }
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],

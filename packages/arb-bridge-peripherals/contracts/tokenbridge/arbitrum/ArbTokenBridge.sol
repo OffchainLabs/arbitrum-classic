@@ -37,16 +37,22 @@ contract ArbTokenBridge is CloneFactory {
 
     ICloneable public immutable templateERC20;
     ICloneable public immutable templateERC777;
+    address immutable l1Pair;
+
+    function getL1Pair() view public returns (address) {
+        return l1Pair;
+    }
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
-        require(tx.origin == address(this), "ONLY_ETH_PAIR");
+        require(tx.origin == l1Pair, "ONLY_ETH_PAIR");
         _;
     }
 
-    constructor() public {
+    constructor(address _l1Pair) public {
         templateERC20 = new StandardArbERC20();
         templateERC777 = new StandardArbERC777();
+        l1Pair = _l1Pair;
     }
 
     function mintERC777FromL1(
@@ -154,4 +160,9 @@ contract ArbTokenBridge is CloneFactory {
         }
         return IArbToken(l2Contract);
     }
+}
+
+contract ArbSymmetricTokenBridge is ArbTokenBridge {
+    // assumes the L1 pair is deployed to the same address
+    constructor() ArbTokenBridge(address(this)) public {}
 }
