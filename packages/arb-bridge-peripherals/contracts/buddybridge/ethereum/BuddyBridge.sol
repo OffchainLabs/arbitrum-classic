@@ -46,8 +46,8 @@ abstract contract BuddyContract {
     function initiateBuddyDeploy(
         uint256 maxGas,
         uint256 gasPriceBid,
-        bytes calldata deployCode
-    ) external payable {
+        bytes memory deployCode
+    ) public payable {
         require(l2Connection != L2Connection.Complete, "already connected");
         require(
             codeHash == bytes32(0) || codeHash == keccak256(deployCode),
