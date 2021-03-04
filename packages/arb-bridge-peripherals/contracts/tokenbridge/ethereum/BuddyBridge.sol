@@ -24,11 +24,15 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 
 import "../arbitrum/BuddyDeployer.sol";
 
-contract BuddyBridge {
-    IInbox public inbox;
+// contracts that want to have buddies should inherit from this
+abstract contract BuddyContract {
+    bool public connected;
     L2Deployer public l2Deployer;
+    IInbox public inbox;
+    bytes32 codeHash;
 
     constructor(address _inbox, address _l2Deployer) public {
+        connected = false;
         inbox = IInbox(_inbox);
         l2Deployer = L2Deployer(_l2Deployer);
     }
@@ -38,6 +42,7 @@ contract BuddyBridge {
         uint256 gasPriceBid,
         bytes calldata deployCode
     ) external payable {
+        require(!connected, "already connected");
         // TODO: check if called by contract
         // TODO: check if contract adheres to interface?
         address user = msg.sender;
@@ -52,47 +57,21 @@ contract BuddyBridge {
             // gas paid in L2
             inbox.sendContractTransaction(maxGas, gasPriceBid, address(l2Deployer), 0, data);
         }
-    }
-}
-
-// contracts that want to have buddies should inherit from this
-abstract contract BuddyContract {
-    bool public connected;
-    bytes32 public codeHash;
-    BuddyBridge public buddyBridge;
-
-    constructor(
-        address _buddyBridge,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes memory l2ContractCode
-    ) public payable {
-        connected = false;
-        buddyBridge = BuddyBridge(_buddyBridge);
-        // l2ContractCode == type(ArbSymmetricTokenBridge).creationCode
-        buddyBridge.initiateBuddyDeploy(maxGas, gasPriceBid, l2ContractCode);
-        codeHash = keccak256(l2ContractCode);
+        codeHash = keccak256(deployCode);
     }
 
     function finalizeBuddyDeploy(
         bool success
     ) external {
         // get sender from outbox
-        IInbox inbox = buddyBridge.inbox();
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
 
-        // this logic only needed if call comes from deployed contract
-        /*
         address expectedL2Address = calculateL2Address(
-            address(buddyBridge.l2Deployer()),
+            address(l2Deployer),
             address(this),
             codeHash
         );
         require(outbox.l2ToL1Sender() == expectedL2Address, "Wrong L2 address triggering outbox");
-        */
-
-        // instead the L2 bridge can tell us if the deploy worked
-        require(outbox.l2ToL1Sender() == address(buddyBridge.l2Deployer()), "Only L2 buddy bridge");
 
         if(success) {
             handleDeploySuccess();
