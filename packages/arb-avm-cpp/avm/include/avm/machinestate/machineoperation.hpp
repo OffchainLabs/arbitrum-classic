@@ -98,6 +98,7 @@ void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 BlockReason sideload(MachineState& m);
 
+uint64_t setbuffer_variable_gas_cost(const MachineState& m);
 void newbuffer(MachineState& m);
 void getbuffer8(MachineState& m);
 void getbuffer64(MachineState& m);

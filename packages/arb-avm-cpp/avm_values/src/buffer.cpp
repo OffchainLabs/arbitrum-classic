@@ -19,14 +19,29 @@
 
 #include <ethash/keccak.hpp>
 
+struct Zeros {
+    uint256_t zeros[64];
+    Zeros() {
+        zeros[5] = hash(0);
+        for (int i = 6; i < 64; i++) {
+            zeros[i] = hash(zeros[i-1], zeros[i-1]);
+        }
+    }
+};
+
+const Zeros z;
 const uint256_t zero_h = hash(0);
 
 uint256_t zero_hash(uint64_t sz) {
+    return z.zeros[sz];
+    /*
     if (sz == 5) {
         return hash(0);
     }
     auto h1 = zero_hash(sz - 1);
     return hash(h1, h1);
+    */
+
 }
 
 uint256_t hash2(uint256_t a, uint256_t b) {
