@@ -26,13 +26,19 @@ import "../arbitrum/BuddyDeployer.sol";
 
 // contracts that want to have buddies should inherit from this
 abstract contract BuddyContract {
-    bool public connected;
+    enum L2Connection {
+        Null, // 0
+        Initiated, // 1
+        Complete // 2
+    }
+
+    L2Connection public l2Connection;
     L2Deployer public l2Deployer;
     IInbox public inbox;
     bytes32 codeHash;
 
     constructor(address _inbox, address _l2Deployer) public {
-        connected = false;
+        l2Connection = L2Connection.Null;
         inbox = IInbox(_inbox);
         l2Deployer = L2Deployer(_l2Deployer);
     }
@@ -42,7 +48,7 @@ abstract contract BuddyContract {
         uint256 gasPriceBid,
         bytes calldata deployCode
     ) external payable {
-        require(!connected, "already connected");
+        require(l2Connection != L2Connection.Complete, "already connected");
         require(
             codeHash == bytes32(0) || codeHash == keccak256(deployCode),
             "Only retry if same deploy code"
@@ -58,6 +64,7 @@ abstract contract BuddyContract {
             inbox.sendContractTransaction(maxGas, gasPriceBid, address(l2Deployer), 0, data);
         }
         codeHash = keccak256(deployCode);
+        l2Connection = L2Connection.Initiated;
     }
 
     function finalizeBuddyDeploy(
@@ -84,7 +91,7 @@ abstract contract BuddyContract {
     
     function handleDeploySuccess() internal virtual {
         delete codeHash;
-        connected = true;
+        l2Connection = L2Connection.Complete;
     }
 
     function handleDeployFail() internal virtual;
