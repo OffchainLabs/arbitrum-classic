@@ -77,7 +77,9 @@ func (v *ValidatorUtils) TimedOutChallenges(ctx context.Context, max int) ([]com
 		}
 		i = i.Add(i, count)
 	}
-	addresses = addresses[:max]
+	if len(addresses) > max {
+		addresses = addresses[:max]
+	}
 	return common.AddressArrayFromEth(addresses), nil
 }
 

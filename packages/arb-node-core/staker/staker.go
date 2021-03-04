@@ -126,6 +126,10 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 			if err != nil || tx != nil {
 				return tx, err
 			}
+			tx, err = s.resolveTimedOutChallenges(ctx)
+			if err != nil || tx != nil {
+				return tx, err
+			}
 		}
 		return nil, nil
 	}

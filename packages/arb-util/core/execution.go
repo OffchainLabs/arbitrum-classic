@@ -145,7 +145,7 @@ func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targe
 	if err != nil {
 		return false, err
 	}
-	notEnoughMessages := localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) > 0
+	notEnoughMessages := localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) < 0
 	if notEnoughMessages {
 		actualEndAcc, expectedEndAcc, err := execTracker.lookup.GetInboxAccPair(localExecutionInfo.After.TotalMessagesRead, assertion.After.TotalMessagesRead)
 		if err != nil {
