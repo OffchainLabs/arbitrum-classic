@@ -223,6 +223,36 @@ TEST_CASE("ArbCore tests") {
     REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
 }
 
+/*
+ Test file in separate repo, but source code of mini program is included here
+ for reference
+
+ type IncomingRequestFromInbox = struct {
+     kind: uint,               // type of message
+     ethBlockNumber: uint,     // block number of the L1 block
+     timestamp: uint,          // timestamp of the L1 block
+     sender: address,          // address of the sender
+     requestId: uint,
+     gasPriceL1: uint,         // L1 gas price paid by this tx
+     msgSize: uint,
+     msgData: buffer,
+ }
+
+ impure func main() {
+     let blockNum = 0;
+     loop {
+         let sameBlockNum = asm(blockNum,) bool { inboxpeek };
+         let rawSideloadMsg = asm(blockNum,) any { sideload };
+         if (rawSideloadMsg != ()) {
+             panic;
+         }
+         let newMsg = asm() IncomingRequestFromInbox { inbox };
+         blockNum = newMsg.ethBlockNumber;
+         asm(blockNum,) { log };
+     }
+ }
+
+ */
 TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
     ValueCache value_cache{};
