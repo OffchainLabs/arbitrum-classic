@@ -57,10 +57,3 @@ contract L2Deployer {
         emit Deployed(user, success);
     }
 }
-
-abstract contract L2Buddy {
-    constructor() public {
-        bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, true);
-        ArbSys(100).sendTxToL1(msg.sender, calldataForL1);
-    }
-}
