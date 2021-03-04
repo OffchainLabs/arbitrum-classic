@@ -498,6 +498,19 @@ contract OneStepProof2 is OneStepProofCommon {
         else return b;
     }
 
+    uint64 constant SETBUFFER_GAS_COST = 240;
+
+    function setbuffer_extra_gas_cost(uint256 size) internal pure returns (uint256) {
+        uint256 mx = size;
+        uint256 res = 0;
+        mx = mx/1024;
+        while (mx > 0) {
+            res += 80;
+            mx = mx/8;
+        }
+        return res;
+    }
+
     function executeSetBuffer8(AssertionContext memory context) internal pure {
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val3 = popVal(context.stack);
@@ -510,6 +523,15 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
+
+        if (deductGas(context, uint64(setbuffer_extra_gas_cost(val1.size)))) {
+            // When we run out of gas, we only charge for an error + gas_set
+            // That means we need to deduct the previously charged base cost here
+            context.gas -= SETBUFFER_GAS_COST;
+            handleError(context);
+            return;
+        }
+
         bytes32 res =
             setBuffer8(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res, max(val1.size, val2.intVal)));
@@ -527,6 +549,15 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
+    
+        if (deductGas(context, uint64(2*setbuffer_extra_gas_cost(val1.size)))) {
+            // When we run out of gas, we only charge for an error + gas_set
+            // That means we need to deduct the previously charged base cost here
+            context.gas -= SETBUFFER_GAS_COST;
+            handleError(context);
+            return;
+        }
+
         bytes32 res =
             setBuffer64(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res, max(val1.size, val2.intVal+7)));
@@ -544,6 +575,15 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
+    
+        if (deductGas(context, uint64(2*setbuffer_extra_gas_cost(val1.size)))) {
+            // When we run out of gas, we only charge for an error + gas_set
+            // That means we need to deduct the previously charged base cost here
+            context.gas -= SETBUFFER_GAS_COST;
+            handleError(context);
+            return;
+        }
+
         bytes32 res =
             setBuffer256(val1.bufferHash, val2.intVal, val3.intVal, decodeProof(context.bufProof));
         pushVal(context.stack, Value.newBuffer(res, max(val1.size, val2.intVal+31)));
@@ -561,17 +601,17 @@ contract OneStepProof2 is OneStepProofCommon {
         )
     {
         if (opCode == OP_GETBUFFER8) {
-            return (2, 0, 10, executeGetBuffer8);
+            return (2, 0, 3, executeGetBuffer8);
         } else if (opCode == OP_GETBUFFER64) {
-            return (2, 0, 10, executeGetBuffer64);
+            return (2, 0, 3, executeGetBuffer64);
         } else if (opCode == OP_GETBUFFER256) {
-            return (2, 0, 10, executeGetBuffer256);
+            return (2, 0, 3, executeGetBuffer256);
         } else if (opCode == OP_SETBUFFER8) {
-            return (3, 0, 100, executeSetBuffer8);
+            return (3, 0, 240, executeSetBuffer8);
         } else if (opCode == OP_SETBUFFER64) {
-            return (3, 0, 100, executeSetBuffer64);
+            return (3, 0, 480, executeSetBuffer64);
         } else if (opCode == OP_SETBUFFER256) {
-            return (3, 0, 100, executeSetBuffer256);
+            return (3, 0, 480, executeSetBuffer256);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {
