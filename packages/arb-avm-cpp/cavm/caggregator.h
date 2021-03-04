@@ -52,6 +52,11 @@ typedef struct CRequestInfoStruct CRequestInfo;
 void deleteAggregatorStore(CAggregatorStore* m);
 
 Uint64Result aggregatorBlockCount(const CAggregatorStore* agg);
+int aggregatorSaveMessageBatch(CAggregatorStore* agg_ptr,
+                               const void* batch_num_ptr,
+                               uint64_t log_index);
+Uint64Result aggregatorGetMessageBatch(CAggregatorStore* agg_ptr,
+                                       const void* batch_num_ptr);
 int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
                         uint64_t height,
                         const void* block_hash,

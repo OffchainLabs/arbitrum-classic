@@ -79,21 +79,39 @@ func serializeBlockData(header *types.Header, logIndex uint64) ([]byte, error) {
 	return append(blockData, headerJSON...), nil
 }
 
+func (as *NodeStore) SaveMessageBatch(batchNum *big.Int, logIndex uint64) error {
+	result := C.aggregatorSaveMessageBatch(as.c, unsafeDataPointer(math.U256Bytes(batchNum)), C.uint64_t(logIndex))
+	if result == 0 {
+		return errors.New("failed to save message batch")
+	}
+
+	return nil
+}
+
 func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, requests []machine.EVMRequestInfo) error {
 	blockData, err := serializeBlockData(header, logIndex)
 	if err != nil {
 		return err
 	}
 
-	requestIds := make([]common.Hash, 0, len(requests))
-	logIndexes := make([]C.uint64_t, 0, len(requests))
+	rawRequestIds := make([][]byte, 0, len(requests))
+	cLogIndexes := make([]C.uint64_t, 0, len(requests))
 	for _, request := range requests {
-		requestIds = append(requestIds, request.RequestId)
-		logIndexes = append(logIndexes, C.uint64_t(request.LogIndex))
+		rawRequestId := new(big.Int).SetBytes(request.RequestId.Bytes())
+		rawRequestIds = append(rawRequestIds, math.U256Bytes(rawRequestId))
+		cLogIndexes = append(cLogIndexes, C.uint64_t(request.LogIndex))
 	}
-	cRequestIds := encodeHashArray(requestIds)
+	cRequestIds := toByteSliceArrayView(encodeByteSliceList(rawRequestIds))
 
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), unsafeDataPointer(blockData), cRequestIds, (*C.uint64_t)(&logIndexes[0]), unsafeDataPointer(blockData), C.int(len(blockData))) == 0 {
+	headerHash := header.Hash()
+	if C.aggregatorSaveBlock(
+		as.c,
+		C.uint64_t(header.Number.Uint64()),
+		unsafeDataPointer(headerHash.Bytes()),
+		cRequestIds,
+		(*C.uint64_t)(&cLogIndexes[0]),
+		unsafeDataPointer(blockData),
+		C.int(len(blockData))) == 0 {
 		return errors.New("failed to save block")
 	}
 

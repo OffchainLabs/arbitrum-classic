@@ -36,13 +36,42 @@ Uint64Result aggregatorBlockCount(const CAggregatorStore* agg) {
     }
 }
 
+int aggregatorSaveMessageBatch(CAggregatorStore* agg_ptr,
+                               const void* batch_num_ptr,
+                               const uint64_t log_index) {
+    try {
+        auto agg = static_cast<AggregatorStore*>(agg_ptr);
+        auto batch_num = receiveUint256(batch_num_ptr);
+
+        agg->saveMessageBatch(batch_num, log_index);
+
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+Uint64Result aggregatorGetMessageBatch(CAggregatorStore* agg_ptr,
+                                       const void* batch_num_ptr) {
+    try {
+        auto agg = static_cast<AggregatorStore*>(agg_ptr);
+        auto batch_num = receiveUint256(batch_num_ptr);
+
+        return {agg->getMessageBatch(batch_num), true};
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
+        return {0, false};
+    }
+}
+
 int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
-                        uint64_t height,
+                        const uint64_t height,
                         const void* block_hash_ptr,
-                        ByteSliceArray requests_data,
+                        const ByteSliceArray requests_data,
                         const uint64_t* log_indexes,
                         const void* block_data,
-                        int block_data_length) {
+                        const int block_data_length) {
     try {
         auto agg = static_cast<AggregatorStore*>(agg_ptr);
         auto block_hash = receiveUint256(block_hash_ptr);

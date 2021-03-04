@@ -36,7 +36,7 @@ class AggregatorStore {
     [[nodiscard]] uint64_t blockCount() const;
     void saveBlock(uint64_t height,
                    const uint256_t& block_hash,
-                   std::vector<uint256_t> requests,
+                   const std::vector<uint256_t>& requests,
                    const uint64_t* log_indexes,
                    const std::vector<char>& data);
     [[nodiscard]] std::vector<char> getBlock(uint64_t height) const;
@@ -49,6 +49,8 @@ class AggregatorStore {
     void reorg(uint64_t block_height);
     [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
     void updateLogsProcessedCount(const uint256_t& count);
+    void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
+    uint64_t getMessageBatch(const uint256_t& batchNum);
 };
 
 #endif /* aggregator_hpp */
