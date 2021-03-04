@@ -221,6 +221,13 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return err
 	}
 	for _, staker := range stakers {
+		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
+		if err != nil {
+			return err
+		}
+		if stakerInfo.CurrentChallenge != nil {
+			continue
+		}
 		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
 		if err != nil {
 			return err

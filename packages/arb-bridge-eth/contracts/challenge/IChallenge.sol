@@ -39,4 +39,8 @@ interface IChallenge {
     function lastMoveBlock() external view returns (uint256);
 
     function timeout() external;
+
+    function asserter() external view returns (address);
+
+    function challenger() external view returns (address);
 }

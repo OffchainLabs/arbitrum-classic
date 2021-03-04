@@ -126,6 +126,8 @@ func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []commo
 
 func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*types.Transaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		// TODO for some reason the gas estimation here is way off
+		auth.GasLimit = uint64(300000 * len(challenges))
 		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
 	})
 }

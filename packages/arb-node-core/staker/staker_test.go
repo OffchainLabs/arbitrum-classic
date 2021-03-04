@@ -3,6 +3,7 @@ package staker
 import (
 	"context"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -77,7 +78,7 @@ func deployRollup(
 	return createEv.RollupAddress
 }
 
-func TestStaker(t *testing.T) {
+func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int) {
 	ctx := context.Background()
 
 	mach, err := cmachine.New(arbos.Path())
@@ -85,7 +86,7 @@ func TestStaker(t *testing.T) {
 
 	confirmPeriodBlocks := big.NewInt(100)
 	extraChallengeTimeBlocks := big.NewInt(0)
-	arbGasSpeedLimitPerBlock := big.NewInt(1000000000)
+	arbGasSpeedLimitPerBlock := maxGasPerNode
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
 	var owner common.Address
@@ -93,7 +94,7 @@ func TestStaker(t *testing.T) {
 
 	clnt, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
-	auth2 := bind.NewKeyedTransactor(pks[0])
+	auth2 := bind.NewKeyedTransactor(pks[1])
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
 	rollupAddr := deployRollup(
@@ -133,7 +134,7 @@ func TestStaker(t *testing.T) {
 	staker, bridge, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
-	faultyCore := challenge.NewFaultyCore(core, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)})
+	faultyCore := challenge.NewFaultyCore(core, faultConfig)
 
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
@@ -145,7 +146,9 @@ func TestStaker(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		msgCount, err := core.GetMessageCount()
 		test.FailIfError(t, err)
-		if msgCount.Cmp(big.NewInt(1)) >= 0 {
+		logCount, err := core.GetLogCount()
+		test.FailIfError(t, err)
+		if msgCount.Cmp(big.NewInt(1)) >= 0 && logCount.Cmp(big.NewInt(1)) >= 0 {
 			// We've found the inbox message
 			break
 		}
@@ -155,15 +158,32 @@ func TestStaker(t *testing.T) {
 		<-time.After(time.Second * 1)
 	}
 
+	faultsExist := faultConfig != challenge.FaultConfig{}
+
+	var targetNode *big.Int
+	if faultsExist {
+		targetNode = big.NewInt(1)
+	} else {
+		targetNode = big.NewInt(3)
+	}
+
 	faultyStakerAlive := false
 	faultyStakerDead := false
-	for i := 100; i >= 0; i++ {
+	for i := 400; i >= 0; i-- {
 		if (i % 2) == 0 {
 			_, err := staker.Act(ctx)
 			test.FailIfError(t, err)
 		} else if !faultyStakerAlive || !faultyStakerDead {
 			_, err = faultyStaker.Act(ctx)
-			test.FailIfError(t, err)
+			if err != nil {
+				errString := err.Error()
+				if faultsExist && (strings.Contains(errString, "WRONG_END") || strings.Contains(errString, "BIS_DEADLINE")) {
+					faultyStakerAlive = true
+					faultyStakerDead = true
+				} else {
+					test.FailIfError(t, err)
+				}
+			}
 		}
 		client.Commit()
 
@@ -178,10 +198,10 @@ func TestStaker(t *testing.T) {
 
 		latestConfirmed, err := staker.rollup.LatestConfirmedNode(ctx)
 		test.FailIfError(t, err)
-		if latestConfirmed.Cmp(big.NewInt(0)) != 0 {
+		if latestConfirmed.Cmp(targetNode) >= 0 {
 			break
 		} else if i == 0 {
-			t.Fatal("No node was confirmed")
+			t.Fatal("Node not confirmed")
 		}
 	}
 
@@ -192,11 +212,36 @@ func TestStaker(t *testing.T) {
 		t.Fatal("Staker isn't staked")
 	}
 
-	if stakerInfo.CurrentChallenge != nil || stakerInfo.AmountStaked.Cmp(big.NewInt(0)) == 0 {
-		t.Fatal("Staker didn't resolve challenge")
+	if stakerInfo.CurrentChallenge != nil {
+		t.Fatal("Staker remained in challenge")
 	}
 
 	if stakerInfo.LatestStakedNode.Cmp(big.NewInt(0)) == 0 {
 		t.Fatal("Staker didn't stake on node")
 	}
+
+	faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
+	test.FailIfError(t, err)
+
+	if faultsExist {
+		if faultyStakerInfo != nil {
+			t.Fatal("Faulty staker is still staked")
+		}
+	} else {
+		if faultyStakerInfo == nil {
+			t.Fatal("Other staker lost stake")
+		}
+	}
+}
+
+func TestChallengeRegular(t *testing.T) {
+	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)}, big.NewInt(100000000))
+}
+
+func TestChallengeTimeout(t *testing.T) {
+	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(50000)}, big.NewInt(100000))
+}
+
+func TestChallengeCooperative(t *testing.T) {
+	adversarialTest(t, challenge.FaultConfig{}, big.NewInt(25000))
 }
