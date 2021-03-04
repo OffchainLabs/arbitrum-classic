@@ -37,6 +37,9 @@ constexpr auto request_key_size = request_key_prefix.size() + 32;
 constexpr auto block_hash_key_prefix = std::array<char, 1>{-55};
 constexpr auto block_hash_key_size = block_hash_key_prefix.size() + 32;
 
+constexpr auto message_batch_key_prefix = std::array<char, 1>{-56};
+constexpr auto message_batch_key_size = message_batch_key_prefix.size() + 32;
+
 namespace {
 
 void commitTx(rocksdb::Transaction& tx) {
@@ -58,6 +61,15 @@ std::array<char, request_key_size> requestKey(const uint256_t& request_id) {
     auto it = std::copy(request_key_prefix.begin(), request_key_prefix.end(),
                         key.begin());
     to_big_endian(request_id, it);
+    return key;
+}
+
+std::array<char, message_batch_key_size> messageBatchKey(
+    const uint256_t& batch_number) {
+    std::array<char, message_batch_key_size> key{};
+    auto it = std::copy(message_batch_key_prefix.begin(),
+                        message_batch_key_prefix.end(), key.begin());
+    to_big_endian(batch_number, it);
     return key;
 }
 
@@ -164,15 +176,44 @@ uint64_t AggregatorStore::blockCount() const {
     return blockCountImpl(*tx);
 }
 
+void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
+                                       const uint64_t& logIndex) {
+    auto tx = data_storage->beginTransaction();
+    auto full_key = messageBatchKey(batchNum);
+    auto index_value = uint64Value(logIndex);
+
+    auto status = tx->Put(vecToSlice(full_key), vecToSlice(index_value));
+    if (!status.ok()) {
+        throw std::runtime_error("failed to save");
+    }
+
+    commitTx(*tx);
+}
+
+uint64_t AggregatorStore::getMessageBatch(const uint256_t& batchNum) {
+    auto tx = data_storage->beginTransaction();
+    auto full_key = messageBatchKey(batchNum);
+
+    std::string value;
+    auto status =
+        tx->GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to save");
+    }
+
+    auto it = value.begin();
+    return extractUint64(it);
+}
+
 void AggregatorStore::saveBlock(uint64_t height,
                                 const uint256_t& block_hash,
-                                std::vector<uint256_t> requests,
+                                const std::vector<uint256_t>& requests,
                                 const uint64_t* log_indexes,
                                 const std::vector<char>& data) {
     auto tx = data_storage->beginTransaction();
-    auto block_key = blockHashKey(block_hash);
+    auto block_hash_key = blockHashKey(block_hash);
     auto block_value = blockHashValue(height);
-    auto s = tx->Put(vecToSlice(block_key), vecToSlice(block_value));
+    auto s = tx->Put(vecToSlice(block_hash_key), vecToSlice(block_value));
     if (!s.ok()) {
         throw std::runtime_error("failed to save block hash");
     }
