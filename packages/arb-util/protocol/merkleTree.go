@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package ethbridge
+package protocol
 
 import (
-	"math/big"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"math/big"
 )
 
 type MerkleTree struct {
@@ -79,12 +78,22 @@ func (m *MerkleTree) GetProof(index int) ([][32]byte, *big.Int) {
 		}
 		index /= 2
 	}
+
+	// reverse path
+	for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
+		path[i], path[j] = path[j], path[i]
+	}
+
+	return proof, PathSliceToInt(path)
+}
+
+func PathSliceToInt(path []bool) *big.Int {
 	route := big.NewInt(0)
-	for i := range path {
+	for _, entry := range path {
 		route = route.Mul(route, big.NewInt(2))
-		if path[len(path)-1-i] {
+		if entry {
 			route = route.Add(route, big.NewInt(1))
 		}
 	}
-	return proof, route
+	return route
 }

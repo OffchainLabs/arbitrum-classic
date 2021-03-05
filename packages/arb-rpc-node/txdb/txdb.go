@@ -189,11 +189,18 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 		logger.Error().Stack().Err(err).Msg("Error parsing log result")
 		return nil
 	}
-	blockInfo, ok := res.(*evm.BlockInfo)
-	if !ok {
+
+	switch res := res.(type) {
+	case *evm.BlockInfo:
+		return db.handleBlockReceipt(res)
+	case *evm.MerkleRootResult:
+		return db.as.SaveMessageBatch(res.BatchNumber, res.NumInBatch.Uint64())
+	default:
 		return nil
 	}
+}
 
+func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
 		Uint64("block_txcount", blockInfo.BlockStats.TxCount.Uint64()).
@@ -290,6 +297,29 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 		db.logsFeed.Send(ethLogs)
 	}
 	return nil
+}
+
+func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
+	logIndex := db.as.GetMessageBatch(index)
+	if logIndex == nil {
+		return nil, nil
+	}
+	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*logIndex))
+	if err != nil {
+		return nil, err
+	}
+	res, err := evm.NewResultFromValue(logVal)
+	if err != nil {
+		return nil, err
+	}
+	merkleRes, ok := res.(*evm.MerkleRootResult)
+	if !ok {
+		return nil, errors.New("expected merkle root result")
+	}
+	if merkleRes.BatchNumber.Cmp(index) != 0 {
+		return nil, nil
+	}
+	return merkleRes, nil
 }
 
 func (db *TxDB) GetBlockWithHash(blockHash common.Hash) (*machine.BlockInfo, error) {

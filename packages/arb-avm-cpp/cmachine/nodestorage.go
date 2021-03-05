@@ -88,13 +88,13 @@ func (as *NodeStore) SaveMessageBatch(batchNum *big.Int, logIndex uint64) error 
 	return nil
 }
 
-func (as *NodeStore) GetMessageBatch(batchNum *big.Int) (uint64, error) {
+func (as *NodeStore) GetMessageBatch(batchNum *big.Int) *uint64 {
 	result := C.aggregatorGetMessageBatch(as.c, unsafeDataPointer(math.U256Bytes(batchNum)))
 	if result.found == 0 {
-		return 0, errors.New("failed to save message batch")
+		return nil
 	}
-
-	return uint64(result.value), nil
+	index := uint64(result.value)
+	return &index
 }
 
 func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, requests []machine.EVMRequestInfo) error {
