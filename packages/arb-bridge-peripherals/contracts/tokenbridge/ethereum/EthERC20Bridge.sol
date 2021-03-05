@@ -94,8 +94,10 @@ contract EthERC20Bridge is L1Buddy {
         require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
 
+        IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
+
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            msg.sender,
+            outbox.l2ToL1Sender(),
             erc20,
             amount,
             exitNum,
