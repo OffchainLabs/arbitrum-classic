@@ -148,7 +148,7 @@ func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targe
 	if localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) < 0 {
 		// We didn't read enough messages.
 		// This can either mean that our messages lasted longer, or that we are missing messages.
-		if localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.After.TotalGasConsumed) < 0 {
+		if localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.After.TotalGasConsumed) < 0 && !localExecutionInfo.After.IsPermanentlyBlocked() {
 			// This means we stopped because we're missing messages,
 			// but the on-chain rollup must've had these messages.
 			// Error and try again when we have the messages.

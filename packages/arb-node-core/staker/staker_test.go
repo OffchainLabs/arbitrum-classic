@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -18,6 +19,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -78,7 +80,38 @@ func deployRollup(
 	return createEv.RollupAddress
 }
 
-func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int) {
+type ExpectedChallengeEnd uint8
+
+const (
+	NoChallenge ExpectedChallengeEnd = iota
+	OneStepProof
+	Timeout
+)
+
+func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.EthClient, challenge *common.Address, topics []string) {
+	if challenge == nil {
+		t.Fatal("Expected challenge but found none")
+	}
+	topicHashes := make([]ethcommon.Hash, 0, len(topics))
+	for _, topic := range topics {
+		hash := hashing.SoliditySHA3([]byte(topic))
+		topicHashes = append(topicHashes, hash.ToEthHash())
+	}
+	query := ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: nil,
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{challenge.ToEthAddress()},
+		Topics:    [][]ethcommon.Hash{topicHashes},
+	}
+	logs, err := client.FilterLogs(ctx, query)
+	test.FailIfError(t, err)
+	if len(logs) == 0 {
+		t.Fatal("Challenge ended in unexpected manner")
+	}
+}
+
+func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
 	mach, err := cmachine.New(arbos.Path())
@@ -167,6 +200,7 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 		targetNode = big.NewInt(3)
 	}
 
+	var lastChallenge *common.Address
 	faultyStakerAlive := false
 	faultyStakerDead := false
 	for i := 400; i >= 0; i-- {
@@ -177,7 +211,7 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 			_, err = faultyStaker.Act(ctx)
 			if err != nil {
 				errString := err.Error()
-				if faultsExist && (strings.Contains(errString, "WRONG_END") || strings.Contains(errString, "BIS_DEADLINE")) {
+				if faultsExist && (strings.Contains(errString, "WRONG_END") || strings.Contains(errString, "BIS_DEADLINE")) && expectedEnd == Timeout {
 					faultyStakerAlive = true
 					faultyStakerDead = true
 				} else {
@@ -194,6 +228,9 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 		} else {
 			faultyStakerAlive = true
 			faultyStakerDead = false
+			if faultyStakerInfo.CurrentChallenge != nil {
+				lastChallenge = faultyStakerInfo.CurrentChallenge
+			}
 		}
 
 		latestConfirmed, err := staker.rollup.LatestConfirmedNode(ctx)
@@ -203,6 +240,17 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 		} else if i == 0 {
 			t.Fatal("Node not confirmed")
 		}
+	}
+
+	switch expectedEnd {
+	case NoChallenge:
+		if lastChallenge != nil {
+			t.Fatal("Unexpected challenge")
+		}
+	case Timeout:
+		requireChallengeLogs(ctx, t, client, lastChallenge, []string{"AsserterTimedOut()", "ChallengerTimedOut()"})
+	case OneStepProof:
+		requireChallengeLogs(ctx, t, client, lastChallenge, []string{"OneStepProofCompleted()"})
 	}
 
 	stakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress))
@@ -234,14 +282,14 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 	}
 }
 
-func TestChallengeRegular(t *testing.T) {
-	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)}, big.NewInt(100000000))
+func TestChallengeToOSP(t *testing.T) {
+	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)}, big.NewInt(100000000), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
-	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(50000)}, big.NewInt(100000))
+	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(50000)}, big.NewInt(100000), Timeout)
 }
 
 func TestChallengeCooperative(t *testing.T) {
-	adversarialTest(t, challenge.FaultConfig{}, big.NewInt(25000))
+	adversarialTest(t, challenge.FaultConfig{}, big.NewInt(25000), NoChallenge)
 }
