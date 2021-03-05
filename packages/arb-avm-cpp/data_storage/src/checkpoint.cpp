@@ -28,6 +28,8 @@ void Checkpoint::resetCheckpoint() {
     arb_gas_used = 0;
     total_messages_read = 0;
     inbox_acc = 0;
+    send_acc = 0;
+    log_acc = 0;
     next_sideload_block_number = 0;
     block_height = 0;
     send_count = 0;
@@ -35,7 +37,7 @@ void Checkpoint::resetCheckpoint() {
     machine_state_keys = MachineStateKeys{};
 }
 
-// applyAssertion does not update processed_message_accumulator_hash so it will
+// applyAssertion does not update inbox accumulator so it will
 // have to be updated by caller.
 void Checkpoint::applyAssertion(const Assertion& assertion) {
     total_steps += assertion.stepCount;
@@ -46,6 +48,13 @@ void Checkpoint::applyAssertion(const Assertion& assertion) {
     if (assertion.sideloadBlockNumber) {
         next_sideload_block_number = *assertion.sideloadBlockNumber + 1;
     }
+
+    for (const auto& send : assertion.sends) {
+        send_acc = hash(send_acc, hash_value(send));
+    }
+    for (const auto& log : assertion.logs) {
+        log_acc = hash(log_acc, hash_value(log));
+    }
 }
 
 Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
@@ -54,7 +63,9 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     auto arb_gas_used = extractUint256(current_iter);
     auto total_steps = extractUint256(current_iter);
     auto total_messages_read = extractUint256(current_iter);
-    auto processed_message_accumulator_hash = extractUint256(current_iter);
+    auto inbox_acc = extractUint256(current_iter);
+    auto send_acc = extractUint256(current_iter);
+    auto log_acc = extractUint256(current_iter);
     auto next_sideload_block_number = extractUint256(current_iter);
     auto block_height = extractUint64(current_iter);
     auto send_count = extractUint64(current_iter);
@@ -65,7 +76,9 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     return Checkpoint{total_steps,
                       arb_gas_used,
                       total_messages_read,
-                      processed_message_accumulator_hash,
+                      inbox_acc,
+                      send_acc,
+                      log_acc,
                       next_sideload_block_number,
                       block_height,
                       send_count,
@@ -80,6 +93,8 @@ std::vector<unsigned char> serializeCheckpoint(const Checkpoint& state_data) {
     marshal_uint256_t(state_data.total_steps, state_data_vector);
     marshal_uint256_t(state_data.total_messages_read, state_data_vector);
     marshal_uint256_t(state_data.inbox_acc, state_data_vector);
+    marshal_uint256_t(state_data.send_acc, state_data_vector);
+    marshal_uint256_t(state_data.log_acc, state_data_vector);
     marshal_uint256_t(state_data.next_sideload_block_number, state_data_vector);
     marshal_uint64_t(state_data.block_height, state_data_vector);
     marshal_uint64_t(state_data.send_count, state_data_vector);
