@@ -121,7 +121,7 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		// TODO for some reason the gas estimation here is way off
-		auth.GasLimit = uint64(300000 * len(stakers))
+		auth.GasLimit = uint64(100000 * len(stakers))
 		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
 	})
 }
