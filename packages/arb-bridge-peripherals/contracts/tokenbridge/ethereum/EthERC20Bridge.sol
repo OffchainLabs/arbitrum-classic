@@ -90,14 +90,15 @@ contract EthERC20Bridge is L1Buddy {
         uint256 amount,
         uint256 exitNum
     ) public onlyIfConnected {
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msg.sender, erc20, amount));
+        IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
+        address msgSender = outbox.l2ToL1Sender();
+
+        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msgSender, erc20, amount));
         require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
 
-        IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
-
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            outbox.l2ToL1Sender(),
+            msgSender,
             erc20,
             amount,
             exitNum,
