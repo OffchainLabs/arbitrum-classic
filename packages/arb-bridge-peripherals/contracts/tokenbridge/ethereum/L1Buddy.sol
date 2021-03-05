@@ -22,7 +22,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 
-contract L1Buddy {
+contract L1BuddyOld {
     IInbox inbox;
     IBridge bridge;
     bool connectedToChain;

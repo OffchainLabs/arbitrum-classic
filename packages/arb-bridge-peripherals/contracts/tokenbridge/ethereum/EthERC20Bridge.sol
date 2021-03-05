@@ -26,7 +26,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../libraries/SafeERC20Namer.sol";
 
-contract EthERC20Bridge is L1Buddy {
+contract EthERC20Bridge is L1BuddyOld {
     address internal constant USED_ADDRESS = address(0x01);
 
     // exitNum => exitDataHash => LP
@@ -34,7 +34,7 @@ contract EthERC20Bridge is L1Buddy {
 
     mapping(address => address) customL2Tokens;
 
-    constructor(IInbox _inbox) public L1Buddy(_inbox) {}
+    constructor(IInbox _inbox) public L1BuddyOld(_inbox) {}
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
         // Pay for gas
