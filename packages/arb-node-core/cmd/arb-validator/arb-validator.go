@@ -20,24 +20,25 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 	"io/ioutil"
 	golog "log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 )
 
 var logger zerolog.Logger
@@ -70,7 +71,17 @@ func main() {
 	}
 	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
-	flagSet.Parse(os.Args[6:])
+	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
+	if err := flagSet.Parse(os.Args[6:]); err != nil {
+		logger.Fatal().Err(err).Msg("failed parsing command line arguments")
+	}
+
+	if *enablePProf {
+		go func() {
+			err := http.ListenAndServe("localhost:8081", pprofMux)
+			log.Error().Err(err).Msg("profiling server failed")
+		}()
+	}
 
 	folder := os.Args[1]
 
@@ -92,7 +103,7 @@ func main() {
 	} else if strategyString == "StakeLatest" {
 		strategy = staker.StakeLatestStrategy
 	} else {
-		logger.Fatal().Msg("Unsupported strategy specified. Currently supported: MakeNdoes, StakeLatest")
+		logger.Fatal().Msg("Unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
 	}
 
 	chainState := ChainState{}
@@ -125,7 +136,9 @@ func main() {
 		if err != nil {
 			logger.Fatal().Stack().Err(err).Msg("Failed to marshal chain state")
 		}
-		ioutil.WriteFile(chainStatePath, newChainStateData, 0644)
+		if err := ioutil.WriteFile(chainStatePath, newChainStateData, 0644); err != nil {
+			logger.Fatal().Stack().Err(err).Msg("Failed to write chain state config")
+		}
 	} else {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
@@ -140,7 +153,8 @@ func main() {
 		storage.CloseArbStorage()
 	}()
 
-	err = storage.Initialize(arbos.Path())
+	arbosPath := path.Join(folder, "arbos.mexe")
+	err = storage.Initialize(arbosPath)
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error initializing ArbStorage")
 	}
