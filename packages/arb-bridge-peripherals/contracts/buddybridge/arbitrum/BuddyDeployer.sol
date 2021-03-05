@@ -24,9 +24,9 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 contract BuddyDeployer {
     constructor() public {}
 
-    event Deployed(address _sender, bool _success);
+    event Deployed(address indexed _sender, address indexed _contract, bool _success);
 
-    function executeBuddyDeploy(bytes memory deployCode)
+    function executeBuddyDeploy(bytes memory contractInitCode)
         external
         payable
     {
@@ -39,16 +39,20 @@ contract BuddyDeployer {
         assembly {
             addr := create2(
                 callvalue(), // wei sent in call
-                add(deployCode, 0x20), // do we need to actually skip this?
-                mload(deployCode),
+                add(contractInitCode, 0x20), // skip 32 bytes from rlp encoding length of bytearray
+                mload(contractInitCode),
                 salt
             )
             success := not(iszero(extcodesize(addr)))
         }
 
         // L1 callback to buddy
+        /*
+            If it calls back to an EOA the L1 call just won't execute as there is no function matching
+            the selector, neither a fallback function to be executed.
+        */
         bytes memory calldataForL1 = abi.encodeWithSelector(L1Buddy.finalizeBuddyDeploy.selector, success);
         ArbSys(100).sendTxToL1(user, calldataForL1);
-        emit Deployed(user, success);
+        emit Deployed(user, addr, success);
     }
 }

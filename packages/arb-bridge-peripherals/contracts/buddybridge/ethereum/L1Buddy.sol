@@ -46,15 +46,15 @@ abstract contract L1Buddy {
     function initiateBuddyDeploy(
         uint256 maxGas,
         uint256 gasPriceBid,
-        bytes memory deployCode
+        bytes memory contractInitCode
     ) public payable {
         require(l2Connection != L2Connection.Complete, "already connected");
         require(
-            codeHash == bytes32(0) || codeHash == keccak256(deployCode),
+            codeHash == bytes32(0) || codeHash == keccak256(contractInitCode),
             "Only retry if same deploy code"
         );
-        // deployCode == type(ArbSymmetricTokenBridge).creationCode
-        bytes memory data = abi.encodeWithSelector(BuddyDeployer.executeBuddyDeploy.selector, deployCode);
+        // contractInitCode == type(ArbSymmetricTokenBridge).creationCode
+        bytes memory data = abi.encodeWithSelector(BuddyDeployer.executeBuddyDeploy.selector, contractInitCode);
 
         if(msg.value > 0) {
             // gas paid in L1
@@ -63,7 +63,7 @@ abstract contract L1Buddy {
             // gas paid in L2
             inbox.sendContractTransaction(maxGas, gasPriceBid, address(l2Deployer), 0, data);
         }
-        codeHash = keccak256(deployCode);
+        codeHash = keccak256(contractInitCode);
         l2Connection = L2Connection.Initiated;
     }
 
