@@ -97,41 +97,17 @@ export class OutboxEntry extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    isMaster(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
 
-    numRemaining(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    numRemaining(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'numRemaining()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'numRemaining()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    root(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    root(overrides?: CallOverrides): Promise<[string]>
 
-    'root()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'root()'(overrides?: CallOverrides): Promise<[string]>
 
     spendOutput(
       _root: BytesLike,
@@ -145,19 +121,12 @@ export class OutboxEntry extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    spentOutput(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    spentOutput(arg0: BytesLike, overrides?: CallOverrides): Promise<[boolean]>
 
     'spentOutput(bytes32)'(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
   }
 
   destroy(overrides?: Overrides): Promise<ContractTransaction>

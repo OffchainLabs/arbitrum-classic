@@ -24,7 +24,9 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface BridgeInterface extends ethers.utils.Interface {
   functions: {
     'activeOutbox()': FunctionFragment
+    'allowedInboxList(uint256)': FunctionFragment
     'allowedInboxes(address)': FunctionFragment
+    'allowedOutboxList(uint256)': FunctionFragment
     'allowedOutboxes(address)': FunctionFragment
     'deliverMessageToInbox(uint8,address,bytes32)': FunctionFragment
     'executeCall(address,uint256,bytes)': FunctionFragment
@@ -42,8 +44,16 @@ interface BridgeInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'allowedInboxList',
+    values: [BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'allowedInboxes',
     values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'allowedOutboxList',
+    values: [BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'allowedOutboxes',
@@ -88,7 +98,15 @@ interface BridgeInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'allowedInboxList',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'allowedInboxes',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'allowedOutboxList',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -140,45 +158,46 @@ export class Bridge extends Contract {
   interface: BridgeInterface
 
   functions: {
-    activeOutbox(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    activeOutbox(overrides?: CallOverrides): Promise<[string]>
 
-    'activeOutbox()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'activeOutbox()'(overrides?: CallOverrides): Promise<[string]>
 
-    allowedInboxes(
-      inbox: string,
+    allowedInboxList(
+      arg0: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[string]>
+
+    'allowedInboxList(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<[boolean]>
 
     'allowedInboxes(address)'(
       inbox: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
+
+    allowedOutboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'allowedOutboxList(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
 
     allowedOutboxes(
       outbox: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
     'allowedOutboxes(address)'(
       outbox: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
     deliverMessageToInbox(
       kind: BigNumberish,
@@ -208,43 +227,20 @@ export class Bridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    inboxAccs(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
     'inboxAccs(uint256)'(
       arg0: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
-    messageCount(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    messageCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'messageCount()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'messageCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    owner(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'owner()'(overrides?: CallOverrides): Promise<[string]>
 
     renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
 
@@ -289,12 +285,32 @@ export class Bridge extends Contract {
 
   'activeOutbox()'(overrides?: CallOverrides): Promise<string>
 
+  allowedInboxList(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'allowedInboxList(uint256)'(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<boolean>
 
   'allowedInboxes(address)'(
     inbox: string,
     overrides?: CallOverrides
   ): Promise<boolean>
+
+  allowedOutboxList(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'allowedOutboxList(uint256)'(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   allowedOutboxes(outbox: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -389,12 +405,32 @@ export class Bridge extends Contract {
 
     'activeOutbox()'(overrides?: CallOverrides): Promise<string>
 
+    allowedInboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'allowedInboxList(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<boolean>
 
     'allowedInboxes(address)'(
       inbox: string,
       overrides?: CallOverrides
     ): Promise<boolean>
+
+    allowedOutboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'allowedOutboxList(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
 
     allowedOutboxes(outbox: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -422,24 +458,14 @@ export class Bridge extends Contract {
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<{
-      success: boolean
-      returnData: string
-      0: boolean
-      1: string
-    }>
+    ): Promise<[boolean, string] & { success: boolean; returnData: string }>
 
     'executeCall(address,uint256,bytes)'(
       destAddr: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<{
-      success: boolean
-      returnData: string
-      0: boolean
-      1: string
-    }>
+    ): Promise<[boolean, string] & { success: boolean; returnData: string }>
 
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -516,10 +542,30 @@ export class Bridge extends Contract {
 
     'activeOutbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    allowedInboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'allowedInboxList(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     allowedInboxes(inbox: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'allowedInboxes(address)'(
       inbox: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    allowedOutboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'allowedOutboxList(uint256)'(
+      arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -620,6 +666,16 @@ export class Bridge extends Contract {
 
     'activeOutbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    allowedInboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'allowedInboxList(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     allowedInboxes(
       inbox: string,
       overrides?: CallOverrides
@@ -627,6 +683,16 @@ export class Bridge extends Contract {
 
     'allowedInboxes(address)'(
       inbox: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    allowedOutboxList(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'allowedOutboxList(uint256)'(
+      arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

@@ -155,17 +155,13 @@ export class StandardArbERC20 extends Contract {
       owner: string,
       spender: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'allowance(address,address)'(
       owner: string,
       spender: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     approve(
       spender: string,
@@ -179,31 +175,16 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    balanceOf(
-      account: string,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    balanceOf(account: string, overrides?: CallOverrides): Promise<[BigNumber]>
 
     'balanceOf(address)'(
       account: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    bridge(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    bridge(overrides?: CallOverrides): Promise<[string]>
 
-    'bridge()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
     bridgeMint(
       account: string,
@@ -217,17 +198,9 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    decimals(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    decimals(overrides?: CallOverrides): Promise<[number]>
 
-    'decimals()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    'decimals()'(overrides?: CallOverrides): Promise<[number]>
 
     decreaseAllowance(
       spender: string,
@@ -267,29 +240,13 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    isMaster(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
 
-    l1Address(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    l1Address(overrides?: CallOverrides): Promise<[string]>
 
-    'l1Address()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'l1Address()'(overrides?: CallOverrides): Promise<[string]>
 
     migrate(
       amount: BigNumberish,
@@ -303,41 +260,17 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    name(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    name(overrides?: CallOverrides): Promise<[string]>
 
-    'name()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'name()'(overrides?: CallOverrides): Promise<[string]>
 
-    symbol(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    symbol(overrides?: CallOverrides): Promise<[string]>
 
-    'symbol()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'symbol()'(overrides?: CallOverrides): Promise<[string]>
 
-    totalSupply(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    totalSupply(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'totalSupply()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'totalSupply()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     transfer(
       recipient: string,

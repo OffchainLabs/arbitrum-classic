@@ -5,15 +5,65 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import { ArbSys } from './ArbSys'
+import type { ArbSys } from '../ArbSys'
 
-export class ArbSysFactory {
+export class ArbSys__factory {
   static connect(address: string, signerOrProvider: Signer | Provider): ArbSys {
     return new Contract(address, _abi, signerOrProvider) as ArbSys
   }
 }
 
 const _abi = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'destAddr',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'tokenAddr',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'ERC20Withdrawal',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'destAddr',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'tokenAddr',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'ERC721Withdrawal',
+    type: 'event',
+  },
   {
     anonymous: false,
     inputs: [
@@ -34,7 +84,19 @@ const _abi = [
     type: 'event',
   },
   {
-    constant: true,
+    inputs: [],
+    name: 'arbBlockNumber',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'arbOSVersion',
     outputs: [
@@ -44,12 +106,10 @@ const _abi = [
         type: 'uint256',
       },
     ],
-    payable: false,
     stateMutability: 'pure',
     type: 'function',
   },
   {
-    constant: true,
     inputs: [
       {
         internalType: 'address',
@@ -70,12 +130,10 @@ const _abi = [
         type: 'uint256',
       },
     ],
-    payable: false,
     stateMutability: 'view',
     type: 'function',
   },
   {
-    constant: true,
     inputs: [
       {
         internalType: 'address',
@@ -91,12 +149,23 @@ const _abi = [
         type: 'uint256',
       },
     ],
-    payable: false,
     stateMutability: 'view',
     type: 'function',
   },
   {
-    constant: false,
+    inputs: [],
+    name: 'isTopLevelCall',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -111,12 +180,10 @@ const _abi = [
     ],
     name: 'sendTxToL1',
     outputs: [],
-    payable: true,
     stateMutability: 'payable',
     type: 'function',
   },
   {
-    constant: false,
     inputs: [
       {
         internalType: 'address',
@@ -126,7 +193,6 @@ const _abi = [
     ],
     name: 'withdrawEth',
     outputs: [],
-    payable: true,
     stateMutability: 'payable',
     type: 'function',
   },

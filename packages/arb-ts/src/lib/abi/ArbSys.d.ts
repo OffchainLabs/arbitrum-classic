@@ -22,13 +22,19 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ArbSysInterface extends ethers.utils.Interface {
   functions: {
+    'arbBlockNumber()': FunctionFragment
     'arbOSVersion()': FunctionFragment
     'getStorageAt(address,uint256)': FunctionFragment
     'getTransactionCount(address)': FunctionFragment
+    'isTopLevelCall()': FunctionFragment
     'sendTxToL1(address,bytes)': FunctionFragment
     'withdrawEth(address)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'arbBlockNumber',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'arbOSVersion',
     values?: undefined
@@ -42,11 +48,19 @@ interface ArbSysInterface extends ethers.utils.Interface {
     values: [string]
   ): string
   encodeFunctionData(
+    functionFragment: 'isTopLevelCall',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'sendTxToL1',
     values: [string, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'withdrawEth', values: [string]): string
 
+  decodeFunctionResult(
+    functionFragment: 'arbBlockNumber',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'arbOSVersion',
     data: BytesLike
@@ -59,13 +73,21 @@ interface ArbSysInterface extends ethers.utils.Interface {
     functionFragment: 'getTransactionCount',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'isTopLevelCall',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'sendTxToL1', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'withdrawEth', data: BytesLike): Result
 
   events: {
+    'ERC20Withdrawal(address,address,uint256)': EventFragment
+    'ERC721Withdrawal(address,address,uint256)': EventFragment
     'EthWithdrawal(address,uint256)': EventFragment
   }
 
+  getEvent(nameOrSignatureOrTopic: 'ERC20Withdrawal'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'ERC721Withdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'EthWithdrawal'): EventFragment
 }
 
@@ -83,47 +105,39 @@ export class ArbSys extends Contract {
   interface: ArbSysInterface
 
   functions: {
-    arbOSVersion(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    arbBlockNumber(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'arbOSVersion()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'arbBlockNumber()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    arbOSVersion(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'arbOSVersion()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     getStorageAt(
       account: string,
       index: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'getStorageAt(address,uint256)'(
       account: string,
       index: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     getTransactionCount(
       account: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'getTransactionCount(address)'(
       account: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
+
+    isTopLevelCall(overrides?: CallOverrides): Promise<[boolean]>
+
+    'isTopLevelCall()'(overrides?: CallOverrides): Promise<[boolean]>
 
     sendTxToL1(
       destAddr: string,
@@ -147,6 +161,10 @@ export class ArbSys extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
   }
+
+  arbBlockNumber(overrides?: CallOverrides): Promise<BigNumber>
+
+  'arbBlockNumber()'(overrides?: CallOverrides): Promise<BigNumber>
 
   arbOSVersion(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -174,6 +192,10 @@ export class ArbSys extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
+  isTopLevelCall(overrides?: CallOverrides): Promise<boolean>
+
+  'isTopLevelCall()'(overrides?: CallOverrides): Promise<boolean>
+
   sendTxToL1(
     destAddr: string,
     calldataForL1: BytesLike,
@@ -197,6 +219,10 @@ export class ArbSys extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    arbBlockNumber(overrides?: CallOverrides): Promise<BigNumber>
+
+    'arbBlockNumber()'(overrides?: CallOverrides): Promise<BigNumber>
+
     arbOSVersion(overrides?: CallOverrides): Promise<BigNumber>
 
     'arbOSVersion()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -222,6 +248,10 @@ export class ArbSys extends Contract {
       account: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    isTopLevelCall(overrides?: CallOverrides): Promise<boolean>
+
+    'isTopLevelCall()'(overrides?: CallOverrides): Promise<boolean>
 
     sendTxToL1(
       destAddr: string,
@@ -244,10 +274,26 @@ export class ArbSys extends Contract {
   }
 
   filters: {
+    ERC20Withdrawal(
+      destAddr: string | null,
+      tokenAddr: string | null,
+      amount: null
+    ): EventFilter
+
+    ERC721Withdrawal(
+      destAddr: string | null,
+      tokenAddr: string | null,
+      id: BigNumberish | null
+    ): EventFilter
+
     EthWithdrawal(destAddr: string | null, amount: null): EventFilter
   }
 
   estimateGas: {
+    arbBlockNumber(overrides?: CallOverrides): Promise<BigNumber>
+
+    'arbBlockNumber()'(overrides?: CallOverrides): Promise<BigNumber>
+
     arbOSVersion(overrides?: CallOverrides): Promise<BigNumber>
 
     'arbOSVersion()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -274,6 +320,10 @@ export class ArbSys extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    isTopLevelCall(overrides?: CallOverrides): Promise<BigNumber>
+
+    'isTopLevelCall()'(overrides?: CallOverrides): Promise<BigNumber>
+
     sendTxToL1(
       destAddr: string,
       calldataForL1: BytesLike,
@@ -295,6 +345,10 @@ export class ArbSys extends Contract {
   }
 
   populateTransaction: {
+    arbBlockNumber(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'arbBlockNumber()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     arbOSVersion(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'arbOSVersion()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -320,6 +374,10 @@ export class ArbSys extends Contract {
       account: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    isTopLevelCall(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'isTopLevelCall()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     sendTxToL1(
       destAddr: string,

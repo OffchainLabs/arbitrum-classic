@@ -43,6 +43,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'extraChallengeTimeBlocks()': FunctionFragment
     'firstUnresolvedNode()': FunctionFragment
     'getNode(uint256)': FunctionFragment
+    'getNodeHash(uint256)': FunctionFragment
     'getStakerAddress(uint256)': FunctionFragment
     'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])': FunctionFragment
     'isMaster()': FunctionFragment
@@ -70,8 +71,8 @@ interface RollupInterface extends ethers.utils.Interface {
     'rollupEventBridge()': FunctionFragment
     'setInbox(address,bool)': FunctionFragment
     'setOutbox(address)': FunctionFragment
-    'stakeOnExistingNode(bytes32,uint256,uint256)': FunctionFragment
-    'stakeOnNewNode(bytes32,uint256,uint256,bytes32[4],uint256[10])': FunctionFragment
+    'stakeOnExistingNode(uint256,bytes32)': FunctionFragment
+    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])': FunctionFragment
     'stakeToken()': FunctionFragment
     'stakerCount()': FunctionFragment
     'upgradeImplementation(address)': FunctionFragment
@@ -127,11 +128,11 @@ interface RollupInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'createChallenge',
     values: [
-      string[],
-      BigNumberish[],
-      BytesLike[],
-      BigNumberish[],
-      BigNumberish[]
+      [string, string],
+      [BigNumberish, BigNumberish],
+      [BytesLike, BytesLike],
+      [BigNumberish, BigNumberish],
+      [BigNumberish, BigNumberish]
     ]
   ): string
   encodeFunctionData(
@@ -155,6 +156,10 @@ interface RollupInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'getNodeHash',
+    values: [BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'getStakerAddress',
     values: [BigNumberish]
   ): string
@@ -169,7 +174,7 @@ interface RollupInterface extends ethers.utils.Interface {
       string,
       string,
       BytesLike,
-      string[]
+      [string, string, string, string, string, string]
     ]
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
@@ -250,11 +255,26 @@ interface RollupInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'setOutbox', values: [string]): string
   encodeFunctionData(
     functionFragment: 'stakeOnExistingNode',
-    values: [BytesLike, BigNumberish, BigNumberish]
+    values: [BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'stakeOnNewNode',
-    values: [BytesLike, BigNumberish, BigNumberish, BytesLike[], BigNumberish[]]
+    values: [
+      BytesLike,
+      [BytesLike, BytesLike, BytesLike, BytesLike],
+      [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ]
+    ]
   ): string
   encodeFunctionData(functionFragment: 'stakeToken', values?: undefined): string
   encodeFunctionData(
@@ -355,6 +375,7 @@ interface RollupInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'getNode', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'getNodeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'getStakerAddress',
     data: BytesLike
@@ -464,7 +485,7 @@ interface RollupInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
-    'NodeCreated(uint256,uint256,bytes32,bytes32[4],uint256[10])': EventFragment
+    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,bytes32,bytes32[4],uint256[10])': EventFragment
     'Paused(address)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
@@ -497,34 +518,28 @@ export class Rollup extends Contract {
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     '_stakerMap(address)'(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     addToDeposit(
       stakerAddress: string,
@@ -538,55 +553,29 @@ export class Rollup extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    admin(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    admin(overrides?: CallOverrides): Promise<[string]>
 
-    'admin()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'admin()'(overrides?: CallOverrides): Promise<[string]>
 
     amountStaked(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'amountStaked(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    arbGasSpeedLimitPerBlock(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    arbGasSpeedLimitPerBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'arbGasSpeedLimitPerBlock()'(
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    baseStake(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    baseStake(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'baseStake()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'baseStake()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     beginTruncatingNodes(
       newLatestNodeCreated: BigNumberish,
@@ -600,29 +589,13 @@ export class Rollup extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    bridge(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    bridge(overrides?: CallOverrides): Promise<[string]>
 
-    'bridge()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
-    challengeFactory(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    challengeFactory(overrides?: CallOverrides): Promise<[string]>
 
-    'challengeFactory()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'challengeFactory()'(overrides?: CallOverrides): Promise<[string]>
 
     completeChallenge(
       winningStaker: string,
@@ -650,17 +623,9 @@ export class Rollup extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    confirmPeriodBlocks(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    confirmPeriodBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'confirmPeriodBlocks()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'confirmPeriodBlocks()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     continueTruncatingNodes(
       maxItems: BigNumberish,
@@ -675,112 +640,81 @@ export class Rollup extends Contract {
     countStakedZombies(
       node: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'countStakedZombies(address)'(
       node: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     createChallenge(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     currentChallenge(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     'currentChallenge(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
-    currentRequiredStake(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    currentRequiredStake(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'currentRequiredStake()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'currentRequiredStake()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    extraChallengeTimeBlocks(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'extraChallengeTimeBlocks()'(
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    firstUnresolvedNode(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    firstUnresolvedNode(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'firstUnresolvedNode()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    getNode(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
     'getNode(uint256)'(
       nodeNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
+
+    getNodeHash(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
 
     getStakerAddress(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     'getStakerAddress(uint256)'(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     initialize(
       _machineHash: BytesLike,
@@ -791,7 +725,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -804,97 +738,46 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    isMaster(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
 
-    isStaked(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
     'isStaked(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
-    lastStakeBlock(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    lastStakeBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'lastStakeBlock()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'lastStakeBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    latestConfirmed(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    latestConfirmed(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'latestConfirmed()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'latestConfirmed()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    latestNodeCreated(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    latestNodeCreated(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'latestNodeCreated()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'latestNodeCreated()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     latestStakedNode(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'latestStakedNode(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    minimumAssertionPeriod(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    minimumAssertionPeriod(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'minimumAssertionPeriod()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     newStake(
       tokenAmount: BigNumberish,
@@ -906,57 +789,25 @@ export class Rollup extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    nodeFactory(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    nodeFactory(overrides?: CallOverrides): Promise<[string]>
 
-    'nodeFactory()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'nodeFactory()'(overrides?: CallOverrides): Promise<[string]>
 
-    outbox(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    outbox(overrides?: CallOverrides): Promise<[string]>
 
-    'outbox()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'outbox()'(overrides?: CallOverrides): Promise<[string]>
 
-    owner(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'owner()'(overrides?: CallOverrides): Promise<[string]>
 
     pause(overrides?: Overrides): Promise<ContractTransaction>
 
     'pause()'(overrides?: Overrides): Promise<ContractTransaction>
 
-    paused(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    paused(overrides?: CallOverrides): Promise<[boolean]>
 
-    'paused()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    'paused()'(overrides?: CallOverrides): Promise<[boolean]>
 
     reduceDeposit(
       target: BigNumberish,
@@ -1015,28 +866,16 @@ export class Rollup extends Contract {
     requireUnresolved(
       nodeNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: void
-    }>
+    ): Promise<[void]>
 
     'requireUnresolved(uint256)'(
       nodeNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: void
-    }>
+    ): Promise<[void]>
 
-    requireUnresolvedExists(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: void
-    }>
+    requireUnresolvedExists(overrides?: CallOverrides): Promise<[void]>
 
-    'requireUnresolvedExists()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: void
-    }>
+    'requireUnresolvedExists()'(overrides?: CallOverrides): Promise<[void]>
 
     resume(overrides?: Overrides): Promise<ContractTransaction>
 
@@ -1052,17 +891,9 @@ export class Rollup extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    rollupEventBridge(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    rollupEventBridge(overrides?: CallOverrides): Promise<[string]>
 
-    'rollupEventBridge()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'rollupEventBridge()'(overrides?: CallOverrides): Promise<[string]>
 
     setInbox(
       _inbox: string,
@@ -1087,60 +918,60 @@ export class Rollup extends Contract {
     ): Promise<ContractTransaction>
 
     stakeOnExistingNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'stakeOnExistingNode(bytes32,uint256,uint256)'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
+    'stakeOnExistingNode(uint256,bytes32)'(
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     stakeOnNewNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'stakeOnNewNode(bytes32,uint256,uint256,bytes32[4],uint256[10])'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    stakeToken(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    stakeToken(overrides?: CallOverrides): Promise<[string]>
 
-    'stakeToken()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'stakeToken()'(overrides?: CallOverrides): Promise<[string]>
 
-    stakerCount(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'stakerCount()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     upgradeImplementation(
       _newRollup: string,
@@ -1177,89 +1008,63 @@ export class Rollup extends Contract {
     withdrawableFunds(
       owner: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'withdrawableFunds(address)'(
       owner: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     zombieAddress(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     'zombieAddress(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
-    zombieCount(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    zombieCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'zombieCount()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'zombieCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     zombieLatestStakedNode(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'zombieLatestStakedNode(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
   }
 
   _stakerMap(
     arg0: string,
     overrides?: CallOverrides
-  ): Promise<{
-    index: BigNumber
-    latestStakedNode: BigNumber
-    amountStaked: BigNumber
-    currentChallenge: string
-    isStaked: boolean
-    0: BigNumber
-    1: BigNumber
-    2: BigNumber
-    3: string
-    4: boolean
-  }>
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber, string, boolean] & {
+      index: BigNumber
+      latestStakedNode: BigNumber
+      amountStaked: BigNumber
+      currentChallenge: string
+      isStaked: boolean
+    }
+  >
 
   '_stakerMap(address)'(
     arg0: string,
     overrides?: CallOverrides
-  ): Promise<{
-    index: BigNumber
-    latestStakedNode: BigNumber
-    amountStaked: BigNumber
-    currentChallenge: string
-    isStaked: boolean
-    0: BigNumber
-    1: BigNumber
-    2: BigNumber
-    3: string
-    4: boolean
-  }>
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber, string, boolean] & {
+      index: BigNumber
+      latestStakedNode: BigNumber
+      amountStaked: BigNumber
+      currentChallenge: string
+      isStaked: boolean
+    }
+  >
 
   addToDeposit(
     stakerAddress: string,
@@ -1363,20 +1168,20 @@ export class Rollup extends Contract {
   ): Promise<BigNumber>
 
   createChallenge(
-    stakers: string[],
-    nodeNums: BigNumberish[],
-    executionHashes: BytesLike[],
-    proposedTimes: BigNumberish[],
-    maxMessageCounts: BigNumberish[],
+    stakers: [string, string],
+    nodeNums: [BigNumberish, BigNumberish],
+    executionHashes: [BytesLike, BytesLike],
+    proposedTimes: [BigNumberish, BigNumberish],
+    maxMessageCounts: [BigNumberish, BigNumberish],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-    stakers: string[],
-    nodeNums: BigNumberish[],
-    executionHashes: BytesLike[],
-    proposedTimes: BigNumberish[],
-    maxMessageCounts: BigNumberish[],
+    stakers: [string, string],
+    nodeNums: [BigNumberish, BigNumberish],
+    executionHashes: [BytesLike, BytesLike],
+    proposedTimes: [BigNumberish, BigNumberish],
+    maxMessageCounts: [BigNumberish, BigNumberish],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -1406,6 +1211,13 @@ export class Rollup extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  getNodeHash(index: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+  'getNodeHash(uint256)'(
+    index: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   getStakerAddress(
     stakerNum: BigNumberish,
     overrides?: CallOverrides
@@ -1425,7 +1237,7 @@ export class Rollup extends Contract {
     _stakeToken: string,
     _owner: string,
     _extraConfig: BytesLike,
-    connectedContracts: string[],
+    connectedContracts: [string, string, string, string, string, string],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -1438,7 +1250,7 @@ export class Rollup extends Contract {
     _stakeToken: string,
     _owner: string,
     _extraConfig: BytesLike,
-    connectedContracts: string[],
+    connectedContracts: [string, string, string, string, string, string],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -1618,34 +1430,50 @@ export class Rollup extends Contract {
   ): Promise<ContractTransaction>
 
   stakeOnExistingNode(
-    blockHash: BytesLike,
-    blockNumber: BigNumberish,
     nodeNum: BigNumberish,
+    nodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'stakeOnExistingNode(bytes32,uint256,uint256)'(
-    blockHash: BytesLike,
-    blockNumber: BigNumberish,
+  'stakeOnExistingNode(uint256,bytes32)'(
     nodeNum: BigNumberish,
+    nodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   stakeOnNewNode(
-    blockHash: BytesLike,
-    blockNumber: BigNumberish,
-    nodeNum: BigNumberish,
-    assertionBytes32Fields: BytesLike[],
-    assertionIntFields: BigNumberish[],
+    expectedNodeHash: BytesLike,
+    assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+    assertionIntFields: [
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'stakeOnNewNode(bytes32,uint256,uint256,bytes32[4],uint256[10])'(
-    blockHash: BytesLike,
-    blockNumber: BigNumberish,
-    nodeNum: BigNumberish,
-    assertionBytes32Fields: BytesLike[],
-    assertionIntFields: BigNumberish[],
+  'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+    expectedNodeHash: BytesLike,
+    assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+    assertionIntFields: [
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -1727,34 +1555,28 @@ export class Rollup extends Contract {
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     '_stakerMap(address)'(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     addToDeposit(
       stakerAddress: string,
@@ -1858,20 +1680,20 @@ export class Rollup extends Contract {
     ): Promise<BigNumber>
 
     createChallenge(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: CallOverrides
     ): Promise<void>
 
     'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1901,6 +1723,13 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    getNodeHash(index: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     getStakerAddress(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
@@ -1920,7 +1749,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1933,7 +1762,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -2107,34 +1936,50 @@ export class Rollup extends Contract {
     ): Promise<void>
 
     stakeOnExistingNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'stakeOnExistingNode(bytes32,uint256,uint256)'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
+    'stakeOnExistingNode(uint256,bytes32)'(
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
     stakeOnNewNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: CallOverrides
     ): Promise<void>
 
-    'stakeOnNewNode(bytes32,uint256,uint256,bytes32[4],uint256[10])'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -2216,6 +2061,9 @@ export class Rollup extends Contract {
   filters: {
     NodeCreated(
       nodeNum: BigNumberish | null,
+      parentNodeHash: BytesLike | null,
+      nodeHash: null,
+      executionHash: null,
       inboxMaxCount: null,
       afterInboxAcc: null,
       assertionBytes32Fields: null,
@@ -2348,20 +2196,20 @@ export class Rollup extends Contract {
     ): Promise<BigNumber>
 
     createChallenge(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -2397,6 +2245,16 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    getNodeHash(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     getStakerAddress(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
@@ -2416,7 +2274,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -2429,7 +2287,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -2603,34 +2461,50 @@ export class Rollup extends Contract {
     ): Promise<BigNumber>
 
     stakeOnExistingNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'stakeOnExistingNode(bytes32,uint256,uint256)'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
+    'stakeOnExistingNode(uint256,bytes32)'(
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     stakeOnNewNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'stakeOnNewNode(bytes32,uint256,uint256,bytes32[4],uint256[10])'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -2835,20 +2709,20 @@ export class Rollup extends Contract {
     ): Promise<PopulatedTransaction>
 
     createChallenge(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: string[],
-      nodeNums: BigNumberish[],
-      executionHashes: BytesLike[],
-      proposedTimes: BigNumberish[],
-      maxMessageCounts: BigNumberish[],
+      stakers: [string, string],
+      nodeNums: [BigNumberish, BigNumberish],
+      executionHashes: [BytesLike, BytesLike],
+      proposedTimes: [BigNumberish, BigNumberish],
+      maxMessageCounts: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -2896,6 +2770,16 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    getNodeHash(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getStakerAddress(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
@@ -2915,7 +2799,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -2928,7 +2812,7 @@ export class Rollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: string[],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -3125,34 +3009,50 @@ export class Rollup extends Contract {
     ): Promise<PopulatedTransaction>
 
     stakeOnExistingNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'stakeOnExistingNode(bytes32,uint256,uint256)'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
+    'stakeOnExistingNode(uint256,bytes32)'(
       nodeNum: BigNumberish,
+      nodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     stakeOnNewNode(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'stakeOnNewNode(bytes32,uint256,uint256,bytes32[4],uint256[10])'(
-      blockHash: BytesLike,
-      blockNumber: BigNumberish,
-      nodeNum: BigNumberish,
-      assertionBytes32Fields: BytesLike[],
-      assertionIntFields: BigNumberish[],
+    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+      expectedNodeHash: BytesLike,
+      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
+      assertionIntFields: [
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish,
+        BigNumberish
+      ],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

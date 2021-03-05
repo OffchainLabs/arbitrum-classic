@@ -26,6 +26,7 @@ interface RollupCoreInterface extends ethers.utils.Interface {
     'currentChallenge(address)': FunctionFragment
     'firstUnresolvedNode()': FunctionFragment
     'getNode(uint256)': FunctionFragment
+    'getNodeHash(uint256)': FunctionFragment
     'getStakerAddress(uint256)': FunctionFragment
     'isStaked(address)': FunctionFragment
     'lastStakeBlock()': FunctionFragment
@@ -51,6 +52,10 @@ interface RollupCoreInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'getNode',
+    values: [BigNumberish]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getNodeHash',
     values: [BigNumberish]
   ): string
   encodeFunctionData(
@@ -109,6 +114,7 @@ interface RollupCoreInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'getNode', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'getNodeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'getStakerAddress',
     data: BytesLike
@@ -165,265 +171,173 @@ export class RollupCore extends Contract {
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     '_stakerMap(address)'(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     amountStaked(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'amountStaked(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     currentChallenge(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     'currentChallenge(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
-    firstUnresolvedNode(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    firstUnresolvedNode(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'firstUnresolvedNode()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    getNode(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
     'getNode(uint256)'(
       nodeNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
+
+    getNodeHash(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
 
     getStakerAddress(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     'getStakerAddress(uint256)'(
       stakerNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
-    isStaked(
-      staker: string,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
     'isStaked(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
-    lastStakeBlock(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    lastStakeBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'lastStakeBlock()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'lastStakeBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    latestConfirmed(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    latestConfirmed(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'latestConfirmed()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'latestConfirmed()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    latestNodeCreated(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    latestNodeCreated(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'latestNodeCreated()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'latestNodeCreated()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     latestStakedNode(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'latestStakedNode(address)'(
       staker: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    stakerCount(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'stakerCount()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     withdrawableFunds(
       owner: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'withdrawableFunds(address)'(
       owner: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     zombieAddress(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     'zombieAddress(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
-    zombieCount(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    zombieCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'zombieCount()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'zombieCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     zombieLatestStakedNode(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'zombieLatestStakedNode(uint256)'(
       zombieNum: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
   }
 
   _stakerMap(
     arg0: string,
     overrides?: CallOverrides
-  ): Promise<{
-    index: BigNumber
-    latestStakedNode: BigNumber
-    amountStaked: BigNumber
-    currentChallenge: string
-    isStaked: boolean
-    0: BigNumber
-    1: BigNumber
-    2: BigNumber
-    3: string
-    4: boolean
-  }>
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber, string, boolean] & {
+      index: BigNumber
+      latestStakedNode: BigNumber
+      amountStaked: BigNumber
+      currentChallenge: string
+      isStaked: boolean
+    }
+  >
 
   '_stakerMap(address)'(
     arg0: string,
     overrides?: CallOverrides
-  ): Promise<{
-    index: BigNumber
-    latestStakedNode: BigNumber
-    amountStaked: BigNumber
-    currentChallenge: string
-    isStaked: boolean
-    0: BigNumber
-    1: BigNumber
-    2: BigNumber
-    3: string
-    4: boolean
-  }>
+  ): Promise<
+    [BigNumber, BigNumber, BigNumber, string, boolean] & {
+      index: BigNumber
+      latestStakedNode: BigNumber
+      amountStaked: BigNumber
+      currentChallenge: string
+      isStaked: boolean
+    }
+  >
 
   amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
@@ -447,6 +361,13 @@ export class RollupCore extends Contract {
 
   'getNode(uint256)'(
     nodeNum: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  getNodeHash(index: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+  'getNodeHash(uint256)'(
+    index: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>
 
@@ -531,34 +452,28 @@ export class RollupCore extends Contract {
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     '_stakerMap(address)'(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      index: BigNumber
-      latestStakedNode: BigNumber
-      amountStaked: BigNumber
-      currentChallenge: string
-      isStaked: boolean
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: string
-      4: boolean
-    }>
+    ): Promise<
+      [BigNumber, BigNumber, BigNumber, string, boolean] & {
+        index: BigNumber
+        latestStakedNode: BigNumber
+        amountStaked: BigNumber
+        currentChallenge: string
+        isStaked: boolean
+      }
+    >
 
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
@@ -582,6 +497,13 @@ export class RollupCore extends Contract {
 
     'getNode(uint256)'(
       nodeNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    getNodeHash(index: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
 
@@ -701,6 +623,16 @@ export class RollupCore extends Contract {
 
     'getNode(uint256)'(
       nodeNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    getNodeHash(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -828,6 +760,16 @@ export class RollupCore extends Contract {
 
     'getNode(uint256)'(
       nodeNum: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getNodeHash(
+      index: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getNodeHash(uint256)'(
+      index: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

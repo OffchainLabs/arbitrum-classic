@@ -23,26 +23,24 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface EthERC20BridgeInterface extends ethers.utils.Interface {
   functions: {
-    'buddyCreated(bool)': FunctionFragment
-    'connectToChain(uint256,uint256)': FunctionFragment
+    'codeHash()': FunctionFragment
     'customL2Tokens(address)': FunctionFragment
     'depositAsERC20(address,address,uint256,uint256,uint256)': FunctionFragment
     'depositAsERC777(address,address,uint256,uint256,uint256)': FunctionFragment
     'fastWithdrawalFromL2(address,bytes,address,uint256,uint256)': FunctionFragment
+    'finalizeBuddyDeploy(bool)': FunctionFragment
+    'inbox()': FunctionFragment
+    'initiateBuddyDeploy(uint256,uint256,bytes)': FunctionFragment
+    'l2Buddy()': FunctionFragment
+    'l2Connection()': FunctionFragment
+    'l2Deployer()': FunctionFragment
     'notifyCustomToken(address,uint256,uint256)': FunctionFragment
     'registerCustomL2Token(address)': FunctionFragment
     'updateTokenInfo(address,uint256,uint256,bool)': FunctionFragment
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'buddyCreated',
-    values: [boolean]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'connectToChain',
-    values: [BigNumberish, BigNumberish]
-  ): string
+  encodeFunctionData(functionFragment: 'codeHash', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'customL2Tokens',
     values: [string]
@@ -60,6 +58,21 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     values: [string, BytesLike, string, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'finalizeBuddyDeploy',
+    values: [boolean]
+  ): string
+  encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'initiateBuddyDeploy',
+    values: [BigNumberish, BigNumberish, BytesLike]
+  ): string
+  encodeFunctionData(functionFragment: 'l2Buddy', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'l2Connection',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'l2Deployer', values?: undefined): string
+  encodeFunctionData(
     functionFragment: 'notifyCustomToken',
     values: [string, BigNumberish, BigNumberish]
   ): string
@@ -76,14 +89,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     values: [BigNumberish, string, string, BigNumberish]
   ): string
 
-  decodeFunctionResult(
-    functionFragment: 'buddyCreated',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'connectToChain',
-    data: BytesLike
-  ): Result
+  decodeFunctionResult(functionFragment: 'codeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'customL2Tokens',
     data: BytesLike
@@ -100,6 +106,21 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     functionFragment: 'fastWithdrawalFromL2',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'finalizeBuddyDeploy',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'initiateBuddyDeploy',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'l2Buddy', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'l2Connection',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'l2Deployer', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'notifyCustomToken',
     data: BytesLike
@@ -134,41 +155,16 @@ export class EthERC20Bridge extends Contract {
   interface: EthERC20BridgeInterface
 
   functions: {
-    buddyCreated(
-      successful: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    codeHash(overrides?: CallOverrides): Promise<[string]>
 
-    'buddyCreated(bool)'(
-      successful: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'codeHash()'(overrides?: CallOverrides): Promise<[string]>
 
-    connectToChain(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'connectToChain(uint256,uint256)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    customL2Tokens(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<[string]>
 
     'customL2Tokens(address)'(
       arg0: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    ): Promise<[string]>
 
     depositAsERC20(
       erc20: string,
@@ -223,6 +219,46 @@ export class EthERC20Bridge extends Contract {
       exitNum: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    finalizeBuddyDeploy(
+      success: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'finalizeBuddyDeploy(bool)'(
+      success: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    inbox(overrides?: CallOverrides): Promise<[string]>
+
+    'inbox()'(overrides?: CallOverrides): Promise<[string]>
+
+    initiateBuddyDeploy(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    l2Buddy(overrides?: CallOverrides): Promise<[string]>
+
+    'l2Buddy()'(overrides?: CallOverrides): Promise<[string]>
+
+    l2Connection(overrides?: CallOverrides): Promise<[number]>
+
+    'l2Connection()'(overrides?: CallOverrides): Promise<[number]>
+
+    l2Deployer(overrides?: CallOverrides): Promise<[string]>
+
+    'l2Deployer()'(overrides?: CallOverrides): Promise<[string]>
 
     notifyCustomToken(
       l1Address: string,
@@ -281,27 +317,9 @@ export class EthERC20Bridge extends Contract {
     ): Promise<ContractTransaction>
   }
 
-  buddyCreated(
-    successful: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  codeHash(overrides?: CallOverrides): Promise<string>
 
-  'buddyCreated(bool)'(
-    successful: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  connectToChain(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'connectToChain(uint256,uint256)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
+  'codeHash()'(overrides?: CallOverrides): Promise<string>
 
   customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<string>
 
@@ -364,6 +382,46 @@ export class EthERC20Bridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  finalizeBuddyDeploy(
+    success: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'finalizeBuddyDeploy(bool)'(
+    success: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  inbox(overrides?: CallOverrides): Promise<string>
+
+  'inbox()'(overrides?: CallOverrides): Promise<string>
+
+  initiateBuddyDeploy(
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    contractInitCode: BytesLike,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  'initiateBuddyDeploy(uint256,uint256,bytes)'(
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    contractInitCode: BytesLike,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  l2Buddy(overrides?: CallOverrides): Promise<string>
+
+  'l2Buddy()'(overrides?: CallOverrides): Promise<string>
+
+  l2Connection(overrides?: CallOverrides): Promise<number>
+
+  'l2Connection()'(overrides?: CallOverrides): Promise<number>
+
+  l2Deployer(overrides?: CallOverrides): Promise<string>
+
+  'l2Deployer()'(overrides?: CallOverrides): Promise<string>
+
   notifyCustomToken(
     l1Address: string,
     maxGas: BigNumberish,
@@ -421,24 +479,9 @@ export class EthERC20Bridge extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    buddyCreated(successful: boolean, overrides?: CallOverrides): Promise<void>
+    codeHash(overrides?: CallOverrides): Promise<string>
 
-    'buddyCreated(bool)'(
-      successful: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    connectToChain(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'connectToChain(uint256,uint256)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
+    'codeHash()'(overrides?: CallOverrides): Promise<string>
 
     customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<string>
 
@@ -501,6 +544,46 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    finalizeBuddyDeploy(
+      success: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'finalizeBuddyDeploy(bool)'(
+      success: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    inbox(overrides?: CallOverrides): Promise<string>
+
+    'inbox()'(overrides?: CallOverrides): Promise<string>
+
+    initiateBuddyDeploy(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    l2Buddy(overrides?: CallOverrides): Promise<string>
+
+    'l2Buddy()'(overrides?: CallOverrides): Promise<string>
+
+    l2Connection(overrides?: CallOverrides): Promise<number>
+
+    'l2Connection()'(overrides?: CallOverrides): Promise<number>
+
+    l2Deployer(overrides?: CallOverrides): Promise<string>
+
+    'l2Deployer()'(overrides?: CallOverrides): Promise<string>
+
     notifyCustomToken(
       l1Address: string,
       maxGas: BigNumberish,
@@ -561,24 +644,9 @@ export class EthERC20Bridge extends Contract {
   filters: {}
 
   estimateGas: {
-    buddyCreated(successful: boolean, overrides?: Overrides): Promise<BigNumber>
+    codeHash(overrides?: CallOverrides): Promise<BigNumber>
 
-    'buddyCreated(bool)'(
-      successful: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    connectToChain(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'connectToChain(uint256,uint256)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
+    'codeHash()'(overrides?: CallOverrides): Promise<BigNumber>
 
     customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
 
@@ -641,6 +709,46 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    finalizeBuddyDeploy(
+      success: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'finalizeBuddyDeploy(bool)'(
+      success: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    inbox(overrides?: CallOverrides): Promise<BigNumber>
+
+    'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    initiateBuddyDeploy(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    l2Buddy(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2Buddy()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2Connection(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2Connection()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2Deployer(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2Deployer()'(overrides?: CallOverrides): Promise<BigNumber>
+
     notifyCustomToken(
       l1Address: string,
       maxGas: BigNumberish,
@@ -699,27 +807,9 @@ export class EthERC20Bridge extends Contract {
   }
 
   populateTransaction: {
-    buddyCreated(
-      successful: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
+    codeHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'buddyCreated(bool)'(
-      successful: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    connectToChain(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'connectToChain(uint256,uint256)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
+    'codeHash()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     customL2Tokens(
       arg0: string,
@@ -784,6 +874,46 @@ export class EthERC20Bridge extends Contract {
       exitNum: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    finalizeBuddyDeploy(
+      success: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'finalizeBuddyDeploy(bool)'(
+      success: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    initiateBuddyDeploy(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      contractInitCode: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    l2Buddy(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2Buddy()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    l2Connection(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2Connection()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    l2Deployer(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2Deployer()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     notifyCustomToken(
       l1Address: string,

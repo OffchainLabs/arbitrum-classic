@@ -222,17 +222,13 @@ export class StandardArbERC777 extends Contract {
       holder: string,
       spender: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'allowance(address,address)'(
       holder: string,
       spender: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     approve(
       spender: string,
@@ -259,28 +255,16 @@ export class StandardArbERC777 extends Contract {
     balanceOf(
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'balanceOf(address)'(
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
-    bridge(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    bridge(overrides?: CallOverrides): Promise<[string]>
 
-    'bridge()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
     bridgeMint(
       account: string,
@@ -306,41 +290,17 @@ export class StandardArbERC777 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    decimals(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    decimals(overrides?: CallOverrides): Promise<[number]>
 
-    'decimals()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    'decimals()'(overrides?: CallOverrides): Promise<[number]>
 
-    defaultOperators(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string[]
-    }>
+    defaultOperators(overrides?: CallOverrides): Promise<[string[]]>
 
-    'defaultOperators()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string[]
-    }>
+    'defaultOperators()'(overrides?: CallOverrides): Promise<[string[]]>
 
-    granularity(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    granularity(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'granularity()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'granularity()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     initialize(
       _bridge: string,
@@ -356,57 +316,29 @@ export class StandardArbERC777 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    isMaster(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
 
-    'isMaster()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
 
     isOperatorFor(
       operator: string,
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
     'isOperatorFor(address,address)'(
       operator: string,
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
-    l1Address(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    l1Address(overrides?: CallOverrides): Promise<[string]>
 
-    'l1Address()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'l1Address()'(overrides?: CallOverrides): Promise<[string]>
 
-    l1Decimals(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    l1Decimals(overrides?: CallOverrides): Promise<[number]>
 
-    'l1Decimals()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    'l1Decimals()'(overrides?: CallOverrides): Promise<[number]>
 
     migrate(
       target: string,
@@ -420,17 +352,9 @@ export class StandardArbERC777 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    name(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    name(overrides?: CallOverrides): Promise<[string]>
 
-    'name()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'name()'(overrides?: CallOverrides): Promise<[string]>
 
     operatorBurn(
       account: string,
@@ -490,29 +414,13 @@ export class StandardArbERC777 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    symbol(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    symbol(overrides?: CallOverrides): Promise<[string]>
 
-    'symbol()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'symbol()'(overrides?: CallOverrides): Promise<[string]>
 
-    totalSupply(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    totalSupply(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'totalSupply()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'totalSupply()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     transfer(
       recipient: string,

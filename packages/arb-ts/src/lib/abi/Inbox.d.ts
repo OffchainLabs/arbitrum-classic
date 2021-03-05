@@ -24,7 +24,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
-    'deployL2ContractPair(uint256,uint256,uint256,bytes)': FunctionFragment
     'depositEth(address)': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
@@ -35,10 +34,6 @@ interface InboxInterface extends ethers.utils.Interface {
   }
 
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'deployL2ContractPair',
-    values: [BigNumberish, BigNumberish, BigNumberish, BytesLike]
-  ): string
   encodeFunctionData(functionFragment: 'depositEth', values: [string]): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
@@ -73,10 +68,6 @@ interface InboxInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'deployL2ContractPair',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
@@ -128,33 +119,9 @@ export class Inbox extends Contract {
   interface: InboxInterface
 
   functions: {
-    bridge(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    bridge(overrides?: CallOverrides): Promise<[string]>
 
-    'bridge()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
-
-    deployL2ContractPair(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'deployL2ContractPair(uint256,uint256,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
     depositEth(
       destAddr: string,
@@ -263,22 +230,6 @@ export class Inbox extends Contract {
 
   'bridge()'(overrides?: CallOverrides): Promise<string>
 
-  deployL2ContractPair(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    payment: BigNumberish,
-    contractData: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'deployL2ContractPair(uint256,uint256,uint256,bytes)'(
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    payment: BigNumberish,
-    contractData: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   depositEth(
     destAddr: string,
     overrides?: PayableOverrides
@@ -385,22 +336,6 @@ export class Inbox extends Contract {
     bridge(overrides?: CallOverrides): Promise<string>
 
     'bridge()'(overrides?: CallOverrides): Promise<string>
-
-    deployL2ContractPair(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'deployL2ContractPair(uint256,uint256,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     depositEth(destAddr: string, overrides?: CallOverrides): Promise<void>
 
@@ -518,22 +453,6 @@ export class Inbox extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    deployL2ContractPair(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'deployL2ContractPair(uint256,uint256,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     depositEth(
       destAddr: string,
       overrides?: PayableOverrides
@@ -641,22 +560,6 @@ export class Inbox extends Contract {
     bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    deployL2ContractPair(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'deployL2ContractPair(uint256,uint256,uint256,bytes)'(
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      payment: BigNumberish,
-      contractData: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
 
     depositEth(
       destAddr: string,

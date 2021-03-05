@@ -180,17 +180,13 @@ export class ERC777 extends Contract {
       holder: string,
       spender: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'allowance(address,address)'(
       holder: string,
       spender: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     approve(
       spender: string,
@@ -217,16 +213,12 @@ export class ERC777 extends Contract {
     balanceOf(
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     'balanceOf(address)'(
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    ): Promise<[BigNumber]>
 
     burn(
       amount: BigNumberish,
@@ -240,69 +232,33 @@ export class ERC777 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    decimals(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    decimals(overrides?: CallOverrides): Promise<[number]>
 
-    'decimals()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: number
-    }>
+    'decimals()'(overrides?: CallOverrides): Promise<[number]>
 
-    defaultOperators(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string[]
-    }>
+    defaultOperators(overrides?: CallOverrides): Promise<[string[]]>
 
-    'defaultOperators()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string[]
-    }>
+    'defaultOperators()'(overrides?: CallOverrides): Promise<[string[]]>
 
-    granularity(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    granularity(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'granularity()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'granularity()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     isOperatorFor(
       operator: string,
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
     'isOperatorFor(address,address)'(
       operator: string,
       tokenHolder: string,
       overrides?: CallOverrides
-    ): Promise<{
-      0: boolean
-    }>
+    ): Promise<[boolean]>
 
-    name(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    name(overrides?: CallOverrides): Promise<[string]>
 
-    'name()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'name()'(overrides?: CallOverrides): Promise<[string]>
 
     operatorBurn(
       account: string,
@@ -362,29 +318,13 @@ export class ERC777 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    symbol(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    symbol(overrides?: CallOverrides): Promise<[string]>
 
-    'symbol()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'symbol()'(overrides?: CallOverrides): Promise<[string]>
 
-    totalSupply(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    totalSupply(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'totalSupply()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'totalSupply()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     transfer(
       recipient: string,

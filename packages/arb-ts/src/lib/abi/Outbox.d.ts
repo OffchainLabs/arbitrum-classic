@@ -164,53 +164,21 @@ export class Outbox extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    l2ToL1Block(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    l2ToL1Block(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'l2ToL1Block()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'l2ToL1Block()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    l2ToL1EthBlock(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    l2ToL1EthBlock(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'l2ToL1EthBlock()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'l2ToL1EthBlock()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    l2ToL1Sender(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    l2ToL1Sender(overrides?: CallOverrides): Promise<[string]>
 
-    'l2ToL1Sender()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'l2ToL1Sender()'(overrides?: CallOverrides): Promise<[string]>
 
-    l2ToL1Timestamp(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    l2ToL1Timestamp(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'l2ToL1Timestamp()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: BigNumber
-    }>
+    'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     processOutgoingMessages(
       sendsData: BytesLike,

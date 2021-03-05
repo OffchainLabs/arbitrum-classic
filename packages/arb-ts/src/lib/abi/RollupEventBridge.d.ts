@@ -82,7 +82,15 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
 
-  events: {}
+  events: {
+    'InboxMessageDelivered(uint256,bytes)': EventFragment
+    'InboxMessageDeliveredFromOrigin(uint256)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'InboxMessageDelivered'): EventFragment
+  getEvent(
+    nameOrSignatureOrTopic: 'InboxMessageDeliveredFromOrigin'
+  ): EventFragment
 }
 
 export class RollupEventBridge extends Contract {
@@ -348,7 +356,16 @@ export class RollupEventBridge extends Contract {
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    InboxMessageDelivered(
+      messageNum: BigNumberish | null,
+      data: null
+    ): EventFilter
+
+    InboxMessageDeliveredFromOrigin(
+      messageNum: BigNumberish | null
+    ): EventFilter
+  }
 
   estimateGas: {
     claimNode(

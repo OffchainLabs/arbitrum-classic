@@ -76,7 +76,7 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
 
   events: {
     'OwnershipTransferred(address,address)': EventFragment
-    'RollupCreated(address)': EventFragment
+    'RollupCreated(address,address)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
@@ -121,17 +121,9 @@ export class RollupCreator extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    owner(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'owner()'(overrides?: CallOverrides): Promise<[string]>
 
     renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
 
@@ -282,7 +274,7 @@ export class RollupCreator extends Contract {
       newOwner: string | null
     ): EventFilter
 
-    RollupCreated(rollupAddress: null): EventFilter
+    RollupCreated(rollupAddress: null, inboxAddress: null): EventFilter
   }
 
   estimateGas: {

@@ -121,17 +121,9 @@ export class RollupCreatorNoProxy extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    owner(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    owner(overrides?: CallOverrides): Promise<[string]>
 
-    'owner()'(
-      overrides?: CallOverrides
-    ): Promise<{
-      0: string
-    }>
+    'owner()'(overrides?: CallOverrides): Promise<[string]>
 
     renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
 
