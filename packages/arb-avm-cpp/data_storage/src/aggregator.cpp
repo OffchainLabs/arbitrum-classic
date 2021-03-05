@@ -250,8 +250,7 @@ std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
     }
     auto full_key = blockEntryKey(height);
     std::string value;
-    auto s =
-        tx->GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
+    auto s = tx->Get(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
     if (!s.ok()) {
         throw std::runtime_error("failed load value");
     }

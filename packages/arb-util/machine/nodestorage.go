@@ -38,6 +38,8 @@ type NodeStore interface {
 	GetBlockInfo(height uint64) (*BlockInfo, error)
 	BlockCount() (uint64, error)
 
+	SaveMessageBatch(batchNum *big.Int, logIndex uint64) error
+	GetMessageBatch(batchNum *big.Int) (uint64, error)
 	SaveBlock(header *types.Header, logIndex uint64, requests []EVMRequestInfo) error
 	Reorg(height uint64) error
 
