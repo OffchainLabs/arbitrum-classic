@@ -26,11 +26,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../libraries/SafeERC20Namer.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
-import "../../buddybridge/util/BuddyUtil.sol";
 
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
-    address public l2Buddy;
 
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) redirectedExits;
@@ -56,28 +54,11 @@ contract EthERC20Bridge is L1Buddy {
     }
 
     function handleDeploySuccess() internal override {
-        // TODO: should we check if connection state is pending?
-        l2Buddy = BuddyUtil.calculateL2Address(
-            address(L1Buddy.l2Deployer),
-            address(this),
-            keccak256(type(ArbSymmetricTokenBridge).creationCode)
-        );
         // this deletes the codehash from state!
         L1Buddy.handleDeploySuccess();
     }
     function handleDeployFail() internal override {}
 
-    modifier onlyIfConnected {
-        require(L1Buddy.l2Connection == L1Buddy.L2Connection.Complete, "Not connected");
-        _;
-    }
-
-    modifier onlyL2Buddy {
-        require(l2Buddy != address(0), "l2 buddy not set");
-        IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
-        require(l2Buddy == outbox.l2ToL1Sender(), "Not from l2 buddy");
-        _;
-    }
 
     /**
      * @notice Notify the L2 side of the bridge that a given token has opted into a custom implementation
@@ -212,7 +193,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid,
         bytes memory data
     ) private {
-        inbox.depositEth{ value: msg.value }(l2Buddy);
-        inbox.sendContractTransaction(maxGas, gasPriceBid, l2Buddy, 0, data);
+        inbox.depositEth{ value: msg.value }(L1Buddy.l2Buddy);
+        inbox.sendContractTransaction(maxGas, gasPriceBid, L1Buddy.l2Buddy, 0, data);
     }
 }

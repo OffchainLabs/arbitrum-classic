@@ -21,7 +21,6 @@ pragma solidity ^0.6.11;
 import "./MMR.sol";
 import "./tokenbridge/arbitrum/StandardArbERC20.sol";
 import "./buddybridge/ethereum/L1Buddy.sol";
-import "./buddybridge/util/BuddyUtil.sol";
 
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -58,7 +57,6 @@ contract EthBatchTokenReceiver is L1Buddy {
     bytes32 root;
     IERC20 erc20;
     mapping(uint256 => bool) redeemed;
-    address l2Buddy;
 
     constructor(
         address _inbox,
@@ -74,28 +72,10 @@ contract EthBatchTokenReceiver is L1Buddy {
     }
 
     function handleDeploySuccess() internal override {
-        // TODO: should we check if connection state is pending?
-        l2Buddy = BuddyUtil.calculateL2Address(
-            address(L1Buddy.l2Deployer),
-            address(this),
-            keccak256(type(ArbBatchTokenMover).creationCode)
-        );
         // this deletes the codehash from state!
         L1Buddy.handleDeploySuccess();
     }
     function handleDeployFail() internal override {}
-
-    modifier onlyIfConnected {
-        require(L1Buddy.l2Connection == L1Buddy.L2Connection.Complete, "Not connected");
-        _;
-    }
-
-    modifier onlyL2Buddy {
-        require(l2Buddy != address(0), "l2 buddy not set");
-        IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
-        require(l2Buddy == outbox.l2ToL1Sender(), "Not from l2 buddy");
-        _;
-    }
 
     function distributeBatch(bytes32 _root) external onlyIfConnected onlyL2Buddy {
         root = _root;
