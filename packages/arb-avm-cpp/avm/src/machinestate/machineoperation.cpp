@@ -101,14 +101,6 @@ Buffer& assumeBuffer(value& val) {
     return *buf;
 }
 
-Buffer const& assumeBuffer(value const& val) {
-    auto buf = std::get_if<Buffer>(&val);
-    if (!buf) {
-        throw bad_pop_type{};
-    }
-    return *buf;
-}
-
 void add(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
@@ -1103,14 +1095,22 @@ void getbuffer256(MachineState& m) {
 }
 
 uint64_t setbuffer_variable_gas_cost(MachineState const& m) {
+    if (m.stack.stacksize() < 3) {
+        return 0;
+    }
     const value* val = &m.stack[2];
-    auto mx = assumeBuffer(*val).maxAccess;
+    auto buf = std::get_if<Buffer>(val);
+    if (!buf) {
+        return 0;
+    }
+    auto mx = buf->maxAccess;
     uint64_t res = 0;
     mx = mx/1024;
     while (mx > 0) {
         res += 80;
         mx = mx/8;
     }
+    std::cerr << "Gas " << res << " mx " << buf->maxAccess << " lastindex " << buf->lastIndex() << "\n";
     return res;
 }
 
