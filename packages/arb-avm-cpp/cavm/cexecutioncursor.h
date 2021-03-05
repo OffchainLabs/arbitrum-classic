@@ -31,6 +31,8 @@ CExecutionCursor* executionCursorClone(CExecutionCursor* execution_cursor_ptr);
 int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
                                void* ret);
 int executionCursorInboxAcc(CExecutionCursor* execution_cursor_ptr, void* ret);
+int executionCursorSendAcc(CExecutionCursor* execution_cursor_ptr, void* ret);
+int executionCursorLogAcc(CExecutionCursor* execution_cursor_ptr, void* ret);
 Uint256Result executionCursorTotalMessagesRead(
     CExecutionCursor* execution_cursor_ptr);
 Uint256Result executionCursorTotalSteps(CExecutionCursor* execution_cursor_ptr);
