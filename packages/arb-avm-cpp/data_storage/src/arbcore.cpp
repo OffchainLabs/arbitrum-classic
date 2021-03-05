@@ -389,10 +389,6 @@ rocksdb::Status ArbCore::saveAssertion(Transaction& tx,
         return status;
     }
 
-    for (const auto& debug_print : assertion.debugPrints) {
-        std::cout << "debug print " << debug_print << "\n";
-    }
-
     pending_checkpoint.applyAssertion(assertion);
 
     updateMessageEntryProcessedCount(tx,

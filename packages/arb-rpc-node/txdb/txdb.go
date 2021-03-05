@@ -18,7 +18,6 @@ package txdb
 
 import (
 	"context"
-	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
@@ -191,7 +190,6 @@ func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 		logger.Error().Stack().Err(err).Msg("Error parsing log result")
 		return nil
 	}
-	fmt.Printf("Log %v %T\n", logIndex, res)
 
 	switch res := res.(type) {
 	case *evm.BlockInfo:
