@@ -22,10 +22,10 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 
-import "../ethereum/BuddyBridge.sol";
+import "../ethereum/L1Buddy.sol";
 import "../util/BuddyUtil.sol";
 
-contract TestConstructorBuddy is BuddyContract {
+contract TestConstructorBuddy is L1Buddy {
     address public l2Buddy;
 
     constructor(
@@ -35,44 +35,44 @@ contract TestConstructorBuddy is BuddyContract {
         uint256 _gasPrice,
         bytes memory _deployCode
     )
-        BuddyContract(_inbox, _l2Deployer)
+        L1Buddy(_inbox, _l2Deployer)
         public
     {
-        BuddyContract.initiateBuddyDeploy(_maxGas, _gasPrice, _deployCode);
+        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, _deployCode);
     }
 
     function handleDeploySuccess() internal override {
         l2Buddy = BuddyUtil.calculateL2Address(
-            address(BuddyContract.l2Deployer),
+            address(L1Buddy.l2Deployer),
             address(this),
-            BuddyContract.codeHash
+            L1Buddy.codeHash
         );
         // this deletes the codehash from state!
-        BuddyContract.handleDeploySuccess();
+        L1Buddy.handleDeploySuccess();
     }
 
     function handleDeployFail() internal override {}
 }
 
-contract TestBuddy is BuddyContract {
+contract TestBuddy is L1Buddy {
     address public l2Buddy;
 
     constructor(
         address _inbox,
         address _l2Deployer
     )
-        BuddyContract(_inbox, _l2Deployer)
+        L1Buddy(_inbox, _l2Deployer)
         public
     {}
 
     function handleDeploySuccess() internal override {
         l2Buddy = BuddyUtil.calculateL2Address(
-            address(BuddyContract.l2Deployer),
+            address(L1Buddy.l2Deployer),
             address(this),
-            BuddyContract.codeHash
+            L1Buddy.codeHash
         );
         // this deletes the codehash from state!
-        BuddyContract.handleDeploySuccess();
+        L1Buddy.handleDeploySuccess();
     }
     function handleDeployFail() internal override {}
 }

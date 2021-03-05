@@ -18,10 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../ethereum/BuddyBridge.sol";
+import "../ethereum/L1Buddy.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
-contract L2Deployer {
+contract BuddyDeployer {
     constructor() public {}
 
     event Deployed(address _sender, bool _success);
@@ -47,7 +47,7 @@ contract L2Deployer {
         }
 
         // L1 callback to buddy
-        bytes memory calldataForL1 = abi.encodeWithSelector(BuddyContract.finalizeBuddyDeploy.selector, success);
+        bytes memory calldataForL1 = abi.encodeWithSelector(L1Buddy.finalizeBuddyDeploy.selector, success);
         ArbSys(100).sendTxToL1(user, calldataForL1);
         emit Deployed(user, success);
     }

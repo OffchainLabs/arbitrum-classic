@@ -25,7 +25,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 import "../arbitrum/BuddyDeployer.sol";
 
 // contracts that want to have buddies should inherit from this
-abstract contract BuddyContract {
+abstract contract L1Buddy {
     enum L2Connection {
         Null, // 0
         Initiated, // 1
@@ -33,14 +33,14 @@ abstract contract BuddyContract {
     }
 
     L2Connection public l2Connection;
-    L2Deployer public l2Deployer;
+    BuddyDeployer public l2Deployer;
     IInbox public inbox;
     bytes32 codeHash;
 
     constructor(address _inbox, address _l2Deployer) public {
         l2Connection = L2Connection.Null;
         inbox = IInbox(_inbox);
-        l2Deployer = L2Deployer(_l2Deployer);
+        l2Deployer = BuddyDeployer(_l2Deployer);
     }
 
     function initiateBuddyDeploy(
@@ -54,7 +54,7 @@ abstract contract BuddyContract {
             "Only retry if same deploy code"
         );
         // deployCode == type(ArbSymmetricTokenBridge).creationCode
-        bytes memory data = abi.encodeWithSelector(L2Deployer.executeBuddyDeploy.selector, deployCode);
+        bytes memory data = abi.encodeWithSelector(BuddyDeployer.executeBuddyDeploy.selector, deployCode);
 
         if(msg.value > 0) {
             // gas paid in L1

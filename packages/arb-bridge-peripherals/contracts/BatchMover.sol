@@ -53,12 +53,12 @@ contract ArbBatchTokenMover {
     }
 }
 
-contract EthBatchTokenReceiver is L1Buddy {
+contract EthBatchTokenReceiver is L1BuddyOld {
     bytes32 root;
     IERC20 erc20;
     mapping(uint256 => bool) redeemed;
 
-    constructor(IInbox _inbox) public L1Buddy(_inbox) {}
+    constructor(IInbox _inbox) public L1BuddyOld(_inbox) {}
 
     function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
         // Pay for gas
