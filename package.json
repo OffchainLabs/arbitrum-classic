@@ -45,7 +45,7 @@
     "packages": [
       "packages/arb-bridge-eth",
       "packages/arb-provider-ethers",
-      "packages/arbos-contracts",
+      "packages/arb-os/contracts",
       "packages/tools"
     ]
   },

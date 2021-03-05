@@ -25,7 +25,7 @@ import "arb-bridge-eth/contracts/libraries/CloneFactory.sol";
 
 import "./IArbToken.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
-import "arbos-contracts/contracts/ArbSys.sol";
+import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 contract ArbTokenBridge is CloneFactory {
     using Address for address;

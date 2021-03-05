@@ -19,12 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../ethereum/BuddyBridge.sol";
-
-// TODO: get from arb-os submodule
-interface ArbSys {
-    function sendTxToL1(address destAddr, bytes calldata calldataForL1) external payable;
-    function isTopLevelCall() external view returns (bool);
-}
+import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 contract L2Deployer {
     constructor() public {}

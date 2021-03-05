@@ -22,7 +22,7 @@ import "./MMR.sol";
 import "./tokenbridge/arbitrum/StandardArbERC20.sol";
 import "./tokenbridge/ethereum/L1Buddy.sol";
 
-import "arbos-contracts/contracts/ArbSys.sol";
+import "arbos-contracts/arbos/builtin/ArbSys.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract ArbBatchTokenMover {
