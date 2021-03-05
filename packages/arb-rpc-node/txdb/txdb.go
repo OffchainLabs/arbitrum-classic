@@ -18,6 +18,7 @@ package txdb
 
 import (
 	"context"
+	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
@@ -121,13 +122,14 @@ func (db *TxDB) UpdateCurrentLogCount(count *big.Int) error {
 	return db.as.UpdateCurrentLogCount(count)
 }
 
-func (db *TxDB) AddLogs(avmLogs []value.Value) error {
+func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
+	logIndex := initialLogIndex.Uint64()
 	for _, avmLog := range avmLogs {
-		if err := db.HandleLog(avmLog); err != nil {
+		if err := db.HandleLog(logIndex, avmLog); err != nil {
 			return err
 		}
+		logIndex++
 	}
-
 	return nil
 }
 
@@ -183,18 +185,19 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	return nil
 }
 
-func (db *TxDB) HandleLog(avmLog value.Value) error {
+func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
 		logger.Error().Stack().Err(err).Msg("Error parsing log result")
 		return nil
 	}
+	fmt.Printf("Log %v %T\n", logIndex, res)
 
 	switch res := res.(type) {
 	case *evm.BlockInfo:
 		return db.handleBlockReceipt(res)
 	case *evm.MerkleRootResult:
-		return db.as.SaveMessageBatch(res.BatchNumber, res.NumInBatch.Uint64())
+		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
 	default:
 		return nil
 	}
@@ -314,7 +317,7 @@ func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
 	}
 	merkleRes, ok := res.(*evm.MerkleRootResult)
 	if !ok {
-		return nil, errors.New("expected merkle root result")
+		return nil, errors.Errorf("expected merkle root result but got %T at log index %v", res, *logIndex)
 	}
 	if merkleRes.BatchNumber.Cmp(index) != 0 {
 		return nil, nil

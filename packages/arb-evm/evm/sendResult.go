@@ -87,11 +87,12 @@ const (
 	BuddyResultType SendResultMessageType = 5
 )
 
-func NewSendResultFromData(data []byte) (SendResultMessage, error) {
-	if len(data) == 0 {
-		return nil, errors.New("send result message must have nonzero data")
+func NewVirtualSendResultFromData(data []byte) (SendResultMessage, error) {
+	if len(data) < 32 {
+		return nil, errors.New("send result message must be at least 32 bytes")
 	}
-	switch SendResultMessageType(data[0]) {
+	typecode := new(big.Int).SetBytes(data[:32])
+	switch SendResultMessageType(typecode.Uint64()) {
 	case WithdrawEthType:
 		return NewWithdrawEthResultFromData(data)
 	case SendTxToL1Type:

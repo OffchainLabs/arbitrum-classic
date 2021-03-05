@@ -32,6 +32,7 @@ type MerkleNode interface {
 	Lowest() uint64
 	Highest() uint64
 	ContainsIndex(index uint64) bool
+	Entries() [][]byte
 }
 
 type MerkleLeaf struct {
@@ -58,6 +59,10 @@ func (m *MerkleLeaf) Highest() uint64 {
 
 func (m *MerkleLeaf) ContainsIndex(index uint64) bool {
 	return index == m.index
+}
+
+func (m *MerkleLeaf) Entries() [][]byte {
+	return [][]byte{m.Data}
 }
 
 type MerkleInteriorNode struct {
@@ -95,6 +100,10 @@ func (m *MerkleInteriorNode) Highest() uint64 {
 
 func (m *MerkleInteriorNode) ContainsIndex(index uint64) bool {
 	return index >= m.lowest && index <= m.highest
+}
+
+func (m *MerkleInteriorNode) Entries() [][]byte {
+	return append(m.Left.Entries(), m.Right.Entries()...)
 }
 
 type MerkleRootResult struct {

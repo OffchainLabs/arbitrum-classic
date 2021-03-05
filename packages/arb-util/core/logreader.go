@@ -129,7 +129,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				return errors.Errorf("logscursor skipped log entries - firstIndex: %v, currentLogCount: %v", firstIndex, currentLogCount)
 			}
 
-			if err = lr.consumer.AddLogs(logs); err != nil {
+			if err = lr.consumer.AddLogs(firstIndex, logs); err != nil {
 				return err
 			}
 

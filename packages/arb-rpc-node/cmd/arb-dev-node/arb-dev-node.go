@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -112,7 +113,15 @@ func main() {
 	}
 	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
-	backend, db, rollupAddress := dev.NewDevNode(tmpDir)
+	config := protocol.ChainParams{
+		StakeRequirement:          big.NewInt(10),
+		StakeToken:                common.Address{},
+		GracePeriod:               common.NewTimeBlocksInt(3),
+		MaxExecutionSteps:         10000000000,
+		ArbGasSpeedLimitPerSecond: 2000000000000,
+	}
+	monitor, backend, db, rollupAddress := dev.NewDevNode(tmpDir, config)
+	defer monitor.Close()
 
 	accounts := make([]accounts2.Account, 0)
 	for i := 0; i < *walletcount; i++ {

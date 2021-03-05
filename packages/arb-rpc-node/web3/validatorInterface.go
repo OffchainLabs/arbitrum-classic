@@ -56,12 +56,12 @@ func handleLookupMessageBatch(srv *aggregator.Server, calldata []byte) ([]byte, 
 		return nil, err
 	}
 	batchNum := inputs[0].(*big.Int)
-	index := inputs[0].(uint64)
+	index := inputs[1].(uint64)
 	proof, err := srv.GetL2ToL1Proof(batchNum, index)
 	if err != nil {
 		return nil, err
 	}
-	res, err := evm.NewSendResultFromData(proof.Data)
+	res, err := evm.NewVirtualSendResultFromData(proof.Data)
 	if err != nil {
 		return nil, err
 	}

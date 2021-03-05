@@ -57,10 +57,15 @@ Uint64Result aggregatorGetMessageBatch(CAggregatorStore* agg_ptr,
     try {
         auto agg = static_cast<AggregatorStore*>(agg_ptr);
         auto batch_num = receiveUint256(batch_num_ptr);
-
-        return {agg->getMessageBatch(batch_num), true};
+        auto index = agg->getMessageBatch(batch_num);
+        if (index) {
+            return {*index, true};
+        } else {
+            return {0, false};
+        }
     } catch (const std::exception& e) {
-        std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
+        std::cerr << "aggregatorGetMessageBatch error: " << e.what()
+                  << std::endl;
         return {0, false};
     }
 }

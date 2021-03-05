@@ -30,14 +30,7 @@ import (
 
 var logger = log.With().Caller().Str("component", "dev").Logger()
 
-func NewDevNode(dir string) (*Backend, *txdb.TxDB, common.Address) {
-	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
-		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000000,
-	}
+func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
 	owner := common.RandAddress()
 	rollupAddress := common.RandAddress()
 	initMsg := message.Init{
@@ -67,7 +60,7 @@ func NewDevNode(dir string) (*Backend, *txdb.TxDB, common.Address) {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	return backend, db, rollupAddress
+	return monitor, backend, db, rollupAddress
 }
 
 type EVM struct {

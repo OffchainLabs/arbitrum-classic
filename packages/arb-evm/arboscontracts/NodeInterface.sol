@@ -7,6 +7,7 @@ interface NodeInterface {
     // Returns the proof necessary to redeem a message batch
     function lookupMessageBatchProof(uint256 batchNum, uint64 index)
         external
+        view
         returns (
             bytes32[] memory proof,
             uint256 path,

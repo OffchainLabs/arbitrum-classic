@@ -27,7 +27,7 @@ var (
 )
 
 // NodeInterfaceABI is the input ABI used to generate the binding from.
-const NodeInterfaceABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"batchNum\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"}],\"name\":\"lookupMessageBatchProof\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"path\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"l2Sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"l1Dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const NodeInterfaceABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"batchNum\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"}],\"name\":\"lookupMessageBatchProof\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"path\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"l2Sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"l1Dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // NodeInterfaceFuncSigs maps the 4-byte function signature to its string representation.
 var NodeInterfaceFuncSigs = map[string]string{
@@ -176,23 +176,79 @@ func (_NodeInterface *NodeInterfaceTransactorRaw) Transact(opts *bind.TransactOp
 	return _NodeInterface.Contract.contract.Transact(opts, method, params...)
 }
 
-// LookupMessageBatchProof is a paid mutator transaction binding the contract method 0x52d388b8.
+// LookupMessageBatchProof is a free data retrieval call binding the contract method 0x52d388b8.
 //
-// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
-func (_NodeInterface *NodeInterfaceTransactor) LookupMessageBatchProof(opts *bind.TransactOpts, batchNum *big.Int, index uint64) (*types.Transaction, error) {
-	return _NodeInterface.contract.Transact(opts, "lookupMessageBatchProof", batchNum, index)
+// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) view returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
+func (_NodeInterface *NodeInterfaceCaller) LookupMessageBatchProof(opts *bind.CallOpts, batchNum *big.Int, index uint64) (struct {
+	Proof         [][32]byte
+	Path          *big.Int
+	L2Sender      common.Address
+	L1Dest        common.Address
+	L2Block       *big.Int
+	L1Block       *big.Int
+	Timestamp     *big.Int
+	Amount        *big.Int
+	CalldataForL1 []byte
+}, error) {
+	var out []interface{}
+	err := _NodeInterface.contract.Call(opts, &out, "lookupMessageBatchProof", batchNum, index)
+
+	outstruct := new(struct {
+		Proof         [][32]byte
+		Path          *big.Int
+		L2Sender      common.Address
+		L1Dest        common.Address
+		L2Block       *big.Int
+		L1Block       *big.Int
+		Timestamp     *big.Int
+		Amount        *big.Int
+		CalldataForL1 []byte
+	})
+
+	outstruct.Proof = out[0].([][32]byte)
+	outstruct.Path = out[1].(*big.Int)
+	outstruct.L2Sender = out[2].(common.Address)
+	outstruct.L1Dest = out[3].(common.Address)
+	outstruct.L2Block = out[4].(*big.Int)
+	outstruct.L1Block = out[5].(*big.Int)
+	outstruct.Timestamp = out[6].(*big.Int)
+	outstruct.Amount = out[7].(*big.Int)
+	outstruct.CalldataForL1 = out[8].([]byte)
+
+	return *outstruct, err
+
 }
 
-// LookupMessageBatchProof is a paid mutator transaction binding the contract method 0x52d388b8.
+// LookupMessageBatchProof is a free data retrieval call binding the contract method 0x52d388b8.
 //
-// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
-func (_NodeInterface *NodeInterfaceSession) LookupMessageBatchProof(batchNum *big.Int, index uint64) (*types.Transaction, error) {
-	return _NodeInterface.Contract.LookupMessageBatchProof(&_NodeInterface.TransactOpts, batchNum, index)
+// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) view returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
+func (_NodeInterface *NodeInterfaceSession) LookupMessageBatchProof(batchNum *big.Int, index uint64) (struct {
+	Proof         [][32]byte
+	Path          *big.Int
+	L2Sender      common.Address
+	L1Dest        common.Address
+	L2Block       *big.Int
+	L1Block       *big.Int
+	Timestamp     *big.Int
+	Amount        *big.Int
+	CalldataForL1 []byte
+}, error) {
+	return _NodeInterface.Contract.LookupMessageBatchProof(&_NodeInterface.CallOpts, batchNum, index)
 }
 
-// LookupMessageBatchProof is a paid mutator transaction binding the contract method 0x52d388b8.
+// LookupMessageBatchProof is a free data retrieval call binding the contract method 0x52d388b8.
 //
-// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
-func (_NodeInterface *NodeInterfaceTransactorSession) LookupMessageBatchProof(batchNum *big.Int, index uint64) (*types.Transaction, error) {
-	return _NodeInterface.Contract.LookupMessageBatchProof(&_NodeInterface.TransactOpts, batchNum, index)
+// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) view returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
+func (_NodeInterface *NodeInterfaceCallerSession) LookupMessageBatchProof(batchNum *big.Int, index uint64) (struct {
+	Proof         [][32]byte
+	Path          *big.Int
+	L2Sender      common.Address
+	L1Dest        common.Address
+	L2Block       *big.Int
+	L1Block       *big.Int
+	Timestamp     *big.Int
+	Amount        *big.Int
+	CalldataForL1 []byte
+}, error) {
+	return _NodeInterface.Contract.LookupMessageBatchProof(&_NodeInterface.CallOpts, batchNum, index)
 }
