@@ -26,7 +26,6 @@ import "./Messages.sol";
 contract Inbox is IInbox {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
-    uint8 internal constant L1MessageType_buddyDeploy = 5;
     uint8 internal constant L1MessageType_L2FundedByL1 = 7;
 
     uint8 internal constant L2MessageType_unsignedEOATx = 0;
@@ -58,20 +57,6 @@ contract Inbox is IInbox {
     function sendL2Message(bytes calldata messageData) external override {
         uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
         emit InboxMessageDelivered(msgNum, messageData);
-    }
-
-    function deployL2ContractPair(
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        uint256 payment,
-        bytes calldata contractData
-    ) external override {
-        require(isContract(msg.sender), "must be called by contract");
-        _deliverMessage(
-            L1MessageType_buddyDeploy,
-            msg.sender,
-            abi.encodePacked(maxGas, gasPriceBid, payment, contractData)
-        );
     }
 
     function sendL1FundedUnsignedTransaction(
@@ -189,20 +174,5 @@ contract Inbox is IInbox {
         bytes32 messageDataHash
     ) private returns (uint256) {
         return bridge.deliverMessageToInbox{ value: msg.value }(kind, sender, messageDataHash);
-    }
-
-    // Implementation taken from OpenZeppelin (https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v3.1.0/contracts/utils/Address.sol)
-    function isContract(address account) private view returns (bool) {
-        // According to EIP-1052, 0x0 is the value returned for not-yet created accounts
-        // and 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 is returned
-        // for accounts without code, i.e. `keccak256('')`
-        bytes32 codehash;
-
-        bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            codehash := extcodehash(account)
-        }
-        return (codehash != accountHash && codehash != 0x0);
     }
 }
