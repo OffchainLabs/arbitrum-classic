@@ -93,6 +93,10 @@ func New(
 	return db, nil
 }
 
+func (db *TxDB) Close() {
+	db.logReader.Stop()
+}
+
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	avmLogs, err := db.lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
 	if err != nil {

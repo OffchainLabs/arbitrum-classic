@@ -2,8 +2,10 @@ package dev
 
 import (
 	"bytes"
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -17,6 +19,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"io/ioutil"
 	"math/big"
+	"math/rand"
 	"os"
 	"testing"
 )
@@ -41,6 +44,7 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, config)
 	defer monitor.Close()
+	defer db.Close()
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
@@ -53,6 +57,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		t.Fatal(err)
 	}
 	auth := bind.NewKeyedTransactor(privkey)
+
+	clnt, pks := test.SimulatedBackend()
+	ethAuth := bind.NewKeyedTransactor(pks[0])
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -69,10 +76,24 @@ func TestL2ToL1Tx(t *testing.T) {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
+	rand.Seed(534523435)
+
+	withdrawAmount := big.NewInt(1)
+
+	l1Dests := make([]common.Address, 0)
 	for i := 0; i < 12; i++ {
-		dest := common.RandAddress().ToEthAddress()
+		dest := common.RandAddress()
+		l1Dests = append(l1Dests, dest)
 		t.Log("Send tx to L1", dest.Hex())
-		_, err = arbSys.SendTxToL1(auth, dest, nil)
+		_, err = arbSys.SendTxToL1(&bind.TransactOpts{
+			From:     auth.From,
+			Nonce:    auth.Nonce,
+			Signer:   auth.Signer,
+			Value:    withdrawAmount,
+			GasPrice: nil,
+			GasLimit: 0,
+			Context:  nil,
+		}, dest.ToEthAddress(), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -92,9 +113,6 @@ func TestL2ToL1Tx(t *testing.T) {
 		}
 		batches = append(batches, batch)
 	}
-
-	clnt, pks := test.SimulatedBackend()
-	ethAuth := bind.NewKeyedTransactor(pks[0])
 
 	bridgeAddress, _, bridge, err := ethbridgecontracts.DeployBridge(ethAuth, clnt)
 	if err != nil {
@@ -124,11 +142,12 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	clnt.Commit()
 
+	bridgeDeposit := big.NewInt(100000000)
 	_, err = inbox.DepositEth(&bind.TransactOpts{
 		From:     ethAuth.From,
 		Nonce:    ethAuth.Nonce,
 		Signer:   ethAuth.Signer,
-		Value:    big.NewInt(100000000),
+		Value:    bridgeDeposit,
 		GasPrice: nil,
 		GasLimit: 0,
 		Context:  nil,
@@ -136,7 +155,15 @@ func TestL2ToL1Tx(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	clnt.Commit()
 
+	beforeBridgeBalance, err := clnt.BalanceAt(context.Background(), bridgeAddress, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if beforeBridgeBalance.Cmp(bridgeDeposit) != 0 {
+		t.Fatal("bridge didn't receive balance")
+	}
 	sendCount, err := backend.arbcore.GetSendCount()
 	if err != nil {
 		t.Fatal(err)
@@ -163,6 +190,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	totalEntries := 0
 	for i, batch := range batches {
 		entries := batch.Tree.Entries()
 		for j, entry := range entries {
@@ -203,8 +231,25 @@ func TestL2ToL1Tx(t *testing.T) {
 			}
 			t.Log("Execute", msgData.L1Dest.Hex(), msgData.Amount, hexutil.Encode(msgData.CalldataForL1))
 
-			_, err = outbox.ExecuteTransaction(
-				ethAuth,
+			tx := types.NewTransaction(uint64(totalEntries), msgData.L1Dest, big.NewInt(1), 100000, big.NewInt(1), nil)
+			signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[1])
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := clnt.SendTransaction(context.Background(), signedTx); err != nil {
+				t.Fatal(err)
+			}
+			clnt.Commit()
+			tx, err = outbox.ExecuteTransaction(
+				&bind.TransactOpts{
+					From:     ethAuth.From,
+					Nonce:    ethAuth.Nonce,
+					Signer:   ethAuth.Signer,
+					Value:    ethAuth.Value,
+					GasPrice: ethAuth.GasPrice,
+					GasLimit: 5000000,
+					Context:  ethAuth.Context,
+				},
 				batchNum,
 				msgData.Proof,
 				msgData.Path,
@@ -220,29 +265,39 @@ func TestL2ToL1Tx(t *testing.T) {
 				t.Fatal(err)
 			}
 			clnt.Commit()
+			receipt, err := clnt.TransactionReceipt(context.Background(), tx.Hash())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if receipt.Status == types.ReceiptStatusFailed {
+				t.Fatal("transaction failed")
+			}
+			totalEntries++
 		}
 	}
-}
 
-func TestBridge(t *testing.T) {
-	clnt, pks := test.SimulatedBackend()
-	auth := bind.NewKeyedTransactor(pks[0])
-
-	_, _, bridge, err := ethbridgecontracts.DeployBridge(auth, clnt)
+	bridgeBalance, err := clnt.BalanceAt(context.Background(), bridgeAddress, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	clnt.Commit()
+	t.Log("Bridge balance", bridgeBalance)
 
-	_, err = bridge.SetOutbox(auth, auth.From, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	clnt.Commit()
+	for _, dest := range l1Dests[:totalEntries] {
+		code, err := clnt.CodeAt(context.Background(), dest.ToEthAddress(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(code) != 0 {
+			t.Fatal("should have no code")
+		}
 
-	_, err = bridge.ExecuteCall(auth, common.RandAddress().ToEthAddress(), big.NewInt(0), nil)
-	if err != nil {
-		t.Fatal(err)
+		balance, err := clnt.BalanceAt(context.Background(), dest.ToEthAddress(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Log("balance", dest.ToEthAddress().Hex(), balance)
+		if balance.Cmp(withdrawAmount) != 0 {
+			t.Fatal("wrong balance after", balance)
+		}
 	}
-	clnt.Commit()
 }
