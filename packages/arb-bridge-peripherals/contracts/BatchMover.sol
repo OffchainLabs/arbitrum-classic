@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./MMR.sol";
 import "./tokenbridge/arbitrum/StandardArbERC20.sol";
-import "./tokenbridge/ethereum/L1Buddy.sol";
+import "./buddybridge/ethereum/L1Buddy.sol";
 
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -53,28 +53,31 @@ contract ArbBatchTokenMover {
     }
 }
 
-contract EthBatchTokenReceiver is L1BuddyOld {
+contract EthBatchTokenReceiver is L1Buddy {
     bytes32 root;
     IERC20 erc20;
     mapping(uint256 => bool) redeemed;
 
-    constructor(IInbox _inbox) public L1BuddyOld(_inbox) {}
-
-    function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
-        // Pay for gas
-        if (msg.value > 0) {
-            inbox.depositEth{ value: msg.value }(address(this));
-        }
-        inbox.deployL2ContractPair(
-            maxGas, // max gas
-            gasPriceBid, // gas price
-            0, // payment
+    constructor(
+        address _inbox,
+        address _l2Deployer,
+        uint256 _maxGas,
+        uint256 _gasPrice
+    ) public payable L1Buddy(_inbox, _l2Deployer) {
+        L1Buddy.initiateBuddyDeploy(
+            _maxGas,
+            _gasPrice,
             type(ArbBatchTokenMover).creationCode
         );
     }
 
-    function distributeBatch(bytes32 _root) external onlyIfConnected onlyL2 {
-        require(l2Sender() == address(this), "L2_SENDER");
+    function handleDeploySuccess() internal override {
+        // this deletes the codehash from state!
+        L1Buddy.handleDeploySuccess();
+    }
+    function handleDeployFail() internal override {}
+
+    function distributeBatch(bytes32 _root) external onlyIfConnected onlyL2Buddy {
         root = _root;
     }
 

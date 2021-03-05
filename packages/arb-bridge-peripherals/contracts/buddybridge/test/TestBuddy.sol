@@ -26,8 +26,6 @@ import "../ethereum/L1Buddy.sol";
 import "../util/BuddyUtil.sol";
 
 contract TestConstructorBuddy is L1Buddy {
-    address public l2Buddy;
-
     constructor(
         address _inbox,
         address _l2Deployer,
@@ -37,16 +35,12 @@ contract TestConstructorBuddy is L1Buddy {
     )
         L1Buddy(_inbox, _l2Deployer)
         public
+        payable
     {
         L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, _deployCode);
     }
 
     function handleDeploySuccess() internal override {
-        l2Buddy = BuddyUtil.calculateL2Address(
-            address(L1Buddy.l2Deployer),
-            address(this),
-            L1Buddy.codeHash
-        );
         // this deletes the codehash from state!
         L1Buddy.handleDeploySuccess();
     }
@@ -55,8 +49,6 @@ contract TestConstructorBuddy is L1Buddy {
 }
 
 contract TestBuddy is L1Buddy {
-    address public l2Buddy;
-
     constructor(
         address _inbox,
         address _l2Deployer
@@ -66,11 +58,6 @@ contract TestBuddy is L1Buddy {
     {}
 
     function handleDeploySuccess() internal override {
-        l2Buddy = BuddyUtil.calculateL2Address(
-            address(L1Buddy.l2Deployer),
-            address(this),
-            L1Buddy.codeHash
-        );
         // this deletes the codehash from state!
         L1Buddy.handleDeploySuccess();
     }

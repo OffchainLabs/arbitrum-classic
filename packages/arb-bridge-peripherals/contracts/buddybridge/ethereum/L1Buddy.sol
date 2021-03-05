@@ -23,6 +23,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 
 import "../arbitrum/BuddyDeployer.sol";
+import "../util/BuddyUtil.sol";
 
 // contracts that want to have buddies should inherit from this
 abstract contract L1Buddy {
@@ -35,7 +36,20 @@ abstract contract L1Buddy {
     L2Connection public l2Connection;
     BuddyDeployer public l2Deployer;
     IInbox public inbox;
-    bytes32 codeHash;
+    address public l2Buddy;
+    bytes32 public codeHash;
+
+    modifier onlyIfConnected {
+        require(l2Connection == L2Connection.Complete, "Not connected");
+        _;
+    }
+
+    modifier onlyL2Buddy {
+        require(l2Buddy != address(0), "l2 buddy not set");
+        IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
+        require(l2Buddy == outbox.l2ToL1Sender(), "Not from l2 buddy");
+        _;
+    }
 
     constructor(address _inbox, address _l2Deployer) public {
         l2Connection = L2Connection.Null;
@@ -82,6 +96,12 @@ abstract contract L1Buddy {
     }
     
     function handleDeploySuccess() internal virtual {
+        // TODO: should we check if connection state is pending?
+        l2Buddy = BuddyUtil.calculateL2Address(
+            address(l2Deployer),
+            address(this),
+            codeHash
+        );
         delete codeHash;
         l2Connection = L2Connection.Complete;
     }
