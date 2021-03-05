@@ -1094,23 +1094,27 @@ void getbuffer256(MachineState& m) {
     ++m.pc;
 }
 
-uint64_t setbuffer_variable_gas_cost(MachineState const& m) {
+uint64_t setbuffer_variable_gas_cost(MachineState const& m, uint64_t inc) {
     if (m.stack.stacksize() < 3) {
         return 0;
     }
-    const value* val = &m.stack[2];
-    auto buf = std::get_if<Buffer>(val);
-    if (!buf) {
+    auto offset = std::get_if<uint256_t>(&m.stack[0]);
+    auto buf = std::get_if<Buffer>(&m.stack[2]);
+    if (!buf || !offset) {
         return 0;
     }
-    auto mx = buf->maxAccess;
+    if (*offset + inc > std::numeric_limits<uint64_t>::max()) {
+        return 0;
+    }
+
+    // return static_cast<uint64_t>(offset);
+    auto mx = std::max(buf->maxAccess, static_cast<uint64_t>(*offset));
     uint64_t res = 0;
     mx = mx/1024;
     while (mx > 0) {
         res += 80;
         mx = mx/8;
     }
-    std::cerr << "Gas " << res << " mx " << buf->maxAccess << " lastindex " << buf->lastIndex() << "\n";
     return res;
 }
 
