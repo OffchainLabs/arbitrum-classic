@@ -57,6 +57,32 @@ int executionCursorInboxAcc(CExecutionCursor* execution_cursor_ptr, void* ret) {
     }
 }
 
+int executionCursorSendAcc(CExecutionCursor* execution_cursor_ptr, void* ret) {
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    try {
+        std::array<unsigned char, 32> val{};
+        to_big_endian(executionCursor->send_acc, val.begin());
+        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
+int executionCursorLogAcc(CExecutionCursor* execution_cursor_ptr, void* ret) {
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    try {
+        std::array<unsigned char, 32> val{};
+        to_big_endian(executionCursor->log_acc, val.begin());
+        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
 Uint256Result executionCursorTotalMessagesRead(
     CExecutionCursor* execution_cursor_ptr) {
     try {

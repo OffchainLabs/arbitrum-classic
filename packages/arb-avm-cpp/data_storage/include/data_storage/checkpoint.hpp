@@ -32,6 +32,8 @@ struct Checkpoint {
     uint256_t arb_gas_used;
     uint256_t total_messages_read;
     uint256_t inbox_acc;
+    uint256_t send_acc;
+    uint256_t log_acc;
     uint256_t next_sideload_block_number;
 
     uint64_t block_height{};
@@ -44,6 +46,8 @@ struct Checkpoint {
                uint256_t arb_gas_used,
                uint256_t total_messages_read,
                uint256_t inbox_acc,
+               uint256_t send_acc,
+               uint256_t log_acc,
                uint256_t next_sideload_block_number,
                uint64_t block_height,
                uint64_t send_count,
@@ -53,6 +57,8 @@ struct Checkpoint {
           arb_gas_used(arb_gas_used),
           total_messages_read(total_messages_read),
           inbox_acc(inbox_acc),
+          send_acc(send_acc),
+          log_acc(log_acc),
           next_sideload_block_number(next_sideload_block_number),
           block_height(block_height),
           send_count(send_count),

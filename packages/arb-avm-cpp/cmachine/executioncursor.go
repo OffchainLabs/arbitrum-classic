@@ -40,6 +40,8 @@ type ExecutionCursor struct {
 	machineHash       common.Hash
 	totalMessagesRead *big.Int
 	inboxAcc          common.Hash
+	sendAcc           common.Hash
+	logAcc            common.Hash
 	totalGasConsumed  *big.Int
 	totalSendCount    *big.Int
 	totalLogCount     *big.Int
@@ -68,6 +70,8 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		machineHash:       ec.machineHash,
 		totalMessagesRead: ec.totalMessagesRead,
 		inboxAcc:          ec.inboxAcc,
+		sendAcc:           ec.sendAcc,
+		logAcc:            ec.logAcc,
 		totalGasConsumed:  ec.totalGasConsumed,
 		totalSendCount:    ec.totalSendCount,
 		totalLogCount:     ec.totalLogCount,
@@ -95,6 +99,16 @@ func (ec *ExecutionCursor) updateValues() error {
 	status = C.executionCursorInboxAcc(ec.c, unsafe.Pointer(&ec.inboxAcc[0]))
 	if status == 0 {
 		return errors.New("failed to load inbox acc")
+	}
+
+	status = C.executionCursorSendAcc(ec.c, unsafe.Pointer(&ec.sendAcc[0]))
+	if status == 0 {
+		return errors.New("failed to load send acc")
+	}
+
+	status = C.executionCursorLogAcc(ec.c, unsafe.Pointer(&ec.logAcc[0]))
+	if status == 0 {
+		return errors.New("failed to load log acc")
 	}
 
 	result := C.executionCursorTotalMessagesRead(ec.c)
@@ -136,6 +150,14 @@ func (ec *ExecutionCursor) MachineHash() common.Hash {
 
 func (ec *ExecutionCursor) InboxAcc() common.Hash {
 	return ec.inboxAcc
+}
+
+func (ec *ExecutionCursor) SendAcc() common.Hash {
+	return ec.sendAcc
+}
+
+func (ec *ExecutionCursor) LogAcc() common.Hash {
+	return ec.logAcc
 }
 
 func (ec *ExecutionCursor) TotalMessagesRead() *big.Int {
