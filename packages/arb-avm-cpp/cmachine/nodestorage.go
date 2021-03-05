@@ -104,21 +104,28 @@ func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, requests [
 	}
 
 	rawRequestIds := make([][]byte, 0, len(requests))
-	cLogIndexes := make([]C.uint64_t, 0, len(requests))
+	logIndexes := make([]C.uint64_t, 0, len(requests))
 	for _, request := range requests {
 		rawRequestId := new(big.Int).SetBytes(request.RequestId.Bytes())
 		rawRequestIds = append(rawRequestIds, math.U256Bytes(rawRequestId))
-		cLogIndexes = append(cLogIndexes, C.uint64_t(request.LogIndex))
+		logIndexes = append(logIndexes, C.uint64_t(request.LogIndex))
 	}
-	cRequestIds := toByteSliceArrayView(encodeByteSliceList(rawRequestIds))
+	byteSlices := make([]C.ByteSlice, 0, len(rawRequestIds))
+	for _, data := range rawRequestIds {
+		byteSlices = append(byteSlices, toByteSliceView(data))
+	}
 
-	headerHash := header.Hash()
+	var logIndexesPtr *C.uint64_t
+	if len(logIndexes) > 0 {
+		logIndexesPtr = &logIndexes[0]
+	}
+	headerHash := header.Hash().Bytes()
 	if C.aggregatorSaveBlock(
 		as.c,
 		C.uint64_t(header.Number.Uint64()),
-		unsafeDataPointer(headerHash.Bytes()),
-		cRequestIds,
-		(*C.uint64_t)(&cLogIndexes[0]),
+		unsafeDataPointer(headerHash),
+		toByteSliceArrayView(byteSlices),
+		logIndexesPtr,
 		unsafeDataPointer(blockData),
 		C.int(len(blockData))) == 0 {
 		return errors.New("failed to save block")
