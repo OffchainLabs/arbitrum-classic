@@ -17,11 +17,12 @@
 package cmachine
 
 import (
+	"math/big"
 	"os"
 	"testing"
 )
 
-func TestMachineCreation(t *testing.T) {
+func TestMessageBatch(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
@@ -36,30 +37,27 @@ func TestMachineCreation(t *testing.T) {
 		}
 	}()
 
-	mach1, err := New(codeFile)
-	if err != nil {
-		logger.Error().Stack().Err(err).Send()
-		t.Fatal(err)
-	}
-
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-	if err := arbStorage.Initialize(codeFile); err != nil {
-		logger.Error().Stack().Err(err).Send()
-		t.Fatal(err)
-	}
-	defer arbStorage.CloseArbStorage()
-	mach2, err := arbStorage.GetInitialMachine()
+
+	nodeStore := arbStorage.GetNodeStore()
+	testBatchNumber := big.NewInt(42)
+	testLogIndex := uint64(0xDEADBEEFA1B2C3D4)
+	err = nodeStore.SaveMessageBatch(testBatchNumber, testLogIndex)
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
-	if mach1.Hash() != mach2.Hash() {
+	logIndex, err := nodeStore.GetMessageBatch(testBatchNumber)
+	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
+	}
+	if logIndex != testLogIndex {
+		logger.Error().Msg("logIndex doesnt match testLogIndex")
 	}
 }

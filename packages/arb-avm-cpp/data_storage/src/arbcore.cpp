@@ -369,6 +369,8 @@ rocksdb::Status ArbCore::saveCheckpoint(Transaction& tx) {
     auto put_status = tx.transaction->Put(
         tx.datastorage->checkpoint_column.get(), key_slice, value_str);
     if (!put_status.ok()) {
+        std::cerr << "ArbCore unable to save checkpoint : "
+                  << put_status.ToString() << "\n";
         return put_status;
     }
 

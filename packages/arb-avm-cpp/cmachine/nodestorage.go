@@ -79,25 +79,49 @@ func serializeBlockData(header *types.Header, logIndex uint64) ([]byte, error) {
 	return append(blockData, headerJSON...), nil
 }
 
+func (as *NodeStore) SaveMessageBatch(batchNum *big.Int, logIndex uint64) error {
+	result := C.aggregatorSaveMessageBatch(as.c, unsafeDataPointer(math.U256Bytes(batchNum)), C.uint64_t(logIndex))
+	if result == 0 {
+		return errors.New("failed to save message batch")
+	}
+
+	return nil
+}
+
+func (as *NodeStore) GetMessageBatch(batchNum *big.Int) (uint64, error) {
+	result := C.aggregatorGetMessageBatch(as.c, unsafeDataPointer(math.U256Bytes(batchNum)))
+	if result.found == 0 {
+		return 0, errors.New("failed to save message batch")
+	}
+
+	return uint64(result.value), nil
+}
+
 func (as *NodeStore) SaveBlock(header *types.Header, logIndex uint64, requests []machine.EVMRequestInfo) error {
 	blockData, err := serializeBlockData(header, logIndex)
 	if err != nil {
 		return err
 	}
 
-	if C.aggregatorSaveBlock(as.c, C.uint64_t(header.Number.Uint64()), unsafeDataPointer(blockData), C.int(len(blockData))) == 0 {
-		return errors.New("failed to save block")
-	}
-
+	rawRequestIds := make([][]byte, 0, len(requests))
+	cLogIndexes := make([]C.uint64_t, 0, len(requests))
 	for _, request := range requests {
-		if C.aggregatorSaveRequest(as.c, unsafeDataPointer(request.RequestId.Bytes()), C.uint64_t(request.LogIndex)) == 0 {
-			return errors.New("failed to save request")
-		}
+		rawRequestId := new(big.Int).SetBytes(request.RequestId.Bytes())
+		rawRequestIds = append(rawRequestIds, math.U256Bytes(rawRequestId))
+		cLogIndexes = append(cLogIndexes, C.uint64_t(request.LogIndex))
 	}
+	cRequestIds := toByteSliceArrayView(encodeByteSliceList(rawRequestIds))
 
 	headerHash := header.Hash()
-	if C.aggregatorSaveBlockHash(as.c, unsafeDataPointer(headerHash.Bytes()), C.uint64_t(header.Number.Uint64())) == 0 {
-		return errors.New("failed to save request")
+	if C.aggregatorSaveBlock(
+		as.c,
+		C.uint64_t(header.Number.Uint64()),
+		unsafeDataPointer(headerHash.Bytes()),
+		cRequestIds,
+		(*C.uint64_t)(&cLogIndexes[0]),
+		unsafeDataPointer(blockData),
+		C.int(len(blockData))) == 0 {
+		return errors.New("failed to save block")
 	}
 
 	return nil

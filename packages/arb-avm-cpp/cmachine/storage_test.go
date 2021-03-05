@@ -27,6 +27,13 @@ var codeFile = arbos.Path()
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"
 
+	defer func() {
+		if err := os.RemoveAll(dePath); err != nil {
+			logger.Error().Stack().Err(err).Send()
+			t.Fatal(err)
+		}
+	}()
+
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
 		t.Fatal(err)
@@ -35,14 +42,17 @@ func TestCheckpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer arbStorage.CloseArbStorage()
-
-	if err := os.RemoveAll(dePath); err != nil {
-		t.Fatal(err)
-	}
 }
 
 func TestCheckpointMachine(t *testing.T) {
 	dePath := "dbPath2"
+
+	defer func() {
+		if err := os.RemoveAll(dePath); err != nil {
+			logger.Error().Stack().Err(err).Send()
+			t.Fatal(err)
+		}
+	}()
 
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
@@ -80,9 +90,5 @@ func TestCheckpointMachine(t *testing.T) {
 
 	if mach.Hash() != loadedMach.Hash() {
 		t.Error("Restored machine with wrong hash", mach.Hash(), loadedMach.Hash())
-	}
-
-	if err := os.RemoveAll(dePath); err != nil {
-		t.Fatal(err)
 	}
 }
