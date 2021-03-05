@@ -98,7 +98,7 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		}
 	}
 
-	if err := s.resolveNextNode(ctx); err != nil {
+	if err := s.resolveNextNode(ctx, s.wallet.Address(), info); err != nil {
 		return nil, err
 	}
 

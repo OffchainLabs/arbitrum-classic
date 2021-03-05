@@ -92,15 +92,19 @@ func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Trans
 	return v.wallet.TimeoutChallenges(ctx, challengesToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context) error {
-	confirmType, successorWithStake, stakerAddress, err := v.validatorUtils.CheckDecidableNextNode(ctx)
+func (v *Validator) resolveNextNode(ctx context.Context, address common.Address, info *ethbridge.StakerInfo) error {
+	confirmType, _, _, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
 		return err
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
+		if info == nil {
+			return nil
+		}
+		// TODO findRejectableExample is broken so we're just using our own address
 		logger.Info().Msg("Rejecting node")
-		return v.rollup.RejectNextNode(ctx, successorWithStake, stakerAddress)
+		return v.rollup.RejectNextNode(ctx, info.LatestStakedNode, address)
 	case ethbridge.CONFIRM_TYPE_VALID:
 		unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
 		if err != nil {
@@ -112,7 +116,7 @@ func (v *Validator) resolveNextNode(ctx context.Context) error {
 		}
 		logAcc, err := v.lookup.GetLogAcc(common.Hash{}, nodeInfo.Assertion.Before.TotalLogCount, nodeInfo.Assertion.LogCount())
 		if err != nil {
-			return err
+			return errors.Wrap(err, "catching up to chain: log accumulator out of date")
 		}
 		sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, nodeInfo.Assertion.SendCount())
 		if err != nil {
@@ -153,6 +157,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 	if cursor.MachineHash() != startState.MachineHash {
+		msgCount, err := v.lookup.GetMessageCount()
+		if err == nil && msgCount.Cmp(startState.TotalMessagesRead) < 0 {
+			return nil, false, errors.New("catching up to chain")
+		}
 		return nil, false, errors.New("local machine doesn't match chain")
 	}
 
