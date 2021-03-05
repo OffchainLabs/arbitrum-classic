@@ -18,7 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "./L1Buddy.sol";
 import "../arbitrum/ArbTokenBridge.sol";
 
 import "./IExitLiquidityProvider.sol";
@@ -26,27 +25,58 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../libraries/SafeERC20Namer.sol";
 
-contract EthERC20Bridge is L1BuddyOld {
+import "../../buddybridge/ethereum/L1Buddy.sol";
+import "../../buddybridge/util/BuddyUtil.sol";
+
+contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
+    address public l2Buddy;
 
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) redirectedExits;
 
     mapping(address => address) customL2Tokens;
 
-    constructor(IInbox _inbox) public L1BuddyOld(_inbox) {}
-
-    function connectToChain(uint256 maxGas, uint256 gasPriceBid) external payable {
-        // Pay for gas
-        if (msg.value > 0) {
-            inbox.depositEth{ value: msg.value }(address(this));
-        }
-        inbox.deployL2ContractPair(
-            maxGas, // max gas
-            gasPriceBid, // gas price
-            0, // payment
+    constructor(
+        address _inbox,
+        address _l2Deployer,
+        uint256 _maxGas,
+        uint256 _gasPrice
+    )
+        public
+        payable
+        L1Buddy(_inbox, _l2Deployer)
+    {
+        // TODO: this stores the creation code in state, but we don't actually need that
+        L1Buddy.initiateBuddyDeploy(
+            _maxGas,
+            _gasPrice,
             type(ArbSymmetricTokenBridge).creationCode
         );
+    }
+
+    function handleDeploySuccess() internal override {
+        // TODO: should we check if connection state is pending?
+        l2Buddy = BuddyUtil.calculateL2Address(
+            address(L1Buddy.l2Deployer),
+            address(this),
+            keccak256(type(ArbSymmetricTokenBridge).creationCode)
+        );
+        // this deletes the codehash from state!
+        L1Buddy.handleDeploySuccess();
+    }
+    function handleDeployFail() internal override {}
+
+    modifier onlyIfConnected {
+        require(L1Buddy.l2Connection == L1Buddy.L2Connection.Complete, "Not connected");
+        _;
+    }
+
+    modifier onlyL2Buddy {
+        require(l2Buddy != address(0), "l2 buddy not set");
+        IOutbox outbox = IOutbox(L1Buddy.inbox.bridge().activeOutbox());
+        require(l2Buddy == outbox.l2ToL1Sender(), "Not from l2 buddy");
+        _;
     }
 
     /**
@@ -97,9 +127,7 @@ contract EthERC20Bridge is L1BuddyOld {
         address erc20,
         address destination,
         uint256 amount
-    ) external onlyIfConnected onlyL2 {
-        // This method is only callable by this contract's buddy contract on L2
-        require(l2Sender() == address(this), "L2_SENDER");
+    ) external onlyIfConnected onlyL2Buddy {
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
         address exitAddress = redirectedExits[withdrawData];
         redirectedExits[withdrawData] = USED_ADDRESS;
@@ -139,7 +167,7 @@ contract EthERC20Bridge is L1BuddyOld {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyIfConnected {
-        require(IERC20(erc20).transferFrom(msg.sender, address(this), amount));
+        require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         uint8 decimals = ERC20(erc20).decimals();
         // This transfers along any ETH sent for to pay for gas in L2
         sendPairedContractTransaction(
@@ -162,7 +190,7 @@ contract EthERC20Bridge is L1BuddyOld {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyIfConnected {
-        require(IERC20(erc20).transferFrom(msg.sender, address(this), amount));
+        require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         uint8 decimals = ERC20(erc20).decimals();
         // This transfers along any ETH sent for to pay for gas in L2
         sendPairedContractTransaction(
@@ -178,12 +206,13 @@ contract EthERC20Bridge is L1BuddyOld {
         );
     }
 
+    // TODO: does this carry over the msg.value of the internal call implicitly?
     function sendPairedContractTransaction(
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes memory data
     ) private {
-        inbox.depositEth{ value: msg.value }(address(this));
-        inbox.sendContractTransaction(maxGas, gasPriceBid, address(this), 0, data);
+        inbox.depositEth{ value: msg.value }(l2Buddy);
+        inbox.sendContractTransaction(maxGas, gasPriceBid, l2Buddy, 0, data);
     }
 }

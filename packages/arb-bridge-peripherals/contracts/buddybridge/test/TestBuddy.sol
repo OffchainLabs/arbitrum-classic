@@ -37,6 +37,7 @@ contract TestConstructorBuddy is L1Buddy {
     )
         L1Buddy(_inbox, _l2Deployer)
         public
+        payable
     {
         L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, _deployCode);
     }
