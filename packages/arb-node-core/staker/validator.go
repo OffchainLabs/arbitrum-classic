@@ -81,7 +81,7 @@ func (v *Validator) removeOldStakers(ctx context.Context) (*types.Transaction, e
 }
 
 func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Transaction, error) {
-	challengesToEliminate, err := v.validatorUtils.TimedOutChallenges(ctx, 1024)
+	challengesToEliminate, err := v.validatorUtils.TimedOutChallenges(ctx, 10)
 	if err != nil {
 		return nil, err
 	}

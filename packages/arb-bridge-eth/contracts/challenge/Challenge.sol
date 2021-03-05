@@ -72,8 +72,8 @@ contract Challenge is Cloneable, IChallenge {
 
     uint256 maxMessageCount;
 
-    address public asserter;
-    address public challenger;
+    address public override asserter;
+    address public override challenger;
 
     uint256 public override lastMoveBlock;
     uint256 public asserterTimeLeft;

@@ -362,7 +362,10 @@ contract ValidatorUtils {
             if (challengeAddr != address(0)) {
                 IChallenge challenge = IChallenge(challengeAddr);
                 uint256 timeSinceLastMove = block.number - challenge.lastMoveBlock();
-                if (timeSinceLastMove > challenge.currentResponderTimeLeft()) {
+                if (
+                    timeSinceLastMove > challenge.currentResponderTimeLeft() &&
+                    challenge.asserter() == staker
+                ) {
                     challenges[index] = IChallenge(challenge);
                     index++;
                 }

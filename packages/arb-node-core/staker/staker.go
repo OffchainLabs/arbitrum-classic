@@ -64,7 +64,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				}
 			}
 			if err != nil {
-				logger.Warn().Err(err).Msg("Staking error (possible reorg?)")
+				logger.Warn().Stack().Err(err).Msg("Staking error (possible reorg?)")
 				<-time.After(backoff)
 				if backoff < 60*time.Second {
 					backoff *= 2
@@ -221,6 +221,13 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return err
 	}
 	for _, staker := range stakers {
+		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
+		if err != nil {
+			return err
+		}
+		if stakerInfo.CurrentChallenge != nil {
+			continue
+		}
 		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
 		if err != nil {
 			return err
@@ -234,7 +241,7 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			staker1, staker2 = staker2, staker1
 			node1, node2 = node2, node1
 		}
-		if node1.Cmp(latestNode) < 0 {
+		if node1.Cmp(latestNode) <= 0 {
 			// removeOldStakers will take care of them
 			continue
 		}

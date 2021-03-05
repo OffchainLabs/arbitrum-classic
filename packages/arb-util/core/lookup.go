@@ -202,12 +202,21 @@ func NewExecutionState(c ExecutionCursor) *ExecutionState {
 }
 
 func (e *ExecutionState) Equals(o *ExecutionState) bool {
+	// We don't check InboxAcc here intentionally.
+	// We don't assert InboxAcc, it's more of a side product.
+	// Any relevant inbox changes will be reflected in other fields.
 	return e.MachineHash == o.MachineHash &&
 		e.TotalMessagesRead.Cmp(o.TotalMessagesRead) == 0 &&
-		e.InboxAcc == o.InboxAcc &&
 		e.TotalGasConsumed.Cmp(o.TotalGasConsumed) == 0 &&
 		e.TotalSendCount.Cmp(o.TotalSendCount) == 0 &&
 		e.TotalLogCount.Cmp(o.TotalLogCount) == 0
+}
+
+func (e *ExecutionState) IsPermanentlyBlocked() bool {
+	var haltedHash common.Hash = [32]byte{}
+	var erroredHash common.Hash = [32]byte{}
+	erroredHash[31] = 1
+	return e.MachineHash == haltedHash || e.MachineHash == erroredHash
 }
 
 type ExecutionInfo struct {
@@ -221,7 +230,7 @@ func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
 	return e.Before.Equals(o.Before) &&
 		e.After.Equals(o.After) &&
 		e.SendAcc == o.SendAcc &&
-		e.LogAcc == o.SendAcc
+		e.LogAcc == o.LogAcc
 }
 
 func (e *ExecutionInfo) GasUsed() *big.Int {

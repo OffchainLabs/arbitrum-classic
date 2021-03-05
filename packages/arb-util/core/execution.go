@@ -145,8 +145,15 @@ func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targe
 	if err != nil {
 		return false, err
 	}
-	notEnoughMessages := localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) < 0
-	if notEnoughMessages {
+	if localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) < 0 {
+		// We didn't read enough messages.
+		// This can either mean that our messages lasted longer, or that we are missing messages.
+		if localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.After.TotalGasConsumed) < 0 && !localExecutionInfo.After.IsPermanentlyBlocked() {
+			// This means we stopped because we're missing messages,
+			// but the on-chain rollup must've had these messages.
+			// Error and try again when we have the messages.
+			return false, errors.New("Missing messages to evaluate assertion")
+		}
 		actualEndAcc, expectedEndAcc, err := execTracker.lookup.GetInboxAccPair(localExecutionInfo.After.TotalMessagesRead, assertion.After.TotalMessagesRead)
 		if err != nil {
 			return false, err
@@ -158,11 +165,6 @@ func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targe
 		if localExecutionInfo.After.InboxAcc != targetInboxAcc {
 			return false, errors.New("inbox reorg while evaluating assertion")
 		}
-	}
-	if notEnoughMessages || localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.GasUsed()) < 0 {
-		// Execution read more messages than provided so assertion should have
-		// stopped short
-		return false, nil
 	}
 
 	return assertion.ExecutionInfo.Equals(localExecutionInfo), nil

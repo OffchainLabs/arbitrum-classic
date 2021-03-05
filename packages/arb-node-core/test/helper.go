@@ -18,6 +18,12 @@ package test
 
 import (
 	"crypto/ecdsa"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -28,11 +34,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/rs/zerolog/log"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"testing"
-	"time"
 )
 
 var logger = log.With().Caller().Str("component", "test").Logger()
@@ -100,7 +101,9 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, 
 		FailIfError(t, err)
 	}
 	for {
-		if arbCore.MachineIdle() {
+		msgCount, err := arbCore.GetMessageCount()
+		FailIfError(t, err)
+		if arbCore.MachineIdle() && msgCount.Cmp(big.NewInt(int64(len(messages)))) >= 0 {
 			break
 		}
 		<-time.After(time.Millisecond * 200)
