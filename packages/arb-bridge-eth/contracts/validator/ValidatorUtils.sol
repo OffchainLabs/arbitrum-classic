@@ -83,69 +83,23 @@ contract ValidatorUtils {
         return findNodeConflict(rollup, staker1NodeNum, staker2NodeNum, maxDepth);
     }
 
-    function checkDecidableNextNode(
-        Rollup rollup,
-        uint256 startNodeOffset,
-        uint256 maxNodeCount,
-        uint256 startStakerIndex,
-        uint256 maxStakerCount
-    )
-        external
-        view
-        returns (
-            ConfirmType,
-            uint256,
-            address
-        )
-    {
+    function checkDecidableNextNode(Rollup rollup) external view returns (ConfirmType) {
         try ValidatorUtils(address(this)).requireConfirmable(rollup) {
-            return (ConfirmType.VALID, 0, address(0));
+            return ConfirmType.VALID;
         } catch {}
 
-        try
-            ValidatorUtils(address(this)).requireRejectableNextNode(
-                rollup,
-                startNodeOffset,
-                maxNodeCount,
-                startStakerIndex,
-                maxStakerCount
-            )
-        returns (uint256 successorWithStake, address stakerAddress) {
-            return (ConfirmType.INVALID, successorWithStake, stakerAddress);
+        try ValidatorUtils(address(this)).requireRejectable(rollup) {
+            return ConfirmType.INVALID;
         } catch {
-            return (ConfirmType.NONE, 0, address(0));
+            return ConfirmType.NONE;
         }
     }
 
-    function requireRejectableNextNode(
-        Rollup rollup,
-        uint256 startNodeOffset,
-        uint256 maxNodeCount,
-        uint256 startStakerIndex,
-        uint256 maxStakerCount
-    ) external view returns (uint256, address) {
-        bool outOfOrder = requireMaybeRejectable(rollup);
-        if (outOfOrder) {
-            return (0, address(0));
-        }
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        (bool found, uint256 successorWithStake, address stakerAddress) =
-            findRejectableExample(
-                rollup,
-                firstUnresolvedNode + 1 + startNodeOffset,
-                maxNodeCount,
-                startStakerIndex,
-                maxStakerCount
-            );
-        require(found, "NO_EXAMPLE");
-        return (successorWithStake, stakerAddress);
-    }
-
-    function requireMaybeRejectable(Rollup rollup) private view returns (bool) {
+    function requireRejectable(Rollup rollup) external view returns (bool) {
         rollup.requireUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
-        bool outOfOrder = node.prev() == rollup.latestConfirmed();
-        if (outOfOrder) {
+        bool inOrder = node.prev() == rollup.latestConfirmed();
+        if (inOrder) {
             // Verify the block's deadline has passed
             require(block.number >= node.deadlineBlock(), "BEFORE_DEADLINE");
             rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
@@ -153,7 +107,7 @@ contract ValidatorUtils {
             // Verify that no staker is staked on this node
             require(node.stakerCount() == rollup.countStakedZombies(node), "HAS_STAKERS");
         }
-        return outOfOrder;
+        return inOrder;
     }
 
     function requireConfirmable(Rollup rollup) external view {
@@ -264,72 +218,6 @@ contract ValidatorUtils {
         return (NodeConflict.INCOMPLETE, node1, node2);
     }
 
-    function findRejectableExample(
-        Rollup rollup,
-        uint256 startNodeOffset,
-        uint256 maxNodeCount,
-        uint256 startStakerIndex,
-        uint256 maxStakerCount
-    )
-        private
-        view
-        returns (
-            bool found,
-            uint256 successorWithStake,
-            address stakerAddress
-        )
-    {
-        uint256 latestNodeCreated = rollup.latestNodeCreated();
-        if (startNodeOffset > latestNodeCreated) {
-            return (false, 0, address(0));
-        }
-        uint256 max = latestNodeCreated - startNodeOffset;
-        if (max > maxNodeCount) {
-            max = maxNodeCount;
-        }
-
-        (address[] memory stakers, ) = getStakers(rollup, startStakerIndex, maxStakerCount);
-        return
-            findRejectableExampleImpl(
-                rollup,
-                startNodeOffset,
-                rollup.latestConfirmed(),
-                max,
-                stakers
-            );
-    }
-
-    function findRejectableExampleImpl(
-        Rollup rollup,
-        uint256 firstNodeToCheck,
-        uint256 prev,
-        uint256 max,
-        address[] memory stakers
-    )
-        private
-        view
-        returns (
-            bool,
-            uint256,
-            address
-        )
-    {
-        uint256 stakerCount = stakers.length;
-        for (uint256 i = 0; i <= max; i++) {
-            uint256 nodeIndex = firstNodeToCheck + i;
-            INode node = rollup.getNode(nodeIndex);
-            if (node.prev() != prev) {
-                continue;
-            }
-            for (uint256 j = 0; j < stakerCount; j++) {
-                if (node.stakers(stakers[j])) {
-                    return (true, nodeIndex, stakers[j]);
-                }
-            }
-        }
-        return (false, 0, address(0));
-    }
-
     function getStakers(
         Rollup rollup,
         uint256 startIndex,
@@ -362,7 +250,10 @@ contract ValidatorUtils {
             if (challengeAddr != address(0)) {
                 IChallenge challenge = IChallenge(challengeAddr);
                 uint256 timeSinceLastMove = block.number - challenge.lastMoveBlock();
-                if (timeSinceLastMove > challenge.currentResponderTimeLeft()) {
+                if (
+                    timeSinceLastMove > challenge.currentResponderTimeLeft() &&
+                    challenge.asserter() == staker
+                ) {
                     challenges[index] = IChallenge(challenge);
                     index++;
                 }

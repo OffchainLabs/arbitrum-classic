@@ -83,20 +83,23 @@ type SendResultMessageType uint8
 
 const (
 	WithdrawEthType SendResultMessageType = 0
+	SendTxToL1Type  SendResultMessageType = 3
 	BuddyResultType SendResultMessageType = 5
 )
 
-func NewSendResultMessage(r *SendResult) (SendResultMessage, error) {
-	if len(r.Data) == 0 {
-		return nil, errors.New("send result message must have nonzero data")
+func NewVirtualSendResultFromData(data []byte) (SendResultMessage, error) {
+	if len(data) == 0 {
+		return nil, errors.New("send result message must be non-empty")
 	}
-	switch SendResultMessageType(r.Data[0]) {
+	switch SendResultMessageType(data[0]) {
 	case WithdrawEthType:
-		return NewWithdrawEthResultFromData(r.Data)
+		return NewWithdrawEthResultFromData(data)
+	case SendTxToL1Type:
+		return NewL2ToL1TxResultFromData(data)
 	case BuddyResultType:
-		return NewBuddyResultFromData(r.Data)
+		return NewBuddyResultFromData(data)
 	default:
-		return nil, errors.Errorf("unhandled send result message type %v", r.Data[0])
+		return nil, errors.Errorf("unhandled send result message type %v", data[0])
 	}
 }
 
@@ -105,23 +108,27 @@ type BuddyResult struct {
 	Succeeded bool
 }
 
+func addressFromBytes(data []byte) common.Address {
+	var address common.Address
+	copy(address[:], data[12:])
+	return address
+}
+
 func NewBuddyResultFromData(data []byte) (*BuddyResult, error) {
 	if len(data) != 65 {
-		return nil, errors.New("unexpected buddy result length")
+		return nil, errors.Errorf("unexpected buddy result length %v", len(data))
 	}
-	typeCode := new(big.Int).SetBytes(data[0:32])
-	contract := data[32:64]
-	success := data[64]
+	typeCode := SendResultMessageType(data[0])
+	contract := data[1:33]
+	success := new(big.Int).SetBytes(data[33:])
 
-	if typeCode.Cmp(big.NewInt(int64(BuddyResultType))) != 0 {
+	if typeCode != BuddyResultType {
 		return nil, errors.New("unexpected type code")
 	}
 
-	var address common.Address
-	copy(address[:], contract[12:])
 	return &BuddyResult{
-		Address:   address,
-		Succeeded: success == 1,
+		Address:   addressFromBytes(contract),
+		Succeeded: success.Cmp(big.NewInt(1)) == 0,
 	}, nil
 }
 
@@ -131,14 +138,14 @@ type WithdrawEthResult struct {
 }
 
 func NewWithdrawEthResultFromData(data []byte) (*WithdrawEthResult, error) {
-	if len(data) != 32*3 {
+	if len(data) != 1+32*2 {
 		return nil, errors.New("unexpected withdraw eth result length")
 	}
-	typeCode := new(big.Int).SetBytes(data[0:32])
-	destination := data[32:64]
-	amount := new(big.Int).SetBytes(data[64:])
+	typeCode := SendResultMessageType(data[0])
+	destination := data[1:33]
+	amount := new(big.Int).SetBytes(data[33:])
 
-	if typeCode.Cmp(big.NewInt(int64(WithdrawEthType))) != 0 {
+	if typeCode != WithdrawEthType {
 		return nil, errors.New("unexpected type code")
 	}
 
@@ -148,5 +155,48 @@ func NewWithdrawEthResultFromData(data []byte) (*WithdrawEthResult, error) {
 	return &WithdrawEthResult{
 		Destination: address,
 		Amount:      amount,
+	}, nil
+}
+
+type L2ToL1TxResult struct {
+	L2Sender  common.Address
+	L1Dest    common.Address
+	L2Block   *big.Int
+	L1Block   *big.Int
+	Timestamp *big.Int
+	Value     *big.Int
+	Calldata  []byte
+}
+
+func NewL2ToL1TxResultFromData(data []byte) (*L2ToL1TxResult, error) {
+	if len(data) < 1+6*32 {
+		return nil, errors.New("unexpected L2 to L1 tx result length")
+	}
+	typeCode := SendResultMessageType(data[0])
+	data = data[1:]
+	if typeCode != SendTxToL1Type {
+		return nil, errors.New("unexpected type code")
+	}
+	l2Sender := data[:32]
+	data = data[32:]
+	l1Dest := data[:32]
+	data = data[32:]
+	l2Block := data[:32]
+	data = data[32:]
+	l1Block := data[:32]
+	data = data[32:]
+	timestamp := data[:32]
+	data = data[32:]
+	payment := data[:32]
+	data = data[32:]
+	calldata := data
+	return &L2ToL1TxResult{
+		L2Sender:  addressFromBytes(l2Sender),
+		L1Dest:    addressFromBytes(l1Dest),
+		L2Block:   new(big.Int).SetBytes(l2Block),
+		L1Block:   new(big.Int).SetBytes(l1Block),
+		Timestamp: new(big.Int).SetBytes(timestamp),
+		Value:     new(big.Int).SetBytes(payment),
+		Calldata:  calldata,
 	}, nil
 }

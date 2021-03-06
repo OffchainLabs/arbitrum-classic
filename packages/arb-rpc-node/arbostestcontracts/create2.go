@@ -27,7 +27,7 @@ var (
 )
 
 // CloneFactoryABI is the input ABI used to generate the binding from.
-const CloneFactoryABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"clone\",\"type\":\"address\"}],\"name\":\"CreatedClone\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"salt\",\"type\":\"uint256\"}],\"name\":\"create2Clone\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CloneFactoryABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"clone\",\"type\":\"address\"}],\"name\":\"CreatedClone\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"salt\",\"type\":\"uint256\"}],\"name\":\"create2Clone\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CloneFactoryFuncSigs maps the 4-byte function signature to its string representation.
 var CloneFactoryFuncSigs = map[string]string{
@@ -35,7 +35,7 @@ var CloneFactoryFuncSigs = map[string]string{
 }
 
 // CloneFactoryBin is the compiled bytecode used for deploying new contracts.
-var CloneFactoryBin = "0x608060405234801561001057600080fd5b50610142806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063c91091c314610030575b600080fd5b61005c6004803603604081101561004657600080fd5b506001600160a01b038135169060200135610078565b604080516001600160a01b039092168252519081900360200190f35b6000808360601b90506000604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528260148201526e5af43d82803e903d91602b57fd5bf360881b6028820152846037826000f5604080516001600160a01b038316815290519193507f8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31925081900360200190a194935050505056fea265627a7a72315820e47e718b9356fd68f4b8cac9bc7583b8d56a240ec643409180bbbe76b15c907464736f6c63430005110032"
+var CloneFactoryBin = "0x608060405234801561001057600080fd5b50610143806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063c91091c314610030575b600080fd5b61005c6004803603604081101561004657600080fd5b506001600160a01b038135169060200135610078565b604080516001600160a01b039092168252519081900360200190f35b6000808360601b90506000604051733d602d80600a3d3981f3363d3d373d3d3d363d7360601b81528260148201526e5af43d82803e903d91602b57fd5bf360881b6028820152846037826000f5604080516001600160a01b038316815290519193507f8bbdbba0e10077e3bdd81d5076242c5eca7c410250c1bf0ff4a0d8e40a6a8b31925081900360200190a194935050505056fea2646970667358221220983e5b820a0e32dac3b93a774092e3c2450a0e396c89998e51e07d808766643364736f6c634300060c0033"
 
 // DeployCloneFactory deploys a new Ethereum contract, binding an instance of CloneFactory to it.
 func DeployCloneFactory(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CloneFactory, error) {

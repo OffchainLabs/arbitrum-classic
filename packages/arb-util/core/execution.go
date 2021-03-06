@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
@@ -31,12 +30,10 @@ type ExecutionTracker struct {
 	sortedStopPoints []*big.Int
 	stopPointIndex   map[string]int
 
-	cursors  []ExecutionCursor
-	sendAccs []common.Hash
-	logAccs  []common.Hash
+	cursors []ExecutionCursor
 }
 
-func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas bool, stopPointsArg []*big.Int) *ExecutionTracker {
+func NewExecutionTracker(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int) *ExecutionTracker {
 	sort.Sort(BigIntList(stopPointsArg))
 	// Deduplicate stop points
 	stopPoints := make([]*big.Int, 0, len(stopPointsArg))
@@ -48,12 +45,7 @@ func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas
 		stopPoints = append(stopPoints, stopPoint)
 		lastStopPoint = stopPoint
 	}
-	cursors := make([]ExecutionCursor, 0, len(stopPoints)+1)
-	cursors = append(cursors, cursor)
-	sendAccs := make([]common.Hash, 0, len(stopPoints)+1)
-	sendAccs = append(sendAccs, common.Hash{})
-	logAccs := make([]common.Hash, 0, len(stopPoints)+1)
-	logAccs = append(logAccs, common.Hash{})
+	cursors := make([]ExecutionCursor, 0, len(stopPoints))
 
 	stopPointIndex := make(map[string]int)
 	for i, stopPoint := range stopPoints {
@@ -64,69 +56,44 @@ func NewExecutionTracker(lookup ArbCoreLookup, cursor ExecutionCursor, goOverGas
 		goOverGas:        goOverGas,
 		sortedStopPoints: stopPoints,
 		stopPointIndex:   stopPointIndex,
-		sendAccs:         sendAccs,
-		logAccs:          logAccs,
 		cursors:          cursors,
 	}
 }
 
 func (e *ExecutionTracker) fillInCursors(max int) error {
 	for i := len(e.cursors); i <= max; i++ {
-		nextCursor := e.cursors[i-1].Clone()
+		var nextCursor ExecutionCursor
+		var err error
+		if i > 0 {
+			nextCursor = e.cursors[i-1].Clone()
+		} else {
+			nextCursor, err = e.lookup.GetExecutionCursor(e.sortedStopPoints[i])
+			// Note: we still might need to advance since we can't set goOverGas here
+		}
 		nextStopPoint := e.sortedStopPoints[i]
 		if nextStopPoint.Cmp(nextCursor.TotalGasConsumed()) > 0 {
 			gasToExecute := new(big.Int).Sub(nextStopPoint, nextCursor.TotalGasConsumed())
-			err := e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
-			if err != nil {
-				return err
-			}
+			err = e.lookup.AdvanceExecutionCursor(nextCursor, gasToExecute, e.goOverGas)
+		}
+		if err != nil {
+			return err
 		}
 		e.cursors = append(e.cursors, nextCursor)
 	}
 	return nil
 }
 
-func (e *ExecutionTracker) fillInAccs(max int) error {
-	if err := e.fillInCursors(max); err != nil {
-		return err
-	}
-
-	for i := len(e.logAccs); i <= max; i++ {
-		prevCursor := e.cursors[i-1]
-		cursor := e.cursors[i]
-		prevSendAcc := e.sendAccs[i-1]
-		prevLogAcc := e.logAccs[i-1]
-		sendCount := new(big.Int).Sub(cursor.TotalSendCount(), prevCursor.TotalSendCount())
-		sendAcc, err := e.lookup.GetSendAcc(prevSendAcc, prevCursor.TotalSendCount(), sendCount)
-		if err != nil {
-			return err
-		}
-		logCount := new(big.Int).Sub(cursor.TotalLogCount(), prevCursor.TotalLogCount())
-		logAcc, err := e.lookup.GetLogAcc(prevLogAcc, prevCursor.TotalLogCount(), logCount)
-		if err != nil {
-			return err
-		}
-		e.sendAccs = append(e.sendAccs, sendAcc)
-		e.logAccs = append(e.logAccs, logAcc)
-	}
-	return nil
-}
-
-func (e *ExecutionTracker) GetExecutionInfo(gasUsed *big.Int) (*ExecutionInfo, *big.Int, error) {
+func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState, *big.Int, error) {
 	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
 	if !ok {
 		return nil, nil, errors.New("invalid gas used")
 	}
-	if err := e.fillInAccs(index); err != nil {
+	if err := e.fillInCursors(index); err != nil {
 		return nil, nil, err
 	}
 
-	return &ExecutionInfo{
-		Before:  NewExecutionState(e.cursors[0]),
-		After:   NewExecutionState(e.cursors[index]),
-		SendAcc: e.sendAccs[index],
-		LogAcc:  e.logAccs[index],
-	}, e.cursors[index].TotalSteps(), nil
+	cursor := e.cursors[index]
+	return NewExecutionState(cursor), cursor.TotalSteps(), nil
 }
 
 func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error) {
@@ -141,29 +108,31 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 }
 
 func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targetInboxAcc [32]byte) (bool, error) {
-	localExecutionInfo, _, err := execTracker.GetExecutionInfo(assertion.After.TotalGasConsumed)
+	localExecutionState, _, err := execTracker.GetExecutionState(assertion.After.TotalGasConsumed)
 	if err != nil {
 		return false, err
 	}
-	notEnoughMessages := localExecutionInfo.InboxMessagesRead().Cmp(assertion.InboxMessagesRead()) < 0
-	if notEnoughMessages {
-		actualEndAcc, expectedEndAcc, err := execTracker.lookup.GetInboxAccPair(localExecutionInfo.After.TotalMessagesRead, assertion.After.TotalMessagesRead)
+	if localExecutionState.TotalMessagesRead.Cmp(assertion.After.TotalMessagesRead) < 0 {
+		// We didn't read enough messages.
+		// This can either mean that our messages lasted longer, or that we are missing messages.
+		if localExecutionState.TotalGasConsumed.Cmp(assertion.After.TotalGasConsumed) < 0 && !localExecutionState.IsPermanentlyBlocked() {
+			// This means we stopped because we're missing messages,
+			// but the on-chain rollup must've had these messages.
+			// Error and try again when we have the messages.
+			return false, errors.New("Missing messages to evaluate assertion")
+		}
+		actualEndAcc, expectedEndAcc, err := execTracker.lookup.GetInboxAccPair(localExecutionState.TotalMessagesRead, assertion.After.TotalMessagesRead)
 		if err != nil {
 			return false, err
 		}
-		if actualEndAcc != localExecutionInfo.After.InboxAcc || expectedEndAcc != targetInboxAcc {
+		if actualEndAcc != localExecutionState.InboxAcc || expectedEndAcc != targetInboxAcc {
 			return false, errors.New("inbox reorg while evaluating assertion")
 		}
 	} else {
-		if localExecutionInfo.After.InboxAcc != targetInboxAcc {
+		if localExecutionState.InboxAcc != targetInboxAcc {
 			return false, errors.New("inbox reorg while evaluating assertion")
 		}
 	}
-	if notEnoughMessages || localExecutionInfo.After.TotalGasConsumed.Cmp(assertion.GasUsed()) < 0 {
-		// Execution read more messages than provided so assertion should have
-		// stopped short
-		return false, nil
-	}
 
-	return assertion.ExecutionInfo.Equals(localExecutionInfo), nil
+	return assertion.After.Equals(localExecutionState), nil
 }

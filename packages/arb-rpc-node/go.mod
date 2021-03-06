@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/c-bata/go-prompt v0.2.4-0.20200903090133-56c224c88aba // indirect
 	github.com/emirpasic/gods v1.12.0
-	github.com/ethereum/go-ethereum v1.9.24
+	github.com/ethereum/go-ethereum v1.10.0
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4
 	github.com/kr/pretty v0.2.0 // indirect
@@ -15,7 +15,6 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03 // indirect
 	github.com/rs/zerolog v1.20.0

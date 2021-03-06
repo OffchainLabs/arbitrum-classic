@@ -27,6 +27,59 @@
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
 
+void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
+                     const std::vector<std::vector<unsigned char>> raw_messages,
+                     int send_count,
+                     int log_count,
+                     bool last_message) {
+    REQUIRE(
+        arbCore->deliverMessages(raw_messages, 0, last_message, std::nullopt));
+
+    ArbCore::message_status_enum status;
+    while (true) {
+        status = arbCore->messagesStatus();
+        if (status != ArbCore::MESSAGES_EMPTY &&
+            status != ArbCore::MESSAGES_READY) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    if (status == ArbCore::MESSAGES_ERROR) {
+        INFO(arbCore->messagesClearError());
+    }
+    REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
+
+    int tries = 0;
+    while (true) {
+        auto countRes = arbCore->messageEntryInsertedCount();
+        REQUIRE(countRes.status.ok());
+        if (countRes.data == raw_messages.size()) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        tries++;
+        REQUIRE(tries < 5);
+    }
+
+    auto accRes = arbCore->getInboxAcc(raw_messages.size() - 1);
+    REQUIRE(accRes.status.ok());
+    REQUIRE(accRes.data != 0);
+
+    while (!arbCore->machineIdle()) {
+        auto err_str = arbCore->machineClearError();
+        REQUIRE(!err_str.has_value());
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+    auto producedLogCountRes = arbCore->logInsertedCount();
+    REQUIRE(producedLogCountRes.status.ok());
+    REQUIRE(producedLogCountRes.data == log_count);
+
+    auto producedSendCountRes = arbCore->sendInsertedCount();
+    REQUIRE(producedSendCountRes.status.ok());
+    REQUIRE(producedSendCountRes.data == send_count);
+}
+
 TEST_CASE("ArbCore tests") {
     DBDeleter deleter;
     ValueCache value_cache{};
@@ -87,63 +140,24 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        REQUIRE(arbCore->deliverMessages(raw_messages, 0, false, std::nullopt));
+        runCheckArbCore(arbCore, raw_messages, sends.size(), logs.size(),
+                        false);
 
-        ArbCore::message_status_enum status;
-        while (true) {
-            status = arbCore->messagesStatus();
-            if (status != ArbCore::MESSAGES_EMPTY &&
-                status != ArbCore::MESSAGES_READY) {
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
-
-        int tries = 0;
-        while (true) {
-            auto countRes = arbCore->messageEntryInsertedCount();
-            REQUIRE(countRes.status.ok());
-            if (countRes.data == inbox_messages.size()) {
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            tries++;
-            REQUIRE(tries < 5);
-        }
-
-        auto accRes = arbCore->getInboxAcc(inbox_messages.size() - 1);
-        REQUIRE(accRes.status.ok());
-        REQUIRE(accRes.data != 0);
-
-        while (!arbCore->machineIdle()) {
-            auto err_str = arbCore->machineClearError();
-            REQUIRE(!err_str.has_value());
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        }
-
-        auto producedLogCountRes = arbCore->logInsertedCount();
-        REQUIRE(producedLogCountRes.status.ok());
-        REQUIRE(producedLogCountRes.data == logs.size());
-        auto logsRes =
-            arbCore->getLogs(0, producedLogCountRes.data, value_cache);
+        auto logsRes = arbCore->getLogs(0, logs.size(), value_cache);
         REQUIRE(logsRes.status.ok());
         REQUIRE(logsRes.data.size() == logs.size());
         for (size_t k = 0; k < logs.size(); ++k) {
             REQUIRE(logsRes.data[k] == logs[k]);
         }
 
-        auto producedSendCountRes = arbCore->sendInsertedCount();
-        REQUIRE(producedSendCountRes.status.ok());
-        REQUIRE(producedSendCountRes.data == sends.size());
-        auto sendsRes = arbCore->getSends(0, producedSendCountRes.data);
+        auto sendsRes = arbCore->getSends(0, sends.size());
         REQUIRE(sendsRes.status.ok());
         REQUIRE(sendsRes.data.size() == sends.size());
         for (size_t k = 0; k < sends.size(); ++k) {
             REQUIRE(sendsRes.data[k] == sends[k]);
         }
 
-        tries = 0;
+        int tries = 0;
         bool done = false;
         while (!done) {
             auto log_request_count = 3;
@@ -207,4 +221,54 @@ TEST_CASE("ArbCore tests") {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
+}
+
+/*
+ Test file in separate repo, but source code of mini program is included here
+ for reference
+
+ type IncomingRequestFromInbox = struct {
+     kind: uint,               // type of message
+     ethBlockNumber: uint,     // block number of the L1 block
+     timestamp: uint,          // timestamp of the L1 block
+     sender: address,          // address of the sender
+     requestId: uint,
+     gasPriceL1: uint,         // L1 gas price paid by this tx
+     msgSize: uint,
+     msgData: buffer,
+ }
+
+ impure func main() {
+     let blockNum = 0;
+     loop {
+         let sameBlockNum = asm(blockNum,) bool { inboxpeek };
+         let rawSideloadMsg = asm(blockNum,) any { sideload };
+         if (rawSideloadMsg != ()) {
+             panic;
+         }
+         let newMsg = asm() IncomingRequestFromInbox { inbox };
+         blockNum = newMsg.ethBlockNumber;
+         asm(blockNum,) { log };
+     }
+ }
+
+ */
+TEST_CASE("ArbCore inbox") {
+    DBDeleter deleter;
+    ValueCache value_cache{};
+
+    ArbStorage storage(dbpath);
+    REQUIRE(
+        storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
+            .ok());
+    auto arbCore = storage.getArbCore();
+    REQUIRE(arbCore->startThread());
+
+    for (int i = 0; i < 5; i++) {
+        std::vector<std::vector<unsigned char>> raw_messages;
+
+        raw_messages.push_back(InboxMessage(0, {}, i, 0, 0, 0, {}).serialize());
+        INFO("RUN " << i);
+        runCheckArbCore(arbCore, raw_messages, 0, 1, true);
+    }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.17;
+pragma solidity >=0.4.21 <0.7.0;
 
 contract FailedERC20 {
     function adminMint(address account, uint256 amount) public {

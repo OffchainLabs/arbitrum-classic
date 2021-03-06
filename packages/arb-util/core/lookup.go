@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -43,6 +44,8 @@ type ExecutionCursor interface {
 	MachineHash() common.Hash
 	TotalMessagesRead() *big.Int
 	InboxAcc() common.Hash
+	SendAcc() common.Hash
+	LogAcc() common.Hash
 	TotalGasConsumed() *big.Int
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
@@ -188,6 +191,8 @@ type ExecutionState struct {
 	TotalGasConsumed  *big.Int
 	TotalSendCount    *big.Int
 	TotalLogCount     *big.Int
+	SendAcc           common.Hash
+	LogAcc            common.Hash
 }
 
 func NewExecutionState(c ExecutionCursor) *ExecutionState {
@@ -198,50 +203,42 @@ func NewExecutionState(c ExecutionCursor) *ExecutionState {
 		TotalGasConsumed:  c.TotalGasConsumed(),
 		TotalSendCount:    c.TotalSendCount(),
 		TotalLogCount:     c.TotalLogCount(),
+		SendAcc:           c.SendAcc(),
+		LogAcc:            c.LogAcc(),
 	}
 }
 
-func (e *ExecutionState) Equals(o *ExecutionState) bool {
-	return e.MachineHash == o.MachineHash &&
-		e.TotalMessagesRead.Cmp(o.TotalMessagesRead) == 0 &&
-		e.InboxAcc == o.InboxAcc &&
-		e.TotalGasConsumed.Cmp(o.TotalGasConsumed) == 0 &&
-		e.TotalSendCount.Cmp(o.TotalSendCount) == 0 &&
-		e.TotalLogCount.Cmp(o.TotalLogCount) == 0
+func (e *ExecutionState) IsPermanentlyBlocked() bool {
+	var haltedHash common.Hash = [32]byte{}
+	var erroredHash common.Hash = [32]byte{}
+	erroredHash[31] = 1
+	return e.MachineHash == haltedHash || e.MachineHash == erroredHash
 }
 
-type ExecutionInfo struct {
-	Before  *ExecutionState
-	After   *ExecutionState
-	SendAcc common.Hash
-	LogAcc  common.Hash
+func (e *ExecutionState) Equals(other Cut) bool {
+	return e.CutHash() == other.CutHash()
 }
 
-func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
-	return e.Before.Equals(o.Before) &&
-		e.After.Equals(o.After) &&
-		e.SendAcc == o.SendAcc &&
-		e.LogAcc == o.SendAcc
+func (e *ExecutionState) RestHash() [32]byte {
+	return hashing.SoliditySHA3(
+		hashing.Uint256(e.TotalMessagesRead),
+		hashing.Bytes32(e.MachineHash),
+		hashing.Bytes32(e.SendAcc),
+		hashing.Uint256(e.TotalSendCount),
+		hashing.Bytes32(e.LogAcc),
+		hashing.Uint256(e.TotalLogCount),
+	)
 }
 
-func (e *ExecutionInfo) GasUsed() *big.Int {
-	return new(big.Int).Sub(e.After.TotalGasConsumed, e.Before.TotalGasConsumed)
-}
-
-func (e *ExecutionInfo) SendCount() *big.Int {
-	return new(big.Int).Sub(e.After.TotalSendCount, e.Before.TotalSendCount)
-}
-
-func (e *ExecutionInfo) LogCount() *big.Int {
-	return new(big.Int).Sub(e.After.TotalLogCount, e.Before.TotalLogCount)
-}
-
-func (e *ExecutionInfo) InboxMessagesRead() *big.Int {
-	return new(big.Int).Sub(e.After.TotalMessagesRead, e.Before.TotalMessagesRead)
+func (e *ExecutionState) CutHash() [32]byte {
+	return hashing.SoliditySHA3(
+		hashing.Uint256(e.TotalGasConsumed),
+		hashing.Bytes32(e.RestHash()),
+	)
 }
 
 type LogConsumer interface {
-	AddLogs(avmLogs []value.Value) error
+	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
 	DeleteLogs(avmLogs []value.Value) error
 	CurrentLogCount() (*big.Int, error)
 	UpdateCurrentLogCount(count *big.Int) error

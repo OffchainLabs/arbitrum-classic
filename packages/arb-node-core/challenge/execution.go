@@ -11,7 +11,6 @@ import (
 )
 
 type ExecutionImpl struct {
-	initialCursor core.ExecutionCursor
 }
 
 func (e *ExecutionImpl) SegmentTarget() int {
@@ -20,50 +19,29 @@ func (e *ExecutionImpl) SegmentTarget() int {
 
 var unreachableCut core.SimpleCut = core.NewSimpleCut([32]byte{})
 
-// Note: it's vital that execTracker's first gas offset was the beginning of the original assertion.
-// All fields except machine state and total messages read are relative to the beginning of the assertion.
 func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (core.Cut, *big.Int, error) {
-	executionInfo, steps, err := execTracker.GetExecutionInfo(gasTarget)
+	state, steps, err := execTracker.GetExecutionState(gasTarget)
 	if err != nil {
 		return nil, nil, err
 	}
-	if executionInfo.After.TotalMessagesRead.Cmp(maxTotalMessagesRead) > 0 || executionInfo.After.TotalGasConsumed.Cmp(gasTarget) < 0 {
+	if state.TotalMessagesRead.Cmp(maxTotalMessagesRead) > 0 || state.TotalGasConsumed.Cmp(gasTarget) < 0 {
 		// Execution read more messages than provided so assertion should have
 		// stopped short
 		return unreachableCut, steps, nil
 	}
-	return core.ExecutionCut{
-		GasUsed:           executionInfo.GasUsed(),
-		TotalMessagesRead: executionInfo.After.TotalMessagesRead,
-		MachineState:      executionInfo.After.MachineHash,
-		SendAcc:           executionInfo.SendAcc,
-		SendCount:         executionInfo.SendCount(),
-		LogAcc:            executionInfo.LogAcc,
-		LogCount:          executionInfo.LogCount(),
-	}, steps, nil
-}
-
-func makeFullOffsets(start *big.Int, offsets []*big.Int) []*big.Int {
-	res := make([]*big.Int, 0, len(offsets)+1)
-	res = append(res, start)
-	for _, offset := range offsets {
-		res = append(res, new(big.Int).Add(start, offset))
-	}
-	return res
+	return state, steps, nil
 }
 
 func (e *ExecutionImpl) GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) ([]core.Cut, error) {
-	start := assertion.Before.TotalGasConsumed
-	fullOffsets := makeFullOffsets(start, offsets)
-	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, fullOffsets)
+	execTracker := core.NewExecutionTracker(lookup, true, offsets)
 	cuts := make([]core.Cut, 0, len(offsets))
 	for i, offset := range offsets {
-		cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, new(big.Int).Add(start, offset))
+		cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
 		if err != nil {
 			return nil, err
 		}
 		if i == 0 {
-			_, ok := cut.(core.ExecutionCut)
+			_, ok := cut.(*core.ExecutionState)
 			if !ok {
 				return nil, errors.New("first cut is unreachable")
 			}
@@ -86,12 +64,10 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		SegmentSteps:     big.NewInt(0),
 		EndIsUnreachable: false,
 	}
-	start := assertion.Before.TotalGasConsumed
-	fullOffsets := makeFullOffsets(start, offsets)
-	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, fullOffsets)
+	execTracker := core.NewExecutionTracker(lookup, true, offsets)
 	lastSteps := big.NewInt(0)
 	for i, offset := range offsets {
-		localCut, newSteps, err := getCut(execTracker, assertion.After.TotalMessagesRead, new(big.Int).Add(start, offset))
+		localCut, newSteps, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
 		if err != nil {
 			return errRes, err
 		}
@@ -124,21 +100,20 @@ func (e *ExecutionImpl) Bisect(
 	)
 }
 
-func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion *core.Assertion, segment *core.ChallengeSegment) (core.ExecutionCut, machine.Machine, error) {
-	absoluteStart := new(big.Int).Add(assertion.Before.TotalGasConsumed, segment.Start)
-	execTracker := core.NewExecutionTracker(lookup, e.initialCursor, true, []*big.Int{assertion.Before.TotalGasConsumed, absoluteStart})
-	cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, absoluteStart)
+func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion *core.Assertion, segment *core.ChallengeSegment) (*core.ExecutionState, machine.Machine, error) {
+	execTracker := core.NewExecutionTracker(lookup, true, []*big.Int{segment.Start})
+	cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, segment.Start)
 	if err != nil {
-		return core.ExecutionCut{}, nil, err
+		return nil, nil, err
 	}
-	execCut, ok := cut.(core.ExecutionCut)
+	execCut, ok := cut.(*core.ExecutionState)
 	if !ok {
-		return core.ExecutionCut{}, nil, errors.New("attempted to one step prove blocked machine")
+		return nil, nil, errors.New("attempted to one step prove blocked machine")
 	}
 
-	beforeMachine, err := execTracker.GetMachine(absoluteStart)
+	beforeMachine, err := execTracker.GetMachine(segment.Start)
 	if err != nil {
-		return core.ExecutionCut{}, nil, err
+		return nil, nil, err
 	}
 
 	return execCut, beforeMachine, nil

@@ -14,59 +14,57 @@ type NodeState struct {
 }
 
 type Assertion struct {
-	PrevProposedBlock *big.Int
-	PrevInboxMaxCount *big.Int
-	*ExecutionInfo
+	Before *ExecutionState
+	After  *ExecutionState
 }
 
-func NewAssertionFromFields(a [4][32]byte, b [10]*big.Int) *Assertion {
-	beforeState := &ExecutionState{
+func newExecutionStateFromFields(a [3][32]byte, b [4]*big.Int) *ExecutionState {
+	return &ExecutionState{
+		TotalGasConsumed:  b[0],
 		MachineHash:       a[0],
-		TotalMessagesRead: b[2],
-		TotalGasConsumed:  b[1],
-		TotalSendCount:    b[3],
-		TotalLogCount:     b[4],
+		TotalMessagesRead: b[1],
+		TotalSendCount:    b[2],
+		TotalLogCount:     b[3],
+		SendAcc:           a[1],
+		LogAcc:            a[2],
 	}
+}
 
+func NewAssertionFromFields(a [2][3][32]byte, b [2][4]*big.Int) *Assertion {
 	return &Assertion{
-		PrevProposedBlock: b[0],
-		PrevInboxMaxCount: b[5],
-		ExecutionInfo: &ExecutionInfo{
-			Before: beforeState,
-			After: &ExecutionState{
-				MachineHash:       a[3],
-				TotalMessagesRead: new(big.Int).Add(beforeState.TotalMessagesRead, b[6]),
-				TotalGasConsumed:  new(big.Int).Add(beforeState.TotalGasConsumed, b[7]),
-				TotalSendCount:    new(big.Int).Add(beforeState.TotalSendCount, b[8]),
-				TotalLogCount:     new(big.Int).Add(beforeState.TotalLogCount, b[9]),
-			},
-			SendAcc: a[1],
-			LogAcc:  a[2],
-		},
+		Before: newExecutionStateFromFields(a[0], b[0]),
+		After:  newExecutionStateFromFields(a[1], b[1]),
 	}
 }
 
-func (a *Assertion) BytesFields() [4][32]byte {
-	return [4][32]byte{
-		a.Before.MachineHash,
-		a.SendAcc,
-		a.LogAcc,
-		a.After.MachineHash,
+func stateByteFields(s *ExecutionState) [3][32]byte {
+	return [3][32]byte{
+		s.MachineHash,
+		s.SendAcc,
+		s.LogAcc,
 	}
 }
 
-func (a *Assertion) IntFields() [10]*big.Int {
-	return [10]*big.Int{
-		a.PrevProposedBlock,
-		a.Before.TotalGasConsumed,
-		a.Before.TotalMessagesRead,
-		a.Before.TotalSendCount,
-		a.Before.TotalLogCount,
-		a.PrevInboxMaxCount,
-		a.InboxMessagesRead(),
-		a.GasUsed(),
-		a.SendCount(),
-		a.LogCount(),
+func (a *Assertion) BytesFields() [2][3][32]byte {
+	return [2][3][32]byte{
+		stateByteFields(a.Before),
+		stateByteFields(a.After),
+	}
+}
+
+func stateIntFields(s *ExecutionState) [4]*big.Int {
+	return [4]*big.Int{
+		s.TotalGasConsumed,
+		s.TotalMessagesRead,
+		s.TotalSendCount,
+		s.TotalLogCount,
+	}
+}
+
+func (a *Assertion) IntFields() [2][4]*big.Int {
+	return [2][4]*big.Int{
+		stateIntFields(a.Before),
+		stateIntFields(a.After),
 	}
 }
 
@@ -84,67 +82,24 @@ func BisectionChunkHash(
 	)
 }
 
-func assertionHash(
-	gasUsed *big.Int,
-	assertionRest common.Hash,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint256(gasUsed),
-		hashing.Bytes32(assertionRest),
-	)
-}
-
-func assertionRestHash(
-	totalMessagesRead *big.Int,
-	machineState common.Hash,
-	sendAcc common.Hash,
-	sendCount *big.Int,
-	logAcc common.Hash,
-	logCount *big.Int,
-) common.Hash {
-	return hashing.SoliditySHA3(
-		hashing.Uint256(totalMessagesRead),
-		hashing.Bytes32(machineState),
-		hashing.Bytes32(sendAcc),
-		hashing.Uint256(sendCount),
-		hashing.Bytes32(logAcc),
-		hashing.Uint256(logCount),
-	)
-}
-
 func (a *Assertion) BeforeExecutionHash() common.Hash {
-	restBefore := assertionRestHash(
-		a.Before.TotalMessagesRead,
-		a.Before.MachineHash,
-		common.Hash{},
-		big.NewInt(0),
-		common.Hash{},
-		big.NewInt(0),
-	)
-	return assertionHash(big.NewInt(0), restBefore)
+	return a.Before.CutHash()
 }
 
 func (a *Assertion) AfterExecutionHash() common.Hash {
-	restAfter := assertionRestHash(
-		a.After.TotalMessagesRead,
-		a.After.MachineHash,
-		a.SendAcc,
-		a.SendCount(),
-		a.LogAcc,
-		a.LogCount(),
-	)
-	return assertionHash(a.GasUsed(), restAfter)
+	return a.After.CutHash()
 }
 
 func (a *Assertion) ExecutionHash() common.Hash {
 	return BisectionChunkHash(
-		big.NewInt(0),
-		a.GasUsed(),
+		a.Before.TotalGasConsumed,
+		new(big.Int).Sub(a.After.TotalGasConsumed, a.Before.TotalGasConsumed),
 		a.BeforeExecutionHash(),
 		a.AfterExecutionHash(),
 	)
 }
 
 func (a *Assertion) CheckTime(arbGasSpeedLimitPerBlock *big.Int) *big.Int {
-	return new(big.Int).Div(a.GasUsed(), arbGasSpeedLimitPerBlock)
+	gasUsed := new(big.Int).Sub(a.After.TotalGasConsumed, a.Before.TotalGasConsumed)
+	return new(big.Int).Div(gasUsed, arbGasSpeedLimitPerBlock)
 }

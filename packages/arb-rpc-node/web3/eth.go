@@ -18,6 +18,7 @@ package web3
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -146,6 +147,10 @@ func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*h
 }
 
 func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+	if *address == arbos.ARB_NODE_INTERFACE_ADDRESS {
+		// Fake code to make the contract appear real
+		return hexutil.Bytes{1}, nil
+	}
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		return nil, err
@@ -224,6 +229,14 @@ func HandleCallError(res *evm.TxResult, ganacheMode bool) error {
 }
 
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+	if *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
+		var data []byte
+		if callArgs.Data != nil {
+			data = *callArgs.Data
+		}
+		return HandleNodeInterfaceCall(s.srv, data)
+	}
+
 	res, err := s.executeCall(callArgs, blockNum)
 	if err != nil {
 		return nil, err
@@ -236,6 +249,10 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 }
 
 func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
+	if *args.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
+		// Fake gas for call
+		return hexutil.Uint64(21000), nil
+	}
 	blockNum := rpc.PendingBlockNumber
 	res, err := s.executeCall(args, &blockNum)
 	if err != nil {

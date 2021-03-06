@@ -19,9 +19,8 @@ package arbostest
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"math/big"
 	"strings"
 	"testing"
@@ -56,7 +55,7 @@ func TestDepositEthTx(t *testing.T) {
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GetBalanceData(depositDest),
+		Data:        arbos.GetBalanceData(depositDest),
 	}
 
 	// Deposit to contract that succeeds
@@ -77,7 +76,7 @@ func TestDepositEthTx(t *testing.T) {
 		SequenceNum: big.NewInt(4),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GetBalanceData(connAddress1),
+		Data:        arbos.GetBalanceData(connAddress1),
 	}
 
 	// Deposit to contract that reverts
@@ -98,7 +97,7 @@ func TestDepositEthTx(t *testing.T) {
 		SequenceNum: big.NewInt(6),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GetBalanceData(connAddress1),
+		Data:        arbos.GetBalanceData(connAddress1),
 	}
 
 	getBalance4 := message.Transaction{
@@ -107,7 +106,7 @@ func TestDepositEthTx(t *testing.T) {
 		SequenceNum: big.NewInt(7),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GetBalanceData(sender),
+		Data:        arbos.GetBalanceData(sender),
 	}
 
 	tx4 := message.EthDepositTx{
@@ -128,7 +127,7 @@ func TestDepositEthTx(t *testing.T) {
 		SequenceNum: big.NewInt(8),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GetBalanceData(connAddress1),
+		Data:        arbos.GetBalanceData(connAddress1),
 	}
 
 	messages := []message.Message{
@@ -157,15 +156,15 @@ func TestDepositEthTx(t *testing.T) {
 	succeededTxCheck(t, results[8])
 	succeededTxCheck(t, results[9])
 
-	balance1, err := snapshot.ParseBalanceResult(results[2])
+	balance1, err := arbos.ParseBalanceResult(results[2])
 	failIfError(t, err)
-	balance2, err := snapshot.ParseBalanceResult(results[4])
+	balance2, err := arbos.ParseBalanceResult(results[4])
 	failIfError(t, err)
-	balance3, err := snapshot.ParseBalanceResult(results[6])
+	balance3, err := arbos.ParseBalanceResult(results[6])
 	failIfError(t, err)
-	balance4, err := snapshot.ParseBalanceResult(results[7])
+	balance4, err := arbos.ParseBalanceResult(results[7])
 	failIfError(t, err)
-	balance5, err := snapshot.ParseBalanceResult(results[9])
+	balance5, err := arbos.ParseBalanceResult(results[9])
 	failIfError(t, err)
 
 	if balance1.Cmp(big.NewInt(100)) != 0 {

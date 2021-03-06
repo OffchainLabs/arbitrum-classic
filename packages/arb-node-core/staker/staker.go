@@ -64,7 +64,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				}
 			}
 			if err != nil {
-				logger.Warn().Err(err).Msg("Staking error (possible reorg?)")
+				logger.Warn().Stack().Err(err).Msg("Staking error (possible reorg?)")
 				<-time.After(backoff)
 				if backoff < 60*time.Second {
 					backoff *= 2
@@ -98,11 +98,11 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		}
 	}
 
-	if err := s.resolveNextNode(ctx); err != nil {
-		return nil, err
-	}
-
 	if info != nil {
+		if err := s.resolveNextNode(ctx, info); err != nil {
+			return nil, err
+		}
+
 		if err = s.handleConflict(ctx, info); err != nil {
 			return nil, err
 		}
@@ -198,7 +198,7 @@ func (s *Staker) advanceStake(ctx context.Context) error {
 	switch action := action.(type) {
 	case createNodeAction:
 		// Already logged with more details in generateNodeAction
-		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion)
+		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
 	case existingNodeAction:
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
@@ -221,6 +221,13 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return err
 	}
 	for _, staker := range stakers {
+		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
+		if err != nil {
+			return err
+		}
+		if stakerInfo.CurrentChallenge != nil {
+			continue
+		}
 		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
 		if err != nil {
 			return err
@@ -234,7 +241,7 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			staker1, staker2 = staker2, staker1
 			node1, node2 = node2, node1
 		}
-		if node1.Cmp(latestNode) < 0 {
+		if node1.Cmp(latestNode) <= 0 {
 			// removeOldStakers will take care of them
 			continue
 		}

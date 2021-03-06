@@ -205,19 +205,21 @@ func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
 }
 
 type FeeStats struct {
-	Price     *FeeSet
-	UnitsUsed *FeeSet
-	Paid      *FeeSet
+	Price      *FeeSet
+	UnitsUsed  *FeeSet
+	Paid       *FeeSet
+	Aggregator *common.Address
 }
 
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 3 {
-		return nil, errors.Errorf("expected gas fee tuple of length 3, but recieved %v", val)
+	if !ok || tup.Len() != 4 {
+		return nil, errors.Errorf("expected gas fee tuple of length 4, but recieved %v", val)
 	}
 	pricesVal, _ := tup.GetByInt64(0)
 	unitsVal, _ := tup.GetByInt64(1)
 	paidVal, _ := tup.GetByInt64(2)
+	aggregator, _ := tup.GetByInt64(3)
 
 	prices, err := NewFeeSetFromValue(pricesVal)
 	if err != nil {
@@ -231,11 +233,21 @@ func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	aggregatorInt, ok := aggregator.(value.IntValue)
+	if !ok {
+		return nil, errors.New("aggregator must be an int")
+	}
+	rawAggregatorAddress := inbox.NewAddressFromInt(aggregatorInt)
+	blankAddress := common.Address{}
+	var aggAddress *common.Address
+	if rawAggregatorAddress != blankAddress {
+		aggAddress = &rawAggregatorAddress
+	}
 	return &FeeStats{
-		Price:     prices,
-		UnitsUsed: units,
-		Paid:      paid,
+		Price:      prices,
+		UnitsUsed:  units,
+		Paid:       paid,
+		Aggregator: aggAddress,
 	}, nil
 }
 

@@ -86,11 +86,18 @@ func New(
 		case <-ctx.Done():
 			return
 		default:
+			if err == nil {
+				return
+			}
 			log.Fatal().Err(err).Msg("error reading logs")
 		}
 	}()
 	db.logReader = logReader
 	return db, nil
+}
+
+func (db *TxDB) Close() {
+	db.logReader.Stop()
 }
 
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
@@ -121,13 +128,14 @@ func (db *TxDB) UpdateCurrentLogCount(count *big.Int) error {
 	return db.as.UpdateCurrentLogCount(count)
 }
 
-func (db *TxDB) AddLogs(avmLogs []value.Value) error {
+func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
+	logIndex := initialLogIndex.Uint64()
 	for _, avmLog := range avmLogs {
-		if err := db.HandleLog(avmLog); err != nil {
+		if err := db.HandleLog(logIndex, avmLog); err != nil {
 			return err
 		}
+		logIndex++
 	}
-
 	return nil
 }
 
@@ -183,17 +191,24 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	return nil
 }
 
-func (db *TxDB) HandleLog(avmLog value.Value) error {
+func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
 		logger.Error().Stack().Err(err).Msg("Error parsing log result")
 		return nil
 	}
-	blockInfo, ok := res.(*evm.BlockInfo)
-	if !ok {
+
+	switch res := res.(type) {
+	case *evm.BlockInfo:
+		return db.handleBlockReceipt(res)
+	case *evm.MerkleRootResult:
+		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
+	default:
 		return nil
 	}
+}
 
+func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
 		Uint64("block_txcount", blockInfo.BlockStats.TxCount.Uint64()).
@@ -290,6 +305,29 @@ func (db *TxDB) HandleLog(avmLog value.Value) error {
 		db.logsFeed.Send(ethLogs)
 	}
 	return nil
+}
+
+func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
+	logIndex := db.as.GetMessageBatch(index)
+	if logIndex == nil {
+		return nil, nil
+	}
+	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*logIndex))
+	if err != nil {
+		return nil, err
+	}
+	res, err := evm.NewResultFromValue(logVal)
+	if err != nil {
+		return nil, err
+	}
+	merkleRes, ok := res.(*evm.MerkleRootResult)
+	if !ok {
+		return nil, errors.Errorf("expected merkle root result but got %T at log index %v", res, *logIndex)
+	}
+	if merkleRes.BatchNumber.Cmp(index) != 0 {
+		return nil, nil
+	}
+	return merkleRes, nil
 }
 
 func (db *TxDB) GetBlockWithHash(blockHash common.Hash) (*machine.BlockInfo, error) {

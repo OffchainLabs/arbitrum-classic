@@ -101,6 +101,17 @@ func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, error) 
 	return m.db.GetRequest(requestId)
 }
 
+func (m *Server) GetL2ToL1Proof(batchNumber *big.Int, index uint64) (*evm.MerkleRootProof, error) {
+	batch, err := m.db.GetMessageBatch(batchNumber)
+	if err != nil {
+		return nil, err
+	}
+	if batch == nil {
+		return nil, errors.New("batch doesn't exist")
+	}
+	return batch.GenerateProof(index)
+}
+
 // GetVMInfo returns current metadata about this VM
 func (m *Server) GetChainAddress() ethcommon.Address {
 	return m.chain.ToEthAddress()

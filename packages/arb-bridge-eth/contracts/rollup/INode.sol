@@ -61,6 +61,4 @@ interface INode {
     function requirePastDeadline() external view;
 
     function requirePastChildConfirmDeadline() external view;
-
-    function requireRejectExample(uint256 latestConfirmed, address stakerAddress) external view;
 }
