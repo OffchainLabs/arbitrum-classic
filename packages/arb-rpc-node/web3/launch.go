@@ -18,6 +18,7 @@ package web3
 
 import (
 	"crypto/ecdsa"
+	"time"
 
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -36,7 +37,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
-	if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false)); err != nil {
+	if err := s.RegisterName("eth", filters.NewPublicFilterAPI(server, false, 2*time.Minute)); err != nil {
 		return nil, err
 	}
 
