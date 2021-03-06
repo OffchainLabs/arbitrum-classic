@@ -149,7 +149,7 @@ export class L1Bridge {
     destinationAddress?: string
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
-    this.ethERC20Bridge.depositAsERC20(
+    return this.ethERC20Bridge.depositAsERC20(
       erc20L1Address,
       destination,
       amount,
@@ -165,7 +165,7 @@ export class L1Bridge {
     destinationAddress?: string
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
-    this.ethERC20Bridge.depositAsERC777(
+    return this.ethERC20Bridge.depositAsERC777(
       erc20L1Address,
       destination,
       amount,
