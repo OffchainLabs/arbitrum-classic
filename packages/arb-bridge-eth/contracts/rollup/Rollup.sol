@@ -117,14 +117,18 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
         bytes32 state =
-            RollupLib.nodeStateHash(
-                block.number, // block proposed
-                0, // total gas used
-                _machineHash,
-                0, // inbox count
-                0, // send count
-                0, // log count
-                1 // Initialization message already in inbox
+            RollupLib.stateHash(
+                RollupLib.ExecutionState(
+                    0, // total gas used
+                    _machineHash,
+                    0, // inbox count
+                    0, // send count
+                    0, // log count
+                    0, // send acc
+                    0, // log acc
+                    block.number, // block proposed
+                    1 // Initialization message already in inbox
+                )
             );
         return
             INode(
@@ -270,23 +274,18 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Reject the next unresolved node
-     * @param successorWithStake Example sibling node
      * @param stakerAddress Example staker staked on sibling
      */
-    function rejectNextNode(uint256 successorWithStake, address stakerAddress)
-        external
-        whenNotPaused
-    {
+    function rejectNextNode(address stakerAddress) external whenNotPaused {
         requireUnresolvedExists();
         uint256 latest = latestConfirmed();
         uint256 firstUnresolved = firstUnresolvedNode();
         INode node = getNode(firstUnresolved);
         if (node.prev() == latest) {
-            requireUnresolved(successorWithStake);
+            // Confirm that the example staker is staked on a sibling node
             require(isStaked(stakerAddress), "NOT_STAKED");
-
-            // Confirm that someone is staked on some sibling node
-            getNode(successorWithStake).requireRejectExample(latest, stakerAddress);
+            requireUnresolved(latestStakedNode(stakerAddress));
+            require(!node.stakers(stakerAddress), "STAKED_ON_TARGET");
 
             // Verify the block's deadline has passed
             node.requirePastDeadline();
@@ -310,6 +309,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function confirmNextNode(
         bytes32 logAcc,
+        bytes32 beforeSendAcc,
         bytes calldata sendsData,
         uint256[] calldata sendLengths
     ) external whenNotPaused {
@@ -337,8 +337,11 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             "NOT_ALL_STAKED"
         );
 
-        bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
-        require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
+        bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+        require(
+            node.confirmData() == RollupLib.confirmHash(beforeSendAcc, afterSendAcc, logAcc),
+            "CONFIRM_DATA"
+        );
 
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
@@ -404,55 +407,59 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
-        bytes32[4] calldata assertionBytes32Fields,
-        uint256[10] calldata assertionIntFields
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        uint256 beforeProposedBlock,
+        uint256 beforeInboxMaxCount
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        uint256 nodeNum = latestNodeCreated() + 1;
-        uint256 deadlineBlock;
-        uint256 inboxMaxCount;
+        uint256 inboxMaxCount = bridge.messageCount();
         bytes32 afterInboxAcc = 0;
         INode node;
         bytes32 executionHash;
         INode prevNode = getNode(latestStakedNode(msg.sender));
         {
+            uint256 nodeNum = latestNodeCreated() + 1;
             RollupLib.Assertion memory assertion =
-                RollupLib.decodeAssertion(assertionBytes32Fields, assertionIntFields);
+                RollupLib.decodeAssertion(
+                    assertionBytes32Fields,
+                    assertionIntFields,
+                    beforeProposedBlock,
+                    beforeInboxMaxCount,
+                    inboxMaxCount
+                );
             executionHash = RollupLib.executionHash(assertion);
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.beforeNodeStateHash(assertion) == prevNode.stateHash(),
+                RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
                 "PREV_STATE_HASH"
             );
 
-            uint256 timeSinceLastNode = block.number.sub(assertion.beforeProposedBlock);
+            uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
             // Verify that assertion meets the minimum Delta time requirement
             require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
 
+            uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
             // Minimum size requirements: each assertion must satisfy either
             require(
                 // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                assertion.inboxMessagesRead >=
-                    assertion.beforeInboxMaxCount.sub(assertion.beforeInboxCount) ||
+                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
                     // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                    assertion.gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
-                    assertion.sendCount == MAX_SEND_COUNT,
+                    gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                    assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
+                    MAX_SEND_COUNT,
                 "TOO_SMALL"
             );
 
             // Don't allow an assertion to use above a maximum amount of gas
-            require(
-                assertion.gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
-                "TOO_LARGE"
-            );
+            require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
 
+            uint256 deadlineBlock;
             {
                 // Set deadline rounding up to the nearest block
                 uint256 checkTime =
-                    assertion.gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(
-                        arbGasSpeedLimitPerBlock
-                    );
+                    gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
                 deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock())
                     .add(checkTime);
             }
@@ -464,17 +471,15 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 msg.sender
             );
 
-            inboxMaxCount = bridge.messageCount();
             // Ensure that the assertion doesn't read past the end of the current inbox
-            uint256 afterInboxCount = assertion.beforeInboxCount.add(assertion.inboxMessagesRead);
-            require(afterInboxCount <= inboxMaxCount, "INBOX_PAST_END");
-            if (afterInboxCount > 0) {
-                afterInboxAcc = bridge.inboxAccs(afterInboxCount - 1);
+            require(assertion.afterState.inboxCount <= inboxMaxCount, "INBOX_PAST_END");
+            if (assertion.afterState.inboxCount > 0) {
+                afterInboxAcc = bridge.inboxAccs(assertion.afterState.inboxCount - 1);
             }
 
             node = INode(
                 nodeFactory.createNode(
-                    RollupLib.nodeStateHash(assertion, inboxMaxCount),
+                    RollupLib.stateHash(assertion.afterState),
                     RollupLib.challengeRoot(assertion, executionHash, block.number),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
@@ -496,14 +501,14 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 RollupLib.nodeHash(hasSibling, lastHash, executionHash, afterInboxAcc);
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
             nodeCreated(node, nodeHash);
-            prevNode.childCreated(nodeNum);
+            prevNode.childCreated(latestNodeCreated());
         }
-        stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
+        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit NodeCreated(
-            nodeNum,
+            latestNodeCreated(),
             getNodeHash(node.prev()),
-            getNodeHash(nodeNum),
+            getNodeHash(latestNodeCreated()),
             executionHash,
             inboxMaxCount,
             afterInboxAcc,

@@ -53,13 +53,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
-	initialCursor, err := c.lookup.GetExecutionCursor(c.challengedNode.Assertion.Before.TotalGasConsumed)
-	if err != nil {
-		return err
-	}
-	challengeImpl := ExecutionImpl{
-		initialCursor: initialCursor,
-	}
+	challengeImpl := ExecutionImpl{}
 	return handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
 }
 

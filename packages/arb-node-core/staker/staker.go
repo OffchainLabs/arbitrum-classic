@@ -98,11 +98,11 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		}
 	}
 
-	if err := s.resolveNextNode(ctx); err != nil {
-		return nil, err
-	}
-
 	if info != nil {
+		if err := s.resolveNextNode(ctx, info); err != nil {
+			return nil, err
+		}
+
 		if err = s.handleConflict(ctx, info); err != nil {
 			return nil, err
 		}
@@ -198,7 +198,7 @@ func (s *Staker) advanceStake(ctx context.Context) error {
 	switch action := action.(type) {
 	case createNodeAction:
 		// Already logged with more details in generateNodeAction
-		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion)
+		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
 	case existingNodeAction:
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
