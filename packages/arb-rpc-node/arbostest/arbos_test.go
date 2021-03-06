@@ -17,7 +17,7 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"math/big"
 	"strings"
 	"testing"
@@ -27,7 +27,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -159,7 +158,7 @@ func TestBlocks(t *testing.T) {
 			SequenceNum: big.NewInt(i * 2),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(i * 2),
-			Data:        snapshot.WithdrawEthData(common.RandAddress()),
+			Data:        arbos.WithdrawEthData(common.RandAddress()),
 		}
 		tx2 := message.Transaction{
 			MaxGas:      big.NewInt(10000000),
@@ -167,7 +166,7 @@ func TestBlocks(t *testing.T) {
 			SequenceNum: big.NewInt(i*2 + 1),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(i*2 + 1),
-			Data:        snapshot.WithdrawEthData(common.RandAddress()),
+			Data:        arbos.WithdrawEthData(common.RandAddress()),
 		}
 		messages = append(
 			messages,

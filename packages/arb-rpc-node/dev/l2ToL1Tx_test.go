@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -14,7 +15,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"io/ioutil"
@@ -80,12 +80,13 @@ func TestL2ToL1Tx(t *testing.T) {
 
 	withdrawAmount := big.NewInt(1)
 
+	l2SendLogs := make([]*arboscontracts.ArbSysL2ToL1Transaction, 0)
 	l1Dests := make([]common.Address, 0)
 	for i := 0; i < 12; i++ {
 		dest := common.RandAddress()
 		l1Dests = append(l1Dests, dest)
 		t.Log("Send tx to L1", dest.Hex())
-		_, err = arbSys.SendTxToL1(&bind.TransactOpts{
+		tx, err := arbSys.SendTxToL1(&bind.TransactOpts{
 			From:     auth.From,
 			Nonce:    auth.Nonce,
 			Signer:   auth.Signer,
@@ -97,6 +98,22 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(receipt.Logs) != 1 {
+			t.Fatal("unexpected log count")
+		}
+		sendLog := receipt.Logs[0]
+		if sendLog.Topics[0] != arbos.L2ToL1TransactionID {
+			t.Fatal("unexpected topic", sendLog.Topics[0], arbos.L2ToL1TransactionID)
+		}
+		parsedEv, err := arbSys.ParseL2ToL1Transaction(*sendLog)
+		if err != nil {
+			t.Fatal(err)
+		}
+		l2SendLogs = append(l2SendLogs, parsedEv)
 		if i%8 == 0 {
 			backend.l1Emulator.IncreaseTime(20)
 		}
@@ -227,6 +244,37 @@ func TestL2ToL1Tx(t *testing.T) {
 			if !ok {
 				t.Fatal("expected l2 to l1 result")
 			}
+
+			// Verify that the L2 log emitted with this event was correct
+			l2SendLog := l2SendLogs[totalEntries]
+			if l2SendLog.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
+				t.Fatal("wrong batch num")
+			}
+			if l2SendLog.ItemNumber.Cmp(big.NewInt(int64(j))) != 0 {
+				t.Fatal("wrong item num")
+			}
+			if l2SendLog.Caller != res.L2Sender.ToEthAddress() {
+				t.Fatal("wrong l2 sender")
+			}
+			if l2SendLog.Destination != res.L1Dest.ToEthAddress() {
+				t.Fatal("wrong l1 dest")
+			}
+			if l2SendLog.ArbBlockNum.Cmp(res.L2Block) != 0 {
+				t.Fatal("wrong l2 block")
+			}
+			if l2SendLog.EthBlockNum.Cmp(res.L1Block) != 0 {
+				t.Fatal("wrong l1 block")
+			}
+			if l2SendLog.Timestamp.Cmp(res.Timestamp) != 0 {
+				t.Fatal("wrong timestamp")
+			}
+			if l2SendLog.Callvalue.Cmp(res.Value) != 0 {
+				t.Fatal("wrong amount")
+			}
+			if !bytes.Equal(l2SendLog.Data, res.Calldata) {
+				t.Fatal("wrong calldata")
+			}
+
 			batchNum := big.NewInt(int64(i))
 			index := uint64(j)
 			msgData, err := nodeInterface.LookupMessageBatchProof(&bind.CallOpts{}, batchNum, index)

@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"time"
 )
@@ -118,4 +119,12 @@ func (c *EthClient) SubscribeFilterLogs(_ context.Context, query ethereum.Filter
 		}
 	}()
 	return sub, nil
+}
+
+func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*types.Receipt, error) {
+	res, block, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	return res.ToEthReceipt(arbcommon.NewHashFromEth(block.Header.Hash())), nil
 }

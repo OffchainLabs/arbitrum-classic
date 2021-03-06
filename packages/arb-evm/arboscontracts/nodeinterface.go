@@ -204,16 +204,19 @@ func (_NodeInterface *NodeInterfaceCaller) LookupMessageBatchProof(opts *bind.Ca
 		Amount        *big.Int
 		CalldataForL1 []byte
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.Proof = out[0].([][32]byte)
-	outstruct.Path = out[1].(*big.Int)
-	outstruct.L2Sender = out[2].(common.Address)
-	outstruct.L1Dest = out[3].(common.Address)
-	outstruct.L2Block = out[4].(*big.Int)
-	outstruct.L1Block = out[5].(*big.Int)
-	outstruct.Timestamp = out[6].(*big.Int)
-	outstruct.Amount = out[7].(*big.Int)
-	outstruct.CalldataForL1 = out[8].([]byte)
+	outstruct.Proof = *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
+	outstruct.Path = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.L2Sender = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+	outstruct.L1Dest = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
+	outstruct.L2Block = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
+	outstruct.L1Block = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
+	outstruct.Timestamp = *abi.ConvertType(out[6], new(*big.Int)).(**big.Int)
+	outstruct.Amount = *abi.ConvertType(out[7], new(*big.Int)).(**big.Int)
+	outstruct.CalldataForL1 = *abi.ConvertType(out[8], new([]byte)).(*[]byte)
 
 	return *outstruct, err
 

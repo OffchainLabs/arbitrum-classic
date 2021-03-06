@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package snapshot
+package arbos
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
