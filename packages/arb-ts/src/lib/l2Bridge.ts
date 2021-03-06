@@ -204,5 +204,3 @@ export class L2Bridge {
     return this.walletAddressCache
   }
 }
-
-// TODO: migrate
