@@ -27,7 +27,7 @@ var (
 )
 
 // TransferABI is the input ABI used to generate the binding from.
-const TransferABI = "[{\"inputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"constant\":false,\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const TransferABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
 // TransferFuncSigs maps the 4-byte function signature to its string representation.
 var TransferFuncSigs = map[string]string{
@@ -36,7 +36,7 @@ var TransferFuncSigs = map[string]string{
 }
 
 // TransferBin is the compiled bytecode used for deploying new contracts.
-var TransferBin = "0x608060405261011d806100136000396000f3fe60806040526004361060265760003560e01c80633386b1a2146028578063b46300ec146057575b005b348015603357600080fd5b50602660048036036020811015604857600080fd5b50356001600160a01b03166069565b348015606257600080fd5b50602660bd565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801560a357600080fd5b505af115801560b6573d6000803e3d6000fd5b5050505050565b604051339060009060019082818181858883f1935050505015801560e5573d6000803e3d6000fd5b5056fea265627a7a723158206ccb039840af3e7c526f85372bfc1c21b5d089da29db9cefa1481600f3674eea64736f6c63430005110032"
+var TransferBin = "0x608060405261012c806100136000396000f3fe60806040526004361060295760003560e01c80633386b1a2146034578063b46300ec14606557602f565b36602f57005b600080fd5b348015603f57600080fd5b50606360048036036020811015605457600080fd5b50356001600160a01b03166077565b005b348015607057600080fd5b50606360cb565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b15801560b157600080fd5b505af115801560c4573d6000803e3d6000fd5b5050505050565b604051339060009060019082818181858883f1935050505015801560f3573d6000803e3d6000fd5b5056fea2646970667358221220af5cb92adaa66fb0fedb0f4f60399117e72dc71bc1d1ccb50e59f50d5c81d49764736f6c634300060c0033"
 
 // DeployTransfer deploys a new Ethereum contract, binding an instance of Transfer to it.
 func DeployTransfer(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Transfer, error) {
@@ -236,23 +236,23 @@ func (_Transfer *TransferTransactorSession) Send2(wrapped common.Address) (*type
 	return _Transfer.Contract.Send2(&_Transfer.TransactOpts, wrapped)
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Receive is a paid mutator transaction binding the contract receive function.
 //
-// Solidity: fallback() payable returns()
-func (_Transfer *TransferTransactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
-	return _Transfer.contract.RawTransact(opts, calldata)
+// Solidity: receive() payable returns()
+func (_Transfer *TransferTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Transfer.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Receive is a paid mutator transaction binding the contract receive function.
 //
-// Solidity: fallback() payable returns()
-func (_Transfer *TransferSession) Fallback(calldata []byte) (*types.Transaction, error) {
-	return _Transfer.Contract.Fallback(&_Transfer.TransactOpts, calldata)
+// Solidity: receive() payable returns()
+func (_Transfer *TransferSession) Receive() (*types.Transaction, error) {
+	return _Transfer.Contract.Receive(&_Transfer.TransactOpts)
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Receive is a paid mutator transaction binding the contract receive function.
 //
-// Solidity: fallback() payable returns()
-func (_Transfer *TransferTransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
-	return _Transfer.Contract.Fallback(&_Transfer.TransactOpts, calldata)
+// Solidity: receive() payable returns()
+func (_Transfer *TransferTransactorSession) Receive() (*types.Transaction, error) {
+	return _Transfer.Contract.Receive(&_Transfer.TransactOpts)
 }
