@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.17;
+pragma solidity >=0.4.21 <0.7.0;
 
 contract Transfer {
     constructor() public payable {}
 
-    function() external payable {}
+    receive() external payable {}
 
     function send() external {
         msg.sender.transfer(1);

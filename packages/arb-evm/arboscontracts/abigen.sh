@@ -1,5 +1,5 @@
 #!/bin/bash
-PREFIX=../../arb-os/contracts/arbos/contracts
+PREFIX=../../arb-os/contracts/arbos/builtin
 PACKAGE=arboscontracts
 
 abigen --sol=$PREFIX/ArbInfo.sol --pkg=$PACKAGE --out=arbinfo.go
