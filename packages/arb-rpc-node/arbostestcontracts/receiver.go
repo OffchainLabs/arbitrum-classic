@@ -27,7 +27,7 @@ var (
 )
 
 // ReceiverABI is the input ABI used to generate the binding from.
-const ReceiverABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"otherReciver\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"other\",\"outputs\":[{\"internalType\":\"contractReceiver2\",\"name\":\"\",\"type\":\"address\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ReceiverABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"otherReciver\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"other\",\"outputs\":[{\"internalType\":\"contractReceiver2\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ReceiverFuncSigs maps the 4-byte function signature to its string representation.
 var ReceiverFuncSigs = map[string]string{
@@ -37,7 +37,7 @@ var ReceiverFuncSigs = map[string]string{
 }
 
 // ReceiverBin is the compiled bytecode used for deploying new contracts.
-var ReceiverBin = "0x6080604052600560005534801561001557600080fd5b506040516101ae3803806101ae8339818101604052602081101561003857600080fd5b5051600180546001600160a01b0319166001600160a01b03909216919091179055610146806100686000396000f3fe6080604052600436106100345760003560e01c80637795b5fc146100395780638529587714610043578063f8a8fd6d14610074575b600080fd5b61004161009b565b005b34801561004f57600080fd5b506100586100fc565b604080516001600160a01b039092168252519081900360200190f35b34801561008057600080fd5b5061008961010b565b60408051918252519081900360200190f35b6006600090815560015460408051631de56d7f60e21b815290516001600160a01b0390921692637795b5fc9260048084019382900301818387803b1580156100e257600080fd5b505af11580156100f6573d6000803e3d6000fd5b50505050565b6001546001600160a01b031681565b6000548156fea265627a7a72315820be3faac533474f1cb03f84747a867670a834d342dc6fcec813e89f537af6abcc64736f6c63430005110032"
+var ReceiverBin = "0x6080604052600560005534801561001557600080fd5b506040516101af3803806101af8339818101604052602081101561003857600080fd5b5051600180546001600160a01b0319166001600160a01b03909216919091179055610147806100686000396000f3fe6080604052600436106100345760003560e01c80637795b5fc146100395780638529587714610043578063f8a8fd6d14610074575b600080fd5b61004161009b565b005b34801561004f57600080fd5b506100586100fc565b604080516001600160a01b039092168252519081900360200190f35b34801561008057600080fd5b5061008961010b565b60408051918252519081900360200190f35b6006600090815560015460408051631de56d7f60e21b815290516001600160a01b0390921692637795b5fc9260048084019382900301818387803b1580156100e257600080fd5b505af11580156100f6573d6000803e3d6000fd5b50505050565b6001546001600160a01b031681565b6000548156fea264697066735822122055deec57309384dc79095e74b45d2bccbf3351a12cb3401564614356a141d8f064736f6c634300060c0033"
 
 // DeployReceiver deploys a new Ethereum contract, binding an instance of Receiver to it.
 func DeployReceiver(auth *bind.TransactOpts, backend bind.ContractBackend, otherReciver common.Address) (common.Address, *types.Transaction, *Receiver, error) {
@@ -279,7 +279,7 @@ func (_Receiver *ReceiverTransactorSession) Mutate() (*types.Transaction, error)
 }
 
 // Receiver2ABI is the input ABI used to generate the binding from.
-const Receiver2ABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const Receiver2ABI = "[{\"inputs\":[],\"name\":\"mutate\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"test\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Receiver2FuncSigs maps the 4-byte function signature to its string representation.
 var Receiver2FuncSigs = map[string]string{
@@ -288,7 +288,7 @@ var Receiver2FuncSigs = map[string]string{
 }
 
 // Receiver2Bin is the compiled bytecode used for deploying new contracts.
-var Receiver2Bin = "0x60806040526007600055348015601457600080fd5b506099806100236000396000f3fe60806040526004361060265760003560e01c80637795b5fc14602b578063f8a8fd6d146033575b600080fd5b60316057565b005b348015603e57600080fd5b506045605e565b60408051918252519081900360200190f35b6008600055565b6000548156fea265627a7a723158204e071dd7cff3f68051284f0207a60d6ee41d5f1505378e20f0d38e1154b194a964736f6c63430005110032"
+var Receiver2Bin = "0x60806040526007600055348015601457600080fd5b50609a806100236000396000f3fe60806040526004361060265760003560e01c80637795b5fc14602b578063f8a8fd6d146033575b600080fd5b60316057565b005b348015603e57600080fd5b506045605e565b60408051918252519081900360200190f35b6008600055565b6000548156fea2646970667358221220f67fdf6e265b1785e0f918553ab4382067717b815bf26f41c9c6ba335319586d64736f6c634300060c0033"
 
 // DeployReceiver2 deploys a new Ethereum contract, binding an instance of Receiver2 to it.
 func DeployReceiver2(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Receiver2, error) {

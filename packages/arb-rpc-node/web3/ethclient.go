@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"math/big"
+	"time"
 )
 
 type EthClient struct {
@@ -22,7 +23,7 @@ func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
 	return &EthClient{
 		srv:    NewServer(srv, ganacheMode),
 		events: filters.NewEventSystem(srv, false),
-		filter: filters.NewPublicFilterAPI(srv, false),
+		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}
 }
 

@@ -32,6 +32,14 @@ func (e *ExecutionCursorMock) InboxAcc() common.Hash {
 	return common.Hash{}
 }
 
+func (e *ExecutionCursorMock) SendAcc() common.Hash {
+	return common.Hash{}
+}
+
+func (e *ExecutionCursorMock) LogAcc() common.Hash {
+	return common.Hash{}
+}
+
 func (e *ExecutionCursorMock) TotalGasConsumed() *big.Int {
 	return big.NewInt(0)
 }
