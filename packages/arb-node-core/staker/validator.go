@@ -92,19 +92,15 @@ func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Trans
 	return v.wallet.TimeoutChallenges(ctx, challengesToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context, address common.Address, info *ethbridge.StakerInfo) error {
-	confirmType, _, _, err := v.validatorUtils.CheckDecidableNextNode(ctx)
+func (v *Validator) resolveNextNode(ctx context.Context) error {
+	confirmType, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
 		return err
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
-		if info == nil {
-			return nil
-		}
-		// TODO findRejectableExample is broken so we're just using our own address
 		logger.Info().Msg("Rejecting node")
-		return v.rollup.RejectNextNode(ctx, info.LatestStakedNode, address)
+		return v.rollup.RejectNextNode(ctx, v.wallet.Address())
 	case ethbridge.CONFIRM_TYPE_VALID:
 		unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
 		if err != nil {
@@ -114,24 +110,23 @@ func (v *Validator) resolveNextNode(ctx context.Context, address common.Address,
 		if err != nil {
 			return err
 		}
-		logAcc, err := v.lookup.GetLogAcc(common.Hash{}, nodeInfo.Assertion.Before.TotalLogCount, nodeInfo.Assertion.LogCount())
-		if err != nil {
-			return errors.Wrap(err, "catching up to chain: log accumulator out of date")
-		}
-		sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, nodeInfo.Assertion.SendCount())
+		sendCount := new(big.Int).Sub(nodeInfo.Assertion.After.TotalSendCount, nodeInfo.Assertion.Before.TotalSendCount)
+		sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, sendCount)
 		if err != nil {
 			return err
 		}
 		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Confirming node")
-		return v.rollup.ConfirmNextNode(ctx, logAcc, sends)
+		return v.rollup.ConfirmNextNode(ctx, nodeInfo.Assertion.After.LogAcc, nodeInfo.Assertion.Before.SendAcc, sends)
 	default:
 		return nil
 	}
 }
 
 type createNodeAction struct {
-	assertion *core.Assertion
-	hash      [32]byte
+	assertion         *core.Assertion
+	prevProposedBlock *big.Int
+	prevInboxMaxCount *big.Int
+	hash              [32]byte
 }
 
 type existingNodeAction struct {
@@ -171,7 +166,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	}
 
 	gasesUsed := make([]*big.Int, 0, len(successorNodes)+1)
-	gasesUsed = append(gasesUsed, startState.TotalGasConsumed)
 	for _, nd := range successorNodes {
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
@@ -197,15 +191,15 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 
-	minMessages := new(big.Int).Sub(startState.InboxMaxCount, startState.TotalMessagesRead)
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
-	maximumGasToConsume := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
+	maximumGasTarget := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
+	maximumGasTarget = maximumGasTarget.Add(maximumGasTarget, startState.TotalGasConsumed)
 
 	if strategy > WatchtowerStrategy {
-		gasesUsed = append(gasesUsed, maximumGasToConsume)
+		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTracker(v.lookup, cursor, false, gasesUsed)
+	execTracker := core.NewExecutionTracker(v.lookup, false, gasesUsed)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
@@ -243,17 +237,17 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return correctNode, wrongNodesExist, nil
 	}
 
-	execInfo, _, err := execTracker.GetExecutionInfo(maximumGasToConsume)
+	execState, _, err := execTracker.GetExecutionState(maximumGasTarget)
 	if err != nil {
 		return nil, false, err
 	}
 
-	if execInfo.GasUsed().Cmp(minimumGasToConsume) < 0 && execInfo.InboxMessagesRead().Cmp(minMessages) < 0 {
+	if new(big.Int).Sub(execState.TotalGasConsumed, startState.TotalGasConsumed).Cmp(minimumGasToConsume) < 0 && execState.TotalMessagesRead.Cmp(startState.InboxMaxCount) < 0 {
 		// Couldn't execute far enough
 		return nil, wrongNodesExist, nil
 	}
 
-	inboxAcc := execInfo.After.InboxAcc
+	inboxAcc := execState.InboxAcc
 	hasSiblingByte := [1]byte{0}
 	lastHash := baseHash
 	if len(successorNodes) > 0 {
@@ -261,20 +255,16 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		hasSiblingByte[0] = 1
 	}
 	assertion := &core.Assertion{
-		PrevProposedBlock: startState.ProposedBlock,
-		PrevInboxMaxCount: startState.InboxMaxCount,
-		ExecutionInfo:     execInfo,
+		Before: startState.ExecutionState,
+		After:  execState,
 	}
-	executionHash := core.BisectionChunkHash(
-		big.NewInt(0),
-		execInfo.GasUsed(),
-		assertion.BeforeExecutionHash(),
-		assertion.AfterExecutionHash(),
-	)
+	executionHash := assertion.ExecutionHash()
 	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
 	action := createNodeAction{
-		assertion: assertion,
-		hash:      newNodeHash,
+		assertion:         assertion,
+		hash:              newNodeHash,
+		prevProposedBlock: startState.ProposedBlock,
+		prevInboxMaxCount: startState.InboxMaxCount,
 	}
 	lastNum := base
 	if len(successorNodes) > 0 {

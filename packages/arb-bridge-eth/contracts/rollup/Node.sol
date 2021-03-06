@@ -144,18 +144,4 @@ contract Node is Cloneable, INode {
     function requirePastChildConfirmDeadline() external view override {
         require(block.number >= noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
     }
-
-    /**
-     * @notice Check whether the current block number has met or passed the node's deadline
-     * @param latestConfirmed Address of the node that should be this node's prev
-     * @param stakerAddress Address on the staker that should be staked on this node
-     */
-    function requireRejectExample(uint256 latestConfirmed, address stakerAddress)
-        external
-        view
-        override
-    {
-        require(prev == latestConfirmed, "BAD_SUCCESSOR");
-        require(stakers[stakerAddress], "BAD_STAKER");
-    }
 }

@@ -71,8 +71,8 @@ func (c *Challenge) BisectExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		subCuts[0].(core.ExecutionCut).GasUsed,
-		subCuts[0].(core.ExecutionCut).RestHash(),
+		subCuts[0].(*core.ExecutionState).TotalGasConsumed,
+		subCuts[0].(*core.ExecutionState).RestHash(),
 		subCutHashes,
 	)
 	return err
@@ -83,7 +83,7 @@ func (c *Challenge) OneStepProveExecution(
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-	beforeCut core.ExecutionCut,
+	beforeCut *core.ExecutionState,
 	executionProof []byte,
 	bufferProof []byte,
 	opcode uint8,
@@ -112,9 +112,9 @@ func (c *Challenge) OneStepProveExecution(
 		beforeCut.SendAcc,
 		beforeCut.LogAcc,
 		[3]*big.Int{
-			beforeCut.GasUsed,
-			beforeCut.SendCount,
-			beforeCut.LogCount,
+			beforeCut.TotalGasConsumed,
+			beforeCut.TotalSendCount,
+			beforeCut.TotalLogCount,
 		},
 		executionProof,
 		bufferProof,
@@ -128,7 +128,7 @@ func (c *Challenge) ProveContinuedExecution(
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-	beforeCut core.ExecutionCut,
+	beforeCut *core.ExecutionState,
 ) error {
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
@@ -139,7 +139,7 @@ func (c *Challenge) ProveContinuedExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		beforeCut.GasUsed,
+		beforeCut.TotalGasConsumed,
 		beforeCut.RestHash(),
 	)
 	return err
