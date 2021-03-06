@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../ethereum/L1Buddy.sol";
-import "arbos-contracts/contracts/ArbSys.sol";
+import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 contract BuddyDeployer {
     constructor() public {}

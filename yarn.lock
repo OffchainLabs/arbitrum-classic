@@ -1827,6 +1827,11 @@
   resolved "https://registry.yarnpkg.com/@typechain/ethers-v5/-/ethers-v5-5.0.0.tgz#6c91766b76c19886cf2c4833ded09611e117f92c"
   integrity sha512-SnLnq6BCq2NBgm5xsQP8kRIawJ7gppLux8EOMb2ceoB5EuoW87AOyi6r1J5LTYe65/J59HjOVtaGCqsO+38Xrw==
 
+"@typechain/ethers-v5@^6.0.1":
+  version "6.0.1"
+  resolved "https://registry.yarnpkg.com/@typechain/ethers-v5/-/ethers-v5-6.0.1.tgz#af6d3186a93c7bb96ca3add706d0a355ac0412c4"
+  integrity sha512-MNrB/lR9TQoubAXWscPzSMCmPNWVwoRlABYQS/al7lP6kGkaA3ObtLy3v1YHCF9T3qdxdpID/5qrmn89s4MEWw==
+
 "@types/accepts@*", "@types/accepts@^1.3.5":
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/@types/accepts/-/accepts-1.3.5.tgz#c34bec115cfc746e04fe5a059df4ce7e7b391575"
@@ -7638,7 +7643,7 @@ hardhat-spdx-license-identifier@^2.0.2:
   resolved "https://registry.yarnpkg.com/hardhat-spdx-license-identifier/-/hardhat-spdx-license-identifier-2.0.3.tgz#6dd89a7e036ede4f7e86fb349eb23daaaad6890f"
   integrity sha512-G4u4I1md0tWaitX6Os7Nq9sYZ/CFdR+ibm7clCksGJ4yrtdHEZxgLjWpJ0WiALF9SoFKt03PwCe9lczDQ/5ADA==
 
-hardhat-typechain@^0.3.4:
+hardhat-typechain@^0.3.4, hardhat-typechain@^0.3.5:
   version "0.3.5"
   resolved "https://registry.yarnpkg.com/hardhat-typechain/-/hardhat-typechain-0.3.5.tgz#8e50616a9da348b33bd001168c8fda9c66b7b4af"
   integrity sha512-w9lm8sxqTJACY+V7vijiH+NkPExnmtiQEjsV9JKD1KgMdVk2q8y+RhvU/c4B7+7b1+HylRUCxpOIvFuB3rE4+w==
@@ -13749,7 +13754,7 @@ truffle@^4.0.0:
     original-require "1.0.1"
     solc "0.4.26"
 
-truffle@^5.0.0, truffle@^5.0.31:
+truffle@^5.0.0:
   version "5.2.2"
   resolved "https://registry.yarnpkg.com/truffle/-/truffle-5.2.2.tgz#2e00cb73b5c2430fe79f81bcbc35df357087705f"
   integrity sha512-66wAdFM/n1Mf1o227hhOteAJCgF9pIPKywbQ0u21qyD2LahU4VZsOjci6GY0Iv/5nDWm57GM+GNhikSdSTKvRQ==
@@ -13944,7 +13949,7 @@ typechain@^3.0.0:
     ts-essentials "^6.0.3"
     ts-generator "^0.1.1"
 
-typechain@^4.0.0:
+typechain@^4.0.0, typechain@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/typechain/-/typechain-4.0.2.tgz#31a961bf1fc43b8cde39193247439715e43ce5d3"
   integrity sha512-SopnfdQrS5ek6sTbvymsnBACA+70FstX/ZLWY8lQWNdLUXGyoGFoa73Y+1hKlbz2DfCnO39bQ551qUMhk5GYSw==
