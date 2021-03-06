@@ -27,7 +27,7 @@ var (
 )
 
 // GasUsedABI is the input ABI used to generate the binding from.
-const GasUsedABI = "[{\"inputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[],\"name\":\"noop\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"sstore\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const GasUsedABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"noop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sstore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // GasUsedFuncSigs maps the 4-byte function signature to its string representation.
 var GasUsedFuncSigs = map[string]string{
@@ -36,7 +36,7 @@ var GasUsedFuncSigs = map[string]string{
 }
 
 // GasUsedBin is the compiled bytecode used for deploying new contracts.
-var GasUsedBin = "0x608060405260878060116000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80635dfc2e4a146037578063703c2d1a14603f575b600080fd5b603d6045565b005b603d6047565b565b60008054600101905556fea265627a7a72315820cedc45ada7118340d59e28e3f93afd5e4a1b321b17b008f6d5002b16848b7a3764736f6c63430005110032"
+var GasUsedBin = "0x608060405260888060116000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80635dfc2e4a146037578063703c2d1a14603f575b600080fd5b603d6045565b005b603d6047565b565b60008054600101905556fea26469706673582212206628eca57b00072886181879d8295f7ebc92273f6ea85fff7a57866db315be7864736f6c634300060c0033"
 
 // DeployGasUsed deploys a new Ethereum contract, binding an instance of GasUsed to it.
 func DeployGasUsed(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GasUsed, error) {
