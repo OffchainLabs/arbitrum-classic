@@ -22,7 +22,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface OutboxInterface extends ethers.utils.Interface {
   functions: {
-    'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)': FunctionFragment
     'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'l2ToL1Block()': FunctionFragment
     'l2ToL1EthBlock()': FunctionFragment
@@ -31,10 +30,6 @@ interface OutboxInterface extends ethers.utils.Interface {
     'processOutgoingMessages(bytes,uint256[])': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'executeBuddyContractReceipt',
-    values: [BigNumberish, BytesLike[], BigNumberish, string, boolean]
-  ): string
   encodeFunctionData(
     functionFragment: 'executeTransaction',
     values: [
@@ -71,10 +66,6 @@ interface OutboxInterface extends ethers.utils.Interface {
     values: [BytesLike, BigNumberish[]]
   ): string
 
-  decodeFunctionResult(
-    functionFragment: 'executeBuddyContractReceipt',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(
     functionFragment: 'executeTransaction',
     data: BytesLike
@@ -118,24 +109,6 @@ export class Outbox extends Contract {
   interface: OutboxInterface
 
   functions: {
-    executeBuddyContractReceipt(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)'(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -192,24 +165,6 @@ export class Outbox extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
-
-  executeBuddyContractReceipt(
-    outboxIndex: BigNumberish,
-    proof: BytesLike[],
-    index: BigNumberish,
-    l2Contract: string,
-    createdSuccessfully: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)'(
-    outboxIndex: BigNumberish,
-    proof: BytesLike[],
-    index: BigNumberish,
-    l2Contract: string,
-    createdSuccessfully: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
 
   executeTransaction(
     outboxIndex: BigNumberish,
@@ -268,24 +223,6 @@ export class Outbox extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    executeBuddyContractReceipt(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)'(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -353,24 +290,6 @@ export class Outbox extends Contract {
   }
 
   estimateGas: {
-    executeBuddyContractReceipt(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)'(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -429,24 +348,6 @@ export class Outbox extends Contract {
   }
 
   populateTransaction: {
-    executeBuddyContractReceipt(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'executeBuddyContractReceipt(uint256,bytes32[],uint256,address,bool)'(
-      outboxIndex: BigNumberish,
-      proof: BytesLike[],
-      index: BigNumberish,
-      l2Contract: string,
-      createdSuccessfully: boolean,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
