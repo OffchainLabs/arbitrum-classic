@@ -3,8 +3,6 @@ package core
 import (
 	"fmt"
 	"math/big"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 type Cut interface {
@@ -30,35 +28,6 @@ func (c SimpleCut) Equals(other Cut) bool {
 
 func (c SimpleCut) CutHash() [32]byte {
 	return c.hash
-}
-
-type ExecutionCut struct {
-	GasUsed           *big.Int
-	TotalMessagesRead *big.Int
-	MachineState      common.Hash
-	SendAcc           common.Hash
-	SendCount         *big.Int
-	LogAcc            common.Hash
-	LogCount          *big.Int
-}
-
-func (c ExecutionCut) Equals(other Cut) bool {
-	return c.CutHash() == other.CutHash()
-}
-
-func (c ExecutionCut) RestHash() [32]byte {
-	return assertionRestHash(
-		c.TotalMessagesRead,
-		c.MachineState,
-		c.SendAcc,
-		c.SendCount,
-		c.LogAcc,
-		c.LogCount,
-	)
-}
-
-func (c ExecutionCut) CutHash() [32]byte {
-	return assertionHash(c.GasUsed, c.RestHash())
 }
 
 type Bisection struct {

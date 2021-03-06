@@ -111,7 +111,7 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 	}
 }
 
-func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
+func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
 	mach, err := cmachine.New(arbos.Path())
@@ -220,6 +220,7 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 			}
 		}
 		client.Commit()
+		client.Commit()
 
 		faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
 		test.FailIfError(t, err)
@@ -283,13 +284,13 @@ func adversarialTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerN
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)}, big.NewInt(100000000), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(10000)}, big.NewInt(100000000), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
-	adversarialTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(50000)}, big.NewInt(100000), Timeout)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(20)}, big.NewInt(400*400), Timeout)
 }
 
-func TestChallengeCooperative(t *testing.T) {
-	adversarialTest(t, challenge.FaultConfig{}, big.NewInt(25000), NoChallenge)
+func TestStakersCooperative(t *testing.T) {
+	runStakersTest(t, challenge.FaultConfig{}, big.NewInt(25000), NoChallenge)
 }
