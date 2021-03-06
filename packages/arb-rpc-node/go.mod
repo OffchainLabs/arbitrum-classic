@@ -15,7 +15,6 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20200520122047-c3ffed290a03 // indirect
 	github.com/rs/zerolog v1.20.0
