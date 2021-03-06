@@ -17,12 +17,12 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"os"
 	"testing"
 )
 
-var codeFile = arbos.Path()
+var codeFile = gotest.OpCodeTestFiles()[0]
 
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"

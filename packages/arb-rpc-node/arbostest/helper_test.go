@@ -24,11 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -56,7 +56,7 @@ func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) m
 		SequenceNum: sequenceNum,
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 		Payment:     amount,
-		Data:        snapshot.WithdrawEthData(dest),
+		Data:        arbos.WithdrawEthData(dest),
 	}
 }
 

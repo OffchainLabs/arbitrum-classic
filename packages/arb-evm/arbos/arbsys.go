@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package snapshot
+package arbos
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/pkg/errors"
 	"math/big"
 	"strings"
@@ -53,7 +52,7 @@ func init() {
 
 	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
 
-	arbsysConn = bind.NewBoundContract(arbos.ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
+	arbsysConn = bind.NewBoundContract(ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
 
 func TransactionCountData(address common.Address) []byte {
@@ -99,7 +98,7 @@ func StorageAtData(address common.Address, index *big.Int) []byte {
 	return makeFuncData(getStorageAtABI, address, index)
 }
 
-func parseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
+func ParseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
 	vals, err := getStorageAtABI.Outputs.UnpackValues(res.ReturnData)
 	if err != nil {
 		return nil, err

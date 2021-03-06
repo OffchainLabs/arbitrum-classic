@@ -18,10 +18,9 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
@@ -42,7 +41,7 @@ func TestGetStorageAt(t *testing.T) {
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
-			Data:        snapshot.StorageAtData(connAddress1, big.NewInt(1)),
+			Data:        arbos.StorageAtData(connAddress1, big.NewInt(1)),
 		},
 	}
 

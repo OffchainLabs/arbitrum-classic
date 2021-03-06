@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package snapshot
+package arbos
 
 import (
 	"github.com/pkg/errors"
@@ -75,7 +75,7 @@ func ParseBalanceResult(res *evm.TxResult) (*big.Int, error) {
 	return val, nil
 }
 
-func getCodeData(address common.Address) []byte {
+func GetCodeData(address common.Address) []byte {
 	txData, err := getCodeABI.Inputs.Pack(address)
 	if err != nil {
 		panic(err)
@@ -83,7 +83,7 @@ func getCodeData(address common.Address) []byte {
 	return append(getCodeSig, txData...)
 }
 
-func parseCodeResult(res *evm.TxResult) ([]byte, error) {
+func ParseCodeResult(res *evm.TxResult) ([]byte, error) {
 	vals, err := getCodeABI.Outputs.UnpackValues(res.ReturnData)
 	if err != nil {
 		return nil, err

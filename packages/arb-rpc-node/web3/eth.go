@@ -18,7 +18,7 @@ package web3
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"

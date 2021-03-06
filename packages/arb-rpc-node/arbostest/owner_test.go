@@ -17,9 +17,8 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
@@ -38,7 +37,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GiveOwnershipData(common.RandAddress()),
+		Data:        arbos.GiveOwnershipData(common.RandAddress()),
 	}
 
 	tx2 := message.Transaction{
@@ -47,7 +46,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GiveOwnershipData(sender),
+		Data:        arbos.GiveOwnershipData(sender),
 	}
 
 	tx3 := message.Transaction{
@@ -56,7 +55,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.StartArbOSUpgradeData(),
+		Data:        arbos.StartArbOSUpgradeData(),
 	}
 
 	tx4 := message.Transaction{
@@ -65,7 +64,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.ContinueArbOSUpgradeData([]byte{}),
+		Data:        arbos.ContinueArbOSUpgradeData([]byte{}),
 	}
 
 	tx5 := message.Transaction{
@@ -74,7 +73,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(3),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.FinishArbOSUpgradeData(),
+		Data:        arbos.FinishArbOSUpgradeData(),
 	}
 
 	messages := []inbox.InboxMessage{
