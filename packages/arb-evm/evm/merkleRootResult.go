@@ -221,9 +221,6 @@ func (m *MerkleRootResult) GenerateProof(index uint64) (*MerkleRootProof, error)
 			for i, j := 0, len(nodes)-1; i < j; i, j = i+1, j-1 {
 				nodes[i], nodes[j] = nodes[j], nodes[i]
 			}
-			for i, j := 0, len(path)-1; i < j; i, j = i+1, j-1 {
-				path[i], path[j] = path[j], path[i]
-			}
 			return &MerkleRootProof{
 				Nodes: nodes,
 				Path:  path,

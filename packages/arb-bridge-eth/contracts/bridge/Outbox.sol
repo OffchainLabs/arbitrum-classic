@@ -33,8 +33,8 @@ contract Outbox is CloneFactory, IOutbox {
 
     bytes1 internal constant MSG_ROOT = 0;
 
-    uint256 internal constant SendType_sendTxToL1 = 3;
-    uint256 internal constant SendType_buddyContractResult = 5;
+    uint8 internal constant SendType_sendTxToL1 = 3;
+    uint8 internal constant SendType_buddyContractResult = 5;
 
     address rollup;
     IBridge bridge;
