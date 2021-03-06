@@ -54,7 +54,7 @@ func TestMessageBatch(t *testing.T) {
 
 	logIndex := nodeStore.GetMessageBatch(testBatchNumber)
 	if logIndex == nil {
-		t.Fatal(err)
+		t.Fatal("GetMessageBatch should have returned log")
 	}
 	if *logIndex != testLogIndex {
 		logger.Error().Msg("logIndex doesnt match testLogIndex")
