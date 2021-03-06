@@ -32,8 +32,6 @@ interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
   ERC777?: { contract: StandardArbERC777; balance: BigNumber }
   CUSTOM?: { contract: StandardArbERC777; balance: BigNumber }
-
-  // TODO - is this fine?
 }
 
 export interface Tokens {
