@@ -6029,12 +6029,15 @@ func (_RollupCore *RollupCoreCaller) StakerMap(opts *bind.CallOpts, arg0 common.
 		CurrentChallenge common.Address
 		IsStaked         bool
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.Index = out[0].(*big.Int)
-	outstruct.LatestStakedNode = out[1].(*big.Int)
-	outstruct.AmountStaked = out[2].(*big.Int)
-	outstruct.CurrentChallenge = out[3].(common.Address)
-	outstruct.IsStaked = out[4].(bool)
+	outstruct.Index = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	outstruct.LatestStakedNode = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.AmountStaked = *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	outstruct.CurrentChallenge = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
+	outstruct.IsStaked = *abi.ConvertType(out[4], new(bool)).(*bool)
 
 	return *outstruct, err
 
