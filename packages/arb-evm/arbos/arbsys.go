@@ -38,6 +38,8 @@ var (
 	ethWithdrawal ethcommon.Hash
 
 	arbsysConn *bind.BoundContract
+
+	L2ToL1TransactionID ethcommon.Hash
 )
 
 func init() {
@@ -51,6 +53,7 @@ func init() {
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
 
 	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
+	L2ToL1TransactionID = arbsys.Events["L2ToL1Transaction"].ID
 
 	arbsysConn = bind.NewBoundContract(ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
