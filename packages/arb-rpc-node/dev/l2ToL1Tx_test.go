@@ -98,7 +98,7 @@ func TestL2ToL1Tx(t *testing.T) {
 			t.Fatal(err)
 		}
 		if i%8 == 0 {
-			backend.l1Emulator.IncreaseTime(10)
+			backend.l1Emulator.IncreaseTime(20)
 		}
 	}
 
@@ -185,6 +185,31 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	clnt.Commit()
 
+	for i, batch := range batches {
+		outboxEntryAddress, err := outbox.Outboxes(&bind.CallOpts{}, big.NewInt(int64(i)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		outboxEntry, err := ethbridgecontracts.NewOutboxEntry(outboxEntryAddress, clnt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		root, err := outboxEntry.Root(&bind.CallOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if root != batch.Tree.Hash() {
+			t.Fatal("wrong root")
+		}
+		numRemaining, err := outboxEntry.NumRemaining(&bind.CallOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if numRemaining.Cmp(batch.NumInBatch) != 0 {
+			t.Fatal("wrong num remaining")
+		}
+	}
+
 	nodeInterface, err := arboscontracts.NewNodeInterface(arbos.ARB_NODE_INTERFACE_ADDRESS, client)
 	if err != nil {
 		t.Fatal(err)
@@ -208,6 +233,7 @@ func TestL2ToL1Tx(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+
 			if msgData.L2Sender != res.L2Sender.ToEthAddress() {
 				t.Fatal("wrong l2 sender")
 			}
@@ -230,26 +256,8 @@ func TestL2ToL1Tx(t *testing.T) {
 				t.Fatal("wrong calldata")
 			}
 			t.Log("Execute", msgData.L1Dest.Hex(), msgData.Amount, hexutil.Encode(msgData.CalldataForL1))
-
-			tx := types.NewTransaction(uint64(totalEntries), msgData.L1Dest, big.NewInt(1), 100000, big.NewInt(1), nil)
-			signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[1])
-			if err != nil {
-				t.Fatal(err)
-			}
-			if err := clnt.SendTransaction(context.Background(), signedTx); err != nil {
-				t.Fatal(err)
-			}
-			clnt.Commit()
-			tx, err = outbox.ExecuteTransaction(
-				&bind.TransactOpts{
-					From:     ethAuth.From,
-					Nonce:    ethAuth.Nonce,
-					Signer:   ethAuth.Signer,
-					Value:    ethAuth.Value,
-					GasPrice: ethAuth.GasPrice,
-					GasLimit: 5000000,
-					Context:  ethAuth.Context,
-				},
+			tx, err := outbox.ExecuteTransaction(
+				ethAuth,
 				batchNum,
 				msgData.Proof,
 				msgData.Path,
@@ -276,12 +284,6 @@ func TestL2ToL1Tx(t *testing.T) {
 		}
 	}
 
-	bridgeBalance, err := clnt.BalanceAt(context.Background(), bridgeAddress, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Log("Bridge balance", bridgeBalance)
-
 	for _, dest := range l1Dests[:totalEntries] {
 		code, err := clnt.CodeAt(context.Background(), dest.ToEthAddress(), nil)
 		if err != nil {
@@ -295,7 +297,6 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Log("balance", dest.ToEthAddress().Hex(), balance)
 		if balance.Cmp(withdrawAmount) != 0 {
 			t.Fatal("wrong balance after", balance)
 		}

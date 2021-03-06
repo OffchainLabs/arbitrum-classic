@@ -21,6 +21,7 @@ type LogReader struct {
 	// Only in main thread
 	running    bool
 	cancelFunc context.CancelFunc
+	completed  chan bool
 }
 
 func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int, maxCount *big.Int, sleepTime time.Duration) *LogReader {
@@ -30,6 +31,7 @@ func NewLogReader(consumer LogConsumer, cursor LogsCursor, cursorIndex *big.Int,
 		cursorIndex: cursorIndex,
 		maxCount:    maxCount,
 		sleepTime:   sleepTime,
+		completed:   make(chan bool, 1),
 	}
 }
 
@@ -39,6 +41,7 @@ func (lr *LogReader) Start(parentCtx context.Context) <-chan error {
 	go func() {
 		defer close(errChan)
 		errChan <- lr.getLogs(ctx)
+		lr.completed <- true
 	}()
 	lr.cancelFunc = cancelFunc
 	lr.running = true
@@ -47,6 +50,7 @@ func (lr *LogReader) Start(parentCtx context.Context) <-chan error {
 
 func (lr *LogReader) Stop() {
 	lr.cancelFunc()
+	<-lr.completed
 	lr.running = false
 }
 

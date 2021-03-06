@@ -86,6 +86,9 @@ func New(
 		case <-ctx.Done():
 			return
 		default:
+			if err == nil {
+				return
+			}
 			log.Fatal().Err(err).Msg("error reading logs")
 		}
 	}()
