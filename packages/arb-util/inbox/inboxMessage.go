@@ -168,6 +168,7 @@ func NewRandomInboxMessage() InboxMessage {
 		Kind:        Type(rand.Uint32()),
 		Sender:      common.RandAddress(),
 		InboxSeqNum: common.RandBigInt(),
+		GasPrice:    common.RandBigInt(),
 		Data:        common.RandBytes(200),
 		ChainTime:   NewRandomChainTime(),
 	}
