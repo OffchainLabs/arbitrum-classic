@@ -139,8 +139,11 @@ std::optional<uint64_t> returnIndex(rocksdb::Transaction& tx, const Key& key) {
     std::string request_value;
     auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key),
                              &request_value);
-    if (!s.ok()) {
+    if (s.IsNotFound()) {
         return std::nullopt;
+    }
+    if (!s.ok()) {
+        throw std::runtime_error("failed to load index");
     }
     auto it = request_value.begin();
     return extractUint64(it);
@@ -190,19 +193,10 @@ void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
     commitTx(*tx);
 }
 
-uint64_t AggregatorStore::getMessageBatch(const uint256_t& batchNum) {
+std::optional<uint64_t> AggregatorStore::getMessageBatch(
+    const uint256_t& batchNum) {
     auto tx = data_storage->beginTransaction();
-    auto full_key = messageBatchKey(batchNum);
-
-    std::string value;
-    auto status =
-        tx->GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(full_key), &value);
-    if (!status.ok()) {
-        throw std::runtime_error("failed to save");
-    }
-
-    auto it = value.begin();
-    return extractUint64(it);
+    return returnIndex(*tx, messageBatchKey(batchNum));
 }
 
 void AggregatorStore::saveBlock(uint64_t height,

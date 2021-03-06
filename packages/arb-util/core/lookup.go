@@ -238,7 +238,7 @@ func (e *ExecutionState) CutHash() [32]byte {
 }
 
 type LogConsumer interface {
-	AddLogs(avmLogs []value.Value) error
+	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
 	DeleteLogs(avmLogs []value.Value) error
 	CurrentLogCount() (*big.Int, error)
 	UpdateCurrentLogCount(count *big.Int) error

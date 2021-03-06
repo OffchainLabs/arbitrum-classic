@@ -2,6 +2,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -18,7 +19,7 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 	return size
 }
 
-func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *MerkleTree) {
+func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *protocol.MerkleTree) {
 	cutHashes := cutsToHashes(bisection.Cuts)
 	segmentCount := len(cutHashes) - 1
 	chunks := make([][32]byte, 0, segmentCount)
@@ -29,7 +30,7 @@ func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *MerkleTree)
 		chunks = append(chunks, chunkHash)
 		segmentStart = segmentStart.Add(segmentStart, segmentLength)
 	}
-	return cutHashes, NewMerkleTree(chunks)
+	return cutHashes, protocol.NewMerkleTree(chunks)
 }
 
 type Challenge struct {

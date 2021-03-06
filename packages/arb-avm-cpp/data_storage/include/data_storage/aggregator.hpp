@@ -50,7 +50,7 @@ class AggregatorStore {
     [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
     void updateLogsProcessedCount(const uint256_t& count);
     void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
-    uint64_t getMessageBatch(const uint256_t& batchNum);
+    std::optional<uint64_t> getMessageBatch(const uint256_t& batchNum);
 };
 
 #endif /* aggregator_hpp */

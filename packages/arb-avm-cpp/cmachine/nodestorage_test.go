@@ -52,12 +52,11 @@ func TestMessageBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	logIndex, err := nodeStore.GetMessageBatch(testBatchNumber)
-	if err != nil {
-		logger.Error().Stack().Err(err).Send()
-		t.Fatal(err)
+	logIndex := nodeStore.GetMessageBatch(testBatchNumber)
+	if logIndex == nil {
+		t.Fatal("GetMessageBatch should have returned log")
 	}
-	if logIndex != testLogIndex {
+	if *logIndex != testLogIndex {
 		logger.Error().Msg("logIndex doesnt match testLogIndex")
 	}
 }
