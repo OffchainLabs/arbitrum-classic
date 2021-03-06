@@ -32,9 +32,11 @@ ROLLUP_LIBS=$INBOX,$OUTBOX,$ROLLUP,$ROLLUP_LIB,$INODE,$OUTBOX_ENTRY,$PREFIX/roll
 
 IGNORED_INTERFACES=$PREFIX/interfaces/IERC20.sol:IERC20
 
-NM=$(realpath ./../../../node_modules)
+CURRPATH=$(pwd)
+FILEROOT=${CURRPATH%/*/*/*}
+NM=$FILEROOT/node_modules
 OZ=$NM/@openzeppelin
-BASE=$(realpath ./../../arb-bridge-eth/contracts)
+BASE=$FILEROOT/packages/arb-bridge-eth/contracts
 
 OZUTILS=$OZ/contracts/utils
 OZ_TOKENS=$OZ/contracts/token/ERC20/IERC20.sol:IERC20
