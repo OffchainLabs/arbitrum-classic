@@ -34,7 +34,6 @@ contract Outbox is CloneFactory, IOutbox {
     bytes1 internal constant MSG_ROOT = 0;
 
     uint256 internal constant SendType_sendTxToL1 = 0;
-    uint256 internal constant SendType_buddyContractResult = 5;
 
     address rollup;
     IBridge bridge;
@@ -147,31 +146,6 @@ contract Outbox is CloneFactory, IOutbox {
         _l2Block = currentL2Block;
         _l1Block = currentL1Block;
         _timestamp = currentTimestamp;
-    }
-
-    function executeBuddyContractReceipt(
-        uint256 outboxIndex,
-        bytes32[] calldata proof,
-        uint256 index,
-        address l2Contract,
-        bool createdSuccessfully
-    ) external {
-        bytes32 userTx =
-            keccak256(
-                abi.encodePacked(
-                    SendType_buddyContractResult,
-                    uint256(uint160(bytes20(l2Contract))),
-                    createdSuccessfully
-                )
-            );
-
-        spendOutput(outboxIndex, proof, index, userTx);
-
-        executeBridgeSystemCall(
-            l2Contract,
-            0,
-            abi.encodeWithSignature("buddyContractResult(bool)", createdSuccessfully)
-        );
     }
 
     function spendOutput(
