@@ -19,8 +19,8 @@ import { Signer, BigNumber } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 
-export class Bridge extends L1Bridge {
-  l2Bridge: L2Bridge
+export class Bridge extends L2Bridge {
+  l1Bridge: L1Bridge
   walletAddressCache?: string
 
   constructor(
@@ -30,24 +30,52 @@ export class Bridge extends L1Bridge {
     arbSigner: Signer
   ) {
     super(erc20BridgeAddress, ethSigner)
-    this.l2Bridge = new L2Bridge(arbERC20BridgeAddress, arbSigner)
+    // TODO can presumably get arbERC20BridgeAddress directly from the L! bridge
+    this.l1Bridge = new L1Bridge(arbERC20BridgeAddress, arbSigner)
   }
 
-  public withdrawETH(value: BigNumber, destinationAddress?: string) {
-    return this.l2Bridge.withdrawETH(value, destinationAddress)
+  public async updateAllTokens() {
+    const l1Tokens = await this.l1Bridge.updateAllL1Tokens()
+    const l2Tokens = await this.updateAllL2Tokens()
+    return { l1Tokens, l2Tokens }
   }
-  public withdrawERC20(
-    erc20l1Address: string,
+
+  public async approveToken(erc20L1Address: string) {
+    return this.l1Bridge.approveToken(erc20L1Address)
+  }
+
+  public async depositETH(value: BigNumber, destinationAddress?: string) {
+    return this.l1Bridge.depositETH(value, destinationAddress)
+  }
+
+  public async depositAsERC20(
+    erc20L1Address: string,
     amount: BigNumber,
+    maxGas: BigNumber,
+    gasPriceBid: BigNumber,
     destinationAddress?: string
   ) {
-    return this.l2Bridge.withdrawERC20(
-      erc20l1Address,
+    return this.l1Bridge.depositAsERC20(
+      erc20L1Address,
       amount,
+      maxGas,
+      gasPriceBid,
       destinationAddress
     )
   }
-  public getERC20L1Address(erc20L2Address: string) {
-    return this.l2Bridge.getERC20L1Address(erc20L2Address)
+  public async depositAsERC777(
+    erc20L1Address: string,
+    amount: BigNumber,
+    maxGas: BigNumber,
+    gasPriceBid: BigNumber,
+    destinationAddress?: string
+  ) {
+    return this.l1Bridge.depositAsERC777(
+      erc20L1Address,
+      amount,
+      maxGas,
+      gasPriceBid,
+      destinationAddress
+    )
   }
 }
