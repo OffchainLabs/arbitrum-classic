@@ -37,7 +37,7 @@ contract ArbTokenBridge is CloneFactory {
 
     ICloneable public immutable templateERC20;
     ICloneable public immutable templateERC777;
-    address immutable public l1Pair;
+    address public immutable l1Pair;
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -47,16 +47,22 @@ contract ArbTokenBridge is CloneFactory {
 
     modifier onlyFromL2Token(address l1ERC20) {
         // This ensures that this method can only be called by the L2 token
-        require(msg.sender == calculateBridgedERC777Address(l1ERC20)
-            || msg.sender == calculateBridgedERC20Address(l1ERC20)
-            || msg.sender == customToken[l1ERC20], "NOT_FROM_TOKEN");
+        require(
+            msg.sender == calculateBridgedERC777Address(l1ERC20) ||
+                msg.sender == calculateBridgedERC20Address(l1ERC20) ||
+                msg.sender == customToken[l1ERC20],
+            "NOT_FROM_TOKEN"
+        );
         _;
     }
     modifier onlyToL2Token(address l1ERC20, address to) {
         // This ensures that this method can only be called by the L2 token
-        require(to == calculateBridgedERC777Address(l1ERC20)
-            || to == calculateBridgedERC20Address(l1ERC20)
-            || to == customToken[l1ERC20], "NOT_TO_TOKEN");
+        require(
+            to == calculateBridgedERC777Address(l1ERC20) ||
+                to == calculateBridgedERC20Address(l1ERC20) ||
+                to == customToken[l1ERC20],
+            "NOT_TO_TOKEN"
+        );
         _;
     }
 
@@ -111,10 +117,11 @@ contract ArbTokenBridge is CloneFactory {
         customToken[l1Address] = l2Address;
     }
 
-    function withdraw(address l1ERC20, address destination, uint256 amount)
-        external
-        onlyFromL2Token(l1ERC20)
-    {
+    function withdraw(
+        address l1ERC20,
+        address destination,
+        uint256 amount
+    ) external onlyFromL2Token(l1ERC20) {
         ArbSys(100).sendTxToL1(
             l1Pair,
             abi.encodeWithSignature(
@@ -130,11 +137,12 @@ contract ArbTokenBridge is CloneFactory {
 
     // A token can be bridged into different L2 implementations (ie 777 and 20)
     // this method allows you to migrate your balance between them.
-    function migrate(address l1ERC20, address target, address account, uint256 amount)
-        external
-        onlyFromL2Token(l1ERC20)
-        onlyToL2Token(l1ERC20, target)
-    {
+    function migrate(
+        address l1ERC20,
+        address target,
+        address account,
+        uint256 amount
+    ) external onlyFromL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) {
         IArbToken(target).bridgeMint(account, amount);
     }
 
@@ -175,5 +183,5 @@ contract ArbTokenBridge is CloneFactory {
 
 contract ArbSymmetricTokenBridge is ArbTokenBridge {
     // assumes the L1 pair is deployed to the same address
-    constructor() ArbTokenBridge(address(this)) public {}
+    constructor() public ArbTokenBridge(address(this)) {}
 }

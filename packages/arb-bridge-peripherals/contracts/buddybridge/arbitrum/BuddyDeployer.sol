@@ -26,10 +26,7 @@ contract BuddyDeployer {
 
     event Deployed(address indexed _sender, address indexed _contract, bool _success);
 
-    function executeBuddyDeploy(bytes memory contractInitCode)
-        external
-        payable
-    {
+    function executeBuddyDeploy(bytes memory contractInitCode) external payable {
         // we don't want nasty address clashes
         require(ArbSys(100).isTopLevelCall(), "Function must be called from L1");
         address user = msg.sender;
@@ -51,7 +48,8 @@ contract BuddyDeployer {
             If it calls back to an EOA the L1 call just won't execute as there is no function matching
             the selector, neither a fallback function to be executed.
         */
-        bytes memory calldataForL1 = abi.encodeWithSelector(L1Buddy.finalizeBuddyDeploy.selector, success);
+        bytes memory calldataForL1 =
+            abi.encodeWithSelector(L1Buddy.finalizeBuddyDeploy.selector, success);
         ArbSys(100).sendTxToL1(user, calldataForL1);
         emit Deployed(user, addr, success);
     }

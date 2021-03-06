@@ -33,7 +33,7 @@ contract EthERC20Bridge is L1Buddy {
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) redirectedExits;
 
-    mapping(address => address) customL2Tokens;
+    mapping(address => address) public customL2Tokens;
 
     constructor(
         address _inbox,
@@ -133,9 +133,10 @@ contract EthERC20Bridge is L1Buddy {
         string memory symbol = SafeERC20Namer.tokenSymbol(erc20);
         uint8 decimals = ERC20(erc20).decimals();
 
-        bytes4 _selector = isERC20
-            ? ArbTokenBridge.updateERC777TokenInfo.selector
-            : ArbTokenBridge.updateERC20TokenInfo.selector;
+        bytes4 _selector =
+            isERC20
+                ? ArbTokenBridge.updateERC777TokenInfo.selector
+                : ArbTokenBridge.updateERC20TokenInfo.selector;
 
         sendPairedContractTransaction(
             maxGas,

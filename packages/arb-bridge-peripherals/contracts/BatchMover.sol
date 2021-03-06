@@ -64,17 +64,14 @@ contract EthBatchTokenReceiver is L1Buddy {
         uint256 _maxGas,
         uint256 _gasPrice
     ) public payable L1Buddy(_inbox, _l2Deployer) {
-        L1Buddy.initiateBuddyDeploy(
-            _maxGas,
-            _gasPrice,
-            type(ArbBatchTokenMover).creationCode
-        );
+        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, type(ArbBatchTokenMover).creationCode);
     }
 
     function handleDeploySuccess() internal override {
         // this deletes the codehash from state!
         L1Buddy.handleDeploySuccess();
     }
+
     function handleDeployFail() internal override {}
 
     function distributeBatch(bytes32 _root) external onlyIfConnected onlyL2Buddy {

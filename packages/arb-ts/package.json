@@ -1,7 +1,7 @@
 {
-  "name": "arb-provider-ethers",
-  "version": "0.7.3",
-  "description": "Arbitrum provider for ethers",
+  "name": "arb-ts",
+  "version": "0.0.1",
+  "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -9,14 +9,14 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/offchainlabs/arbitrum.git",
-    "directory": "packages/arb-provider-ethers"
+    "directory": "packages/arb-ts"
   },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum/issues"
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
-    "prepublishOnly": "yarn build && yarn format && yarn test",
+    "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
     "prepare": "install-peers",
     "build": "./scripts/builder",
@@ -27,18 +27,17 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update:abi": "./scripts/update-abi && yarn format",
-    "test_bridge": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 15000"
+    "test:integration": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 15000"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.0.12",
     "@ethersproject/bytes": "^5.0.8",
     "@types/promise-poller": "^1.7.0",
-    "jayson": "^3.2.0",
-    "promise-poller": "^1.9.1"
+    "ethers": "^5.0.24"
   },
   "peerDependencies": {
-    "ethers": "~4.0.47"
+    "ethers": "~5.0.24"
   },
   "devDependencies": {
     "@types/chai": "^4.2.11",
