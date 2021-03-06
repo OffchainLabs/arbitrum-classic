@@ -99,7 +99,7 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	}
 
 	if info != nil {
-		if err := s.resolveNextNode(ctx); err != nil {
+		if err := s.resolveNextNode(ctx, info); err != nil {
 			return nil, err
 		}
 

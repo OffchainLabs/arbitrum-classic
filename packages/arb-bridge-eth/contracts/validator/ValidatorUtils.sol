@@ -88,18 +88,14 @@ contract ValidatorUtils {
             return ConfirmType.VALID;
         } catch {}
 
-        try ValidatorUtils(address(this)).requireRejectableNextNode(rollup) {
+        try ValidatorUtils(address(this)).requireRejectable(rollup) {
             return ConfirmType.INVALID;
         } catch {
             return ConfirmType.NONE;
         }
     }
 
-    function requireRejectableNextNode(Rollup rollup) external view {
-        requireMaybeRejectable(rollup);
-    }
-
-    function requireMaybeRejectable(Rollup rollup) private view returns (bool) {
+    function requireRejectable(Rollup rollup) external view returns (bool) {
         rollup.requireUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool inOrder = node.prev() == rollup.latestConfirmed();

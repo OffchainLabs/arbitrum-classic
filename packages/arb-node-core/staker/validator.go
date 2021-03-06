@@ -92,20 +92,24 @@ func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Trans
 	return v.wallet.TimeoutChallenges(ctx, challengesToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context) error {
+func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerInfo) error {
 	confirmType, err := v.validatorUtils.CheckDecidableNextNode(ctx)
+	if err != nil {
+		return err
+	}
+	unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
 	if err != nil {
 		return err
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
-		logger.Info().Msg("Rejecting node")
+		if info == nil || info.LatestStakedNode.Cmp(unresolvedNodeIndex) <= 0 {
+			// We aren't an example of someone staked on a competitor
+			return nil
+		}
+		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Rejecting node")
 		return v.rollup.RejectNextNode(ctx, v.wallet.Address())
 	case ethbridge.CONFIRM_TYPE_VALID:
-		unresolvedNodeIndex, err := v.rollup.FirstUnresolvedNode(ctx)
-		if err != nil {
-			return err
-		}
 		nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
 		if err != nil {
 			return err
