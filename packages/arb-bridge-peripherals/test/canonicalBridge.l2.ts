@@ -21,7 +21,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { Contract, ContractFactory } from 'ethers'
 import { deploy1820Registry } from '../scripts/utils'
 
-describe.skip('Bridge peripherals layer 2', () => {
+describe('Bridge peripherals layer 2', () => {
   let accounts: SignerWithAddress[]
   let TestBridge: ContractFactory
   let testBridge: Contract

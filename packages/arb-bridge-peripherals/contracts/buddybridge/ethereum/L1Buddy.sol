@@ -67,7 +67,6 @@ abstract contract L1Buddy {
             codeHash == bytes32(0) || codeHash == keccak256(contractInitCode),
             "Only retry if same deploy code"
         );
-        // contractInitCode == type(ArbSymmetricTokenBridge).creationCode
         bytes memory data = abi.encodeWithSelector(BuddyDeployer.executeBuddyDeploy.selector, contractInitCode);
 
         if(msg.value > 0) {
@@ -78,15 +77,25 @@ abstract contract L1Buddy {
             inbox.sendContractTransaction(maxGas, gasPriceBid, address(l2Deployer), 0, data);
         }
         codeHash = keccak256(contractInitCode);
+        l2Buddy = BuddyUtil.calculateL2Address(
+            address(l2Deployer),
+            address(this),
+            codeHash
+        );
         l2Connection = L2Connection.Initiated;
     }
 
     function finalizeBuddyDeploy(
         bool success
     ) external {
+        require(l2Connection == L2Connection.Initiated, "Connection not in initiated state");
         // get sender from outbox
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
         require(outbox.l2ToL1Sender() == address(l2Deployer), "Wrong L2 address triggering outbox");
+        /*
+            The callback from L2 can come from buddy's constructor if
+            you don't want to rely on the L2Deployer's correctness.
+        */
 
         if(success) {
             handleDeploySuccess();
@@ -96,13 +105,6 @@ abstract contract L1Buddy {
     }
     
     function handleDeploySuccess() internal virtual {
-        // TODO: should we check if connection state is pending?
-        l2Buddy = BuddyUtil.calculateL2Address(
-            address(l2Deployer),
-            address(this),
-            codeHash
-        );
-        delete codeHash;
         l2Connection = L2Connection.Complete;
     }
 
