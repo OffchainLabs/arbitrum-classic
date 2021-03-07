@@ -165,7 +165,7 @@ jobs:
           root: /home/user/project/packages/arb-avm-cpp/
           paths:
             - ./cmachine/*.a
-            - ./debug/bin/*
+            - ./debug/*
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.2.5
