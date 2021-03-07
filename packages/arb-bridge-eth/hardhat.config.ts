@@ -127,6 +127,7 @@ const config = {
         initialIndex: 0,
         count: 10,
       },
+      timeout: 100000,
     },
   },
   mocha: {
