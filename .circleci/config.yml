@@ -180,6 +180,10 @@ jobs:
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/workspace
@@ -204,6 +208,10 @@ jobs:
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
           at: /home/user/workspace
