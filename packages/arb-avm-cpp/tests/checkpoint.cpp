@@ -406,16 +406,17 @@ Machine getComplexMachine() {
     CodePointRef pc{0, 0};
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    uint256_t messages_fully_processed = 42;
-    uint256_t inbox_accumulator = 54;
+    uint256_t fully_processed_messages = 42;
+    uint256_t fully_processed_inbox_accumulator = 54;
 
-    //Tuple staged_message(uint256_t{100}, uint256_t{200});
+    // Tuple staged_message(uint256_t{100}, uint256_t{200});
     staged_variant staged_message(88);
 
     return Machine(MachineState(
         std::move(code), register_val, std::move(static_val), data_stack,
         aux_stack, arb_gas_remaining, state, pc, err_pc,
-        messages_fully_processed, inbox_accumulator, std::move(staged_message)));
+        fully_processed_messages, fully_processed_inbox_accumulator,
+        std::move(staged_message)));
 }
 
 Machine getDefaultMachine() {
@@ -429,14 +430,14 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    uint256_t messages_fully_processed = 42;
-    uint256_t inbox_accumulator = 54;
+    uint256_t fully_processed_messages = 42;
+    uint256_t fully_processed_inbox_accumulator = 54;
     staged_variant staged_message = 88;
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
-                                messages_fully_processed, inbox_accumulator,
-                                staged_message));
+    return Machine(
+        MachineState(std::move(code), register_val, std::move(static_val),
+                     data_stack, aux_stack, arb_gas_remaining, state, pc,
+                     err_pc, fully_processed_messages,
+                     fully_processed_inbox_accumulator, staged_message));
 }
 
 TEST_CASE("Save Machinestatedata") {

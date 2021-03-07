@@ -97,12 +97,12 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error(err)
 	}
 
-	hash1, err := mach.Hash();
+	hash1, err := mach.Hash()
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-	hash2, err := loadedMach.Hash();
+	hash2, err := loadedMach.Hash()
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
