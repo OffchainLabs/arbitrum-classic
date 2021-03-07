@@ -229,14 +229,14 @@ contract ValidatorUtils {
         uint256 max
     ) public view returns (address[] memory, bool hasMore) {
         uint256 maxStakers = rollup.stakerCount();
-        if (startIndex + max <= maxStakers) {
+        if (startIndex + max < maxStakers) {
             maxStakers = startIndex + max;
             hasMore = true;
         }
 
         address[] memory stakers = new address[](maxStakers);
-        for (uint256 i = 0; i < maxStakers; i++) {
-            stakers[i] = rollup.getStakerAddress(startIndex + i);
+        for (uint256 i = startIndex; i < maxStakers; i++) {
+            stakers[i] = rollup.getStakerAddress(i);
         }
         return (stakers, hasMore);
     }
