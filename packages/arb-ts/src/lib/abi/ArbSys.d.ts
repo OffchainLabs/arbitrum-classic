@@ -84,11 +84,13 @@ interface ArbSysInterface extends ethers.utils.Interface {
     'ERC20Withdrawal(address,address,uint256)': EventFragment
     'ERC721Withdrawal(address,address,uint256)': EventFragment
     'EthWithdrawal(address,uint256)': EventFragment
+    'L2ToL1Transaction(address,uint256,uint256,uint256,uint256,uint256,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'ERC20Withdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'ERC721Withdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'EthWithdrawal'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'L2ToL1Transaction'): EventFragment
 }
 
 export class ArbSys extends Contract {
@@ -287,6 +289,18 @@ export class ArbSys extends Contract {
     ): EventFilter
 
     EthWithdrawal(destAddr: string | null, amount: null): EventFilter
+
+    L2ToL1Transaction(
+      caller: string | null,
+      batchNumber: BigNumberish | null,
+      itemNumber: null,
+      arbBlockNum: null,
+      ethBlockNum: null,
+      timestamp: null,
+      destination: null,
+      callvalue: null,
+      data: null
+    ): EventFilter
   }
 
   estimateGas: {

@@ -27,6 +27,7 @@ interface OutboxInterface extends ethers.utils.Interface {
     'l2ToL1EthBlock()': FunctionFragment
     'l2ToL1Sender()': FunctionFragment
     'l2ToL1Timestamp()': FunctionFragment
+    'outboxes(uint256)': FunctionFragment
     'processOutgoingMessages(bytes,uint256[])': FunctionFragment
   }
 
@@ -62,6 +63,10 @@ interface OutboxInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'outboxes',
+    values: [BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'processOutgoingMessages',
     values: [BytesLike, BigNumberish[]]
   ): string
@@ -83,6 +88,7 @@ interface OutboxInterface extends ethers.utils.Interface {
     functionFragment: 'l2ToL1Timestamp',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'outboxes', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'processOutgoingMessages',
     data: BytesLike
@@ -153,6 +159,13 @@ export class Outbox extends Contract {
 
     'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
+    outboxes(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>
+
+    'outboxes(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
@@ -210,6 +223,13 @@ export class Outbox extends Contract {
 
   'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<BigNumber>
 
+  outboxes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+  'outboxes(uint256)'(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   processOutgoingMessages(
     sendsData: BytesLike,
     sendLengths: BigNumberish[],
@@ -266,6 +286,13 @@ export class Outbox extends Contract {
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<BigNumber>
 
     'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    outboxes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
+
+    'outboxes(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
 
     processOutgoingMessages(
       sendsData: BytesLike,
@@ -334,6 +361,13 @@ export class Outbox extends Contract {
 
     'l2ToL1Timestamp()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    outboxes(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>
+
+    'outboxes(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
@@ -391,6 +425,16 @@ export class Outbox extends Contract {
     l2ToL1Timestamp(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l2ToL1Timestamp()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    outboxes(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'outboxes(uint256)'(
+      arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

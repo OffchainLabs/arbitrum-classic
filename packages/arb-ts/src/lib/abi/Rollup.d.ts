@@ -33,7 +33,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'bridge()': FunctionFragment
     'challengeFactory()': FunctionFragment
     'completeChallenge(address,address)': FunctionFragment
-    'confirmNextNode(bytes32,bytes,uint256[])': FunctionFragment
+    'confirmNextNode(bytes32,bytes32,bytes,uint256[])': FunctionFragment
     'confirmPeriodBlocks()': FunctionFragment
     'continueTruncatingNodes(uint256)': FunctionFragment
     'countStakedZombies(address)': FunctionFragment
@@ -60,7 +60,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'pause()': FunctionFragment
     'paused()': FunctionFragment
     'reduceDeposit(uint256)': FunctionFragment
-    'rejectNextNode(uint256,address)': FunctionFragment
+    'rejectNextNode(address)': FunctionFragment
     'removeOldOutbox(address)': FunctionFragment
     'removeOldZombies(uint256)': FunctionFragment
     'removeZombie(uint256,uint256)': FunctionFragment
@@ -72,7 +72,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'setInbox(address,bool)': FunctionFragment
     'setOutbox(address)': FunctionFragment
     'stakeOnExistingNode(uint256,bytes32)': FunctionFragment
-    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])': FunctionFragment
+    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)': FunctionFragment
     'stakeToken()': FunctionFragment
     'stakerCount()': FunctionFragment
     'upgradeImplementation(address)': FunctionFragment
@@ -111,7 +111,7 @@ interface RollupInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'confirmNextNode',
-    values: [BytesLike, BytesLike, BigNumberish[]]
+    values: [BytesLike, BytesLike, BytesLike, BigNumberish[]]
   ): string
   encodeFunctionData(
     functionFragment: 'confirmPeriodBlocks',
@@ -217,7 +217,7 @@ interface RollupInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'rejectNextNode',
-    values: [BigNumberish, string]
+    values: [string]
   ): string
   encodeFunctionData(
     functionFragment: 'removeOldOutbox',
@@ -261,19 +261,13 @@ interface RollupInterface extends ethers.utils.Interface {
     functionFragment: 'stakeOnNewNode',
     values: [
       BytesLike,
-      [BytesLike, BytesLike, BytesLike, BytesLike],
+      [[BytesLike, BytesLike, BytesLike], [BytesLike, BytesLike, BytesLike]],
       [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
-      ]
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      BigNumberish,
+      BigNumberish
     ]
   ): string
   encodeFunctionData(functionFragment: 'stakeToken', values?: undefined): string
@@ -485,7 +479,7 @@ interface RollupInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
-    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,bytes32,bytes32[4],uint256[10])': EventFragment
+    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
     'Paused(address)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
@@ -611,13 +605,15 @@ export class Rollup extends Contract {
 
     confirmNextNode(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'confirmNextNode(bytes32,bytes,uint256[])'(
+    'confirmNextNode(bytes32,bytes32,bytes,uint256[])'(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: Overrides
@@ -820,13 +816,11 @@ export class Rollup extends Contract {
     ): Promise<ContractTransaction>
 
     rejectNextNode(
-      successorWithStake: BigNumberish,
       stakerAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'rejectNextNode(uint256,address)'(
-      successorWithStake: BigNumberish,
+    'rejectNextNode(address)'(
       stakerAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -931,37 +925,31 @@ export class Rollup extends Contract {
 
     stakeOnNewNode(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -1131,13 +1119,15 @@ export class Rollup extends Contract {
 
   confirmNextNode(
     logAcc: BytesLike,
+    beforeSendAcc: BytesLike,
     sendsData: BytesLike,
     sendLengths: BigNumberish[],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'confirmNextNode(bytes32,bytes,uint256[])'(
+  'confirmNextNode(bytes32,bytes32,bytes,uint256[])'(
     logAcc: BytesLike,
+    beforeSendAcc: BytesLike,
     sendsData: BytesLike,
     sendLengths: BigNumberish[],
     overrides?: Overrides
@@ -1332,13 +1322,11 @@ export class Rollup extends Contract {
   ): Promise<ContractTransaction>
 
   rejectNextNode(
-    successorWithStake: BigNumberish,
     stakerAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'rejectNextNode(uint256,address)'(
-    successorWithStake: BigNumberish,
+  'rejectNextNode(address)'(
     stakerAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -1443,37 +1431,31 @@ export class Rollup extends Contract {
 
   stakeOnNewNode(
     expectedNodeHash: BytesLike,
-    assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-    assertionIntFields: [
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish
+    assertionBytes32Fields: [
+      [BytesLike, BytesLike, BytesLike],
+      [BytesLike, BytesLike, BytesLike]
     ],
+    assertionIntFields: [
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+    ],
+    beforeProposedBlock: BigNumberish,
+    beforeInboxMaxCount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+  'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
     expectedNodeHash: BytesLike,
-    assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-    assertionIntFields: [
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish
+    assertionBytes32Fields: [
+      [BytesLike, BytesLike, BytesLike],
+      [BytesLike, BytesLike, BytesLike]
     ],
+    assertionIntFields: [
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+    ],
+    beforeProposedBlock: BigNumberish,
+    beforeInboxMaxCount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -1643,13 +1625,15 @@ export class Rollup extends Contract {
 
     confirmNextNode(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<void>
 
-    'confirmNextNode(bytes32,bytes,uint256[])'(
+    'confirmNextNode(bytes32,bytes32,bytes,uint256[])'(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: CallOverrides
@@ -1844,13 +1828,11 @@ export class Rollup extends Contract {
     ): Promise<void>
 
     rejectNextNode(
-      successorWithStake: BigNumberish,
       stakerAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'rejectNextNode(uint256,address)'(
-      successorWithStake: BigNumberish,
+    'rejectNextNode(address)'(
       stakerAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -1949,37 +1931,31 @@ export class Rollup extends Contract {
 
     stakeOnNewNode(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -2159,13 +2135,15 @@ export class Rollup extends Contract {
 
     confirmNextNode(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'confirmNextNode(bytes32,bytes,uint256[])'(
+    'confirmNextNode(bytes32,bytes32,bytes,uint256[])'(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: Overrides
@@ -2369,13 +2347,11 @@ export class Rollup extends Contract {
     ): Promise<BigNumber>
 
     rejectNextNode(
-      successorWithStake: BigNumberish,
       stakerAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'rejectNextNode(uint256,address)'(
-      successorWithStake: BigNumberish,
+    'rejectNextNode(address)'(
       stakerAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -2474,37 +2450,31 @@ export class Rollup extends Contract {
 
     stakeOnNewNode(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -2668,13 +2638,15 @@ export class Rollup extends Contract {
 
     confirmNextNode(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'confirmNextNode(bytes32,bytes,uint256[])'(
+    'confirmNextNode(bytes32,bytes32,bytes,uint256[])'(
       logAcc: BytesLike,
+      beforeSendAcc: BytesLike,
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
       overrides?: Overrides
@@ -2905,13 +2877,11 @@ export class Rollup extends Contract {
     ): Promise<PopulatedTransaction>
 
     rejectNextNode(
-      successorWithStake: BigNumberish,
       stakerAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'rejectNextNode(uint256,address)'(
-      successorWithStake: BigNumberish,
+    'rejectNextNode(address)'(
       stakerAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -3022,37 +2992,31 @@ export class Rollup extends Contract {
 
     stakeOnNewNode(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'stakeOnNewNode(bytes32,bytes32[4],uint256[10])'(
+    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
       expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [BytesLike, BytesLike, BytesLike, BytesLike],
-      assertionIntFields: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
+      assertionBytes32Fields: [
+        [BytesLike, BytesLike, BytesLike],
+        [BytesLike, BytesLike, BytesLike]
       ],
+      assertionIntFields: [
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+      ],
+      beforeProposedBlock: BigNumberish,
+      beforeInboxMaxCount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
