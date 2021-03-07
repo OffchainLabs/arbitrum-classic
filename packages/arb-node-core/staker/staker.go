@@ -212,57 +212,31 @@ func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return nil
 	}
 
-	stakers, err := s.validatorUtils.GetStakers(ctx)
-	if err != nil {
+	otherStaker, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address())
+	if err != nil || otherStaker == nil {
 		return err
 	}
-	latestNode, err := s.rollup.LatestConfirmedNode(ctx)
-	if err != nil {
-		return err
+	staker1 := s.wallet.Address()
+	staker2 := *otherStaker
+	if node2.Cmp(node1) < 0 {
+		staker1, staker2 = staker2, staker1
+		node1, node2 = node2, node1
 	}
-	for _, staker := range stakers {
-		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
-		if err != nil {
-			return err
-		}
-		if stakerInfo.CurrentChallenge != nil {
-			continue
-		}
-		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
-		if err != nil {
-			return err
-		}
-		if conflictType != ethbridge.CONFLICT_TYPE_FOUND {
-			continue
-		}
-		staker1 := s.wallet.Address()
-		staker2 := staker
-		if node2.Cmp(node1) < 0 {
-			staker1, staker2 = staker2, staker1
-			node1, node2 = node2, node1
-		}
-		if node1.Cmp(latestNode) <= 0 {
-			// removeOldStakers will take care of them
-			continue
-		}
 
-		node1Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node1)
-		if err != nil {
-			return err
-		}
-		node2Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node2)
-		if err != nil {
-			return err
-		}
-		logger.Warn().Int("ourNode", int(node1.Int64())).Int("otherNode", int(node2.Int64())).Str("otherStaker", staker2.String()).Msg("Creating challenge")
-		return s.rollup.CreateChallenge(
-			ctx,
-			staker1,
-			node1Info,
-			staker2,
-			node2Info,
-		)
+	node1Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node1)
+	if err != nil {
+		return err
 	}
-	// No conflicts exist
-	return nil
+	node2Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node2)
+	if err != nil {
+		return err
+	}
+	logger.Warn().Int("ourNode", int(node1.Int64())).Int("otherNode", int(node2.Int64())).Str("otherStaker", staker2.String()).Msg("Creating challenge")
+	return s.rollup.CreateChallenge(
+		ctx,
+		staker1,
+		node1Info,
+		staker2,
+		node2Info,
+	)
 }

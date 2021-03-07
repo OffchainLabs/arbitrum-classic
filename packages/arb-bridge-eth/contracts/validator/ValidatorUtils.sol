@@ -26,8 +26,6 @@ import "../challenge/IChallenge.sol";
 contract ValidatorUtils {
     enum ConfirmType { NONE, VALID, INVALID }
 
-    enum NodeConflict { NONE, FOUND, INDETERMINATE, INCOMPLETE }
-
     function getConfig(Rollup rollup)
         external
         view
@@ -64,23 +62,69 @@ contract ValidatorUtils {
         );
     }
 
+    struct FindStakerConflictFrame {
+        bool[] compatible;
+        uint256[] ourChildren;
+        uint256 latestStakedNode;
+    }
+
     function findStakerConflict(
         Rollup rollup,
-        address staker1,
-        address staker2,
-        uint256 maxDepth
+        address staker,
+        uint256 startIndex,
+        uint256 max
     )
         external
         view
         returns (
-            NodeConflict,
+            address,
             uint256,
-            uint256
+            uint256,
+            bool
         )
     {
-        uint256 staker1NodeNum = rollup.latestStakedNode(staker1);
-        uint256 staker2NodeNum = rollup.latestStakedNode(staker2);
-        return findNodeConflict(rollup, staker1NodeNum, staker2NodeNum, maxDepth);
+        uint256 latestConfirmed = rollup.latestConfirmed();
+        uint256 node = rollup.latestStakedNode(staker);
+        FindStakerConflictFrame memory frame;
+        frame.latestStakedNode = node;
+        frame.compatible = new bool[](rollup.latestNodeCreated() - latestConfirmed + 1);
+        frame.ourChildren = new uint256[](node - latestConfirmed + 1);
+        while (node > latestConfirmed) {
+            frame.compatible[node - latestConfirmed] = true;
+            uint256 newNode = rollup.getNode(node).prev();
+            frame.ourChildren[newNode - latestConfirmed] = node;
+            node = newNode;
+        }
+        frame.compatible[0] = true;
+        (address[] memory stakers, bool hasMore) = getStakers(rollup, startIndex, max);
+        for (uint256 i = 0; i < stakers.length; i++) {
+            address otherStaker = stakers[i];
+            if (rollup.currentChallenge(otherStaker) != address(0)) {
+                continue;
+            }
+            node = rollup.latestStakedNode(otherStaker);
+            if (frame.compatible[node - latestConfirmed]) {
+                continue;
+            }
+            uint256 otherStakerChild;
+            while (!frame.compatible[node - latestConfirmed]) {
+                // We won't revisit this node for this staker,
+                // and if we make it to another staker,
+                // this staker's path must be compatible.
+                frame.compatible[node - latestConfirmed] = true;
+                otherStakerChild = node;
+                node = rollup.getNode(node).prev();
+            }
+            if (node < frame.latestStakedNode) {
+                return (
+                    otherStaker,
+                    frame.ourChildren[node - latestConfirmed],
+                    otherStakerChild,
+                    false
+                );
+            }
+        }
+        return (address(0), 0, 0, hasMore);
     }
 
     function checkDecidableNextNode(Rollup rollup) external view returns (ConfirmType) {
@@ -177,45 +221,6 @@ contract ValidatorUtils {
             mstore(nodes, index)
         }
         return nodes;
-    }
-
-    function findNodeConflict(
-        Rollup rollup,
-        uint256 node1,
-        uint256 node2,
-        uint256 maxDepth
-    )
-        public
-        view
-        returns (
-            NodeConflict,
-            uint256,
-            uint256
-        )
-    {
-        uint256 firstUnresolvedNode = rollup.firstUnresolvedNode();
-        uint256 node1Prev = rollup.getNode(node1).prev();
-        uint256 node2Prev = rollup.getNode(node2).prev();
-
-        for (uint256 i = 0; i < maxDepth; i++) {
-            if (node1 == node2) {
-                return (NodeConflict.NONE, node1, node2);
-            }
-            if (node1Prev == node2Prev) {
-                return (NodeConflict.FOUND, node1, node2);
-            }
-            if (node1Prev < firstUnresolvedNode && node2Prev < firstUnresolvedNode) {
-                return (NodeConflict.INDETERMINATE, 0, 0);
-            }
-            if (node1Prev < node2Prev) {
-                node2 = node2Prev;
-                node2Prev = rollup.getNode(node2).prev();
-            } else {
-                node1 = node1Prev;
-                node1Prev = rollup.getNode(node1).prev();
-            }
-        }
-        return (NodeConflict.INCOMPLETE, node1, node2);
     }
 
     function getStakers(

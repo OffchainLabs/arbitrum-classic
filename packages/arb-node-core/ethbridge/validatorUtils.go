@@ -131,28 +131,23 @@ func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmTyp
 	return ConfirmType(confirmType), nil
 }
 
-func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker1, staker2 common.Address) (ConflictType, *big.Int, *big.Int, error) {
-	conflictType, staker1Node, staker2Node, err := v.con.FindStakerConflict(
-		&bind.CallOpts{Context: ctx},
-		v.rollupAddress,
-		staker1.ToEthAddress(),
-		staker2.ToEthAddress(),
-		math.MaxBig256,
-	)
-	if err != nil {
-		return CONFLICT_TYPE_NONE, nil, nil, err
-	}
-	for ConflictType(conflictType) == CONFLICT_TYPE_INCOMPLETE {
-		conflictType, staker1Node, staker2Node, err = v.con.FindNodeConflict(
-			&bind.CallOpts{Context: ctx},
-			v.rollupAddress,
-			staker1Node,
-			staker2Node,
-			math.MaxBig256,
-		)
+func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker common.Address) (*common.Address, *big.Int, *big.Int, error) {
+	i := big.NewInt(0)
+	count := big.NewInt(1024)
+	var emptyAddress ethcommon.Address
+	for {
+		otherStaker, ourNode, otherNode, hasMore, err := v.con.FindStakerConflict(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress(), i, count)
 		if err != nil {
-			return CONFLICT_TYPE_NONE, nil, nil, err
+			return nil, nil, nil, err
 		}
+		if otherStaker != emptyAddress {
+			address := common.NewAddressFromEth(otherStaker)
+			return &address, ourNode, otherNode, err
+		}
+		if !hasMore {
+			break
+		}
+		i = i.Add(i, count)
 	}
-	return ConflictType(conflictType), staker1Node, staker2Node, nil
+	return nil, nil, nil, nil
 }
