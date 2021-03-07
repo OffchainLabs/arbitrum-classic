@@ -36,6 +36,8 @@ int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
         auto index_result = executionCursor->machineHash();
         if (!index_result) {
             // Unable to compute machine hash
+            std::cerr << "unable to create machine hash for execution cursor"
+                      << std::endl;
             return false;
         }
         std::array<unsigned char, 32> val{};

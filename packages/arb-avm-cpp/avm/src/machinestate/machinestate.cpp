@@ -40,8 +40,7 @@ AssertionContext::AssertionContext(MachineExecutionConfig config)
       max_gas(config.max_gas),
       go_over_gas(config.go_over_gas) {}
 
-MachineState::MachineState()
-    : arb_gas_remaining(max_arb_gas_remaining) {}
+MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
 MachineState::MachineState(std::shared_ptr<Code> code_, value static_val_)
     : code(std::move(code_)),
@@ -58,8 +57,8 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            Status state_,
                            CodePointRef pc_,
                            CodePointStub errpc_,
-                           uint256_t messages_fully_processed_,
-                           uint256_t inbox_accumulator_,
+                           uint256_t fully_processed_messages_,
+                           uint256_t fully_processed_inbox_accumulator_,
                            staged_variant staged_message_)
     : code(std::move(code_)),
       registerVal(std::move(register_val_)),
@@ -70,9 +69,9 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
       state(state_),
       pc(pc_),
       errpc(errpc_),
-      messages_fully_processed(messages_fully_processed_),
-      inbox_accumulator(inbox_accumulator_),
-      staged_message_temp(std::move(staged_message_)) {}
+      fully_processed_messages(fully_processed_messages_),
+      fully_processed_inbox_accumulator(fully_processed_inbox_accumulator_),
+      staged_message(std::move(staged_message_)) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
@@ -118,7 +117,9 @@ std::optional<uint256_t> MachineState::hash() const {
     {
         auto message = getStagedMessageTuple();
         if (!message) {
-            std::cerr << "Can't get hash of machine with incomplete staged_message" << std::endl;
+            std::cerr
+                << "Can't get hash of machine with incomplete staged_message"
+                << std::endl;
             return std::nullopt;
         }
         auto val = ::hash_value(*message);
@@ -430,7 +431,6 @@ OneStepProof MachineState::marshalForProof() const {
     // Inbox or inbox peek with no staged message
     if ((current_op.opcode == OpCode::INBOX ||
          current_op.opcode == OpCode::INBOX_PEEK)) {
-
     }
     if (stagedMessageEmpty()) {
         if (context.inboxEmpty()) {
@@ -882,7 +882,8 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     if (state_hash) {
         os << "hash " << intx::to_string(*state_hash, 16) << "\n";
     } else {
-        os << "hash not available because staged value unresolved" << "\n";
+        os << "hash not available because staged value unresolved"
+           << "\n";
     }
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
@@ -906,39 +907,40 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
 }
 
 std::optional<Tuple> MachineState::getStagedMessageTuple() const {
-    if (std::holds_alternative<uint256_t>(staged_message_temp)) {
+    if (std::holds_alternative<uint256_t>(staged_message)) {
         // Staged message is unresolved
         return std::nullopt;
     }
 
-    if (!std::holds_alternative<InboxMessage>(staged_message_temp)) {
+    if (!std::holds_alternative<InboxMessage>(staged_message)) {
         // Staged message is empty
         return Tuple{};
     }
 
-    return std::get<InboxMessage>(staged_message_temp).toTuple();
+    return std::get<InboxMessage>(staged_message).toTuple();
 }
 
 bool MachineState::stagedMessageEmpty() const {
-    return std::holds_alternative<std::monostate>(staged_message_temp);
+    return std::holds_alternative<std::monostate>(staged_message);
 }
 
 bool MachineState::stagedMessageUnresolved() const {
-    return std::holds_alternative<uint256_t>(staged_message_temp);
+    return std::holds_alternative<uint256_t>(staged_message);
 }
 
-std::optional<uint256_t> MachineState::getUnresolvedStagedMessageBlockHeight() const {
+std::optional<uint256_t> MachineState::getUnresolvedStagedMessageBlockHeight()
+    const {
     if (!stagedMessageUnresolved()) {
         return std::nullopt;
     }
 
-    return std::get<uint256_t>(staged_message_temp);
+    return std::get<uint256_t>(staged_message);
 }
 
 uint256_t MachineState::getMessagesConsumed() const {
     if (stagedMessageEmpty()) {
-        return messages_fully_processed;
+        return fully_processed_messages;
     }
 
-    return messages_fully_processed + 1;
+    return fully_processed_messages + 1;
 }

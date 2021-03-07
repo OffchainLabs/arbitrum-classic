@@ -137,9 +137,10 @@ class ArbCore {
         bool use_latest,
         ValueCache& cache);
     template <class T>
-    std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
-                                                const MachineStateKeys& state_data,
-                                                ValueCache& value_cache);
+    std::unique_ptr<T> getMachineUsingStateKeys(
+        Transaction& transaction,
+        const MachineStateKeys& state_data,
+        ValueCache& value_cache);
 
    public:
     // To be deprecated, use checkpoints instead

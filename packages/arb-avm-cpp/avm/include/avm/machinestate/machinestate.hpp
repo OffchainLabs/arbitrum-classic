@@ -94,9 +94,9 @@ struct MachineState {
     Status state{Status::Extensive};
     CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
-    uint256_t messages_fully_processed;
-    uint256_t inbox_accumulator;
-    staged_variant staged_message_temp{std::monostate()};
+    uint256_t fully_processed_messages;
+    uint256_t fully_processed_inbox_accumulator;
+    staged_variant staged_message{std::monostate()};
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
@@ -114,8 +114,8 @@ struct MachineState {
                  Status state_,
                  CodePointRef pc_,
                  CodePointStub errpc_,
-                 uint256_t messages_fully_processed_,
-                 uint256_t inbox_accumulator_,
+                 uint256_t fully_processed_messages_,
+                 uint256_t fully_processed_inbox_accumulator_,
                  staged_variant staged_message_);
 
     uint256_t getMachineSize() const;

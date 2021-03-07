@@ -901,7 +901,7 @@ BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
     if (m.stagedMessageEmpty()) {
         if (!m.context.inboxEmpty()) {
-            m.staged_message_temp = m.context.popInbox();
+            m.staged_message = m.context.popInbox();
         } else if (m.context.next_block_height.has_value()) {
             // The inboxPeekOp should always leave a message Tuple in
             // staged_message so that hashes always come out consistently.
@@ -911,7 +911,7 @@ BlockReason inboxPeekOp(MachineState& m) {
             // that uses staged_message can throw an error when staged_message
             // is something other than a non-empty Tuple, and the uint256_t can
             // be replaced by a valid message Tuple when it becomes available.
-            m.staged_message_temp = *m.context.next_block_height;
+            m.staged_message = *m.context.next_block_height;
 
             // When next_block_height is set, we know the result of the inbox
             // peek opcode before we know the next message
@@ -932,15 +932,14 @@ BlockReason inboxPeekOp(MachineState& m) {
         return InboxBlocked();
     }
 
-    m.stack[0] =
-        m.stack[0] == message_tuple->get_element(1) ? 1 : 0;
+    m.stack[0] = m.stack[0] == message_tuple->get_element(1) ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }
 
 BlockReason inboxOp(MachineState& m) {
     bool has_staged_message = !m.stagedMessageEmpty();
-    if (has_staged_message && m.context.inboxEmpty()) {
+    if (!has_staged_message && m.context.inboxEmpty()) {
         return InboxBlocked();
     }
 
@@ -951,15 +950,17 @@ BlockReason inboxOp(MachineState& m) {
     }
 
     if (has_staged_message) {
-        m.inbox_accumulator = ::hash(m.inbox_accumulator, hash_value(*message_tuple));
+        m.fully_processed_inbox_accumulator = ::hash(
+            m.fully_processed_inbox_accumulator, hash_value(*message_tuple));
         m.stack.push(*message_tuple);
-        m.staged_message_temp = std::monostate();
+        m.staged_message = std::monostate();
     } else {
         auto tuple = m.context.popInbox().toTuple();
-        m.inbox_accumulator = ::hash(m.inbox_accumulator, hash_value(tuple));
+        m.fully_processed_inbox_accumulator =
+            ::hash(m.fully_processed_inbox_accumulator, hash_value(tuple));
         m.stack.push(tuple);
     }
-    m.messages_fully_processed += 1;
+    m.fully_processed_messages += 1;
     ++m.pc;
     return NotBlocked{};
 }

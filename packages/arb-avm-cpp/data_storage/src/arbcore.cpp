@@ -210,6 +210,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         auto machine_hash = machine->hash();
         if (!machine_hash) {
             std::cerr << "failed to compute initial machine hash" << std::endl;
+            return rocksdb::Status::Corruption();
         }
         marshal_uint256_t(*machine_hash, value_data);
         auto s = tx->transaction->Put(data_storage->state_column.get(),
@@ -657,17 +658,21 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                               state_data.status,
                               state_data.pc,
                               state_data.err_pc,
-                              state_data.messages_fully_processed,
-                              state_data.inbox_accumulator,
+                              state_data.fully_processed_messages,
+                              state_data.fully_processed_inbox_accumulator,
                               state_data.staged_message};
 
     return std::make_unique<T>(state);
 }
 
-template std::unique_ptr<Machine>
-ArbCore::getMachineUsingStateKeys(Transaction&, const MachineStateKeys&, ValueCache&);
-template std::unique_ptr<MachineThread>
-ArbCore::getMachineUsingStateKeys(Transaction&, const MachineStateKeys&, ValueCache&);
+template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeys(
+    Transaction&,
+    const MachineStateKeys&,
+    ValueCache&);
+template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
+    Transaction&,
+    const MachineStateKeys&,
+    ValueCache&);
 
 // operator() runs the main thread for ArbCore.  It is responsible for adding
 // messages to the queue, starting machine thread when needed and collecting
@@ -827,12 +832,13 @@ void ArbCore::operator()() {
             if (machine->machine_state.stagedMessageUnresolved()) {
                 // Resolve staged message if possible.  If message not found,
                 // machine will just be blocked
-                auto sequence_number = machine->machine_state.getMessagesConsumed();
+                auto sequence_number =
+                    machine->machine_state.getMessagesConsumed();
                 auto message_lookup = getMessageEntry(*tx, sequence_number);
                 if (message_lookup.status.ok()) {
                     auto inbox_message =
                         extractInboxMessage(message_lookup.data.data);
-                    machine->machine_state.staged_message_temp = inbox_message;
+                    machine->machine_state.staged_message = inbox_message;
                     if (messages.empty() &&
                         message_lookup.data.last_message_in_block) {
                         execConfig.next_block_height =
@@ -1282,7 +1288,8 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
             return message_lookup.status;
         }
         inbox_acc = message_lookup.data.inbox_acc;
-        machine_state.staged_message_temp = extractInboxMessage(message_lookup.data.data);
+        machine_state.staged_message =
+            extractInboxMessage(message_lookup.data.data);
     }
 
     return rocksdb::Status::OK();

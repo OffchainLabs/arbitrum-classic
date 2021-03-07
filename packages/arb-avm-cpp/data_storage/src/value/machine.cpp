@@ -45,7 +45,8 @@ CodePointStub extractCodePointStub(iterator& iter) {
     return {ref, next_hash};
 }
 
-void serializeStagedVariant(staged_variant message, std::vector<unsigned char> state_data_vector) {
+void serializeStagedVariant(staged_variant message,
+                            std::vector<unsigned char> state_data_vector) {
     uint256_t next_block_height = 0;
     uint8_t inbox_message_present = 0;
 
@@ -92,15 +93,16 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
     marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
     state_data.pc.marshal(state_data_vector);
     state_data.err_pc.marshal(state_data_vector);
-    marshal_uint256_t(state_data.messages_fully_processed, state_data_vector);
-    marshal_uint256_t(state_data.inbox_accumulator, state_data_vector);
+    marshal_uint256_t(state_data.fully_processed_messages, state_data_vector);
+    marshal_uint256_t(state_data.fully_processed_inbox_accumulator,
+                      state_data_vector);
 
     serializeStagedVariant(state_data.staged_message, state_data_vector);
 }
 
 MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator& iter,
-    const std::vector<unsigned char>::const_iterator& end) {
+    std::vector<unsigned char>::const_iterator iter,
+    const std::vector<unsigned char>::const_iterator end) {
     auto status = static_cast<Status>(*iter);
     ++iter;
     auto static_hash = extractUint256(iter);
@@ -110,15 +112,21 @@ MachineStateKeys extractMachineStateKeys(
     auto arb_gas_remaining = extractUint256(iter);
     auto pc = extractCodePointRef(iter);
     auto err_pc = extractCodePointStub(iter);
-    auto messages_fully_processed = extractUint256(iter);
-    auto inbox_accumulator = extractUint256(iter);
+    auto fully_processed_messages = extractUint256(iter);
+    auto fully_processed_inbox_accumulator = extractUint256(iter);
     auto staged_message = extractStagedVariant(iter, end);
 
-    return MachineStateKeys{
-        static_hash,   register_hash,       datastack_hash,
-        auxstack_hash, arb_gas_remaining,   pc,
-        err_pc,        messages_fully_processed, inbox_accumulator,
-        std::move(staged_message), status};
+    return MachineStateKeys{static_hash,
+                            register_hash,
+                            datastack_hash,
+                            auxstack_hash,
+                            arb_gas_remaining,
+                            pc,
+                            err_pc,
+                            fully_processed_messages,
+                            fully_processed_inbox_accumulator,
+                            std::move(staged_message),
+                            status};
 }
 
 void deleteMachineState(Transaction& transaction,
@@ -171,7 +179,8 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
 
     if (delete_results.reference_count < 1) {
         auto iter = results.stored_value.cbegin();
-        auto parsed_state = extractMachineStateKeys(iter, results.stored_value.cend());
+        auto parsed_state =
+            extractMachineStateKeys(iter, results.stored_value.cend());
 
         deleteMachineState(transaction, parsed_state);
     }
@@ -190,7 +199,8 @@ DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
             results.status, results.reference_count, MachineStateKeys()};
     }
     auto iter = results.stored_value.cbegin();
-    auto parsed_state = extractMachineStateKeys(iter, results.stored_value.cend());
+    auto parsed_state =
+        extractMachineStateKeys(iter, results.stored_value.cend());
 
     return DbResult<MachineStateKeys>{results.status, results.reference_count,
                                       parsed_state};
@@ -244,9 +254,11 @@ rocksdb::Status saveMachineState(Transaction& transaction,
     machine_state_keys.arb_gas_remaining = machinestate.arb_gas_remaining;
     machine_state_keys.pc = machinestate.pc;
     machine_state_keys.err_pc = machinestate.errpc;
-    machine_state_keys.messages_fully_processed = machinestate.messages_fully_processed;
-    machine_state_keys.inbox_accumulator = machinestate.inbox_accumulator;
-    machine_state_keys.staged_message = machinestate.staged_message_temp;
+    machine_state_keys.fully_processed_messages =
+        machinestate.fully_processed_messages;
+    machine_state_keys.fully_processed_inbox_accumulator =
+        machinestate.fully_processed_inbox_accumulator;
+    machine_state_keys.staged_message = machinestate.staged_message;
     machine_state_keys.status = machinestate.state;
 
     return rocksdb::Status::OK();

@@ -17,8 +17,8 @@
 #ifndef avm_status_hpp
 #define avm_status_hpp
 
-#include <variant>
 #include <avm/inboxmessage.hpp>
+#include <variant>
 
 typedef std::variant<std::monostate, InboxMessage, uint256_t> staged_variant;
 

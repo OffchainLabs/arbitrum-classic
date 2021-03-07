@@ -66,7 +66,7 @@ int machineHash(CMachine* m, void* ret) {
     assert(m);
     auto optionalHash = static_cast<Machine*>(m)->hash();
     if (!optionalHash) {
-       return 0;
+        return 0;
     }
     std::array<unsigned char, 32> val{};
     to_big_endian(*optionalHash, val.begin());

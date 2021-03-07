@@ -67,7 +67,7 @@ uint256_t hash_inbox(const uint256_t& previous_inbox_acc,
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessageImpl(
-    std::vector<unsigned char>::const_iterator& current_iter,
-    const std::vector<unsigned char>::const_iterator& end);
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end);
 
 #endif /* data_storage_inboxmessage_hpp */

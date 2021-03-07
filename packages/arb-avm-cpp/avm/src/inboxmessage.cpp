@@ -75,9 +75,8 @@ InboxMessage extractInboxMessage(
 }
 
 InboxMessage extractInboxMessageImpl(
-    std::vector<unsigned char>::const_iterator& current_iter,
-    const std::vector<unsigned char>::const_iterator& end) {
-
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end) {
     auto kind = *reinterpret_cast<const uint8_t*>(&*current_iter);
     current_iter++;
     Address sender;
@@ -96,7 +95,8 @@ InboxMessage extractInboxMessageImpl(
         gas_price_l1, data};
 }
 
-void InboxMessage::serializeHeader(std::vector<unsigned char>& state_data_vector) const {
+void InboxMessage::serializeHeader(
+    std::vector<unsigned char>& state_data_vector) const {
     state_data_vector.push_back(kind);
     state_data_vector.insert(state_data_vector.end(), sender.begin(),
                              sender.end());
@@ -106,7 +106,8 @@ void InboxMessage::serializeHeader(std::vector<unsigned char>& state_data_vector
     marshal_uint256_t(gas_price_l1, state_data_vector);
 }
 
-void InboxMessage::serializeImpl(std::vector<unsigned char>& state_data_vector) const {
+void InboxMessage::serializeImpl(
+    std::vector<unsigned char>& state_data_vector) const {
     serializeHeader(state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
 }
