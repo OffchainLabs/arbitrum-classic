@@ -175,6 +175,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	reader, err := NewInboxReader(ctx, bridge, core)
 	test.FailIfError(t, err)
 	reader.Start(ctx)
+	defer reader.Stop()
 
 	for i := 1; i <= 10; i++ {
 		msgCount, err := core.GetMessageCount()

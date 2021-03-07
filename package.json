@@ -29,6 +29,7 @@
     "go:vet": "./scripts/run-go-packages \"go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts' | xargs go vet\"",
     "go:generate": "./scripts/run-go-packages 'go generate ./...'",
     "go:tidy": "./scripts/run-go-packages 'go mod tidy'",
+    "go:test": "./scripts/run-go-packages 'go test ./...'",
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
