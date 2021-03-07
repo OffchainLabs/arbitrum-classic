@@ -278,10 +278,6 @@ jobs:
           command: go run arb-dev-node.go
           working_directory: /home/user/project/packages/arb-rpc-node/cmd/arb-dev-node
           background: true
-      - run:
-          name: test arb-avm-cpp
-          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
-          working_directory: /home/user/project/packages/arb-avm-cpp
       - restore_cache: *restore_yarn_cache
       - run:
           name: install
@@ -297,7 +293,7 @@ jobs:
       - run:
           name: test arb-bridge-peripherals l2
           command: |
-            yarn test:l12
+            yarn test:l2
           working_directory: /home/user/project/packages/arb-bridge-peripherals
       - store_test_results:
           path: *test-path
