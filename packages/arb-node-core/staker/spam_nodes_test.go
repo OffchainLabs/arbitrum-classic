@@ -45,7 +45,7 @@ func makeStaker(ctx context.Context, t *testing.T, origAuth *bind.TransactOpts, 
 	auth := bind.NewKeyedTransactor(privateKey)
 	nonce, err := client.PendingNonceAt(ctx, origAuth.From)
 	test.FailIfError(t, err)
-	transferTx := types.NewTransaction(nonce, auth.From, big.NewInt(1000000), 21000, big.NewInt(0), []byte{})
+	transferTx := types.NewTransaction(nonce, auth.From, big.NewInt(10000000), 21000, big.NewInt(0), []byte{})
 	transferTx, err = origAuth.Signer(origAuth.From, transferTx)
 	test.FailIfError(t, err)
 	client.SendTransaction(ctx, transferTx)
@@ -77,7 +77,7 @@ func stakeOnNodes(ctx context.Context, t *testing.T, client *ethutils.SimulatedE
 		test.FailIfError(t, err)
 		_, err = staker.wallet.ExecuteTransactions(ctx, staker.builder)
 		test.FailIfError(t, err)
-		for i := 0; i < 75; i++ {
+		for i := 0; i < 100; i++ {
 			client.Commit()
 		}
 
@@ -158,6 +158,9 @@ func TestSpamNodes(t *testing.T) {
 		<-time.After(time.Second * 1)
 	}
 
+	for i := 0; i < 100; i++ {
+		client.Commit()
+	}
 	honestPath := make([]*big.Int, 0)
 	err = honestStaker.newStake(ctx)
 	test.FailIfError(t, err)
@@ -166,7 +169,7 @@ func TestSpamNodes(t *testing.T) {
 		test.FailIfError(t, err)
 		_, err = honestStaker.wallet.ExecuteTransactions(ctx, honestStaker.builder)
 		test.FailIfError(t, err)
-		for j := 0; j < 75; j++ {
+		for j := 0; j < 100; j++ {
 			client.Commit()
 		}
 
