@@ -128,7 +128,7 @@ jobs:
       - run:
           name: test arb-bridge-eth
           command: |
-            yarn test:coverage
+            yarn test:coverage --network development
             yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
             yarn lint:solidity
           environment:

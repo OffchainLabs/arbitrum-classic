@@ -10,6 +10,7 @@ import 'solidity-coverage'
 import 'hardhat-spdx-license-identifier'
 import 'hardhat-gas-reporter'
 import '@nomiclabs/hardhat-etherscan'
+import '@nomiclabs/hardhat-ganache'
 
 const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @typescript-eslint/no-var-requires
 const setupVerifyTask = verifyTask.default
