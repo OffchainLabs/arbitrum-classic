@@ -84,7 +84,6 @@ type SendResultMessageType uint8
 const (
 	WithdrawEthType SendResultMessageType = 0
 	SendTxToL1Type  SendResultMessageType = 3
-	BuddyResultType SendResultMessageType = 5
 )
 
 func NewVirtualSendResultFromData(data []byte) (SendResultMessage, error) {
@@ -96,40 +95,15 @@ func NewVirtualSendResultFromData(data []byte) (SendResultMessage, error) {
 		return NewWithdrawEthResultFromData(data)
 	case SendTxToL1Type:
 		return NewL2ToL1TxResultFromData(data)
-	case BuddyResultType:
-		return NewBuddyResultFromData(data)
 	default:
 		return nil, errors.Errorf("unhandled send result message type %v", data[0])
 	}
-}
-
-type BuddyResult struct {
-	Address   common.Address
-	Succeeded bool
 }
 
 func addressFromBytes(data []byte) common.Address {
 	var address common.Address
 	copy(address[:], data[12:])
 	return address
-}
-
-func NewBuddyResultFromData(data []byte) (*BuddyResult, error) {
-	if len(data) != 65 {
-		return nil, errors.Errorf("unexpected buddy result length %v", len(data))
-	}
-	typeCode := SendResultMessageType(data[0])
-	contract := data[1:33]
-	success := new(big.Int).SetBytes(data[33:])
-
-	if typeCode != BuddyResultType {
-		return nil, errors.New("unexpected type code")
-	}
-
-	return &BuddyResult{
-		Address:   addressFromBytes(contract),
-		Succeeded: success.Cmp(big.NewInt(1)) == 0,
-	}, nil
 }
 
 type WithdrawEthResult struct {
