@@ -252,7 +252,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.1.0
+      - image: offchainlabs/integration-base:0.1.1
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:

@@ -9,7 +9,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     useradd -ms /bin/bash user
 USER user
 WORKDIR /home/user/
-ENV PATH="/usr/local/go/bin:/home/user/go/bin:/home/user/bin:/home/user/.local/bin:/home/user/.yarn/bin:${PATH}"
+ENV PATH="/usr/local/go/bin:/home/user/go/bin:/home/user/bin:/home/user/.local/bin:/home/user/.npm-global/bin:/home/user/.yarn/bin:${PATH}"
 RUN mkdir -p /home/user/.npm-global && \
     npm config set prefix "/home/user/.npm-global" && \
     npm install -g yarn && \
