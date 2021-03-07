@@ -69,6 +69,10 @@ jobs:
       TEST_RESULTS: *test-path
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
       - run: yarn install --cache-folder ~/.cache/yarn
