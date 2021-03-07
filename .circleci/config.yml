@@ -277,6 +277,7 @@ jobs:
           name: Run dev node
           command: go run arb-dev-node.go
           working_directory: /home/user/project/packages/arb-rpc-node/cmd/arb-dev-node
+          background: true
       - run:
           name: test arb-avm-cpp
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
