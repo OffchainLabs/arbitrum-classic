@@ -10,12 +10,6 @@
 [submodule "packages/arb-avm-cpp/external/json"]
     path = packages/arb-avm-cpp/external/json
     url = https://github.com/nlohmann/json
-[submodule "packages/arb-avm-cpp/external/variant-lite"]
-    path = packages/arb-avm-cpp/external/variant-lite
-    url = https://github.com/martinmoene/variant-lite
-[submodule "packages/arb-avm-cpp/external/optional-lite"]
-	path = packages/arb-avm-cpp/external/optional-lite
-	url = https://github.com/martinmoene/optional-lite
 [submodule "packages/arb-avm-cpp/cmake/cable"]
 	path = packages/arb-avm-cpp/cmake/cable
 	url = https://github.com/ethereum/cable

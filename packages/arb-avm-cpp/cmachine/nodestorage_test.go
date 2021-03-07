@@ -43,6 +43,8 @@ func TestMessageBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer arbStorage.CloseArbStorage()
+
 	nodeStore := arbStorage.GetNodeStore()
 	testBatchNumber := big.NewInt(42)
 	testLogIndex := uint64(0xDEADBEEFA1B2C3D4)

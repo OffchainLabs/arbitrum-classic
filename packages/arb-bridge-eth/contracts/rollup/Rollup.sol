@@ -591,7 +591,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     proposedTimes[0],
                     maxMessageCounts[0]
                 ),
-            "CHAL_HASH"
+            "CHAL_HASH1"
         );
 
         require(
@@ -601,7 +601,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     proposedTimes[1],
                     maxMessageCounts[1]
                 ),
-            "CHAL_HASH"
+            "CHAL_HASH2"
         );
 
         uint256 commonEndTime =

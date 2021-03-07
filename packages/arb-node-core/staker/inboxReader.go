@@ -36,6 +36,7 @@ type InboxReader struct {
 	// Only in main thread
 	running    bool
 	cancelFunc context.CancelFunc
+	completed  chan bool
 }
 
 func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db core.ArbCore) (*InboxReader, error) {
@@ -47,6 +48,7 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db cor
 		bridge:            bridge,
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
+		completed:         make(chan bool, 1),
 	}, nil
 }
 
@@ -54,7 +56,10 @@ func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
 	errChan := make(chan error, 1)
 	ctx, cancelFunc := context.WithCancel(parentCtx)
 	go func() {
-		defer close(errChan)
+		defer func() {
+			ir.completed <- true
+			close(errChan)
+		}()
 		for {
 			err := ir.getMessages(ctx)
 			if err == nil {
@@ -71,6 +76,7 @@ func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
 
 func (ir *InboxReader) Stop() {
 	ir.cancelFunc()
+	<-ir.completed
 	ir.running = false
 }
 

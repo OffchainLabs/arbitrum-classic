@@ -103,6 +103,9 @@ const config = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
+      accounts: {
+        accountsBalance: '10000000000000000000000000',
+      },
     },
     parity: {
       url: 'http://127.0.0.1:7545',
@@ -113,6 +116,22 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
+    arbitrum: {
+      url: 'http://127.0.0.1:8547',
+      // url: 'https://kovan3.arbitrum.io/rpc',
+      gas: 999999999999999,
+      accounts: {
+        mnemonic:
+          'jar deny prosper gasp flush glass core corn alarm treat leg smart',
+        path: "m/44'/60'/0'/0",
+        initialIndex: 0,
+        count: 10,
+      },
+      timeout: 100000,
+    },
+  },
+  mocha: {
+    timeout: 0,
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],

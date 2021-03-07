@@ -46,6 +46,8 @@ import (
 var logger zerolog.Logger
 var pprofMux *http.ServeMux
 
+var canceled = false
+
 func init() {
 	pprofMux = http.DefaultServeMux
 	http.DefaultServeMux = http.NewServeMux()
@@ -96,11 +98,6 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("error generating temporary directory")
 	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}()
 
 	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
 	if err != nil {
@@ -121,7 +118,19 @@ func main() {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 	monitor, backend, db, rollupAddress := dev.NewDevNode(tmpDir, config)
-	defer monitor.Close()
+
+	cancel := func() {
+		if !canceled {
+			db.Close()
+			monitor.Close()
+			if err := os.RemoveAll(tmpDir); err != nil {
+				panic(err)
+			}
+			canceled = true
+		}
+	}
+
+	defer cancel()
 
 	accounts := make([]accounts2.Account, 0)
 	for i := 0; i < *walletcount; i++ {
@@ -188,6 +197,7 @@ func main() {
 				logger.Fatal().Err(err).Send()
 			}
 		}
+		cancel()
 		os.Exit(0)
 	}()
 
