@@ -37,7 +37,7 @@ ExecutionCursor* ExecutionCursor::clone() {
     return new ExecutionCursor(*this);
 }
 
-uint256_t ExecutionCursor::machineHash() {
+std::optional<uint256_t> ExecutionCursor::machineHash() {
     return machine->hash();
 }
 std::unique_ptr<Machine> ExecutionCursor::takeMachine() {

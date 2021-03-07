@@ -328,7 +328,9 @@ void saveState(Transaction& transaction,
 void checkSavedState(const Transaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
-    auto results = getMachineStateKeys(transaction, expected_machine.hash());
+    auto expected_hash = expected_machine.hash();
+    REQUIRE(expected_hash);
+    auto results = getMachineStateKeys(transaction, *expected_hash);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
 
@@ -353,7 +355,9 @@ void checkSavedState(const Transaction& transaction,
 
 void checkDeletedCheckpoint(Transaction& transaction,
                             const Machine& deleted_machine) {
-    auto results = getMachineStateKeys(transaction, deleted_machine.hash());
+    auto deleted_hash = deleted_machine.hash();
+    REQUIRE(deleted_hash);
+    auto results = getMachineStateKeys(transaction, *deleted_hash);
     REQUIRE(!results.status.ok());
 
     auto datastack_tup =
@@ -373,7 +377,9 @@ void checkDeletedCheckpoint(Transaction& transaction,
 
 void deleteCheckpoint(Transaction& transaction,
                       const Machine& deleted_machine) {
-    auto res = deleteMachine(transaction, deleted_machine.hash());
+    auto deleted_hash = deleted_machine.hash();
+    REQUIRE(deleted_hash);
+    auto res = deleteMachine(transaction, *deleted_hash);
     REQUIRE(res.status.ok());
     checkDeletedCheckpoint(transaction, deleted_machine);
 }
@@ -400,14 +406,16 @@ Machine getComplexMachine() {
     CodePointRef pc{0, 0};
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    uint256_t total_messages_consumed = 42;
+    uint256_t messages_fully_processed = 42;
+    uint256_t inbox_accumulator = 54;
 
-    Tuple staged_message(uint256_t{100}, uint256_t{200});
+    //Tuple staged_message(uint256_t{100}, uint256_t{200});
+    staged_variant staged_message(88);
 
     return Machine(MachineState(
         std::move(code), register_val, std::move(static_val), data_stack,
         aux_stack, arb_gas_remaining, state, pc, err_pc,
-        total_messages_consumed, std::move(staged_message)));
+        messages_fully_processed, inbox_accumulator, std::move(staged_message)));
 }
 
 Machine getDefaultMachine() {
@@ -421,12 +429,14 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    uint256_t total_messages_consumed = 42;
-    Tuple staged_message{Tuple()};
+    uint256_t messages_fully_processed = 42;
+    uint256_t inbox_accumulator = 54;
+    staged_variant staged_message = 88;
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
                                 arb_gas_remaining, state, pc, err_pc,
-                                total_messages_consumed, staged_message));
+                                messages_fully_processed, inbox_accumulator,
+                                staged_message));
 }
 
 TEST_CASE("Save Machinestatedata") {
@@ -484,9 +494,11 @@ TEST_CASE("Delete checkpoint") {
             saveState(*transaction2, machine, 2);
         }
         auto transaction3 = storage.makeTransaction();
-        auto res = deleteMachine(*transaction3, machine.hash());
+        auto machine_hash = machine.hash();
+        REQUIRE(machine_hash);
+        auto res = deleteMachine(*transaction3, *machine.hash());
         REQUIRE(res.status.ok());
-        auto res2 = deleteMachine(*transaction3, machine.hash());
+        auto res2 = deleteMachine(*transaction3, *machine.hash());
         REQUIRE(res2.status.ok());
         checkDeletedCheckpoint(*transaction3, machine);
     }
@@ -497,9 +509,11 @@ TEST_CASE("Delete checkpoint") {
         saveState(*transaction2, machine, 2);
 
         checkSavedState(*transaction, machine, 2);
-        auto res = deleteMachine(*transaction, machine.hash());
+        auto machine_hash = machine.hash();
+        REQUIRE(machine_hash);
+        auto res = deleteMachine(*transaction, *machine.hash());
         checkSavedState(*transaction, machine, 1);
-        auto res2 = deleteMachine(*transaction, machine.hash());
+        auto res2 = deleteMachine(*transaction, *machine.hash());
         checkDeletedCheckpoint(*transaction, machine);
     }
 }

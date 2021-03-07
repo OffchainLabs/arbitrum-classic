@@ -36,11 +36,6 @@ template <typename T>
 static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
-
-bool hasStagedMessage(const value& staged_message) {
-    return !std::holds_alternative<Tuple>(staged_message) ||
-           std::get<Tuple>(staged_message) != Tuple();
-}
 }  // namespace
 
 namespace machineoperation {
@@ -904,19 +899,19 @@ void send(MachineState& m) {
 
 BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
-    if (!hasStagedMessage(m.staged_message)) {
+    if (m.stagedMessageEmpty()) {
         if (!m.context.inboxEmpty()) {
-            m.staged_message = m.context.popInbox();
-            m.total_messages_consumed += 1;
+            m.staged_message_temp = m.context.popInbox();
         } else if (m.context.next_block_height.has_value()) {
             // The inboxPeekOp should always leave a message Tuple in
-            // staged_message so that hashes always come out consistently.  When
-            // a message is not available, the uint256_t sequence number of the
-            // next message is put into staged_messages.  This way, any function
+            // staged_message so that hashes always come out consistently.
+            // The current message is annotated as end of block, and the next
+            // block number is known, so store the blocked number as a uint256_t
+            // value in staged_message.  This way, any function
             // that uses staged_message can throw an error when staged_message
             // is something other than a non-empty Tuple, and the uint256_t can
-            // be replaced by valid message Tuple when it becomes available.
-            m.staged_message = m.total_messages_consumed;
+            // be replaced by a valid message Tuple when it becomes available.
+            m.staged_message_temp = *m.context.next_block_height;
 
             // When next_block_height is set, we know the result of the inbox
             // peek opcode before we know the next message
@@ -924,7 +919,6 @@ BlockReason inboxPeekOp(MachineState& m) {
                 m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
             ++m.pc;
             m.context.inbox_messages_consumed += 1;
-            m.total_messages_consumed += 1;
             return NotBlocked{};
         } else {
             // Don't have information needed to continue
@@ -932,36 +926,40 @@ BlockReason inboxPeekOp(MachineState& m) {
         }
     }
 
-    if (!std::holds_alternative<Tuple>(m.staged_message)) {
+    auto message_tuple = m.getStagedMessageTuple();
+    if (!message_tuple) {
         // Don't have information needed to continue
         return InboxBlocked();
     }
 
     m.stack[0] =
-        m.stack[0] == std::get<Tuple>(m.staged_message).get_element(1) ? 1 : 0;
+        m.stack[0] == message_tuple->get_element(1) ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }
 
 BlockReason inboxOp(MachineState& m) {
-    bool has_staged_message = hasStagedMessage(m.staged_message);
-    if (!has_staged_message && m.context.inboxEmpty()) {
+    bool has_staged_message = !m.stagedMessageEmpty();
+    if (has_staged_message && m.context.inboxEmpty()) {
         return InboxBlocked();
     }
 
-    if (has_staged_message &&
-        !std::holds_alternative<Tuple>(m.staged_message)) {
+    auto message_tuple = m.getStagedMessageTuple();
+    if (has_staged_message && !message_tuple) {
         // We have a staged message, but it needs to actually be resolved
         return InboxBlocked();
     }
 
     if (has_staged_message) {
-        m.stack.push(Tuple(std::get<Tuple>(m.staged_message)));
-        m.staged_message = Tuple();
+        m.inbox_accumulator = ::hash(m.inbox_accumulator, hash_value(*message_tuple));
+        m.stack.push(*message_tuple);
+        m.staged_message_temp = std::monostate();
     } else {
-        m.stack.push(m.context.popInbox());
-        m.total_messages_consumed += 1;
+        auto tuple = m.context.popInbox().toTuple();
+        m.inbox_accumulator = ::hash(m.inbox_accumulator, hash_value(tuple));
+        m.stack.push(tuple);
     }
+    m.messages_fully_processed += 1;
     ++m.pc;
     return NotBlocked{};
 }

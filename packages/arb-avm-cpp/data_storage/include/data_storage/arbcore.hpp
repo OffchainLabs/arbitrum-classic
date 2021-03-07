@@ -126,7 +126,7 @@ class ArbCore {
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
     rocksdb::Status resolveStagedMessage(Transaction& tx,
-                                         value& message,
+                                         MachineState& machine_state,
                                          uint256_t& inbox_acc) const;
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
@@ -138,7 +138,7 @@ class ArbCore {
         ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
-                                                MachineStateKeys state_data,
+                                                const MachineStateKeys& state_data,
                                                 ValueCache& value_cache);
 
    public:

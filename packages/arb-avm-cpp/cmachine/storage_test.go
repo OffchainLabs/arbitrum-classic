@@ -68,7 +68,11 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error(err)
 	}
 
-	t.Log("Initial machine hash", mach.Hash())
+	hash, err := mach.Hash()
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("Initial machine hash", hash)
 
 	_, _, numSteps := mach.ExecuteAssertion(
 		1000,
@@ -83,12 +87,27 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error("Failed to checkpoint machine")
 	}
 
-	loadedMach, err := arbStorage.GetMachine(mach.Hash())
+	hash, err = mach.Hash()
 	if err != nil {
 		t.Error(err)
 	}
 
-	if mach.Hash() != loadedMach.Hash() {
-		t.Error("Restored machine with wrong hash", mach.Hash(), loadedMach.Hash())
+	loadedMach, err := arbStorage.GetMachine(hash)
+	if err != nil {
+		t.Error(err)
+	}
+
+	hash1, err := mach.Hash();
+	if err != nil {
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
+	}
+	hash2, err := loadedMach.Hash();
+	if err != nil {
+		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
+	}
+	if hash1 != hash2 {
+		t.Error("Restored machine with wrong hash", hash1, hash2)
 	}
 }

@@ -51,7 +51,10 @@ func TestDeserializeMachine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedHash := machine.Hash()
+	expectedHash, err := machine.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	offset, bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
 	if err != nil {

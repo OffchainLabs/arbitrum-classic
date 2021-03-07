@@ -22,6 +22,7 @@
 #include <rocksdb/status.h>
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepoint.hpp>
+#include <utility>
 
 class Transaction;
 
@@ -41,8 +42,9 @@ struct MachineStateKeys {
     uint256_t arb_gas_remaining;
     CodePointRef pc{0, 0};
     CodePointStub err_pc{{0, 0}, getErrCodePoint()};
-    uint256_t staged_message_hash;
-    uint256_t total_messages_consumed;
+    uint256_t messages_fully_processed;
+    uint256_t inbox_accumulator;
+    staged_variant staged_message;
     Status status{};
 
     MachineStateKeys() = default;
@@ -53,8 +55,9 @@ struct MachineStateKeys {
                      uint256_t arb_gas_remaining_,
                      CodePointRef pc_,
                      CodePointStub err_pc_,
-                     uint256_t staged_message_hash_,
-                     uint256_t total_messages_consumed_,
+                     uint256_t messages_fully_processed_,
+                     uint256_t inbox_accumulator_,
+                     staged_variant staged_message_,
                      Status status_)
         : static_hash(static_hash_),
           register_hash(register_hash_),
@@ -63,15 +66,17 @@ struct MachineStateKeys {
           arb_gas_remaining(arb_gas_remaining_),
           pc(pc_),
           err_pc(err_pc_),
-          staged_message_hash(staged_message_hash_),
-          total_messages_consumed(total_messages_consumed_),
+          messages_fully_processed(messages_fully_processed_),
+          inbox_accumulator(inbox_accumulator_),
+          staged_message(std::move(staged_message_)),
           status(status_) {}
 };
 
 DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
                                                uint256_t machineHash);
 MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator& iter);
+    std::vector<unsigned char>::const_iterator& iter,
+    const std::vector<unsigned char>::const_iterator& end);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
 rocksdb::Status saveMachineState(Transaction& transaction,

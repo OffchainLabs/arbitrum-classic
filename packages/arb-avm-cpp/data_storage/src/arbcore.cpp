@@ -207,7 +207,11 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         }
 
         std::vector<unsigned char> value_data;
-        marshal_uint256_t(machine->hash(), value_data);
+        auto machine_hash = machine->hash();
+        if (!machine_hash) {
+            std::cerr << "failed to compute initial machine hash" << std::endl;
+        }
+        marshal_uint256_t(*machine_hash, value_data);
         auto s = tx->transaction->Put(data_storage->state_column.get(),
                                       vecToSlice(initial_machine_hash_key),
                                       vecToSlice(value_data));
@@ -594,7 +598,7 @@ ValueResult<Checkpoint> ArbCore::getCheckpointUsingGas(
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     Transaction& transaction,
-    MachineStateKeys state_data,
+    const MachineStateKeys& state_data,
     ValueCache& value_cache) {
     std::set<uint64_t> segment_ids;
 
@@ -622,12 +626,6 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     if (!auxstack_results.status.ok() ||
         !std::holds_alternative<Tuple>(auxstack_results.data)) {
         throw std::runtime_error("failed to load machine auxstack");
-    }
-
-    auto staged_message_results = ::getValueImpl(
-        transaction, state_data.staged_message_hash, segment_ids, value_cache);
-    if (!staged_message_results.status.ok()) {
-        throw std::runtime_error("failed to load machine saved message");
     }
 
     segment_ids.insert(state_data.pc.segment);
@@ -659,16 +657,17 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                               state_data.status,
                               state_data.pc,
                               state_data.err_pc,
-                              state_data.total_messages_consumed,
-                              std::move(staged_message_results.data)};
+                              state_data.messages_fully_processed,
+                              state_data.inbox_accumulator,
+                              state_data.staged_message};
 
     return std::make_unique<T>(state);
 }
 
 template std::unique_ptr<Machine>
-ArbCore::getMachineUsingStateKeys(Transaction&, MachineStateKeys, ValueCache&);
+ArbCore::getMachineUsingStateKeys(Transaction&, const MachineStateKeys&, ValueCache&);
 template std::unique_ptr<MachineThread>
-ArbCore::getMachineUsingStateKeys(Transaction&, MachineStateKeys, ValueCache&);
+ArbCore::getMachineUsingStateKeys(Transaction&, const MachineStateKeys&, ValueCache&);
 
 // operator() runs the main thread for ArbCore.  It is responsible for adding
 // messages to the queue, starting machine thread when needed and collecting
@@ -825,18 +824,15 @@ void ArbCore::operator()() {
             }
 
             bool resolved_staged = false;
-            if (std::holds_alternative<uint256_t>(
-                    machine->machine_state.staged_message)) {
+            if (machine->machine_state.stagedMessageUnresolved()) {
                 // Resolve staged message if possible.  If message not found,
                 // machine will just be blocked
-                auto sequence_number =
-                    std::get<uint256_t>(machine->machine_state.staged_message);
+                auto sequence_number = machine->machine_state.getMessagesConsumed();
                 auto message_lookup = getMessageEntry(*tx, sequence_number);
                 if (message_lookup.status.ok()) {
                     auto inbox_message =
                         extractInboxMessage(message_lookup.data.data);
-                    machine->machine_state.staged_message =
-                        inbox_message.toTuple();
+                    machine->machine_state.staged_message_temp = inbox_message;
                     if (messages.empty() &&
                         message_lookup.data.last_message_in_block) {
                         execConfig.next_block_height =
@@ -1237,7 +1233,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 // If placeholder message not found, machine will just be
                 // blocked
                 auto resolve_status = resolveStagedMessage(
-                    tx, execution_cursor.machine->machine_state.staged_message,
+                    tx, execution_cursor.machine->machine_state,
                     execution_cursor.inbox_acc);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
                     core_error_string = "error resolving staged message";
@@ -1276,18 +1272,17 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 }
 
 rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
-                                              value& message,
+                                              MachineState& machine_state,
                                               uint256_t& inbox_acc) const {
-    if (std::holds_alternative<uint256_t>(message)) {
-        auto sequence_number = std::get<uint256_t>(message);
+    if (machine_state.stagedMessageUnresolved()) {
+        auto sequence_number = machine_state.getMessagesConsumed();
         auto message_lookup = getMessageEntry(tx, sequence_number);
         if (!message_lookup.status.ok()) {
             // Unable to resolve cursor, no valid message found
             return message_lookup.status;
         }
         inbox_acc = message_lookup.data.inbox_acc;
-        auto inbox_message = extractInboxMessage(message_lookup.data.data);
-        message = inbox_message.toTuple();
+        machine_state.staged_message_temp = extractInboxMessage(message_lookup.data.data);
     }
 
     return rocksdb::Status::OK();
@@ -1336,42 +1331,26 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
             }
         }
 
-        auto staged_message = getValue(
-            tx, checkpoint_result.data.machine_state_keys.staged_message_hash,
-            cache);
-        if (!staged_message.status.ok()) {
-            // Corrupt checkpoint, try earlier checkpoint
-            if (checkpoint_result.data.arb_gas_used == 0) {
-                std::cerr << "first checkpoint corrupted" << std::endl;
-                return staged_message.status;
-            }
-            target_gas_used = checkpoint_result.data.arb_gas_used - 1;
-            continue;
-        }
-
-        if (!is_for_sideload) {
-            auto resolve_status = resolveStagedMessage(
-                tx, staged_message.data, checkpoint_result.data.inbox_acc);
-            if (!resolve_status.ok()) {
-                // Unable to resolve staged_message, try earlier checkpoint
-                if (checkpoint_result.data.arb_gas_used == 0) {
-                    std::cerr << "first checkpoint corrupted" << std::endl;
-                    return staged_message.status;
-                }
-                target_gas_used = checkpoint_result.data.arb_gas_used - 1;
-                continue;
-            }
-        }
-
         // Update execution_cursor with checkpoint
         execution_cursor.resetCheckpoint();
         execution_cursor.setCheckpoint(checkpoint_result.data);
         execution_cursor.machine = getMachineUsingStateKeys<Machine>(
             tx, execution_cursor.machine_state_keys, cache);
 
-        // Replace staged_message with resolved value
-        execution_cursor.machine->machine_state.staged_message =
-            staged_message.data;
+        if (!is_for_sideload) {
+            auto resolve_status = resolveStagedMessage(
+                tx, execution_cursor.machine->machine_state,
+                checkpoint_result.data.inbox_acc);
+            if (!resolve_status.ok()) {
+                // Unable to resolve staged_message, try earlier checkpoint
+                if (checkpoint_result.data.arb_gas_used == 0) {
+                    std::cerr << "first checkpoint corrupted" << std::endl;
+                    return resolve_status;
+                }
+                target_gas_used = checkpoint_result.data.arb_gas_used - 1;
+                continue;
+            }
+        }
 
         return rocksdb::Status::OK();
     }

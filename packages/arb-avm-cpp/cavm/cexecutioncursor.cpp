@@ -34,8 +34,12 @@ int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     try {
         auto index_result = executionCursor->machineHash();
+        if (!index_result) {
+            // Unable to compute machine hash
+            return false;
+        }
         std::array<unsigned char, 32> val{};
-        to_big_endian(index_result, val.begin());
+        to_big_endian(*index_result, val.begin());
         std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 
         return true;

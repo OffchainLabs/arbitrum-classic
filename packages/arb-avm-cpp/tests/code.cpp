@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "config.hpp"
 #include "helper.hpp"
 
 #include <data_storage/arbstorage.hpp>
@@ -87,7 +86,9 @@ TEST_CASE("Code serialization") {
     SECTION("Save and load") {
         saveMachine(*tx, mach);
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach.hash(), value_cache);
+        auto mach_hash = mach.hash();
+        REQUIRE(mach_hash);
+        auto mach2 = storage.getMachine(*mach_hash, value_cache);
         checkRun(*mach2);
     }
 
@@ -101,16 +102,20 @@ TEST_CASE("Code serialization") {
         saveMachine(*tx, mach2);
 
         SECTION("Delete first") {
-            deleteMachine(*tx, mach.hash());
+            auto mach_hash = mach.hash();
+            REQUIRE(mach_hash);
+            deleteMachine(*tx, *mach_hash);
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach2.hash(), value_cache);
+            auto mach3 = storage.getMachine(*mach_hash, value_cache);
             checkRun(*mach3, 14);
         }
 
         SECTION("Delete second") {
-            deleteMachine(*tx, mach2.hash());
+            auto mach2_hash = mach2.hash();
+            REQUIRE(mach2_hash);
+            deleteMachine(*tx, *mach2_hash);
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach.hash(), value_cache);
+            auto mach3 = storage.getMachine(*mach2_hash, value_cache);
             checkRun(*mach3);
         }
     }
@@ -118,9 +123,11 @@ TEST_CASE("Code serialization") {
     SECTION("Save twice, delete and load") {
         saveMachine(*tx, mach);
         saveMachine(*tx, mach);
-        deleteMachine(*tx, mach.hash());
+        auto mach_hash = mach.hash();
+        REQUIRE(mach_hash);
+        deleteMachine(*tx, *mach_hash);
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach.hash(), value_cache);
+        auto mach2 = storage.getMachine(*mach_hash, value_cache);
         checkRun(*mach2);
     }
 }

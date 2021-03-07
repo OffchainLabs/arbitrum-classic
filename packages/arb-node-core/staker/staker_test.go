@@ -117,6 +117,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	mach, err := cmachine.New(arbos.Path())
 	test.FailIfError(t, err)
 
+	hash, err := mach.Hash()
+	test.FailIfError(t, err)
+
 	confirmPeriodBlocks := big.NewInt(100)
 	extraChallengeTimeBlocks := big.NewInt(0)
 	arbGasSpeedLimitPerBlock := maxGasPerNode
@@ -134,7 +137,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		t,
 		auth,
 		client,
-		mach.Hash(),
+		hash,
 		confirmPeriodBlocks,
 		extraChallengeTimeBlocks,
 		arbGasSpeedLimitPerBlock,
