@@ -57,7 +57,7 @@ CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-void machineHash(CMachine* m, void* ret);
+int machineHash(CMachine* m, void* ret);
 CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash

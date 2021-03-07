@@ -70,7 +70,7 @@ class ExecutionCursor : public Checkpoint {
     void resetExecutionCursor();
     void setCheckpoint(Checkpoint& checkpoint);
     ExecutionCursor* clone();
-    uint256_t machineHash();
+    std::optional<uint256_t> machineHash();
 
     std::unique_ptr<Machine> takeMachine();
 };

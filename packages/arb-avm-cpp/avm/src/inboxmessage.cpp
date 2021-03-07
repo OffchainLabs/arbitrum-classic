@@ -55,7 +55,6 @@ uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {
 uint256_t hash_inbox(const uint256_t& previous_inbox_acc,
                      const std::vector<unsigned char>& stored_state) {
     return hash(previous_inbox_acc, hash_raw_message(stored_state));
-    ;
 }
 
 namespace {
@@ -72,6 +71,13 @@ InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
+    return extractInboxMessageImpl(current_iter, stored_state.end());
+}
+
+InboxMessage extractInboxMessageImpl(
+    std::vector<unsigned char>::const_iterator& current_iter,
+    const std::vector<unsigned char>::const_iterator& end) {
+
     auto kind = *reinterpret_cast<const uint8_t*>(&*current_iter);
     current_iter++;
     Address sender;
@@ -83,15 +89,14 @@ InboxMessage extractInboxMessage(
     auto gas_price_l1 = extractUint256(current_iter);
 
     std::vector<unsigned char> data;
-    data.insert(data.end(), current_iter, stored_state.end());
+    data.insert(data.end(), current_iter, end);
 
     return InboxMessage{
         kind,         sender, block_number, timestamp, inbox_sequence_number,
         gas_price_l1, data};
 }
 
-std::vector<unsigned char> InboxMessage::serialize() const {
-    std::vector<unsigned char> state_data_vector;
+void InboxMessage::serializeHeader(std::vector<unsigned char>& state_data_vector) const {
     state_data_vector.push_back(kind);
     state_data_vector.insert(state_data_vector.end(), sender.begin(),
                              sender.end());
@@ -99,26 +104,29 @@ std::vector<unsigned char> InboxMessage::serialize() const {
     marshal_uint256_t(timestamp, state_data_vector);
     marshal_uint256_t(inbox_sequence_number, state_data_vector);
     marshal_uint256_t(gas_price_l1, state_data_vector);
+}
+
+void InboxMessage::serializeImpl(std::vector<unsigned char>& state_data_vector) const {
+    serializeHeader(state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
+}
+
+std::vector<unsigned char> InboxMessage::serialize() const {
+    std::vector<unsigned char> state_data_vector;
+    this->serializeImpl(state_data_vector);
     return state_data_vector;
 }
 
 std::vector<unsigned char> InboxMessage::serializeForProof() const {
     std::vector<unsigned char> state_data_vector;
-    state_data_vector.push_back(kind);
-    state_data_vector.insert(state_data_vector.end(), sender.begin(),
-                             sender.end());
-    marshal_uint256_t(block_number, state_data_vector);
-    marshal_uint256_t(timestamp, state_data_vector);
-    marshal_uint256_t(inbox_sequence_number, state_data_vector);
-    marshal_uint256_t(gas_price_l1, state_data_vector);
+    serializeHeader(state_data_vector);
     uint256_t proofLength = state_data_vector.size();
     marshal_uint256_t(proofLength, state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
     return state_data_vector;
 }
 
-Tuple InboxMessage::toTuple() {
+Tuple InboxMessage::toTuple() const {
     uint8_t raw_sender[32];
     std::fill_n(&raw_sender[0], 12, 0);
     std::copy(sender.begin(), sender.end(), &raw_sender[12]);

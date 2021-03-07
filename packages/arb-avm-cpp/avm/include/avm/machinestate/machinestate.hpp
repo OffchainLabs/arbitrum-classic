@@ -43,9 +43,9 @@ struct AssertionContext {
     std::vector<value> logs;
     std::vector<value> debug_prints;
     std::deque<InboxMessage> sideloads;
-    bool stop_on_sideload{};
+    bool stop_on_sideload{false};
     uint256_t max_gas;
-    bool go_over_gas;
+    bool go_over_gas{false};
 
     AssertionContext() = default;
 
@@ -53,8 +53,8 @@ struct AssertionContext {
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    Tuple popInbox() {
-        return inbox_messages[inbox_messages_consumed++].toTuple();
+    InboxMessage popInbox() {
+        return inbox_messages[inbox_messages_consumed++];
     }
 
     // peekInbox assumes that the number of messages already consumed is less
@@ -92,10 +92,11 @@ struct MachineState {
     Datastack auxstack;
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
-    CodePointRef pc;
-    CodePointStub errpc;
-    uint256_t total_messages_consumed;
-    value staged_message{};
+    CodePointRef pc{0, 0};
+    CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    uint256_t messages_fully_processed;
+    uint256_t inbox_accumulator;
+    staged_variant staged_message_temp{std::monostate()};
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
@@ -113,19 +114,26 @@ struct MachineState {
                  Status state_,
                  CodePointRef pc_,
                  CodePointStub errpc_,
-                 uint256_t total_messages_consumed_,
-                 value staged_message_);
+                 uint256_t messages_fully_processed_,
+                 uint256_t inbox_accumulator_,
+                 staged_variant staged_message_);
 
     uint256_t getMachineSize() const;
     OneStepProof marshalForProof() const;
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();
-    uint256_t hash() const;
+    std::optional<uint256_t> hash() const;
     BlockReason isBlocked(bool newMessages) const;
 
     const CodePoint& loadCurrentInstruction() const;
     uint256_t nextGasCost() const;
+
+    bool stagedMessageEmpty() const;
+    bool stagedMessageUnresolved() const;
+    std::optional<uint256_t> getUnresolvedStagedMessageBlockHeight() const;
+    std::optional<Tuple> getStagedMessageTuple() const;
+    uint256_t getMessagesConsumed() const;
 
    private:
     void marshalBufferProof(OneStepProof& proof) const;

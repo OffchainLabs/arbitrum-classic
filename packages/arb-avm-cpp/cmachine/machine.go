@@ -73,9 +73,13 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 	return ret
 }
 
-func (m *Machine) Hash() (ret common.Hash) {
-	C.machineHash(m.c, unsafe.Pointer(&ret[0]))
-	return
+func (m *Machine) Hash() (ret common.Hash, err error) {
+	success := C.machineHash(m.c, unsafe.Pointer(&ret[0]))
+	if success == 0 {
+		err = errors.New("Cannot get machine hash")
+    }
+
+    return
 }
 
 func (m *Machine) Clone() machine.Machine {

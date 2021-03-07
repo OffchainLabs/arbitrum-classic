@@ -58,7 +58,7 @@ void Checkpoint::applyAssertion(const Assertion& assertion) {
 }
 
 Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
-    auto current_iter = stored_state.begin();
+    auto current_iter = stored_state.cbegin();
 
     auto arb_gas_used = extractUint256(current_iter);
     auto total_steps = extractUint256(current_iter);
@@ -71,7 +71,8 @@ Checkpoint extractCheckpoint(const std::vector<unsigned char>& stored_state) {
     auto send_count = extractUint64(current_iter);
     auto log_count = extractUint64(current_iter);
 
-    auto machineStateKeys = extractMachineStateKeys(current_iter);
+    auto machineStateKeys =
+        extractMachineStateKeys(current_iter, stored_state.cend());
 
     return Checkpoint{total_steps,
                       arb_gas_used,
