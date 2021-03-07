@@ -199,7 +199,7 @@ jobs:
       - restore_cache: *restore_go_cache
       - run:
           command: |
-            cd packages/arb-validator
+            cd packages/arb-rpc-node
             export CGO_LDFLAGS="-lgcov --coverage"
             go install -v ./...
       - run:
