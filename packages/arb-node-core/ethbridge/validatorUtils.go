@@ -133,7 +133,7 @@ func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmTyp
 
 func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker common.Address) (*common.Address, *big.Int, *big.Int, error) {
 	i := big.NewInt(0)
-	count := big.NewInt(1024)
+	count := big.NewInt(100)
 	var emptyAddress ethcommon.Address
 	for {
 		otherStaker, ourNode, otherNode, hasMore, err := v.con.FindStakerConflict(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress(), i, count)
