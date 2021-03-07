@@ -229,7 +229,7 @@ func HandleCallError(res *evm.TxResult, ganacheMode bool) error {
 }
 
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
-	if *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
+	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
 		if callArgs.Data != nil {
 			data = *callArgs.Data
@@ -249,7 +249,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 }
 
 func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
-	if *args.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
+	if args.To != nil && *args.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		// Fake gas for call
 		return hexutil.Uint64(21000), nil
 	}

@@ -24,4 +24,8 @@ contract Mock {
     constructor(string memory _mocked) public {
         mocked = _mocked;
     }
+
+    receive() external payable {}
+
+    fallback() external payable {}
 }

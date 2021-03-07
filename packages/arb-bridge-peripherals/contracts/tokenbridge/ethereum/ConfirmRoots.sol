@@ -38,12 +38,16 @@ contract ConfirmRoots {
     function setupConfirmData(
         uint256 nodeNum,
         bytes32 logAcc,
+        bytes32 beforeSendAcc,
         bytes calldata sendsData,
         uint256[] calldata sendLengths
     ) external {
         INode node = rollup.getNode(nodeNum);
-        bytes32 sendAcc = RollupLib.generateLastMessageHash(sendsData, sendLengths);
-        require(node.confirmData() == RollupLib.confirmHash(sendAcc, logAcc), "CONFIRM_DATA");
+        bytes32 sendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
+        require(
+            node.confirmData() == RollupLib.confirmHash(beforeSendAcc, sendAcc, logAcc),
+            "CONFIRM_DATA"
+        );
         uint256 messageCount = sendLengths.length;
         uint256 offset = 0;
         for (uint256 i = 0; i < messageCount; i++) {

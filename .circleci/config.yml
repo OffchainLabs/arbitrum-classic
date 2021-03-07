@@ -41,8 +41,12 @@ workflows:
             - cpp-avm-build
       - frontend
       - ethbridge
-      - ethbridge-coverage
+      # - ethbridge-coverage
       - backend:
+          requires:
+            - go-deps
+            - cpp-avm-build
+      - arb-bridge-peripherals:
           requires:
             - go-deps
             - cpp-avm-build
@@ -110,36 +114,36 @@ jobs:
       - store_test_results:
           path: *test-path
 
-  ethbridge-coverage:
-    docker:
-      - image: offchainlabs/ethbridge-base:0.2.1
-    environment: # environment variables for the build itself
-      TEST_RESULTS: *test-path # path to where test results will be saved
-    steps:
-      - checkout
-      - run: mkdir -p $TEST_RESULTS
-      - restore_cache: *restore_yarn_cache
-      - run:
-          name: install
-          command: |
-            yarn install --cache-folder ~/.cache/yarn
-            yarn build
-          working_directory: /home/user/project
-      - run:
-          name: test arb-bridge-eth
-          command: |
-            yarn test:coverage --network development
-            yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
-            yarn lint:solidity
-          environment:
-            MOCHA_FILE: *ethbridge-test-path
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run:
-          name: Upload Coverage to Codecov
-          command: codecovbash -R /home/user/project -c -F unit
-          working_directory: /home/user/project/packages
-      - store_test_results:
-          path: *test-path
+  # ethbridge-coverage:
+  #   docker:
+  #     - image: offchainlabs/ethbridge-base:0.2.1
+  #   environment: # environment variables for the build itself
+  #     TEST_RESULTS: *test-path # path to where test results will be saved
+  #   steps:
+  #     - checkout
+  #     - run: mkdir -p $TEST_RESULTS
+  #     - restore_cache: *restore_yarn_cache
+  #     - run:
+  #         name: install
+  #         command: |
+  #           yarn install --cache-folder ~/.cache/yarn
+  #           yarn build
+  #         working_directory: /home/user/project
+  #     - run:
+  #         name: test arb-bridge-eth
+  #         command: |
+  #           yarn test:coverage --network development
+  #           yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-eth-lint.xml
+  #           yarn lint:solidity
+  #         environment:
+  #           MOCHA_FILE: *ethbridge-test-path
+  #         working_directory: /home/user/project/packages/arb-bridge-eth
+  #     - run:
+  #         name: Upload Coverage to Codecov
+  #         command: codecovbash -R /home/user/project -c -F unit
+  #         working_directory: /home/user/project/packages
+  #     - store_test_results:
+  #         path: *test-path
 
   cpp-avm-build:
     docker:
@@ -238,5 +242,56 @@ jobs:
           command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-rpc-node.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
           working_directory: /home/user/project/packages/arb-rpc-node
       - run: codecovbash -R /home/user/project -c -F unit
+      - store_test_results:
+          path: *test-path
+
+  arb-bridge-peripherals:
+    docker:
+      - image: offchainlabs/backend-base:0.2.8
+    environment: # environment variables for the build itself
+      TEST_RESULTS: *test-path # path to where test results will be saved
+    steps:
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recursive
+      - run: mkdir -p $TEST_RESULTS
+      - attach_workspace:
+          at: /home/user/workspace
+      - run:
+          name: 'Setup Enviroment'
+          command: |
+            export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
+            echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
+            echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
+      - run:
+          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
+      - restore_cache: *restore_go_cache
+      - run:
+          name: Run dev node
+          command: go run arb-dev-node.go
+          working_directory: /home/user/project/packages/arb-rpc-node/cmd/arb-dev-node
+      - run:
+          name: test arb-avm-cpp
+          command: gotestsum --format short-verbose --junitfile ${TEST_RESULTS}/arb-avm-cpp.xml -- -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=$ARB_PACKAGES ./...
+          working_directory: /home/user/project/packages/arb-avm-cpp
+      - restore_cache: *restore_yarn_cache
+      - run:
+          name: install
+          command: |
+            yarn install --cache-folder ~/.cache/yarn
+            yarn build
+          working_directory: /home/user/project
+      - run:
+          name: test arb-bridge-peripherals l1
+          command: |
+            yarn test:l1
+          working_directory: /home/user/project/packages/arb-bridge-peripherals
+      - run:
+          name: test arb-bridge-peripherals l2
+          command: |
+            yarn test:l12
+          working_directory: /home/user/project/packages/arb-bridge-peripherals
       - store_test_results:
           path: *test-path

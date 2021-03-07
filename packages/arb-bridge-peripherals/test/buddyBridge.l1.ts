@@ -28,7 +28,10 @@ describe('Buddy bridge layer 1', () => {
   before(async function () {
     accounts = await ethers.getSigners()
 
-    const inbox = '0x0000000000000000000000000000000000000000'
+    const Mock = await ethers.getContractFactory('Mock')
+    const mock = await Mock.deploy('Inbox')
+
+    const inbox = mock.address
     const l2Deployer = '0x0000000000000000000000000000000000000000'
 
     TestBuddy = await ethers.getContractFactory('TestBuddy')
@@ -45,7 +48,7 @@ describe('Buddy bridge layer 1', () => {
     const maxGas = 999999999999
     const gasPrice = 0
     const deployCode = '0x000000000000000000000000'
-    // await testBuddy.initiateBuddyDeploy(maxGas, gasPrice, deployCode)
+    await testBuddy.initiateBuddyDeploy(maxGas, gasPrice, deployCode)
 
     assert.notEqual(
       await testBuddy.l2Buddy(),
