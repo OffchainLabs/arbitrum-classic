@@ -181,9 +181,7 @@ jobs:
       - attach_workspace:
           at: /home/user/workspace
       - run:
-          command: |
-            mkdir packages/arb-avm-cpp/debug
-            cp -r /home/user/workspace/bin /home/user/project/packages/arb-avm-cpp/debug
+          command: cp -r /home/user/workspace/debug /home/user/project/packages/arb-avm-cpp/
           working_directory: /home/user/project
       - run:
           name: test arb-avm-cpp
@@ -215,7 +213,7 @@ jobs:
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
-            echo "export CGO_LDFLAGS='-lgcov --coverage'"" >> $BASH_ENV
+            echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
       - run:
           command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
