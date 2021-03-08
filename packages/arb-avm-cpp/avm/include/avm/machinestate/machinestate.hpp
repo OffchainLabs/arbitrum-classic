@@ -34,7 +34,7 @@ class MachineExecutionConfig;
 struct AssertionContext {
     std::vector<InboxMessage> inbox_messages;
     std::optional<uint256_t> next_block_height;
-    size_t inbox_messages_consumed{0};
+
     size_t messages_to_skip{0};
     uint256_t numSteps{0};
     uint256_t numGas{0};
@@ -47,6 +47,10 @@ struct AssertionContext {
     uint256_t max_gas;
     bool go_over_gas{false};
 
+   private:
+    size_t inbox_messages_consumed{0};
+
+   public:
     AssertionContext() = default;
 
     explicit AssertionContext(MachineExecutionConfig config);
@@ -131,7 +135,7 @@ struct MachineState {
 
     bool stagedMessageEmpty() const;
     bool stagedMessageUnresolved() const;
-    std::optional<uint256_t> getUnresolvedStagedMessageBlockHeight() const;
+    std::optional<uint256_t> getStagedMessageBlockHeight() const;
     std::optional<Tuple> getStagedMessageTuple() const;
     uint256_t getMessagesConsumed() const;
 

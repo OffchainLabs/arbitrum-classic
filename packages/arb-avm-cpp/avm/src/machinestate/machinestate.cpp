@@ -33,12 +33,12 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
       next_block_height(config.next_block_height),
-      inbox_messages_consumed(config.messages_to_skip),
       messages_to_skip(config.messages_to_skip),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
-      go_over_gas(config.go_over_gas) {}
+      go_over_gas(config.go_over_gas),
+      inbox_messages_consumed(config.messages_to_skip) {}
 
 MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
 
@@ -928,13 +928,18 @@ bool MachineState::stagedMessageUnresolved() const {
     return std::holds_alternative<uint256_t>(staged_message);
 }
 
-std::optional<uint256_t> MachineState::getUnresolvedStagedMessageBlockHeight()
-    const {
-    if (!stagedMessageUnresolved()) {
+std::optional<uint256_t> MachineState::getStagedMessageBlockHeight() const {
+    if (std::holds_alternative<uint256_t>(staged_message)) {
+        // Staged message is unresolved
+        return std::get<uint256_t>(staged_message);
+    }
+
+    if (!std::holds_alternative<InboxMessage>(staged_message)) {
+        // Staged message is empty
         return std::nullopt;
     }
 
-    return std::get<uint256_t>(staged_message);
+    return std::get<InboxMessage>(staged_message).block_number;
 }
 
 uint256_t MachineState::getMessagesConsumed() const {
