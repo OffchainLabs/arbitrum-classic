@@ -1299,7 +1299,7 @@ rocksdb::Status ArbCore::resolveStagedMessageInStateKeys(
     Transaction& tx,
     MachineStateKeys& machine_state_keys,
     uint256_t& inbox_acc) const {
-    auto sequence_number = machine_state_keys.fully_processed_inbox_accumulator;
+    auto sequence_number = machine_state_keys.fully_processed_messages;
     auto message_lookup = getMessageEntry(tx, sequence_number);
     if (!message_lookup.status.ok()) {
         // Unable to resolve cursor, no valid message found
