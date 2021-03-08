@@ -71,6 +71,7 @@ Assertion Machine::continueRunning() {
 Assertion Machine::runImpl() {
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
+    uint256_t initialConsumed = machine_state.getMessagesConsumed();
     while (true) {
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
@@ -97,8 +98,8 @@ Assertion Machine::runImpl() {
     }
     return {intx::narrow_cast<uint64_t>(machine_state.context.numSteps),
             intx::narrow_cast<uint64_t>(machine_state.context.numGas),
-            machine_state.context.inbox_messages_consumed -
-                machine_state.context.messages_to_skip,
+            intx::narrow_cast<uint64_t>(machine_state.getMessagesConsumed() -
+                                        initialConsumed),
             std::move(machine_state.context.sends),
             std::move(machine_state.context.logs),
             std::move(machine_state.context.debug_prints),
