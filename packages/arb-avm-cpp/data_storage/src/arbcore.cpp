@@ -1359,7 +1359,7 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
 
         if (!is_for_sideload) {
             auto resolve_status = resolveStagedMessageInStateKeys(
-                tx, execution_cursor.machine_state_keys,
+                tx, checkpoint_result.data.machine_state_keys,
                 checkpoint_result.data.inbox_acc);
             if (!resolve_status.ok()) {
                 // Unable to resolve staged_message, try earlier checkpoint
@@ -1375,8 +1375,10 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
         // Update execution_cursor with checkpoint
         execution_cursor.resetCheckpoint();
         execution_cursor.setCheckpoint(checkpoint_result.data);
+        execution_cursor.machine_state_keys =
+            checkpoint_result.data.machine_state_keys;
         execution_cursor.machine = getMachineUsingStateKeys<Machine>(
-            tx, execution_cursor.machine_state_keys, cache);
+            tx, checkpoint_result.data.machine_state_keys, cache);
 
         return rocksdb::Status::OK();
     }
