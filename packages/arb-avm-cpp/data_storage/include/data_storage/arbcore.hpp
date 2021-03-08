@@ -333,6 +333,10 @@ class ArbCore {
                                                     uint256_t count);
     ValueResult<uint256_t> logsCursorGetCurrentTotalCount(Transaction& tx,
                                                           size_t cursor_index);
+    rocksdb::Status resolveStagedMessageInStateKeys(
+        Transaction& tx,
+        MachineStateKeys& machine_state_keys,
+        uint256_t& inbox_acc) const;
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(Transaction& tx,

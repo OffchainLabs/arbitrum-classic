@@ -1295,6 +1295,23 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
     return rocksdb::Status::OK();
 }
 
+rocksdb::Status ArbCore::resolveStagedMessageInStateKeys(
+    Transaction& tx,
+    MachineStateKeys& machine_state_keys,
+    uint256_t& inbox_acc) const {
+    auto sequence_number = machine_state_keys.fully_processed_inbox_accumulator;
+    auto message_lookup = getMessageEntry(tx, sequence_number);
+    if (!message_lookup.status.ok()) {
+        // Unable to resolve cursor, no valid message found
+        return message_lookup.status;
+    }
+    inbox_acc = message_lookup.data.inbox_acc;
+    machine_state_keys.staged_message =
+        extractInboxMessage(message_lookup.data.data);
+
+    return rocksdb::Status::OK();
+}
+
 rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                                               ExecutionCursor& execution_cursor,
                                               const uint256_t& gas_used,
@@ -1338,15 +1355,9 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
             }
         }
 
-        // Update execution_cursor with checkpoint
-        execution_cursor.resetCheckpoint();
-        execution_cursor.setCheckpoint(checkpoint_result.data);
-        execution_cursor.machine = getMachineUsingStateKeys<Machine>(
-            tx, execution_cursor.machine_state_keys, cache);
-
         if (!is_for_sideload) {
-            auto resolve_status = resolveStagedMessage(
-                tx, execution_cursor.machine->machine_state,
+            auto resolve_status = resolveStagedMessageInStateKeys(
+                tx, execution_cursor.machine_state_keys,
                 checkpoint_result.data.inbox_acc);
             if (!resolve_status.ok()) {
                 // Unable to resolve staged_message, try earlier checkpoint
@@ -1358,6 +1369,12 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
                 continue;
             }
         }
+
+        // Update execution_cursor with checkpoint
+        execution_cursor.resetCheckpoint();
+        execution_cursor.setCheckpoint(checkpoint_result.data);
+        execution_cursor.machine = getMachineUsingStateKeys<Machine>(
+            tx, execution_cursor.machine_state_keys, cache);
 
         return rocksdb::Status::OK();
     }
