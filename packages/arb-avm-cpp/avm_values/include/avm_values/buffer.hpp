@@ -312,6 +312,7 @@ class Buffer {
 
 inline uint256_t hash(const Buffer& b) {
     return hash(b.maxAccess, b.hash());
+    // return hash(123, b.hash());
 }
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {

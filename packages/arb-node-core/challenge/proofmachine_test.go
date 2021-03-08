@@ -213,7 +213,7 @@ func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestco
 				t.Fatal("wrong message")
 			}
 			if machineData.Fields[1] != proof.AfterCut.MachineState {
-				t.Fatalf("wrong after machine 0x%x 0x%x", machineData.Fields[1][:], proof.AfterCut.MachineState[:])
+				t.Fatalf("wrong after machine 0x%x expected 0x%x", machineData.Fields[1][:], proof.AfterCut.MachineState[:])
 			}
 		})
 	}
