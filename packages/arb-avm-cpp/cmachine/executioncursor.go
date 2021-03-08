@@ -144,8 +144,8 @@ func (ec *ExecutionCursor) updateValues() error {
 	return nil
 }
 
-func (ec *ExecutionCursor) MachineHash() common.Hash {
-	return ec.machineHash
+func (ec *ExecutionCursor) MachineHash() (common.Hash, error) {
+	return ec.machineHash, nil
 }
 
 func (ec *ExecutionCursor) InboxAcc() common.Hash {

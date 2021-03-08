@@ -155,7 +155,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	if err != nil {
 		return nil, false, err
 	}
-	if cursor.MachineHash() != startState.MachineHash {
+	cursorHash, err := cursor.MachineHash()
+	if err != nil {
+		return nil, false, err
+	}
+	if cursorHash != startState.MachineHash {
 		if cursor.TotalMessagesRead().Cmp(startState.TotalMessagesRead) < 0 {
 			return nil, false, errors.New("catching up to chain")
 		}

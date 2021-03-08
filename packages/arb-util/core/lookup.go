@@ -41,7 +41,7 @@ const (
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
-	MachineHash() common.Hash
+	MachineHash() (common.Hash, error)
 	TotalMessagesRead() *big.Int
 	InboxAcc() common.Hash
 	SendAcc() common.Hash
@@ -196,8 +196,12 @@ type ExecutionState struct {
 }
 
 func NewExecutionState(c ExecutionCursor) *ExecutionState {
+	hash, err := c.MachineHash()
+	if err != nil {
+		panic("Unable to compute hash for execution state")
+	}
 	return &ExecutionState{
-		MachineHash:       c.MachineHash(),
+		MachineHash:       hash,
 		InboxAcc:          c.InboxAcc(),
 		TotalMessagesRead: c.TotalMessagesRead(),
 		TotalGasConsumed:  c.TotalGasConsumed(),
