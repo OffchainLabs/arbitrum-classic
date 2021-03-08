@@ -36,26 +36,23 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db cor
 	}, nil
 }
 
-func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
-	errChan := make(chan error, 1)
+func (ir *InboxReader) Start(parentCtx context.Context) {
 	ctx, cancelFunc := context.WithCancel(parentCtx)
 	go func() {
 		defer func() {
 			ir.completed <- true
-			close(errChan)
 		}()
 		for {
 			err := ir.getMessages(ctx)
 			if err == nil {
 				break
 			}
-			errChan <- err
-			<-time.After(time.Second * 5)
+			logger.Warn().Stack().Err(err).Msg("Failed to read inbox messages")
+			<-time.After(time.Second * 2)
 		}
 	}()
 	ir.cancelFunc = cancelFunc
 	ir.running = true
-	return errChan
 }
 
 func (ir *InboxReader) Stop() {
