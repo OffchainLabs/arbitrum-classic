@@ -46,7 +46,7 @@ CodePointStub extractCodePointStub(iterator& iter) {
 }
 
 void serializeStagedVariant(staged_variant message,
-                            std::vector<unsigned char> state_data_vector) {
+                            std::vector<unsigned char>& state_data_vector) {
     uint256_t next_block_height = 0;
     uint8_t inbox_message_present = 0;
 
