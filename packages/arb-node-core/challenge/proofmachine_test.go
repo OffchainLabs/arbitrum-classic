@@ -40,7 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -69,9 +68,9 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 	}
 
 	maxSteps := uint64(100000)
-	db := core.NewValidatorLookupMock(mach)
+	messages := make([]inbox.InboxMessage, 0)
 	for i := 0; i < 100; i++ {
-		db.AddMessage(inbox.NewRandomInboxMessage())
+		messages = append(messages, inbox.NewRandomInboxMessage())
 	}
 
 	hash, err := mach.Hash()
@@ -100,10 +99,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return nil, nil, err
 		}
 
-		messages, err := db.GetMessages(big.NewInt(0), big.NewInt(1))
-		if err != nil {
-			return nil, nil, err
-		}
+		messages := messages[:1]
 
 		a, _, ranSteps := mach.ExecuteAssertionAdvanced(
 			1,
