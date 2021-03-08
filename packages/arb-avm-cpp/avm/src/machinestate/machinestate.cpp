@@ -430,9 +430,8 @@ OneStepProof MachineState::marshalForProof() const {
     }
     // Inbox or inbox peek with no staged message
     if ((current_op.opcode == OpCode::INBOX ||
-         current_op.opcode == OpCode::INBOX_PEEK)) {
-    }
-    if (stagedMessageEmpty()) {
+         current_op.opcode == OpCode::INBOX_PEEK) &&
+        stagedMessageEmpty()) {
         if (context.inboxEmpty()) {
             throw std::runtime_error("Can't generate proof with empty inbox");
         }
