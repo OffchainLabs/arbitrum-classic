@@ -156,8 +156,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 	if cursor.MachineHash() != startState.MachineHash {
-		msgCount, err := v.lookup.GetMessageCount()
-		if err == nil && msgCount.Cmp(startState.TotalMessagesRead) < 0 {
+		if cursor.TotalMessagesRead().Cmp(startState.TotalMessagesRead) < 0 {
 			return nil, false, errors.New("catching up to chain")
 		}
 		return nil, false, errors.New("local machine doesn't match chain")
