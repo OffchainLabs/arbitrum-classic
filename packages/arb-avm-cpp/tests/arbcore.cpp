@@ -271,4 +271,12 @@ TEST_CASE("ArbCore inbox") {
         INFO("RUN " << i);
         runCheckArbCore(arbCore, raw_messages, 0, 1, true);
     }
+    auto tx = arbCore->makeTransaction();
+    auto position = arbCore->getSideloadPosition(*tx, 2);
+    REQUIRE(position.status.ok());
+
+    auto cursor = arbCore->getExecutionCursor(position.data, value_cache);
+    REQUIRE(cursor.status.ok());
+    REQUIRE(cursor.data->arb_gas_used > 0);
+    REQUIRE(cursor.data->arb_gas_used <= position.data);
 }

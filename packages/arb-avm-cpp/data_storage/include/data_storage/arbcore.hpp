@@ -320,12 +320,14 @@ class ArbCore {
         const uint256_t& block_number,
         ValueCache& cache);
 
+    ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
+                                               const uint256_t& block_number);
+
    private:
     // Private sideload interaction
     rocksdb::Status saveSideloadPosition(Transaction& tx,
                                          const uint256_t& block_number);
-    ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
-                                               const uint256_t& block_number);
+
     rocksdb::Status deleteSideloadsStartingAt(Transaction& tx,
                                               const uint256_t& block_number);
     rocksdb::Status logsCursorSaveCurrentTotalCount(Transaction& tx,
