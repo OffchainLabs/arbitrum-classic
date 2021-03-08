@@ -187,6 +187,10 @@ DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
     return delete_results;
 }
 
+bool MachineStateKeys::stagedMessageUnresolved() const {
+    return std::holds_alternative<uint256_t>(staged_message);
+}
+
 DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
                                                uint256_t machineHash) {
     std::vector<unsigned char> checkpoint_name;

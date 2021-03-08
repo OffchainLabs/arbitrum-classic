@@ -70,6 +70,7 @@ struct MachineStateKeys {
           fully_processed_inbox_accumulator(fully_processed_inbox_accumulator_),
           staged_message(std::move(staged_message_)),
           status(status_) {}
+    bool stagedMessageUnresolved() const;
 };
 
 DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
