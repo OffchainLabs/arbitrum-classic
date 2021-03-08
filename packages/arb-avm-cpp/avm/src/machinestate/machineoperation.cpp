@@ -1108,7 +1108,7 @@ uint64_t setbuffer_variable_gas_cost(MachineState const& m, uint64_t inc) {
     }
 
     // return static_cast<uint64_t>(offset);
-    auto mx = std::max(buf->maxAccess, static_cast<uint64_t>(*offset));
+    auto mx = std::max(buf->maxAccess, static_cast<uint64_t>(*offset+inc));
     uint64_t res = 0;
     mx = mx/1024;
     while (mx > 0) {
