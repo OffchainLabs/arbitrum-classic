@@ -24,7 +24,13 @@ import { Challenge } from '../build/types/Challenge'
 import { Bridge } from '../build/types/Bridge'
 import { initializeAccounts } from './utils'
 
-import { Node, NodeState, Assertion, RollupContract } from './rolluplib'
+import {
+  Node,
+  ExecutionState,
+  NodeState,
+  Assertion,
+  RollupContract,
+} from './rolluplib'
 
 const initialVmState =
   '0x9900000000000000000000000000000000000000000000000000000000000000'
@@ -47,11 +53,16 @@ describe('Challenge', () => {
     const osp2 = await OneStepProof2.deploy()
     await osp2.deployed()
 
+    const OneStepProof3 = await ethers.getContractFactory('OneStepProofHash')
+    const osp3 = await OneStepProof3.deploy()
+    await osp3.deployed()
+
     const ChallengeTester = await ethers.getContractFactory('ChallengeTester')
-    challengeTester = (await ChallengeTester.deploy(
+    challengeTester = (await ChallengeTester.deploy([
       osp.address,
-      osp2.address
-    )) as ChallengeTester
+      osp2.address,
+      osp3.address,
+    ])) as ChallengeTester
     await challengeTester.deployed()
 
     const Bridge = await ethers.getContractFactory('Bridge')
@@ -63,15 +74,13 @@ describe('Challenge', () => {
   let challengedNode: Node
   it('should initiate challenge', async function () {
     const block = await ethers.provider.getBlock('latest')
+
     const prevNodeState = new NodeState(
+      new ExecutionState(0, initialVmState, 0, 0, 0, zerobytes32, zerobytes32),
       block.number,
-      0,
-      initialVmState,
-      0,
-      0,
-      0,
       1
     )
+
     const assertion = new Assertion(
       prevNodeState,
       10000000,
@@ -80,10 +89,10 @@ describe('Challenge', () => {
       [],
       []
     )
-    challengedNode = new Node(assertion, 10, 0)
+    challengedNode = new Node(assertion, 10, 0, zerobytes32)
     await challengeTester.startChallenge(
-      challengedNode.assertion.executionHash(),
-      challengedNode.assertion.afterMessageCount(),
+      challengedNode.executionHash(),
+      challengedNode.afterState.execState.inboxCount,
       await accounts[0].getAddress(),
       await accounts[1].getAddress(),
       100,
@@ -97,7 +106,7 @@ describe('Challenge', () => {
 
   it('should bisect execution', async function () {
     const chunks = Array(401).fill(
-      challengedNode.assertion.startAssertionHash()
+      challengedNode.beforeState.execState.challengeHash()
     )
     const tx = await challenge
       .connect(accounts[1])
@@ -105,10 +114,10 @@ describe('Challenge', () => {
         [],
         0,
         0,
-        challengedNode.assertion.gasUsed,
-        challengedNode.assertion.endAssertionHash(),
+        challengedNode.gasUsed(),
+        challengedNode.afterState.execState.challengeHash(),
         0,
-        challengedNode.assertion.startAssertionRestHash(),
+        challengedNode.beforeState.execState.challengeRestHash(),
         chunks
       )
     const receipt = await tx.wait()

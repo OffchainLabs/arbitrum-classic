@@ -33,14 +33,13 @@ contract Outbox is CloneFactory, IOutbox {
 
     bytes1 internal constant MSG_ROOT = 0;
 
-    uint256 internal constant SendType_sendTxToL1 = 0;
-    uint256 internal constant SendType_buddyContractResult = 5;
+    uint8 internal constant SendType_sendTxToL1 = 3;
 
     address rollup;
     IBridge bridge;
 
     ICloneable outboxEntryTemplate;
-    OutboxEntry[] outboxes;
+    OutboxEntry[] public outboxes;
 
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
@@ -91,6 +90,7 @@ contract Outbox is CloneFactory, IOutbox {
     function handleOutgoingMessage(bytes memory data) private {
         // Otherwise we have an unsupported message type and we skip the message
         if (data[0] == MSG_ROOT) {
+            require(data.length == 97, "BAD_LENGTH");
             uint256 batchNum = data.toUint(1);
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
@@ -149,31 +149,6 @@ contract Outbox is CloneFactory, IOutbox {
         _timestamp = currentTimestamp;
     }
 
-    function executeBuddyContractReceipt(
-        uint256 outboxIndex,
-        bytes32[] calldata proof,
-        uint256 index,
-        address l2Contract,
-        bool createdSuccessfully
-    ) external {
-        bytes32 userTx =
-            keccak256(
-                abi.encodePacked(
-                    SendType_buddyContractResult,
-                    uint256(uint160(bytes20(l2Contract))),
-                    createdSuccessfully
-                )
-            );
-
-        spendOutput(outboxIndex, proof, index, userTx);
-
-        executeBridgeSystemCall(
-            l2Contract,
-            0,
-            abi.encodeWithSignature("buddyContractResult(bool)", createdSuccessfully)
-        );
-    }
-
     function spendOutput(
         uint256 outboxIndex,
         bytes32[] memory proof,
@@ -196,11 +171,15 @@ contract Outbox is CloneFactory, IOutbox {
         executeBridgeSystemCall(
             address(outbox),
             0,
-            abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, uniqueKey)
+            abi.encodeWithSelector(OutboxEntry.spendOutput.selector, calcRoot, uniqueKey)
         );
 
         if (outbox.numRemaining() == 0) {
-            executeBridgeSystemCall(address(outbox), 0, abi.encodeWithSignature("destroy()"));
+            executeBridgeSystemCall(
+                address(outbox),
+                0,
+                abi.encodeWithSelector(OutboxEntry.destroy.selector)
+            );
             outboxes[outboxIndex] = OutboxEntry(address(0));
         }
     }

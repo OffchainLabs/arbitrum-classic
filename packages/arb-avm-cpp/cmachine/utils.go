@@ -65,10 +65,13 @@ func receiveByteSliceArray(sliceArray C.ByteSliceArray) [][]byte {
 }
 
 func toByteSliceView(data []byte) C.ByteSlice {
-	return C.struct_ByteSliceStruct{data: unsafeDataPointer(data), length: C.int(len(data))}
+	return C.struct_ByteSliceStruct{data: C.CBytes(data), length: C.int(len(data))}
 }
 
 func toByteSliceArrayView(slices []C.ByteSlice) C.ByteSliceArray {
+	if len(slices) == 0 {
+		return C.struct_ByteSliceArrayStruct{slices: nil, count: 0}
+	}
 	return C.struct_ByteSliceArrayStruct{slices: unsafe.Pointer(&slices[0]), count: C.int(len(slices))}
 }
 

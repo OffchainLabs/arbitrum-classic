@@ -27,7 +27,7 @@ var (
 )
 
 // FailedSendABI is the input ABI used to generate the binding from.
-const FailedSendABI = "[{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"send\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawFunds\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const FailedSendABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawFunds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // FailedSendFuncSigs maps the 4-byte function signature to its string representation.
 var FailedSendFuncSigs = map[string]string{
@@ -36,7 +36,7 @@ var FailedSendFuncSigs = map[string]string{
 }
 
 // FailedSendBin is the compiled bytecode used for deploying new contracts.
-var FailedSendBin = "0x608060405234801561001057600080fd5b506101c1806100206000396000f3fe6080604052600436106100295760003560e01c80633e58c58c1461002e57806368742da614610056575b600080fd5b6100546004803603602081101561004457600080fd5b50356001600160a01b0316610089565b005b34801561006257600080fd5b506100546004803603602081101561007957600080fd5b50356001600160a01b0316610125565b6040805163343a16d360e11b81526001600160a01b0383166004820152905130916368742da691602480830192600092919082900301818387803b1580156100d057600080fd5b505af11580156100e4573d6000803e3d6000fd5b505050506040805162461bcd60e51b815260206004820152600d60248201526c666f726365206661696c75726560981b604482015290519081900360640190fd5b604080516325e1606360e01b81526001600160a01b038316600482015290516064916325e1606391479160248082019260009290919082900301818588803b15801561017057600080fd5b505af1158015610184573d6000803e3d6000fd5b50505050505056fea265627a7a723158206a56a9760cf1cf43049cfaf6f066190e6987cb4ad4c0ceec2243edf54896c44564736f6c63430005110032"
+var FailedSendBin = "0x608060405234801561001057600080fd5b506101c7806100206000396000f3fe6080604052600436106100295760003560e01c80633e58c58c1461002e57806368742da614610056575b600080fd5b6100546004803603602081101561004457600080fd5b50356001600160a01b0316610089565b005b34801561006257600080fd5b506100546004803603602081101561007957600080fd5b50356001600160a01b0316610125565b6040805163343a16d360e11b81526001600160a01b0383166004820152905130916368742da691602480830192600092919082900301818387803b1580156100d057600080fd5b505af11580156100e4573d6000803e3d6000fd5b505050506040805162461bcd60e51b815260206004820152600d60248201526c666f726365206661696c75726560981b604482015290519081900360640190fd5b60646001600160a01b03166325e1606347836040518363ffffffff1660e01b815260040180826001600160a01b031681526020019150506000604051808303818588803b15801561017557600080fd5b505af1158015610189573d6000803e3d6000fd5b50505050505056fea264697066735822122044178fdeee557751148d0f3a7d757bd6219ecb5e0043bcee1ef78336d14b2e6d64736f6c634300060c0033"
 
 // DeployFailedSend deploys a new Ethereum contract, binding an instance of FailedSend to it.
 func DeployFailedSend(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *FailedSend, error) {
@@ -237,7 +237,7 @@ func (_FailedSend *FailedSendTransactorSession) WithdrawFunds(dest common.Addres
 }
 
 // IFailedSendABI is the input ABI used to generate the binding from.
-const IFailedSendABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawFunds\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IFailedSendABI = "[{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawFunds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IFailedSendFuncSigs maps the 4-byte function signature to its string representation.
 var IFailedSendFuncSigs = map[string]string{
@@ -408,7 +408,7 @@ func (_IFailedSend *IFailedSendTransactorSession) WithdrawFunds(dest common.Addr
 }
 
 // SysABI is the input ABI used to generate the binding from.
-const SysABI = "[{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const SysABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // SysFuncSigs maps the 4-byte function signature to its string representation.
 var SysFuncSigs = map[string]string{

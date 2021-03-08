@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -112,47 +112,47 @@ func checkValidResult(res *evm.TxResult) error {
 }
 
 func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
-	res, err := s.BasicCall(GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(arbos.GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return ParseBalanceResult(res)
+	return arbos.ParseBalanceResult(res)
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
-	res, err := s.BasicCall(TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(arbos.TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return ParseTransactionCountResult(res)
+	return arbos.ParseTransactionCountResult(res)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
-	res, err := s.BasicCall(getCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(arbos.GetCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseCodeResult(res)
+	return arbos.ParseCodeResult(res)
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	res, err := s.BasicCall(StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(arbos.StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseGetStorageAtResult(res)
+	return arbos.ParseGetStorageAtResult(res)
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {

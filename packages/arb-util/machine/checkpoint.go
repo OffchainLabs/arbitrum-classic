@@ -27,7 +27,10 @@ type ArbStorage interface {
 	Initialized() bool
 	CloseArbStorage() bool
 	GetInitialMachine() (Machine, error)
+
 	GetMachine(machineHash common.Hash) (Machine, error)
+
+	GetNodeStore() NodeStore
 }
 
 type ValueNotFoundError struct {

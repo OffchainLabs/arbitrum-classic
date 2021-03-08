@@ -10,7 +10,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
 type ConfirmType uint8
@@ -32,6 +31,8 @@ const (
 
 type ValidatorUtils struct {
 	con           *ethbridgecontracts.ValidatorUtils
+	client        ethutils.EthClient
+	address       ethcommon.Address
 	rollupAddress ethcommon.Address
 }
 
@@ -43,6 +44,8 @@ func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils
 
 	return &ValidatorUtils{
 		con:           con,
+		client:        client,
+		address:       address,
 		rollupAddress: rollupAddress,
 	}, nil
 }
@@ -73,7 +76,9 @@ func (v *ValidatorUtils) TimedOutChallenges(ctx context.Context, max int) ([]com
 		}
 		i = i.Add(i, count)
 	}
-	addresses = addresses[:max]
+	if len(addresses) > max {
+		addresses = addresses[:max]
+	}
 	return common.AddressArrayFromEth(addresses), nil
 }
 
@@ -115,19 +120,15 @@ func (v *ValidatorUtils) StakedNodes(ctx context.Context, staker common.Address)
 	return v.con.StakedNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
 }
 
-func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmType, core.NodeID, common.Address, error) {
-	confirmType, successorWithStake, stakerAddress, err := v.con.CheckDecidableNextNode(
+func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmType, error) {
+	confirmType, err := v.con.CheckDecidableNextNode(
 		&bind.CallOpts{Context: ctx},
 		v.rollupAddress,
-		big.NewInt(0),
-		math.MaxBig256,
-		big.NewInt(0),
-		math.MaxBig256,
 	)
 	if err != nil {
-		return CONFIRM_TYPE_NONE, nil, common.Address{}, err
+		return CONFIRM_TYPE_NONE, err
 	}
-	return ConfirmType(confirmType), successorWithStake, common.NewAddressFromEth(stakerAddress), nil
+	return ConfirmType(confirmType), nil
 }
 
 func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker1, staker2 common.Address) (ConflictType, *big.Int, *big.Int, error) {

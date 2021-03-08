@@ -22,13 +22,6 @@ import "./IBridge.sol";
 import "./IMessageProvider.sol";
 
 interface IInbox is IMessageProvider {
-    function deployL2ContractPair(
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        uint256 payment,
-        bytes calldata contractData
-    ) external;
-
     function sendL2Message(bytes calldata messageData) external;
 
     function sendUnsignedTransaction(

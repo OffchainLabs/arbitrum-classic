@@ -27,7 +27,7 @@ var (
 )
 
 // StorageABI is the input ABI used to generate the binding from.
-const StorageABI = "[{\"inputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"constant\":false,\"inputs\":[],\"name\":\"failGetStorage\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const StorageABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"failGetStorage\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // StorageFuncSigs maps the 4-byte function signature to its string representation.
 var StorageFuncSigs = map[string]string{
@@ -35,7 +35,7 @@ var StorageFuncSigs = map[string]string{
 }
 
 // StorageBin is the compiled bytecode used for deploying new contracts.
-var StorageBin = "0x608060405234801561001057600080fd5b5061303960015560f1806100256000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063188f913914602d575b600080fd5b60336045565b60408051918252519081900360200190f35b6040805163a169625f60e01b815230600482015260016024820152905160009160649163a169625f91604480820192602092909190829003018186803b158015608d57600080fd5b505afa15801560a0573d6000803e3d6000fd5b505050506040513d602081101560b557600080fd5b505190509056fea265627a7a72315820f8a576c0fe5baea1c340e9aaaaf8b899c1aaf1e0f071b4ac1b72fc4e58ec378464736f6c63430005110032"
+var StorageBin = "0x608060405234801561001057600080fd5b5061303960015560f2806100256000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063188f913914602d575b600080fd5b60336045565b60408051918252519081900360200190f35b6040805163a169625f60e01b815230600482015260016024820152905160009160649163a169625f91604480820192602092909190829003018186803b158015608d57600080fd5b505afa15801560a0573d6000803e3d6000fd5b505050506040513d602081101560b557600080fd5b505190509056fea2646970667358221220a67a8209534ea581ed7713550e703740681f0a77f4d4d3c6592bb7376261492064736f6c634300060c0033"
 
 // DeployStorage deploys a new Ethereum contract, binding an instance of Storage to it.
 func DeployStorage(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Storage, error) {
@@ -215,7 +215,7 @@ func (_Storage *StorageTransactorSession) FailGetStorage() (*types.Transaction, 
 }
 
 // Sys2ABI is the input ABI used to generate the binding from.
-const Sys2ABI = "[{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const Sys2ABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // Sys2FuncSigs maps the 4-byte function signature to its string representation.
 var Sys2FuncSigs = map[string]string{

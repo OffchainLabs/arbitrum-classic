@@ -144,33 +144,15 @@ func initializeChallengeData(
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
-		ProposedBlock: big.NewInt(0),
-		InboxMaxCount: inboxMaxCount,
-		ExecutionState: &core.ExecutionState{
-			MachineHash:       cursor.MachineHash(),
-			TotalMessagesRead: cursor.TotalMessagesRead(),
-			TotalGasConsumed:  cursor.TotalGasConsumed(),
-			TotalSendCount:    cursor.TotalSendCount(),
-			TotalLogCount:     cursor.TotalLogCount(),
-		},
+		ProposedBlock:  big.NewInt(0),
+		InboxMaxCount:  inboxMaxCount,
+		ExecutionState: core.NewExecutionState(cursor),
 	}
 
 	lookup.AdvanceExecutionCursor(cursor, endGas, true)
 	assertion := &core.Assertion{
-		PrevProposedBlock: prevState.ProposedBlock,
-		PrevInboxMaxCount: prevState.InboxMaxCount,
-		ExecutionInfo: &core.ExecutionInfo{
-			Before: prevState.ExecutionState,
-			After: &core.ExecutionState{
-				MachineHash:       cursor.MachineHash(),
-				TotalMessagesRead: cursor.TotalMessagesRead(),
-				TotalGasConsumed:  cursor.TotalGasConsumed(),
-				TotalSendCount:    cursor.TotalSendCount(),
-				TotalLogCount:     cursor.TotalLogCount(),
-			},
-			SendAcc: common.Hash{},
-			LogAcc:  common.Hash{},
-		},
+		Before: prevState.ExecutionState,
+		After:  core.NewExecutionState(cursor),
 	}
 
 	return &core.NodeInfo{

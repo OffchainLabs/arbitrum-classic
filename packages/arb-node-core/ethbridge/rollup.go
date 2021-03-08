@@ -40,19 +40,19 @@ func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *Bu
 	}, nil
 }
 
-func (r *Rollup) RejectNextNode(ctx context.Context, node *big.Int, staker common.Address) error {
-	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), node, staker.ToEthAddress())
+func (r *Rollup) RejectNextNode(ctx context.Context, staker common.Address) error {
+	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), staker.ToEthAddress())
 	return err
 }
 
-func (r *Rollup) ConfirmNextNode(ctx context.Context, logAcc common.Hash, sends [][]byte) error {
+func (r *Rollup) ConfirmNextNode(ctx context.Context, logAcc common.Hash, beforeSendAcc common.Hash, sends [][]byte) error {
 	var sendsData []byte
 	sendLengths := make([]*big.Int, 0, len(sends))
 	for _, msg := range sends {
 		sendsData = append(sendsData, msg...)
 		sendLengths = append(sendLengths, new(big.Int).SetInt64(int64(len(msg))))
 	}
-	_, err := r.builderCon.ConfirmNextNode(authWithContext(ctx, r.builderAuth), logAcc, sendsData, sendLengths)
+	_, err := r.builderCon.ConfirmNextNode(authWithContext(ctx, r.builderAuth), logAcc, beforeSendAcc, sendsData, sendLengths)
 	return err
 }
 
@@ -84,12 +84,16 @@ func (r *Rollup) StakeOnNewNode(
 	ctx context.Context,
 	nodeHash [32]byte,
 	assertion *core.Assertion,
+	prevProposedBlock *big.Int,
+	prevInboxMaxCount *big.Int,
 ) error {
 	_, err := r.builderCon.StakeOnNewNode(
 		authWithContext(ctx, r.builderAuth),
 		nodeHash,
 		assertion.BytesFields(),
 		assertion.IntFields(),
+		prevProposedBlock,
+		prevInboxMaxCount,
 	)
 	return err
 }

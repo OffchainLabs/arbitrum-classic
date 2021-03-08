@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
 #include "../cavm/carbstorage.h"
 #include "../cavm/cvaluecache.h"
 #include <stdio.h>
@@ -113,7 +113,7 @@ func (s *ArbStorage) GetArbCore() core.ArbCore {
 	return NewArbCore(ac, s)
 }
 
-func (s *ArbStorage) GetAggregatorStore() machine.AggregatorStore {
+func (s *ArbStorage) GetNodeStore() machine.NodeStore {
 	as := C.createAggregatorStore(s.c)
-	return NewAggregatorStore(as)
+	return NewNodeStore(as)
 }

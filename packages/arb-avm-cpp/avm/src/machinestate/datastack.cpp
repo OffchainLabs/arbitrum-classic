@@ -63,7 +63,7 @@ DataStackProof Datastack::marshalForProof(
         auto index = val.size() - 1 - i;
         // Only marshal a stub if we are underflowing
         auto level = underflow ? MarshalLevel::STUB : stackInfo[index];
-        ::marshalForProof(values[index], level, buf, code);
+        ::marshalForProof(val[index], level, buf, code);
     }
 
     return {c.getHashPreImage(), std::move(buf), items_to_pop};

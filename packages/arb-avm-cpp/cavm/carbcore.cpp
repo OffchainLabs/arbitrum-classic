@@ -66,7 +66,7 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
 
     try {
         auto status =
-            arb_core->deliverMessages(messages, previous_inbox_acc,
+            arb_core->deliverMessages(std::move(messages), previous_inbox_acc,
                                       last_block_complete, reorg_message_count);
         return status;
     } catch (const std::exception& e) {

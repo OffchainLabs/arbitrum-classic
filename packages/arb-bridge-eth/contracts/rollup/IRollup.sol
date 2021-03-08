@@ -28,8 +28,8 @@ interface IRollup {
         bytes32 executionHash,
         uint256 inboxMaxCount,
         bytes32 afterInboxAcc,
-        bytes32[4] assertionBytes32Fields,
-        uint256[10] assertionIntFields
+        bytes32[3][2] assertionBytes32Fields,
+        uint256[4][2] assertionIntFields
     );
 
     event RollupChallengeStarted(

@@ -33,19 +33,24 @@ class AggregatorStore {
    public:
     explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_);
 
-    uint64_t blockCount() const;
-    void saveBlock(uint64_t height, const std::vector<char>& data);
-    std::vector<char> getBlock(uint64_t height) const;
+    [[nodiscard]] uint64_t blockCount() const;
+    void saveBlock(uint64_t height,
+                   const uint256_t& block_hash,
+                   const std::vector<uint256_t>& requests,
+                   const uint64_t* log_indexes,
+                   const std::vector<char>& data);
+    [[nodiscard]] std::vector<char> getBlock(uint64_t height) const;
 
-    std::optional<uint64_t> getPossibleRequestInfo(
+    [[nodiscard]] std::optional<uint64_t> getPossibleRequestInfo(
         const uint256_t& request_id) const;
-    void saveRequest(const uint256_t& request_id, uint64_t log_index);
-    std::optional<uint64_t> getPossibleBlock(const uint256_t& block_hash) const;
-    void saveBlockHash(const uint256_t& block_hash, uint64_t block_height);
+    [[nodiscard]] std::optional<uint64_t> getPossibleBlock(
+        const uint256_t& block_hash) const;
 
     void reorg(uint64_t block_height);
-    ValueResult<uint256_t> logsProcessedCount() const;
+    [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
     void updateLogsProcessedCount(const uint256_t& count);
+    void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
+    std::optional<uint64_t> getMessageBatch(const uint256_t& batchNum);
 };
 
 #endif /* aggregator_hpp */

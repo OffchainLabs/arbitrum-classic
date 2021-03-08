@@ -17,8 +17,8 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"math/big"
 	"testing"
 
@@ -86,7 +86,7 @@ func TestWithdrawEth(t *testing.T) {
 	if len(txRes.EVMLogs) != 1 {
 		t.Fatal("unexpected log count")
 	}
-	ev, err := snapshot.ParseEthWithdrawalEvent(txRes.EVMLogs[0])
+	ev, err := arbos.ParseEthWithdrawalEvent(txRes.EVMLogs[0])
 	failIfError(t, err)
 	if ev.Amount.Cmp(withdrawValue) != 0 {
 		t.Error("unexpected withdrawal value")

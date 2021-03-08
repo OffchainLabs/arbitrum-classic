@@ -31,7 +31,7 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runExecutionTest(t, []inbox.InboxMessage{}, big.NewInt(0), big.NewInt(200000), FaultConfig{DistortMachineAtGas: big.NewInt(100000)}, false)
+	runExecutionTest(t, []inbox.InboxMessage{}, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
 }
 
 func makeInitMsg() inbox.InboxMessage {

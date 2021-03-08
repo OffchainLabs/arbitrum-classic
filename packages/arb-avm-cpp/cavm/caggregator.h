@@ -52,26 +52,27 @@ typedef struct CRequestInfoStruct CRequestInfo;
 void deleteAggregatorStore(CAggregatorStore* m);
 
 Uint64Result aggregatorBlockCount(const CAggregatorStore* agg);
-int aggregatorSaveBlock(CAggregatorStore* agg,
+int aggregatorSaveMessageBatch(CAggregatorStore* agg_ptr,
+                               const void* batch_num_ptr,
+                               uint64_t log_index);
+Uint64Result aggregatorGetMessageBatch(CAggregatorStore* agg_ptr,
+                                       const void* batch_num_ptr);
+int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
                         uint64_t height,
-                        const void* data,
-                        int data_length);
+                        const void* block_hash,
+                        ByteSliceArray requests_data,
+                        const uint64_t* log_indexes,
+                        const void* block_data,
+                        int block_data_length);
 CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height);
 int aggregatorReorg(CAggregatorStore* agg, uint64_t block_height);
 
 // request_id is 32 bytes long
 Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
                                               const void* request_id);
-int aggregatorSaveRequest(CAggregatorStore* agg,
-                          const void* request_id,
-                          uint64_t log_index);
-
 // block_hash is 32 bytes long
 Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
                                         const void* block_hash);
-int aggregatorSaveBlockHash(CAggregatorStore* agg,
-                            const void* block_hash,
-                            uint64_t block_height);
 
 Uint256Result aggregatorLogsProcessedCount(CAggregatorStore* agg);
 int aggregatorUpdateLogsProcessedCount(CAggregatorStore* agg, void* count_ptr);

@@ -20,6 +20,7 @@ type InboxReader struct {
 	// Only in main thread
 	running    bool
 	cancelFunc context.CancelFunc
+	completed  chan bool
 }
 
 func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db core.ArbCore) (*InboxReader, error) {
@@ -31,6 +32,7 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db cor
 		bridge:            bridge,
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
+		completed:         make(chan bool, 1),
 	}, nil
 }
 
@@ -38,7 +40,10 @@ func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
 	errChan := make(chan error, 1)
 	ctx, cancelFunc := context.WithCancel(parentCtx)
 	go func() {
-		defer close(errChan)
+		defer func() {
+			ir.completed <- true
+			close(errChan)
+		}()
 		for {
 			err := ir.getMessages(ctx)
 			if err == nil {
@@ -55,6 +60,7 @@ func (ir *InboxReader) Start(parentCtx context.Context) <-chan error {
 
 func (ir *InboxReader) Stop() {
 	ir.cancelFunc()
+	<-ir.completed
 	ir.running = false
 }
 
@@ -83,7 +89,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			if from.Cmp(currentHeight) >= 0 {
 				break
 			}
-			to := new(big.Int).Add(from, big.NewInt(10))
+			to := new(big.Int).Add(from, big.NewInt(100))
 			if to.Cmp(currentHeight) > 0 {
 				to = currentHeight
 			}
@@ -93,7 +99,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				return err
 			}
 			if len(newMessages) == 0 {
-				if !reorging {
+				if reorging {
 					from, err = ir.getPrevBlockForReorg(from)
 					if err != nil {
 						return err
@@ -102,12 +108,12 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					from = to
 				}
 			} else {
-				needOlder, err := ir.addMessages(newMessages)
+				success, err := ir.addMessages(newMessages)
 				if err != nil {
 					return err
 				}
-				reorging = needOlder
-				if needOlder {
+				reorging = !success
+				if !success {
 					from, err = ir.getPrevBlockForReorg(from)
 					if err != nil {
 						return err

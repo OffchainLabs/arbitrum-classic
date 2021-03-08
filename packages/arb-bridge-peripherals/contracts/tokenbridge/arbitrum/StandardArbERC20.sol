@@ -33,7 +33,7 @@ contract StandardArbERC20 is ERC20, Cloneable, IArbToken {
     }
 
     function initialize(address _bridge, address _l1Address, uint8 decimals_) external override {
-        require(address(bridge) != address(0), "ALREADY_INIT");
+        require(address(bridge) == address(0), "ALREADY_INIT");
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
         _decimals = decimals_;

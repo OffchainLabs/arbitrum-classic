@@ -211,10 +211,13 @@ func (_OneStepProof2 *OneStepProof2Caller) ExecuteStep(opts *bind.CallOpts, brid
 		TotalMessagesRead *big.Int
 		Fields            [4][32]byte
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.Gas = out[0].(uint64)
-	outstruct.TotalMessagesRead = out[1].(*big.Int)
-	outstruct.Fields = out[2].([4][32]byte)
+	outstruct.Gas = *abi.ConvertType(out[0], new(uint64)).(*uint64)
+	outstruct.TotalMessagesRead = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.Fields = *abi.ConvertType(out[2], new([4][32]byte)).(*[4][32]byte)
 
 	return *outstruct, err
 
@@ -256,9 +259,12 @@ func (_OneStepProof2 *OneStepProof2Caller) ExecuteStepDebug(opts *bind.CallOpts,
 		StartMachine string
 		AfterMachine string
 	})
+	if err != nil {
+		return *outstruct, err
+	}
 
-	outstruct.StartMachine = out[0].(string)
-	outstruct.AfterMachine = out[1].(string)
+	outstruct.StartMachine = *abi.ConvertType(out[0], new(string)).(*string)
+	outstruct.AfterMachine = *abi.ConvertType(out[1], new(string)).(*string)
 
 	return *outstruct, err
 

@@ -125,7 +125,9 @@ class ArbCore {
     rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
     ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
                                           const uint256_t& arb_gas_used) const;
-    rocksdb::Status resolveStagedMessage(Transaction& tx, value& message) const;
+    rocksdb::Status resolveStagedMessage(Transaction& tx,
+                                         value& message,
+                                         uint256_t& inbox_acc) const;
     ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
                                                   const uint256_t& total_gas,
                                                   bool after_gas);
@@ -167,7 +169,7 @@ class ArbCore {
 
    public:
     // Sending messages to core thread
-    bool deliverMessages(std::vector<std::vector<unsigned char>>& messages,
+    bool deliverMessages(std::vector<std::vector<unsigned char>> messages,
                          const uint256_t& previous_inbox_acc,
                          bool last_block_complete,
                          const std::optional<uint256_t>& reorg_height);
@@ -233,6 +235,9 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
+                          std::optional<uint256_t>>>
+    getMessagesImpl(Transaction& tx, uint256_t index, uint256_t count) const;
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,

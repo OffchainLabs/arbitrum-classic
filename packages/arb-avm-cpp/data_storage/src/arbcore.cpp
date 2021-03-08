@@ -145,7 +145,7 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(
-    std::vector<std::vector<unsigned char>>& messages,
+    std::vector<std::vector<unsigned char>> messages,
     const uint256_t& previous_inbox_acc,
     bool last_block_complete,
     const std::optional<uint256_t>& reorg_message_count) {
@@ -369,6 +369,8 @@ rocksdb::Status ArbCore::saveCheckpoint(Transaction& tx) {
     auto put_status = tx.transaction->Put(
         tx.datastorage->checkpoint_column.get(), key_slice, value_str);
     if (!put_status.ok()) {
+        std::cerr << "ArbCore unable to save checkpoint : "
+                  << put_status.ToString() << "\n";
         return put_status;
     }
 
@@ -678,6 +680,7 @@ void ArbCore::operator()() {
     uint256_t message_count_in_machine = 0;
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
+    uint256_t max_message_batch_size = 10;
 
     while (!arbcore_abort) {
         if (message_data_status == MESSAGES_READY) {
@@ -795,27 +798,25 @@ void ArbCore::operator()() {
             std::vector<std::vector<unsigned char>> messages;
             if (messages_count.data > total_messages_read) {
                 // New messages to process
-                auto next_message_result =
-                    getMessageEntry(*tx, total_messages_read);
-                if (!next_message_result.status.ok()) {
-                    core_error_string = next_message_result.status.ToString();
+                auto message_batch_size = max_message_batch_size;
+                if (message_batch_size > messages_count.data) {
+                    message_batch_size = messages_count.data;
+                }
+                auto next_messages_result = getMessagesImpl(
+                    *tx, total_messages_read, message_batch_size);
+                if (!next_messages_result.status.ok()) {
+                    core_error_string = next_messages_result.status.ToString();
                     machine_error = true;
                     std::cerr << "ArbCore failed getting message entry: "
                               << core_error_string << "\n";
                     break;
                 }
-                if (next_message_result.data.sequence_number !=
-                    total_messages_read) {
-                    core_error_string =
-                        "sequence number in message different than expected";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << "\n";
-                    break;
-                }
-                messages.push_back(next_message_result.data.data);
-                if (next_message_result.data.last_message_in_block) {
+                messages.insert(messages.end(),
+                                next_messages_result.data.first.begin(),
+                                next_messages_result.data.first.end());
+                if (next_messages_result.data.second) {
                     execConfig.next_block_height =
-                        next_message_result.data.block_height + 1;
+                        *next_messages_result.data.second;
                 } else {
                     execConfig.next_block_height = std::nullopt;
                 }
@@ -828,34 +829,30 @@ void ArbCore::operator()() {
                     machine->machine_state.staged_message)) {
                 // Resolve staged message if possible.  If message not found,
                 // machine will just be blocked
-                if (std::holds_alternative<uint256_t>(
-                        machine->machine_state.staged_message)) {
-                    auto sequence_number = std::get<uint256_t>(
-                        machine->machine_state.staged_message);
-                    auto message_lookup = getMessageEntry(*tx, sequence_number);
-                    if (message_lookup.status.ok()) {
-                        auto inbox_message =
-                            extractInboxMessage(message_lookup.data.data);
-                        machine->machine_state.staged_message =
-                            inbox_message.toTuple();
-                        if (messages.empty() &&
-                            message_lookup.data.last_message_in_block) {
-                            execConfig.next_block_height =
-                                message_lookup.data.block_height + 1;
-                        }
+                auto sequence_number =
+                    std::get<uint256_t>(machine->machine_state.staged_message);
+                auto message_lookup = getMessageEntry(*tx, sequence_number);
+                if (message_lookup.status.ok()) {
+                    auto inbox_message =
+                        extractInboxMessage(message_lookup.data.data);
+                    machine->machine_state.staged_message =
+                        inbox_message.toTuple();
+                    if (messages.empty() &&
+                        message_lookup.data.last_message_in_block) {
+                        execConfig.next_block_height =
+                            message_lookup.data.block_height + 1;
                     }
-                    if (!message_lookup.status.IsNotFound() &&
-                        !message_lookup.status.ok()) {
-                        core_error_string = "error resolving staged message";
-                        machine_error = true;
-                        std::cerr << "ArbCore error: " << core_error_string
-                                  << ": " << message_lookup.status.ToString()
-                                  << "\n";
-                        break;
-                    }
-                    if (message_lookup.status.ok()) {
-                        resolved_staged = true;
-                    }
+                }
+                if (!message_lookup.status.IsNotFound() &&
+                    !message_lookup.status.ok()) {
+                    core_error_string = "error resolving staged message";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ": "
+                              << message_lookup.status.ToString() << "\n";
+                    break;
+                }
+                if (message_lookup.status.ok()) {
+                    resolved_staged = true;
                 }
             }
 
@@ -1020,12 +1017,22 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t count) const {
     auto tx = Transaction::makeTransaction(data_storage);
 
+    auto result = getMessagesImpl(*tx, index, count);
+
+    return {result.status, result.data.first};
+}
+
+ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
+                      std::optional<uint256_t>>>
+ArbCore::getMessagesImpl(Transaction& tx,
+                         uint256_t index,
+                         uint256_t count) const {
     if (count == 0) {
         return {rocksdb::Status::OK(), {}};
     }
 
     // Check if attempting to get entries past current valid messages
-    auto message_count = messageEntryInsertedCountImpl(*tx);
+    auto message_count = messageEntryInsertedCountImpl(tx);
     if (!message_count.status.ok()) {
         return {message_count.status, {}};
     }
@@ -1042,7 +1049,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     auto key_slice = vecToSlice(key);
 
     auto results = getVectorVectorUsingFamilyAndKey(
-        *tx->transaction, data_storage->messageentry_column.get(), key_slice,
+        *tx.transaction, data_storage->messageentry_column.get(), key_slice,
         intx::narrow_cast<size_t>(count));
     if (!results.status.ok()) {
         return {results.status, {}};
@@ -1050,13 +1057,19 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
 
     std::vector<std::vector<unsigned char>> messages;
     messages.reserve(results.data.size());
-    for (const auto& data : results.data) {
-        auto message_entry = extractMessageEntry(0, vecToSlice(data));
+    std::optional<uint256_t> next_block_height;
+    auto last_index = results.data.size() - 1;
+    for (size_t i = 0; i <= last_index; i++) {
+        auto message_entry =
+            extractMessageEntry(0, vecToSlice(results.data[i]));
 
         messages.push_back(message_entry.data);
+        if (i == last_index && message_entry.last_message_in_block) {
+            next_block_height = message_entry.block_height + 1;
+        }
     }
 
-    return {rocksdb::Status::OK(), std::move(messages)};
+    return {rocksdb::Status::OK(), {std::move(messages), next_block_height}};
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
@@ -1224,7 +1237,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 // If placeholder message not found, machine will just be
                 // blocked
                 auto resolve_status = resolveStagedMessage(
-                    tx, execution_cursor.machine->machine_state.staged_message);
+                    tx, execution_cursor.machine->machine_state.staged_message,
+                    execution_cursor.inbox_acc);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
                     core_error_string = "error resolving staged message";
                     machine_error = true;
@@ -1262,7 +1276,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 }
 
 rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
-                                              value& message) const {
+                                              value& message,
+                                              uint256_t& inbox_acc) const {
     if (std::holds_alternative<uint256_t>(message)) {
         auto sequence_number = std::get<uint256_t>(message);
         auto message_lookup = getMessageEntry(tx, sequence_number);
@@ -1270,6 +1285,7 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
             // Unable to resolve cursor, no valid message found
             return message_lookup.status;
         }
+        inbox_acc = message_lookup.data.inbox_acc;
         auto inbox_message = extractInboxMessage(message_lookup.data.data);
         message = inbox_message.toTuple();
     }
@@ -1334,7 +1350,8 @@ rocksdb::Status ArbCore::executionCursorSetup(Transaction& tx,
         }
 
         if (!is_for_sideload) {
-            auto resolve_status = resolveStagedMessage(tx, staged_message.data);
+            auto resolve_status = resolveStagedMessage(
+                tx, staged_message.data, checkpoint_result.data.inbox_acc);
             if (!resolve_status.ok()) {
                 // Unable to resolve staged_message, try earlier checkpoint
                 if (checkpoint_result.data.arb_gas_used == 0) {
