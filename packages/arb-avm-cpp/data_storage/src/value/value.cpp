@@ -72,7 +72,6 @@ namespace {
 template <class T>
 T parseBuffer(const char* buf, int& len, uint64_t max_access) {
     uint8_t level = buf[0];
-    // std::cerr << "Buffer level " << int(level) << " " << max_access << "\n";
     len++;
     // Empty
     if (buf[1] == 0) {
@@ -165,7 +164,6 @@ ParsedSerializedVal parseRecord(const std::vector<unsigned char>& data) {
         }
         case BUFFER: {
             uint64_t mx = deserialize_uint64_t(buf);
-            // std::cerr << "Deserializing " << mx << "\n";
             int len = 0;
             auto res = parseBuffer<ParsedSerializedVal>(buf, len, mx);
             return res;
@@ -230,16 +228,12 @@ std::vector<value> serializeValue(const Buffer& b,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
     marshal_uint64_t(b.maxAccess, value_vector);
-    // std::cerr << "Serialize " << b.maxAccess << " " << b.hash() << " " << b.lastIndex() << "\n";
-    // int l1 = value_vector.size();
     std::vector<RawBuffer> res = b.serialize(value_vector);
-    // int len = 0; parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len, b.maxAccess);
     std::vector<value> ret{};
     ret.reserve(res.size());
     for (auto& re : res) {
         ret.emplace_back(Buffer(re, 1234));
     }
-    // std::cerr << "Serialized\n";
     return ret;
 }
 

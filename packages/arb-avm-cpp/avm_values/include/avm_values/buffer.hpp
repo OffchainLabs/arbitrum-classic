@@ -156,7 +156,6 @@ class RawBuffer {
     uint8_t get(uint64_t pos) const {
         auto res = get_many(pos, 1);
         return res[0];
-        // return 123;
     }
 
     // Note: pos and len must be aligned so that the data to be read is from one
@@ -187,13 +186,6 @@ class RawBuffer {
     Packed hash_aux() const;
     uint256_t hash() const { return hash_aux().hash; }
 
-    void analyze();
-
-    uint256_t hash_fast();
-
-    Packed hash_aux_no_cache() const;
-    uint256_t hash_no_cache() const { return hash_aux_no_cache().hash; }
-
     uint64_t lastIndex() { return hash_aux().lastIndex; }
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
@@ -223,11 +215,6 @@ class Buffer {
     Buffer(const RawBuffer& buffer, uint64_t mx) {
         buf = std::make_shared<RawBuffer>(buffer);
         maxAccess = mx;
-        /*
-        if (buf->lastIndex() > maxAccess) {
-            std::cerr << "??? " << buf->lastIndex() << " > " << maxAccess << "\n";
-        }
-        */
     }
 
     Buffer() {
@@ -270,8 +257,6 @@ class Buffer {
 
     uint256_t hash() const { return buf->hash(); }
 
-    uint256_t hash_no_cache() const { return buf->hash_no_cache(); }
-
     std::vector<unsigned char> makeProof(uint64_t loc) const {
         RawBuffer nbuf = buf->normalize();
         return nbuf.makeProof(loc);
@@ -312,15 +297,14 @@ class Buffer {
 
 inline uint256_t hash(const Buffer& b) {
     return hash(b.maxAccess, b.hash());
-    // return hash(123, b.hash());
 }
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {
-    return val1.hash() == val2.hash();
+    return hash(val1) == hash(val2);
 }
 
 inline bool operator!=(const Buffer& val1, const Buffer& val2) {
-    return val1.hash() != val2.hash();
+    return hash(val1) != hash(val2);
 }
 
 #endif /* buffer_hpp */

@@ -34,14 +34,6 @@ const uint256_t zero_h = hash(0);
 
 uint256_t zero_hash(uint64_t sz) {
     return z.zeros[sz];
-    /*
-    if (sz == 5) {
-        return hash(0);
-    }
-    auto h1 = zero_hash(sz - 1);
-    return hash(h1, h1);
-    */
-
 }
 
 uint256_t hash2(uint256_t a, uint256_t b) {
@@ -96,16 +88,6 @@ Packed hash_buf(uint8_t* buf, uint64_t offset, uint64_t sz) {
                   h2.lastIndex + (1 << (sz - 1)));
 }
 
-uint256_t hash_buf_fast(uint8_t* buf, uint64_t offset, uint64_t sz) {
-    if (sz == 5) {
-        auto hash_val = ethash::keccak256(buf + offset, 32);
-        return intx::be::load<uint256_t>(hash_val);
-    }
-    auto h1 = hash_buf_fast(buf, offset, sz - 1);
-    auto h2 = hash_buf_fast(buf, offset + (1 << (sz - 1)), sz - 1);
-    return hash(h1, h2);
-}
-
 Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
     if (len == 1) {
         auto res = buf[offset].hash_aux();
@@ -113,30 +95,6 @@ Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
     }
     auto h1 = hash_node(buf, offset, len / 2, sz - 1);
     auto h2 = hash_node(buf, offset + len / 2, len / 2, sz - 1);
-    if (is_zero_hash(h2)) {
-        return pack(h1);
-    }
-    return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
-}
-
-uint256_t hash_node_fast(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
-    if (len == 1) {
-        return buf[offset].hash_fast();
-    }
-    auto h1 = hash_node_fast(buf, offset, len / 2, sz - 1);
-    auto h2 = hash_node_fast(buf, offset + len / 2, len / 2, sz - 1);
-    return hash(h1, h2);
-}
-
-Packed hash_node_no_cache(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
-    // std::cerr << "At offset " << offset << " sz " << sz << "\n";
-    if (len == 1) {
-        auto res = buf[offset].hash_aux_no_cache();
-        return res;
-    }
-    auto h1 = hash_node_no_cache(buf, offset, len / 2, sz - 1);
-    auto h2 = hash_node_no_cache(buf, offset + len / 2, len / 2, sz - 1);
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
@@ -164,64 +122,6 @@ Packed RawBuffer::hash_aux() const {
     saved = true;
     savedHash = res;
     return res;
-}
-
-void RawBuffer::analyze() {
-    // std::cerr << "At level " << level << " \n";
-    if (level == 0) {
-        if (!leaf) std::cerr << "Leaf was empty\n";
-        else std::cerr << " has leaf\n";
-    } else {
-        if (!node) std::cerr << "  was empty\n";
-        else {
-            std::cerr << "Level " << level << " not empty\n";
-            for (auto a : *node) {
-                a.analyze();
-            }
-        }
-    }
-}
-
-Packed RawBuffer::hash_aux_no_cache() const {
-    Packed res;
-    if (level == 0) {
-        // std::cerr << "At level " << level << " \n";
-        if (!leaf || leaf->size() == 0)
-            res = zero_packed(LEAF_SIZE2);
-        else
-            res = hash_buf(leaf->data(), 0, LEAF_SIZE2);
-    } else {
-        // std::cerr << "At level " << level << " \n";
-        if (!node) {
-            // std::cerr << "Found default " << level << "\n";
-            res = zero_packed(calc_height(level));
-        }
-        else {
-            res = hash_node_no_cache(node->data(), 0, NODE_SIZE, calc_height(level));
-        }
-    }
-    return res;
-}
-
-uint256_t RawBuffer::hash_fast() {
-    if (level == 0) {
-        // std::cerr << "At level " << level << " \n";
-        if (!leaf || leaf->size() == 0)
-            // return zero_hash(0);
-            return zero_h;
-        else
-            return hash_buf_fast(leaf->data(), 0, LEAF_SIZE2);
-    } else {
-        // std::cerr << "At level " << level << " \n";
-        if (!node) {
-            // std::cerr << "Found default " << level << "\n";
-            // return zero_hash(calc_height(level));
-            return zero_h;
-        }
-        else {
-            return hash_node_fast(node->data(), 0, NODE_SIZE, calc_height(level));
-        }
-    }
 }
 
 RawBuffer RawBuffer::normalize() const {

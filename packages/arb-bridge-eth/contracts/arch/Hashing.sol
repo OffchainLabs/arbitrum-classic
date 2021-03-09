@@ -130,7 +130,6 @@ library Hashing {
             return bytes32(val.intVal);
         } else if (val.typeCode == Value.bufferTypeCode()) {
             return keccak256(abi.encodePacked(val.size, val.bufferHash));
-            // return keccak256(abi.encodePacked(uint(123), val.bufferHash));
         } else {
             require(false, "Invalid type code");
         }

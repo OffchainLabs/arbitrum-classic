@@ -663,7 +663,6 @@ void tset(MachineState& m) {
     auto index = assumeInt64(bigIndex);
     auto& tup = assumeTuple(m.stack[1]);
     tup.set_element(index, std::move(m.stack[2]));
-    hash(tup);
     m.stack[2] = std::move(tup);
     m.stack.popClear();
     m.stack.popClear();
@@ -686,7 +685,6 @@ void xset(MachineState& m) {
     auto index = assumeInt64(bigIndex);
     auto& tup = assumeTuple(m.auxstack[0]);
     tup.set_element(index, std::move(m.stack[1]));
-    hash(tup);
     m.auxstack[0] = std::move(tup);
     m.stack.popClear();
     m.stack.popClear();
@@ -1044,7 +1042,6 @@ void getbuffer8(MachineState& m) {
     auto offset = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
     auto res = uint256_t(md.get(offset));
-//    auto res = uint256_t(0);
     m.stack.popClear();
     m.stack.popClear();
     m.stack.push(res);
@@ -1107,7 +1104,6 @@ uint64_t setbuffer_variable_gas_cost(MachineState const& m, uint64_t inc) {
         return 0;
     }
 
-    // return static_cast<uint64_t>(offset);
     auto mx = std::max(buf->maxAccess, static_cast<uint64_t>(*offset+inc));
     uint64_t res = 0;
     mx = mx/1024;
@@ -1128,7 +1124,6 @@ void setbuffer8(MachineState& m) {
     auto val = static_cast<uint8_t>(val_int);
     Buffer& md = assumeBuffer(m.stack[2]);
     auto res = md.set(offset, val);
-    res.hash();
     m.stack.popClear();
     m.stack.popClear();
     m.stack.popClear();

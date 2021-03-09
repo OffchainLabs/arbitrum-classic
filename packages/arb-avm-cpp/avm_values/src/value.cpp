@@ -218,7 +218,6 @@ void marshalForProof(const Buffer& val,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(BUFFER);
-    std::cerr << "Marshal for proof " << intx::to_string(val.hash(), 16) << " mx " << val.maxAccess << " " << int(BUFFER) << "\n";
     marshal_uint256_t(val.maxAccess, buf);
     marshal_uint256_t(val.hash(), buf);
 }
