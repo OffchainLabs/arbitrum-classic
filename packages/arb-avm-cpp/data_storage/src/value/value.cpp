@@ -543,14 +543,14 @@ DbResult<value> getValueImpl(const Transaction& transaction,
     auto result = processFirstVal(transaction, ValueHash{value_hash}, val_stack,
                                   segment_ids, 0, value_cache);
     if (!result.status.ok()) {
-        return {result.status, result.reference_count, Tuple()};
+        return result.status;
     }
 
     if (val_stack[0].raw_vals.empty()) {
         // First value has no child values, so just return single value without
         // populating cache
-        return {rocksdb::Status::OK(), result.reference_count,
-                std::move(val_stack[0].val)};
+        return CountedData<value>{result.reference_count,
+                                  std::move(val_stack[0].val)};
     }
 
     // This should always be true
@@ -568,7 +568,7 @@ DbResult<value> getValueImpl(const Transaction& transaction,
                 },
                 next);
             if (!results.status.ok()) {
-                return {results.status, 0, Tuple()};
+                return results.status;
             }
         } else {
             // All child values have been resolved
@@ -579,7 +579,7 @@ DbResult<value> getValueImpl(const Transaction& transaction,
             if (val_stack.empty()) {
                 // All values resolved
                 value_cache.maybeSave(val);
-                return {rocksdb::Status::OK(), reference_count, std::move(val)};
+                return CountedData<value>{reference_count, std::move(val)};
             }
 
             if (reference_count > 1) {

@@ -440,6 +440,15 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
+CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
+                             CExecutionCursor* execution_cursor_ptr) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
+    ValueCache cache;
+    return static_cast<void*>(
+        arbCore->takeExecutionCursorMachine(*executionCursor, cache).release());
+}
+
 CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
                                        uint64_t block_number) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);

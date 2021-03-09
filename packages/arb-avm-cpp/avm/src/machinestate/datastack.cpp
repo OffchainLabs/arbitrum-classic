@@ -83,17 +83,22 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
 
 Tuple Datastack::getTupleRepresentation() const {
     Tuple rep;
-    for (size_t i = 0; i < values.size(); i++) {
-        rep = Tuple(values[values.size() - 1 - i], rep);
+    for (const auto& val : values) {
+        rep = Tuple(val, rep);
     }
     return rep;
 }
 
 Datastack::Datastack(Tuple tuple_rep) : Datastack() {
     Tuple ret = std::move(tuple_rep);
+    std::vector<value> vals;
     while (ret.tuple_size() == 2) {
-        push(ret.get_element(0));
+        vals.push_back(ret.get_element(0));
         ret = std::get<Tuple>(ret.get_element(1));
+    }
+
+    for (size_t i = 0; i < vals.size(); i++) {
+        push(std::move(vals[vals.size() - 1 - i]));
     }
 }
 

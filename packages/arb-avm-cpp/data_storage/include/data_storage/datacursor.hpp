@@ -21,7 +21,6 @@
 #include <avm/machinethread.hpp>
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepointstub.hpp>
-#include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/machine.hpp>

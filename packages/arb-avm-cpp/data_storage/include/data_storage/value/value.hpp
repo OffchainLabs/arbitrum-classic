@@ -18,6 +18,7 @@
 #define checkpoint_value_hpp
 
 #include <avm_values/value.hpp>
+#include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/valuecache.hpp>
 
 #include <map>
@@ -26,9 +27,6 @@
 struct DeleteResults;
 struct SaveResults;
 class Transaction;
-
-template <typename T>
-struct DbResult;
 
 SaveResults saveValueImpl(Transaction& transaction,
                           const value& val,

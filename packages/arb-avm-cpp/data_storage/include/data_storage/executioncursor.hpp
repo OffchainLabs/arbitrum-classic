@@ -21,44 +21,50 @@
 #include <avm/machinethread.hpp>
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepointstub.hpp>
-#include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/machine.hpp>
 #include <utility>
 
-class ExecutionCursor : public Checkpoint {
+class ExecutionCursor {
    public:
-    std::unique_ptr<Machine> machine;
     uint256_t first_message_sequence_number;
     std::vector<InboxMessage> messages;
     std::vector<uint256_t> inbox_accumulators;
     size_t messages_to_skip{0};
+    std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    ExecutionCursor() = default;
-    ExecutionCursor(Checkpoint& checkpoint,
-                    std::unique_ptr<Machine>& machine,
-                    std::vector<InboxMessage>& messages,
-                    std::vector<uint256_t>& inbox_accumulators,
-                    size_t messages_to_skip)
-        : Checkpoint(checkpoint),
-          machine(std::move(machine)),
-          first_message_sequence_number(checkpoint.total_messages_read),
-          messages(std::move(messages)),
-          inbox_accumulators(std::move(inbox_accumulators)),
-          messages_to_skip(messages_to_skip) {}
+    ExecutionCursor(MachineStateKeys machine_)
+        : first_message_sequence_number(
+              machine_.output.fully_processed_messages),
+          machine(std::move(machine_)) {}
+
     ~ExecutionCursor() = default;
-    ExecutionCursor(const ExecutionCursor& rhs) : Checkpoint(rhs) {
-        machine = std::make_unique<Machine>(*rhs.machine);
+
+    ExecutionCursor(const ExecutionCursor& rhs)
+        : machine(std::unique_ptr<Machine>(nullptr)) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(rhs.machine)) {
+            machine = std::make_unique<Machine>(
+                *std::get<std::unique_ptr<Machine>>(rhs.machine));
+        } else {
+            machine = std::get<MachineStateKeys>(rhs.machine);
+        }
+
         first_message_sequence_number = rhs.first_message_sequence_number;
         messages = rhs.messages;
         inbox_accumulators = rhs.inbox_accumulators;
         messages_to_skip = rhs.messages_to_skip;
     }
+
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
-        Checkpoint::operator=(rhs);
-        machine = std::make_unique<Machine>(*rhs.machine);
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            machine = std::make_unique<Machine>(
+                *std::get<std::unique_ptr<Machine>>(machine));
+        } else {
+            machine = std::get<MachineStateKeys>(machine);
+        }
+
         first_message_sequence_number = rhs.first_message_sequence_number;
         messages = rhs.messages;
         inbox_accumulators = rhs.inbox_accumulators;
@@ -67,12 +73,67 @@ class ExecutionCursor : public Checkpoint {
         return *this;
     }
 
-    void resetExecutionCursor();
-    void setCheckpoint(Checkpoint& checkpoint);
     ExecutionCursor* clone();
-    std::optional<uint256_t> machineHash();
 
-    std::unique_ptr<Machine> takeMachine();
+    std::optional<uint256_t> machineHash() const {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            return std::get<std::unique_ptr<Machine>>(machine)->hash();
+        } else {
+            return std::get<MachineStateKeys>(machine).machineHash();
+        }
+    }
+
+    const MachineOutput& getOutput() const {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            return std::get<std::unique_ptr<Machine>>(machine)
+                ->machine_state.output;
+        } else {
+            return std::get<MachineStateKeys>(machine).output;
+        }
+    }
+
+    const staged_variant& getStaged() const {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            return std::get<std::unique_ptr<Machine>>(machine)
+                ->machine_state.staged_message;
+        } else {
+            return std::get<MachineStateKeys>(machine).staged_message;
+        }
+    }
+
+    staged_variant& getStaged() {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            return std::get<std::unique_ptr<Machine>>(machine)
+                ->machine_state.staged_message;
+        } else {
+            return std::get<MachineStateKeys>(machine).staged_message;
+        }
+    }
+
+    std::optional<uint256_t> getInboxAcc() const {
+        auto fully_processed_acc =
+            getOutput().fully_processed_inbox_accumulator;
+        auto& staged_message = getStaged();
+        if (std::holds_alternative<InboxMessage>(staged_message)) {
+            return hash_inbox(
+                fully_processed_acc,
+                std::get<InboxMessage>(staged_message).serialize());
+        } else if (std::holds_alternative<std::monostate>(staged_message)) {
+            return fully_processed_acc;
+        } else {
+            return std::nullopt;
+        }
+    }
+
+    uint256_t getTotalMessagesRead() const {
+        auto fully_processed_messages = getOutput().fully_processed_messages;
+        auto& staged_message = getStaged();
+        if (std::holds_alternative<std::monostate>(staged_message)) {
+            return fully_processed_messages;
+        } else {
+            return fully_processed_messages + 1;
+        }
+    }
 };
 
 #endif /* data_storage_executioncursor_hpp */

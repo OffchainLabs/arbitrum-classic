@@ -156,10 +156,11 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
         } else {
             auto imm = getValueImpl(transaction, *raw_cp.immediateHash,
                                     segment_ids, value_cache);
-            if (!imm.status.ok()) {
+            if (std::holds_alternative<rocksdb::Status>(imm)) {
                 throw std::runtime_error("failed to load immediate value");
             }
-            cps.emplace_back(Operation{raw_cp.opcode, imm.data},
+            cps.emplace_back(Operation{raw_cp.opcode,
+                                       std::get<CountedData<value>>(imm).data},
                              raw_cp.next_hash);
         }
     }
