@@ -1150,7 +1150,7 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
         std::get<CountedData<MachineStateKeys>>(result).data);
 
     auto status = getExecutionCursorImpl(*tx, *execution_cursor, total_gas_used,
-                                         false, 10, cache);
+                                         false, 10, cache, false);
 
     return {status, std::move(execution_cursor)};
 }
@@ -1165,7 +1165,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     return getExecutionCursorImpl(
         *tx, execution_cursor,
         execution_cursor.getOutput().arb_gas_used + max_gas, go_over_gas, 10,
-        cache);
+        cache, true);
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -1212,7 +1212,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
     uint256_t total_gas_used,
     bool go_over_gas,
     uint256_t message_group_size,
-    ValueCache& cache) {
+    ValueCache& cache,
+    bool possible_reorg) {
     auto handle_reorg = true;
     while (handle_reorg) {
         handle_reorg = false;
@@ -1232,6 +1233,12 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
             if (!get_messages_result.data.first) {
                 // Reorg occurred, need to recreate machine
                 handle_reorg = true;
+                if (!possible_reorg) {
+                    std::cerr
+                        << "Warning: Unexpected execution cursor reorg detected"
+                        << std::endl;
+                }
+                possible_reorg = false;
                 break;
             }
 
@@ -1400,7 +1407,7 @@ ArbCore::executionCursorGetMessagesNoLock(
     auto current_message_sequence_number =
         execution_cursor.getTotalMessagesRead();
 
-    auto inserted_message_count_result = messageEntryInsertedCount();
+    auto inserted_message_count_result = messageEntryInsertedCountImpl(tx);
 
     if (current_message_sequence_number + message_group_size >
         inserted_message_count_result.data) {
