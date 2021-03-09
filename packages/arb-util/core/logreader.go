@@ -58,6 +58,13 @@ func (lr *LogReader) IsRunning() bool {
 	return lr.running
 }
 
+func bigIntAsString(val *big.Int) string {
+	if val == nil {
+		return "nil"
+	}
+	return val.String()
+}
+
 func (lr *LogReader) getLogs(ctx context.Context) error {
 	for {
 		select {
@@ -109,10 +116,10 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		currentLogIndex := new(big.Int).Sub(currentLogCount, big.NewInt(1))
 
 		logger.Info().
-			Uint64("currentLogCount", currentLogCount.Uint64()).
-			Uint64("firstDeletedIndex", firstDeletedIndex.Uint64()).
+			Str("currentLogCount", bigIntAsString(currentLogCount)).
+			Str("firstDeletedIndex", bigIntAsString(firstDeletedIndex)).
 			Int("deletedLog count", len(deletedLogs)).
-			Uint64("firstIndex", firstIndex.Uint64()).
+			Str("firstIndex", bigIntAsString(firstIndex)).
 			Int("log count", len(logs)).
 			Msg("logs received from log cursor")
 
