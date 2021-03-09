@@ -860,7 +860,7 @@ BlockReason breakpoint(MachineState& m) {
 
 void log(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.logs.push_back(std::move(m.stack[0]));
+    m.addProcessedLog(std::move(m.stack[0]));
     m.stack.popClear();
     ++m.pc;
 }
@@ -885,16 +885,16 @@ void send(MachineState& m) {
         m.state = Status::Error;
         std::cerr << "Send failure: over size limit" << std::endl;
         return;
-    } else {
-        auto vec = std::vector<uint8_t>(msg_size);
-        for (uint64_t i = 0; i < msg_size; i++) {
-            vec[i] = buf.get(i);
-        }
-        m.context.sends.push_back(vec);
-        m.stack.popClear();
-        m.stack.popClear();
-        ++m.pc;
     }
+
+    auto vec = std::vector<uint8_t>(msg_size);
+    for (uint64_t i = 0; i < msg_size; i++) {
+        vec[i] = buf.get(i);
+    }
+    m.addProcessedSend(std::move(vec));
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
 }
 
 BlockReason inboxPeekOp(MachineState& m) {
@@ -927,24 +927,22 @@ BlockReason inboxPeekOp(MachineState& m) {
 }
 
 BlockReason inboxOp(MachineState& m) {
-    auto optional_message_tuple = m.getStagedMessageTuple();
-    if (!optional_message_tuple.has_value()) {
+    if (m.stagedMessageUnresolved()) {
         return InboxBlocked();
     }
 
-    auto next_message = *optional_message_tuple;
-    if (next_message == Tuple{}) {
-        if (m.context.inboxEmpty()) {
-            return InboxBlocked();
-        }
-        next_message = m.context.popInbox().toTuple();
+    InboxMessage next_message;
+    if (std::holds_alternative<InboxMessage>(m.staged_message)) {
+        next_message = std::get<InboxMessage>(m.staged_message);
+    } else if (m.stagedMessageEmpty() && m.context.inboxEmpty()) {
+        next_message = m.context.popInbox();
+    } else {
+        return InboxBlocked();
     }
 
-    m.fully_processed_inbox_accumulator =
-        ::hash(m.fully_processed_inbox_accumulator, hash_value(next_message));
-    m.stack.push(std::move(next_message));
+    m.addProcessedMessage(next_message);
+    m.stack.push(next_message.toTuple());
     m.staged_message = std::monostate();
-    m.fully_processed_messages += 1;
     ++m.pc;
     return NotBlocked{};
 }
@@ -1001,11 +999,12 @@ void pushinsnimm(MachineState& m) {
 BlockReason sideload(MachineState& m) {
     m.stack.prepForMod(1);
     auto& block_num = assumeInt(m.stack[0]);
+    m.output.last_sideload = block_num;
     if (!m.context.sideloads.empty()) {
         m.stack[0] = m.context.sideloads.back().toTuple();
         m.context.sideloads.pop_back();
     } else {
-        if (m.context.stop_on_sideload && m.context.numSteps > 0) {
+        if (m.context.stop_on_sideload && !m.context.first_instruction) {
             return SideloadBlocked{block_num};
         }
         m.stack[0] = Tuple();

@@ -43,12 +43,6 @@ Uint256Result executionCursorTotalSendCount(
 Uint256Result executionCursorTotalLogCount(
     CExecutionCursor* execution_cursor_ptr);
 
-int executionCursorAdvance(CExecutionCursor* execution_cursor_ptr,
-                           const void* max_gas_ptr,
-                           int go_over_gas);
-
-CMachine* executionCursorTakeMachine(CExecutionCursor* execution_cursor_ptr);
-
 #ifdef __cplusplus
 }
 #endif

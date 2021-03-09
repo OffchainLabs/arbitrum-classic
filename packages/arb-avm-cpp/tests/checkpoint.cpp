@@ -36,16 +36,22 @@ void saveValue(Transaction& transaction,
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
-void getValue(const Transaction& transaction,
-              const value& value,
-              uint32_t expected_ref_count,
-              bool expected_status,
-              ValueCache& value_cache) {
-    auto results = getValue(transaction, hash_value(value), value_cache);
-
-    REQUIRE(results.status.ok() == expected_status);
-    REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(hash_value(results.data) == hash_value(value));
+DbResult<value> getValue(const Transaction& transaction,
+                         const value& value_target,
+                         uint32_t expected_ref_count,
+                         bool expected_status,
+                         ValueCache& value_cache) {
+    auto res = getValue(transaction, hash_value(value_target), value_cache);
+    if (expected_status) {
+        REQUIRE(std::holds_alternative<CountedData<value>>(res));
+        REQUIRE(std::get<CountedData<value>>(res).reference_count ==
+                expected_ref_count);
+        REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+                hash_value(value_target));
+    } else {
+        REQUIRE(std::holds_alternative<rocksdb::Status>(res));
+    }
+    return res;
 }
 
 void getTuple(const Transaction& transaction,
@@ -53,16 +59,15 @@ void getTuple(const Transaction& transaction,
               uint32_t expected_ref_count,
               bool expected_status,
               ValueCache& value_cache) {
+    auto res = getValue(transaction, val, expected_ref_count, expected_status,
+                        value_cache);
     const auto& tuple = std::get<Tuple>(val);
-    auto results = getValue(transaction, hash(tuple), value_cache);
-
-    REQUIRE(std::holds_alternative<Tuple>(results.data));
-
-    auto loadedTuple = std::get<Tuple>(results.data);
-    REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(loadedTuple == tuple);
-    REQUIRE(loadedTuple.tuple_size() == tuple.tuple_size());
-    REQUIRE(results.status.ok() == expected_status);
+    if (expected_status) {
+        REQUIRE(std::holds_alternative<Tuple>(
+            std::get<CountedData<value>>(res).data));
+        REQUIRE(std::get<Tuple>(std::get<CountedData<value>>(res).data) ==
+                tuple);
+    }
 }
 
 void getTupleValues(const Transaction& transaction,
@@ -70,10 +75,10 @@ void getTupleValues(const Transaction& transaction,
                     std::vector<uint256_t> value_hashes,
                     ValueCache& value_cache) {
     auto results = getValue(transaction, tuple_hash, value_cache);
-    REQUIRE(results.status.ok());
-    REQUIRE(std::holds_alternative<Tuple>(results.data));
-
-    auto tuple = std::get<Tuple>(results.data);
+    REQUIRE(std::holds_alternative<CountedData<value>>(results));
+    auto val = std::get<CountedData<value>>(results).data;
+    REQUIRE(std::holds_alternative<Tuple>(val));
+    auto tuple = std::get<Tuple>(val);
     REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
@@ -331,12 +336,13 @@ void checkSavedState(const Transaction& transaction,
     auto expected_hash = expected_machine.hash();
     REQUIRE(expected_hash);
     auto results = getMachineStateKeys(transaction, *expected_hash);
-    REQUIRE(results.status.ok());
-    REQUIRE(results.reference_count == expected_ref_count);
+    REQUIRE(std::holds_alternative<CountedData<MachineStateKeys>>(results));
+    auto res = std::get<CountedData<MachineStateKeys>>(results);
+    REQUIRE(res.reference_count == expected_ref_count);
 
-    auto data = results.data;
+    auto data = res.data;
     REQUIRE(data.status == expected_machine.machine_state.state);
-    REQUIRE(data.pc == expected_machine.machine_state.pc);
+    REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
     REQUIRE(
         data.datastack_hash ==
         hash(expected_machine.machine_state.stack.getTupleRepresentation()));
@@ -347,10 +353,12 @@ void checkSavedState(const Transaction& transaction,
             hash_value(expected_machine.machine_state.registerVal));
 
     ValueCache value_cache{};
-    REQUIRE(
-        getValue(transaction, data.datastack_hash, value_cache).status.ok());
-    REQUIRE(getValue(transaction, data.auxstack_hash, value_cache).status.ok());
-    REQUIRE(getValue(transaction, data.register_hash, value_cache).status.ok());
+    REQUIRE(!std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, data.datastack_hash, value_cache)));
+    REQUIRE(!std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, data.auxstack_hash, value_cache)));
+    REQUIRE(!std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, data.register_hash, value_cache)));
 }
 
 void checkDeletedCheckpoint(Transaction& transaction,
@@ -358,21 +366,20 @@ void checkDeletedCheckpoint(Transaction& transaction,
     auto deleted_hash = deleted_machine.hash();
     REQUIRE(deleted_hash);
     auto results = getMachineStateKeys(transaction, *deleted_hash);
-    REQUIRE(!results.status.ok());
+    REQUIRE(std::holds_alternative<rocksdb::Status>(results));
 
     auto datastack_tup =
         deleted_machine.machine_state.stack.getTupleRepresentation();
     auto auxstack_tup =
         deleted_machine.machine_state.auxstack.getTupleRepresentation();
     ValueCache value_cache{};
-    REQUIRE(
-        !getValue(transaction, hash(datastack_tup), value_cache).status.ok());
-    REQUIRE(
-        !getValue(transaction, hash(auxstack_tup), value_cache).status.ok());
-    REQUIRE(!getValue(transaction,
-                      hash_value(deleted_machine.machine_state.registerVal),
-                      value_cache)
-                 .status.ok());
+    REQUIRE(std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, hash(datastack_tup), value_cache)));
+    REQUIRE(std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, hash(auxstack_tup), value_cache)));
+    REQUIRE(std::holds_alternative<rocksdb::Status>(getValue(
+        transaction, hash_value(deleted_machine.machine_state.registerVal),
+        value_cache)));
 }
 
 void deleteCheckpoint(Transaction& transaction,
@@ -406,17 +413,16 @@ Machine getComplexMachine() {
     CodePointRef pc{0, 0};
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    uint256_t fully_processed_messages = 42;
-    uint256_t fully_processed_inbox_accumulator = 54;
+
+    auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 65};
 
     // Tuple staged_message(uint256_t{100}, uint256_t{200});
     staged_variant staged_message(88);
 
-    return Machine(MachineState(
-        std::move(code), register_val, std::move(static_val), data_stack,
-        aux_stack, arb_gas_remaining, state, pc, err_pc,
-        fully_processed_messages, fully_processed_inbox_accumulator,
-        std::move(staged_message)));
+    return Machine(MachineState(std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc,
+                                std::move(staged_message), output));
 }
 
 Machine getDefaultMachine() {
@@ -430,14 +436,12 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    uint256_t fully_processed_messages = 42;
-    uint256_t fully_processed_inbox_accumulator = 54;
+    auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 34};
     staged_variant staged_message = 88;
-    return Machine(
-        MachineState(std::move(code), register_val, std::move(static_val),
-                     data_stack, aux_stack, arb_gas_remaining, state, pc,
-                     err_pc, fully_processed_messages,
-                     fully_processed_inbox_accumulator, staged_message));
+    return Machine(MachineState(std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc,
+                                staged_message, output));
 }
 
 TEST_CASE("Save Machinestatedata") {
