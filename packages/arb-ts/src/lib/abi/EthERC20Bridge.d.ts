@@ -25,6 +25,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   functions: {
     'codeHash()': FunctionFragment
     'customL2Tokens(address)': FunctionFragment
+    'depositAsCustomToken(address,address,uint256,uint256,uint256)': FunctionFragment
     'depositAsERC20(address,address,uint256,uint256,uint256)': FunctionFragment
     'depositAsERC777(address,address,uint256,uint256,uint256)': FunctionFragment
     'fastWithdrawalFromL2(address,bytes,address,uint256,uint256)': FunctionFragment
@@ -44,6 +45,10 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'customL2Tokens',
     values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'depositAsCustomToken',
+    values: [string, string, BigNumberish, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'depositAsERC20',
@@ -92,6 +97,10 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'codeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'customL2Tokens',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'depositAsCustomToken',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -165,6 +174,24 @@ export class EthERC20Bridge extends Contract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<[string]>
+
+    depositAsCustomToken(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    'depositAsCustomToken(address,address,uint256,uint256,uint256)'(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
 
     depositAsERC20(
       erc20: string,
@@ -328,6 +355,24 @@ export class EthERC20Bridge extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  depositAsCustomToken(
+    erc20: string,
+    destination: string,
+    amount: BigNumberish,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  'depositAsCustomToken(address,address,uint256,uint256,uint256)'(
+    erc20: string,
+    destination: string,
+    amount: BigNumberish,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
   depositAsERC20(
     erc20: string,
     destination: string,
@@ -489,6 +534,24 @@ export class EthERC20Bridge extends Contract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<string>
+
+    depositAsCustomToken(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'depositAsCustomToken(address,address,uint256,uint256,uint256)'(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     depositAsERC20(
       erc20: string,
@@ -655,6 +718,24 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    depositAsCustomToken(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    'depositAsCustomToken(address,address,uint256,uint256,uint256)'(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
     depositAsERC20(
       erc20: string,
       destination: string,
@@ -819,6 +900,24 @@ export class EthERC20Bridge extends Contract {
     'customL2Tokens(address)'(
       arg0: string,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    depositAsCustomToken(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    'depositAsCustomToken(address,address,uint256,uint256,uint256)'(
+      erc20: string,
+      destination: string,
+      amount: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     depositAsERC20(
