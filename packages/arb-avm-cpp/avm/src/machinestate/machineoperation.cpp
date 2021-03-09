@@ -934,7 +934,7 @@ BlockReason inboxOp(MachineState& m) {
     InboxMessage next_message;
     if (std::holds_alternative<InboxMessage>(m.staged_message)) {
         next_message = std::get<InboxMessage>(m.staged_message);
-    } else if (m.stagedMessageEmpty() && m.context.inboxEmpty()) {
+    } else if (m.stagedMessageEmpty() && !m.context.inboxEmpty()) {
         next_message = m.context.popInbox();
     } else {
         return InboxBlocked();

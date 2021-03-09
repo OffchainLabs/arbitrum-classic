@@ -769,18 +769,18 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
-            auto fully_processed_messages =
-                machine->machine_state.output.fully_processed_messages;
+            auto total_messages_read =
+                machine->machine_state.getTotalMessagesRead();
 
             std::vector<std::vector<unsigned char>> messages;
-            if (messages_count.data > fully_processed_messages) {
+            if (messages_count.data > total_messages_read) {
                 // New messages to process
                 auto message_batch_size = max_message_batch_size;
                 if (message_batch_size > messages_count.data) {
                     message_batch_size = messages_count.data;
                 }
                 auto next_messages_result = getMessagesImpl(
-                    *tx, fully_processed_messages, message_batch_size);
+                    *tx, total_messages_read, message_batch_size);
                 if (!next_messages_result.status.ok()) {
                     core_error_string = next_messages_result.status.ToString();
                     machine_error = true;
@@ -833,7 +833,7 @@ void ArbCore::operator()() {
 
             if (!messages.empty() || resolved_staged) {
                 message_count_in_machine =
-                    fully_processed_messages + messages.size();
+                    total_messages_read + messages.size();
                 execConfig.setInboxMessagesFromBytes(messages);
 
                 auto status = machine->runMachine(execConfig);
@@ -1249,7 +1249,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 total_gas_used - execution_cursor.getOutput().arb_gas_used;
             if (remaining_gas > 0) {
                 MachineExecutionConfig execConfig;
-                execConfig.max_gas = remaining_gas;
+                execConfig.max_gas = total_gas_used;
                 execConfig.go_over_gas = go_over_gas;
                 execConfig.inbox_messages = execution_cursor.messages;
                 execConfig.messages_to_skip = execution_cursor.messages_to_skip;

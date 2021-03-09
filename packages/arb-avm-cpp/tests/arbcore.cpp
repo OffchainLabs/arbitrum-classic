@@ -29,18 +29,11 @@
 
 void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
                      const std::vector<std::vector<unsigned char>> raw_messages,
+                     uint256_t prev_inbox_acc,
+                     uint256_t target_message_count,
                      int send_count,
                      int log_count,
                      bool last_message) {
-    auto first_message = extractInboxMessage(raw_messages.front());
-    uint256_t prev_inbox_acc = 0;
-    if (first_message.inbox_sequence_number > 0) {
-        auto acc_res =
-            arbCore->getInboxAcc(first_message.inbox_sequence_number - 1);
-        REQUIRE(acc_res.status.ok());
-        prev_inbox_acc = acc_res.data;
-    }
-
     auto initial_count_res = arbCore->messageEntryInsertedCount();
     REQUIRE(initial_count_res.status.ok());
 
@@ -65,7 +58,7 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
     while (true) {
         auto countRes = arbCore->messageEntryInsertedCount();
         REQUIRE(countRes.status.ok());
-        if (countRes.data == initial_count_res.data + raw_messages.size()) {
+        if (countRes.data == target_message_count) {
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -73,8 +66,7 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
         REQUIRE(tries < 5);
     }
 
-    auto accRes =
-        arbCore->getInboxAcc(initial_count_res.data + raw_messages.size() - 1);
+    auto accRes = arbCore->getInboxAcc(target_message_count - 1);
     REQUIRE(accRes.status.ok());
     REQUIRE(accRes.data != 0);
 
@@ -153,8 +145,8 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        runCheckArbCore(arbCore, raw_messages, sends.size(), logs.size(),
-                        false);
+        runCheckArbCore(arbCore, raw_messages, 0, raw_messages.size(),
+                        sends.size(), logs.size(), false);
 
         auto logsRes = arbCore->getLogs(0, logs.size(), value_cache);
         REQUIRE(logsRes.status.ok());
@@ -277,12 +269,14 @@ TEST_CASE("ArbCore inbox") {
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
+    uint256_t inbox_acc = 0;
     for (int i = 0; i < 5; i++) {
         std::vector<std::vector<unsigned char>> raw_messages;
         auto message = InboxMessage(0, {}, i, 0, i, 0, {});
         raw_messages.push_back(message.serialize());
         INFO("RUN " << i);
-        runCheckArbCore(arbCore, raw_messages, 0, i + 1, true);
+        runCheckArbCore(arbCore, raw_messages, inbox_acc, i, 0, i + 1, true);
+        inbox_acc = hash_inbox(inbox_acc, message.serialize());
     }
     auto tx = arbCore->makeTransaction();
     auto position = arbCore->getSideloadPosition(*tx, 2);
