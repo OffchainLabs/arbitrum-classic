@@ -31,9 +31,6 @@ void destroyArbStorage(CArbStorage* storage);
 CMachine* getInitialMachine(const CArbStorage* storage_ptr);
 CMachine* getMachine(const CArbStorage* storage_ptr, const void* machine_hash);
 int closeArbStorage(CArbStorage* storage_ptr);
-int saveValue(CArbStorage* storage_ptr, const void* value_data);
-ByteSlice getValue(const CArbStorage* storage_ptr, const void* hash_key);
-int deleteValue(CArbStorage* storage_ptr, const void* hash_key);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);
