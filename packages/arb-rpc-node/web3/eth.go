@@ -256,7 +256,26 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
 	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
-		logger.Warn().Err(err).Msg("error estimating gas")
+		logging := log.Warn()
+		if args.Gas != nil {
+			logging = logging.Uint64("gaslimit", uint64(*args.Gas))
+		}
+		if args.GasPrice != nil {
+			logging = logging.Str("gasPrice", args.GasPrice.String())
+		}
+		if args.Value != nil {
+			logging = logging.Str("value", args.Value.String())
+		}
+		if args.To != nil {
+			logging = logging.Str("to", args.To.Hex())
+		}
+		if args.From != nil {
+			logging = logging.Str("from", args.From.Hex())
+		}
+		if args.Data != nil {
+			logging = logging.Hex("data", *args.Data)
+		}
+		logging.Err(err).Msg("error estimating gas")
 		return 0, err
 	}
 	if res.ResultCode == evm.RevertCode {
