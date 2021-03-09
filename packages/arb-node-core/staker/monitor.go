@@ -18,6 +18,7 @@ package staker
 
 import (
 	"context"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
@@ -84,12 +85,6 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAdd
 	if err != nil {
 		return nil, err
 	}
-	errChan := reader.Start(ctx)
-	go func() {
-		err := <-errChan
-		if err != nil {
-			logger.Fatal().Err(err).Msg("inbox reader failed")
-		}
-	}()
+	reader.Start(ctx)
 	return reader, nil
 }
