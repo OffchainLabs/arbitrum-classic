@@ -42,7 +42,6 @@ class MachineExecutionConfig {
     uint256_t max_gas;
     bool go_over_gas;
     std::vector<InboxMessage> inbox_messages;
-    uint256_t messages_to_skip;
     std::optional<uint256_t> next_block_height;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;

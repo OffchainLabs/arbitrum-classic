@@ -41,7 +41,6 @@ MachineExecutionConfig::MachineExecutionConfig()
     : max_gas(0),
       go_over_gas(false),
       inbox_messages(),
-      messages_to_skip(0),
       sideloads(),
       stop_on_sideload(false) {}
 

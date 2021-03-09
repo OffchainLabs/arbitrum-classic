@@ -36,7 +36,6 @@ struct AssertionContext {
     std::vector<InboxMessage> inbox_messages;
     std::optional<uint256_t> next_block_height;
 
-    size_t messages_to_skip{0};
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debug_prints;
@@ -74,7 +73,6 @@ struct AssertionContext {
         sends.clear();
         logs.clear();
         debug_prints.clear();
-        messages_to_skip = inbox_messages_consumed;
         first_instruction = true;
     }
 };

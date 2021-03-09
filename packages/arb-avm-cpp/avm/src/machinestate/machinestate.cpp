@@ -33,12 +33,11 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
       next_block_height(config.next_block_height),
-      messages_to_skip(config.messages_to_skip),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
       go_over_gas(config.go_over_gas),
-      inbox_messages_consumed(config.messages_to_skip) {}
+      inbox_messages_consumed(0) {}
 
 MachineStateKeys::MachineStateKeys(const MachineState& machine)
     : static_hash(hash_value(machine.static_val)),
