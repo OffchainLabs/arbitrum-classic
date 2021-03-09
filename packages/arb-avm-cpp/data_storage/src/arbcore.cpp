@@ -1242,6 +1242,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 MachineExecutionConfig execConfig;
                 execConfig.max_gas = total_gas_used;
                 execConfig.go_over_gas = go_over_gas;
+                execConfig.inbox_messages =
+                    std::move(execution_cursor.messages);
 
                 // Resolve staged message if possible.
                 // If placeholder message not found, machine will just be
