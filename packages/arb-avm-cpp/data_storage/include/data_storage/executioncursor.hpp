@@ -28,17 +28,10 @@
 
 class ExecutionCursor {
    public:
-    uint256_t first_message_sequence_number;
-    std::vector<InboxMessage> messages;
-    std::vector<uint256_t> inbox_accumulators;
-    size_t messages_to_skip{0};
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    ExecutionCursor(MachineStateKeys machine_)
-        : first_message_sequence_number(
-              machine_.output.fully_processed_messages),
-          machine(std::move(machine_)) {}
+    ExecutionCursor(MachineStateKeys machine_) : machine(std::move(machine_)) {}
 
     ~ExecutionCursor() = default;
 
@@ -50,26 +43,15 @@ class ExecutionCursor {
         } else {
             machine = std::get<MachineStateKeys>(rhs.machine);
         }
-
-        first_message_sequence_number = rhs.first_message_sequence_number;
-        messages = rhs.messages;
-        inbox_accumulators = rhs.inbox_accumulators;
-        messages_to_skip = rhs.messages_to_skip;
     }
 
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(rhs.machine)) {
             machine = std::make_unique<Machine>(
-                *std::get<std::unique_ptr<Machine>>(machine));
+                *std::get<std::unique_ptr<Machine>>(rhs.machine));
         } else {
-            machine = std::get<MachineStateKeys>(machine);
+            machine = std::get<MachineStateKeys>(rhs.machine);
         }
-
-        first_message_sequence_number = rhs.first_message_sequence_number;
-        messages = rhs.messages;
-        inbox_accumulators = rhs.inbox_accumulators;
-        messages_to_skip = rhs.messages_to_skip;
-
         return *this;
     }
 

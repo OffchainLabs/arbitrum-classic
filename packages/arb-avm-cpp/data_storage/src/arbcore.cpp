@@ -1224,12 +1224,12 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
         }
 
         while (true) {
-            auto result = executionCursorAddMessages(tx, execution_cursor,
-                                                     message_group_size);
-            if (!result.status.ok()) {
-                return result.status;
+            auto get_messages_result = executionCursorGetMessages(
+                tx, execution_cursor, message_group_size);
+            if (!get_messages_result.status.ok()) {
+                return get_messages_result.status;
             }
-            if (!result.data) {
+            if (!get_messages_result.data.first) {
                 // Reorg occurred, need to recreate machine
                 handle_reorg = true;
                 break;
@@ -1242,8 +1242,8 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 MachineExecutionConfig execConfig;
                 execConfig.max_gas = total_gas_used;
                 execConfig.go_over_gas = go_over_gas;
-                execConfig.inbox_messages = execution_cursor.messages;
-                execConfig.messages_to_skip = execution_cursor.messages_to_skip;
+                execConfig.inbox_messages =
+                    std::move(get_messages_result.data.second);
 
                 // Resolve staged message if possible.
                 // If placeholder message not found, machine will just be
@@ -1268,8 +1268,6 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                     // Nothing was executed
                     break;
                 }
-                execution_cursor.messages_to_skip +=
-                    assertion.inbox_messages_consumed;
 
                 if (total_gas_used <=
                     execution_cursor.getOutput().arb_gas_used) {
@@ -1341,8 +1339,8 @@ rocksdb::Status ArbCore::executionCursorSetup(ReadTransaction& tx,
             // Execution cursor used more gas than checkpoint so use it if inbox
             // hash valid
             auto result =
-                executionCursorAddMessagesNoLock(tx, execution_cursor, 0);
-            if (result.status.ok() && result.data) {
+                executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
+            if (result.status.ok() && result.data.first) {
                 // Execution cursor machine still valid, so use it
                 return rocksdb::Status::OK();
             }
@@ -1366,21 +1364,23 @@ rocksdb::Status ArbCore::executionCursorSetup(ReadTransaction& tx,
     }
 }
 
-ValueResult<bool> ArbCore::executionCursorAddMessages(
-    ReadTransaction& tx,
-    ExecutionCursor& execution_cursor,
-    const uint256_t& orig_message_group_size) {
+ValueResult<std::pair<bool, std::vector<InboxMessage>>>
+ArbCore::executionCursorGetMessages(ReadTransaction& tx,
+                                    const ExecutionCursor& execution_cursor,
+                                    const uint256_t& orig_message_group_size) {
     const std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
-    return executionCursorAddMessagesNoLock(tx, execution_cursor,
+    return executionCursorGetMessagesNoLock(tx, execution_cursor,
                                             orig_message_group_size);
 }
 
-ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
+ValueResult<std::pair<bool, std::vector<InboxMessage>>>
+ArbCore::executionCursorGetMessagesNoLock(
     ReadTransaction& tx,
-    ExecutionCursor& execution_cursor,
+    const ExecutionCursor& execution_cursor,
     const uint256_t& orig_message_group_size) {
     auto message_group_size = orig_message_group_size;
+    std::vector<InboxMessage> messages;
 
     // Check if current machine is obsolete
     uint256_t totalRead = execution_cursor.getTotalMessagesRead();
@@ -1389,23 +1389,16 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
         auto inboxAcc = execution_cursor.getInboxAcc();
         if (!stored_result.status.ok() || !inboxAcc) {
             // Obsolete machine, reorg occurred
-            return {rocksdb::Status::OK(), false};
+            return {rocksdb::Status::OK(), std::make_pair(false, messages)};
         }
         if (*inboxAcc != stored_result.data.inbox_acc) {
             // Obsolete machine, reorg occurred
-            return {rocksdb::Status::OK(), false};
+            return {rocksdb::Status::OK(), std::make_pair(false, messages)};
         }
     }
 
-    // Delete any pending messages because they may have been affected by reorg
-    execution_cursor.first_message_sequence_number +=
-        execution_cursor.messages_to_skip;
-    execution_cursor.messages.clear();
-    execution_cursor.inbox_accumulators.clear();
-    execution_cursor.messages_to_skip = 0;
-
     auto current_message_sequence_number =
-        execution_cursor.first_message_sequence_number;
+        execution_cursor.getTotalMessagesRead();
 
     auto inserted_message_count_result = messageEntryInsertedCount();
 
@@ -1418,7 +1411,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
 
     if (message_group_size == 0) {
         // No messages to read
-        return {rocksdb::Status::OK(), true};
+        return {rocksdb::Status::OK(), std::make_pair(true, messages)};
     }
 
     std::vector<unsigned char> message_key;
@@ -1428,26 +1421,18 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     auto results = tx.messageEntryGetVectorVector(
         message_key_slice, intx::narrow_cast<size_t>(message_group_size));
     if (!results.status.ok()) {
-        return {results.status, false};
+        return {results.status, std::make_pair(false, messages)};
     }
 
-    std::vector<InboxMessage> messages;
-    std::vector<uint256_t> inbox_accumulators;
     auto total_size = results.data.size();
     messages.reserve(total_size);
-    inbox_accumulators.reserve(total_size);
     for (const auto& data : results.data) {
         auto message_entry = extractMessageEntry(0, vecToSlice(data));
         auto inbox_message = extractInboxMessage(message_entry.data);
         messages.push_back(inbox_message);
-        inbox_accumulators.push_back(message_entry.inbox_acc);
     }
 
-    execution_cursor.messages = std::move(messages);
-    execution_cursor.inbox_accumulators = std::move(inbox_accumulators);
-    execution_cursor.messages_to_skip = 0;
-
-    return {rocksdb::Status::OK(), true};
+    return {rocksdb::Status::OK(), std::make_pair(true, std::move(messages))};
 }
 
 ValueResult<uint256_t> ArbCore::logInsertedCount() const {
