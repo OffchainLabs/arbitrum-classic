@@ -1399,7 +1399,6 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
 
     // Delete any pending messages because they may have been affected by reorg
     execution_cursor.messages.clear();
-    execution_cursor.inbox_accumulators.clear();
     execution_cursor.messages_to_skip = 0;
 
     auto current_message_sequence_number =
@@ -1430,19 +1429,15 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     }
 
     std::vector<InboxMessage> messages;
-    std::vector<uint256_t> inbox_accumulators;
     auto total_size = results.data.size();
     messages.reserve(total_size);
-    inbox_accumulators.reserve(total_size);
     for (const auto& data : results.data) {
         auto message_entry = extractMessageEntry(0, vecToSlice(data));
         auto inbox_message = extractInboxMessage(message_entry.data);
         messages.push_back(inbox_message);
-        inbox_accumulators.push_back(message_entry.inbox_acc);
     }
 
     execution_cursor.messages = std::move(messages);
-    execution_cursor.inbox_accumulators = std::move(inbox_accumulators);
     execution_cursor.messages_to_skip = 0;
 
     return {rocksdb::Status::OK(), true};
