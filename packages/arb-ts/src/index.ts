@@ -18,5 +18,3 @@ export { Bridge } from './lib/bridge'
 export { L1Bridge } from './lib/l1bridge'
 export { L2Bridge } from './lib/l2bridge'
 export { ArbConversion } from './lib/conversion'
-
-export { RollupCreatorFactory } from './lib/abi/RollupCreatorFactory'

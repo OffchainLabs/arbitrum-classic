@@ -15,7 +15,7 @@ echo 'Copying interfaces into arb-ts'
 
 cd ../arb-bridge-eth/build/types
 
-\cp -rf Outbox* Bridge* Inbox* Rollup* ../../../arb-ts/src/lib/abi
+\cp -rf Outbox* Bridge* Inbox.* InboxFactory.* ../../../arb-ts/src/lib/abi
             
 cd ../../../arb-os/contracts/src/types
 

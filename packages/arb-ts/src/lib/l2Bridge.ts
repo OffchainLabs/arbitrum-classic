@@ -15,11 +15,11 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers, ethers, constants } from 'ethers'
+import { Signer, BigNumber, providers, ethers } from 'ethers'
 import { ArbTokenBridgeFactory } from './abi/ArbTokenBridgeFactory'
 import { ArbTokenBridge } from './abi/ArbTokenBridge'
 import { ArbSys } from './abi/ArbSys'
-import { ArbSys__factory } from './abi/ArbSys__Factory'
+import { ArbSys__factory } from './abi/factories/ArbSys__Factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
 import { StandardArbERC20Factory } from './abi/StandardArbERC20Factory'
 import { StandardArbERC777Factory } from './abi/StandardArbERC777Factory'
