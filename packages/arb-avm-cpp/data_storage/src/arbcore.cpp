@@ -1300,7 +1300,7 @@ rocksdb::Status ArbCore::resolveStagedMessage(Transaction& tx,
                                               T& machine_state) {
     if (machine_state.stagedMessageUnresolved()) {
         auto sequence_number = machine_state.getTotalMessagesRead();
-        auto message_lookup = getMessageEntry(tx, sequence_number);
+        auto message_lookup = getMessageEntry(tx, sequence_number - 1);
         if (!message_lookup.status.ok()) {
             // Unable to resolve cursor, no valid message found
             return message_lookup.status;
@@ -1396,8 +1396,11 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     if (totalRead > 0) {
         auto stored_result = getMessageEntry(tx, totalRead - 1);
         auto inboxAcc = execution_cursor.getInboxAcc();
-        if (!stored_result.status.ok() || !inboxAcc ||
-            *inboxAcc != stored_result.data.inbox_acc) {
+        if (!stored_result.status.ok() || !inboxAcc) {
+            // Obsolete machine, reorg occurred
+            return {rocksdb::Status::OK(), false};
+        }
+        if (*inboxAcc != stored_result.data.inbox_acc) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), false};
         }
