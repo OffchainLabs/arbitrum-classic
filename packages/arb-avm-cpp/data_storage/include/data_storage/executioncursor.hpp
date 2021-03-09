@@ -28,7 +28,6 @@
 
 class ExecutionCursor {
    public:
-    std::vector<InboxMessage> messages;
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
@@ -44,20 +43,15 @@ class ExecutionCursor {
         } else {
             machine = std::get<MachineStateKeys>(rhs.machine);
         }
-
-        messages = rhs.messages;
     }
 
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(rhs.machine)) {
             machine = std::make_unique<Machine>(
-                *std::get<std::unique_ptr<Machine>>(machine));
+                *std::get<std::unique_ptr<Machine>>(rhs.machine));
         } else {
-            machine = std::get<MachineStateKeys>(machine);
+            machine = std::get<MachineStateKeys>(rhs.machine);
         }
-
-        messages = rhs.messages;
-
         return *this;
     }
 

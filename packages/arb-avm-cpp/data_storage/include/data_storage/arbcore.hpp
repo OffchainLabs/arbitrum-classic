@@ -307,14 +307,14 @@ class ArbCore {
                                                   uint256_t count,
                                                   ValueCache& valueCache);
 
-    ValueResult<bool> executionCursorAddMessages(
-        ReadTransaction& tx,
-        ExecutionCursor& execution_cursor,
-        const uint256_t& orig_message_group_size);
-    ValueResult<bool> executionCursorAddMessagesNoLock(
-        ReadTransaction& tx,
-        ExecutionCursor& execution_cursor,
-        const uint256_t& orig_message_group_size);
+    ValueResult<std::pair<bool, std::vector<InboxMessage>>>
+    executionCursorGetMessages(ReadTransaction& tx,
+                               const ExecutionCursor& execution_cursor,
+                               const uint256_t& orig_message_group_size);
+    ValueResult<std::pair<bool, std::vector<InboxMessage>>>
+    executionCursorGetMessagesNoLock(ReadTransaction& tx,
+                                     const ExecutionCursor& execution_cursor,
+                                     const uint256_t& orig_message_group_size);
     rocksdb::Status executionCursorSetup(ReadTransaction& tx,
                                          ExecutionCursor& execution_cursor,
                                          const uint256_t& total_gas_used,
