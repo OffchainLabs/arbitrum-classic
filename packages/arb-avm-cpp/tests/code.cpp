@@ -80,7 +80,7 @@ TEST_CASE("Code serialization") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
     auto mach = generateTestMachine();
-    auto tx = storage.makeTransaction();
+    auto tx = storage.makeReadWriteTransaction();
     ValueCache value_cache{};
 
     SECTION("Save and load") {

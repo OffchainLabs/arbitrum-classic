@@ -29,7 +29,7 @@ TEST_CASE("CheckpointedMachine tests") {
     arbcore->initialize(executable);
 
     SECTION("CheckpointedMachine basic") {
-        auto tx = arbcore->makeTransaction();
+        auto tx = arbcore->makeReadWriteTransaction();
         REQUIRE(arbcore->initialized());
         REQUIRE(arbcore->maxCheckpointGas() == 0);
 

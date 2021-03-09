@@ -79,7 +79,7 @@ TEST_CASE("ARBOS test vectors") {
                 REQUIRE(assertion.sends[k] == sends[k]);
             }
             {
-                auto tx = storage.makeTransaction();
+                auto tx = storage.makeReadWriteTransaction();
                 saveMachine(*tx, *mach);
                 tx->commit();
             }
@@ -98,7 +98,7 @@ TEST_CASE("ARBOS test vectors") {
             REQUIRE(*mach_hash == *mach3_hash);
 
             {
-                auto tx = storage2.makeTransaction();
+                auto tx = storage2.makeReadWriteTransaction();
                 deleteMachine(*tx, *mach_hash);
                 tx->commit();
             }

@@ -51,17 +51,6 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CArbStorage* s) {
-    auto machine = static_cast<Machine*>(m);
-    auto storage = static_cast<ArbStorage*>(s);
-    auto transaction = storage->makeTransaction();
-    auto result = saveMachine(*transaction, *machine);
-    if (!result.status.ok()) {
-        return false;
-    }
-    return transaction->commit().ok();
-}
-
 int machineHash(CMachine* m, void* ret) {
     assert(m);
     auto optionalHash = static_cast<Machine*>(m)->hash();

@@ -56,7 +56,7 @@ class Tuple {
         return getHashPreImage().getSize();
     }
 
-    static Tuple createSizedTuple(size_t size);
+    static Tuple createSizedTuple(const size_t size);
 
     static Tuple createTuple(std::vector<value> values);
 
@@ -102,7 +102,7 @@ class Tuple {
         }
     }
 
-    void set_element(uint64_t pos, value newval) {
+    void set_element(const uint64_t pos, value newval) {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
@@ -115,14 +115,14 @@ class Tuple {
         tpl->deferredHashing = true;
     }
 
-    [[nodiscard]] value get_element(uint64_t pos) const {
+    [[nodiscard]] value get_element(const uint64_t pos) const {
         if (pos >= tuple_size()) {
             throw bad_tuple_index{};
         }
         return tpl->data[pos];
     }
 
-    [[nodiscard]] const value& get_element_unsafe(uint64_t pos) const {
+    [[nodiscard]] const value& get_element_unsafe(const uint64_t pos) const {
         return tpl->data[pos];
     }
 

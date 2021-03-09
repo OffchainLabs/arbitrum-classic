@@ -159,22 +159,22 @@ MachineStateKeys extractMachineStateKeys(
          last_sideload}};
 }
 
-void deleteMachineState(Transaction& transaction,
+void deleteMachineState(ReadWriteTransaction& tx,
                         MachineStateKeys& parsed_state) {
     std::map<uint64_t, uint64_t> segment_counts;
     auto delete_static_res =
-        deleteValueImpl(transaction, parsed_state.static_hash, segment_counts);
-    auto delete_register_res = deleteValueImpl(
-        transaction, parsed_state.register_hash, segment_counts);
-    auto delete_datastack_res = deleteValueImpl(
-        transaction, parsed_state.datastack_hash, segment_counts);
-    auto delete_auxstack_res = deleteValueImpl(
-        transaction, parsed_state.auxstack_hash, segment_counts);
+        deleteValueImpl(tx, parsed_state.static_hash, segment_counts);
+    auto delete_register_res =
+        deleteValueImpl(tx, parsed_state.register_hash, segment_counts);
+    auto delete_datastack_res =
+        deleteValueImpl(tx, parsed_state.datastack_hash, segment_counts);
+    auto delete_auxstack_res =
+        deleteValueImpl(tx, parsed_state.auxstack_hash, segment_counts);
 
     ++segment_counts[parsed_state.pc.pc.segment];
     ++segment_counts[parsed_state.err_pc.pc.segment];
 
-    deleteCode(transaction, segment_counts);
+    deleteCode(tx, segment_counts);
 
     if (!delete_static_res.status.ok()) {
         std::cout << "error deleting static in checkpoint" << std::endl;
@@ -193,26 +193,26 @@ void deleteMachineState(Transaction& transaction,
     }
 }
 
-DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash) {
+DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
     std::map<uint64_t, uint64_t> segment_counts;
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto results = getRefCountedData(*transaction.transaction, key);
+    auto results = getRefCountedData(tx, key);
 
     if (!results.status.ok()) {
         return DeleteResults{0, results.status,
                              std::move(results.stored_value)};
     }
 
-    auto delete_results = deleteRefCountedData(*transaction.transaction, key);
+    auto delete_results = deleteRefCountedData(tx, key);
 
     if (delete_results.reference_count < 1) {
         auto iter = results.stored_value.cbegin();
         auto parsed_state =
             extractMachineStateKeys(iter, results.stored_value.cend());
 
-        deleteMachineState(transaction, parsed_state);
+        deleteMachineState(tx, parsed_state);
     }
     return delete_results;
 }
@@ -221,12 +221,13 @@ bool MachineStateKeys::stagedMessageUnresolved() const {
     return std::holds_alternative<uint256_t>(staged_message);
 }
 
-DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
-                                               uint256_t machineHash) {
+DbResult<MachineStateKeys> getMachineStateKeys(
+    const ReadTransaction& transaction,
+    uint256_t machineHash) {
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machineHash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto results = getRefCountedData(*transaction.transaction, key);
+    auto results = getRefCountedData(transaction, key);
 
     if (!results.status.ok()) {
         return results.status;
@@ -238,33 +239,31 @@ DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
     return CountedData<MachineStateKeys>{results.reference_count, parsed_state};
 }
 
-rocksdb::Status saveMachineState(Transaction& transaction,
+rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
                                  const Machine& machine) {
     std::map<uint64_t, uint64_t> segment_counts;
 
     auto& machinestate = machine.machine_state;
     auto static_val_results =
-        saveValueImpl(transaction, machinestate.static_val, segment_counts);
+        saveValueImpl(tx, machinestate.static_val, segment_counts);
     if (!static_val_results.status.ok()) {
         return static_val_results.status;
     }
 
     auto register_val_results =
-        saveValueImpl(transaction, machinestate.registerVal, segment_counts);
+        saveValueImpl(tx, machinestate.registerVal, segment_counts);
     if (!register_val_results.status.ok()) {
         return register_val_results.status;
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
-    auto datastack_results =
-        saveValueImpl(transaction, datastack_tup, segment_counts);
+    auto datastack_results = saveValueImpl(tx, datastack_tup, segment_counts);
     if (!datastack_results.status.ok()) {
         return datastack_results.status;
     }
 
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
-    auto auxstack_results =
-        saveValueImpl(transaction, auxstack_tup, segment_counts);
+    auto auxstack_results = saveValueImpl(tx, auxstack_tup, segment_counts);
     if (!auxstack_results.status.ok()) {
         return auxstack_results.status;
     }
@@ -272,8 +271,7 @@ rocksdb::Status saveMachineState(Transaction& transaction,
     ++segment_counts[machinestate.pc.segment];
     ++segment_counts[machinestate.errpc.pc.segment];
 
-    auto code_status =
-        saveCode(transaction, *machinestate.code, segment_counts);
+    auto code_status = saveCode(tx, *machinestate.code, segment_counts);
     if (!code_status.ok()) {
         return code_status;
     }
@@ -281,7 +279,8 @@ rocksdb::Status saveMachineState(Transaction& transaction,
     return rocksdb::Status::OK();
 }
 
-SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
+SaveResults saveMachine(ReadWriteTransaction& transaction,
+                        const Machine& machine) {
     std::vector<unsigned char> checkpoint_name;
     auto machine_hash = machine.hash();
     if (!machine_hash) {
@@ -290,10 +289,10 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     marshal_uint256_t(*machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
 
-    auto transactionResult = getRefCountedData(*transaction.transaction, key);
+    auto transactionResult = getRefCountedData(transaction, key);
     if (transactionResult.status.ok()) {
         // Already saved so just increment reference count
-        return saveRefCountedData(*transaction.transaction, key,
+        return saveRefCountedData(transaction, key,
                                   transactionResult.stored_value);
     }
 
@@ -304,7 +303,7 @@ SaveResults saveMachine(Transaction& transaction, const Machine& machine) {
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
                               serialized_state);
-    return saveRefCountedData(*transaction.transaction, key, serialized_state);
+    return saveRefCountedData(transaction, key, serialized_state);
 }
 
 std::optional<uint256_t> MachineStateKeys::getInboxAcc() const {

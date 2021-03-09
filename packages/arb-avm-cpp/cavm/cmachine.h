@@ -75,8 +75,6 @@ ByteSlice machineMarshallState(CMachine* m);
 
 char* machineInfo(CMachine* m);
 
-int checkpointMachine(CMachine* m, CArbStorage* storage);
-
 CMachineExecutionConfig* machineExecutionConfigCreate();
 void machineExecutionConfigDestroy(CMachineExecutionConfig* m);
 void* machineExecutionConfigClone(CMachineExecutionConfig* c);

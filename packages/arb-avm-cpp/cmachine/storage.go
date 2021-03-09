@@ -102,12 +102,6 @@ func (s *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine, error
 	return ret, nil
 }
 
-func (s *ArbStorage) DeleteCheckpoint(machineHash common.Hash) bool {
-	success := C.deleteCheckpoint(s.c, unsafe.Pointer(&machineHash[0]))
-
-	return success == 1
-}
-
 func (s *ArbStorage) GetArbCore() core.ArbCore {
 	ac := C.createArbCore(s.c)
 	return NewArbCore(ac, s)

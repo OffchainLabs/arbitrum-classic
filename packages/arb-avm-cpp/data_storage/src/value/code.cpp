@@ -98,12 +98,12 @@ std::vector<unsigned char> serializeCodeSegment(
 }
 
 std::vector<unsigned char> prepareToSaveCodeSegment(
-    Transaction& transaction,
+    ReadWriteTransaction& tx,
     const CodeSegmentSnapshot& snapshot,
     std::map<uint64_t, uint64_t>& segment_counts) {
     uint64_t segment_id = snapshot.segment->segmentID();
     auto key = segment_key(segment_id);
-    auto results = getRefCountedData(*transaction.transaction, vecToSlice(key));
+    auto results = getRefCountedData(tx, vecToSlice(key));
 
     uint64_t existing_cp_count = 0;
 
@@ -123,8 +123,7 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
         if (cp.op.immediate) {
-            auto result =
-                saveValueImpl(transaction, *cp.op.immediate, segment_counts);
+            auto result = saveValueImpl(tx, *cp.op.immediate, segment_counts);
             if (!result.status.ok()) {
                 throw std::runtime_error("failed to save immediate value");
             }
@@ -135,13 +134,13 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
 }
 }  // namespace
 
-std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
+std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
                                             uint64_t segment_id,
                                             std::set<uint64_t>& segment_ids,
                                             ValueCache& value_cache) {
     auto key_vec = segment_key(segment_id);
     auto key = vecToSlice(key_vec);
-    auto results = getRefCountedData(*transaction.transaction, key);
+    auto results = getRefCountedData(tx, key);
 
     if (!results.status.ok()) {
         throw std::runtime_error("failed to load segment");
@@ -154,8 +153,8 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
         if (!raw_cp.immediateHash) {
             cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
         } else {
-            auto imm = getValueImpl(transaction, *raw_cp.immediateHash,
-                                    segment_ids, value_cache);
+            auto imm = getValueImpl(tx, *raw_cp.immediateHash, segment_ids,
+                                    value_cache);
             if (std::holds_alternative<rocksdb::Status>(imm)) {
                 throw std::runtime_error("failed to load immediate value");
             }
@@ -167,22 +166,21 @@ std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
     return std::make_shared<CodeSegment>(segment_id, std::move(cps));
 }
 
-void saveNextSegmentID(Transaction& transaction, uint64_t next_segment_id) {
+void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
     std::vector<unsigned char> value_data;
     marshal_uint64_t(next_segment_id, value_data);
     auto value_slice = vecToSlice(value_data);
-    auto status = transaction.transaction->Put(
-        rocksdb::Slice(max_code_segment_key), value_slice);
+    auto status =
+        tx.defaultPut(rocksdb::Slice(max_code_segment_key), value_slice);
     if (!status.ok()) {
         throw std::runtime_error("failed to size mac code segment");
     }
 }
 
-uint64_t getNextSegmentID(const Transaction& transaction) {
+uint64_t getNextSegmentID(ReadTransaction& tx) {
     std::string segment_id_raw;
-    auto s = transaction.transaction->GetForUpdate(
-        rocksdb::ReadOptions(), rocksdb::Slice(max_code_segment_key),
-        &segment_id_raw);
+    auto s =
+        tx.defaultGet(rocksdb::Slice(max_code_segment_key), &segment_id_raw);
     if (s.IsNotFound()) {
         return 0;
     }
@@ -218,7 +216,7 @@ std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
     return total_segment_counts;
 }
 
-rocksdb::Status deleteCode(Transaction& transaction,
+rocksdb::Status deleteCode(ReadWriteTransaction& tx,
                            std::map<uint64_t, uint64_t>& segment_counts) {
     std::unordered_map<uint64_t, GetResults> current_values{};
 
@@ -230,9 +228,8 @@ rocksdb::Status deleteCode(Transaction& transaction,
             if (current_value_it == current_values.end()) {
                 auto key_vec = segment_key(segment_id);
                 auto key = vecToSlice(key_vec);
-                auto inserted = current_values.insert(std::make_pair(
-                    segment_id,
-                    getRefCountedData(*transaction.transaction, key)));
+                auto inserted = current_values.insert(
+                    std::make_pair(segment_id, getRefCountedData(tx, key)));
                 current_value_it = inserted.first;
             }
 
@@ -246,8 +243,7 @@ rocksdb::Status deleteCode(Transaction& transaction,
                 extractRawCodeSegment(current_value_it->second.stored_value);
             for (const auto& cp : cps) {
                 if (cp.immediateHash) {
-                    deleteValueImpl(transaction, *cp.immediateHash,
-                                    next_segment_counts);
+                    deleteValueImpl(tx, *cp.immediateHash, next_segment_counts);
                 }
             }
             return true;
@@ -258,8 +254,7 @@ rocksdb::Status deleteCode(Transaction& transaction,
     for (const auto& item : total_deleted_segment_references) {
         auto key_vec = segment_key(item.first);
         auto key = vecToSlice(key_vec);
-        auto result =
-            deleteRefCountedData(*transaction.transaction, key, item.second);
+        auto result = deleteRefCountedData(tx, key, item.second);
         if (!result.status.ok()) {
             return result.status;
         }
@@ -268,11 +263,11 @@ rocksdb::Status deleteCode(Transaction& transaction,
     return rocksdb::Status::OK();
 }
 
-rocksdb::Status saveCode(Transaction& transaction,
+rocksdb::Status saveCode(ReadWriteTransaction& tx,
                          const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
-    saveNextSegmentID(transaction, snapshots.op_count);
+    saveNextSegmentID(tx, snapshots.op_count);
 
     std::unordered_map<uint64_t, std::vector<unsigned char>>
         code_segments_to_save{};
@@ -291,8 +286,7 @@ rocksdb::Status saveCode(Transaction& transaction,
             }
             uint64_t current_segment_count = next_segment_counts[segment_id];
             code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
-                transaction, snapshots.segments[segment_id],
-                next_segment_counts);
+                tx, snapshots.segments[segment_id], next_segment_counts);
             // Ignore internal references to this segment
             next_segment_counts[segment_id] = current_segment_count;
             return true;
@@ -301,9 +295,9 @@ rocksdb::Status saveCode(Transaction& transaction,
     // Now that we've handled all references, save all the serialized segments
     for (const auto& item : code_segments_to_save) {
         auto key_vec = segment_key(item.first);
-        auto results = saveRefCountedData(
-            *transaction.transaction, vecToSlice(key_vec), item.second,
-            total_segment_counts[item.first], true);
+        auto results =
+            saveRefCountedData(tx, vecToSlice(key_vec), item.second,
+                               total_segment_counts[item.first], true);
         if (!results.status.ok()) {
             return results.status;
         }
