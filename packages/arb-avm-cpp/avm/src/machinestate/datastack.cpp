@@ -83,8 +83,8 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
 
 Tuple Datastack::getTupleRepresentation() const {
     Tuple rep;
-    for (size_t i = 0; i < values.size(); i++) {
-        rep = Tuple(values[values.size() - 1 - i], rep);
+    for (const auto& val : values) {
+        rep = Tuple(val, rep);
     }
     return rep;
 }
