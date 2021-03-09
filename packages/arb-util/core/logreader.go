@@ -108,6 +108,14 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 		currentLogIndex := new(big.Int).Sub(currentLogCount, big.NewInt(1))
 
+		logger.Info().
+			Uint64("currentLogCount", currentLogCount.Uint64()).
+			Uint64("firstDeletedIndex", firstDeletedIndex.Uint64()).
+			Int("deletedLog count", len(deletedLogs)).
+			Uint64("firstIndex", firstIndex.Uint64()).
+			Int("log count", len(logs)).
+			Msg("logs received from log cursor")
+
 		if len(deletedLogs) > 0 && firstDeletedIndex.Cmp(currentLogIndex) <= 0 {
 			// Existing logs to delete
 			deletedCount := new(big.Int).Sub(currentLogCount, firstDeletedIndex)
