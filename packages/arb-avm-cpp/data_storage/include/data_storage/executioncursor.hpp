@@ -29,7 +29,6 @@
 class ExecutionCursor {
    public:
     std::vector<InboxMessage> messages;
-    size_t messages_to_skip{0};
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
@@ -47,7 +46,6 @@ class ExecutionCursor {
         }
 
         messages = rhs.messages;
-        messages_to_skip = rhs.messages_to_skip;
     }
 
     ExecutionCursor& operator=(const ExecutionCursor& rhs) {
@@ -59,7 +57,6 @@ class ExecutionCursor {
         }
 
         messages = rhs.messages;
-        messages_to_skip = rhs.messages_to_skip;
 
         return *this;
     }

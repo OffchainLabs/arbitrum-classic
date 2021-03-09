@@ -1242,8 +1242,6 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                 MachineExecutionConfig execConfig;
                 execConfig.max_gas = total_gas_used;
                 execConfig.go_over_gas = go_over_gas;
-                execConfig.inbox_messages = execution_cursor.messages;
-                execConfig.messages_to_skip = execution_cursor.messages_to_skip;
 
                 // Resolve staged message if possible.
                 // If placeholder message not found, machine will just be
@@ -1268,8 +1266,6 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
                     // Nothing was executed
                     break;
                 }
-                execution_cursor.messages_to_skip +=
-                    assertion.inbox_messages_consumed;
 
                 if (total_gas_used <=
                     execution_cursor.getOutput().arb_gas_used) {
@@ -1399,7 +1395,6 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
 
     // Delete any pending messages because they may have been affected by reorg
     execution_cursor.messages.clear();
-    execution_cursor.messages_to_skip = 0;
 
     auto current_message_sequence_number =
         execution_cursor.getTotalMessagesRead();
@@ -1438,7 +1433,6 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     }
 
     execution_cursor.messages = std::move(messages);
-    execution_cursor.messages_to_skip = 0;
 
     return {rocksdb::Status::OK(), true};
 }
