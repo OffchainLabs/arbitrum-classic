@@ -28,6 +28,7 @@ import "C"
 import (
 	"bytes"
 	"math/big"
+	"runtime"
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -257,7 +258,7 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCurs
 func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
-		return errors.New("unsupported execution cursor type")
+		return errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
 	maxGasData := math.U256Bytes(maxGas)
 
@@ -272,6 +273,21 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	}
 
 	return cursor.updateValues()
+}
+
+func (ec *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
+	cursor, ok := executionCursor.(*ExecutionCursor)
+	if !ok {
+		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
+	}
+	cMachine := C.arbCoreTakeMachine(ec.c, cursor.c)
+	if cMachine == nil {
+		return nil, errors.Errorf("error taking machine from execution cursor")
+	}
+	ret := &Machine{cMachine}
+
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
 }
 
 func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error {

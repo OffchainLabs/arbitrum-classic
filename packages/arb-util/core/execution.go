@@ -107,7 +107,7 @@ func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error)
 	if err := e.fillInCursors(index); err != nil {
 		return nil, err
 	}
-	return e.cursors[index].Clone().TakeMachine()
+	return e.lookup.TakeMachine(e.cursors[index].Clone())
 }
 
 func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targetInboxAcc [32]byte) (bool, error) {

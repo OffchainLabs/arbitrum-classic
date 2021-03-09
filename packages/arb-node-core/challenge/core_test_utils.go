@@ -1,6 +1,7 @@
 package challenge
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -99,4 +100,9 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 		}
 	}
 	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas)
+}
+
+func (c FaultyCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
+	faultyCursor := executionCursor.(FaultyExecutionCursor)
+	return c.ArbCore.TakeMachine(faultyCursor.ExecutionCursor)
 }

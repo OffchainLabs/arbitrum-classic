@@ -40,25 +40,15 @@ class ExecutionCursor {
               machine_.output.fully_processed_messages),
           machine(std::move(machine_)) {}
 
-    //    ExecutionCursor(std::unique_ptr<Machine>& machine,
-    //                    std::vector<InboxMessage>& messages,
-    //                    std::vector<uint256_t>& inbox_accumulators,
-    //                    size_t messages_to_skip)
-    //        : machine(std::move(machine)),
-    //          first_message_sequence_number(machine->machine_state.output.fully_processed_messages),
-    //          messages(std::move(messages)),
-    //          inbox_accumulators(std::move(inbox_accumulators)),
-    //          messages_to_skip(messages_to_skip) {}
-
     ~ExecutionCursor() = default;
 
     ExecutionCursor(const ExecutionCursor& rhs)
         : machine(std::unique_ptr<Machine>(nullptr)) {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(rhs.machine)) {
             machine = std::make_unique<Machine>(
-                *std::get<std::unique_ptr<Machine>>(machine));
+                *std::get<std::unique_ptr<Machine>>(rhs.machine));
         } else {
-            machine = std::get<MachineStateKeys>(machine);
+            machine = std::get<MachineStateKeys>(rhs.machine);
         }
 
         first_message_sequence_number = rhs.first_message_sequence_number;
