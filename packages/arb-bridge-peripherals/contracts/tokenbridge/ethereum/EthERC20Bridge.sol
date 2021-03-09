@@ -194,7 +194,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyIfConnected {
-        require(customTokens[erc20] != address(0), "Custom token not deployed");
+        require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         // This transfers along any ETH sent for to pay for gas in L2
         sendPairedContractTransaction(

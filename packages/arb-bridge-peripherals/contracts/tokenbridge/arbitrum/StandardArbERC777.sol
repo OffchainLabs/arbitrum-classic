@@ -18,14 +18,18 @@ contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
         _;
     }
 
-    function initialize(address _bridge, address _l1Address, uint8 _decimals) external override {
+    function initialize(
+        address _bridge,
+        address _l1Address,
+        uint8 _decimals
+    ) external override {
         require(address(bridge) == address(0), "ALREADY_INIT");
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
 
         require(_decimals <= 18, "Decimals must be less than or equal to 18");
         l1Decimals = _decimals;
-        _granularity = 10 ** uint256(18 - _decimals);
+        _granularity = 10**uint256(18 - _decimals);
     }
 
     function updateInfo(string memory newName, string memory newSymbol) public override onlyBridge {
@@ -38,16 +42,16 @@ contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
     }
 
     function bridgeMint(address account, uint256 amount) external override onlyBridge {
-        _mint(account, amount.from20to777(l1Decimals), '', '');
+        _mint(account, amount.from20to777(l1Decimals), "", "");
     }
 
-    function withdraw(address destination, uint256 amount) external {
-        _burn(msg.sender, amount, '', '');
+    function withdraw(address destination, uint256 amount) external override {
+        _burn(msg.sender, amount, "", "");
         bridge.withdraw(l1Address, destination, amount.from777to20(l1Decimals));
     }
 
     function migrate(address target, uint256 amount) external {
-        _burn(msg.sender, amount, '', '');
+        _burn(msg.sender, amount, "", "");
         bridge.migrate(l1Address, target, msg.sender, amount);
     }
 }
