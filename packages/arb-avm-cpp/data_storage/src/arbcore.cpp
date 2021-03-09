@@ -1398,14 +1398,12 @@ ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
     }
 
     // Delete any pending messages because they may have been affected by reorg
-    execution_cursor.first_message_sequence_number +=
-        execution_cursor.messages_to_skip;
     execution_cursor.messages.clear();
     execution_cursor.inbox_accumulators.clear();
     execution_cursor.messages_to_skip = 0;
 
     auto current_message_sequence_number =
-        execution_cursor.first_message_sequence_number;
+        execution_cursor.getTotalMessagesRead();
 
     auto inserted_message_count_result = messageEntryInsertedCount();
 

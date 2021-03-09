@@ -28,17 +28,13 @@
 
 class ExecutionCursor {
    public:
-    uint256_t first_message_sequence_number;
     std::vector<InboxMessage> messages;
     std::vector<uint256_t> inbox_accumulators;
     size_t messages_to_skip{0};
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    ExecutionCursor(MachineStateKeys machine_)
-        : first_message_sequence_number(
-              machine_.output.fully_processed_messages),
-          machine(std::move(machine_)) {}
+    ExecutionCursor(MachineStateKeys machine_) : machine(std::move(machine_)) {}
 
     ~ExecutionCursor() = default;
 
@@ -51,7 +47,6 @@ class ExecutionCursor {
             machine = std::get<MachineStateKeys>(rhs.machine);
         }
 
-        first_message_sequence_number = rhs.first_message_sequence_number;
         messages = rhs.messages;
         inbox_accumulators = rhs.inbox_accumulators;
         messages_to_skip = rhs.messages_to_skip;
@@ -65,7 +60,6 @@ class ExecutionCursor {
             machine = std::get<MachineStateKeys>(machine);
         }
 
-        first_message_sequence_number = rhs.first_message_sequence_number;
         messages = rhs.messages;
         inbox_accumulators = rhs.inbox_accumulators;
         messages_to_skip = rhs.messages_to_skip;
