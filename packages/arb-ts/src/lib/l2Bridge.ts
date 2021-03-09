@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers } from 'ethers'
+import { Signer, BigNumber, providers, ethers, constants } from 'ethers'
 import { ArbTokenBridgeFactory } from './abi/ArbTokenBridgeFactory'
 import { ArbTokenBridge } from './abi/ArbTokenBridge'
 import { ArbSys } from './abi/ArbSys'
@@ -23,6 +23,8 @@ import { ArbSys__factory } from './abi/ArbSys__Factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
 import { StandardArbERC20Factory } from './abi/StandardArbERC20Factory'
 import { StandardArbERC777Factory } from './abi/StandardArbERC777Factory'
+import { IArbToken } from './abi/IArbToken'
+import { IArbTokenFactory } from './abi/IArbTokenFactory'
 
 import { StandardArbERC777 } from './abi/StandardArbERC777'
 
@@ -31,7 +33,7 @@ const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
   ERC777?: { contract: StandardArbERC777; balance: BigNumber }
-  CUSTOM?: { contract: StandardArbERC777; balance: BigNumber }
+  CUSTOM?: { contract: IArbToken; balance: BigNumber }
 }
 
 export interface Tokens {
@@ -127,6 +129,30 @@ export class L2Bridge {
 
     const tokenData = this.l2Tokens[erc20L1Address] as L2TokenData // truthiness is ensured above
     const walletAddress = await this.getWalletAddress()
+
+    const customTokenAddress = await this.arbTokenBridge.customToken(
+      erc20L1Address
+    )
+    if (customTokenAddress !== ethers.constants.AddressZero) {
+      const customTokenContract = IArbTokenFactory.connect(
+        customTokenAddress,
+        this.l2Signer
+      )
+      tokenData.CUSTOM = {
+        contract: customTokenContract,
+        balance: BigNumber.from(0),
+      }
+      try {
+        const balance = (await customTokenContract.balanceOf(
+          walletAddress
+        )) as BigNumber
+        tokenData.CUSTOM.balance = balance
+      } catch (err) {
+        console.warn("Count not get custom token's balance", err)
+      }
+      return tokenData
+    }
+
     const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
     const l2ERC777Address = await this.getERC777L2Address(erc20L1Address)
 
