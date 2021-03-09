@@ -275,7 +275,8 @@ TEST_CASE("ArbCore inbox") {
         auto message = InboxMessage(0, {}, i, 0, i, 0, {});
         raw_messages.push_back(message.serialize());
         INFO("RUN " << i);
-        runCheckArbCore(arbCore, raw_messages, inbox_acc, i, 0, i + 1, true);
+        runCheckArbCore(arbCore, raw_messages, inbox_acc, i + 1, 0, i + 1,
+                        true);
         inbox_acc = hash_inbox(inbox_acc, message.serialize());
     }
     auto tx = arbCore->makeTransaction();
