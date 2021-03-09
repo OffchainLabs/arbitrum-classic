@@ -44,7 +44,7 @@ void checkGetTupleResult(const DbResult<value>& res,
             expected_hash);
 }
 
-void initializeDatastack(const ReadOnlyTransaction& transaction,
+void initializeDatastack(const ReadTransaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
                          uint64_t expected_size) {

@@ -29,7 +29,7 @@
 #include <rocksdb/utilities/transaction_db.h>
 
 class Transaction;
-class ReadOnlyTransaction;
+class ReadTransaction;
 class ReadWriteTransaction;
 
 class DataStorage {
@@ -59,7 +59,7 @@ class DataStorage {
 };
 
 class Transaction {
-    friend ReadOnlyTransaction;
+    friend ReadTransaction;
     friend ReadWriteTransaction;
 
    public:

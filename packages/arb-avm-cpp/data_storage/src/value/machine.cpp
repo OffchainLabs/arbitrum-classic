@@ -222,7 +222,7 @@ bool MachineStateKeys::stagedMessageUnresolved() const {
 }
 
 DbResult<MachineStateKeys> getMachineStateKeys(
-    const ReadOnlyTransaction& transaction,
+    const ReadTransaction& transaction,
     uint256_t machineHash) {
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machineHash, checkpoint_name);

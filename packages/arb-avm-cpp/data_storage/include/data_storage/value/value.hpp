@@ -21,7 +21,7 @@
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/valuecache.hpp>
 
-#include <data_storage/readonlytransaction.hpp>
+#include <data_storage/readtransaction.hpp>
 #include <map>
 #include <set>
 
@@ -35,12 +35,12 @@ SaveResults saveValueImpl(ReadWriteTransaction& transaction,
 DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts);
-DbResult<value> getValueImpl(const ReadOnlyTransaction& tx,
+DbResult<value> getValueImpl(const ReadTransaction& tx,
                              const uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
                              ValueCache& value_cache);
 
-DbResult<value> getValue(const ReadOnlyTransaction& tx,
+DbResult<value> getValue(const ReadTransaction& tx,
                          const uint256_t value_hash,
                          ValueCache& value_cache);
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val);

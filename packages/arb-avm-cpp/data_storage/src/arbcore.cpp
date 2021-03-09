@@ -60,7 +60,7 @@ ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
 }
 
 ValueResult<MessageEntry> ArbCore::getMessageEntry(
-    const ReadOnlyTransaction& tx,
+    const ReadTransaction& tx,
     uint256_t message_sequence_number) const {
     std::vector<unsigned char> previous_key;
     marshal_uint256_t(message_sequence_number, previous_key);
@@ -161,13 +161,13 @@ bool ArbCore::deliverMessages(
     return true;
 }
 
-std::unique_ptr<ReadOnlyTransaction> ArbCore::makeReadOnlyTransaction() {
-    return ReadOnlyTransaction::makeReadOnlyTransaction(data_storage);
+std::unique_ptr<ReadTransaction> ArbCore::makeReadOnlyTransaction() {
+    return ReadTransaction::makeReadOnlyTransaction(data_storage);
 }
 
-std::unique_ptr<const ReadOnlyTransaction>
-ArbCore::makeConstReadOnlyTransaction() const {
-    return ReadOnlyTransaction::makeReadOnlyTransaction(data_storage);
+std::unique_ptr<const ReadTransaction> ArbCore::makeConstReadOnlyTransaction()
+    const {
+    return ReadTransaction::makeReadOnlyTransaction(data_storage);
 }
 
 std::unique_ptr<ReadWriteTransaction> ArbCore::makeReadWriteTransaction() {
@@ -268,7 +268,7 @@ bool ArbCore::initialized() const {
     return s.ok();
 }
 
-ValueResult<uint256_t> ArbCore::getInitialMachineHash(ReadOnlyTransaction& tx) {
+ValueResult<uint256_t> ArbCore::getInitialMachineHash(ReadTransaction& tx) {
     std::string initial_raw;
     auto s = tx.stateGet(vecToSlice(initial_machine_hash_key), &initial_raw);
     if (!s.ok()) {
@@ -281,17 +281,17 @@ ValueResult<uint256_t> ArbCore::getInitialMachineHash(ReadOnlyTransaction& tx) {
 }
 
 template <class T>
-std::unique_ptr<T> ArbCore::getInitialMachineImpl(ReadOnlyTransaction& tx,
+std::unique_ptr<T> ArbCore::getInitialMachineImpl(ReadTransaction& tx,
                                                   ValueCache& value_cache) {
     auto machine_hash = getInitialMachineHash(tx);
     return getMachine<T>(machine_hash.data, value_cache);
 }
 
 template std::unique_ptr<Machine> ArbCore::getInitialMachineImpl(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     ValueCache& value_cache);
 template std::unique_ptr<MachineThread> ArbCore::getInitialMachineImpl(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     ValueCache& value_cache);
 
 template <class T>
@@ -305,7 +305,7 @@ template std::unique_ptr<Machine> ArbCore::getInitialMachine(ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getInitialMachine(ValueCache&);
 
 template <class T>
-std::unique_ptr<T> ArbCore::getMachineImpl(ReadOnlyTransaction& tx,
+std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
                                            uint256_t machineHash,
                                            ValueCache& value_cache) {
     auto results = getMachineStateKeys(tx, machineHash);
@@ -318,11 +318,11 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadOnlyTransaction& tx,
 }
 
 template std::unique_ptr<Machine> ArbCore::getMachineImpl(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     uint256_t machineHash,
     ValueCache& value_cache);
 template std::unique_ptr<MachineThread> ArbCore::getMachineImpl(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     uint256_t machineHash,
     ValueCache& value_cache);
 
@@ -490,7 +490,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 }
 
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     const uint256_t& arb_gas_used) const {
     std::vector<unsigned char> key;
     marshal_uint256_t(arb_gas_used, key);
@@ -502,7 +502,7 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
     return extractMachineStateKeys(result.data.begin(), result.data.end());
 }
 
-bool ArbCore::isCheckpointsEmpty(ReadOnlyTransaction& tx) const {
+bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
     auto it = std::unique_ptr<rocksdb::Iterator>(tx.checkpointGetIterator());
     it->SeekToLast();
     return !it->Valid();
@@ -524,7 +524,7 @@ uint256_t ArbCore::maxCheckpointGas() {
 // if `after_gas` is false. If `after_gas` is true, checkpoint after specified
 // gas is returned.
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     const uint256_t& total_gas,
     bool after_gas) {
     auto it = tx.checkpointGetIterator();
@@ -558,7 +558,7 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
 
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
-    const ReadOnlyTransaction& transaction,
+    const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const {
     std::set<uint64_t> segment_ids;
@@ -633,11 +633,11 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
 }
 
 template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeys(
-    const ReadOnlyTransaction& transaction,
+    const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const;
 template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
-    const ReadOnlyTransaction& transaction,
+    const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const;
 
@@ -910,7 +910,7 @@ ValueResult<std::vector<value>> ArbCore::getLogs(uint256_t index,
     return getLogsNoLock(*tx, index, count, valueCache);
 }
 
-ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadOnlyTransaction& tx,
+ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
                                                        uint256_t index,
                                                        uint256_t count,
                                                        ValueCache& valueCache) {
@@ -992,7 +992,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
 
 ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
                       std::optional<uint256_t>>>
-ArbCore::getMessagesImpl(const ReadOnlyTransaction& tx,
+ArbCore::getMessagesImpl(const ReadTransaction& tx,
                          uint256_t index,
                          uint256_t count) const {
     if (count == 0) {
@@ -1177,7 +1177,7 @@ MachineStateKeys& resolveExecutionVariant(MachineStateKeys& mach) {
 }
 
 std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
-    const ReadOnlyTransaction& tx,
+    const ReadTransaction& tx,
     ExecutionCursor& execution_cursor,
     ValueCache& cache) const {
     if (std::holds_alternative<MachineStateKeys>(execution_cursor.machine)) {
@@ -1190,7 +1190,7 @@ std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
 }
 
 std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachineImpl(
-    const ReadOnlyTransaction& tx,
+    const ReadTransaction& tx,
     ExecutionCursor& execution_cursor,
     ValueCache& cache) const {
     auto mach =
@@ -1207,7 +1207,7 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
 }
 
 rocksdb::Status ArbCore::getExecutionCursorImpl(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     ExecutionCursor& execution_cursor,
     uint256_t total_gas_used,
     bool go_over_gas,
@@ -1287,7 +1287,7 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
 }
 
 template <typename T>
-rocksdb::Status ArbCore::resolveStagedMessage(const ReadOnlyTransaction& tx,
+rocksdb::Status ArbCore::resolveStagedMessage(const ReadTransaction& tx,
                                               T& machine_state) {
     if (machine_state.stagedMessageUnresolved()) {
         auto sequence_number = machine_state.getTotalMessagesRead();
@@ -1303,7 +1303,7 @@ rocksdb::Status ArbCore::resolveStagedMessage(const ReadOnlyTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-rocksdb::Status ArbCore::executionCursorSetup(ReadOnlyTransaction& tx,
+rocksdb::Status ArbCore::executionCursorSetup(ReadTransaction& tx,
                                               ExecutionCursor& execution_cursor,
                                               const uint256_t& total_gas_used,
                                               bool is_for_sideload) {
@@ -1367,7 +1367,7 @@ rocksdb::Status ArbCore::executionCursorSetup(ReadOnlyTransaction& tx,
 }
 
 ValueResult<bool> ArbCore::executionCursorAddMessages(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     ExecutionCursor& execution_cursor,
     const uint256_t& orig_message_group_size) {
     const std::lock_guard<std::mutex> lock(core_reorg_mutex);
@@ -1377,7 +1377,7 @@ ValueResult<bool> ArbCore::executionCursorAddMessages(
 }
 
 ValueResult<bool> ArbCore::executionCursorAddMessagesNoLock(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     ExecutionCursor& execution_cursor,
     const uint256_t& orig_message_group_size) {
     auto message_group_size = orig_message_group_size;
@@ -1457,7 +1457,7 @@ ValueResult<uint256_t> ArbCore::logInsertedCount() const {
 }
 
 ValueResult<uint256_t> ArbCore::logInsertedCountImpl(
-    const ReadOnlyTransaction& tx) const {
+    const ReadTransaction& tx) const {
     return tx.stateGetUint256(vecToSlice(log_inserted_key));
 }
 rocksdb::Status ArbCore::updateLogInsertedCount(ReadWriteTransaction& tx,
@@ -1468,8 +1468,7 @@ rocksdb::Status ArbCore::updateLogInsertedCount(ReadWriteTransaction& tx,
     return tx.statePut(vecToSlice(log_inserted_key), vecToSlice(value));
 }
 
-ValueResult<uint256_t> ArbCore::logProcessedCount(
-    ReadOnlyTransaction& tx) const {
+ValueResult<uint256_t> ArbCore::logProcessedCount(ReadTransaction& tx) const {
     return tx.stateGetUint256(vecToSlice(log_processed_key));
 }
 rocksdb::Status ArbCore::updateLogProcessedCount(ReadWriteTransaction& tx,
@@ -1484,7 +1483,7 @@ ValueResult<uint256_t> ArbCore::sendInsertedCount() const {
 }
 
 ValueResult<uint256_t> ArbCore::sendInsertedCountImpl(
-    const ReadOnlyTransaction& tx) const {
+    const ReadTransaction& tx) const {
     return tx.stateGetUint256(vecToSlice(send_inserted_key));
 }
 
@@ -1496,8 +1495,7 @@ rocksdb::Status ArbCore::updateSendInsertedCount(ReadWriteTransaction& tx,
     return tx.statePut(vecToSlice(send_inserted_key), vecToSlice(value));
 }
 
-ValueResult<uint256_t> ArbCore::sendProcessedCount(
-    ReadOnlyTransaction& tx) const {
+ValueResult<uint256_t> ArbCore::sendProcessedCount(ReadTransaction& tx) const {
     return tx.stateGetUint256(vecToSlice(send_processed_key));
 }
 rocksdb::Status ArbCore::updateSendProcessedCount(ReadWriteTransaction& tx,
@@ -1512,7 +1510,7 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
 }
 
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
-    const ReadOnlyTransaction& tx) const {
+    const ReadTransaction& tx) const {
     return tx.stateGetUint256(vecToSlice(message_entry_inserted_key));
 }
 
@@ -1728,7 +1726,7 @@ std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-bool ArbCore::handleLogsCursorRequested(ReadOnlyTransaction& tx,
+bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
                                         size_t cursor_index,
                                         ValueCache& cache) {
     if (cursor_index >= logs_cursors.size()) {
@@ -2028,7 +2026,7 @@ rocksdb::Status ArbCore::logsCursorSaveCurrentTotalCount(
 }
 
 ValueResult<uint256_t> ArbCore::logsCursorGetCurrentTotalCount(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     size_t cursor_index) {
     return tx.stateGetUint256(
         vecToSlice(logs_cursors[cursor_index].current_total_key));
@@ -2049,7 +2047,7 @@ rocksdb::Status ArbCore::saveSideloadPosition(ReadWriteTransaction& tx,
 }
 
 ValueResult<uint256_t> ArbCore::getSideloadPosition(
-    ReadOnlyTransaction& tx,
+    ReadTransaction& tx,
     const uint256_t& block_number) {
     std::vector<unsigned char> key;
     marshal_uint256_t(block_number, key);

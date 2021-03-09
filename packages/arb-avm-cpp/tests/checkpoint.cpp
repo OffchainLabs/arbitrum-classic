@@ -36,7 +36,7 @@ void saveValue(ReadWriteTransaction& transaction,
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
-DbResult<value> getValue(const ReadOnlyTransaction& transaction,
+DbResult<value> getValue(const ReadTransaction& transaction,
                          const value& value_target,
                          uint32_t expected_ref_count,
                          bool expected_status,
@@ -54,7 +54,7 @@ DbResult<value> getValue(const ReadOnlyTransaction& transaction,
     return res;
 }
 
-void getTuple(const ReadOnlyTransaction& transaction,
+void getTuple(const ReadTransaction& transaction,
               const value& val,
               uint32_t expected_ref_count,
               bool expected_status,
@@ -70,7 +70,7 @@ void getTuple(const ReadOnlyTransaction& transaction,
     }
 }
 
-void getTupleValues(const ReadOnlyTransaction& transaction,
+void getTupleValues(const ReadTransaction& transaction,
                     uint256_t tuple_hash,
                     std::vector<uint256_t> value_hashes,
                     ValueCache& value_cache) {
@@ -361,7 +361,7 @@ void checkSavedState(const ReadWriteTransaction& transaction,
         getValue(transaction, data.register_hash, value_cache)));
 }
 
-void checkDeletedCheckpoint(ReadOnlyTransaction& transaction,
+void checkDeletedCheckpoint(ReadTransaction& transaction,
                             const Machine& deleted_machine) {
     auto deleted_hash = deleted_machine.hash();
     REQUIRE(deleted_hash);

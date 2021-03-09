@@ -114,7 +114,7 @@ DeleteResults deleteRefCountedData(ReadWriteTransaction& tx,
     }
 }
 
-GetResults getRefCountedData(const ReadOnlyTransaction& tx,
+GetResults getRefCountedData(const ReadTransaction& tx,
                              const rocksdb::Slice& hash_key) {
     auto read_options = rocksdb::ReadOptions();
     std::string return_value;

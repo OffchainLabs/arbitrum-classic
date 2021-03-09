@@ -45,7 +45,7 @@ class ArbStorage {
     rocksdb::Status initialize(const std::string& executable_path);
     [[nodiscard]] bool initialized() const;
 
-    std::unique_ptr<ReadOnlyTransaction> makeReadOnlyTransaction();
+    std::unique_ptr<ReadTransaction> makeReadOnlyTransaction();
     std::unique_ptr<ReadWriteTransaction> makeReadWriteTransaction();
     [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;
     std::shared_ptr<ArbCore> getArbCore();

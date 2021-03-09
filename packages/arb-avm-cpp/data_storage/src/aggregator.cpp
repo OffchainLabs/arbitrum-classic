@@ -104,7 +104,7 @@ void saveBlockCount(ReadWriteTransaction& tx, uint64_t max) {
     }
 }
 
-uint64_t blockCountImpl(const ReadOnlyTransaction& tx) {
+uint64_t blockCountImpl(const ReadTransaction& tx) {
     std::string value;
     auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
     if (!s.ok()) {
@@ -136,8 +136,7 @@ std::array<char, block_key.size() + sizeof(uint64_t)> blockEntryKey(
 
 namespace {
 template <typename Key>
-std::optional<uint64_t> returnIndex(const ReadOnlyTransaction& tx,
-                                    const Key& key) {
+std::optional<uint64_t> returnIndex(const ReadTransaction& tx, const Key& key) {
     std::string request_value;
     auto s = tx.aggregatorGet(vecToSlice(key), &request_value);
     if (s.IsNotFound()) {
@@ -272,14 +271,13 @@ void AggregatorStore::updateLogsProcessedCount(const uint256_t& count) {
     commitTx(*tx);
 }
 
-std::unique_ptr<ReadOnlyTransaction>
-AggregatorStore::makeReadOnlyTransaction() {
-    return ReadOnlyTransaction::makeReadOnlyTransaction(data_storage);
+std::unique_ptr<ReadTransaction> AggregatorStore::makeReadOnlyTransaction() {
+    return ReadTransaction::makeReadOnlyTransaction(data_storage);
 }
 
-std::unique_ptr<const ReadOnlyTransaction>
+std::unique_ptr<const ReadTransaction>
 AggregatorStore::makeConstReadOnlyTransaction() const {
-    return ReadOnlyTransaction::makeReadOnlyTransaction(data_storage);
+    return ReadTransaction::makeReadOnlyTransaction(data_storage);
 }
 
 std::unique_ptr<ReadWriteTransaction>

@@ -51,8 +51,8 @@ class AggregatorStore {
     void updateLogsProcessedCount(const uint256_t& count);
     void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
     std::optional<uint64_t> getMessageBatch(const uint256_t& batchNum);
-    std::unique_ptr<ReadOnlyTransaction> makeReadOnlyTransaction();
-    [[nodiscard]] std::unique_ptr<const ReadOnlyTransaction>
+    std::unique_ptr<ReadTransaction> makeReadOnlyTransaction();
+    [[nodiscard]] std::unique_ptr<const ReadTransaction>
     makeConstReadOnlyTransaction() const;
     std::unique_ptr<ReadWriteTransaction> makeReadWriteTransaction();
 };

@@ -14,33 +14,32 @@
  * limitations under the License.
  */
 
-#include "data_storage/readonlytransaction.hpp"
+#include "data_storage/readtransaction.hpp"
 #include <data_storage/storageresult.hpp>
 #include "value/utils.hpp"
 
-ReadOnlyTransaction::ReadOnlyTransaction(std::shared_ptr<DataStorage> store)
+ReadTransaction::ReadTransaction(std::shared_ptr<DataStorage> store)
     : transaction(Transaction::makeTransaction(std::move(store))) {}
 
-ReadOnlyTransaction::~ReadOnlyTransaction() {
+ReadTransaction::~ReadTransaction() {
     if (read_options.snapshot != nullptr) {
         transaction->datastorage->txn_db->ReleaseSnapshot(
             read_options.snapshot);
     }
 }
 
-std::unique_ptr<ReadOnlyTransaction>
-ReadOnlyTransaction::makeReadOnlyTransaction(
+std::unique_ptr<ReadTransaction> ReadTransaction::makeReadOnlyTransaction(
     std::shared_ptr<DataStorage> store) {
-    return std::make_unique<ReadOnlyTransaction>(std::move(store));
+    return std::make_unique<ReadTransaction>(std::move(store));
 }
 
-void ReadOnlyTransaction::enterReadSnapshot() {
+void ReadTransaction::enterReadSnapshot() {
     if (read_options.snapshot == nullptr) {
         read_options.snapshot = transaction->datastorage->txn_db->GetSnapshot();
     }
 }
 
-void ReadOnlyTransaction::exitReadSnapshot() {
+void ReadTransaction::exitReadSnapshot() {
     if (read_options.snapshot != nullptr) {
         transaction->datastorage->txn_db->ReleaseSnapshot(
             read_options.snapshot);
@@ -48,158 +47,155 @@ void ReadOnlyTransaction::exitReadSnapshot() {
     }
 }
 
-rocksdb::Status ReadOnlyTransaction::defaultGet(const rocksdb::Slice& key,
-                                                std::string* value) const {
+rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,
+                                            std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->default_column.get(), key,
         value);
 }
-rocksdb::Status ReadOnlyTransaction::stateGet(const rocksdb::Slice& key,
-                                              std::string* value) const {
+rocksdb::Status ReadTransaction::stateGet(const rocksdb::Slice& key,
+                                          std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->state_column.get(), key, value);
 }
-rocksdb::Status ReadOnlyTransaction::checkpointGet(const rocksdb::Slice& key,
-                                                   std::string* value) const {
+rocksdb::Status ReadTransaction::checkpointGet(const rocksdb::Slice& key,
+                                               std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->checkpoint_column.get(), key,
         value);
 }
-rocksdb::Status ReadOnlyTransaction::messageEntryGet(const rocksdb::Slice& key,
-                                                     std::string* value) const {
+rocksdb::Status ReadTransaction::messageEntryGet(const rocksdb::Slice& key,
+                                                 std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->messageentry_column.get(), key,
         value);
 }
-rocksdb::Status ReadOnlyTransaction::logGet(const rocksdb::Slice& key,
-                                            std::string* value) const {
+rocksdb::Status ReadTransaction::logGet(const rocksdb::Slice& key,
+                                        std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->log_column.get(), key, value);
 }
-rocksdb::Status ReadOnlyTransaction::sendGet(const rocksdb::Slice& key,
-                                             std::string* value) const {
+rocksdb::Status ReadTransaction::sendGet(const rocksdb::Slice& key,
+                                         std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->send_column.get(), key, value);
 }
-rocksdb::Status ReadOnlyTransaction::sideloadGet(const rocksdb::Slice& key,
-                                                 std::string* value) const {
+rocksdb::Status ReadTransaction::sideloadGet(const rocksdb::Slice& key,
+                                             std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->sideload_column.get(), key,
         value);
 }
 
-rocksdb::Status ReadOnlyTransaction::aggregatorGet(const rocksdb::Slice& key,
-                                                   std::string* value) const {
+rocksdb::Status ReadTransaction::aggregatorGet(const rocksdb::Slice& key,
+                                               std::string* value) const {
     return transaction->transaction->Get(
         read_options, transaction->datastorage->aggregator_column.get(), key,
         value);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::defaultGetIterator()
-    const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::defaultGetIterator() const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->default_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::stateGetIterator()
-    const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::stateGetIterator() const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->state_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::checkpointGetIterator()
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::checkpointGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->checkpoint_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator>
-ReadOnlyTransaction::messageEntryGetIterator() const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::messageEntryGetIterator()
+    const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->messageentry_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::logGetIterator() const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::logGetIterator() const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->log_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::sendGetIterator()
-    const {
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::sendGetIterator() const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->send_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::sideloadGetIterator()
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::sideloadGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->sideload_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadOnlyTransaction::aggregatorGetIterator()
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::aggregatorGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
         read_options, transaction->datastorage->aggregator_column.get());
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::defaultGetUint256(
+ValueResult<uint256_t> ReadTransaction::defaultGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->default_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::stateGetUint256(
+ValueResult<uint256_t> ReadTransaction::stateGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->state_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::checkpointGetUint256(
+ValueResult<uint256_t> ReadTransaction::checkpointGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->checkpoint_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::messageEntryGetUint256(
+ValueResult<uint256_t> ReadTransaction::messageEntryGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->messageentry_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::logGetUint256(
+ValueResult<uint256_t> ReadTransaction::logGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->log_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::sendGetUint256(
+ValueResult<uint256_t> ReadTransaction::sendGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->send_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::sideloadGetUint256(
+ValueResult<uint256_t> ReadTransaction::sideloadGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->sideload_column.get(), key_slice);
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::aggregatorGetUint256(
+ValueResult<uint256_t> ReadTransaction::aggregatorGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
         transaction->datastorage->aggregator_column.get(), key_slice);
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
-ReadOnlyTransaction::messageEntryGetVectorVector(
+ReadTransaction::messageEntryGetVectorVector(
     const rocksdb::Slice first_key_slice,
     size_t count) const {
     return getVectorVectorUsingFamilyAndKey(
@@ -208,27 +204,25 @@ ReadOnlyTransaction::messageEntryGetVectorVector(
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
-ReadOnlyTransaction::sendGetVectorVector(const rocksdb::Slice first_key_slice,
-                                         size_t count) const {
+ReadTransaction::sendGetVectorVector(const rocksdb::Slice first_key_slice,
+                                     size_t count) const {
     return getVectorVectorUsingFamilyAndKey(
         transaction->datastorage->send_column.get(), first_key_slice, count);
 }
 
-ValueResult<std::vector<unsigned char>>
-ReadOnlyTransaction::messageEntryGetVector(
+ValueResult<std::vector<unsigned char>> ReadTransaction::messageEntryGetVector(
     const rocksdb::Slice first_key_slice) const {
     return getVectorUsingFamilyAndKey(
         transaction->datastorage->messageentry_column.get(), first_key_slice);
 }
 
-ValueResult<std::vector<unsigned char>>
-ReadOnlyTransaction::checkpointGetVector(
+ValueResult<std::vector<unsigned char>> ReadTransaction::checkpointGetVector(
     const rocksdb::Slice first_key_slice) const {
     return getVectorUsingFamilyAndKey(
         transaction->datastorage->checkpoint_column.get(), first_key_slice);
 }
 
-ValueResult<std::vector<uint256_t>> ReadOnlyTransaction::logGetUint256Vector(
+ValueResult<std::vector<uint256_t>> ReadTransaction::logGetUint256Vector(
     const rocksdb::Slice first_key_slice,
     size_t count) const {
     return getUint256VectorUsingFamilyAndKey(
@@ -236,7 +230,7 @@ ValueResult<std::vector<uint256_t>> ReadOnlyTransaction::logGetUint256Vector(
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
-ReadOnlyTransaction::getVectorVectorUsingFamilyAndKey(
+ReadTransaction::getVectorVectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice first_key_slice,
     const size_t count) const {
@@ -267,7 +261,7 @@ ReadOnlyTransaction::getVectorVectorUsingFamilyAndKey(
 }
 
 ValueResult<std::vector<unsigned char>>
-ReadOnlyTransaction::getVectorUsingFamilyAndKey(
+ReadTransaction::getVectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice key_slice) const {
     std::string returned_value;
@@ -285,7 +279,7 @@ ReadOnlyTransaction::getVectorUsingFamilyAndKey(
 }
 
 ValueResult<std::vector<uint256_t>>
-ReadOnlyTransaction::getUint256VectorUsingFamilyAndKey(
+ReadTransaction::getUint256VectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice first_key_slice,
     const size_t count) const {
@@ -316,7 +310,7 @@ ReadOnlyTransaction::getUint256VectorUsingFamilyAndKey(
     return {rocksdb::Status::OK(), std::move(vectors)};
 }
 
-ValueResult<uint256_t> ReadOnlyTransaction::getUint256UsingFamilyAndKey(
+ValueResult<uint256_t> ReadTransaction::getUint256UsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
     const rocksdb::Slice key_slice) const {
     auto result = getVectorUsingFamilyAndKey(family, key_slice);

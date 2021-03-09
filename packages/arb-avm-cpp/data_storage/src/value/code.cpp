@@ -134,7 +134,7 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
 }
 }  // namespace
 
-std::shared_ptr<CodeSegment> getCodeSegment(const ReadOnlyTransaction& tx,
+std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
                                             uint64_t segment_id,
                                             std::set<uint64_t>& segment_ids,
                                             ValueCache& value_cache) {
@@ -177,7 +177,7 @@ void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
     }
 }
 
-uint64_t getNextSegmentID(ReadOnlyTransaction& tx) {
+uint64_t getNextSegmentID(ReadTransaction& tx) {
     std::string segment_id_raw;
     auto s =
         tx.defaultGet(rocksdb::Slice(max_code_segment_key), &segment_id_raw);

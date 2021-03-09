@@ -25,7 +25,7 @@
 
 #include <avm_values/tuple.hpp>
 #include <cstdint>
-#include <data_storage/readonlytransaction.hpp>
+#include <data_storage/readtransaction.hpp>
 #include <vector>
 
 constexpr int TUP_TUPLE_LENGTH = 33;
@@ -301,21 +301,21 @@ GetResults applyValue(value&& val,
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
-GetResults processVal(const ReadOnlyTransaction& tx,
+GetResults processVal(const ReadTransaction& tx,
                       const ValueHash& val_hash,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
                       const uint32_t,
                       ValueCache& val_cache);
 
-GetResults processVal(const ReadOnlyTransaction& tx,
+GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
                       const uint32_t reference_count,
                       ValueCache& val_cache);
 
-GetResults getStoredValue(const ReadOnlyTransaction& tx,
+GetResults getStoredValue(const ReadTransaction& tx,
                           const ValueHash& val_hash) {
     std::vector<unsigned char> hash_key;
     marshal_uint256_t(val_hash.hash, hash_key);
@@ -324,7 +324,7 @@ GetResults getStoredValue(const ReadOnlyTransaction& tx,
     return results;
 }
 
-GetResults processVal(const ReadOnlyTransaction&,
+GetResults processVal(const ReadTransaction&,
                       const uint256_t& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
@@ -333,7 +333,7 @@ GetResults processVal(const ReadOnlyTransaction&,
     return applyValue(val, reference_count, val_stack);
 }
 
-GetResults processFirstVal(const ReadOnlyTransaction&,
+GetResults processFirstVal(const ReadTransaction&,
                            const uint256_t& val,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>&,
@@ -345,7 +345,7 @@ GetResults processFirstVal(const ReadOnlyTransaction&,
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
-GetResults processVal(const ReadOnlyTransaction&,
+GetResults processVal(const ReadTransaction&,
                       const Buffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
@@ -354,7 +354,7 @@ GetResults processVal(const ReadOnlyTransaction&,
     return applyValue(val, reference_count, val_stack);
 }
 
-GetResults processFirstVal(const ReadOnlyTransaction&,
+GetResults processFirstVal(const ReadTransaction&,
                            const Buffer& val,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>&,
@@ -366,7 +366,7 @@ GetResults processFirstVal(const ReadOnlyTransaction&,
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
-Buffer processBuffer(const ReadOnlyTransaction& tx,
+Buffer processBuffer(const ReadTransaction& tx,
                      const ParsedBuffer& val,
                      ValueCache& val_cache) {
     std::shared_ptr<std::vector<RawBuffer>> vec =
@@ -407,7 +407,7 @@ Buffer processBuffer(const ReadOnlyTransaction& tx,
     return Buffer(RawBuffer(vec, val.level));
 }
 
-GetResults processVal(const ReadOnlyTransaction& tx,
+GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
@@ -417,7 +417,7 @@ GetResults processVal(const ReadOnlyTransaction& tx,
                       val_stack);
 }
 
-GetResults processFirstVal(const ReadOnlyTransaction& tx,
+GetResults processFirstVal(const ReadTransaction& tx,
                            const ParsedBuffer& val,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>&,
@@ -427,7 +427,7 @@ GetResults processFirstVal(const ReadOnlyTransaction& tx,
                       val_stack);
 }
 
-GetResults processVal(const ReadOnlyTransaction&,
+GetResults processVal(const ReadTransaction&,
                       const CodePointStub& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
@@ -438,7 +438,7 @@ GetResults processVal(const ReadOnlyTransaction&,
     return applyValue(val, reference_count, val_stack);
 }
 
-GetResults processFirstVal(const ReadOnlyTransaction&,
+GetResults processFirstVal(const ReadTransaction&,
                            const CodePointStub& val,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
@@ -452,7 +452,7 @@ GetResults processFirstVal(const ReadOnlyTransaction&,
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
-GetResults processVal(const ReadOnlyTransaction&,
+GetResults processVal(const ReadTransaction&,
                       const std::vector<ParsedTupVal>& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
@@ -469,7 +469,7 @@ GetResults processVal(const ReadOnlyTransaction&,
     return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
-GetResults processFirstVal(const ReadOnlyTransaction& tx,
+GetResults processFirstVal(const ReadTransaction& tx,
                            const std::vector<ParsedTupVal>& val,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
@@ -479,7 +479,7 @@ GetResults processFirstVal(const ReadOnlyTransaction& tx,
                       value_cache);
 }
 
-GetResults processVal(const ReadOnlyTransaction& tx,
+GetResults processVal(const ReadTransaction& tx,
                       const ValueHash& val_hash,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>& segment_ids,
@@ -506,7 +506,7 @@ GetResults processVal(const ReadOnlyTransaction& tx,
         record);
 }
 
-GetResults processFirstVal(const ReadOnlyTransaction& tx,
+GetResults processFirstVal(const ReadTransaction& tx,
                            const ValueHash& val_hash,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
@@ -534,7 +534,7 @@ GetResults processFirstVal(const ReadOnlyTransaction& tx,
         record);
 }
 
-DbResult<value> getValueImpl(const ReadOnlyTransaction& tx,
+DbResult<value> getValueImpl(const ReadTransaction& tx,
                              const uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
                              ValueCache& value_cache) {
@@ -594,7 +594,7 @@ DbResult<value> getValueImpl(const ReadOnlyTransaction& tx,
     throw std::runtime_error("val_stack loop should never finish");
 }
 
-DbResult<value> getValue(const ReadOnlyTransaction& tx,
+DbResult<value> getValue(const ReadTransaction& tx,
                          const uint256_t value_hash,
                          ValueCache& value_cache) {
     std::set<uint64_t> segment_ids{};

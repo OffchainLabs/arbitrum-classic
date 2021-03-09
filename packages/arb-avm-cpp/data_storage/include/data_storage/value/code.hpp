@@ -30,9 +30,9 @@ class Transaction;
 class CodeSegment;
 class Code;
 
-uint64_t getNextSegmentID(ReadOnlyTransaction& tx);
+uint64_t getNextSegmentID(ReadTransaction& tx);
 
-std::shared_ptr<CodeSegment> getCodeSegment(const ReadOnlyTransaction& tx,
+std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
                                             uint64_t segment_id,
                                             std::set<uint64_t>& segment_ids,
                                             ValueCache& value_cache);

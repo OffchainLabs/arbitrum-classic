@@ -19,7 +19,7 @@
 #include <utility>
 
 ReadWriteTransaction::ReadWriteTransaction(std::shared_ptr<DataStorage> store)
-    : ReadOnlyTransaction(std::move(store)) {}
+    : ReadTransaction(std::move(store)) {}
 
 std::unique_ptr<ReadWriteTransaction>
 ReadWriteTransaction::makeReadWriteTransaction(

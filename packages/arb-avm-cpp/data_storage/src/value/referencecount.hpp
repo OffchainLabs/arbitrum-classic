@@ -29,7 +29,7 @@ class Status;
 struct Slice;
 }  // namespace rocksdb
 
-GetResults getRefCountedData(const ReadOnlyTransaction& tx,
+GetResults getRefCountedData(const ReadTransaction& tx,
                              const rocksdb::Slice& hash_key);
 SaveResults saveRefCountedData(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,

@@ -73,7 +73,7 @@ DbResult<value> ArbStorage::getValue(uint256_t value_hash,
     return ::getValue(*tx, value_hash, value_cache);
 }
 
-std::unique_ptr<ReadOnlyTransaction> ArbStorage::makeReadOnlyTransaction() {
+std::unique_ptr<ReadTransaction> ArbStorage::makeReadOnlyTransaction() {
     return arb_core->makeReadOnlyTransaction();
 }
 

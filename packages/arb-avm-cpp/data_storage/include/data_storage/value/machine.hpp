@@ -35,7 +35,7 @@ struct DeleteResults;
 class Machine;
 
 DbResult<MachineStateKeys> getMachineStateKeys(
-    const ReadOnlyTransaction& transaction,
+    const ReadTransaction& transaction,
     uint256_t machineHash);
 MachineStateKeys extractMachineStateKeys(
     std::vector<unsigned char>::const_iterator iter,

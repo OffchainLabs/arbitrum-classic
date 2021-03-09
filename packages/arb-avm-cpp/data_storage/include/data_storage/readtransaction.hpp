@@ -21,7 +21,7 @@
 
 class ReadWriteTransaction;
 
-class ReadOnlyTransaction {
+class ReadTransaction {
    private:
     std::unique_ptr<Transaction> transaction{};
     rocksdb::ReadOptions read_options{};
@@ -29,10 +29,10 @@ class ReadOnlyTransaction {
     friend ReadWriteTransaction;
 
    public:
-    explicit ReadOnlyTransaction(std::shared_ptr<DataStorage> store);
-    ~ReadOnlyTransaction();
+    explicit ReadTransaction(std::shared_ptr<DataStorage> store);
+    ~ReadTransaction();
 
-    static std::unique_ptr<ReadOnlyTransaction> makeReadOnlyTransaction(
+    static std::unique_ptr<ReadTransaction> makeReadOnlyTransaction(
         std::shared_ptr<DataStorage> store);
 
     void enterReadSnapshot();

@@ -17,9 +17,9 @@
 #ifndef data_storage_readwritetransaction_hpp
 #define data_storage_readwritetransaction_hpp
 
-#include <data_storage/readonlytransaction.hpp>
+#include <data_storage/readtransaction.hpp>
 
-class ReadWriteTransaction : public ReadOnlyTransaction {
+class ReadWriteTransaction : public ReadTransaction {
    private:
     rocksdb::WriteOptions write_options{};
 
