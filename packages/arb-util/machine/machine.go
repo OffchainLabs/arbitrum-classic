@@ -44,6 +44,4 @@ type Machine interface {
 	MarshalForProof() ([]byte, []byte, error)
 
 	MarshalState() ([]byte, error)
-
-	Checkpoint(storage ArbStorage) bool
 }

@@ -24,6 +24,7 @@
 #include <rocksdb/status.h>
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepoint.hpp>
+#include <data_storage/readwritetransaction.hpp>
 #include <utility>
 
 class Transaction;
@@ -33,18 +34,20 @@ struct DeleteResults;
 
 class Machine;
 
-DbResult<MachineStateKeys> getMachineStateKeys(const Transaction& transaction,
-                                               uint256_t machineHash);
+DbResult<MachineStateKeys> getMachineStateKeys(
+    const ReadOnlyTransaction& transaction,
+    uint256_t machineHash);
 MachineStateKeys extractMachineStateKeys(
     std::vector<unsigned char>::const_iterator iter,
-    const std::vector<unsigned char>::const_iterator end);
+    std::vector<unsigned char>::const_iterator end);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
-rocksdb::Status saveMachineState(Transaction& transaction,
+rocksdb::Status saveMachineState(ReadWriteTransaction& transaction,
                                  const Machine& machine);
-SaveResults saveMachine(Transaction& transaction, const Machine& machine);
-void deleteMachineState(Transaction& transaction,
+SaveResults saveMachine(ReadWriteTransaction& transaction,
+                        const Machine& machine);
+void deleteMachineState(ReadWriteTransaction& transaction,
                         MachineStateKeys& parsed_state);
-DeleteResults deleteMachine(Transaction& transaction, uint256_t machine_hash);
+DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash);
 
 #endif /* checkpoint_machine_hpp */

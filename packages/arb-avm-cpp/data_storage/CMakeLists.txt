@@ -23,12 +23,12 @@ set(LIB_HEADERS
   include/data_storage/aggregator.hpp
   include/data_storage/arbcore.hpp
   include/data_storage/arbstorage.hpp
-  include/data_storage/blockstore.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/datacursor.hpp
   include/data_storage/executioncursor.hpp
-  include/data_storage/keyvaluestore.hpp
   include/data_storage/messageentry.hpp
+  include/data_storage/readonlytransaction.hpp
+  include/data_storage/readwritetransaction.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
   include/data_storage/value/code.hpp
@@ -46,12 +46,12 @@ set(LIB_SOURCES
   src/aggregator.cpp
   src/arbcore.cpp
   src/arbstorage.cpp
-  src/blockstore.cpp
   src/datastorage.cpp
   src/datacursor.cpp
   src/executioncursor.cpp
-  src/keyvaluestore.cpp
   src/messageentry.cpp
+  src/readonlytransaction.cpp
+  src/readwritetransaction.cpp
   src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp

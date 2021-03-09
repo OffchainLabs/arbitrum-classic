@@ -20,7 +20,7 @@
 
 #include <iostream>
 
-Tuple Tuple::createSizedTuple(size_t size) {
+Tuple Tuple::createSizedTuple(const size_t size) {
     if (size == 0) {
         return {};
     }

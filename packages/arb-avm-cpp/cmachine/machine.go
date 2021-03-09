@@ -237,10 +237,3 @@ func (m *Machine) MarshalState() ([]byte, error) {
 	stateData := C.machineMarshallState(m.c)
 	return receiveByteSlice(stateData), nil
 }
-
-func (m *Machine) Checkpoint(storage machine.ArbStorage) bool {
-	cArbStorage := storage.(*ArbStorage)
-	success := C.checkpointMachine(m.c, cArbStorage.c)
-
-	return success == 1
-}

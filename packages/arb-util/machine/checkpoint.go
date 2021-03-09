@@ -22,7 +22,6 @@ import (
 )
 
 type ArbStorage interface {
-	DeleteCheckpoint(machineHash common.Hash) bool
 	Initialize(contractPath string) error
 	Initialized() bool
 	CloseArbStorage() bool

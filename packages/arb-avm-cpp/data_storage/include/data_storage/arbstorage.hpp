@@ -28,7 +28,6 @@
 
 struct GetResults;
 class Machine;
-class BlockStore;
 class AggregatorStore;
 
 namespace rocksdb {
@@ -44,13 +43,11 @@ class ArbStorage {
     bool closeArbStorage();
     rocksdb::Status initialize(const LoadedExecutable& executable);
     rocksdb::Status initialize(const std::string& executable_path);
-    bool initialized() const;
+    [[nodiscard]] bool initialized() const;
 
-    std::unique_ptr<Transaction> makeTransaction();
-    std::unique_ptr<const Transaction> makeConstTransaction() const;
-    std::unique_ptr<KeyValueStore> makeKeyValueStore();
-    std::unique_ptr<BlockStore> getBlockStore() const;
-    std::unique_ptr<AggregatorStore> getAggregatorStore() const;
+    std::unique_ptr<ReadOnlyTransaction> makeReadOnlyTransaction();
+    std::unique_ptr<ReadWriteTransaction> makeReadWriteTransaction();
+    [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;
     std::shared_ptr<ArbCore> getArbCore();
 
     std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;

@@ -30,16 +30,16 @@ class Transaction;
 class CodeSegment;
 class Code;
 
-uint64_t getNextSegmentID(const Transaction& transaction);
+uint64_t getNextSegmentID(ReadOnlyTransaction& tx);
 
-std::shared_ptr<CodeSegment> getCodeSegment(const Transaction& transaction,
+std::shared_ptr<CodeSegment> getCodeSegment(const ReadOnlyTransaction& tx,
                                             uint64_t segment_id,
                                             std::set<uint64_t>& segment_ids,
                                             ValueCache& value_cache);
-rocksdb::Status saveCode(Transaction& transaction,
+rocksdb::Status saveCode(ReadWriteTransaction& tx,
                          const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts);
-rocksdb::Status deleteCode(Transaction& transaction,
+rocksdb::Status deleteCode(ReadWriteTransaction& tx,
                            std::map<uint64_t, uint64_t>& segment_counts);
 
 #endif /* checkpoint_code_hpp */

@@ -81,7 +81,6 @@ typedef struct {
 typedef void CAggregatorStore;
 typedef void CArbCore;
 typedef void CArbStorage;
-typedef void CBlockStore;
 typedef void CCheckpointedMachine;
 typedef void CExecutionCursor;
 typedef void CMachine;

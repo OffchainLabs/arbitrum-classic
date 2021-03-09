@@ -17,6 +17,7 @@
 #ifndef transaction_hpp
 #define transaction_hpp
 
+#include <data_storage/readwritetransaction.hpp>
 #include <data_storage/storageresultfwd.hpp>
 
 #include <memory>
@@ -28,17 +29,17 @@ class Status;
 struct Slice;
 }  // namespace rocksdb
 
-GetResults getRefCountedData(rocksdb::Transaction& transaction,
+GetResults getRefCountedData(const ReadOnlyTransaction& tx,
                              const rocksdb::Slice& hash_key);
-SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
+SaveResults saveRefCountedData(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,
                                const std::vector<unsigned char>& value,
                                uint32_t new_references = 1,
                                bool allow_replacement = false);
-SaveResults incrementReference(rocksdb::Transaction& transaction,
+SaveResults incrementReference(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,
                                uint32_t new_references = 1);
-DeleteResults deleteRefCountedData(rocksdb::Transaction& transaction,
+DeleteResults deleteRefCountedData(ReadWriteTransaction& transaction,
                                    const rocksdb::Slice& hash_key,
                                    uint32_t deleted_references = 1);
 

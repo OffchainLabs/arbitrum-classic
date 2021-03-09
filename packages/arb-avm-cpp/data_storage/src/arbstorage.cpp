@@ -17,7 +17,6 @@
 #include <data_storage/arbstorage.hpp>
 
 #include <data_storage/aggregator.hpp>
-#include <data_storage/blockstore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/code.hpp>
 
@@ -50,14 +49,6 @@ bool ArbStorage::closeArbStorage() {
     return status.ok();
 }
 
-std::unique_ptr<KeyValueStore> ArbStorage::makeKeyValueStore() {
-    return std::make_unique<KeyValueStore>(datastorage);
-}
-
-std::unique_ptr<BlockStore> ArbStorage::getBlockStore() const {
-    return std::make_unique<BlockStore>(datastorage);
-}
-
 std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {
     return std::make_unique<AggregatorStore>(datastorage);
 }
@@ -78,14 +69,14 @@ std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
 
 DbResult<value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
-    auto tx = arb_core->makeConstTransaction();
+    auto tx = arb_core->makeReadOnlyTransaction();
     return ::getValue(*tx, value_hash, value_cache);
 }
 
-std::unique_ptr<Transaction> ArbStorage::makeTransaction() {
-    return arb_core->makeTransaction();
+std::unique_ptr<ReadOnlyTransaction> ArbStorage::makeReadOnlyTransaction() {
+    return arb_core->makeReadOnlyTransaction();
 }
 
-std::unique_ptr<const Transaction> ArbStorage::makeConstTransaction() const {
-    return arb_core->makeConstTransaction();
+std::unique_ptr<ReadWriteTransaction> ArbStorage::makeReadWriteTransaction() {
+    return arb_core->makeReadWriteTransaction();
 }
