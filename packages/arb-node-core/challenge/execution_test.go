@@ -16,7 +16,10 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 
-	challengedNode := initializeChallengeData(t, faultyCore, startGas, endGas)
+	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	if err != nil {
+		t.Fatal("Error with initializeChallengeData")
+	}
 
 	time := big.NewInt(100)
 	return executeChallenge(
@@ -82,7 +85,7 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 	faultConfig := FaultConfig{StallMachineAt: startGas}
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 
-	challengedNode := initializeChallengeData(t, faultyCore, startGas, endGas)
+	challengedNode, _ := initializeChallengeData(t, faultyCore, startGas, endGas)
 
 	time := big.NewInt(100)
 	executeChallenge(

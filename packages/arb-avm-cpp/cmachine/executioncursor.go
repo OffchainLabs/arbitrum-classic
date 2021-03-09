@@ -31,7 +31,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
 )
 
@@ -77,17 +76,6 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		totalLogCount:     ec.totalLogCount,
 		totalSteps:        ec.totalSteps,
 	}
-}
-
-func (ec *ExecutionCursor) TakeMachine() (machine.Machine, error) {
-	cMachine := C.executionCursorTakeMachine(ec.c)
-	if cMachine == nil {
-		return nil, errors.Errorf("error taking machine from execution cursor")
-	}
-	ret := &Machine{cMachine}
-
-	runtime.SetFinalizer(ret, cdestroyVM)
-	return ret, nil
 }
 
 func (ec *ExecutionCursor) updateValues() error {
@@ -144,8 +132,8 @@ func (ec *ExecutionCursor) updateValues() error {
 	return nil
 }
 
-func (ec *ExecutionCursor) MachineHash() common.Hash {
-	return ec.machineHash
+func (ec *ExecutionCursor) MachineHash() (common.Hash, error) {
+	return ec.machineHash, nil
 }
 
 func (ec *ExecutionCursor) InboxAcc() common.Hash {

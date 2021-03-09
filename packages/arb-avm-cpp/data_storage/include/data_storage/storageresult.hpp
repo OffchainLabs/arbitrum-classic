@@ -40,8 +40,7 @@ struct DeleteResults {
 };
 
 template <typename T>
-struct DbResult {
-    rocksdb::Status status;
+struct CountedData {
     uint32_t reference_count{};
     T data;
 };

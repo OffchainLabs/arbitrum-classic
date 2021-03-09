@@ -84,17 +84,22 @@ TEST_CASE("ARBOS test vectors") {
                 tx->commit();
             }
             auto mach_hash = mach->hash();
-            auto mach2 = storage.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach2->hash());
+            REQUIRE(mach_hash);
+            auto mach2 = storage.getMachine(*mach_hash, value_cache);
+            auto mach2_hash = mach2->hash();
+            REQUIRE(mach2_hash);
+            REQUIRE(*mach_hash == *mach2_hash);
             storage.closeArbStorage();
 
             ArbStorage storage2(dbpath);
-            auto mach3 = storage2.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach3->hash());
+            auto mach3 = storage2.getMachine(*mach_hash, value_cache);
+            auto mach3_hash = mach3->hash();
+            REQUIRE(mach3_hash);
+            REQUIRE(*mach_hash == *mach3_hash);
 
             {
                 auto tx = storage2.makeTransaction();
-                deleteMachine(*tx, mach_hash);
+                deleteMachine(*tx, *mach_hash);
                 tx->commit();
             }
         }

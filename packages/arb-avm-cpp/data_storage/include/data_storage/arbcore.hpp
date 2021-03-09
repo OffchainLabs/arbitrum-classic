@@ -19,7 +19,6 @@
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
-#include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/messageentry.hpp>
 #include <data_storage/storageresultfwd.hpp>
@@ -80,7 +79,6 @@ class ArbCore {
 
     std::unique_ptr<MachineThread> machine;
     std::shared_ptr<Code> code{};
-    Checkpoint pending_checkpoint;
 
     // Cache a machine ready to sideload view transactions just after recent
     // blocks
@@ -122,24 +120,26 @@ class ArbCore {
    private:
     // Private database interaction
     ValueResult<uint256_t> getInitialMachineHash(Transaction& tx);
-    rocksdb::Status saveAssertion(Transaction& tx, const Assertion& assertion);
-    ValueResult<Checkpoint> getCheckpoint(Transaction& tx,
-                                          const uint256_t& arb_gas_used) const;
-    rocksdb::Status resolveStagedMessage(Transaction& tx,
-                                         value& message,
-                                         uint256_t& inbox_acc) const;
-    ValueResult<Checkpoint> getCheckpointUsingGas(Transaction& tx,
-                                                  const uint256_t& total_gas,
-                                                  bool after_gas);
+    rocksdb::Status saveAssertion(Transaction& tx,
+                                  const Assertion& assertion,
+                                  const uint256_t arb_gas_used);
+    std::variant<rocksdb::Status, MachineStateKeys> getCheckpoint(
+        Transaction& tx,
+        const uint256_t& arb_gas_used) const;
+    std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
+        Transaction& tx,
+        const uint256_t& total_gas,
+        bool after_gas);
     rocksdb::Status reorgToMessageOrBefore(
         Transaction& tx,
         const uint256_t& message_sequence_number,
         bool use_latest,
         ValueCache& cache);
     template <class T>
-    std::unique_ptr<T> getMachineUsingStateKeys(Transaction& transaction,
-                                                MachineStateKeys state_data,
-                                                ValueCache& value_cache);
+    std::unique_ptr<T> getMachineUsingStateKeys(
+        Transaction& transaction,
+        const MachineStateKeys& state_data,
+        ValueCache& value_cache) const;
 
    public:
     // To be deprecated, use checkpoints instead
@@ -207,6 +207,10 @@ class ArbCore {
                                            bool go_over_gas,
                                            ValueCache& cache);
 
+    std::unique_ptr<Machine> takeExecutionCursorMachine(
+        ExecutionCursor& execution_cursor,
+        ValueCache& cache) const;
+
    private:
     // Execution cursor internal functions
     rocksdb::Status getExecutionCursorImpl(Transaction& tx,
@@ -216,6 +220,15 @@ class ArbCore {
                                            uint256_t message_group_size,
                                            ValueCache& cache);
 
+    std::unique_ptr<Machine>& resolveExecutionCursorMachine(
+        Transaction& tx,
+        ExecutionCursor& execution_cursor,
+        ValueCache& cache) const;
+    std::unique_ptr<Machine> takeExecutionCursorMachineImpl(
+        Transaction& tx,
+        ExecutionCursor& execution_cursor,
+        ValueCache& cache) const;
+
    public:
     // Public database interaction
     std::unique_ptr<Transaction> makeTransaction();
@@ -224,7 +237,6 @@ class ArbCore {
     ValueResult<uint256_t> logInsertedCount() const;
     ValueResult<uint256_t> sendInsertedCount() const;
     ValueResult<uint256_t> messageEntryInsertedCount() const;
-    ValueResult<uint256_t> messageEntryProcessedCount() const;
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
                                             ValueCache& valueCache);
@@ -251,6 +263,8 @@ class ArbCore {
                                      ValueCache& cache);
 
    private:
+    template <typename T>
+    rocksdb::Status resolveStagedMessage(Transaction& tx, T& machine_state);
     // Private database interaction
     ValueResult<MessageEntry> getMessageEntry(
         Transaction& tx,
@@ -266,9 +280,6 @@ class ArbCore {
     rocksdb::Status updateSendProcessedCount(Transaction& tx,
                                              rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryInsertedCountImpl(Transaction& tx) const;
-
-    ValueResult<uint256_t> messageEntryProcessedCountImpl(
-        Transaction& tx) const;
 
     rocksdb::Status saveLogs(Transaction& tx, const std::vector<value>& val);
     rocksdb::Status saveSends(
@@ -299,16 +310,17 @@ class ArbCore {
     rocksdb::Status executionCursorSetup(Transaction& tx,
                                          ExecutionCursor& execution_cursor,
                                          const uint256_t& total_gas_used,
-                                         ValueCache& cache,
                                          bool is_for_sideload = false);
+
+    std::variant<rocksdb::Status, MachineStateKeys> executionCursorInitialSetup(
+        Transaction& tx,
+        const uint256_t& gas_used,
+        bool is_for_sideload);
 
     rocksdb::Status updateLogInsertedCount(Transaction& tx,
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(Transaction& tx,
                                             const uint256_t& send_index);
-    rocksdb::Status updateMessageEntryProcessedCount(
-        Transaction& tx,
-        const uint256_t& message_index);
     rocksdb::Status updateMessageEntryInsertedCount(
         Transaction& tx,
         const uint256_t& message_index);
@@ -319,12 +331,15 @@ class ArbCore {
         const uint256_t& block_number,
         ValueCache& cache);
 
+    ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
+                                               const uint256_t& block_number);
+
    private:
     // Private sideload interaction
     rocksdb::Status saveSideloadPosition(Transaction& tx,
-                                         const uint256_t& block_number);
-    ValueResult<uint256_t> getSideloadPosition(Transaction& tx,
-                                               const uint256_t& block_number);
+                                         const uint256_t& block_number,
+                                         const uint256_t& arb_gas_used);
+
     rocksdb::Status deleteSideloadsStartingAt(Transaction& tx,
                                               const uint256_t& block_number);
     rocksdb::Status logsCursorSaveCurrentTotalCount(Transaction& tx,

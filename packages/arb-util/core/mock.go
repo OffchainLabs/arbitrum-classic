@@ -20,7 +20,7 @@ func (e *ExecutionCursorMock) Clone() ExecutionCursor {
 	return &ExecutionCursorMock{}
 }
 
-func (e *ExecutionCursorMock) MachineHash() common.Hash {
+func (e *ExecutionCursorMock) MachineHash() (common.Hash, error) {
 	return e.mach.Hash()
 }
 

@@ -54,9 +54,11 @@ struct InboxMessage {
 
     [[nodiscard]] uint256_t hash(const uint256_t& previous_inbox_acc) const;
 
-    Tuple toTuple();
+    [[nodiscard]] Tuple toTuple() const;
     [[nodiscard]] std::vector<unsigned char> serialize() const;
     [[nodiscard]] std::vector<unsigned char> serializeForProof() const;
+    void serializeHeader(std::vector<unsigned char>& state_data_vector) const;
+    void serializeImpl(std::vector<unsigned char>& state_data_vector) const;
 };
 
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state);
@@ -64,10 +66,8 @@ uint256_t hash_inbox(const uint256_t& previous_inbox_acc,
                      const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
-
-std::vector<unsigned char> serializeInboxMessage(
-    const InboxMessage& state_data);
-
-Tuple messageDataToTuple(const std::vector<unsigned char>& data);
+InboxMessage extractInboxMessageImpl(
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end);
 
 #endif /* data_storage_inboxmessage_hpp */

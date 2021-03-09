@@ -32,7 +32,7 @@ const (
 )
 
 type Machine interface {
-	Hash() common.Hash
+	Hash() (common.Hash, error)
 	Clone() Machine
 
 	CurrentStatus() Status

@@ -133,12 +133,7 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 	}
 }
 
-func initializeChallengeData(
-	t *testing.T,
-	lookup core.ArbCoreLookup,
-	startGas *big.Int,
-	endGas *big.Int,
-) *core.NodeInfo {
+func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *big.Int, endGas *big.Int) (*core.NodeInfo, error) {
 	cursor, err := lookup.GetExecutionCursor(startGas)
 	test.FailIfError(t, err)
 	inboxMaxCount, err := lookup.GetMessageCount()
@@ -150,9 +145,13 @@ func initializeChallengeData(
 	}
 
 	lookup.AdvanceExecutionCursor(cursor, endGas, true)
+	after := core.NewExecutionState(cursor)
+	if err != nil {
+		return nil, err
+	}
 	assertion := &core.Assertion{
 		Before: prevState.ExecutionState,
-		After:  core.NewExecutionState(cursor),
+		After:  after,
 	}
 
 	return &core.NodeInfo{
@@ -165,7 +164,7 @@ func initializeChallengeData(
 		InboxMaxCount: inboxMaxCount,
 		NodeHash:      common.RandHash(),
 		AfterInboxAcc: [32]byte{},
-	}
+	}, nil
 }
 
 func initializeChallengeTest(

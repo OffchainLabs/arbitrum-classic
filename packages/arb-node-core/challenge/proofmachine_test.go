@@ -74,10 +74,15 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 		db.AddMessage(inbox.NewRandomInboxMessage())
 	}
 
+	hash, err := mach.Hash()
+	if err != nil {
+		return nil, nil, err
+	}
+
 	beforeCut := ExecutionCutJSON{
 		GasUsed:           0,
 		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
-		MachineState:      mach.Hash().ToEthHash(),
+		MachineState:      hash.ToEthHash(),
 		SendAcc:           ethcommon.Hash{},
 		SendCount:         (*hexutil.Big)(big.NewInt(0)),
 		LogAcc:            ethcommon.Hash{},
@@ -122,10 +127,15 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return proofs, nil, nil
 		}
 
+		hash, err := mach.Hash()
+		if err != nil {
+			return nil, nil, err
+		}
+
 		afterCut := ExecutionCutJSON{
 			GasUsed:           beforeCut.GasUsed + a.NumGas,
 			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
-			MachineState:      mach.Hash().ToEthHash(),
+			MachineState:      hash.ToEthHash(),
 			SendAcc:           ethcommon.Hash{},
 			SendCount:         (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
 			LogAcc:            ethcommon.Hash{},

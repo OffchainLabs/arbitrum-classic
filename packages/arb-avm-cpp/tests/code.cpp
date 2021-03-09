@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "config.hpp"
 #include "helper.hpp"
 
 #include <data_storage/arbstorage.hpp>
@@ -85,9 +84,12 @@ TEST_CASE("Code serialization") {
     ValueCache value_cache{};
 
     SECTION("Save and load") {
-        saveMachine(*tx, mach);
+        auto save_ret = saveMachine(*tx, mach);
+        REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach.hash(), value_cache);
+        auto mach_hash = mach.hash();
+        REQUIRE(mach_hash);
+        auto mach2 = storage.getMachine(*mach_hash, value_cache);
         checkRun(*mach2);
     }
 
@@ -97,20 +99,30 @@ TEST_CASE("Code serialization") {
         execConfig.max_gas = 7;
         execConfig.next_block_height = 8;
         mach2.run(execConfig);
-        saveMachine(*tx, mach);
-        saveMachine(*tx, mach2);
+        auto save_ret = saveMachine(*tx, mach);
+        REQUIRE(save_ret.status.ok());
+        save_ret = saveMachine(*tx, mach2);
+        REQUIRE(save_ret.status.ok());
+
+        auto mach_hash = mach.hash();
+        REQUIRE(mach_hash.has_value());
+
+        auto mach_hash2 = mach2.hash();
+        REQUIRE(mach_hash2.has_value());
 
         SECTION("Delete first") {
-            deleteMachine(*tx, mach.hash());
+            auto del_ret = deleteMachine(*tx, *mach_hash);
+            REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach2.hash(), value_cache);
-            checkRun(*mach3, 14);
+            auto mach3 = storage.getMachine(*mach_hash2, value_cache);
+            checkRun(*mach3);
         }
 
         SECTION("Delete second") {
-            deleteMachine(*tx, mach2.hash());
+            auto del_ret = deleteMachine(*tx, *mach_hash2);
+            REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach.hash(), value_cache);
+            auto mach3 = storage.getMachine(*mach_hash, value_cache);
             checkRun(*mach3);
         }
     }
@@ -118,9 +130,11 @@ TEST_CASE("Code serialization") {
     SECTION("Save twice, delete and load") {
         saveMachine(*tx, mach);
         saveMachine(*tx, mach);
-        deleteMachine(*tx, mach.hash());
+        auto mach_hash = mach.hash();
+        REQUIRE(mach_hash);
+        deleteMachine(*tx, *mach_hash);
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach.hash(), value_cache);
+        auto mach2 = storage.getMachine(*mach_hash, value_cache);
         checkRun(*mach2);
     }
 }

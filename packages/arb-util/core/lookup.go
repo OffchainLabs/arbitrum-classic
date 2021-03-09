@@ -17,6 +17,7 @@
 package core
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"time"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -41,7 +41,7 @@ const (
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
-	MachineHash() common.Hash
+	MachineHash() (common.Hash, error)
 	TotalMessagesRead() *big.Int
 	InboxAcc() common.Hash
 	SendAcc() common.Hash
@@ -50,10 +50,6 @@ type ExecutionCursor interface {
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
-
-	// TakeMachine takes ownership of machine such that ExecutionCursor will
-	// no longer be able to advance.
-	TakeMachine() (machine.Machine, error)
 }
 
 type ArbCoreLookup interface {
@@ -71,6 +67,10 @@ type ArbCoreLookup interface {
 	// Advance executes as much as it can without going over maxGas or
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
+
+	// TakeMachine takes ownership of machine such that ExecutionCursor will
+	// no longer be able to advance.
+	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)
 }
 
 type ArbCoreInbox interface {
@@ -196,8 +196,12 @@ type ExecutionState struct {
 }
 
 func NewExecutionState(c ExecutionCursor) *ExecutionState {
+	hash, err := c.MachineHash()
+	if err != nil {
+		panic("Unable to compute hash for execution state")
+	}
 	return &ExecutionState{
-		MachineHash:       c.MachineHash(),
+		MachineHash:       hash,
 		InboxAcc:          c.InboxAcc(),
 		TotalMessagesRead: c.TotalMessagesRead(),
 		TotalGasConsumed:  c.TotalGasConsumed(),

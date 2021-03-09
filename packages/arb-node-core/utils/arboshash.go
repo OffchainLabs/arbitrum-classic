@@ -16,7 +16,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = ioutil.WriteFile("../../MACHINEHASH", []byte(mach.Hash().String()), 777)
+	hash, err := mach.Hash()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = ioutil.WriteFile("../../MACHINEHASH", []byte(hash.String()), 777)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -24,7 +24,6 @@ set(LIB_HEADERS
   include/data_storage/arbcore.hpp
   include/data_storage/arbstorage.hpp
   include/data_storage/blockstore.hpp
-  include/data_storage/checkpoint.hpp
   include/data_storage/datastorage.hpp
   include/data_storage/datacursor.hpp
   include/data_storage/executioncursor.hpp
@@ -48,7 +47,6 @@ set(LIB_SOURCES
   src/arbcore.cpp
   src/arbstorage.cpp
   src/blockstore.cpp
-  src/checkpoint.cpp
   src/datastorage.cpp
   src/datacursor.cpp
   src/executioncursor.cpp
