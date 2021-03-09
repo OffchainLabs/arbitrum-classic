@@ -48,7 +48,7 @@ contract ArbTokenBridge is CloneFactory {
     }
 
     modifier onlyFromStandardL2Token(address l1ERC20) {
-        // This ensures that this method can only be called by the L2 token
+        // I.e., can't be called by a custom token
         require(
             msg.sender == calculateBridgedERC777Address(l1ERC20) ||
                 msg.sender == calculateBridgedERC20Address(l1ERC20),
