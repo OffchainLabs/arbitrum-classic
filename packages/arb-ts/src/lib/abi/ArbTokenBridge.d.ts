@@ -28,6 +28,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'customTokenRegistered(address,address)': FunctionFragment
     'l1Pair()': FunctionFragment
     'migrate(address,address,address,uint256)': FunctionFragment
+    'mintCustomtokenFromL1(address,address,uint256)': FunctionFragment
     'mintERC20FromL1(address,address,uint256,uint8)': FunctionFragment
     'mintERC777FromL1(address,address,uint256,uint8)': FunctionFragment
     'templateERC20()': FunctionFragment
@@ -54,6 +55,10 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'migrate',
     values: [string, string, string, BigNumberish]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'mintCustomtokenFromL1',
+    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'mintERC20FromL1',
@@ -99,6 +104,10 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'l1Pair', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'mintCustomtokenFromL1',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'mintERC20FromL1',
     data: BytesLike
@@ -196,6 +205,20 @@ export class ArbTokenBridge extends Contract {
     'migrate(address,address,address,uint256)'(
       l1ERC20: string,
       target: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    mintCustomtokenFromL1(
+      l1ERC20: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'mintCustomtokenFromL1(address,address,uint256)'(
+      l1ERC20: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -347,6 +370,20 @@ export class ArbTokenBridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  mintCustomtokenFromL1(
+    l1ERC20: string,
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'mintCustomtokenFromL1(address,address,uint256)'(
+    l1ERC20: string,
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   mintERC20FromL1(
     l1ERC20: string,
     account: string,
@@ -488,6 +525,20 @@ export class ArbTokenBridge extends Contract {
     'migrate(address,address,address,uint256)'(
       l1ERC20: string,
       target: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    mintCustomtokenFromL1(
+      l1ERC20: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'mintCustomtokenFromL1(address,address,uint256)'(
+      l1ERC20: string,
       account: string,
       amount: BigNumberish,
       overrides?: CallOverrides
@@ -642,6 +693,20 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    mintCustomtokenFromL1(
+      l1ERC20: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'mintCustomtokenFromL1(address,address,uint256)'(
+      l1ERC20: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     mintERC20FromL1(
       l1ERC20: string,
       account: string,
@@ -787,6 +852,20 @@ export class ArbTokenBridge extends Contract {
     'migrate(address,address,address,uint256)'(
       l1ERC20: string,
       target: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    mintCustomtokenFromL1(
+      l1ERC20: string,
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'mintCustomtokenFromL1(address,address,uint256)'(
+      l1ERC20: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
