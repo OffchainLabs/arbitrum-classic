@@ -84,7 +84,8 @@ TEST_CASE("Code serialization") {
     ValueCache value_cache{};
 
     SECTION("Save and load") {
-        saveMachine(*tx, mach);
+        auto save_ret = saveMachine(*tx, mach);
+        REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
         auto mach_hash = mach.hash();
         REQUIRE(mach_hash);
@@ -98,24 +99,30 @@ TEST_CASE("Code serialization") {
         execConfig.max_gas = 7;
         execConfig.next_block_height = 8;
         mach2.run(execConfig);
-        saveMachine(*tx, mach);
-        saveMachine(*tx, mach2);
+        auto save_ret = saveMachine(*tx, mach);
+        REQUIRE(save_ret.status.ok());
+        save_ret = saveMachine(*tx, mach2);
+        REQUIRE(save_ret.status.ok());
+
+        auto mach_hash = mach.hash();
+        REQUIRE(mach_hash.has_value());
+
+        auto mach_hash2 = mach2.hash();
+        REQUIRE(mach_hash2.has_value());
 
         SECTION("Delete first") {
-            auto mach_hash = mach.hash();
-            REQUIRE(mach_hash);
-            deleteMachine(*tx, *mach_hash);
+            auto del_ret = deleteMachine(*tx, *mach_hash);
+            REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(*mach_hash, value_cache);
-            checkRun(*mach3, 14);
+            auto mach3 = storage.getMachine(*mach_hash2, value_cache);
+            checkRun(*mach3);
         }
 
         SECTION("Delete second") {
-            auto mach2_hash = mach2.hash();
-            REQUIRE(mach2_hash);
-            deleteMachine(*tx, *mach2_hash);
+            auto del_ret = deleteMachine(*tx, *mach_hash2);
+            REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(*mach2_hash, value_cache);
+            auto mach3 = storage.getMachine(*mach_hash, value_cache);
             checkRun(*mach3);
         }
     }

@@ -325,8 +325,8 @@ void saveState(Transaction& transaction,
                const Machine& machine,
                uint256_t expected_ref_count) {
     auto results = saveMachine(transaction, machine);
-    REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok());
+    REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(transaction.commit().ok());
 }
 
@@ -416,8 +416,7 @@ Machine getComplexMachine() {
 
     auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 65};
 
-    // Tuple staged_message(uint256_t{100}, uint256_t{200});
-    staged_variant staged_message(88);
+    staged_variant staged_message;
 
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
@@ -437,7 +436,7 @@ Machine getDefaultMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
     auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 34};
-    staged_variant staged_message = 88;
+    staged_variant staged_message;
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
                                 arb_gas_remaining, state, pc, err_pc,

@@ -176,8 +176,8 @@ TEST_CASE("Save datastack") {
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveDataStack(datastack);
     }
     SECTION("save with values, twice") {
@@ -187,8 +187,8 @@ TEST_CASE("Save datastack") {
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveDataStackTwice(datastack);
     }
 }
@@ -206,8 +206,8 @@ TEST_CASE("Save and get datastack") {
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
     SECTION("save datastack twice and get") {
@@ -218,8 +218,8 @@ TEST_CASE("Save and get datastack") {
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveTwiceAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
 }
