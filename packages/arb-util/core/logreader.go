@@ -99,7 +99,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if deletedLogs != nil {
+			if len(deletedLogs) > 0 {
 				// Got deleted logs successfully, retry loop to get any new logs without waiting
 				continue
 			}
