@@ -89,6 +89,7 @@ rocksdb::Status DataStorage::closeDb() {
     log_column.reset();
     send_column.reset();
     sideload_column.reset();
+    aggregator_column.reset();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;

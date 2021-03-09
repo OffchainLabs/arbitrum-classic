@@ -1458,7 +1458,7 @@ ValueResult<uint256_t> ArbCore::logInsertedCount() const {
 
 ValueResult<uint256_t> ArbCore::logInsertedCountImpl(
     const ReadOnlyTransaction& tx) const {
-    return tx.logGetUint256(vecToSlice(log_inserted_key));
+    return tx.stateGetUint256(vecToSlice(log_inserted_key));
 }
 rocksdb::Status ArbCore::updateLogInsertedCount(ReadWriteTransaction& tx,
                                                 const uint256_t& log_index) {
