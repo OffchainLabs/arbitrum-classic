@@ -174,6 +174,29 @@ export class L1Bridge {
     )
   }
 
+  public async depositAsCustomToken(
+    erc20L1Address: string,
+    amount: BigNumber,
+    maxGas: BigNumber,
+    gasPriceBid: BigNumber,
+    destinationAddress?: string
+  ) {
+    const destination = destinationAddress || (await this.getWalletAddress())
+    const customTokenL2Address = await this.ethERC20Bridge.customL2Tokens(
+      erc20L1Address
+    )
+    if (customTokenL2Address === constants.AddressZero) {
+      throw new Error(`Custom token at ${erc20L1Address} not registtered on L2`)
+    }
+    return this.ethERC20Bridge.depositAsCustomToken(
+      erc20L1Address,
+      destination,
+      amount,
+      maxGas,
+      gasPriceBid
+    )
+  }
+
   public async getWalletAddress() {
     if (this.walletAddressCache) {
       return this.walletAddressCache
