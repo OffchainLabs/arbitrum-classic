@@ -27,6 +27,8 @@ import "./IArbToken.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
+import "../libraries/StandardTokenType.sol";
+
 contract ArbTokenBridge is CloneFactory {
     using Address for address;
 
@@ -42,6 +44,16 @@ contract ArbTokenBridge is CloneFactory {
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
         require(tx.origin == l1Pair, "ONLY_ETH_PAIR");
+        _;
+    }
+
+    modifier onlyFromStandardL2Token(address l1ERC20) {
+        // This ensures that this method can only be called by the L2 token
+        require(
+            msg.sender == calculateBridgedERC777Address(l1ERC20) ||
+                msg.sender == calculateBridgedERC20Address(l1ERC20),
+            "NOT_FROM_STANDARD_TOKEN"
+        );
         _;
     }
 
@@ -90,6 +102,17 @@ contract ArbTokenBridge is CloneFactory {
         uint8 decimals
     ) external onlyEthPair {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
+        token.bridgeMint(account, amount);
+    }
+
+    function mintCustomtokenFromL1(
+        address l1ERC20,
+        address account,
+        uint256 amount
+    ) external onlyEthPair {
+        address tokenAddress = customToken[l1ERC20];
+        require(tokenAddress != address(0), "Custom Token doesn't exist");
+        IArbToken token = IArbToken(tokenAddress);
         token.bridgeMint(account, amount);
     }
 
@@ -142,7 +165,7 @@ contract ArbTokenBridge is CloneFactory {
         address target,
         address account,
         uint256 amount
-    ) external onlyFromL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) {
+    ) external onlyFromStandardL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) {
         IArbToken(target).bridgeMint(account, amount);
     }
 
@@ -154,30 +177,38 @@ contract ArbTokenBridge is CloneFactory {
         return calculateCreate2CloneAddress(templateERC20, bytes32(uint256(l1ERC20)));
     }
 
-    function ensureERC777TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
+    function ensureTokenExists(
+        address l1ERC20,
+        uint8 decimals,
+        StandardTokenType tokenType
+    ) private returns (IArbToken) {
         address _customToken = customToken[l1ERC20];
         if (_customToken != address(0)) {
             return IArbToken(_customToken);
         }
-
-        address l2Contract = calculateBridgedERC777Address(l1ERC20);
+        address l2Contract =
+            tokenType == StandardTokenType.ERC20
+                ? calculateBridgedERC20Address(l1ERC20)
+                : calculateBridgedERC777Address(l1ERC20);
 
         if (!l2Contract.isContract()) {
-            address createdContract = create2Clone(templateERC777, bytes32(uint256(l1ERC20)));
+            address createdContract =
+                create2Clone(
+                    tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777,
+                    bytes32(uint256(l1ERC20))
+                );
             assert(createdContract == l2Contract);
             IArbToken(l2Contract).initialize(address(this), l1ERC20, decimals);
         }
         return IArbToken(l2Contract);
     }
 
+    function ensureERC777TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
+        return ensureTokenExists(l1ERC20, decimals, StandardTokenType.ERC777);
+    }
+
     function ensureERC20TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
-        address l2Contract = calculateBridgedERC20Address(l1ERC20);
-        if (!l2Contract.isContract()) {
-            address createdContract = create2Clone(templateERC20, bytes32(uint256(l1ERC20)));
-            assert(createdContract == l2Contract);
-            IArbToken(l2Contract).initialize(address(this), l1ERC20, decimals);
-        }
-        return IArbToken(l2Contract);
+        return ensureTokenExists(l1ERC20, decimals, StandardTokenType.ERC20);
     }
 }
 
