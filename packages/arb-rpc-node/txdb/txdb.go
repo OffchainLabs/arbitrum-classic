@@ -121,6 +121,7 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 }
 
 func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
+	logger.Info().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("adding logs")
 	logIndex := initialLogIndex.Uint64()
 	for _, avmLog := range avmLogs {
 		if err := db.HandleLog(logIndex, avmLog); err != nil {
@@ -131,7 +132,8 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 	return nil
 }
 
-func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
+func (db *TxDB) DeleteLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
+	logger.Info().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("deleting logs")
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
 	var currentBlockHeight uint64
 	blocksFound := false
