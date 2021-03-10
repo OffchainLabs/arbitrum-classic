@@ -27,7 +27,7 @@ import "./IArbToken.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
-import "../libraries/StandardTokenType.sol";
+import "../ethereum/EthERC20Bridge.sol";
 
 contract ArbTokenBridge is CloneFactory {
     using Address for address;
@@ -147,8 +147,8 @@ contract ArbTokenBridge is CloneFactory {
     ) external onlyFromL2Token(l1ERC20) {
         ArbSys(100).sendTxToL1(
             l1Pair,
-            abi.encodeWithSignature(
-                "withdrawFromL2(uint256,address,address,uint256)",
+            abi.encodeWithSelector(
+                EthERC20Bridge.withdrawFromL2.selector,
                 exitNum,
                 l1ERC20,
                 destination,

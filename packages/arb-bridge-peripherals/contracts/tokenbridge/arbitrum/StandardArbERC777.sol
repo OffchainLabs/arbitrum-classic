@@ -7,7 +7,7 @@ import "../libraries/DecimalConverter.sol";
 import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 
-contract StandardArbERC777 is ERC777, Cloneable, IArbToken {
+contract StandardArbERC777 is OZERC777, Cloneable, IArbToken {
     using DecimalConverter for uint256;
     ArbTokenBridge public bridge;
     address public l1Address;

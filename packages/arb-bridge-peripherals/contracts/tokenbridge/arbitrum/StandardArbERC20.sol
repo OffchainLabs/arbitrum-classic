@@ -23,7 +23,7 @@ import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
 import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 
-contract StandardArbERC20 is ERC20, Cloneable, IArbToken {
+contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
     ArbTokenBridge public bridge;
     address public l1Address;
 

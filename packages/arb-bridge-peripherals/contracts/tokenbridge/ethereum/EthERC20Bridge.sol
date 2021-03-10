@@ -27,7 +27,7 @@ import "../libraries/SafeERC20Namer.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
 
-import "../libraries/StandardTokenType.sol";
+enum StandardTokenType { ERC20, ERC777 }
 
 contract EthERC20Bridge is L1Buddy {
     address internal constant USED_ADDRESS = address(0x01);
