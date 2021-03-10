@@ -1757,8 +1757,8 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
             current_count_result.status.ToString();
         logs_cursors[cursor_index].status = DataCursor::ERROR;
 
-        std::cerr << "Unable to get logs cursor current total count: "
-                  << cursor_index << " because error: "
+        std::cerr << "logscursor index" << cursor_index
+                  << " error getting cursor current total count: "
                   << current_count_result.status.ToString() << std::endl;
         return;
     }
@@ -1769,13 +1769,12 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
         return;
     }
     if (current_count_result.data > log_inserted_count.data) {
-        // Error
         logs_cursors[cursor_index].error_string =
             "current_count_result greater than log_inserted_count";
         logs_cursors[cursor_index].status = DataCursor::ERROR;
 
         std::cerr << "handleLogsCursor current count: "
-                  << current_count_result.data << " == "
+                  << current_count_result.data << " > "
                   << " log inserted count: " << log_inserted_count.data
                   << std::endl;
         return;
