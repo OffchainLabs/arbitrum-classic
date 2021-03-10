@@ -177,7 +177,8 @@ void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
     }
 }
 
-uint64_t getNextSegmentID(ReadTransaction& tx) {
+uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store) {
+    ReadTransaction tx(store);
     std::string segment_id_raw;
     auto s =
         tx.defaultGet(rocksdb::Slice(max_code_segment_key), &segment_id_raw);

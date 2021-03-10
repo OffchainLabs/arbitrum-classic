@@ -69,14 +69,14 @@ std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
 
 DbResult<value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
-    auto tx = arb_core->makeReadOnlyTransaction();
-    return ::getValue(*tx, value_hash, value_cache);
+    ReadTransaction tx(datastorage);
+    return ::getValue(tx, value_hash, value_cache);
 }
 
-std::unique_ptr<ReadTransaction> ArbStorage::makeReadOnlyTransaction() {
-    return arb_core->makeReadOnlyTransaction();
+std::unique_ptr<ReadTransaction> ArbStorage::getReadTransaction() {
+    return std::make_unique<ReadTransaction>(datastorage);
 }
 
-std::unique_ptr<ReadWriteTransaction> ArbStorage::makeReadWriteTransaction() {
-    return arb_core->makeReadWriteTransaction();
+std::unique_ptr<ReadWriteTransaction> ArbStorage::getReadWriteTransaction() {
+    return std::make_unique<ReadWriteTransaction>(datastorage);
 }
