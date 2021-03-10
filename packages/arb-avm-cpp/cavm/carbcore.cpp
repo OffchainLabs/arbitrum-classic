@@ -264,6 +264,22 @@ int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
     }
 }
 
+Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
+                                           const void* index_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto cursor_index = receiveUint256(index_ptr);
+    try {
+        auto count_result = arb_core->logsCursorPosition(
+            intx::narrow_cast<size_t>(cursor_index));
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
                              const void* index_ptr,
                              const void* count_ptr) {
