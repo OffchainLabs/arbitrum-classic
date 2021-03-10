@@ -88,7 +88,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if len(logs) > 0 || len(deletedLogs) > 0 {
+			if logs != nil || deletedLogs != nil {
 				// Retrieved logs successfully
 				break
 			}
@@ -98,7 +98,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if len(deletedLogs) > 0 {
+			if deletedLogs != nil {
 				// Got deleted logs successfully, retry loop to get any new logs without waiting
 				continue
 			}
