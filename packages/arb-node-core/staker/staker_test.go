@@ -285,7 +285,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(9000)}, big.NewInt(40000), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
