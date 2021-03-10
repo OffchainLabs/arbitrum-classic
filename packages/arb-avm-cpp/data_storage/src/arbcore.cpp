@@ -2015,6 +2015,16 @@ bool ArbCore::logsCursorCheckError(size_t cursor_index) const {
     return logs_cursors[cursor_index].status == DataCursor::ERROR;
 }
 
+ValueResult<uint256_t> ArbCore::logsCursorPosition(size_t cursor_index) const {
+    if (cursor_index >= logs_cursors.size()) {
+        std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
+        throw std::runtime_error("Invalid logsCursor index");
+    }
+
+    auto tx = makeConstReadOnlyTransaction();
+    return logsCursorGetCurrentTotalCount(*tx, cursor_index);
+}
+
 std::string ArbCore::logsCursorClearError(size_t cursor_index) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
@@ -2050,8 +2060,8 @@ rocksdb::Status ArbCore::logsCursorSaveCurrentTotalCount(
 }
 
 ValueResult<uint256_t> ArbCore::logsCursorGetCurrentTotalCount(
-    ReadTransaction& tx,
-    size_t cursor_index) {
+    const ReadTransaction& tx,
+    size_t cursor_index) const {
     return tx.stateGetUint256(
         vecToSlice(logs_cursors[cursor_index].current_total_key));
 }

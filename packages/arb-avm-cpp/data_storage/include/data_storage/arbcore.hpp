@@ -186,6 +186,7 @@ class ArbCore {
     bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
+    ValueResult<uint256_t> logsCursorPosition(size_t cursor_index) const;
 
    private:
     // Logs cursor internal functions
@@ -349,8 +350,9 @@ class ArbCore {
     rocksdb::Status logsCursorSaveCurrentTotalCount(ReadWriteTransaction& tx,
                                                     size_t cursor_index,
                                                     uint256_t count);
-    ValueResult<uint256_t> logsCursorGetCurrentTotalCount(ReadTransaction& tx,
-                                                          size_t cursor_index);
+    ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
+        const ReadTransaction& tx,
+        size_t cursor_index) const;
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,

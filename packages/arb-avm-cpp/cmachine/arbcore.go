@@ -290,6 +290,16 @@ func (ec *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 	return ret, nil
 }
 
+func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	result := C.arbCoreLogsCursorGetPosition(ac.c, unsafeDataPointer(cursorIndexData))
+	if result.found == 0 {
+		return nil, errors.New("failed to load logs cursor position")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	countData := math.U256Bytes(count)
