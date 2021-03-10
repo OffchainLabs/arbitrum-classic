@@ -129,7 +129,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			}
 		}
 
-		if len(logs) > 0 || len(deletedLogs) > 0 {
+		if logs != nil || deletedLogs != nil {
 			logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirming receipt of logs")
 			for {
 				status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
