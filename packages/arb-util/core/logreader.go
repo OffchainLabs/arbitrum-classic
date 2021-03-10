@@ -118,7 +118,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 		if len(deletedLogs) > 0 {
 			// Existing logs to delete
-			if err = lr.consumer.DeleteLogs(deletedLogs); err != nil {
+			if err = lr.consumer.DeleteLogs(firstDeletedIndex, deletedLogs); err != nil {
 				return err
 			}
 		}
@@ -130,7 +130,6 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		}
 
 		if logs != nil || deletedLogs != nil {
-			logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirming receipt of logs")
 			for {
 				status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
 				if err != nil {
@@ -138,7 +137,6 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				}
 				if status {
 					// Successfully confirmed receipt of logs
-					logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirmed receipt of logs")
 					break
 				}
 
@@ -151,7 +149,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 				// Got deleted logs successfully
 				if len(newDeletedLogs) > 0 {
-					err = lr.consumer.DeleteLogs(newDeletedLogs)
+					err = lr.consumer.DeleteLogs(firstDeletedIndex, newDeletedLogs)
 					if err != nil {
 						return err
 					}

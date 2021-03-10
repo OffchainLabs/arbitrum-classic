@@ -243,7 +243,7 @@ func (e *ExecutionState) CutHash() [32]byte {
 
 type LogConsumer interface {
 	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
-	DeleteLogs(avmLogs []value.Value) error
+	DeleteLogs(initialLogIndex *big.Int, avmLogs []value.Value) error
 }
 
 type LogsCursor interface {
