@@ -42,7 +42,4 @@ type NodeStore interface {
 	GetMessageBatch(batchNum *big.Int) *uint64
 	SaveBlock(header *types.Header, logIndex uint64, requests []EVMRequestInfo) error
 	Reorg(height uint64) error
-
-	CurrentLogCount() (*big.Int, error)
-	UpdateCurrentLogCount(count *big.Int) error
 }

@@ -120,14 +120,6 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	return results, nil
 }
 
-func (db *TxDB) CurrentLogCount() (*big.Int, error) {
-	return db.as.CurrentLogCount()
-}
-
-func (db *TxDB) UpdateCurrentLogCount(count *big.Int) error {
-	return db.as.UpdateCurrentLogCount(count)
-}
-
 func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 	logIndex := initialLogIndex.Uint64()
 	for _, avmLog := range avmLogs {

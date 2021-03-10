@@ -278,7 +278,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		<-time.After(time.Millisecond * 1000)
 	}
 	for {
-		txdbLogs, err := b.db.CurrentLogCount()
+		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
 		if err != nil {
 			return err
 		}
@@ -286,7 +286,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		if err != nil {
 			return err
 		}
-		if txdbLogs.Cmp(coreLogs) == 0 {
+		if cursorPos.Cmp(coreLogs) == 0 {
 			break
 		}
 		<-time.After(time.Millisecond * 200)
