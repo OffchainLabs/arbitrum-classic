@@ -1853,8 +1853,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
 
         logs_cursors[cursor_index].pending_total_count = log_count;
 
-        if (current_count_result.data <
-            logs_cursors[cursor_index].pending_total_count) {
+        if (current_count_result.data > log_count) {
             auto status =
                 logsCursorSaveCurrentTotalCount(tx, cursor_index, log_count);
             if (!status.ok()) {
