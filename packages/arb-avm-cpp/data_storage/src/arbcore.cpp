@@ -1758,10 +1758,15 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
         return;
     }
 
+    if (current_count_result.data == log_inserted_count.data) {
+        // Nothing to do
+        logs_cursors[cursor_index].status = DataCursor::READY;
+        return;
+    }
     if (current_count_result.data > log_inserted_count.data) {
         // Error
         std::cerr << "handleLogsCursor current count: "
-                  << current_count_result.data << " > "
+                  << current_count_result.data << " == "
                   << " log inserted count: " << log_inserted_count.data
                   << std::endl;
         logs_cursors[cursor_index].status = DataCursor::READY;
@@ -1868,10 +1873,10 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
                        logs_cursors[cursor_index].data.size() >
                    log_count) {
             // Only part of the data needs to be removed
-            auto offset = intx::narrow_cast<size_t>(log_count -
-                                                    current_count_result.data);
+            auto logs_to_keep = intx::narrow_cast<size_t>(
+                log_count - current_count_result.data);
             logs_cursors[cursor_index].data.erase(
-                logs_cursors[cursor_index].data.begin() + offset,
+                logs_cursors[cursor_index].data.begin() + logs_to_keep,
                 logs_cursors[cursor_index].data.end());
         }
     }
