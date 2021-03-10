@@ -34,17 +34,17 @@ DataStorage::DataStorage(const std::string& db_path) {
 
     // As recommended for new applications by
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning
-    cf_options.level_compaction_dynamic_level_bytes = true;
-    options.max_background_compactions = 4;
-    options.max_background_flushes = 2;
-    options.bytes_per_sync = 1048576;
-    options.compaction_pri = rocksdb::kMinOverlappingRatio;
-    table_options.block_size = 16 * 1024;
-    table_options.cache_index_and_filter_blocks = true;
-    table_options.pin_l0_filter_and_index_blocks_in_cache = true;
-    table_options.format_version = 5;
-    options.table_factory.reset(
-        rocksdb::NewBlockBasedTableFactory(table_options));
+    //    cf_options.level_compaction_dynamic_level_bytes = true;
+    //    options.max_background_compactions = 4;
+    //    options.max_background_flushes = 2;
+    //    options.bytes_per_sync = 1048576;
+    //    options.compaction_pri = rocksdb::kMinOverlappingRatio;
+    //    table_options.block_size = 16 * 1024;
+    //    table_options.cache_index_and_filter_blocks = true;
+    //    table_options.pin_l0_filter_and_index_blocks_in_cache = true;
+    //    table_options.format_version = 5;
+    //    options.table_factory.reset(
+    //        rocksdb::NewBlockBasedTableFactory(table_options));
 
     txn_db_path = db_path;
 
