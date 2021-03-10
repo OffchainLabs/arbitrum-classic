@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
@@ -108,80 +107,54 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			time.Sleep(lr.sleepTime)
 		}
 
-		currentLogCount, err := lr.consumer.CurrentLogCount()
-		if err != nil {
-			return err
+		if len(logs) > 0 || len(deletedLogs) > 0 {
+			logger.Info().
+				Str("firstDeletedIndex", bigIntAsString(firstDeletedIndex)).
+				Int("deletedLog count", len(deletedLogs)).
+				Str("firstIndex", bigIntAsString(firstIndex)).
+				Int("log count", len(logs)).
+				Msg("logs received from log cursor")
 		}
 
-		currentLogIndex := new(big.Int).Sub(currentLogCount, big.NewInt(1))
-
-		logger.Info().
-			Str("currentLogCount", bigIntAsString(currentLogCount)).
-			Str("firstDeletedIndex", bigIntAsString(firstDeletedIndex)).
-			Int("deletedLog count", len(deletedLogs)).
-			Str("firstIndex", bigIntAsString(firstIndex)).
-			Int("log count", len(logs)).
-			Msg("logs received from log cursor")
-
-		if len(deletedLogs) > 0 && firstDeletedIndex.Cmp(currentLogIndex) <= 0 {
+		if len(deletedLogs) > 0 {
 			// Existing logs to delete
-			deletedCount := new(big.Int).Sub(currentLogCount, firstDeletedIndex)
-			if deletedCount.Cmp(big.NewInt(int64(len(deletedLogs)))) != 0 {
-				logger.Warn().
-					Uint64("currentLogCount", currentLogCount.Uint64()).
-					Uint64("firstDeletedIndex", firstDeletedIndex.Uint64()).
-					Int("deletedLogs count", len(deletedLogs)).
-					Msg("more deleted logs sent than we previously received")
-			}
-			if err = lr.consumer.DeleteLogs(deletedLogs[:deletedCount.Uint64()]); err != nil {
-				return err
-			}
-
-			currentLogCount = firstDeletedIndex
-			if err := lr.consumer.UpdateCurrentLogCount(currentLogCount); err != nil {
+			if err = lr.consumer.DeleteLogs(deletedLogs); err != nil {
 				return err
 			}
 		}
 
 		if len(logs) > 0 {
-			if firstIndex.Cmp(currentLogCount) > 0 {
-				return errors.Errorf("logscursor skipped log entries - firstIndex: %v, currentLogCount: %v", firstIndex, currentLogCount)
-			}
-
 			if err = lr.consumer.AddLogs(firstIndex, logs); err != nil {
-				return err
-			}
-
-			if err := lr.consumer.UpdateCurrentLogCount(new(big.Int).Add(currentLogCount, big.NewInt(int64(len(logs))))); err != nil {
 				return err
 			}
 		}
 
-		for {
-			status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
-			if err != nil {
-				return err
-			}
-			if status {
-				// Successfully confirmed receipt of logs
-				break
-			}
-
-			// Reorg happened since previous call to GetLogs.  Post-retrieve reorg of logscursor will only include
-			// extra deleted logs, won't add any new logs
-			_, newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
-			if err != nil {
-				return err
-			}
-			if newDeletedLogs == nil {
-				return errors.New("missing expected deleted logs")
-			}
-
-			// Got deleted logs successfully
-			if len(newDeletedLogs) > 0 {
-				err = lr.consumer.DeleteLogs(newDeletedLogs)
+		if len(logs) > 0 || len(deletedLogs) > 0 {
+			logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirming receipt of logs")
+			for {
+				status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
 				if err != nil {
 					return err
+				}
+				if status {
+					// Successfully confirmed receipt of logs
+					logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirmed receipt of logs")
+					break
+				}
+
+				// Reorg happened since previous call to GetLogs.  Post-retrieve reorg of logscursor will only include
+				// extra deleted logs, won't add any new logs
+				_, newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
+				if err != nil {
+					return err
+				}
+
+				// Got deleted logs successfully
+				if len(newDeletedLogs) > 0 {
+					err = lr.consumer.DeleteLogs(newDeletedLogs)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}

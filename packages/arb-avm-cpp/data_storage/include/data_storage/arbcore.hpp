@@ -189,7 +189,7 @@ class ArbCore {
 
    private:
     // Logs cursor internal functions
-    bool handleLogsCursorRequested(ReadTransaction& tx,
+    void handleLogsCursorRequested(ReadTransaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(ReadWriteTransaction& tx,
