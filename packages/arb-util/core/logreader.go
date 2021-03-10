@@ -88,7 +88,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			if logs != nil || deletedLogs != nil {
+			if logs != nil {
 				// Retrieved logs successfully
 				break
 			}
@@ -107,7 +107,9 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			time.Sleep(lr.sleepTime)
 		}
 
+		logs_present := false
 		if len(logs) > 0 || len(deletedLogs) > 0 {
+			logs_present = true
 			logger.Info().
 				Str("firstDeletedIndex", bigIntAsString(firstDeletedIndex)).
 				Int("deletedLog count", len(deletedLogs)).
@@ -137,6 +139,9 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				}
 				if status {
 					// Successfully confirmed receipt of logs
+					if logs_present {
+						logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirmed receipt of logs")
+					}
 					break
 				}
 
