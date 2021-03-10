@@ -177,11 +177,6 @@ std::unique_ptr<ReadWriteTransaction> ArbCore::makeReadWriteTransaction() {
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     auto tx = makeReadWriteTransaction();
 
-    code = std::make_shared<Code>(0);
-    code->addSegment(executable.code);
-    machine = std::make_unique<MachineThread>(
-        MachineState{code, executable.static_val});
-
     auto result = getInitialMachineHash(*tx);
     if (result.status.ok() && machine->hash() == result.data) {
         if (machine->hash() != result.data) {
@@ -199,6 +194,10 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
             return status;
         }
     } else {
+        code->addSegment(executable.code);
+        machine = std::make_unique<MachineThread>(
+            MachineState{code, executable.static_val});
+
         // Need to initialize database from scratch
         auto res = saveMachine(*tx, *machine);
         if (!res.status.ok()) {
