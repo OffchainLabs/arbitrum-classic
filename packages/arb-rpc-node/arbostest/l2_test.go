@@ -25,7 +25,6 @@ import (
 	"strings"
 	"testing"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -243,67 +242,6 @@ func TestContractTx(t *testing.T) {
 	if new(big.Int).SetBytes(callRes2.ReturnData).Cmp(big.NewInt(8)) != 0 {
 		t.Errorf("Storage wasn't updated")
 	}
-}
-
-func TestSignedTx(t *testing.T) {
-	dest := common.RandAddress()
-	pk, err := crypto.GenerateKey()
-	failIfError(t, err)
-	addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-
-	tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 1000000, big.NewInt(0), []byte{})
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	failIfError(t, err)
-
-	l2msg, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx})
-	failIfError(t, err)
-
-	tx2 := types.NewContractCreation(1, big.NewInt(0), 1000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
-	signedTx2, err := types.SignTx(tx2, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
-	failIfError(t, err)
-
-	l2msg2, err := message.NewL2Message(message.SignedTransaction{Tx: signedTx2})
-	failIfError(t, err)
-
-	messages := makeSimpleInbox([]message.Message{
-		message.Eth{
-			Dest:  addr,
-			Value: big.NewInt(1000),
-		},
-		l2msg,
-		l2msg2,
-	})
-
-	logs, _, _, _ := runAssertion(t, messages, 2, 0)
-	results := processTxResults(t, logs)
-	allResultsSucceeded(t, results)
-	for i, result := range results {
-		if result.IncomingRequest.Sender != addr {
-			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, addr)
-		}
-		if result.IncomingRequest.Kind != message.L2Type {
-			t.Error("l2message has incorrect type")
-		}
-		l2Message, err := message.L2Message{Data: result.IncomingRequest.Data}.AbstractMessage()
-		failIfError(t, err)
-
-		var correctHash ethcommon.Hash
-		if i == 0 {
-			correctHash = signedTx.Hash()
-		} else {
-			correctHash = signedTx2.Hash()
-		}
-
-		if result.IncomingRequest.MessageID.ToEthHash() != correctHash {
-			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash.Hex())
-		}
-
-		_, ok := l2Message.(message.SignedTransaction)
-		if !ok {
-			t.Error("bad transaction format", l2Message)
-		}
-	}
-
 }
 
 func TestUnsignedTx(t *testing.T) {
