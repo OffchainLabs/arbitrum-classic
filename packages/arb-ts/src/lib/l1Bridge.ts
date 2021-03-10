@@ -16,10 +16,10 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, constants } from 'ethers'
-import { InboxFactory } from './abi/InboxFactory'
 import { EthERC20BridgeFactory } from './abi/EthERC20BridgeFactory'
 import { EthERC20Bridge } from './abi/EthERC20Bridge'
 import { Inbox } from './abi/Inbox'
+import { InboxFactory } from './abi/InboxFactory'
 import { ERC20 } from './abi/ERC20'
 
 import { ERC20Factory } from './abi/ERC20Factory'
