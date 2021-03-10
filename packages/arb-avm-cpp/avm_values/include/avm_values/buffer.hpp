@@ -29,6 +29,8 @@ const uint64_t LEAF_SIZE = 1 << LEAF_SIZE2;
 const uint64_t NODE_SIZE = 1 << NODE_SIZE2;
 const uint64_t ALIGN = LEAF_SIZE;
 
+const uint64_t BUFFER_INNER_NODE_TAG = 1234;
+
 inline uint64_t calc_len(int h) {
     if (h == 0) {
         return LEAF_SIZE;
@@ -210,31 +212,31 @@ class RawBuffer {
 class Buffer {
    public:
     std::shared_ptr<RawBuffer> buf;
-    uint64_t maxAccess;
+    uint64_t maxWritten; // Maximal written index
 
     Buffer(const RawBuffer& buffer, uint64_t mx) {
         buf = std::make_shared<RawBuffer>(buffer);
-        maxAccess = mx;
+        maxWritten = mx;
     }
 
     Buffer() {
         buf = std::make_shared<RawBuffer>(); 
-        maxAccess = 0;
+        maxWritten = 0;
     }
 
     Buffer(const std::vector<uint8_t>& data) : Buffer() {
         for (uint64_t i = 0; i < data.size(); i++) {
             buf = std::make_shared<RawBuffer>(buf->set(i, data[i]));
         }
-        maxAccess = data.size();
+        maxWritten = data.size() == 0 ? 0 : data.size() - 1;
     }
 
     Buffer set(uint64_t offset, uint8_t v) const {
-        return Buffer(buf->set(offset, v), std::max(offset, maxAccess));
+        return Buffer(buf->set(offset, v), std::max(offset, maxWritten));
     }
 
     Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) const {
-        return Buffer(buf->set_many(offset, arr), std::max(offset+arr.size()-1, maxAccess));
+        return Buffer(buf->set_many(offset, arr), std::max(offset+arr.size()-1, maxWritten));
     }
 
     uint8_t get(uint64_t pos) const { return buf->get(pos); }
@@ -296,7 +298,7 @@ class Buffer {
 };
 
 inline uint256_t hash(const Buffer& b) {
-    return hash(b.maxAccess, b.hash());
+    return hash(b.maxWritten, b.hash());
 }
 
 inline bool operator==(const Buffer& val1, const Buffer& val2) {

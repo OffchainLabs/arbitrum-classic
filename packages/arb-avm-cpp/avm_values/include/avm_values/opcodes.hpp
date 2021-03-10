@@ -409,6 +409,8 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::ECMUL, {}},
                                {OpCode::ECPAIRING, {}}};
 
+// About computing gas prices, the cost should be the cost in the worst case.
+// In addition, it should include the possible added hashing cost (for tuple and buffer set functions)
 const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::ADD, 3},
     {OpCode::MUL, 3},
@@ -487,9 +489,11 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::DEBUG_PRINT, 1},
 
     {OpCode::NEW_BUFFER, 1},
+    // Cost determined for the worst case (large buffer)
     {OpCode::GET_BUFFER8, 3},
     {OpCode::GET_BUFFER64, 3},
     {OpCode::GET_BUFFER256, 3},
+    // Variable cost, this is just the base fee in the best case. Most of the cost comes from hashing
     {OpCode::SET_BUFFER8, 240},
     {OpCode::SET_BUFFER64, 480},
     {OpCode::SET_BUFFER256, 480},

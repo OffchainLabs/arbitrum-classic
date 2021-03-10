@@ -19,9 +19,9 @@
 
 #include <ethash/keccak.hpp>
 
-struct Zeros {
+struct EmptyBufferHashes {
     uint256_t zeros[64];
-    Zeros() {
+    EmptyBufferHashes() {
         zeros[5] = hash(0);
         for (int i = 6; i < 64; i++) {
             zeros[i] = hash(zeros[i-1], zeros[i-1]);
@@ -29,7 +29,7 @@ struct Zeros {
     }
 };
 
-const Zeros z;
+const EmptyBufferHashes z;
 const uint256_t zero_h = hash(0);
 
 uint256_t zero_hash(uint64_t sz) {
@@ -168,7 +168,7 @@ std::vector<RawBuffer> RawBuffer::serialize(
     if (level > 0) {
         value_vector.push_back(1);
         for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            uint256_t hash_ = hash2(1234, (*node)[i].hash());
+            uint256_t hash_ = hash2(BUFFER_INNER_NODE_TAG, (*node)[i].hash());
             marshal_uint256_t(hash_, value_vector);
             ret.push_back((*node)[i]);
         }

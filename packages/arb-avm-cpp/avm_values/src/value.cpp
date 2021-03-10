@@ -218,7 +218,7 @@ void marshalForProof(const Buffer& val,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(BUFFER);
-    marshal_uint256_t(val.maxAccess, buf);
+    marshal_uint256_t(val.maxWritten, buf);
     marshal_uint256_t(val.hash(), buf);
 }
 
@@ -246,7 +246,7 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
-    uint256_t operator()(const Buffer& buf) const { return buf.maxAccess; }
+    uint256_t operator()(const Buffer& buf) const { return buf.maxWritten; }
 
     uint256_t operator()(const uint256_t&) const { return 1; }
 
@@ -261,7 +261,7 @@ struct ValuePrinter {
     std::ostream& os;
 
     std::ostream* operator()(const Buffer& b) const {
-        os << "Buffer(" << b.hash() << "," << b.lastIndex() << "," << b.maxAccess << ")";
+        os << "Buffer(" << b.hash() << "," << b.lastIndex() << "," << b.maxWritten << ")";
         return &os;
     }
 

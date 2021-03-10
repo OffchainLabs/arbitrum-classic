@@ -227,12 +227,12 @@ std::vector<value> serializeValue(const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    marshal_uint64_t(b.maxAccess, value_vector);
+    marshal_uint64_t(b.maxWritten, value_vector);
     std::vector<RawBuffer> res = b.serialize(value_vector);
     std::vector<value> ret{};
     ret.reserve(res.size());
     for (auto& re : res) {
-        ret.emplace_back(Buffer(re, 1234));
+        ret.emplace_back(Buffer(re, BUFFER_INNER_NODE_TAG));
     }
     return ret;
 }
