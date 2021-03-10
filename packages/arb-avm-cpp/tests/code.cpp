@@ -28,8 +28,8 @@
 
 #include <catch2/catch.hpp>
 
-Machine generateTestMachine() {
-    auto code = std::make_shared<Code>();
+void generateTestMachine(std::unique_ptr<Machine>& mach) {
+    auto& code = mach->machine_state.code;
     auto stub1 = code->addSegment();
     auto stub2 = code->addSegment();
     auto stub3 = code->addSegment();
@@ -53,11 +53,10 @@ Machine generateTestMachine() {
     add_op1(Operation{OpCode::JUMP, stub3});
     add_op1(Operation{OpCode::ADD});
 
-    Machine mach{std::move(code), Tuple()};
     for (int i = 0; i < 4; i++) {
-        mach.machine_state.stack.push(uint256_t{1});
+        mach->machine_state.stack.push(uint256_t{1});
     }
-    return mach;
+    mach->machine_state.pc = CodePointRef(1, 2);
 }
 
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
@@ -72,39 +71,49 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
 }
 
 TEST_CASE("Code works correctly") {
-    auto mach = generateTestMachine();
-    checkRun(mach);
+    DBDeleter deleter;
+    ArbStorage storage(dbpath);
+    storage.initialize(
+        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+    ValueCache value_cache{};
+    auto mach = storage.getInitialMachine(value_cache);
+    generateTestMachine(mach);
+    checkRun(*mach);
 }
 
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto mach = generateTestMachine();
-    auto tx = storage.makeReadWriteTransaction();
+    storage.initialize(
+        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
     ValueCache value_cache{};
 
+    auto mach = storage.getInitialMachine(value_cache);
+    generateTestMachine(mach);
+    auto tx = storage.makeReadWriteTransaction();
+
     SECTION("Save and load") {
-        auto save_ret = saveMachine(*tx, mach);
+        auto save_ret = saveMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
-        auto mach_hash = mach.hash();
+        auto mach_hash = mach->hash();
         REQUIRE(mach_hash);
         auto mach2 = storage.getMachine(*mach_hash, value_cache);
         checkRun(*mach2);
     }
 
     SECTION("Save different and load") {
-        auto mach2 = mach;
+        auto mach2 = *mach;
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
         execConfig.next_block_height = 8;
         mach2.run(execConfig);
-        auto save_ret = saveMachine(*tx, mach);
+        auto save_ret = saveMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
         save_ret = saveMachine(*tx, mach2);
         REQUIRE(save_ret.status.ok());
 
-        auto mach_hash = mach.hash();
+        auto mach_hash = mach->hash();
         REQUIRE(mach_hash.has_value());
 
         auto mach_hash2 = mach2.hash();
@@ -128,9 +137,9 @@ TEST_CASE("Code serialization") {
     }
 
     SECTION("Save twice, delete and load") {
-        saveMachine(*tx, mach);
-        saveMachine(*tx, mach);
-        auto mach_hash = mach.hash();
+        saveMachine(*tx, *mach);
+        saveMachine(*tx, *mach);
+        auto mach_hash = mach->hash();
         REQUIRE(mach_hash);
         deleteMachine(*tx, *mach_hash);
         REQUIRE(tx->commit().ok());
