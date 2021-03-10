@@ -478,11 +478,11 @@ uint256_t MachineState::nextGasCost() const {
     if (instruction.op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
     } else if (instruction.op.opcode == OpCode::SET_BUFFER256) {
-        base_gas += 2*machineoperation::setbuffer_variable_gas_cost(*this, 31);
+        base_gas += machineoperation::setbuffer_variable_gas_cost256(*this);
     } else if (instruction.op.opcode == OpCode::SET_BUFFER64) {
-        base_gas += 2*machineoperation::setbuffer_variable_gas_cost(*this, 7);
+        base_gas += machineoperation::setbuffer_variable_gas_cost64(*this);
     } else if (instruction.op.opcode == OpCode::SET_BUFFER8) {
-        base_gas += machineoperation::setbuffer_variable_gas_cost(*this, 0);
+        base_gas += machineoperation::setbuffer_variable_gas_cost8(*this);
     }
     return base_gas;
 }

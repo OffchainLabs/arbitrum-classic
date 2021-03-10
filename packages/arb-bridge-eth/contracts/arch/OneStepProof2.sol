@@ -557,7 +557,7 @@ contract OneStepProof2 is OneStepProofCommon {
         if (deductGas(context, uint64(2*setbuffer_extra_gas_cost(mx)))) {
             // When we run out of gas, we only charge for an error + gas_set
             // That means we need to deduct the previously charged base cost here
-            context.gas -= SETBUFFER_GAS_COST;
+            context.gas -= 2*SETBUFFER_GAS_COST;
             handleError(context);
             return;
         }
@@ -585,7 +585,7 @@ contract OneStepProof2 is OneStepProofCommon {
         if (deductGas(context, uint64(2*setbuffer_extra_gas_cost(mx)))) {
             // When we run out of gas, we only charge for an error + gas_set
             // That means we need to deduct the previously charged base cost here
-            context.gas -= SETBUFFER_GAS_COST;
+            context.gas -= 2*SETBUFFER_GAS_COST;
             handleError(context);
             return;
         }
@@ -613,11 +613,11 @@ contract OneStepProof2 is OneStepProofCommon {
         } else if (opCode == OP_GETBUFFER256) {
             return (2, 0, 3, executeGetBuffer256);
         } else if (opCode == OP_SETBUFFER8) {
-            return (3, 0, 240, executeSetBuffer8);
+            return (3, 0, SETBUFFER_GAS_COST, executeSetBuffer8);
         } else if (opCode == OP_SETBUFFER64) {
-            return (3, 0, 480, executeSetBuffer64);
+            return (3, 0, SETBUFFER_GAS_COST*2, executeSetBuffer64);
         } else if (opCode == OP_SETBUFFER256) {
-            return (3, 0, 480, executeSetBuffer256);
+            return (3, 0, SETBUFFER_GAS_COST*2, executeSetBuffer256);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {

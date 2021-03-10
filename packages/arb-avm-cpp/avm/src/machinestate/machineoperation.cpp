@@ -1101,6 +1101,9 @@ uint64_t setbuffer_variable_gas_cost(MachineState const& m, uint64_t inc) {
     if (!buf || !offset) {
         return 0;
     }
+    if (*offset > std::numeric_limits<uint64_t>::max()) {
+        return 0;
+    }
     if (*offset + inc > std::numeric_limits<uint64_t>::max()) {
         return 0;
     }
@@ -1113,6 +1116,26 @@ uint64_t setbuffer_variable_gas_cost(MachineState const& m, uint64_t inc) {
         mx = mx/8;
     }
     return res;
+}
+
+uint64_t setbuffer_variable_gas_cost8(MachineState const& m) {
+    auto val = std::get_if<uint256_t>(&m.stack[1]);
+    if (!val || *val > std::numeric_limits<uint8_t>::max()) {
+        return 0;
+    }
+    return setbuffer_variable_gas_cost(m, 0);
+}
+
+uint64_t setbuffer_variable_gas_cost64(MachineState const& m) {
+    auto val = std::get_if<uint256_t>(&m.stack[1]);
+    if (!val || *val > std::numeric_limits<uint64_t>::max()) {
+        return 0;
+    }
+    return 2*setbuffer_variable_gas_cost(m, 7);
+}
+
+uint64_t setbuffer_variable_gas_cost256(MachineState const& m) {
+    return 2*setbuffer_variable_gas_cost(m, 31);
 }
 
 void setbuffer8(MachineState& m) {
