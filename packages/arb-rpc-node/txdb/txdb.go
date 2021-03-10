@@ -141,12 +141,11 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 
 func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
-	lastResultIndex := len(avmLogs) - 1
 	var currentBlockHeight uint64
 	blocksFound := false
-	for i := range avmLogs {
-		// Parse L2 transaction receipts in reverse
-		res, err := evm.NewResultFromValue(avmLogs[lastResultIndex-i])
+	for _, avmLog := range avmLogs {
+		// L2 transaction receipts already provided in reverse
+		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
 			return err
 		}
