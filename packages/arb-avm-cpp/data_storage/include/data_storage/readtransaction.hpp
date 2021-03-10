@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef data_storage_readonlytransaction_hpp
-#define data_storage_readonlytransaction_hpp
+#ifndef data_storage_readtransaction_hpp
+#define data_storage_readtransaction_hpp
 
 #include <data_storage/datastorage.hpp>
 
+class ReadSnapshotTransaction;
 class ReadWriteTransaction;
 
 class ReadTransaction {
@@ -26,17 +27,12 @@ class ReadTransaction {
     std::unique_ptr<Transaction> transaction{};
     rocksdb::ReadOptions read_options{};
 
+    friend ReadSnapshotTransaction;
     friend ReadWriteTransaction;
 
    public:
+    ReadTransaction() = delete;
     explicit ReadTransaction(std::shared_ptr<DataStorage> store);
-    ~ReadTransaction();
-
-    static std::unique_ptr<ReadTransaction> makeReadOnlyTransaction(
-        std::shared_ptr<DataStorage> store);
-
-    void enterReadSnapshot();
-    void exitReadSnapshot();
 
     rocksdb::Status defaultGet(const rocksdb::Slice& key,
                                std::string* value) const;
@@ -113,4 +109,4 @@ class ReadTransaction {
         rocksdb::Slice key_slice) const;
 };
 
-#endif  // data_storage_readonlytransaction_hpp
+#endif  // data_storage_readtransaction_hpp

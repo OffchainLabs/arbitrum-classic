@@ -278,7 +278,7 @@ TEST_CASE("ArbCore inbox") {
                         true);
         inbox_acc = hash_inbox(inbox_acc, message.serialize());
     }
-    auto tx = arbCore->makeReadOnlyTransaction();
+    auto tx = storage.getReadTransaction();
     auto position = arbCore->getSideloadPosition(*tx, 2);
     REQUIRE(position.status.ok());
 

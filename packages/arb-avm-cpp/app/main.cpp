@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
               << assertion.gasCount << " gas ending in state "
               << static_cast<int>(mach->currentStatus()) << "\n";
 
-    auto tx = storage.makeReadWriteTransaction();
+    auto tx = storage.getReadWriteTransaction();
     saveMachine(*tx, *mach);
     tx->commit();
 

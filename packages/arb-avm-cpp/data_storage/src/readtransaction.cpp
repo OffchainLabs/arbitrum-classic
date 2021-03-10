@@ -21,32 +21,6 @@
 ReadTransaction::ReadTransaction(std::shared_ptr<DataStorage> store)
     : transaction(Transaction::makeTransaction(std::move(store))) {}
 
-ReadTransaction::~ReadTransaction() {
-    if (read_options.snapshot != nullptr) {
-        transaction->datastorage->txn_db->ReleaseSnapshot(
-            read_options.snapshot);
-    }
-}
-
-std::unique_ptr<ReadTransaction> ReadTransaction::makeReadOnlyTransaction(
-    std::shared_ptr<DataStorage> store) {
-    return std::make_unique<ReadTransaction>(std::move(store));
-}
-
-void ReadTransaction::enterReadSnapshot() {
-    if (read_options.snapshot == nullptr) {
-        read_options.snapshot = transaction->datastorage->txn_db->GetSnapshot();
-    }
-}
-
-void ReadTransaction::exitReadSnapshot() {
-    if (read_options.snapshot != nullptr) {
-        transaction->datastorage->txn_db->ReleaseSnapshot(
-            read_options.snapshot);
-        read_options.snapshot = nullptr;
-    }
-}
-
 rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,
                                             std::string* value) const {
     return transaction->transaction->Get(

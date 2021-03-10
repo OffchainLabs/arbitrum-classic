@@ -21,12 +21,6 @@
 ReadWriteTransaction::ReadWriteTransaction(std::shared_ptr<DataStorage> store)
     : ReadTransaction(std::move(store)) {}
 
-std::unique_ptr<ReadWriteTransaction>
-ReadWriteTransaction::makeReadWriteTransaction(
-    std::shared_ptr<DataStorage> store) {
-    return std::make_unique<ReadWriteTransaction>(std::move(store));
-}
-
 rocksdb::Status ReadWriteTransaction::defaultPut(const rocksdb::Slice& key,
                                                  const rocksdb::Slice& value) {
     return transaction->transaction->Put(

@@ -45,16 +45,19 @@ class ArbStorage {
     rocksdb::Status initialize(const std::string& executable_path);
     [[nodiscard]] bool initialized() const;
 
-    std::unique_ptr<ReadTransaction> makeReadOnlyTransaction();
-    std::unique_ptr<ReadWriteTransaction> makeReadWriteTransaction();
     [[nodiscard]] std::unique_ptr<AggregatorStore> getAggregatorStore() const;
-    std::shared_ptr<ArbCore> getArbCore();
+    [[nodiscard]] std::shared_ptr<ArbCore> getArbCore();
 
-    std::unique_ptr<Machine> getInitialMachine(ValueCache& value_cache) const;
-    std::unique_ptr<Machine> getMachine(uint256_t machineHash,
-                                        ValueCache& value_cache) const;
-    DbResult<value> getValue(uint256_t value_hash,
-                             ValueCache& value_cache) const;
+    [[nodiscard]] std::unique_ptr<Machine> getInitialMachine(
+        ValueCache& value_cache) const;
+    [[nodiscard]] std::unique_ptr<Machine> getMachine(
+        uint256_t machineHash,
+        ValueCache& value_cache) const;
+    [[nodiscard]] DbResult<value> getValue(uint256_t value_hash,
+                                           ValueCache& value_cache) const;
+    [[nodiscard]] std::unique_ptr<ReadTransaction> getReadTransaction();
+    [[nodiscard]] std::unique_ptr<ReadWriteTransaction>
+    getReadWriteTransaction();
 };
 
 #endif /* arbstorage_hpp */

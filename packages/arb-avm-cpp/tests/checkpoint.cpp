@@ -89,7 +89,7 @@ void getTupleValues(const ReadTransaction& transaction,
 TEST_CASE("Save value") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
@@ -109,7 +109,7 @@ TEST_CASE("Save value") {
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
@@ -134,7 +134,7 @@ TEST_CASE("Save tuple") {
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
     ValueCache value_cache{};
 
     SECTION("save empty tuple") {
@@ -162,7 +162,7 @@ TEST_CASE("Save and get value") {
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
     ValueCache value_cache{};
 
     SECTION("save num tuple") {
@@ -218,7 +218,7 @@ TEST_CASE("Save and get tuple values") {
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
     ValueCache value_cache{};
 
     SECTION("save 1 num tuple") {
@@ -236,7 +236,7 @@ TEST_CASE("Save And Get Tuple") {
     }
     SECTION("save 1 num tuple twice") {
         value_cache.clear();
-        auto transaction2 = storage.makeReadWriteTransaction();
+        auto transaction2 = storage.getReadWriteTransaction();
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
@@ -279,7 +279,7 @@ TEST_CASE("Save And Get Tuple") {
     }
     SECTION("save saved tuple in tuple") {
         value_cache.clear();
-        auto transaction2 = storage.makeReadWriteTransaction();
+        auto transaction2 = storage.getReadWriteTransaction();
         uint256_t num = 1;
         value inner_tuple = Tuple::createTuple(num);
         value tuple = Tuple::createTuple(inner_tuple);
@@ -300,7 +300,7 @@ TEST_CASE("Save And Get Tuple") {
 TEST_CASE("Checkpoint Benchmark") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
     uint256_t num = 1;
     value tuple = Tuple::createTuple(num);
     for (uint64_t i = 1; i < 100000; i++) {
@@ -446,7 +446,7 @@ Machine getDefaultMachine() {
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
@@ -461,7 +461,7 @@ TEST_CASE("Save Machinestatedata") {
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
@@ -478,7 +478,7 @@ TEST_CASE("Get Machinestate data") {
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.makeReadWriteTransaction();
+    auto transaction = storage.getReadWriteTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
@@ -494,10 +494,10 @@ TEST_CASE("Delete checkpoint") {
         auto machine = getComplexMachine();
         saveState(*transaction, machine, 1);
         {
-            auto transaction2 = storage.makeReadWriteTransaction();
+            auto transaction2 = storage.getReadWriteTransaction();
             saveState(*transaction2, machine, 2);
         }
-        auto transaction3 = storage.makeReadWriteTransaction();
+        auto transaction3 = storage.getReadWriteTransaction();
         auto machine_hash = machine.hash();
         REQUIRE(machine_hash);
         auto res = deleteMachine(*transaction3, *machine.hash());
@@ -507,7 +507,7 @@ TEST_CASE("Delete checkpoint") {
         checkDeletedCheckpoint(*transaction3, machine);
     }
     SECTION("delete checkpoint saved twice, reordered") {
-        auto transaction2 = storage.makeReadWriteTransaction();
+        auto transaction2 = storage.getReadWriteTransaction();
         auto machine = getComplexMachine();
         saveState(*transaction, machine, 1);
         saveState(*transaction2, machine, 2);

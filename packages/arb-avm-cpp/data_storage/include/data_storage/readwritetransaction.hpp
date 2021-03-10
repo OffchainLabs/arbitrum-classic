@@ -26,9 +26,6 @@ class ReadWriteTransaction : public ReadTransaction {
    public:
     explicit ReadWriteTransaction(std::shared_ptr<DataStorage> store);
 
-    static std::unique_ptr<ReadWriteTransaction> makeReadWriteTransaction(
-        std::shared_ptr<DataStorage> store);
-
     rocksdb::Status commit() { return transaction->transaction->Commit(); }
     rocksdb::Status rollback() { return transaction->transaction->Rollback(); }
 
@@ -37,10 +34,6 @@ class ReadWriteTransaction : public ReadTransaction {
     rocksdb::Status defaultDelete(const rocksdb::Slice& key);
     rocksdb::Status statePut(const rocksdb::Slice& key,
                              const rocksdb::Slice& value);
-    rocksdb::Status blocksPut(const rocksdb::Slice& key,
-                              const rocksdb::Slice& value);
-    rocksdb::Status nodePut(const rocksdb::Slice& key,
-                            const rocksdb::Slice& value);
     rocksdb::Status checkpointPut(const rocksdb::Slice& key,
                                   const rocksdb::Slice& value);
     rocksdb::Status messageEntryPut(const rocksdb::Slice& key,
@@ -52,8 +45,6 @@ class ReadWriteTransaction : public ReadTransaction {
     rocksdb::Status sideloadPut(const rocksdb::Slice& key,
                                 const rocksdb::Slice& value);
     rocksdb::Status stateDelete(const rocksdb::Slice& key);
-    rocksdb::Status blocksDelete(const rocksdb::Slice& key);
-    rocksdb::Status nodeDelete(const rocksdb::Slice& key);
     rocksdb::Status checkpointDelete(const rocksdb::Slice& key);
     rocksdb::Status messageEntryDelete(const rocksdb::Slice& key);
     rocksdb::Status logDelete(const rocksdb::Slice& key);

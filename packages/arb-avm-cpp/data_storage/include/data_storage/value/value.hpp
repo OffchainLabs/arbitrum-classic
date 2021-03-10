@@ -18,10 +18,10 @@
 #define checkpoint_value_hpp
 
 #include <avm_values/value.hpp>
+#include <data_storage/readtransaction.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/valuecache.hpp>
 
-#include <data_storage/readtransaction.hpp>
 #include <map>
 #include <set>
 
@@ -36,12 +36,12 @@ DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts);
 DbResult<value> getValueImpl(const ReadTransaction& tx,
-                             const uint256_t value_hash,
+                             uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
                              ValueCache& value_cache);
 
 DbResult<value> getValue(const ReadTransaction& tx,
-                         const uint256_t value_hash,
+                         uint256_t value_hash,
                          ValueCache& value_cache);
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
 DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);

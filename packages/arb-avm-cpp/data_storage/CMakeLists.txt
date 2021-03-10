@@ -27,7 +27,8 @@ set(LIB_HEADERS
   include/data_storage/datacursor.hpp
   include/data_storage/executioncursor.hpp
   include/data_storage/messageentry.hpp
-        include/data_storage/readtransaction.hpp
+  include/data_storage/readtransaction.hpp
+  include/data_storage/readsnapshottransaction.hpp
   include/data_storage/readwritetransaction.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
@@ -50,7 +51,7 @@ set(LIB_SOURCES
   src/datacursor.cpp
   src/executioncursor.cpp
   src/messageentry.cpp
-        src/readtransaction.cpp
+  src/readtransaction.cpp
   src/readwritetransaction.cpp
   src/value/code.cpp
   src/value/machine.cpp

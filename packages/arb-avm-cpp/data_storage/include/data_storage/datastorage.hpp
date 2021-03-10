@@ -30,7 +30,6 @@
 
 class Transaction;
 class ReadTransaction;
-class ReadWriteTransaction;
 
 class DataStorage {
     friend Transaction;
@@ -60,7 +59,6 @@ class DataStorage {
 
 class Transaction {
     friend ReadTransaction;
-    friend ReadWriteTransaction;
 
    public:
     std::shared_ptr<DataStorage> datastorage;

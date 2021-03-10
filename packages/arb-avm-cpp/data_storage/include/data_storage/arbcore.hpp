@@ -19,8 +19,11 @@
 
 #include <avm/machine.hpp>
 #include <avm_values/bigint.hpp>
+#include <data_storage/datacursor.hpp>
 #include <data_storage/datastorage.hpp>
+#include <data_storage/executioncursor.hpp>
 #include <data_storage/messageentry.hpp>
+#include <data_storage/readsnapshottransaction.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
@@ -34,8 +37,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include "datacursor.hpp"
-#include "executioncursor.hpp"
 
 namespace rocksdb {
 class TransactionDB;
@@ -128,7 +129,7 @@ class ArbCore {
     ValueResult<uint256_t> getInitialMachineHash(ReadTransaction& tx);
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
-                                  const uint256_t arb_gas_used);
+                                  uint256_t arb_gas_used);
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpoint(
         ReadTransaction& tx,
         const uint256_t& arb_gas_used) const;
@@ -235,11 +236,6 @@ class ArbCore {
         ValueCache& cache) const;
 
    public:
-    // Public database interaction
-    std::unique_ptr<ReadTransaction> makeReadOnlyTransaction();
-    std::unique_ptr<const ReadTransaction> makeConstReadOnlyTransaction() const;
-    std::unique_ptr<ReadWriteTransaction> makeReadWriteTransaction();
-
     ValueResult<uint256_t> logInsertedCount() const;
     ValueResult<uint256_t> sendInsertedCount() const;
     ValueResult<uint256_t> messageEntryInsertedCount() const;

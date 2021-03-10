@@ -152,52 +152,52 @@ std::optional<uint64_t> returnIndex(const ReadTransaction& tx, const Key& key) {
 
 AggregatorStore::AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
     : data_storage(std::move(data_storage_)) {
-    auto tx = makeReadWriteTransaction();
+    ReadWriteTransaction tx(data_storage);
     std::string value;
-    auto s = tx->aggregatorGet(vecToSlice(block_key), &value);
+    auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
     if (s.IsNotFound()) {
-        saveBlockCount(*tx, 0);
-        updateLogsProcessedCountImpl(*tx, 0);
+        saveBlockCount(tx, 0);
+        updateLogsProcessedCountImpl(tx, 0);
     }
-    commitTx(*tx);
+    commitTx(tx);
 }
 
 std::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
     const uint256_t& request_id) const {
-    auto tx = makeConstReadOnlyTransaction();
-    return returnIndex(*tx, requestKey(request_id));
+    ReadTransaction tx(data_storage);
+    return returnIndex(tx, requestKey(request_id));
 }
 
 std::optional<uint64_t> AggregatorStore::getPossibleBlock(
     const uint256_t& block_hash) const {
-    auto tx = makeConstReadOnlyTransaction();
-    return returnIndex(*tx, blockHashKey(block_hash));
+    ReadTransaction tx(data_storage);
+    return returnIndex(tx, blockHashKey(block_hash));
 }
 
 uint64_t AggregatorStore::blockCount() const {
-    auto tx = makeConstReadOnlyTransaction();
-    return blockCountImpl(*tx);
+    ReadTransaction tx(data_storage);
+    return blockCountImpl(tx);
 }
 
 void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
                                        const uint64_t& logIndex) {
-    auto tx = makeReadWriteTransaction();
+    ReadWriteTransaction tx(data_storage);
     auto full_key = messageBatchKey(batchNum);
     auto index_value = uint64Value(logIndex);
 
     auto status =
-        tx->aggregatorPut(vecToSlice(full_key), vecToSlice(index_value));
+        tx.aggregatorPut(vecToSlice(full_key), vecToSlice(index_value));
     if (!status.ok()) {
         throw std::runtime_error("failed to save");
     }
 
-    commitTx(*tx);
+    commitTx(tx);
 }
 
 std::optional<uint64_t> AggregatorStore::getMessageBatch(
     const uint256_t& batchNum) {
-    auto tx = makeReadOnlyTransaction();
-    return returnIndex(*tx, messageBatchKey(batchNum));
+    ReadWriteTransaction tx(data_storage);
+    return returnIndex(tx, messageBatchKey(batchNum));
 }
 
 void AggregatorStore::saveBlock(uint64_t height,
@@ -205,11 +205,11 @@ void AggregatorStore::saveBlock(uint64_t height,
                                 const std::vector<uint256_t>& requests,
                                 const uint64_t* log_indexes,
                                 const std::vector<char>& data) {
-    auto tx = makeReadWriteTransaction();
+    ReadWriteTransaction tx(data_storage);
     auto block_hash_key = blockHashKey(block_hash);
     auto block_value = blockHashValue(height);
     auto s =
-        tx->aggregatorPut(vecToSlice(block_hash_key), vecToSlice(block_value));
+        tx.aggregatorPut(vecToSlice(block_hash_key), vecToSlice(block_value));
     if (!s.ok()) {
         throw std::runtime_error("failed to save block hash");
     }
@@ -217,14 +217,14 @@ void AggregatorStore::saveBlock(uint64_t height,
     for (size_t i = 0; i < requests.size(); i++) {
         auto request_key = requestKey(requests[i]);
         auto request_value = requestValue(log_indexes[i]);
-        s = tx->aggregatorPut(vecToSlice(request_key),
-                              vecToSlice(request_value));
+        s = tx.aggregatorPut(vecToSlice(request_key),
+                             vecToSlice(request_value));
         if (!s.ok()) {
             throw std::runtime_error("failed to save request");
         }
     }
 
-    uint64_t current_count = blockCountImpl(*tx);
+    uint64_t current_count = blockCountImpl(tx);
     if (height > current_count) {
         std::stringstream ss;
         ss << "tried to save block with unexpected height: got" << height
@@ -232,17 +232,17 @@ void AggregatorStore::saveBlock(uint64_t height,
         throw std::runtime_error(ss.str());
     }
     auto full_key = blockEntryKey(height);
-    s = tx->aggregatorPut(vecToSlice(full_key), vecToSlice(data));
+    s = tx.aggregatorPut(vecToSlice(full_key), vecToSlice(data));
     if (!s.ok()) {
         throw std::runtime_error("failed to save");
     }
-    saveBlockCount(*tx, height + 1);
-    commitTx(*tx);
+    saveBlockCount(tx, height + 1);
+    commitTx(tx);
 }
 
 std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
-    auto tx = makeConstReadOnlyTransaction();
-    uint64_t current_count = blockCountImpl(*tx);
+    ReadWriteTransaction tx(data_storage);
+    uint64_t current_count = blockCountImpl(tx);
     if (height >= current_count) {
         std::stringstream ss;
         ss << "invalid index " << height << " with count " << current_count;
@@ -250,7 +250,7 @@ std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
     }
     auto full_key = blockEntryKey(height);
     std::string value;
-    auto s = tx->aggregatorGet(vecToSlice(full_key), &value);
+    auto s = tx.aggregatorGet(vecToSlice(full_key), &value);
     if (!s.ok()) {
         throw std::runtime_error("failed load value");
     }
@@ -258,32 +258,18 @@ std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
 }
 
 void AggregatorStore::reorg(uint64_t block_height) {
-    auto tx = makeReadWriteTransaction();
-    saveBlockCount(*tx, block_height);
-    commitTx(*tx);
+    ReadWriteTransaction tx(data_storage);
+    saveBlockCount(tx, block_height);
+    commitTx(tx);
 }
 
 ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
-    auto tx = makeConstReadOnlyTransaction();
-    return tx->aggregatorGetUint256(vecToSlice(logs_processed_key));
+    ReadWriteTransaction tx(data_storage);
+    return tx.aggregatorGetUint256(vecToSlice(logs_processed_key));
 }
 
 void AggregatorStore::updateLogsProcessedCount(const uint256_t& count) {
-    auto tx = makeReadWriteTransaction();
-    updateLogsProcessedCountImpl(*tx, count);
-    commitTx(*tx);
-}
-
-std::unique_ptr<ReadTransaction> AggregatorStore::makeReadOnlyTransaction() {
-    return ReadTransaction::makeReadOnlyTransaction(data_storage);
-}
-
-std::unique_ptr<const ReadTransaction>
-AggregatorStore::makeConstReadOnlyTransaction() const {
-    return ReadTransaction::makeReadOnlyTransaction(data_storage);
-}
-
-std::unique_ptr<ReadWriteTransaction>
-AggregatorStore::makeReadWriteTransaction() {
-    return ReadWriteTransaction::makeReadWriteTransaction(data_storage);
+    ReadWriteTransaction tx(data_storage);
+    updateLogsProcessedCountImpl(tx, count);
+    commitTx(tx);
 }
