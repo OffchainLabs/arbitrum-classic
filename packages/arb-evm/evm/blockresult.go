@@ -47,6 +47,7 @@ type BlockInfo struct {
 	ChainStats     *OutputStatistics
 	GasSummary     *GasAccountingSummary
 	PreviousHeight *big.Int
+	L1BlockNum     *big.Int
 }
 
 func (b *BlockInfo) LastAVMLog() *big.Int {
@@ -82,6 +83,7 @@ func parseBlockResult(
 	chainStatsRaw value.Value,
 	gasStatsRaw value.Value,
 	previousHeight value.Value,
+	l1BlockNum value.Value,
 ) (*BlockInfo, error) {
 	blockNumInt, ok := blockNum.(value.IntValue)
 	if !ok {
@@ -108,6 +110,10 @@ func parseBlockResult(
 	if !ok {
 		return nil, errors.New("previousHeight must be an int")
 	}
+	l1BlockNumInt, ok := l1BlockNum.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1BlockNum must be an int")
+	}
 
 	return &BlockInfo{
 		BlockNum:       blockNumInt.BigInt(),
@@ -116,6 +122,7 @@ func parseBlockResult(
 		ChainStats:     chainStats,
 		GasSummary:     gasStats,
 		PreviousHeight: previousHeightInt.BigInt(),
+		L1BlockNum:     l1BlockNumInt.BigInt(),
 	}, nil
 }
 
