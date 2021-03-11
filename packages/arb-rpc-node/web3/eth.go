@@ -396,6 +396,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 			UnitsUsed: feeSetToFeeSetResult(res.FeeStats.UnitsUsed),
 			Paid:      feeSetToFeeSetResult(res.FeeStats.Paid),
 		},
+		L1BlockNumber: (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
 	}, nil
 }
 
@@ -533,11 +534,13 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 		V:                (*hexutil.Big)(vVal),
 		R:                (*hexutil.Big)(rVal),
 		S:                (*hexutil.Big)(sVal),
-		L1SeqNum:         (*hexutil.Big)(provenance.L1SeqNum),
-		ParentRequestId:  parentRequestId,
-		IndexInParent:    (*hexutil.Big)(provenance.IndexInParent),
-		ArbType:          hexutil.Uint64(processedTx.Kind),
-		ArbSubType:       l2Subtype,
+
+		L1SeqNum:        (*hexutil.Big)(provenance.L1SeqNum),
+		ParentRequestId: parentRequestId,
+		IndexInParent:   (*hexutil.Big)(provenance.IndexInParent),
+		ArbType:         hexutil.Uint64(processedTx.Kind),
+		ArbSubType:      l2Subtype,
+		L1BlockNumber:   (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
 	}
 }
 
