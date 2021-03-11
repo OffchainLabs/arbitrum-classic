@@ -225,8 +225,11 @@ void AggregatorStore::saveBlock(uint64_t height,
     }
 
     uint64_t current_count = blockCountImpl(*tx);
-    if (height != current_count) {
-        throw std::runtime_error("tried to save block with unexpected height");
+    if (height > current_count) {
+        std::stringstream ss;
+        ss << "tried to save block with unexpected height: got" << height
+           << " but expected " << current_count;
+        throw std::runtime_error(ss.str());
     }
     auto full_key = blockEntryKey(height);
     s = tx->aggregatorPut(vecToSlice(full_key), vecToSlice(data));

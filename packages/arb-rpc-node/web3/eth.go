@@ -73,7 +73,7 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 		return 0, err
 	}
 	if blockCount == 0 {
-		return 0, errors.New("no blocks")
+		return 0, errors.New("can't get block number because there are no blocks")
 	}
 	return hexutil.Uint64(blockCount - 1), nil
 }
@@ -256,7 +256,26 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	blockNum := rpc.PendingBlockNumber
 	res, err := s.executeCall(args, &blockNum)
 	if err != nil {
-		logger.Warn().Err(err).Msg("error estimating gas")
+		logging := log.Warn()
+		if args.Gas != nil {
+			logging = logging.Uint64("gaslimit", uint64(*args.Gas))
+		}
+		if args.GasPrice != nil {
+			logging = logging.Str("gasPrice", args.GasPrice.String())
+		}
+		if args.Value != nil {
+			logging = logging.Str("value", args.Value.String())
+		}
+		if args.To != nil {
+			logging = logging.Str("to", args.To.Hex())
+		}
+		if args.From != nil {
+			logging = logging.Str("from", args.From.Hex())
+		}
+		if args.Data != nil {
+			logging = logging.Hex("data", *args.Data)
+		}
+		logging.Err(err).Msg("error estimating gas")
 		return 0, err
 	}
 	if res.ResultCode == evm.RevertCode {
@@ -377,6 +396,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 			UnitsUsed: feeSetToFeeSetResult(res.FeeStats.UnitsUsed),
 			Paid:      feeSetToFeeSetResult(res.FeeStats.Paid),
 		},
+		L1BlockNumber: (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
 	}, nil
 }
 
@@ -419,6 +439,10 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 }
 
 func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
+	blockLog, err := s.srv.BlockLogFromInfo(block)
+	if err != nil {
+		return nil, err
+	}
 	results, err := s.srv.GetMachineBlockResults(block)
 	if err != nil {
 		return nil, err
@@ -442,10 +466,10 @@ func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlo
 		transactions = txHashes
 	}
 
-	return makeBlockResult(block.Header, transactions), nil
+	return makeBlockResult(blockLog, block.Header, transactions), nil
 }
 
-func makeBlockResult(header *types.Header, transactions interface{}) *GetBlockResult {
+func makeBlockResult(blockLog *evm.BlockInfo, header *types.Header, transactions interface{}) *GetBlockResult {
 	size := uint64(0)
 	uncles := make([]hexutil.Bytes, 0)
 	return &GetBlockResult{
@@ -469,6 +493,8 @@ func makeBlockResult(header *types.Header, transactions interface{}) *GetBlockRe
 		Timestamp:        (*hexutil.Uint64)(&header.Time),
 		Transactions:     transactions,
 		Uncles:           &uncles,
+
+		L1BlockNumber: (*hexutil.Big)(blockLog.L1BlockNum),
 	}
 }
 
@@ -508,11 +534,13 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 		V:                (*hexutil.Big)(vVal),
 		R:                (*hexutil.Big)(rVal),
 		S:                (*hexutil.Big)(sVal),
-		L1SeqNum:         (*hexutil.Big)(provenance.L1SeqNum),
-		ParentRequestId:  parentRequestId,
-		IndexInParent:    (*hexutil.Big)(provenance.IndexInParent),
-		ArbType:          hexutil.Uint64(processedTx.Kind),
-		ArbSubType:       l2Subtype,
+
+		L1SeqNum:        (*hexutil.Big)(provenance.L1SeqNum),
+		ParentRequestId: parentRequestId,
+		IndexInParent:   (*hexutil.Big)(provenance.IndexInParent),
+		ArbType:         hexutil.Uint64(processedTx.Kind),
+		ArbSubType:      l2Subtype,
+		L1BlockNumber:   (*hexutil.Big)(res.IncomingRequest.L1BlockNumber),
 	}
 }
 

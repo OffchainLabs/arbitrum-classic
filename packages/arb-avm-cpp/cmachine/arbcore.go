@@ -290,6 +290,16 @@ func (ec *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 	return ret, nil
 }
 
+func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	result := C.arbCoreLogsCursorGetPosition(ac.c, unsafeDataPointer(cursorIndexData))
+	if result.found == 0 {
+		return nil, errors.New("failed to load logs cursor position")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	countData := math.U256Bytes(count)
@@ -307,57 +317,45 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	return nil
 }
 
-func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
+func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		// Nothing found, try again later
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	firstIndex := receiveBigInt(result.first_index)
-	data := receiveByteSliceArray(result.array)
+	data := receiveByteSliceArray(result.first_array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
-	return firstIndex, logs, nil
-}
-
-func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error) {
-	cursorIndexData := math.U256Bytes(cursorIndex)
-	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
-	if result.found == 0 {
-		err := ac.LogsCursorCheckError(cursorIndex)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		// Nothing found, try again later
-		return nil, nil, nil
-	}
-
-	firstIndex := receiveBigInt(result.first_index)
-	data := receiveByteSliceArray(result.array)
-	logs := make([]value.Value, len(data))
-	for i, slice := range data {
+	deletedData := receiveByteSliceArray(result.second_array)
+	deletedLogs := make([]value.Value, len(deletedData))
+	for i, slice := range deletedData {
 		var err error
-		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
+		deletedLogs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
-	return firstIndex, logs, nil
+
+	if len(logs) == 0 && len(deletedLogs) == 0 {
+		return nil, nil, nil, errors.New("logs cursor missing response")
+	}
+
+	return firstIndex, logs, deletedLogs, nil
 }
 
 func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {

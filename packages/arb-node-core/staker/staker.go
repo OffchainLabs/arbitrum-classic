@@ -53,9 +53,9 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 		defer func() {
 			done <- true
 		}()
+		backoff := time.Second
 		for {
 			tx, err := s.Act(ctx)
-			backoff := time.Second
 			if tx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")

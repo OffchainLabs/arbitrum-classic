@@ -53,21 +53,16 @@ task('create-chain', 'Creates a rollup chain').setAction(
 )
 
 task('deposit', 'Deposit coins into ethbridge')
-  .addPositionalParam('chain', "The rollup chain's address")
+  .addPositionalParam('inboxAddress', "The rollup chain's address")
   .addPositionalParam('privkey', 'The private key of the depositer')
   .addPositionalParam('dest', "The destination account's address")
   .addPositionalParam('amount', 'The amount to deposit')
-  .setAction(async ({ chain, privkey, dest, amount }, bre) => {
-    const { deployments, ethers } = bre
-    const inboxDep = await deployments.getOrNull('GlobalInbox')
-    if (!inboxDep) {
-      throw Error('GlobalInbox not deployed')
-    }
-
+  .setAction(async ({ inboxAddress, privkey, dest, amount }, bre) => {
+    const { ethers } = bre
     const wallet = new ethers.Wallet(privkey, ethers.provider)
-    const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
-    const inbox = GlobalInbox.attach(inboxDep.address).connect(wallet)
-    await inbox.depositEthMessage(chain, dest, { value: amount })
+    const GlobalInbox = await ethers.getContractFactory('Inbox')
+    const inbox = GlobalInbox.attach(inboxAddress).connect(wallet)
+    await inbox.depositEth(dest, { value: amount })
   })
 
 const config = {

@@ -98,10 +98,17 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
-		if err != nil {
-			t.Fatal(err)
+		arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+		test.FailIfError(t, err)
+		if len(arbRes.ReturnData) != 32 {
+			t.Fatal("expected return data")
 		}
+		l2SendNum := new(big.Int).SetBytes(arbRes.ReturnData)
+		if l2SendNum.Cmp(big.NewInt(int64(i))) != 0 {
+			t.Fatal("unexpected l2 send num", l2SendNum, "instead of", i)
+		}
+		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+		test.FailIfError(t, err)
 		if len(receipt.Logs) != 1 {
 			t.Fatal("unexpected log count")
 		}
@@ -112,6 +119,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		parsedEv, err := arbSys.ParseL2ToL1Transaction(*sendLog)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if parsedEv.UniqueId.Cmp(l2SendNum) != 0 {
+			t.Fatal("incorrect unique id")
 		}
 		l2SendLogs = append(l2SendLogs, parsedEv)
 		if i%8 == 0 {
@@ -250,7 +260,7 @@ func TestL2ToL1Tx(t *testing.T) {
 			if l2SendLog.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
 				t.Fatal("wrong batch num")
 			}
-			if l2SendLog.ItemNumber.Cmp(big.NewInt(int64(j))) != 0 {
+			if l2SendLog.IndexInBatch.Cmp(big.NewInt(int64(j))) != 0 {
 				t.Fatal("wrong item num")
 			}
 			if l2SendLog.Caller != res.L2Sender.ToEthAddress() {

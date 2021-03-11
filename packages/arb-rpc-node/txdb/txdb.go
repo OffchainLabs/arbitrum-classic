@@ -18,6 +18,7 @@ package txdb
 
 import (
 	"context"
+	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
@@ -113,6 +114,7 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 		}
 		txRes, ok := res.(*evm.TxResult)
 		if !ok {
+			logger.Warn().Str("type", fmt.Sprintf("%T", res)).Msg("expected tx result but got something else")
 			continue
 		}
 		results = append(results, txRes)
@@ -120,15 +122,8 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	return results, nil
 }
 
-func (db *TxDB) CurrentLogCount() (*big.Int, error) {
-	return db.as.CurrentLogCount()
-}
-
-func (db *TxDB) UpdateCurrentLogCount(count *big.Int) error {
-	return db.as.UpdateCurrentLogCount(count)
-}
-
 func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
+	logger.Info().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("adding logs")
 	logIndex := initialLogIndex.Uint64()
 	for _, avmLog := range avmLogs {
 		if err := db.HandleLog(logIndex, avmLog); err != nil {
@@ -140,13 +135,13 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 }
 
 func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
+	logger.Info().Int("count", len(avmLogs)).Msg("deleting logs")
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
-	lastResultIndex := len(avmLogs) - 1
 	var currentBlockHeight uint64
 	blocksFound := false
-	for i := range avmLogs {
-		// Parse L2 transaction receipts in reverse
-		res, err := evm.NewResultFromValue(avmLogs[lastResultIndex-i])
+	for _, avmLog := range avmLogs {
+		// L2 transaction receipts already provided in reverse
+		res, err := evm.NewResultFromValue(avmLog)
 		if err != nil {
 			return err
 		}
@@ -219,6 +214,19 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	txResults, err := db.GetBlockResults(blockInfo)
 	if err != nil {
 		return err
+	}
+
+	if uint64(len(txResults)) != blockInfo.BlockStats.TxCount.Uint64() {
+		logger.Warn().
+			Uint64("block", blockInfo.BlockNum.Uint64()).
+			Int("real", len(txResults)).
+			Uint64("claimed", blockInfo.BlockStats.TxCount.Uint64()).
+			Msg("expected to get same number of results")
+	}
+	if blockInfo.BlockStats.AVMLogCount.Cmp(big.NewInt(0)) == 0 {
+		logger.Warn().
+			Uint64("block", blockInfo.BlockNum.Uint64()).
+			Msg("found empty block")
 	}
 
 	processedResults := evm.FilterEthTxResults(txResults)
@@ -397,7 +405,7 @@ func (db *TxDB) LatestBlock() (uint64, error) {
 		return 0, err
 	}
 	if blockCount == 0 {
-		return 0, errors.New("no blocks")
+		return 0, errors.New("can't get latest block because there are no blocks")
 	}
 	return blockCount - 1, nil
 }

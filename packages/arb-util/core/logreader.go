@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
 	"time"
@@ -58,6 +57,13 @@ func (lr *LogReader) IsRunning() bool {
 	return lr.running
 }
 
+func bigIntAsString(val *big.Int) string {
+	if val == nil {
+		return "nil"
+	}
+	return val.String()
+}
+
 func (lr *LogReader) getLogs(ctx context.Context) error {
 	for {
 		select {
@@ -73,101 +79,89 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 
 		var firstIndex *big.Int
 		var logs []value.Value
-		var firstDeletedIndex *big.Int
 		var deletedLogs []value.Value
 		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			// Loop until new logs retrieved, may get deleted logs if reorg happened
-			// Cannot retrieve new logs until deleted logs have been retrieved
-			firstIndex, logs, err = lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
+			firstIndex, logs, deletedLogs, err = lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
-			if logs != nil || deletedLogs != nil {
+
+			if len(logs) != 0 || len(deletedLogs) != 0 {
 				// Retrieved logs successfully
 				break
 			}
 
-			// No new logs yet, check if deleted logs
-			firstDeletedIndex, deletedLogs, err = lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
+			err = lr.cursor.LogsCursorCheckError(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
-			if deletedLogs != nil {
-				// Got deleted logs successfully, retry loop to get any new logs without waiting
-				continue
-			}
 
-			// No new logs or deleted logs so give some time for new logs to be added
+			// No new logs or errors so give some time for new logs to be added
 			time.Sleep(lr.sleepTime)
 		}
 
-		currentLogCount, err := lr.consumer.CurrentLogCount()
-		if err != nil {
-			return err
-		}
+		logger.Debug().
+			Uint64("cursorIndex", lr.cursorIndex.Uint64()).
+			Str("firstIndex", bigIntAsString(firstIndex)).
+			Int("log count", len(logs)).
+			Int("deletedLog count", len(deletedLogs)).
+			Msg("logs received from log cursor")
 
-		currentLogIndex := new(big.Int).Sub(currentLogCount, big.NewInt(1))
-
-		if len(deletedLogs) > 0 && firstDeletedIndex.Cmp(currentLogIndex) <= 0 {
+		if len(deletedLogs) > 0 {
 			// Existing logs to delete
-			deletedCount := new(big.Int).Sub(currentLogCount, firstDeletedIndex)
-			if deletedCount.Cmp(big.NewInt(int64(len(deletedLogs)))) != 0 {
-				logger.Warn().
-					Uint64("currentLogCount", currentLogCount.Uint64()).
-					Uint64("firstDeletedIndex", firstDeletedIndex.Uint64()).
-					Int("deletedLogs count", len(deletedLogs)).
-					Msg("more deleted logs sent than we previously received")
-			}
-			if err = lr.consumer.DeleteLogs(deletedLogs[:deletedCount.Uint64()]); err != nil {
-				return err
-			}
-
-			currentLogCount = firstDeletedIndex
-			if err := lr.consumer.UpdateCurrentLogCount(currentLogCount); err != nil {
+			if err = lr.consumer.DeleteLogs(deletedLogs); err != nil {
 				return err
 			}
 		}
 
 		if len(logs) > 0 {
-			if firstIndex.Cmp(currentLogCount) > 0 {
-				return errors.Errorf("logscursor skipped log entries - firstIndex: %v, currentLogCount: %v", firstIndex, currentLogCount)
-			}
-
 			if err = lr.consumer.AddLogs(firstIndex, logs); err != nil {
-				return err
-			}
-
-			if err := lr.consumer.UpdateCurrentLogCount(new(big.Int).Add(currentLogCount, big.NewInt(int64(len(logs))))); err != nil {
 				return err
 			}
 		}
 
 		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
 			if status {
 				// Successfully confirmed receipt of logs
+				logger.Debug().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirmed receipt of logs")
 				break
 			}
 
-			// Reorg happened since previous call to GetLogs.  Post-retrieve reorg of logscursor will only include
-			// extra deleted logs, won't add any new logs
-			_, newDeletedLogs, err := lr.cursor.LogsCursorGetDeletedLogs(lr.cursorIndex)
+			// Reorg may have happened since previous call to GetLogs.
+			// Post-retrieve reorg of logscursor will only include extra deleted logs, won't add any new logs
+			_, _, newDeletedLogs, err := lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
-			if newDeletedLogs == nil {
-				return errors.New("missing expected deleted logs")
-			}
 
-			// Got deleted logs successfully
 			if len(newDeletedLogs) > 0 {
+				// Got deleted logs successfully
 				err = lr.consumer.DeleteLogs(newDeletedLogs)
 				if err != nil {
 					return err
 				}
+			}
+
+			err = lr.cursor.LogsCursorCheckError(lr.cursorIndex)
+			if err != nil {
+				return err
 			}
 		}
 	}

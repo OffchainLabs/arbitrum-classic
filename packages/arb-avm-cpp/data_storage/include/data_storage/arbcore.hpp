@@ -54,6 +54,12 @@ class ArbCore {
         MESSAGES_ERROR        // Out: Error processing messages
     } message_status_enum;
 
+    struct logscursor_logs {
+        uint256_t first_log_index;
+        std::vector<value> logs;
+        std::vector<value> deleted_logs;
+    };
+
    private:
     struct message_data_struct {
         std::vector<std::vector<unsigned char>> messages;
@@ -179,17 +185,15 @@ class ArbCore {
    public:
     // Logs Cursor interaction
     bool logsCursorRequest(size_t cursor_index, uint256_t count);
-    std::optional<std::pair<uint256_t, std::vector<value>>> logsCursorGetLogs(
-        size_t cursor_index);
-    std::optional<std::pair<uint256_t, std::vector<value>>>
-    logsCursorGetDeletedLogs(size_t cursor_index);
+    ValueResult<logscursor_logs> logsCursorGetLogs(size_t cursor_index);
     bool logsCursorCheckError(size_t cursor_index) const;
     std::string logsCursorClearError(size_t cursor_index);
     bool logsCursorConfirmReceived(size_t cursor_index);
+    ValueResult<uint256_t> logsCursorPosition(size_t cursor_index) const;
 
    private:
     // Logs cursor internal functions
-    bool handleLogsCursorRequested(ReadTransaction& tx,
+    void handleLogsCursorRequested(ReadTransaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
     rocksdb::Status handleLogsCursorReorg(ReadWriteTransaction& tx,
@@ -349,8 +353,9 @@ class ArbCore {
     rocksdb::Status logsCursorSaveCurrentTotalCount(ReadWriteTransaction& tx,
                                                     size_t cursor_index,
                                                     uint256_t count);
-    ValueResult<uint256_t> logsCursorGetCurrentTotalCount(ReadTransaction& tx,
-                                                          size_t cursor_index);
+    ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
+        const ReadTransaction& tx,
+        size_t cursor_index) const;
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,

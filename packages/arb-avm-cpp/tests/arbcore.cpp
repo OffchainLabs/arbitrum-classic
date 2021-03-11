@@ -27,13 +27,14 @@
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
 
-void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
-                     const std::vector<std::vector<unsigned char>> raw_messages,
-                     uint256_t prev_inbox_acc,
-                     uint256_t target_message_count,
-                     int send_count,
-                     int log_count,
-                     bool last_message) {
+void runCheckArbCore(
+    std::shared_ptr<ArbCore>& arbCore,
+    const std::vector<std::vector<unsigned char>>& raw_messages,
+    uint256_t prev_inbox_acc,
+    uint256_t target_message_count,
+    int send_count,
+    int log_count,
+    bool last_message) {
     auto initial_count_res = arbCore->messageEntryInsertedCount();
     REQUIRE(initial_count_res.status.ok());
 
@@ -168,23 +169,21 @@ TEST_CASE("ArbCore tests") {
             auto log_request_count = 3;
             REQUIRE(arbCore->logsCursorRequest(0, log_request_count));
             while (true) {
-                auto deleted = arbCore->logsCursorGetDeletedLogs(0);
-                if (deleted.has_value()) {
-                    REQUIRE(deleted->first <= logs_count);
-                    REQUIRE(deleted->second.size() == logs_count);
-                    logs_count -= deleted->second.size();
-                }
                 auto result = arbCore->logsCursorGetLogs(0);
+                REQUIRE((result.status.ok() || result.status.IsTryAgain()));
                 REQUIRE(!arbCore->logsCursorCheckError(0));
-                if (result.has_value()) {
-                    REQUIRE(result->first == logs_count);
-                    REQUIRE(result->second.size() <= logs.size() - logs_count);
-                    for (uint64_t k = 0; k < result->second.size(); ++k) {
-                        REQUIRE(result->second[k] == logs[logs_count + k]);
+                if (result.status.ok()) {
+                    REQUIRE(result.data.deleted_logs.size() <= logs_count);
+                    logs_count -= result.data.deleted_logs.size();
+                    REQUIRE(result.data.first_log_index == logs_count);
+                    REQUIRE(result.data.logs.size() <=
+                            logs.size() - logs_count);
+                    for (uint64_t k = 0; k < result.data.logs.size(); ++k) {
+                        REQUIRE(result.data.logs[k] == logs[logs_count + k]);
                     }
-                    logs_count += result->second.size();
+                    logs_count += result.data.logs.size();
                     REQUIRE(arbCore->logsCursorConfirmReceived(0));
-                    if (result->first == logs.size()) {
+                    if (logs_count == logs.size()) {
                         done = true;
                     }
                     break;

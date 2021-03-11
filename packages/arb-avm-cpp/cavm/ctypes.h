@@ -54,6 +54,13 @@ typedef struct IndexedByteSliceArrayResultStruct {
     int found;
 } IndexedByteSliceArrayResult;
 
+typedef struct IndexedDoubleByteSliceArrayResultStruct {
+    void* first_index;
+    ByteSliceArray first_array;
+    ByteSliceArray second_array;
+    int found;
+} IndexedDoubleByteSliceArrayResult;
+
 typedef struct Uint64ResultStruct {
     uint64_t value;
     int found;

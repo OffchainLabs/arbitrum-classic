@@ -244,14 +244,12 @@ func (e *ExecutionState) CutHash() [32]byte {
 type LogConsumer interface {
 	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
 	DeleteLogs(avmLogs []value.Value) error
-	CurrentLogCount() (*big.Int, error)
-	UpdateCurrentLogCount(count *big.Int) error
 }
 
 type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
-	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
-	LogsCursorGetDeletedLogs(cursorIndex *big.Int) (*big.Int, []value.Value, error)
+	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error)
 	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
+	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)
 }

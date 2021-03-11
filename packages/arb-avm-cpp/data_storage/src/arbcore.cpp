@@ -177,11 +177,6 @@ std::unique_ptr<ReadWriteTransaction> ArbCore::makeReadWriteTransaction() {
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     auto tx = makeReadWriteTransaction();
 
-    code = std::make_shared<Code>(0);
-    code->addSegment(executable.code);
-    machine = std::make_unique<MachineThread>(
-        MachineState{code, executable.static_val});
-
     auto result = getInitialMachineHash(*tx);
     if (result.status.ok() && machine->hash() == result.data) {
         if (machine->hash() != result.data) {
@@ -199,6 +194,10 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
             return status;
         }
     } else {
+        code->addSegment(executable.code);
+        machine = std::make_unique<MachineThread>(
+            MachineState{code, executable.static_val});
+
         // Need to initialize database from scratch
         auto res = saveMachine(*tx, *machine);
         if (!res.status.ok()) {
@@ -454,12 +453,21 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         return status;
     }
 
-    // Update log cursors, must be called before logs are deleted
-    for (size_t i = 0; i < logs_cursors.size(); i++) {
-        status =
-            handleLogsCursorReorg(tx, i, checkpoint.output.log_count, cache);
-        if (!status.ok()) {
-            return status;
+    auto log_inserted_count = logInsertedCountImpl(tx);
+    if (!log_inserted_count.status.ok()) {
+        std::cerr << "Error getting inserted count in Cursor Reorg: "
+                  << log_inserted_count.status.ToString() << "\n";
+        return log_inserted_count.status;
+    }
+
+    if (checkpoint.output.log_count < log_inserted_count.data) {
+        // Update log cursors, must be called before logs are deleted
+        for (size_t i = 0; i < logs_cursors.size(); i++) {
+            status = handleLogsCursorReorg(tx, i, checkpoint.output.log_count,
+                                           cache);
+            if (!status.ok()) {
+                return status;
+            }
         }
     }
 
@@ -1718,39 +1726,59 @@ std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
+void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
                                         size_t cursor_index,
                                         ValueCache& cache) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return false;
+        throw std::runtime_error("Invalid logsCursor index");
     }
 
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    // Provide requested logs
     logs_cursors[cursor_index].data.clear();
+
+    // Provide requested logs
     auto log_inserted_count = logInsertedCountImpl(tx);
     if (!log_inserted_count.status.ok()) {
         logs_cursors[cursor_index].error_string =
             log_inserted_count.status.ToString();
         logs_cursors[cursor_index].status = DataCursor::ERROR;
-        return true;
+
+        std::cerr << "logscursor index " << cursor_index
+                  << " error getting inserted count: "
+                  << log_inserted_count.status.ToString() << std::endl;
+        return;
     }
 
     auto current_count_result =
         logsCursorGetCurrentTotalCount(tx, cursor_index);
     if (!current_count_result.status.ok()) {
-        std::cerr << "Unable to get logs cursor current total count: "
-                  << cursor_index << "\n";
-        return false;
+        logs_cursors[cursor_index].error_string =
+            current_count_result.status.ToString();
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
+
+        std::cerr << "logscursor index" << cursor_index
+                  << " error getting cursor current total count: "
+                  << current_count_result.status.ToString() << std::endl;
+        return;
     }
 
-    if (current_count_result.data >= log_inserted_count.data) {
-        // No new data available
-        logs_cursors[cursor_index].status = DataCursor::READY;
-        return true;
+    if (current_count_result.data == log_inserted_count.data) {
+        // No new messages, so don't post any changes
+        return;
+    }
+    if (current_count_result.data > log_inserted_count.data) {
+        logs_cursors[cursor_index].error_string =
+            "current_count_result greater than log_inserted_count";
+        logs_cursors[cursor_index].status = DataCursor::ERROR;
+
+        std::cerr << "handleLogsCursor current count: "
+                  << current_count_result.data << " > "
+                  << " log inserted count: " << log_inserted_count.data
+                  << std::endl;
+        return;
     }
     if (current_count_result.data +
             logs_cursors[cursor_index].number_requested >
@@ -1762,7 +1790,7 @@ bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
     if (logs_cursors[cursor_index].number_requested == 0) {
         logs_cursors[cursor_index].status = DataCursor::READY;
         // No new logs to provide
-        return true;
+        return;
     }
     auto requested_logs =
         getLogs(current_count_result.data,
@@ -1771,15 +1799,14 @@ bool ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
         logs_cursors[cursor_index].error_string =
             requested_logs.status.ToString();
         logs_cursors[cursor_index].status = DataCursor::ERROR;
-        return true;
+
+        std::cerr << "logscursor index " << cursor_index
+                  << " error getting logs: " << requested_logs.status.ToString()
+                  << std::endl;
+        return;
     }
-    logs_cursors[cursor_index].data.swap(requested_logs.data);
+    logs_cursors[cursor_index].data = std::move(requested_logs.data);
     logs_cursors[cursor_index].status = DataCursor::READY;
-
-    logs_cursors[cursor_index].pending_total_count =
-        current_count_result.data + logs_cursors[cursor_index].data.size();
-
-    return true;
 }
 
 // handleLogsCursorReorg must be called before logs are deleted.
@@ -1793,23 +1820,11 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
                                                ValueCache& cache) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return rocksdb::Status::InvalidArgument();
+        throw std::runtime_error("Invalid logsCursor index");
     }
 
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
-
-    auto log_inserted_count = logInsertedCountImpl(tx);
-    if (!log_inserted_count.status.ok()) {
-        std::cerr << "Error getting inserted count in Cursor Reorg: "
-                  << log_inserted_count.status.ToString() << "\n";
-        return log_inserted_count.status;
-    }
-
-    if (log_count >= log_inserted_count.data) {
-        // No reorg needed
-        return rocksdb::Status::OK();
-    }
 
     auto current_count_result =
         logsCursorGetCurrentTotalCount(tx, cursor_index);
@@ -1819,20 +1834,41 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
         return current_count_result.status;
     }
 
-    if (log_count < current_count_result.data) {
+    if (current_count_result.data >
+        logs_cursors[cursor_index].pending_total_count) {
+        logs_cursors[cursor_index].pending_total_count =
+            current_count_result.data;
+    }
+
+    if (log_count < logs_cursors[cursor_index].pending_total_count) {
         // Need to save logs that will be deleted
-        auto logs = getLogsNoLock(tx, log_count,
-                                  log_inserted_count.data - log_count, cache);
+        auto logs = getLogsNoLock(
+            tx, log_count,
+            logs_cursors[cursor_index].pending_total_count - log_count, cache);
         if (!logs.status.ok()) {
-            std::cerr << "Error getting " << log_count << " logs starting at "
-                      << log_inserted_count.data - log_count
+            std::cerr << "Error getting "
+                      << logs_cursors[cursor_index].pending_total_count -
+                             log_count
+                      << " logs starting at " << log_count
                       << " in Cursor reorg : " << logs.status.ToString()
                       << "\n";
             return logs.status;
         }
         logs_cursors[cursor_index].deleted_data.insert(
-            logs_cursors[cursor_index].deleted_data.end(), logs.data.begin(),
-            logs.data.end());
+            logs_cursors[cursor_index].deleted_data.end(), logs.data.rbegin(),
+            logs.data.rend());
+
+        logs_cursors[cursor_index].pending_total_count = log_count;
+
+        if (current_count_result.data > log_count) {
+            auto status =
+                logsCursorSaveCurrentTotalCount(tx, cursor_index, log_count);
+            if (!status.ok()) {
+                std::cerr << "unable to save current total count during reorg"
+                          << std::endl;
+                return status;
+            }
+        }
     }
 
     if (!logs_cursors[cursor_index].data.empty()) {
@@ -1843,21 +1879,13 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
                        logs_cursors[cursor_index].data.size() >
                    log_count) {
             // Only part of the data needs to be removed
-            auto offset = intx::narrow_cast<size_t>(log_count -
-                                                    current_count_result.data);
+            auto logs_to_keep = intx::narrow_cast<size_t>(
+                log_count - current_count_result.data);
             logs_cursors[cursor_index].data.erase(
-                logs_cursors[cursor_index].data.begin() + offset,
+                logs_cursors[cursor_index].data.begin() + logs_to_keep,
                 logs_cursors[cursor_index].data.end());
         }
     }
-
-    auto status = logsCursorSaveCurrentTotalCount(tx, cursor_index, log_count);
-    if (!status.ok()) {
-        std::cerr << "unable to save current total count during reorg"
-                  << std::endl;
-        return status;
-    }
-    logs_cursors[cursor_index].pending_total_count = log_count;
 
     return rocksdb::Status::OK();
 }
@@ -1865,7 +1893,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
 bool ArbCore::logsCursorRequest(size_t cursor_index, uint256_t count) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return false;
+        throw std::runtime_error("Invalid logsCursor index");
     }
 
     if (logs_cursors[cursor_index].status != DataCursor::EMPTY) {
@@ -1878,72 +1906,48 @@ bool ArbCore::logsCursorRequest(size_t cursor_index, uint256_t count) {
     return true;
 }
 
-std::optional<std::pair<uint256_t, std::vector<value>>>
-ArbCore::logsCursorGetLogs(size_t cursor_index) {
+ValueResult<ArbCore::logscursor_logs> ArbCore::logsCursorGetLogs(
+    size_t cursor_index) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return std::nullopt;
+        throw std::runtime_error("Invalid logsCursor index");
     }
 
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    if (logs_cursors[cursor_index].status != DataCursor::READY ||
-        !logs_cursors[cursor_index].deleted_data.empty()) {
-        return std::nullopt;
+    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+        // No new logs yet
+        return {rocksdb::Status::TryAgain(), {}};
     }
-
-    std::vector<value> logs;
-    logs.swap(logs_cursors[cursor_index].data);
-    logs_cursors[cursor_index].data.clear();
 
     auto tx = makeReadOnlyTransaction();
     auto current_count_result =
         logsCursorGetCurrentTotalCount(*tx, cursor_index);
     if (!current_count_result.status.ok()) {
-        std::cerr << "Unable to get logs cursor current total count: "
-                  << cursor_index << "\n";
-        return std::nullopt;
+        std::cerr << "logs cursor " << cursor_index
+                  << " unable to get current total count: "
+                  << current_count_result.status.ToString() << "\n";
+        return {current_count_result.status, {}};
     }
 
-    return {{current_count_result.data, std::move(logs)}};
-}
+    logs_cursors[cursor_index].pending_total_count =
+        current_count_result.data + logs_cursors[cursor_index].data.size();
 
-std::optional<std::pair<uint256_t, std::vector<value>>>
-ArbCore::logsCursorGetDeletedLogs(size_t cursor_index) {
-    if (cursor_index >= logs_cursors.size()) {
-        std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return std::nullopt;
-    }
-
-    const std::lock_guard<std::mutex> lock(
-        logs_cursors[cursor_index].reorg_mutex);
-
-    if (logs_cursors[cursor_index].status != DataCursor::READY ||
-        logs_cursors[cursor_index].deleted_data.empty()) {
-        return std::nullopt;
-    }
-
-    std::vector<value> logs;
-    logs.swap(logs_cursors[cursor_index].deleted_data);
+    ArbCore::logscursor_logs logs{};
+    logs.first_log_index = current_count_result.data;
+    logs.logs = std::move(logs_cursors[cursor_index].data);
+    logs.deleted_logs = std::move(logs_cursors[cursor_index].deleted_data);
+    logs_cursors[cursor_index].data.clear();
     logs_cursors[cursor_index].deleted_data.clear();
 
-    auto tx = makeReadOnlyTransaction();
-    auto current_count_result =
-        logsCursorGetCurrentTotalCount(*tx, cursor_index);
-    if (!current_count_result.status.ok()) {
-        std::cerr << "Unable to get logs cursor current total count: "
-                  << cursor_index << "\n";
-        return std::nullopt;
-    }
-
-    return {{current_count_result.data, std::move(logs)}};
+    return {rocksdb::Status::OK(), std::move(logs)};
 }
 
 bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return false;
+        throw std::runtime_error("Invalid logsCursor index");
     }
 
     const std::lock_guard<std::mutex> lock(
@@ -1955,6 +1959,14 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         std::cerr << "logsCursorConfirmReceived called at wrong state: "
                   << logs_cursors[cursor_index].status << "\n";
         logs_cursors[cursor_index].status = DataCursor::ERROR;
+        return false;
+    }
+
+    if (!logs_cursors[cursor_index].data.empty()) {
+        // Still have logs to get
+        std::cerr << "logs cursor " << cursor_index
+                  << " has messages left in cursor when trying to confirm"
+                  << std::endl;
         return false;
     }
 
@@ -1977,10 +1989,20 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
 bool ArbCore::logsCursorCheckError(size_t cursor_index) const {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
-        return false;
+        throw std::runtime_error("Invalid logsCursor index");
     }
 
     return logs_cursors[cursor_index].status == DataCursor::ERROR;
+}
+
+ValueResult<uint256_t> ArbCore::logsCursorPosition(size_t cursor_index) const {
+    if (cursor_index >= logs_cursors.size()) {
+        std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
+        throw std::runtime_error("Invalid logsCursor index");
+    }
+
+    auto tx = makeConstReadOnlyTransaction();
+    return logsCursorGetCurrentTotalCount(*tx, cursor_index);
 }
 
 std::string ArbCore::logsCursorClearError(size_t cursor_index) {
@@ -2018,8 +2040,8 @@ rocksdb::Status ArbCore::logsCursorSaveCurrentTotalCount(
 }
 
 ValueResult<uint256_t> ArbCore::logsCursorGetCurrentTotalCount(
-    ReadTransaction& tx,
-    size_t cursor_index) {
+    const ReadTransaction& tx,
+    size_t cursor_index) const {
     return tx.stateGetUint256(
         vecToSlice(logs_cursors[cursor_index].current_total_key));
 }
