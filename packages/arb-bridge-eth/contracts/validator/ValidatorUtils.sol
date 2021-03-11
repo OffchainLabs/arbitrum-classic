@@ -265,4 +265,14 @@ contract ValidatorUtils {
         }
         return (challenges, hasMoreStakers);
     }
+
+    function areUnresolvedNodesLinear(Rollup rollup) external view returns (bool) {
+        uint256 end = rollup.latestNodeCreated();
+        for (uint256 i = rollup.firstUnresolvedNode(); i <= end; i++) {
+            if (i > 0 && rollup.getNode(i).prev() != i - 1) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

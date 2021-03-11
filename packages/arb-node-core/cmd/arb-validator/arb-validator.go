@@ -20,15 +20,16 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 	"io/ioutil"
 	golog "log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
@@ -102,6 +103,8 @@ func main() {
 		strategy = staker.MakeNodesStrategy
 	} else if strategyString == "StakeLatest" {
 		strategy = staker.StakeLatestStrategy
+	} else if strategyString == "Defensive" {
+		strategy = staker.DefensiveStrategy
 	} else {
 		logger.Fatal().Msg("Unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
 	}

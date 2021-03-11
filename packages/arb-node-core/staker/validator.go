@@ -126,6 +126,18 @@ func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerI
 	}
 }
 
+func (v *Validator) isRequiredStakeElevated(ctx context.Context) (bool, error) {
+	requiredStake, err := v.rollup.CurrentRequiredStake(ctx)
+	if err != nil {
+		return false, err
+	}
+	baseStake, err := v.rollup.BaseStake(ctx)
+	if err != nil {
+		return false, err
+	}
+	return requiredStake.Cmp(baseStake) > 0, nil
+}
+
 type createNodeAction struct {
 	assertion         *core.Assertion
 	prevProposedBlock *big.Int

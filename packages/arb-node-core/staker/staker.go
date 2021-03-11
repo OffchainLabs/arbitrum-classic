@@ -91,7 +91,46 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	creatingNewStake := info == nil
+
+	effectiveStrategy := s.strategy
+	nodesLinear, err := s.validatorUtils.AreUnresolvedNodesLinear(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !nodesLinear {
+		logger.Warn().Msg("Fork detected")
+		if effectiveStrategy == DefensiveStrategy {
+			effectiveStrategy = StakeLatestStrategy
+		}
+	}
+
+	// Resolve nodes if either we're on the make nodes strategy,
+	// or we're on the stake latest strategy but don't have a stake
+	// (attempt to reduce the current required stake).
+	shouldResolveNodes := s.strategy >= MakeNodesStrategy
+	if !shouldResolveNodes && s.strategy >= StakeLatestStrategy && info == nil {
+		shouldResolveNodes, err = s.isRequiredStakeElevated(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if shouldResolveNodes {
+		tx, err := s.removeOldStakers(ctx)
+		if err != nil || tx != nil {
+			return tx, err
+		}
+		tx, err = s.resolveTimedOutChallenges(ctx)
+		if err != nil || tx != nil {
+			return tx, err
+		}
+		if err := s.resolveNextNode(ctx, info); err != nil {
+			return nil, err
+		}
+	}
+
+	// Don't attempt to create a new stake if we're resolving a node,
+	// as that might affect the current required stake.
+	creatingNewStake := info == nil && s.builder.TransactionCount() == 0
 	if creatingNewStake {
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
@@ -99,16 +138,14 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	}
 
 	if info != nil {
-		if err := s.resolveNextNode(ctx, info); err != nil {
-			return nil, err
-		}
-
 		if err = s.handleConflict(ctx, info); err != nil {
 			return nil, err
 		}
 	}
-	if err := s.advanceStake(ctx); err != nil {
-		return nil, err
+	if info != nil || creatingNewStake {
+		if err := s.advanceStake(ctx, effectiveStrategy); err != nil {
+			return nil, err
+		}
 	}
 	if info != nil && s.builder.TransactionCount() == 0 {
 		if err := s.createConflict(ctx, info); err != nil {
@@ -121,16 +158,6 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		txCount--
 	}
 	if txCount == 0 {
-		if info != nil {
-			tx, err := s.removeOldStakers(ctx)
-			if err != nil || tx != nil {
-				return tx, err
-			}
-			tx, err = s.resolveTimedOutChallenges(ctx)
-			if err != nil || tx != nil {
-				return tx, err
-			}
-		}
 		return nil, nil
 	}
 	if creatingNewStake {
@@ -184,9 +211,9 @@ func (s *Staker) newStake(ctx context.Context) error {
 	return s.rollup.NewStake(ctx, stakeAmount)
 }
 
-func (s *Staker) advanceStake(ctx context.Context) error {
-	active := s.strategy > WatchtowerStrategy
-	action, _, err := s.generateNodeAction(ctx, s.wallet.Address(), s.strategy)
+func (s *Staker) advanceStake(ctx context.Context, effectiveStrategy Strategy) error {
+	active := effectiveStrategy > WatchtowerStrategy
+	action, _, err := s.generateNodeAction(ctx, s.wallet.Address(), effectiveStrategy)
 	if err != nil {
 		return err
 	}

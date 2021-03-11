@@ -70,14 +70,26 @@ contract Validator {
     function returnOldDeposits(IRollup rollup, address payable[] calldata stakers) external {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i < stakerCount; i++) {
-            try rollup.returnOldDeposit(stakers[i]) {} catch {}
+            try rollup.returnOldDeposit(stakers[i]) {} catch (bytes memory error) {
+                if (error.length == 0) {
+                    // Assume out of gas
+                    // We need to revert here so gas estimation works
+                    require(false, "GAS");
+                }
+            }
         }
     }
 
     function timeoutChallenges(IChallenge[] calldata challenges) external {
         uint256 challengesCount = challenges.length;
         for (uint256 i = 0; i < challengesCount; i++) {
-            try challenges[i].timeout() {} catch {}
+            try challenges[i].timeout() {} catch (bytes memory error) {
+                if (error.length == 0) {
+                    // Assume out of gas
+                    // We need to revert here so gas estimation works
+                    require(false, "GAS");
+                }
+            }
         }
     }
 }

@@ -120,6 +120,10 @@ func (v *ValidatorUtils) StakedNodes(ctx context.Context, staker common.Address)
 	return v.con.StakedNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
 }
 
+func (v *ValidatorUtils) AreUnresolvedNodesLinear(ctx context.Context) (bool, error) {
+	return v.con.AreUnresolvedNodesLinear(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+}
+
 func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmType, error) {
 	confirmType, err := v.con.CheckDecidableNextNode(
 		&bind.CallOpts{Context: ctx},

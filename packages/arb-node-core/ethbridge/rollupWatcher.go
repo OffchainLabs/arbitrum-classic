@@ -259,6 +259,10 @@ func (r *RollupWatcher) CurrentRequiredStake(ctx context.Context) (*big.Int, err
 	return r.con.CurrentRequiredStake(&bind.CallOpts{Context: ctx})
 }
 
+func (r *RollupWatcher) BaseStake(ctx context.Context) (*big.Int, error) {
+	return r.con.BaseStake(&bind.CallOpts{Context: ctx})
+}
+
 func (r *RollupWatcher) LatestConfirmedNode(ctx context.Context) (*big.Int, error) {
 	return r.con.LatestConfirmed(&bind.CallOpts{Context: ctx})
 }
