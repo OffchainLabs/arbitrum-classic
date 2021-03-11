@@ -266,6 +266,7 @@ contract ValidatorUtils {
         return (challenges, hasMoreStakers);
     }
 
+    // Worst case runtime of O(depth), as it terminates if it switches paths.
     function areUnresolvedNodesLinear(Rollup rollup) external view returns (bool) {
         uint256 end = rollup.latestNodeCreated();
         for (uint256 i = rollup.firstUnresolvedNode(); i <= end; i++) {

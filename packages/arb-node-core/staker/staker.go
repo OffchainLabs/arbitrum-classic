@@ -107,8 +107,8 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	// Resolve nodes if either we're on the make nodes strategy,
 	// or we're on the stake latest strategy but don't have a stake
 	// (attempt to reduce the current required stake).
-	shouldResolveNodes := s.strategy >= MakeNodesStrategy
-	if !shouldResolveNodes && s.strategy >= StakeLatestStrategy && info == nil {
+	shouldResolveNodes := effectiveStrategy >= MakeNodesStrategy
+	if !shouldResolveNodes && effectiveStrategy >= StakeLatestStrategy && info == nil {
 		shouldResolveNodes, err = s.isRequiredStakeElevated(ctx)
 		if err != nil {
 			return nil, err
