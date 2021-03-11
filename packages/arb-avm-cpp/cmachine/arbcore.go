@@ -137,7 +137,7 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetSends(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get log")
+		return nil, errors.New("failed to get send")
 	}
 
 	return receiveByteSliceArray(result.array), nil
@@ -148,7 +148,7 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, 
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetLogs(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get log")
+		return nil, errors.New("failed to get logs")
 	}
 
 	marshaledValues := receiveByteSliceArray(result.array)
@@ -169,7 +169,7 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 
 	result := C.arbCoreGetMessages(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get log")
+		return nil, errors.New("failed to get messages")
 	}
 
 	data := receiveByteSliceArray(result.array)
