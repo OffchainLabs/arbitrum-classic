@@ -2,6 +2,7 @@ package dev
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -56,7 +57,7 @@ func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Back
 		logger.Fatal().Err(err).Send()
 	}
 
-	if err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
+	if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
@@ -103,12 +104,13 @@ func (s *EVM) Mine(timestamp *hexutil.Uint64) error {
 	if timestamp != nil {
 		s.backend.l1Emulator.SetTime(int64(*timestamp))
 	}
-	return s.backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{})
+	_, err := s.backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{})
+	return err
 }
 
 func (s *EVM) IncreaseTime(amount int64) (string, error) {
 	s.backend.l1Emulator.IncreaseTime(amount)
-	err := s.backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{})
+	_, err := s.backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{})
 	return strconv.FormatInt(amount, 10), err
 }
 
@@ -211,7 +213,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		Msg("sent transaction")
 	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
 	block := b.l1Emulator.GenerateBlock()
-	if err := b.addInboxMessage(arbMsg, common.NewAddressFromEth(sender), block); err != nil {
+	if _, err := b.addInboxMessage(arbMsg, common.NewAddressFromEth(sender), block); err != nil {
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
@@ -230,7 +232,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 		// Insert an empty block instead
 		block := b.l1Emulator.GenerateBlock()
-		if err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
+		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
 			return err
 		}
 
@@ -240,36 +242,37 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	return nil
 }
 
-func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) error {
+func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (common.Hash, error) {
 	b.Lock()
 	defer b.Unlock()
 	return b.addInboxMessage(msg, sender, b.l1Emulator.GenerateBlock())
 }
 
-func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, block L1BlockInfo) error {
+func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, block L1BlockInfo) (common.Hash, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  block.blockId.Height,
 		Timestamp: block.timestamp,
 	}
 	msgCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), big.NewInt(0), chainTime)
 
+	requestId := hashing.SoliditySHA3(hashing.Uint256(b.signer.ChainID()), hashing.Uint256(msgCount))
 	var prevHash common.Hash
 	if msgCount.Cmp(big.NewInt(0)) > 0 {
 		prevHash, err = b.arbcore.GetInboxAcc(msgCount.Sub(msgCount, big.NewInt(1)))
 		if err != nil {
-			return err
+			return common.Hash{}, err
 		}
 	}
 	successful, err := core.DeliverMessagesAndWait(b.arbcore, []inbox.InboxMessage{inboxMessage}, prevHash, true)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 	if !successful {
-		return errors.New("failed to deliver message")
+		return common.Hash{}, errors.New("failed to deliver message")
 	}
 	for {
 		if b.arbcore.MachineIdle() {
@@ -280,11 +283,11 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 	for {
 		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
 		if err != nil {
-			return err
+			return common.Hash{}, err
 		}
 		coreLogs, err := b.arbcore.GetLogCount()
 		if err != nil {
-			return err
+			return common.Hash{}, err
 		}
 		if cursorPos.Cmp(coreLogs) == 0 {
 			break
@@ -292,7 +295,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		<-time.After(time.Millisecond * 200)
 	}
 
-	return nil
+	return requestId, nil
 }
 
 func (b *Backend) SubscribeNewTxsEvent(ch chan<- core2.NewTxsEvent) event.Subscription {

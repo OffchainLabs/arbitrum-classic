@@ -123,7 +123,7 @@ func (c *EthClient) SubscribeFilterLogs(_ context.Context, query ethereum.Filter
 
 func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*types.Receipt, error) {
 	res, block, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
-	if err != nil {
+	if err != nil || res == nil {
 		return nil, err
 	}
 	return res.ToEthReceipt(arbcommon.NewHashFromEth(block.Header.Hash())), nil

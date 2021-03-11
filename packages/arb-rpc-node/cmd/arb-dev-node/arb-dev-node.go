@@ -150,7 +150,7 @@ func main() {
 				},
 			}),
 		}
-		if err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 			logger.Fatal().Stack().Err(err).Send()
 		}
 		accounts = append(accounts, account)
