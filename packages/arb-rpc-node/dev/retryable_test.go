@@ -18,7 +18,6 @@ import (
 	"math/big"
 	"os"
 	"testing"
-	"time"
 )
 
 func setupTest(t *testing.T, tmpDir string) (
@@ -28,8 +27,6 @@ func setupTest(t *testing.T, tmpDir string) (
 	common.Address,
 	*txdb.TxDB,
 	*Backend,
-	message.RetryableTx,
-	common.Hash,
 	func(),
 ) {
 	config := protocol.ChainParams{
@@ -68,20 +65,24 @@ func setupTest(t *testing.T, tmpDir string) (
 	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
+	return sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc
+}
+
+func setupTicket(t *testing.T, backend *Backend, sender, destination, beneficiary common.Address) (message.RetryableTx, common.Hash) {
 	retryableTx := message.RetryableTx{
-		Destination:       common.RandAddress(),
+		Destination:       destination,
 		Value:             big.NewInt(20),
 		Deposit:           big.NewInt(100),
 		MaxSubmissionCost: big.NewInt(30),
 		CreditBack:        common.RandAddress(),
-		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
+		Beneficiary:       beneficiary,
 		Data:              nil,
 	}
 
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
 
-	return sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, retryableTx, requestId, closeFunc
+	return retryableTx, requestId
 }
 
 func TestRetryableRedeem(t *testing.T) {
@@ -95,14 +96,19 @@ func TestRetryableRedeem(t *testing.T) {
 		}
 	}()
 
-	sender, _, otherAuth, rollupAddress, db, backend, retryableTx, requestId, closeFunc := setupTest(t, tmpDir)
+	sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
-	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
+
+	//dest, _, _, err := arbostestcontracts.DeployTransfer(otherAuth, client)
+	//test.FailIfError(t, err)
+
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	txReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
 	test.FailIfError(t, err)
@@ -177,8 +183,8 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("wrong log topic")
 	}
 
-	// TODO: Remove this
-	correctSenderBalance = correctSenderBalance.Sub(correctSenderBalance, retryableTx.Value)
+	//// TODO: Remove this
+	//correctSenderBalance = correctSenderBalance.Sub(correctSenderBalance, retryableTx.Value)
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, big.NewInt(0), retryableTx.MaxSubmissionCost, retryableTx.Value)
 }
 
@@ -193,8 +199,9 @@ func TestRetryableCancel(t *testing.T) {
 		}
 	}()
 
-	sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, retryableTx, requestId, closeFunc := setupTest(t, tmpDir)
+	sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
@@ -244,8 +251,9 @@ func TestRetryableTimeout(t *testing.T) {
 		}
 	}()
 
-	sender, _, otherAuth, rollupAddress, db, backend, retryableTx, requestId, closeFunc := setupTest(t, tmpDir)
+	sender, beneficiaryAuth, _, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
@@ -256,35 +264,66 @@ func TestRetryableTimeout(t *testing.T) {
 	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, ticketId)
 	test.FailIfError(t, err)
 
+	timeout, err := retryable.GetTimeout(&bind.CallOpts{}, ticketId)
+	test.FailIfError(t, err)
+
 	lifetime, err := retryable.GetLifetime(&bind.CallOpts{})
 	test.FailIfError(t, err)
-	backend.l1Emulator.IncreaseTime(lifetime.Int64())
+	backend.l1Emulator.IncreaseTime(lifetime.Int64() * 10)
 
 	_, err = backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress())
 	test.FailIfError(t, err)
 
+	latestBlock, err := db.LatestBlock()
+	test.FailIfError(t, err)
+	l2Block, err := db.GetBlock(latestBlock)
+	test.FailIfError(t, err)
+
+	if timeout.Uint64() >= l2Block.Header.Time {
+		t.Fatal("should've moved forward more", l2Block.Header.Time, timeout.Uint64())
+	}
+
 	retryableTx2 := message.RetryableTx{
 		Destination:       common.RandAddress(),
-		Value:             big.NewInt(0),
-		Deposit:           big.NewInt(0),
-		MaxSubmissionCost: big.NewInt(0),
+		Value:             big.NewInt(5),
+		Deposit:           big.NewInt(20),
+		MaxSubmissionCost: big.NewInt(10),
 		CreditBack:        common.RandAddress(),
 		Beneficiary:       common.RandAddress(),
 		Data:              nil,
 	}
 
-	// Send and cancel retryable to trigger pruning
+	//// Send and cancel retryable to trigger pruning
 	otherRequest, err := backend.AddInboxMessage(retryableTx2, common.RandAddress())
 	test.FailIfError(t, err)
+
+	//res, err := backend.db.GetRequest(otherRequest)
+	//test.FailIfError(t, err)
+	//
+	//t.Log("res", res.ResultCode)
+
+	txReceipt, err := client.TransactionReceipt(context.Background(), otherRequest.ToEthHash())
+	test.FailIfError(t, err)
+
+	if txReceipt == nil {
+		t.Fatal("other retryable tx doesn't exist")
+	}
+
+	if txReceipt.Status != 1 {
+		t.Fatal("other retryable tx failed")
+	}
+
 	otherTicket := hashing.SoliditySHA3(hashing.Bytes32(otherRequest), hashing.Uint256(big.NewInt(0)))
-
-	otherTimeout, err := retryable.GetTimeout(&bind.CallOpts{}, otherTicket)
+	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, otherTicket)
 	test.FailIfError(t, err)
-	t.Log("Other timeout at", otherTimeout)
-	t.Log("Current time at", big.NewInt(time.Now().Unix()+backend.l1Emulator.timeIncrease))
-
-	_, err = retryable.Redeem(otherAuth, otherTicket)
-	test.FailIfError(t, err)
+	//
+	//otherTimeout, err := retryable.GetTimeout(&bind.CallOpts{}, otherTicket)
+	//test.FailIfError(t, err)
+	//t.Log("Other timeout at", otherTimeout)
+	//t.Log("Current time at", big.NewInt(time.Now().Unix()+backend.l1Emulator.timeIncrease))
+	//
+	//_, err = retryable.Redeem(otherAuth, otherTicket)
+	//test.FailIfError(t, err)
 
 	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, ticketId)
 	if err == nil {
@@ -330,7 +369,7 @@ func balanceCheck(
 	creditBackBalance, err := snap.GetBalance(retryableTx.CreditBack)
 	test.FailIfError(t, err)
 	if creditBackBalance.Cmp(correctCreditBackBalance) != 0 {
-		t.Error("unexpected credit back balance")
+		t.Error("unexpected credit back balance", creditBackBalance, "instead of", correctCreditBackBalance)
 	}
 
 	destinationBalance, err := snap.GetBalance(retryableTx.Destination)
