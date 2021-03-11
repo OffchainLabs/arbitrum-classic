@@ -132,8 +132,8 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 	return nil
 }
 
-func (db *TxDB) DeleteLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
-	logger.Info().Str("start", initialLogIndex.String()).Int("count", len(avmLogs)).Msg("deleting logs")
+func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
+	logger.Info().Int("count", len(avmLogs)).Msg("deleting logs")
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
 	var currentBlockHeight uint64
 	blocksFound := false

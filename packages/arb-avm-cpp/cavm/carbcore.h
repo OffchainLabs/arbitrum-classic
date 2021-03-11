@@ -74,9 +74,7 @@ Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
 int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
                              const void* cursor_index,
                              const void* count);
-IndexedByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                                     const void* index_ptr);
-IndexedByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(
+IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
     CArbCore* arbcore_ptr,
     const void* index_ptr);
 int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
