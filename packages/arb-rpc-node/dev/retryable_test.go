@@ -183,8 +183,6 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("wrong log topic")
 	}
 
-	//// TODO: Remove this
-	//correctSenderBalance = correctSenderBalance.Sub(correctSenderBalance, retryableTx.Value)
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, big.NewInt(0), retryableTx.MaxSubmissionCost, retryableTx.Value)
 }
 
@@ -321,7 +319,6 @@ func TestRetryableTimeout(t *testing.T) {
 	correctSenderBalance = correctSenderBalance.Sub(correctSenderBalance, retryableTx.MaxSubmissionCost)
 
 	correctBeneficiaryValue := retryableTx.Value
-
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, correctBeneficiaryValue, retryableTx.MaxSubmissionCost, big.NewInt(0))
 }
 
