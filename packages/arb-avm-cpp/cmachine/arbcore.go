@@ -137,7 +137,7 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetSends(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get send")
+		return nil, errors.New("failed to get sends")
 	}
 
 	return receiveByteSliceArray(result.array), nil
