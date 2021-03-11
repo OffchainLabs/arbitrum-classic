@@ -81,6 +81,12 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		var logs []value.Value
 		var deletedLogs []value.Value
 		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			// Loop until new logs retrieved, may get deleted logs if reorg happened
 			firstIndex, logs, deletedLogs, err = lr.cursor.LogsCursorGetLogs(lr.cursorIndex)
 			if err != nil {
@@ -101,7 +107,8 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 			time.Sleep(lr.sleepTime)
 		}
 
-		logger.Info().
+		logger.Debug().
+			Uint64("cursorIndex", lr.cursorIndex.Uint64()).
 			Str("firstIndex", bigIntAsString(firstIndex)).
 			Int("log count", len(logs)).
 			Int("deletedLog count", len(deletedLogs)).
@@ -121,13 +128,19 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 		}
 
 		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
+
 			status, err := lr.cursor.LogsCursorConfirmReceived(lr.cursorIndex)
 			if err != nil {
 				return err
 			}
 			if status {
 				// Successfully confirmed receipt of logs
-				logger.Info().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirmed receipt of logs")
+				logger.Debug().Uint64("cursorIndex", lr.cursorIndex.Uint64()).Msg("confirmed receipt of logs")
 				break
 			}
 
