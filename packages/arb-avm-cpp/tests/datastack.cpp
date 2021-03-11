@@ -64,7 +64,7 @@ void initializeDatastack(const ReadTransaction& transaction,
 void saveDataStack(const Datastack& data_stack) {
     ArbStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto transaction = storage.getReadWriteTransaction();
+    auto transaction = storage.makeReadWriteTransaction();
 
     auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(*transaction, tuple_ret);
@@ -77,7 +77,7 @@ void saveDataStack(const Datastack& data_stack) {
 void saveDataStackTwice(const Datastack& data_stack) {
     ArbStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto transaction = storage.getReadWriteTransaction();
+    auto transaction = storage.makeReadWriteTransaction();
 
     auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(*transaction, tuple_ret);
@@ -119,7 +119,7 @@ void saveTwiceAndGetDataStack(ReadWriteTransaction& transaction,
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
-    auto transaction = storage.getReadWriteTransaction();
+    auto transaction = storage.makeReadWriteTransaction();
     Datastack data_stack;
 
     SECTION("default") {
@@ -201,7 +201,7 @@ TEST_CASE("Save and get datastack") {
 
     SECTION("save datastack and get") {
         uint256_t intVal = 5435;
-        auto transaction = storage.getReadWriteTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
@@ -213,7 +213,7 @@ TEST_CASE("Save and get datastack") {
     }
     SECTION("save datastack twice and get") {
         uint256_t intVal = 5435;
-        auto transaction = storage.getReadWriteTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);

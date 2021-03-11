@@ -31,7 +31,8 @@ class ExecutionCursor {
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    ExecutionCursor(MachineStateKeys machine_) : machine(std::move(machine_)) {}
+    explicit ExecutionCursor(MachineStateKeys machine_)
+        : machine(std::move(machine_)) {}
 
     ~ExecutionCursor() = default;
 
@@ -57,7 +58,7 @@ class ExecutionCursor {
 
     ExecutionCursor* clone();
 
-    std::optional<uint256_t> machineHash() const {
+    [[nodiscard]] std::optional<uint256_t> machineHash() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
             return std::get<std::unique_ptr<Machine>>(machine)->hash();
         } else {
@@ -65,7 +66,7 @@ class ExecutionCursor {
         }
     }
 
-    const MachineOutput& getOutput() const {
+    [[nodiscard]] const MachineOutput& getOutput() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
             return std::get<std::unique_ptr<Machine>>(machine)
                 ->machine_state.output;
@@ -74,7 +75,7 @@ class ExecutionCursor {
         }
     }
 
-    const staged_variant& getStaged() const {
+    [[nodiscard]] const staged_variant& getStaged() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
             return std::get<std::unique_ptr<Machine>>(machine)
                 ->machine_state.staged_message;
@@ -92,7 +93,7 @@ class ExecutionCursor {
         }
     }
 
-    std::optional<uint256_t> getInboxAcc() const {
+    [[nodiscard]] std::optional<uint256_t> getInboxAcc() const {
         auto fully_processed_acc =
             getOutput().fully_processed_inbox_accumulator;
         auto& staged_message = getStaged();
@@ -107,7 +108,7 @@ class ExecutionCursor {
         }
     }
 
-    uint256_t getTotalMessagesRead() const {
+    [[nodiscard]] uint256_t getTotalMessagesRead() const {
         auto fully_processed_messages = getOutput().fully_processed_messages;
         auto& staged_message = getStaged();
         if (std::holds_alternative<std::monostate>(staged_message)) {

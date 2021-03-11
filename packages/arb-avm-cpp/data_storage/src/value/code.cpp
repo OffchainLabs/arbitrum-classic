@@ -26,6 +26,7 @@
 
 #include <boost/endian/conversion.hpp>
 
+#include <utility>
 #include <vector>
 
 namespace {
@@ -178,7 +179,7 @@ void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
 }
 
 uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store) {
-    ReadTransaction tx(store);
+    ReadTransaction tx(std::move(store));
     std::string segment_id_raw;
     auto s =
         tx.defaultGet(rocksdb::Slice(max_code_segment_key), &segment_id_raw);
