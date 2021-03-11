@@ -32,7 +32,7 @@
 auto execution_path = boost::filesystem::current_path();
 
 void checkpointState(ArbStorage& storage, Machine& machine) {
-    auto transaction = storage.getReadWriteTransaction();
+    auto transaction = storage.makeReadWriteTransaction();
     auto results = saveMachine(*transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
@@ -40,13 +40,13 @@ void checkpointState(ArbStorage& storage, Machine& machine) {
 }
 
 void checkpointStateTwice(ArbStorage& storage, Machine& machine) {
-    auto transaction1 = storage.getReadWriteTransaction();
+    auto transaction1 = storage.makeReadWriteTransaction();
     auto results = saveMachine(*transaction1, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction1->commit().ok());
 
-    auto transaction2 = storage.getReadWriteTransaction();
+    auto transaction2 = storage.makeReadWriteTransaction();
     auto results2 = saveMachine(*transaction2, machine);
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
@@ -87,7 +87,7 @@ TEST_CASE("Checkpoint State") {
     SECTION("assert machine hash") {
         auto hash1 = machine->hash();
         REQUIRE(hash1);
-        auto transaction = storage.getReadWriteTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
@@ -109,7 +109,7 @@ TEST_CASE("Delete machine checkpoint") {
         execConfig.max_gas = 4;
         execConfig.next_block_height = 3;
         machine->run(execConfig);
-        auto transaction = storage.getReadWriteTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         saveMachine(*transaction, *machine);
         execConfig.max_gas = 0;
         machine->run(execConfig);
@@ -127,7 +127,7 @@ TEST_CASE("Restore checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
-        auto transaction = storage.getReadWriteTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());

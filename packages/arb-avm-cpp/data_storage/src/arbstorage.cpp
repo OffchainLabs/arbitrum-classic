@@ -73,10 +73,10 @@ DbResult<value> ArbStorage::getValue(uint256_t value_hash,
     return ::getValue(tx, value_hash, value_cache);
 }
 
-std::unique_ptr<ReadTransaction> ArbStorage::getReadTransaction() {
+std::unique_ptr<ReadTransaction> ArbStorage::makeReadTransaction() {
     return std::make_unique<ReadTransaction>(datastorage);
 }
 
-std::unique_ptr<ReadWriteTransaction> ArbStorage::getReadWriteTransaction() {
+std::unique_ptr<ReadWriteTransaction> ArbStorage::makeReadWriteTransaction() {
     return std::make_unique<ReadWriteTransaction>(datastorage);
 }

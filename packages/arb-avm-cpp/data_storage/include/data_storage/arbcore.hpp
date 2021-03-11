@@ -153,11 +153,13 @@ class ArbCore {
     template <class T>
     std::unique_ptr<T> getInitialMachine(ValueCache& value_cache);
     template <class T>
-    std::unique_ptr<T> getInitialMachineImpl(ReadTransaction& tx,
-                                             ValueCache& value_cache);
-    template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
+
+   private:
+    template <class T>
+    std::unique_ptr<T> getInitialMachineImpl(ReadTransaction& tx,
+                                             ValueCache& value_cache);
     template <class T>
     std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
                                       uint256_t machineHash,
@@ -249,11 +251,6 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
-    ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
-                          std::optional<uint256_t>>>
-    getMessagesImpl(const ReadTransaction& tx,
-                    uint256_t index,
-                    uint256_t count) const;
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
@@ -267,6 +264,11 @@ class ArbCore {
                                      ValueCache& cache);
 
    private:
+    ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
+                          std::optional<uint256_t>>>
+    getMessagesImpl(const ReadTransaction& tx,
+                    uint256_t index,
+                    uint256_t count) const;
     template <typename T>
     rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
                                          T& machine_state);

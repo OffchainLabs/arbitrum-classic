@@ -23,12 +23,9 @@ class ReadSnapshotTransaction;
 class ReadWriteTransaction;
 
 class ReadTransaction {
-   private:
+   protected:
     std::unique_ptr<Transaction> transaction{};
     rocksdb::ReadOptions read_options{};
-
-    friend ReadSnapshotTransaction;
-    friend ReadWriteTransaction;
 
    public:
     ReadTransaction() = delete;

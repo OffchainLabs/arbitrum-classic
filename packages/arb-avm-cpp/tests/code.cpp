@@ -90,7 +90,7 @@ TEST_CASE("Code serialization") {
 
     auto mach = storage.getInitialMachine(value_cache);
     generateTestMachine(mach);
-    auto tx = storage.getReadWriteTransaction();
+    auto tx = storage.makeReadWriteTransaction();
 
     SECTION("Save and load") {
         auto save_ret = saveMachine(*tx, *mach);
