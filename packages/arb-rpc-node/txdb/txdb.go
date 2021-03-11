@@ -18,6 +18,7 @@ package txdb
 
 import (
 	"context"
+	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
@@ -113,6 +114,7 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 		}
 		txRes, ok := res.(*evm.TxResult)
 		if !ok {
+			logger.Warn().Str("type", fmt.Sprintf("%T", res)).Msg("expected tx result but got something else")
 			continue
 		}
 		results = append(results, txRes)
@@ -212,6 +214,19 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	txResults, err := db.GetBlockResults(blockInfo)
 	if err != nil {
 		return err
+	}
+
+	if uint64(len(txResults)) != blockInfo.BlockStats.TxCount.Uint64() {
+		logger.Warn().
+			Uint64("block", blockInfo.BlockNum.Uint64()).
+			Int("real", len(txResults)).
+			Uint64("claimed", blockInfo.BlockStats.TxCount.Uint64()).
+			Msg("expected to get same number of results")
+	}
+	if blockInfo.BlockStats.AVMLogCount.Cmp(big.NewInt(0)) == 0 {
+		logger.Warn().
+			Uint64("block", blockInfo.BlockNum.Uint64()).
+			Msg("found empty block")
 	}
 
 	processedResults := evm.FilterEthTxResults(txResults)
