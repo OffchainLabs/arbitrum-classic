@@ -32,6 +32,7 @@ const (
 	L2Type           inbox.Type = 3
 	InitType         inbox.Type = 4
 	EthDepositTxType inbox.Type = 7
+	RetryableType    inbox.Type = 9
 )
 
 type Message interface {
@@ -70,6 +71,8 @@ func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 		return NewInitFromData(data), nil
 	case EthDepositTxType:
 		return NewEthDepositTxFromData(data), nil
+	case RetryableType:
+		return NewRetryableTxFromData(data), nil
 	default:
 		return nil, errors.New("unknown inbox l2message type")
 	}

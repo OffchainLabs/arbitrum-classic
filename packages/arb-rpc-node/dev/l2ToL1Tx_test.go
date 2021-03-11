@@ -72,7 +72,7 @@ func TestL2ToL1Tx(t *testing.T) {
 			},
 		}),
 	}
-	if err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
