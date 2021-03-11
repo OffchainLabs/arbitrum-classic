@@ -299,62 +299,51 @@ int arbCoreLogsCursorRequest(CArbCore* arbcore_ptr,
     }
 }
 
-IndexedByteSliceArrayResult arbCoreLogsCursorGetLogs(CArbCore* arbcore_ptr,
-                                                     const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        auto result =
-            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
-        if (!result) {
-            // Cursor not in the right state, may have deleted logs to process
-            return {0, {}, false};
-        }
-
-        std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : result->second) {
-            std::vector<unsigned char> marshalled_value;
-            marshal_value(val, marshalled_value);
-            data.push_back(move(marshalled_value));
-        }
-
-        return {returnUint256(result->first), returnCharVectorVector(data),
-                true};
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while retrieving new logs from logscursor "
-                  << e.what() << std::endl;
-        return {0, {}, false};
-    }
-}
-
-IndexedByteSliceArrayResult arbCoreLogsCursorGetDeletedLogs(
+IndexedDoubleByteSliceArrayResult arbCoreLogsCursorGetLogs(
     CArbCore* arbcore_ptr,
     const void* index_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
     auto cursor_index = receiveUint256(index_ptr);
 
     try {
-        auto result = arbcore->logsCursorGetDeletedLogs(
-            intx::narrow_cast<size_t>(cursor_index));
-        if (!result) {
-            // Cursor not in the right state, may have deleted logs to process
-            return {0, {}, false};
+        auto result =
+            arbcore->logsCursorGetLogs(intx::narrow_cast<size_t>(cursor_index));
+        if (!result.status.ok()) {
+            if (!result.status.IsTryAgain()) {
+                std::cerr << "Error getting logs from logs cursor: "
+                          << result.status.ToString() << std::endl;
+            }
+            return {nullptr, {}, {}, false};
         }
 
-        std::vector<std::vector<unsigned char>> data;
-        for (const auto& val : result->second) {
+        if (result.data.logs.empty() && result.data.deleted_logs.empty()) {
+            std::cerr << "Error: no logs from logsCursor" << std::endl;
+            return {nullptr, {}, {}, false};
+        }
+
+        std::vector<std::vector<unsigned char>> marshalled_logs;
+        marshalled_logs.reserve(result.data.logs.size());
+        for (const auto& val : result.data.logs) {
             std::vector<unsigned char> marshalled_value;
             marshal_value(val, marshalled_value);
-            data.push_back(move(marshalled_value));
+            marshalled_logs.push_back(move(marshalled_value));
         }
 
-        return {returnUint256(result->first), returnCharVectorVector(data),
-                true};
+        std::vector<std::vector<unsigned char>> marshalled_deleted_logs;
+        marshalled_deleted_logs.reserve(result.data.deleted_logs.size());
+        for (const auto& val : result.data.deleted_logs) {
+            std::vector<unsigned char> marshalled_value;
+            marshal_value(val, marshalled_value);
+            marshalled_deleted_logs.push_back(move(marshalled_value));
+        }
+
+        return {returnUint256(result.data.first_log_index),
+                returnCharVectorVector(marshalled_logs),
+                returnCharVectorVector(marshalled_deleted_logs), true};
     } catch (const std::exception& e) {
-        std::cerr << "Exception while retrieving deleted logs from logscursor "
+        std::cerr << "Exception while retrieving new logs from logscursor "
                   << e.what() << std::endl;
-        return {0, {}, false};
+        return {nullptr, {}, {}, false};
     }
 }
 
