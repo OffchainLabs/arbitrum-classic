@@ -297,11 +297,6 @@ func TestRetryableTimeout(t *testing.T) {
 	otherRequest, err := backend.AddInboxMessage(retryableTx2, common.RandAddress())
 	test.FailIfError(t, err)
 
-	//res, err := backend.db.GetRequest(otherRequest)
-	//test.FailIfError(t, err)
-	//
-	//t.Log("res", res.ResultCode)
-
 	txReceipt, err := client.TransactionReceipt(context.Background(), otherRequest.ToEthHash())
 	test.FailIfError(t, err)
 
@@ -316,14 +311,6 @@ func TestRetryableTimeout(t *testing.T) {
 	otherTicket := hashing.SoliditySHA3(hashing.Bytes32(otherRequest), hashing.Uint256(big.NewInt(0)))
 	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, otherTicket)
 	test.FailIfError(t, err)
-	//
-	//otherTimeout, err := retryable.GetTimeout(&bind.CallOpts{}, otherTicket)
-	//test.FailIfError(t, err)
-	//t.Log("Other timeout at", otherTimeout)
-	//t.Log("Current time at", big.NewInt(time.Now().Unix()+backend.l1Emulator.timeIncrease))
-	//
-	//_, err = retryable.Redeem(otherAuth, otherTicket)
-	//test.FailIfError(t, err)
 
 	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, ticketId)
 	if err == nil {
