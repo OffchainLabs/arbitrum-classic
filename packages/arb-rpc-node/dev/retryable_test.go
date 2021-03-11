@@ -18,6 +18,7 @@ import (
 	"math/big"
 	"os"
 	"testing"
+	"time"
 )
 
 func setupTest(t *testing.T, tmpDir string) (
@@ -182,7 +183,6 @@ func TestRetryableRedeem(t *testing.T) {
 }
 
 func TestRetryableCancel(t *testing.T) {
-
 	tmpDir, err := ioutil.TempDir(".", "arbitrum")
 	if err != nil {
 		logger.Fatal().Err(err).Msg("error generating temporary directory")
@@ -228,9 +228,73 @@ func TestRetryableCancel(t *testing.T) {
 	correctSenderBalance := new(big.Int).Sub(retryableTx.Deposit, retryableTx.Value)
 	correctSenderBalance = correctSenderBalance.Sub(correctSenderBalance, retryableTx.MaxSubmissionCost)
 
-	correctBeneficiaryValue := big.NewInt(0)
-	// TODO: Why isn't this right
-	//correctBeneficiaryValue := retryableTx.Value
+	correctBeneficiaryValue := retryableTx.Value
+
+	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, correctBeneficiaryValue, retryableTx.MaxSubmissionCost, big.NewInt(0))
+}
+
+func TestRetryableTimeout(t *testing.T) {
+	tmpDir, err := ioutil.TempDir(".", "arbitrum")
+	if err != nil {
+		logger.Fatal().Err(err).Msg("error generating temporary directory")
+	}
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			panic(err)
+		}
+	}()
+
+	sender, _, otherAuth, rollupAddress, db, backend, retryableTx, requestId, closeFunc := setupTest(t, tmpDir)
+	defer closeFunc()
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+
+	srv := aggregator.NewServer(backend, rollupAddress, db)
+	client := web3.NewEthClient(srv, true)
+	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, ticketId)
+	test.FailIfError(t, err)
+
+	lifetime, err := retryable.GetLifetime(&bind.CallOpts{})
+	test.FailIfError(t, err)
+	backend.l1Emulator.IncreaseTime(lifetime.Int64())
+
+	_, err = backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress())
+	test.FailIfError(t, err)
+
+	retryableTx2 := message.RetryableTx{
+		Destination:       common.RandAddress(),
+		Value:             big.NewInt(0),
+		Deposit:           big.NewInt(0),
+		MaxSubmissionCost: big.NewInt(0),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.RandAddress(),
+		Data:              nil,
+	}
+
+	// Send and cancel retryable to trigger pruning
+	otherRequest, err := backend.AddInboxMessage(retryableTx2, common.RandAddress())
+	test.FailIfError(t, err)
+	otherTicket := hashing.SoliditySHA3(hashing.Bytes32(otherRequest), hashing.Uint256(big.NewInt(0)))
+
+	otherTimeout, err := retryable.GetTimeout(&bind.CallOpts{}, otherTicket)
+	test.FailIfError(t, err)
+	t.Log("Other timeout at", otherTimeout)
+	t.Log("Current time at", big.NewInt(time.Now().Unix()+backend.l1Emulator.timeIncrease))
+
+	_, err = retryable.Redeem(otherAuth, otherTicket)
+	test.FailIfError(t, err)
+
+	_, err = retryable.GetBeneficiary(&bind.CallOpts{}, ticketId)
+	if err == nil {
+		t.Fatal("should revert after timeout")
+	}
+
+	correctSenderBalance := new(big.Int).Sub(retryableTx.Deposit, retryableTx.Value)
+	correctSenderBalance = correctSenderBalance.Sub(correctSenderBalance, retryableTx.MaxSubmissionCost)
+
+	correctBeneficiaryValue := retryableTx.Value
 
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, correctBeneficiaryValue, retryableTx.MaxSubmissionCost, big.NewInt(0))
 }
