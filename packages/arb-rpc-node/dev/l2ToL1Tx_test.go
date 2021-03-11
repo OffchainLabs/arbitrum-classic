@@ -250,7 +250,7 @@ func TestL2ToL1Tx(t *testing.T) {
 			if l2SendLog.BatchNumber.Cmp(big.NewInt(int64(i))) != 0 {
 				t.Fatal("wrong batch num")
 			}
-			if l2SendLog.ItemNumber.Cmp(big.NewInt(int64(j))) != 0 {
+			if l2SendLog.IndexInBatch.Cmp(big.NewInt(int64(j))) != 0 {
 				t.Fatal("wrong item num")
 			}
 			if l2SendLog.Caller != res.L2Sender.ToEthAddress() {

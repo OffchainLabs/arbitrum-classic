@@ -390,7 +390,7 @@ func (db *TxDB) LatestBlock() (uint64, error) {
 		return 0, err
 	}
 	if blockCount == 0 {
-		return 0, errors.New("no blocks")
+		return 0, errors.New("can't get latest block because there are no blocks")
 	}
 	return blockCount - 1, nil
 }
