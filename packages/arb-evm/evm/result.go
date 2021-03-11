@@ -362,8 +362,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		feeStats, _ := tup.GetByInt64(5)
 		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo, feeStats)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		if tup.Len() != 7 {
-			return nil, errors.Errorf("block result expected tuple of length 7, but received len %v: %v", tup.Len(), tup)
+		if tup.Len() != 8 {
+			return nil, errors.Errorf("block result expected tuple of length 8, but received len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -373,8 +373,9 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		chainStatsRaw, _ := tup.GetByInt64(4)
 		gasStats, _ := tup.GetByInt64(5)
 		previousHeight, _ := tup.GetByInt64(6)
+		l1BlockNum, _ := tup.GetByInt64(7)
 
-		return parseBlockResult(blockNum, timestamp, blockStatsRaw, chainStatsRaw, gasStats, previousHeight)
+		return parseBlockResult(blockNum, timestamp, blockStatsRaw, chainStatsRaw, gasStats, previousHeight, l1BlockNum)
 	} else if kindInt.BigInt().Uint64() == 2 {
 		return NewSendResultFromValue(tup)
 	} else if kindInt.BigInt().Uint64() == 3 {

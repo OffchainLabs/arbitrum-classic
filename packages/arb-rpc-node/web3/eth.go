@@ -438,6 +438,10 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 }
 
 func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
+	blockLog, err := s.srv.BlockLogFromInfo(block)
+	if err != nil {
+		return nil, err
+	}
 	results, err := s.srv.GetMachineBlockResults(block)
 	if err != nil {
 		return nil, err
@@ -461,10 +465,10 @@ func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlo
 		transactions = txHashes
 	}
 
-	return makeBlockResult(block.Header, transactions), nil
+	return makeBlockResult(blockLog, block.Header, transactions), nil
 }
 
-func makeBlockResult(header *types.Header, transactions interface{}) *GetBlockResult {
+func makeBlockResult(blockLog *evm.BlockInfo, header *types.Header, transactions interface{}) *GetBlockResult {
 	size := uint64(0)
 	uncles := make([]hexutil.Bytes, 0)
 	return &GetBlockResult{
@@ -488,6 +492,8 @@ func makeBlockResult(header *types.Header, transactions interface{}) *GetBlockRe
 		Timestamp:        (*hexutil.Uint64)(&header.Time),
 		Transactions:     transactions,
 		Uncles:           &uncles,
+
+		L1BlockNumber: (*hexutil.Big)(blockLog.L1BlockNum),
 	}
 }
 

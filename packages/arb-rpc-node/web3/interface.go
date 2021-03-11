@@ -27,6 +27,8 @@ type GetBlockResult struct {
 	Timestamp        *hexutil.Uint64   `json:"timestamp"`
 	Transactions     interface{}       `json:"transactions"`
 	Uncles           *[]hexutil.Bytes  `json:"uncles"`
+
+	L1BlockNumber *hexutil.Big `json:"l1BlockNumber"`
 }
 
 type CallTxArgs struct {
