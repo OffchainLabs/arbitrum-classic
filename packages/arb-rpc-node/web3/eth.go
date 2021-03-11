@@ -73,7 +73,7 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 		return 0, err
 	}
 	if blockCount == 0 {
-		return 0, errors.New("no blocks")
+		return 0, errors.New("can't get block number because there are no blocks")
 	}
 	return hexutil.Uint64(blockCount - 1), nil
 }
