@@ -104,7 +104,9 @@ func TestL2ToL1Tx(t *testing.T) {
 			t.Fatal("expected return data")
 		}
 		l2SendNum := new(big.Int).SetBytes(arbRes.ReturnData)
-
+		if l2SendNum.Cmp(big.NewInt(int64(i))) != 0 {
+			t.Fatal("unexpected l2 send num", l2SendNum, "instead of", i)
+		}
 		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
 		test.FailIfError(t, err)
 		if len(receipt.Logs) != 1 {
