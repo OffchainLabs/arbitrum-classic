@@ -242,7 +242,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 		return nil, err
 	}
 
-	if res.ResultCode == evm.RevertCode {
+	if res.ResultCode != evm.ReturnCode {
 		return nil, HandleCallError(res, s.ganacheMode)
 	}
 	return res.ReturnData, nil
@@ -278,7 +278,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		logging.Err(err).Msg("error estimating gas")
 		return 0, err
 	}
-	if res.ResultCode == evm.RevertCode {
+	if res.ResultCode != evm.ReturnCode {
 		return 0, HandleCallError(res, s.ganacheMode)
 	}
 	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
