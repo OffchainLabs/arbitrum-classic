@@ -224,7 +224,9 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	if res == nil {
 		return errors.New("tx res not found")
 	}
-	if res.ResultCode == evm.RevertCode {
+
+	if res.ResultCode != evm.ReturnCode {
+		logger.Warn().Int("code", int(res.ResultCode)).Msg("transaction failed")
 		// If transaction failed, rollback the block
 		if err := b.reorg(startHeight); err != nil {
 			return err
