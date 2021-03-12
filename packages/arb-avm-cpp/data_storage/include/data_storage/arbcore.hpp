@@ -75,6 +75,10 @@ class ArbCore {
     // Core thread input
     std::atomic<bool> arbcore_abort{false};
 
+    // Core thread input
+    std::atomic<bool> save_checkpoint{false};
+    rocksdb::Status save_checkpoint_status;
+
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
     // because obsolete log entries have `Value` references removed causing
@@ -157,10 +161,12 @@ class ArbCore {
     std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
                                       uint256_t machineHash,
                                       ValueCache& value_cache);
+    rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
 
    public:
     // Useful for unit tests
-    rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
+    // Do not call triggerSaveCheckpoint from multiple threads at the same time
+    rocksdb::Status triggerSaveCheckpoint();
     bool isCheckpointsEmpty(ReadTransaction& tx) const;
     uint256_t maxCheckpointGas();
 

@@ -258,6 +258,20 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
+// triggerSaveCheckpoint is meant for unit tests and should not be called from
+// multiple threads at the same time.
+rocksdb::Status ArbCore::triggerSaveCheckpoint() {
+    save_checkpoint = true;
+    std::cerr << "Triggering checkpoint save" << std::endl;
+    while (save_checkpoint) {
+        // Wait until snapshot has been saved
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    std::cerr << "Checkpoint saved" << std::endl;
+
+    return save_checkpoint_status;
+}
+
 rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     auto status = saveMachineState(tx, *machine);
     if (!status.ok()) {
@@ -574,8 +588,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.status,
         state_data.pc.pc,
         state_data.err_pc,
-        std::move(state_data.staged_message),
-        std::move(state_data.output)};
+        state_data.staged_message,
+        state_data.output};
 
     return std::make_unique<T>(state);
 }
@@ -804,6 +818,12 @@ void ArbCore::operator()() {
             // Machine is already running or new messages, so sleep for a short
             // while
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+
+        if (save_checkpoint) {
+            ReadWriteTransaction tx(data_storage);
+            save_checkpoint_status = saveCheckpoint(tx);
+            save_checkpoint = false;
         }
     }
 
@@ -1219,9 +1239,9 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 // If placeholder message not found, machine will just be
                 // blocked
                 auto resolve_status = std::visit(
-                    [&](auto& machine) {
+                    [&](auto& mach) {
                         return resolveStagedMessage(
-                            tx, resolveExecutionVariant(machine));
+                            tx, resolveExecutionVariant(mach));
                     },
                     execution_cursor.machine);
                 if (!resolve_status.IsNotFound() && !resolve_status.ok()) {
