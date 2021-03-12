@@ -251,6 +251,7 @@ export class L2Bridge {
 
   public async getAndUpdateL2EthBalance(): Promise<BigNumber> {
     const bal = await this.l2Signer.getBalance()
-    return (this.l2EthBalance = bal)
+    this.l2EthBalance = bal
+    return bal
   }
 }
