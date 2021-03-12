@@ -18,10 +18,9 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
@@ -38,17 +37,17 @@ func TestGetStorageAt(t *testing.T) {
 
 	getStorageAtTx := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(100000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
-			Data:        snapshot.StorageAtData(connAddress1, big.NewInt(1)),
+			Data:        arbos.StorageAtData(connAddress1, big.NewInt(1)),
 		},
 	}
 
 	failGetStorageAtTx := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: connAddress1,
 			Payment:     big.NewInt(0),
@@ -57,10 +56,10 @@ func TestGetStorageAt(t *testing.T) {
 	}
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), sender, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(getStorageAtTx), common.Address{}, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(getStorageAtTx), common.Address{}, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), big.NewInt(0), chainTime),
 	}
 
 	logs, _, _, _ := runAssertion(t, inboxMessages, 3, 0)

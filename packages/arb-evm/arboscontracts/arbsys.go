@@ -27,13 +27,15 @@ var (
 )
 
 // ArbSysABI is the input ABI used to generate the binding from.
-const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"ERC721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"name\":\"sendTxToL1\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+const ArbSysABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"ERC20Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"tokenAddr\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"ERC721Withdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"EthWithdrawal\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"caller\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"uniqueId\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"batchNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"indexInBatch\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"arbBlockNum\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"ethBlockNum\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"callvalue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"L2ToL1Transaction\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"arbBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"arbOSVersion\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"getStorageAt\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getTransactionCount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isTopLevelCall\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"name\":\"sendTxToL1\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destination\",\"type\":\"address\"}],\"name\":\"withdrawEth\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
 // ArbSysFuncSigs maps the 4-byte function signature to its string representation.
 var ArbSysFuncSigs = map[string]string{
+	"a3b1b31d": "arbBlockNumber()",
 	"051038f2": "arbOSVersion()",
 	"a169625f": "getStorageAt(address,uint256)",
 	"23ca0cd2": "getTransactionCount(address)",
+	"08bd624c": "isTopLevelCall()",
 	"928c169a": "sendTxToL1(address,bytes)",
 	"25e16063": "withdrawEth(address)",
 }
@@ -180,6 +182,37 @@ func (_ArbSys *ArbSysTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _ArbSys.Contract.contract.Transact(opts, method, params...)
 }
 
+// ArbBlockNumber is a free data retrieval call binding the contract method 0xa3b1b31d.
+//
+// Solidity: function arbBlockNumber() view returns(uint256)
+func (_ArbSys *ArbSysCaller) ArbBlockNumber(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _ArbSys.contract.Call(opts, &out, "arbBlockNumber")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// ArbBlockNumber is a free data retrieval call binding the contract method 0xa3b1b31d.
+//
+// Solidity: function arbBlockNumber() view returns(uint256)
+func (_ArbSys *ArbSysSession) ArbBlockNumber() (*big.Int, error) {
+	return _ArbSys.Contract.ArbBlockNumber(&_ArbSys.CallOpts)
+}
+
+// ArbBlockNumber is a free data retrieval call binding the contract method 0xa3b1b31d.
+//
+// Solidity: function arbBlockNumber() view returns(uint256)
+func (_ArbSys *ArbSysCallerSession) ArbBlockNumber() (*big.Int, error) {
+	return _ArbSys.Contract.ArbBlockNumber(&_ArbSys.CallOpts)
+}
+
 // ArbOSVersion is a free data retrieval call binding the contract method 0x051038f2.
 //
 // Solidity: function arbOSVersion() pure returns(uint256)
@@ -273,46 +306,77 @@ func (_ArbSys *ArbSysCallerSession) GetTransactionCount(account common.Address) 
 	return _ArbSys.Contract.GetTransactionCount(&_ArbSys.CallOpts, account)
 }
 
-// SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
+// IsTopLevelCall is a free data retrieval call binding the contract method 0x08bd624c.
 //
-// Solidity: function sendTxToL1(address destAddr, bytes calldataForL1) payable returns()
-func (_ArbSys *ArbSysTransactor) SendTxToL1(opts *bind.TransactOpts, destAddr common.Address, calldataForL1 []byte) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "sendTxToL1", destAddr, calldataForL1)
+// Solidity: function isTopLevelCall() view returns(bool)
+func (_ArbSys *ArbSysCaller) IsTopLevelCall(opts *bind.CallOpts) (bool, error) {
+	var out []interface{}
+	err := _ArbSys.contract.Call(opts, &out, "isTopLevelCall")
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsTopLevelCall is a free data retrieval call binding the contract method 0x08bd624c.
+//
+// Solidity: function isTopLevelCall() view returns(bool)
+func (_ArbSys *ArbSysSession) IsTopLevelCall() (bool, error) {
+	return _ArbSys.Contract.IsTopLevelCall(&_ArbSys.CallOpts)
+}
+
+// IsTopLevelCall is a free data retrieval call binding the contract method 0x08bd624c.
+//
+// Solidity: function isTopLevelCall() view returns(bool)
+func (_ArbSys *ArbSysCallerSession) IsTopLevelCall() (bool, error) {
+	return _ArbSys.Contract.IsTopLevelCall(&_ArbSys.CallOpts)
 }
 
 // SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
 //
-// Solidity: function sendTxToL1(address destAddr, bytes calldataForL1) payable returns()
-func (_ArbSys *ArbSysSession) SendTxToL1(destAddr common.Address, calldataForL1 []byte) (*types.Transaction, error) {
-	return _ArbSys.Contract.SendTxToL1(&_ArbSys.TransactOpts, destAddr, calldataForL1)
+// Solidity: function sendTxToL1(address destination, bytes calldataForL1) payable returns(uint256)
+func (_ArbSys *ArbSysTransactor) SendTxToL1(opts *bind.TransactOpts, destination common.Address, calldataForL1 []byte) (*types.Transaction, error) {
+	return _ArbSys.contract.Transact(opts, "sendTxToL1", destination, calldataForL1)
 }
 
 // SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
 //
-// Solidity: function sendTxToL1(address destAddr, bytes calldataForL1) payable returns()
-func (_ArbSys *ArbSysTransactorSession) SendTxToL1(destAddr common.Address, calldataForL1 []byte) (*types.Transaction, error) {
-	return _ArbSys.Contract.SendTxToL1(&_ArbSys.TransactOpts, destAddr, calldataForL1)
+// Solidity: function sendTxToL1(address destination, bytes calldataForL1) payable returns(uint256)
+func (_ArbSys *ArbSysSession) SendTxToL1(destination common.Address, calldataForL1 []byte) (*types.Transaction, error) {
+	return _ArbSys.Contract.SendTxToL1(&_ArbSys.TransactOpts, destination, calldataForL1)
+}
+
+// SendTxToL1 is a paid mutator transaction binding the contract method 0x928c169a.
+//
+// Solidity: function sendTxToL1(address destination, bytes calldataForL1) payable returns(uint256)
+func (_ArbSys *ArbSysTransactorSession) SendTxToL1(destination common.Address, calldataForL1 []byte) (*types.Transaction, error) {
+	return _ArbSys.Contract.SendTxToL1(&_ArbSys.TransactOpts, destination, calldataForL1)
 }
 
 // WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.
 //
-// Solidity: function withdrawEth(address dest) payable returns()
-func (_ArbSys *ArbSysTransactor) WithdrawEth(opts *bind.TransactOpts, dest common.Address) (*types.Transaction, error) {
-	return _ArbSys.contract.Transact(opts, "withdrawEth", dest)
+// Solidity: function withdrawEth(address destination) payable returns(uint256)
+func (_ArbSys *ArbSysTransactor) WithdrawEth(opts *bind.TransactOpts, destination common.Address) (*types.Transaction, error) {
+	return _ArbSys.contract.Transact(opts, "withdrawEth", destination)
 }
 
 // WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.
 //
-// Solidity: function withdrawEth(address dest) payable returns()
-func (_ArbSys *ArbSysSession) WithdrawEth(dest common.Address) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest)
+// Solidity: function withdrawEth(address destination) payable returns(uint256)
+func (_ArbSys *ArbSysSession) WithdrawEth(destination common.Address) (*types.Transaction, error) {
+	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, destination)
 }
 
 // WithdrawEth is a paid mutator transaction binding the contract method 0x25e16063.
 //
-// Solidity: function withdrawEth(address dest) payable returns()
-func (_ArbSys *ArbSysTransactorSession) WithdrawEth(dest common.Address) (*types.Transaction, error) {
-	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, dest)
+// Solidity: function withdrawEth(address destination) payable returns(uint256)
+func (_ArbSys *ArbSysTransactorSession) WithdrawEth(destination common.Address) (*types.Transaction, error) {
+	return _ArbSys.Contract.WithdrawEth(&_ArbSys.TransactOpts, destination)
 }
 
 // ArbSysERC20WithdrawalIterator is returned from FilterERC20Withdrawal and is used to iterate over the raw logs and unpacked data for ERC20Withdrawal events raised by the ArbSys contract.
@@ -770,6 +834,175 @@ func (_ArbSys *ArbSysFilterer) WatchEthWithdrawal(opts *bind.WatchOpts, sink cha
 func (_ArbSys *ArbSysFilterer) ParseEthWithdrawal(log types.Log) (*ArbSysEthWithdrawal, error) {
 	event := new(ArbSysEthWithdrawal)
 	if err := _ArbSys.contract.UnpackLog(event, "EthWithdrawal", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ArbSysL2ToL1TransactionIterator is returned from FilterL2ToL1Transaction and is used to iterate over the raw logs and unpacked data for L2ToL1Transaction events raised by the ArbSys contract.
+type ArbSysL2ToL1TransactionIterator struct {
+	Event *ArbSysL2ToL1Transaction // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ArbSysL2ToL1TransactionIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ArbSysL2ToL1Transaction)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ArbSysL2ToL1Transaction)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ArbSysL2ToL1TransactionIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ArbSysL2ToL1TransactionIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ArbSysL2ToL1Transaction represents a L2ToL1Transaction event raised by the ArbSys contract.
+type ArbSysL2ToL1Transaction struct {
+	Caller       common.Address
+	Destination  common.Address
+	UniqueId     *big.Int
+	BatchNumber  *big.Int
+	IndexInBatch *big.Int
+	ArbBlockNum  *big.Int
+	EthBlockNum  *big.Int
+	Timestamp    *big.Int
+	Callvalue    *big.Int
+	Data         []byte
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterL2ToL1Transaction is a free log retrieval operation binding the contract event 0x5baaa87db386365b5c161be377bc3d8e317e8d98d71a3ca7ed7d555340c8f767.
+//
+// Solidity: event L2ToL1Transaction(address caller, address indexed destination, uint256 indexed uniqueId, uint256 indexed batchNumber, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)
+func (_ArbSys *ArbSysFilterer) FilterL2ToL1Transaction(opts *bind.FilterOpts, destination []common.Address, uniqueId []*big.Int, batchNumber []*big.Int) (*ArbSysL2ToL1TransactionIterator, error) {
+
+	var destinationRule []interface{}
+	for _, destinationItem := range destination {
+		destinationRule = append(destinationRule, destinationItem)
+	}
+	var uniqueIdRule []interface{}
+	for _, uniqueIdItem := range uniqueId {
+		uniqueIdRule = append(uniqueIdRule, uniqueIdItem)
+	}
+	var batchNumberRule []interface{}
+	for _, batchNumberItem := range batchNumber {
+		batchNumberRule = append(batchNumberRule, batchNumberItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.FilterLogs(opts, "L2ToL1Transaction", destinationRule, uniqueIdRule, batchNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ArbSysL2ToL1TransactionIterator{contract: _ArbSys.contract, event: "L2ToL1Transaction", logs: logs, sub: sub}, nil
+}
+
+// WatchL2ToL1Transaction is a free log subscription operation binding the contract event 0x5baaa87db386365b5c161be377bc3d8e317e8d98d71a3ca7ed7d555340c8f767.
+//
+// Solidity: event L2ToL1Transaction(address caller, address indexed destination, uint256 indexed uniqueId, uint256 indexed batchNumber, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)
+func (_ArbSys *ArbSysFilterer) WatchL2ToL1Transaction(opts *bind.WatchOpts, sink chan<- *ArbSysL2ToL1Transaction, destination []common.Address, uniqueId []*big.Int, batchNumber []*big.Int) (event.Subscription, error) {
+
+	var destinationRule []interface{}
+	for _, destinationItem := range destination {
+		destinationRule = append(destinationRule, destinationItem)
+	}
+	var uniqueIdRule []interface{}
+	for _, uniqueIdItem := range uniqueId {
+		uniqueIdRule = append(uniqueIdRule, uniqueIdItem)
+	}
+	var batchNumberRule []interface{}
+	for _, batchNumberItem := range batchNumber {
+		batchNumberRule = append(batchNumberRule, batchNumberItem)
+	}
+
+	logs, sub, err := _ArbSys.contract.WatchLogs(opts, "L2ToL1Transaction", destinationRule, uniqueIdRule, batchNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ArbSysL2ToL1Transaction)
+				if err := _ArbSys.contract.UnpackLog(event, "L2ToL1Transaction", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseL2ToL1Transaction is a log parse operation binding the contract event 0x5baaa87db386365b5c161be377bc3d8e317e8d98d71a3ca7ed7d555340c8f767.
+//
+// Solidity: event L2ToL1Transaction(address caller, address indexed destination, uint256 indexed uniqueId, uint256 indexed batchNumber, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)
+func (_ArbSys *ArbSysFilterer) ParseL2ToL1Transaction(log types.Log) (*ArbSysL2ToL1Transaction, error) {
+	event := new(ArbSysL2ToL1Transaction)
+	if err := _ArbSys.contract.UnpackLog(event, "L2ToL1Transaction", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

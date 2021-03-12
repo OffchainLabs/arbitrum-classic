@@ -57,6 +57,7 @@ type TxResult struct {
 	CumulativeGas   *big.Int
 	TxIndex         *big.Int
 	StartLogIndex   *big.Int
+	FeeStats        *FeeStats
 }
 
 func CompareResults(res1 *TxResult, res2 *TxResult) []string {
@@ -114,7 +115,7 @@ func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
 			Address:     l.Address.ToEthAddress(),
 			Topics:      common.NewEthHashesFromHashes(l.Topics),
 			Data:        l.Data,
-			BlockNumber: r.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64(),
+			BlockNumber: r.IncomingRequest.L2BlockNumber.Uint64(),
 			TxHash:      r.IncomingRequest.MessageID.ToEthHash(),
 			TxIndex:     uint(r.TxIndex.Uint64()),
 			BlockHash:   blockHash.ToEthHash(),
@@ -156,15 +157,104 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		ContractAddress:   contractAddress,
 		GasUsed:           r.GasUsed.Uint64(),
 		BlockHash:         blockHash.ToEthHash(),
-		BlockNumber:       r.IncomingRequest.ChainTime.BlockNum.AsInt(),
+		BlockNumber:       r.IncomingRequest.L2BlockNumber,
 		TransactionIndex:  uint(r.TxIndex.Uint64()),
 	}
 }
 
-func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
+type FeeSet struct {
+	L1Transaction *big.Int
+	L1Calldata    *big.Int
+	L2Storage     *big.Int
+	L2Computation *big.Int
+}
+
+func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 4 {
+		return nil, errors.Errorf("expected fee set tuple of length 4, but recieved %v", val)
+	}
+	l1Transaction, _ := tup.GetByInt64(0)
+	l1Calldata, _ := tup.GetByInt64(1)
+	l2Storage, _ := tup.GetByInt64(2)
+	l2Computation, _ := tup.GetByInt64(3)
+
+	l1TransactionInt, ok := l1Transaction.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1Transaction must be an int")
+	}
+	l1CalldataInt, ok := l1Calldata.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1Calldata must be an int")
+	}
+	l2StorageInt, ok := l2Storage.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l2Storage must be an int")
+	}
+	l2ComputationInt, ok := l2Computation.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l2Computation must be an int")
+	}
+
+	return &FeeSet{
+		L1Transaction: l1TransactionInt.BigInt(),
+		L1Calldata:    l1CalldataInt.BigInt(),
+		L2Storage:     l2StorageInt.BigInt(),
+		L2Computation: l2ComputationInt.BigInt(),
+	}, nil
+}
+
+type FeeStats struct {
+	Price      *FeeSet
+	UnitsUsed  *FeeSet
+	Paid       *FeeSet
+	Aggregator *common.Address
+}
+
+func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 4 {
+		return nil, errors.Errorf("expected gas fee tuple of length 4, but recieved %v", val)
+	}
+	pricesVal, _ := tup.GetByInt64(0)
+	unitsVal, _ := tup.GetByInt64(1)
+	paidVal, _ := tup.GetByInt64(2)
+	aggregator, _ := tup.GetByInt64(3)
+
+	prices, err := NewFeeSetFromValue(pricesVal)
+	if err != nil {
+		return nil, err
+	}
+	units, err := NewFeeSetFromValue(unitsVal)
+	if err != nil {
+		return nil, err
+	}
+	paid, err := NewFeeSetFromValue(paidVal)
+	if err != nil {
+		return nil, err
+	}
+	aggregatorInt, ok := aggregator.(value.IntValue)
+	if !ok {
+		return nil, errors.New("aggregator must be an int")
+	}
+	rawAggregatorAddress := inbox.NewAddressFromInt(aggregatorInt)
+	blankAddress := common.Address{}
+	var aggAddress *common.Address
+	if rawAggregatorAddress != blankAddress {
+		aggAddress = &rawAggregatorAddress
+	}
+	return &FeeStats{
+		Price:      prices,
+		UnitsUsed:  units,
+		Paid:       paid,
+		Aggregator: aggAddress,
+	}, nil
+}
+
+func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value, feeStatsVal value.Value) (*TxResult, error) {
 	resultTup, ok := resultInfo.(*value.TupleValue)
 	if !ok || resultTup.Len() != 3 {
-		return nil, errors.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
+		return nil, errors.Errorf("expected result info tuple of length 3, but recieved %v", resultTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -228,6 +318,10 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 		return nil, errors.New("startLogIndex must be an int")
 	}
 
+	feeStats, err := NewFeeStatsFromValue(feeStatsVal)
+	if err != nil {
+		return nil, err
+	}
 	return &TxResult{
 		IncomingRequest: l1Msg,
 		ResultCode:      ResultType(resultCodeInt.BigInt().Uint64()),
@@ -238,6 +332,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 		CumulativeGas:   cumulativeGasInt.BigInt(),
 		TxIndex:         txIndexInt.BigInt(),
 		StartLogIndex:   startLogIndexInt.BigInt(),
+		FeeStats:        feeStats,
 	}, nil
 }
 
@@ -255,8 +350,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	}
 
 	if kindInt.BigInt().Uint64() == 0 {
-		if tup.Len() != 5 {
-			return nil, errors.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
+		if tup.Len() != 6 {
+			return nil, errors.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -264,7 +359,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		resultInfo, _ := tup.GetByInt64(2)
 		gasInfo, _ := tup.GetByInt64(3)
 		chainInfo, _ := tup.GetByInt64(4)
-		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
+		feeStats, _ := tup.GetByInt64(5)
+		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo, feeStats)
 	} else if kindInt.BigInt().Uint64() == 1 {
 		if tup.Len() != 8 {
 			return nil, errors.Errorf("block result expected tuple of length 8, but received len %v: %v", tup.Len(), tup)
@@ -273,13 +369,13 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		// Tuple size already verified above, so error can be ignored
 		blockNum, _ := tup.GetByInt64(1)
 		timestamp, _ := tup.GetByInt64(2)
-		gasLimit, _ := tup.GetByInt64(3)
-		blockStatsRaw, _ := tup.GetByInt64(4)
-		chainStatsRaw, _ := tup.GetByInt64(5)
-		gasStats, _ := tup.GetByInt64(6)
-		previousHeight, _ := tup.GetByInt64(7)
+		blockStatsRaw, _ := tup.GetByInt64(3)
+		chainStatsRaw, _ := tup.GetByInt64(4)
+		gasStats, _ := tup.GetByInt64(5)
+		previousHeight, _ := tup.GetByInt64(6)
+		l1BlockNum, _ := tup.GetByInt64(7)
 
-		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw, gasStats, previousHeight)
+		return parseBlockResult(blockNum, timestamp, blockStatsRaw, chainStatsRaw, gasStats, previousHeight, l1BlockNum)
 	} else if kindInt.BigInt().Uint64() == 2 {
 		return NewSendResultFromValue(tup)
 	} else if kindInt.BigInt().Uint64() == 3 {

@@ -2,6 +2,9 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -9,8 +12,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
-	"strings"
 )
 
 var validatorABI abi.ABI
@@ -120,5 +121,11 @@ func (v *ValidatorWallet) ExecuteTransactions(ctx context.Context, builder *Buil
 func (v *ValidatorWallet) ReturnOldDeposits(ctx context.Context, stakers []common.Address) (*types.Transaction, error) {
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.ReturnOldDeposits(auth, v.rollupAddress, common.AddressArrayToEth(stakers))
+	})
+}
+
+func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []common.Address) (*types.Transaction, error) {
+	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
 	})
 }

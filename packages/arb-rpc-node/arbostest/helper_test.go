@@ -24,11 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -38,11 +38,11 @@ import (
 func initMsg() message.Init {
 	return message.Init{
 		ChainParams: protocol.ChainParams{
-			StakeRequirement:        big.NewInt(0),
-			StakeToken:              common.Address{},
-			GracePeriod:             common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:       0,
-			ArbGasSpeedLimitPerTick: 0,
+			StakeRequirement:          big.NewInt(0),
+			StakeToken:                common.Address{},
+			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
+			MaxExecutionSteps:         0,
+			ArbGasSpeedLimitPerSecond: 1000000000,
 		},
 		Owner:       owner,
 		ExtraConfig: []byte{},
@@ -51,12 +51,12 @@ func initMsg() message.Init {
 
 func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
 	return message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(1000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: sequenceNum,
 		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 		Payment:     amount,
-		Data:        snapshot.WithdrawEthData(dest),
+		Data:        arbos.WithdrawEthData(dest),
 	}
 }
 
@@ -164,14 +164,14 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	}
 
 	if len(assertion.Sends) != sendCount {
-		t.Fatal("unxpected send count ", len(assertion.Sends))
+		t.Fatal("unxpected send count ", len(assertion.Sends), "instead of", sendCount)
 	}
 
 	var snap *snapshot.Snapshot
 	if len(inboxMessages) > 0 {
 		lastMessage := inboxMessages[len(inboxMessages)-1]
 		seq := new(big.Int).Add(lastMessage.InboxSeqNum, big.NewInt(1))
-		msg := message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, seq, lastMessage.ChainTime)
+		msg := message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, seq, big.NewInt(0), lastMessage.ChainTime)
 		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, true, nil, true, common.Hash{}, common.Hash{})
 		snap = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
 	}
@@ -185,9 +185,9 @@ func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
 	}
 
 	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime))
+	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime))
 	for i, msg := range messages {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(msg, sender, big.NewInt(int64(1+i)), chainTime))
+		inboxMessages = append(inboxMessages, message.NewInboxMessage(msg, sender, big.NewInt(int64(1+i)), big.NewInt(0), chainTime))
 	}
 	return inboxMessages
 }

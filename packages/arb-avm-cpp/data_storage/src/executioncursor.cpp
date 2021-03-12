@@ -20,26 +20,6 @@
 
 #include <data_storage/value/machine.hpp>
 
-void ExecutionCursor::resetExecutionCursor() {
-    Checkpoint::resetCheckpoint();
-    machine = nullptr;
-    first_message_sequence_number = 0;
-    messages.clear();
-    inbox_hashes.clear();
-    messages_to_skip = 0;
-}
-
-void ExecutionCursor::setCheckpoint(Checkpoint& checkpoint) {
-    Checkpoint::operator=(checkpoint);
-}
-
 ExecutionCursor* ExecutionCursor::clone() {
     return new ExecutionCursor(*this);
-}
-
-uint256_t ExecutionCursor::machineHash() {
-    return machine->hash();
-}
-std::unique_ptr<Machine> ExecutionCursor::takeMachine() {
-    return std::move(machine);
 }

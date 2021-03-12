@@ -51,23 +51,17 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CArbStorage* s) {
-    auto machine = static_cast<Machine*>(m);
-    auto storage = static_cast<ArbStorage*>(s);
-    auto transaction = storage->makeTransaction();
-    auto result = saveMachine(*transaction, *machine);
-    if (!result.status.ok()) {
-        return false;
-    }
-    return transaction->commit().ok();
-}
-
-void machineHash(CMachine* m, void* ret) {
+int machineHash(CMachine* m, void* ret) {
     assert(m);
-    uint256_t retHash = static_cast<Machine*>(m)->hash();
+    auto optionalHash = static_cast<Machine*>(m)->hash();
+    if (!optionalHash) {
+        return 0;
+    }
     std::array<unsigned char, 32> val{};
-    to_big_endian(retHash, val.begin());
+    to_big_endian(*optionalHash, val.begin());
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+
+    return 1;
 }
 
 void* machineClone(CMachine* m) {
@@ -176,12 +170,17 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
 }
 
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
-                                            ByteSliceArray bytes,
-                                            int final_message_of_block) {
+                                            ByteSliceArray bytes) {
     assert(c);
     auto config = static_cast<MachineExecutionConfig*>(c);
     config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
-    config->final_message_of_block = final_message_of_block;
+}
+
+void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
+                                              void* next_block_height) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->next_block_height = receiveUint256(next_block_height);
 }
 
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,

@@ -17,11 +17,12 @@
 package snapshot
 
 import (
+	"fmt"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -49,7 +50,7 @@ func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, l
 // If an error is returned, s is unmodified
 func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
-	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, s.time)
+	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
 	res, err := runTx(mach, inboxMsg, targetHash)
 	if err != nil {
 		return nil, err
@@ -86,14 +87,14 @@ func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) 
 }
 
 func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
-	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, s.time)
+	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
 	return runTx(s.mach.Clone(), inboxMsg, targetHash)
 }
 
 func (s *Snapshot) BasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(100000000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: dest,
 			Payment:     big.NewInt(0),
@@ -111,51 +112,51 @@ func checkValidResult(res *evm.TxResult) error {
 }
 
 func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
-	res, err := s.BasicCall(GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(arbos.GetBalanceData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return ParseBalanceResult(res)
+	return arbos.ParseBalanceResult(res)
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
-	res, err := s.BasicCall(TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(arbos.TransactionCountData(account), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return ParseTransactionCountResult(res)
+	return arbos.ParseTransactionCountResult(res)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
-	res, err := s.BasicCall(getCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
+	res, err := s.BasicCall(arbos.GetCodeData(account), common.NewAddressFromEth(arbos.ARB_INFO_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseCodeResult(res)
+	return arbos.ParseCodeResult(res)
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
-	res, err := s.BasicCall(StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.BasicCall(arbos.StorageAtData(account, index), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return parseGetStorageAtResult(res)
+	return arbos.ParseGetStorageAtResult(res)
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
-	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 
 	// If the machine wasn't able to run and it reports that it is currently
 	// blocked, return the block reason to give the client more information
@@ -166,6 +167,7 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 
 	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
+		fmt.Println("bad mach", mach)
 		return nil, errors.New("no logs produced by tx")
 	}
 

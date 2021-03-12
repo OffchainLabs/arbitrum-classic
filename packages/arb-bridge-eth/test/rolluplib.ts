@@ -36,6 +36,18 @@ function assertionHash(
   )
 }
 
+function nodeHash(
+  hasSibling: boolean,
+  lastHash: BytesLike,
+  assertionExecHash: BytesLike,
+  inboxAcc: BytesLike
+): BytesLike {
+  return ethers.utils.solidityKeccak256(
+    ['bool', 'bytes32', 'bytes32', 'bytes32'],
+    [hasSibling, lastHash, assertionExecHash, inboxAcc]
+  )
+}
+
 function assertionRestHash(
   totalMessagesRead: BigNumberish,
   machineState: BytesLike,
@@ -61,38 +73,77 @@ function challengeRootHash(
   )
 }
 
-export class NodeState {
+export class ExecutionState {
   constructor(
-    public proposedBlock: number,
-    public totalGasUsed: BigNumberish,
+    public gasUsed: BigNumberish,
     public machineHash: BytesLike,
     public inboxCount: BigNumberish,
-    public totalSendCount: BigNumberish,
-    public totalLogCount: BigNumberish,
+    public sendCount: BigNumberish,
+    public logCount: BigNumberish,
+    public sendAcc: BytesLike,
+    public logAcc: BytesLike
+  ) {}
+
+  challengeRestHash(): BytesLike {
+    return assertionRestHash(
+      this.inboxCount,
+      this.machineHash,
+      this.sendAcc,
+      this.sendCount,
+      this.logAcc,
+      this.logCount
+    )
+  }
+
+  challengeHash(): BytesLike {
+    return assertionHash(this.gasUsed, this.challengeRestHash())
+  }
+
+  bytes32Fields(): [BytesLike, BytesLike, BytesLike] {
+    return [this.machineHash, this.sendAcc, this.logAcc]
+  }
+
+  intFields(): [BigNumberish, BigNumberish, BigNumberish, BigNumberish] {
+    return [this.gasUsed, this.inboxCount, this.sendCount, this.logCount]
+  }
+}
+
+export class NodeState {
+  constructor(
+    public execState: ExecutionState,
+    public proposedBlock: number,
     public inboxMaxCount: BigNumberish
   ) {}
 
-  hash(): BytesLike {
+  hash(): string {
     return ethers.utils.solidityKeccak256(
       [
-        'uint256',
         'uint256',
         'bytes32',
         'uint256',
         'uint256',
         'uint256',
+        'bytes32',
+        'bytes32',
+        'uint256',
         'uint256',
       ],
       [
+        this.execState.gasUsed,
+        this.execState.machineHash,
+        this.execState.inboxCount,
+        this.execState.sendCount,
+        this.execState.logCount,
+        this.execState.sendAcc,
+        this.execState.logAcc,
         this.proposedBlock,
-        this.totalGasUsed,
-        this.machineHash,
-        this.inboxCount,
-        this.totalSendCount,
-        this.totalLogCount,
         this.inboxMaxCount,
       ]
     )
+  }
+
+  equals(other: NodeState): boolean {
+    return this.hash() == other.hash()
   }
 }
 
@@ -105,152 +156,120 @@ function buildAccumulator(base: BytesLike, hashes: BytesLike[]): BytesLike {
 }
 
 export class Assertion {
-  public inboxMessagesRead: BigNumberish
-  public sendAcc: BytesLike
-  public sendCount: BigNumberish
-  public logAcc: BytesLike
-  public logCount: BigNumberish
+  public afterState: ExecutionState
 
   constructor(
-    public prevNodeState: NodeState,
-    public gasUsed: BigNumberish,
-    public afterMachineHash: BytesLike,
+    public beforeState: NodeState,
+    gasUsed: BigNumberish,
+    afterMachineHash: BytesLike,
     messages: BytesLike[],
     sends: BytesLike[],
     logs: BytesLike[]
   ) {
-    this.inboxMessagesRead = messages.length
-
-    this.sendAcc = buildAccumulator(zerobytes32, sends)
-    this.sendCount = sends.length
-
-    this.logAcc = buildAccumulator(zerobytes32, logs)
-    this.logCount = logs.length
-  }
-
-  afterMessageCount(): BigNumber {
-    return ethers.BigNumber.from(this.prevNodeState.inboxCount).add(
-      this.inboxMessagesRead
-    )
-  }
-
-  createdNodeState(
-    proposedBlock: number,
-    inboxMaxCount: BigNumberish
-  ): NodeState {
-    return new NodeState(
-      proposedBlock,
-      ethers.BigNumber.from(this.prevNodeState.totalGasUsed).add(this.gasUsed),
-      this.afterMachineHash,
-      this.afterMessageCount(),
-      ethers.BigNumber.from(this.prevNodeState.totalSendCount).add(
-        this.sendCount
+    this.afterState = new ExecutionState(
+      ethers.BigNumber.from(this.beforeState.execState.gasUsed).add(gasUsed),
+      afterMachineHash,
+      ethers.BigNumber.from(this.beforeState.execState.inboxCount).add(
+        messages.length
       ),
-      ethers.BigNumber.from(this.prevNodeState.totalLogCount).add(
-        this.logCount
+      ethers.BigNumber.from(this.beforeState.execState.sendCount).add(
+        sends.length
       ),
-      inboxMaxCount
+      ethers.BigNumber.from(this.beforeState.execState.logCount).add(
+        logs.length
+      ),
+      buildAccumulator(this.beforeState.execState.sendAcc, sends),
+      buildAccumulator(this.beforeState.execState.logAcc, logs)
     )
   }
 
-  startAssertionRestHash(): BytesLike {
-    return assertionRestHash(
-      this.prevNodeState.inboxCount,
-      this.prevNodeState.machineHash,
-      zerobytes32,
-      0,
-      zerobytes32,
-      0
+  gasUsed(): BigNumber {
+    return ethers.BigNumber.from(this.afterState.gasUsed).sub(
+      this.beforeState.execState.gasUsed
     )
   }
 
-  startAssertionHash(): BytesLike {
-    return assertionHash(0, this.startAssertionRestHash())
-  }
-
-  endAssertionRestHash(): BytesLike {
-    return assertionRestHash(
-      this.afterMessageCount(),
-      this.afterMachineHash,
-      this.sendAcc,
-      this.sendCount,
-      this.logAcc,
-      this.logCount
-    )
-  }
-
-  endAssertionHash(): BytesLike {
-    return assertionHash(this.gasUsed, this.endAssertionRestHash())
-  }
-
-  executionHash(): BytesLike {
-    return bisectionChunkHash(
-      0,
-      this.gasUsed,
-      this.startAssertionHash(),
-      this.endAssertionHash()
-    )
-  }
-
-  checkTime(arbGasSpeedLimitPerBlock: BigNumberish): number {
-    return ethers.BigNumber.from(this.gasUsed)
-      .div(arbGasSpeedLimitPerBlock)
-      .toNumber()
-  }
-
-  challengeRoot(inboxMaxCount: BigNumberish): BytesLike {
-    return challengeRootHash(this.executionHash(), this.gasUsed, inboxMaxCount)
-  }
-
-  bytes32Fields(): [BytesLike, BytesLike, BytesLike, BytesLike] {
+  bytes32Fields(): [
+    [BytesLike, BytesLike, BytesLike],
+    [BytesLike, BytesLike, BytesLike]
+  ] {
     return [
-      this.prevNodeState.machineHash,
-      this.sendAcc,
-      this.logAcc,
-      this.afterMachineHash,
+      this.beforeState.execState.bytes32Fields(),
+      this.afterState.bytes32Fields(),
     ]
   }
 
   intFields(): [
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish,
-    BigNumberish
+    [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
   ] {
-    return [
-      this.prevNodeState.proposedBlock,
-      this.prevNodeState.totalGasUsed,
-      this.prevNodeState.inboxCount,
-      this.prevNodeState.totalSendCount,
-      this.prevNodeState.totalLogCount,
-      this.prevNodeState.inboxMaxCount,
-      this.inboxMessagesRead,
-      this.gasUsed,
-      this.sendCount,
-      this.logCount,
-    ]
+    return [this.beforeState.execState.intFields(), this.afterState.intFields()]
+  }
+
+  executionHash(): BytesLike {
+    return bisectionChunkHash(
+      this.beforeState.execState.gasUsed,
+      this.gasUsed(),
+      this.beforeState.execState.challengeHash(),
+      this.afterState.challengeHash()
+    )
   }
 }
 
 export class Node {
+  public beforeState: NodeState
+  public afterState: NodeState
   constructor(
-    public assertion: Assertion,
-    public blockCreated: number,
-    public inboxMaxCount: BigNumberish
-  ) {}
-
-  afterNodeState(): NodeState {
-    return this.assertion.createdNodeState(
-      this.blockCreated,
-      this.inboxMaxCount
+    assertion: Assertion,
+    blockCreated: number,
+    inboxMaxCount: BigNumberish,
+    public nodeHash: BytesLike
+  ) {
+    this.beforeState = assertion.beforeState
+    this.afterState = new NodeState(
+      assertion.afterState,
+      blockCreated,
+      inboxMaxCount
     )
   }
+
+  gasUsed(): BigNumber {
+    return ethers.BigNumber.from(
+      ethers.BigNumber.from(this.afterState.execState.gasUsed).sub(
+        this.beforeState.execState.gasUsed
+      )
+    )
+  }
+
+  checkTime(arbGasSpeedLimitPerBlock: BigNumberish): number {
+    return this.gasUsed().div(arbGasSpeedLimitPerBlock).toNumber()
+  }
+
+  executionHash(): BytesLike {
+    return bisectionChunkHash(
+      this.beforeState.execState.gasUsed,
+      this.gasUsed(),
+      this.beforeState.execState.challengeHash(),
+      this.afterState.execState.challengeHash()
+    )
+  }
+}
+
+export interface NodeCreatedEvent {
+  nodeNum: BigNumberish
+  parentNodeHash: BytesLike
+  nodeHash: BytesLike
+  executionHash: BytesLike
+  inboxMaxCount: BigNumberish
+  afterInboxAcc: BytesLike
+  assertionBytes32Fields: [
+    [BytesLike, BytesLike, BytesLike],
+    [BytesLike, BytesLike, BytesLike]
+  ]
+  assertionIntFields: [
+    [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
+    [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
+  ]
 }
 
 export class RollupContract {
@@ -268,16 +287,27 @@ export class RollupContract {
   }
 
   async stakeOnNewNode(
-    block: Block,
+    parentNode: Node,
     assertion: Assertion,
-    newNodeNum: BigNumberish
-  ): Promise<{ tx: ContractTransaction; node: Node }> {
+    afterInboxAcc: BytesLike,
+    prevNode?: Node
+  ): Promise<{ tx: ContractTransaction; node: Node; event: NodeCreatedEvent }> {
+    if (!prevNode) {
+      prevNode = parentNode
+    }
+    const isChild = prevNode.afterState.equals(assertion.beforeState)
+    const newNodeHash = nodeHash(
+      !isChild,
+      prevNode.nodeHash,
+      assertion.executionHash(),
+      afterInboxAcc
+    )
     const tx = await this.rollup.stakeOnNewNode(
-      block.hash,
-      block.number,
-      newNodeNum,
+      newNodeHash,
       assertion.bytes32Fields(),
-      assertion.intFields()
+      assertion.intFields(),
+      parentNode.afterState.proposedBlock,
+      parentNode.afterState.inboxMaxCount
     )
     const receipt = await tx.wait()
     if (receipt.logs == undefined) {
@@ -291,34 +321,43 @@ export class RollupContract {
       throw 'wrong event type'
     }
     const parsedEv = (ev as any) as {
-      args: { inboxMaxCount: BigNumberish }
+      args: NodeCreatedEvent
     }
     const node = new Node(
       assertion,
       receipt.blockNumber!,
-      parsedEv.args.inboxMaxCount
+      parsedEv.args.inboxMaxCount,
+      newNodeHash
     )
-    return { tx, node }
+    const event = parsedEv.args
+    return { tx, node, event }
   }
 
-  stakeOnExistingNode(block: Block, nodeNum: BigNumberish) {
-    return this.rollup.stakeOnExistingNode(block.hash, block.number, nodeNum)
+  stakeOnExistingNode(nodeNum: BigNumberish, nodeHash: BytesLike) {
+    return this.rollup.stakeOnExistingNode(nodeNum, nodeHash)
   }
 
   confirmNextNode(
-    logAcc: BytesLike,
-    messages: BytesLike[]
+    prevSendAcc: BytesLike,
+    prevSendCount: BigNumberish,
+    sends: BytesLike[],
+    afterlogAcc: BytesLike,
+    afterLogCount: BigNumberish
   ): Promise<ContractTransaction> {
-    const messageData = ethers.utils.concat(messages)
-    const messageLengths = messages.map(msg => msg.length)
-    return this.rollup.confirmNextNode(logAcc, messageData, messageLengths)
+    const messageData = ethers.utils.concat(sends)
+    const messageLengths = sends.map(msg => msg.length)
+    return this.rollup.confirmNextNode(
+      prevSendAcc,
+      messageData,
+      messageLengths,
+      BigNumber.from(prevSendCount).add(sends.length),
+      afterlogAcc,
+      afterLogCount
+    )
   }
 
-  rejectNextNode(
-    successorWithStake: BigNumberish,
-    stakerAddress: string
-  ): Promise<ContractTransaction> {
-    return this.rollup.rejectNextNode(successorWithStake, stakerAddress)
+  rejectNextNode(stakerAddress: string): Promise<ContractTransaction> {
+    return this.rollup.rejectNextNode(stakerAddress)
   }
 
   async createChallenge(
@@ -332,9 +371,12 @@ export class RollupContract {
     return this.rollup.createChallenge(
       [staker1Address, staker2Address],
       [nodeNum1, nodeNum2],
-      [node1.assertion.executionHash(), node2.assertion.executionHash()],
-      [node1.blockCreated, node2.blockCreated],
-      [node1.assertion.afterMessageCount(), node2.assertion.afterMessageCount()]
+      [node1.executionHash(), node2.executionHash()],
+      [node1.afterState.proposedBlock, node2.afterState.proposedBlock],
+      [
+        node1.afterState.execState.inboxCount,
+        node2.afterState.execState.inboxCount,
+      ]
     )
   }
 

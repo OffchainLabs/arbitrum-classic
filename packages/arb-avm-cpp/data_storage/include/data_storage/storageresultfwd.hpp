@@ -17,6 +17,9 @@
 #ifndef storageresultfwd_h
 #define storageresultfwd_h
 
+#include <rocksdb/status.h>
+
+#include <variant>
 #include <vector>
 
 struct GetResults;
@@ -24,7 +27,10 @@ struct SaveResults;
 struct DeleteResults;
 
 template <typename T>
-struct DbResult;
+struct CountedData;
+
+template <typename T>
+using DbResult = std::variant<rocksdb::Status, CountedData<T>>;
 
 template <typename T>
 struct ValueResult;

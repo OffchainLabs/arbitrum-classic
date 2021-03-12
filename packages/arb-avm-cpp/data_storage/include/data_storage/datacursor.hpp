@@ -21,7 +21,6 @@
 #include <avm/machinethread.hpp>
 #include <avm_values/bigint.hpp>
 #include <avm_values/codepointstub.hpp>
-#include <data_storage/checkpoint.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/machine.hpp>
@@ -39,11 +38,10 @@ class DataCursor {
    public:
     std::atomic<status_enum> status{EMPTY};
 
-    // Mutex is acquired by core thread when reorg is occurring.
-    // Other threads should acquire mutex whenever accessing below data.
+    // All threads should acquire mutex before modifying any of the below fields
     std::mutex reorg_mutex;
     uint256_t pending_total_count;
-    uint256_t current_total_count;
+    std::vector<char> current_total_key;
     std::vector<value> data;
     std::vector<value> deleted_data;
     std::string error_string;

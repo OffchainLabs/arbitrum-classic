@@ -60,6 +60,7 @@ TEST_CASE("ARBOS test vectors") {
             for (auto& send_json : sends_json) {
                 sends.push_back(send_from_json(send_json));
             }
+            auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
@@ -68,6 +69,7 @@ TEST_CASE("ARBOS test vectors") {
             config.inbox_messages = messages;
             auto assertion = mach->run(config);
             INFO("Machine ran for " << assertion.stepCount << " steps");
+            REQUIRE(assertion.gasCount == total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 REQUIRE(assertion.logs[k] == logs[k]);
@@ -77,22 +79,27 @@ TEST_CASE("ARBOS test vectors") {
                 REQUIRE(assertion.sends[k] == sends[k]);
             }
             {
-                auto tx = storage.makeTransaction();
+                auto tx = storage.makeReadWriteTransaction();
                 saveMachine(*tx, *mach);
                 tx->commit();
             }
             auto mach_hash = mach->hash();
-            auto mach2 = storage.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach2->hash());
+            REQUIRE(mach_hash);
+            auto mach2 = storage.getMachine(*mach_hash, value_cache);
+            auto mach2_hash = mach2->hash();
+            REQUIRE(mach2_hash);
+            REQUIRE(*mach_hash == *mach2_hash);
             storage.closeArbStorage();
 
             ArbStorage storage2(dbpath);
-            auto mach3 = storage2.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach3->hash());
+            auto mach3 = storage2.getMachine(*mach_hash, value_cache);
+            auto mach3_hash = mach3->hash();
+            REQUIRE(mach3_hash);
+            REQUIRE(*mach_hash == *mach3_hash);
 
             {
-                auto tx = storage2.makeTransaction();
-                deleteMachine(*tx, mach_hash);
+                auto tx = storage2.makeReadWriteTransaction();
+                deleteMachine(*tx, *mach_hash);
                 tx->commit();
             }
         }

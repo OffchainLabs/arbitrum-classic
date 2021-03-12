@@ -133,44 +133,25 @@ func checkChallengeCompleted(t *testing.T, tester *ethbridgetestcontracts.Challe
 	}
 }
 
-func initializeChallengeData(
-	t *testing.T,
-	lookup core.ArbCoreLookup,
-	startGas *big.Int,
-	endGas *big.Int,
-) *core.NodeInfo {
+func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *big.Int, endGas *big.Int) (*core.NodeInfo, error) {
 	cursor, err := lookup.GetExecutionCursor(startGas)
 	test.FailIfError(t, err)
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
 	prevState := &core.NodeState{
-		ProposedBlock: big.NewInt(0),
-		InboxMaxCount: inboxMaxCount,
-		ExecutionState: &core.ExecutionState{
-			MachineHash:       cursor.MachineHash(),
-			TotalMessagesRead: cursor.TotalMessagesRead(),
-			TotalGasConsumed:  cursor.TotalGasConsumed(),
-			TotalSendCount:    cursor.TotalSendCount(),
-			TotalLogCount:     cursor.TotalLogCount(),
-		},
+		ProposedBlock:  big.NewInt(0),
+		InboxMaxCount:  inboxMaxCount,
+		ExecutionState: core.NewExecutionState(cursor),
 	}
 
 	lookup.AdvanceExecutionCursor(cursor, endGas, true)
+	after := core.NewExecutionState(cursor)
+	if err != nil {
+		return nil, err
+	}
 	assertion := &core.Assertion{
-		PrevProposedBlock: prevState.ProposedBlock,
-		PrevInboxMaxCount: prevState.InboxMaxCount,
-		ExecutionInfo: &core.ExecutionInfo{
-			Before: prevState.ExecutionState,
-			After: &core.ExecutionState{
-				MachineHash:       cursor.MachineHash(),
-				TotalMessagesRead: cursor.TotalMessagesRead(),
-				TotalGasConsumed:  cursor.TotalGasConsumed(),
-				TotalSendCount:    cursor.TotalSendCount(),
-				TotalLogCount:     cursor.TotalLogCount(),
-			},
-			SendAcc: common.Hash{},
-			LogAcc:  common.Hash{},
-		},
+		Before: prevState.ExecutionState,
+		After:  after,
 	}
 
 	return &core.NodeInfo{
@@ -181,7 +162,9 @@ func initializeChallengeData(
 		},
 		Assertion:     assertion,
 		InboxMaxCount: inboxMaxCount,
-	}
+		NodeHash:      common.RandHash(),
+		AfterInboxAcc: [32]byte{},
+	}, nil
 }
 
 func initializeChallengeTest(

@@ -35,7 +35,7 @@ func TestEVMOps(t *testing.T) {
 	failIfError(t, err)
 
 	tx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -44,7 +44,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.Address{},
@@ -53,7 +53,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
@@ -62,7 +62,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx4 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -71,7 +71,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx5 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(4),
 		DestAddress: connAddress1,
@@ -80,7 +80,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx6 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(5),
 		DestAddress: connAddress1,
@@ -89,7 +89,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx7 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(6),
 		DestAddress: connAddress1,

@@ -36,11 +36,6 @@ template <typename T>
 static T shrink(uint256_t i) {
     return static_cast<T>(i & std::numeric_limits<T>::max());
 }
-
-bool hasStagedMessage(const value& staged_message) {
-    return !std::holds_alternative<Tuple>(staged_message) ||
-           std::get<Tuple>(staged_message) != Tuple();
-}
 }  // namespace
 
 namespace machineoperation {
@@ -865,7 +860,7 @@ BlockReason breakpoint(MachineState& m) {
 
 void log(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.logs.push_back(std::move(m.stack[0]));
+    m.addProcessedLog(std::move(m.stack[0]));
     m.stack.popClear();
     ++m.pc;
 }
@@ -890,78 +885,64 @@ void send(MachineState& m) {
         m.state = Status::Error;
         std::cerr << "Send failure: over size limit" << std::endl;
         return;
-    } else {
-        auto vec = std::vector<uint8_t>(msg_size);
-        for (uint64_t i = 0; i < msg_size; i++) {
-            vec[i] = buf.get(i);
-        }
-        m.context.sends.push_back(vec);
-        m.stack.popClear();
-        m.stack.popClear();
-        ++m.pc;
     }
+
+    auto vec = std::vector<uint8_t>(msg_size);
+    for (uint64_t i = 0; i < msg_size; i++) {
+        vec[i] = buf.get(i);
+    }
+    m.addProcessedSend(std::move(vec));
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
 }
 
 BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
-    if (!hasStagedMessage(m.staged_message)) {
+    if (m.stagedMessageEmpty()) {
         if (!m.context.inboxEmpty()) {
             m.staged_message = m.context.popInbox();
-            m.total_messages_consumed += 1;
         } else if (m.context.next_block_height.has_value()) {
             // The inboxPeekOp should always leave a message Tuple in
-            // staged_message so that hashes always come out consistently.  When
-            // a message is not available, the uint256_t sequence number of the
-            // next message is put into staged_messages.  This way, any function
+            // staged_message so that hashes always come out consistently.
+            // The current message is annotated as end of block, and the next
+            // block number is known, so store the blocked number as a uint256_t
+            // value in staged_message.  This way, any function
             // that uses staged_message can throw an error when staged_message
             // is something other than a non-empty Tuple, and the uint256_t can
-            // be replaced by valid message Tuple when it becomes available.
-            m.staged_message = m.total_messages_consumed;
-
-            // When next_block_height is set, we know the result of the inbox
-            // peek opcode before we know the next message
-            m.stack[0] =
-                m.stack[0] == value(*m.context.next_block_height) ? 1 : 0;
-            ++m.pc;
-            m.context.inbox_messages_consumed += 1;
-            m.total_messages_consumed += 1;
-            return NotBlocked{};
-        } else {
-            // Don't have information needed to continue
-            return InboxBlocked();
+            // be replaced by a valid message Tuple when it becomes available.
+            m.staged_message = *m.context.next_block_height;
         }
     }
 
-    if (!std::holds_alternative<Tuple>(m.staged_message)) {
+    auto next_block_height = m.getStagedMessageBlockHeight();
+    if (!next_block_height) {
         // Don't have information needed to continue
         return InboxBlocked();
     }
 
-    m.stack[0] =
-        m.stack[0] == std::get<Tuple>(m.staged_message).get_element(1) ? 1 : 0;
+    m.stack[0] = m.stack[0] == value{*next_block_height} ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }
 
 BlockReason inboxOp(MachineState& m) {
-    bool has_staged_message = hasStagedMessage(m.staged_message);
-    if (!has_staged_message && m.context.inboxEmpty()) {
+    if (m.stagedMessageUnresolved()) {
         return InboxBlocked();
     }
 
-    if (has_staged_message &&
-        !std::holds_alternative<Tuple>(m.staged_message)) {
-        // We have a staged message, but it needs to actually be resolved
-        return InboxBlocked();
-    }
-
-    if (has_staged_message) {
-        m.stack.push(Tuple(std::get<Tuple>(m.staged_message)));
-        m.staged_message = Tuple();
+    InboxMessage next_message;
+    if (std::holds_alternative<InboxMessage>(m.staged_message)) {
+        next_message = std::get<InboxMessage>(m.staged_message);
+    } else if (m.stagedMessageEmpty() && !m.context.inboxEmpty()) {
+        next_message = m.context.popInbox();
     } else {
-        m.stack.push(m.context.popInbox());
-        m.total_messages_consumed += 1;
+        return InboxBlocked();
     }
+
+    m.addProcessedMessage(next_message);
+    m.stack.push(next_message.toTuple());
+    m.staged_message = std::monostate();
     ++m.pc;
     return NotBlocked{};
 }
@@ -1018,11 +999,12 @@ void pushinsnimm(MachineState& m) {
 BlockReason sideload(MachineState& m) {
     m.stack.prepForMod(1);
     auto& block_num = assumeInt(m.stack[0]);
+    m.output.last_sideload = block_num;
     if (!m.context.sideloads.empty()) {
         m.stack[0] = m.context.sideloads.back().toTuple();
         m.context.sideloads.pop_back();
     } else {
-        if (m.context.stop_on_sideload && m.context.numSteps > 0) {
+        if (m.context.stop_on_sideload && !m.context.first_instruction) {
             return SideloadBlocked{block_num};
         }
         m.stack[0] = Tuple();

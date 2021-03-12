@@ -2,6 +2,9 @@ package staker
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
@@ -9,22 +12,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 )
 
 type Strategy uint8
 
 const (
-	EagerStrategy Strategy = iota
-	OpportunisticStrategy
-	ChallengerTakerStrategy
-	WatchtowerStrategy
+	WatchtowerStrategy Strategy = iota
+	DefensiveStrategy
+	StakeLatestStrategy
+	MakeNodesStrategy
 )
 
 type Staker struct {
 	*Validator
-	makeNewNodes    bool
 	activeChallenge *challenge.Challenger
+	strategy        Strategy
 }
 
 func NewStaker(
@@ -33,33 +35,133 @@ func NewStaker(
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
-) (*Staker, error) {
+	strategy Strategy,
+) (*Staker, *ethbridge.BridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	return &Staker{
-		Validator:    val,
-		makeNewNodes: true,
-	}, nil
+		Validator: val,
+		strategy:  strategy,
+	}, val.bridge, nil
+}
+
+func (s *Staker) RunInBackground(ctx context.Context) chan bool {
+	done := make(chan bool)
+	go func() {
+		defer func() {
+			done <- true
+		}()
+		backoff := time.Second
+		for {
+			tx, err := s.Act(ctx)
+			if tx != nil {
+				// Note: methodName isn't accurate, it's just used for logging
+				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")
+				if err == nil {
+					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
+				}
+			}
+			if err != nil {
+				logger.Warn().Stack().Err(err).Msg("Staking error (possible reorg?)")
+				<-time.After(backoff)
+				if backoff < 60*time.Second {
+					backoff *= 2
+				}
+				continue
+			} else {
+				backoff = time.Second
+			}
+			if tx != nil {
+				// We did something, there's probably something else to do
+				<-time.After(time.Second)
+			} else {
+				// Nothing to do for now
+				<-time.After(time.Minute)
+			}
+		}
+	}()
+	return done
 }
 
 func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
+	s.builder.ClearTransactions()
 	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.handleConflict(ctx, info); err != nil {
+	effectiveStrategy := s.strategy
+	nodesLinear, err := s.validatorUtils.AreUnresolvedNodesLinear(ctx)
+	if err != nil {
 		return nil, err
 	}
-	if err := s.resolveNextNode(ctx); err != nil {
-		return nil, err
+	if !nodesLinear {
+		logger.Warn().Msg("Fork detected")
+		if effectiveStrategy == DefensiveStrategy {
+			effectiveStrategy = StakeLatestStrategy
+		}
 	}
-	if info != nil {
-		if err := s.advanceStake(ctx, info); err != nil {
+
+	// Resolve nodes if either we're on the make nodes strategy,
+	// or we're on the stake latest strategy but don't have a stake
+	// (attempt to reduce the current required stake).
+	shouldResolveNodes := effectiveStrategy >= MakeNodesStrategy
+	if !shouldResolveNodes && effectiveStrategy >= StakeLatestStrategy && info == nil {
+		shouldResolveNodes, err = s.isRequiredStakeElevated(ctx)
+		if err != nil {
 			return nil, err
 		}
+	}
+	if shouldResolveNodes {
+		tx, err := s.removeOldStakers(ctx)
+		if err != nil || tx != nil {
+			return tx, err
+		}
+		tx, err = s.resolveTimedOutChallenges(ctx)
+		if err != nil || tx != nil {
+			return tx, err
+		}
+		if err := s.resolveNextNode(ctx, info); err != nil {
+			return nil, err
+		}
+	}
+
+	// Don't attempt to create a new stake if we're resolving a node,
+	// as that might affect the current required stake.
+	creatingNewStake := info == nil && s.builder.TransactionCount() == 0
+	if creatingNewStake {
+		if err := s.newStake(ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	if info != nil {
+		if err = s.handleConflict(ctx, info); err != nil {
+			return nil, err
+		}
+	}
+	if info != nil || creatingNewStake {
+		if err := s.advanceStake(ctx, effectiveStrategy); err != nil {
+			return nil, err
+		}
+	}
+	if info != nil && s.builder.TransactionCount() == 0 {
+		if err := s.createConflict(ctx, info); err != nil {
+			return nil, err
+		}
+	}
+	txCount := s.builder.TransactionCount()
+	if creatingNewStake {
+		// Ignore our stake creation, as it's useless by itself
+		txCount--
+	}
+	if txCount == 0 {
+		return nil, nil
+	}
+	if creatingNewStake {
+		logger.Info().Msg("Staking to execute transactions")
 	}
 	return s.wallet.ExecuteTransactions(ctx, s.builder)
 }
@@ -70,7 +172,9 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 		return nil
 	}
 
-	if s.activeChallenge != nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
+	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
+		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("Entered challenge")
+
 		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.builder)
 		if err != nil {
 			return err
@@ -81,7 +185,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		nodeInfo, err := lookupNode(ctx, s.rollup.RollupWatcher, challengedNode)
+		nodeInfo, err := s.rollup.RollupWatcher.LookupNode(ctx, challengedNode)
 		if err != nil {
 			return err
 		}
@@ -107,41 +211,30 @@ func (s *Staker) newStake(ctx context.Context) error {
 	return s.rollup.NewStake(ctx, stakeAmount)
 }
 
-func (s *Staker) advanceStake(ctx context.Context, info *ethbridge.StakerInfo) error {
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
+func (s *Staker) advanceStake(ctx context.Context, effectiveStrategy Strategy) error {
+	active := effectiveStrategy > WatchtowerStrategy
+	action, _, err := s.generateNodeAction(ctx, s.wallet.Address(), effectiveStrategy)
 	if err != nil {
 		return err
 	}
-	if info == nil {
-		return errors.New("no stake placed")
-	}
-
-	action, err := s.generateNodeAction(ctx, info.LatestStakedNode, true)
-	if err != nil || action == nil {
-		return err
+	// TODO raise an alert if wrongNodesExist (esp for watchtower strategy)
+	if action == nil || !active {
+		return nil
 	}
 
 	switch action := action.(type) {
-	case *nodeCreationInfo:
-		if !s.makeNewNodes {
-			return nil
-		}
-		return s.rollup.StakeOnNewNode(ctx, action.block, action.newNodeID, action.assertion)
-	case *nodeMovementInfo:
-		return s.rollup.StakeOnExistingNode(ctx, action.block, action.nodeNum)
+	case createNodeAction:
+		// Already logged with more details in generateNodeAction
+		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
+	case existingNodeAction:
+		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
+		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
 	default:
-		panic("invalid type")
+		panic("invalid action type")
 	}
 }
 
-func (s *Staker) createConflict(ctx context.Context) error {
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
-	if err != nil {
-		return err
-	}
-	if info == nil {
-		return errors.New("not staked")
-	}
+func (s *Staker) createConflict(ctx context.Context, info *ethbridge.StakerInfo) error {
 	if info.CurrentChallenge != nil {
 		return nil
 	}
@@ -150,7 +243,18 @@ func (s *Staker) createConflict(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	latestNode, err := s.rollup.LatestConfirmedNode(ctx)
+	if err != nil {
+		return err
+	}
 	for _, staker := range stakers {
+		stakerInfo, err := s.rollup.StakerInfo(ctx, staker)
+		if err != nil {
+			return err
+		}
+		if stakerInfo.CurrentChallenge != nil {
+			continue
+		}
 		conflictType, node1, node2, err := s.validatorUtils.FindStakerConflict(ctx, s.wallet.Address(), staker)
 		if err != nil {
 			return err
@@ -164,15 +268,20 @@ func (s *Staker) createConflict(ctx context.Context) error {
 			staker1, staker2 = staker2, staker1
 			node1, node2 = node2, node1
 		}
+		if node1.Cmp(latestNode) <= 0 {
+			// removeOldStakers will take care of them
+			continue
+		}
 
-		node1Info, err := lookupNode(ctx, s.rollup.RollupWatcher, node1)
+		node1Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node1)
 		if err != nil {
 			return err
 		}
-		node2Info, err := lookupNode(ctx, s.rollup.RollupWatcher, node2)
+		node2Info, err := s.rollup.RollupWatcher.LookupNode(ctx, node2)
 		if err != nil {
 			return err
 		}
+		logger.Warn().Int("ourNode", int(node1.Int64())).Int("otherNode", int(node2.Int64())).Str("otherStaker", staker2.String()).Msg("Creating challenge")
 		return s.rollup.CreateChallenge(
 			ctx,
 			staker1,

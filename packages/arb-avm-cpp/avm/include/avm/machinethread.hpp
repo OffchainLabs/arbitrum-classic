@@ -55,11 +55,14 @@ class MachineThread : public Machine {
         : Machine(std::move(code), std::move(static_val)) {}
 
     bool runMachine(MachineExecutionConfig config);
+    bool continueRunningMachine();
     void abortMachine();
     machine_status_enum status();
     std::string getErrorString();
     void clearError();
     Assertion nextAssertion();
+
+    void operator()();
     void operator()(MachineExecutionConfig config);
 };
 

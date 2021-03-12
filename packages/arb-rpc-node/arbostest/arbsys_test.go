@@ -27,11 +27,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -45,11 +44,11 @@ func generateFib(t *testing.T, val *big.Int) []byte {
 func makeTxCountCall(account common.Address) message.L2Message {
 	call := message.Call{
 		BasicTx: message.BasicTx{
-			MaxGas:      big.NewInt(1000000000),
+			MaxGas:      big.NewInt(10000000),
 			GasPriceBid: big.NewInt(0),
 			DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
 			Payment:     big.NewInt(0),
-			Data:        snapshot.TransactionCountData(account),
+			Data:        arbos.TransactionCountData(account),
 		},
 	}
 	return message.NewSafeL2Message(call)
@@ -58,7 +57,7 @@ func makeTxCountCall(account common.Address) message.L2Message {
 func checkTxCountResult(t *testing.T, res *evm.TxResult, correctCount *big.Int) {
 	t.Helper()
 	succeededTxCheck(t, res)
-	txCount, err := snapshot.ParseTransactionCountResult(res)
+	txCount, err := arbos.ParseTransactionCountResult(res)
 	failIfError(t, err)
 	if correctCount.Cmp(txCount) != 0 {
 		t.Fatal("unexpected tx count")
@@ -70,7 +69,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Valid contract deployment
 	tx1 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -80,7 +79,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Valid value tranfer to EOA
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: randDest,
@@ -90,7 +89,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Invalid sequencer number
 	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: randDest,
@@ -100,7 +99,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Insufficient balance
 	tx4 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: randDest,
@@ -110,7 +109,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Valid transaction to contract
 	tx5 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
@@ -120,7 +119,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Transaction to contract with incorrect sequence number
 	tx6 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(4),
 		DestAddress: connAddress1,
@@ -130,7 +129,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Transaction to contract with insufficient balance
 	tx7 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -140,7 +139,7 @@ func TestTransactionCount(t *testing.T) {
 
 	// Transaction to contract with insufficient balance
 	tx8 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(1000),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -154,26 +153,26 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(6), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(7), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(8), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(9), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(10), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(11), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(12), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(13), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx6), sender, big.NewInt(14), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx8), sender, big.NewInt(18), chainTime),
-		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(6), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(7), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(8), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(9), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(10), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(11), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(12), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(13), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx6), sender, big.NewInt(14), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(15), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx7), sender, big.NewInt(16), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(17), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx8), sender, big.NewInt(18), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), big.NewInt(0), chainTime),
 	}
 
 	logs, _, _, _ := runAssertion(t, messages, len(messages)-2, 0)
@@ -221,7 +220,7 @@ func TestTransactionCount(t *testing.T) {
 
 func makeSyscallTx(data []byte, seq *big.Int, addr common.Address) message.Message {
 	tx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: seq,
 		DestAddress: addr,
@@ -246,35 +245,35 @@ func TestAddressTable(t *testing.T) {
 
 	addressTableCalls := [][]byte{
 		// lookup nonexistent key
-		snapshot.AddressTableLookupData(targetAddress),
+		arbos.AddressTableLookupData(targetAddress),
 		// register that key
-		snapshot.AddressTableRegisterData(targetAddress),
+		arbos.AddressTableRegisterData(targetAddress),
 		// now lookup the same key
-		snapshot.AddressTableLookupData(targetAddress),
+		arbos.AddressTableLookupData(targetAddress),
 		// register a different ket
-		snapshot.AddressTableRegisterData(targetAddress2),
+		arbos.AddressTableRegisterData(targetAddress2),
 		// call register on the first key again
-		snapshot.AddressTableRegisterData(targetAddress),
+		arbos.AddressTableRegisterData(targetAddress),
 		// Check to make sure that key exists
-		snapshot.AddressTableAddressExistsData(targetAddress),
+		arbos.AddressTableAddressExistsData(targetAddress),
 		// Check to make sure a different key doesn't exist
-		snapshot.AddressTableAddressExistsData(unregisteredAddress),
+		arbos.AddressTableAddressExistsData(unregisteredAddress),
 		// Check to make sure the address table is the right size
-		snapshot.AddressTableSizeData(),
+		arbos.AddressTableSizeData(),
 		// Lookup the address with a registered index
-		snapshot.AddressTableLookupIndexData(big.NewInt(2)),
+		arbos.AddressTableLookupIndexData(big.NewInt(2)),
 		// Lookup the address with an index which is too high
-		snapshot.AddressTableLookupIndexData(big.NewInt(3)),
+		arbos.AddressTableLookupIndexData(big.NewInt(3)),
 		// Decompress a compressed address index for an address that exists
-		snapshot.AddressTableDecompressData(encodedIndex2, big.NewInt(0)),
+		arbos.AddressTableDecompressData(encodedIndex2, big.NewInt(0)),
 		// Decompress a compressed address index for an address that does't exist
-		snapshot.AddressTableDecompressData(encodedIndex3, big.NewInt(0)),
+		arbos.AddressTableDecompressData(encodedIndex3, big.NewInt(0)),
 		// Decompress a compressed full address
-		snapshot.AddressTableDecompressData(encodedAddress3, big.NewInt(0)),
+		arbos.AddressTableDecompressData(encodedAddress3, big.NewInt(0)),
 		// Compress an unregistered address
-		snapshot.AddressTableCompressData(unregisteredAddress),
+		arbos.AddressTableCompressData(unregisteredAddress),
 		// Compress a registerted address
-		snapshot.AddressTableCompressData(targetAddress2),
+		arbos.AddressTableCompressData(targetAddress2),
 	}
 
 	senderSeq := int64(0)
@@ -390,15 +389,15 @@ func TestArbSysBLS(t *testing.T) {
 
 	arbSysCalls := [][]byte{
 		// Lookup the key for the sender who hasn't registered
-		snapshot.GetBLSPublicKeyData(sender),
+		arbos.GetBLSPublicKeyData(sender),
 		// Register a key
-		snapshot.RegisterBLSKeyData(x0a, x1a, y0a, y1a),
+		arbos.RegisterBLSKeyData(x0a, x1a, y0a, y1a),
 		// Lookup the registered key
-		snapshot.GetBLSPublicKeyData(sender),
+		arbos.GetBLSPublicKeyData(sender),
 		// Replace the currently registered key with a different one
-		snapshot.RegisterBLSKeyData(x0b, x1b, y0b, y1b),
+		arbos.RegisterBLSKeyData(x0b, x1b, y0b, y1b),
 		// Make sure when we lookup, we get the new key
-		snapshot.GetBLSPublicKeyData(sender),
+		arbos.GetBLSPublicKeyData(sender),
 	}
 
 	senderSeq := int64(0)
@@ -452,21 +451,21 @@ func TestArbSysFunctionTable(t *testing.T) {
 
 	arbSysCalls := [][]byte{
 		// Get size of non existent table
-		snapshot.FunctionTableSizeData(sender),
+		arbos.FunctionTableSizeData(sender),
 		// Get row of non existent table
-		snapshot.FunctionTableGetData(sender, big.NewInt(0)),
+		arbos.FunctionTableGetData(sender, big.NewInt(0)),
 		// Upload valid table
-		snapshot.UploadFunctionTableData(functionTableEncoded1),
+		arbos.UploadFunctionTableData(functionTableEncoded1),
 		// Get size of uploaded table
-		snapshot.FunctionTableSizeData(sender),
+		arbos.FunctionTableSizeData(sender),
 		// Get row from uploaded table
-		snapshot.FunctionTableGetData(sender, big.NewInt(1)),
+		arbos.FunctionTableGetData(sender, big.NewInt(1)),
 		// Upload a new function table
-		snapshot.UploadFunctionTableData(functionTableEncoded2),
+		arbos.UploadFunctionTableData(functionTableEncoded2),
 		// Get new table size
-		snapshot.FunctionTableSizeData(sender),
+		arbos.FunctionTableSizeData(sender),
 		// Lookup from new table
-		snapshot.FunctionTableGetData(sender, big.NewInt(0)),
+		arbos.FunctionTableGetData(sender, big.NewInt(0)),
 	}
 
 	senderSeq := int64(0)
@@ -534,7 +533,7 @@ func returnedFunctionTableEntry(t *testing.T, res *evm.TxResult) message.Functio
 	if len(res.ReturnData) != 96 {
 		t.Fatal("unexpected return data length")
 	}
-	entry, err := snapshot.ParseFunctionTableGetDataResult(res.ReturnData)
+	entry, err := arbos.ParseFunctionTableGetDataResult(res.ReturnData)
 	failIfError(t, err)
 	return entry
 }

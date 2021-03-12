@@ -1,14 +1,31 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package core
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
@@ -24,31 +41,24 @@ const (
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
-	MachineHash() common.Hash
+	MachineHash() (common.Hash, error)
 	TotalMessagesRead() *big.Int
-	InboxHash() common.Hash
+	InboxAcc() common.Hash
+	SendAcc() common.Hash
+	LogAcc() common.Hash
 	TotalGasConsumed() *big.Int
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
-
-	// TakeMachine takes ownership of machine such that ExecutionCursor will
-	// no longer be able to advance.
-	TakeMachine() (machine.Machine, error)
 }
 
 type ArbCoreLookup interface {
-	GetLogCount() (*big.Int, error)
-	GetLogs(startIndex, count *big.Int) ([]value.Value, error)
-
-	GetSendCount() (*big.Int, error)
-	GetSends(startIndex, count *big.Int) ([][]byte, error)
-
-	GetMessageCount() (*big.Int, error)
-	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
+	ArbOutputLookup
 
 	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
+	GetInboxAcc(index *big.Int) (common.Hash, error)
+	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
@@ -58,38 +68,23 @@ type ArbCoreLookup interface {
 	// optionally until it reaches or goes over maxGas
 	AdvanceExecutionCursor(executionCursor ExecutionCursor, maxGas *big.Int, goOverGas bool) error
 
-	GetMachineForSideload(uint64) (machine.Machine, error)
+	// TakeMachine takes ownership of machine such that ExecutionCursor will
+	// no longer be able to advance.
+	TakeMachine(executionCursor ExecutionCursor) (machine.Machine, error)
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool
+	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgHeight *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) (bool, error) {
-	if !db.DeliverMessages(messages, previousInboxHash, lastBlockComplete) {
+func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) (bool, error) {
+	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete, nil) {
 		return false, errors.New("unable to deliver messages")
 	}
-
-	start := time.Now()
-	var status MessageStatus
-	var err error
-	for {
-		status, err = db.MessagesStatus()
-		if err != nil {
-			return false, err
-		}
-
-		if status == MessagesEmpty {
-			return false, errors.New("should have messages")
-		}
-		if status != MessagesReady {
-			break
-		}
-		if time.Since(start) > time.Second*30 {
-			return false, errors.New("timed out adding messages")
-		}
-		<-time.After(time.Millisecond * 200)
+	status, err := waitForMessages(db)
+	if err != nil {
+		return false, err
 	}
 	if status == MessagesSuccess {
 		return true, nil
@@ -100,15 +95,54 @@ func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, prev
 	return false, errors.New("Unexpected status")
 }
 
+func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
+	if !db.DeliverMessages(nil, common.Hash{}, false, reorgMessageCount) {
+		return errors.New("unable to deliver messages")
+	}
+	status, err := waitForMessages(db)
+	if err != nil {
+		return err
+	}
+	if status == MessagesSuccess {
+		return nil
+	}
+	return errors.New("Unexpected status")
+}
+
+func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
+	start := time.Now()
+	var status MessageStatus
+	var err error
+	for {
+		status, err = db.MessagesStatus()
+		if err != nil {
+			return 0, err
+		}
+
+		if status == MessagesEmpty {
+			return 0, errors.New("should have messages")
+		}
+		if status != MessagesReady {
+			break
+		}
+		if time.Since(start) > time.Second*30 {
+			return 0, errors.New("timed out adding messages")
+		}
+		<-time.After(time.Millisecond * 50)
+	}
+	return status, nil
+}
+
 type ArbCore interface {
 	ArbCoreLookup
 	ArbCoreInbox
+	LogsCursor
 	StartThread() bool
 	StopThread()
 	MachineIdle() bool
 }
 
-func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage, error) {
+func GetSingleMessage(lookup ArbOutputLookup, index *big.Int) (inbox.InboxMessage, error) {
 	messages, err := lookup.GetMessages(index, big.NewInt(1))
 	if err != nil {
 		return inbox.InboxMessage{}, err
@@ -122,7 +156,7 @@ func GetSingleMessage(lookup ArbCoreLookup, index *big.Int) (inbox.InboxMessage,
 	return messages[0], nil
 }
 
-func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
+func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	sends, err := lookup.GetSends(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
@@ -136,7 +170,7 @@ func GetSingleSend(lookup ArbCoreLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
+func GetSingleLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
@@ -152,69 +186,70 @@ func GetSingleLog(lookup ArbCoreLookup, index *big.Int) (value.Value, error) {
 
 type ExecutionState struct {
 	MachineHash       common.Hash
+	InboxAcc          common.Hash
 	TotalMessagesRead *big.Int
 	TotalGasConsumed  *big.Int
 	TotalSendCount    *big.Int
 	TotalLogCount     *big.Int
+	SendAcc           common.Hash
+	LogAcc            common.Hash
 }
 
 func NewExecutionState(c ExecutionCursor) *ExecutionState {
+	hash, err := c.MachineHash()
+	if err != nil {
+		panic("Unable to compute hash for execution state")
+	}
 	return &ExecutionState{
-		MachineHash:       c.MachineHash(),
+		MachineHash:       hash,
+		InboxAcc:          c.InboxAcc(),
 		TotalMessagesRead: c.TotalMessagesRead(),
 		TotalGasConsumed:  c.TotalGasConsumed(),
 		TotalSendCount:    c.TotalSendCount(),
 		TotalLogCount:     c.TotalLogCount(),
+		SendAcc:           c.SendAcc(),
+		LogAcc:            c.LogAcc(),
 	}
 }
 
-func (e *ExecutionState) Equals(o *ExecutionState) bool {
-	return e.MachineHash == o.MachineHash &&
-		e.TotalMessagesRead.Cmp(o.TotalMessagesRead) == 0 &&
-		e.TotalGasConsumed.Cmp(o.TotalGasConsumed) == 0 &&
-		e.TotalSendCount.Cmp(o.TotalSendCount) == 0 &&
-		e.TotalLogCount.Cmp(o.TotalLogCount) == 0
+func (e *ExecutionState) IsPermanentlyBlocked() bool {
+	var haltedHash common.Hash = [32]byte{}
+	var erroredHash common.Hash = [32]byte{}
+	erroredHash[31] = 1
+	return e.MachineHash == haltedHash || e.MachineHash == erroredHash
 }
 
-type ExecutionInfo struct {
-	Before  *ExecutionState
-	After   *ExecutionState
-	SendAcc common.Hash
-	LogAcc  common.Hash
+func (e *ExecutionState) Equals(other Cut) bool {
+	return e.CutHash() == other.CutHash()
 }
 
-func (e *ExecutionInfo) Equals(o *ExecutionInfo) bool {
-	return e.Before.Equals(o.Before) &&
-		e.After.Equals(o.After) &&
-		e.SendAcc == o.SendAcc &&
-		e.LogAcc == o.SendAcc
+func (e *ExecutionState) RestHash() [32]byte {
+	return hashing.SoliditySHA3(
+		hashing.Uint256(e.TotalMessagesRead),
+		hashing.Bytes32(e.MachineHash),
+		hashing.Bytes32(e.SendAcc),
+		hashing.Uint256(e.TotalSendCount),
+		hashing.Bytes32(e.LogAcc),
+		hashing.Uint256(e.TotalLogCount),
+	)
 }
 
-func (e *ExecutionInfo) GasUsed() *big.Int {
-	return new(big.Int).Sub(e.After.TotalGasConsumed, e.Before.TotalGasConsumed)
-}
-
-func (e *ExecutionInfo) SendCount() *big.Int {
-	return new(big.Int).Sub(e.After.TotalSendCount, e.Before.TotalSendCount)
-}
-
-func (e *ExecutionInfo) LogCount() *big.Int {
-	return new(big.Int).Sub(e.After.TotalLogCount, e.Before.TotalLogCount)
-}
-
-func (e *ExecutionInfo) InboxMessagesRead() *big.Int {
-	return new(big.Int).Sub(e.After.TotalMessagesRead, e.Before.TotalMessagesRead)
+func (e *ExecutionState) CutHash() [32]byte {
+	return hashing.SoliditySHA3(
+		hashing.Uint256(e.TotalGasConsumed),
+		hashing.Bytes32(e.RestHash()),
+	)
 }
 
 type LogConsumer interface {
-	AddLogs(avmLogs []value.Value) error
+	AddLogs(initialIndex *big.Int, avmLogs []value.Value) error
 	DeleteLogs(avmLogs []value.Value) error
 }
 
 type LogsCursor interface {
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
-	LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error)
-	LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error)
-	LogsCursorClearError(cursorIndex *big.Int) error
+	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error)
+	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
+	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)
 }

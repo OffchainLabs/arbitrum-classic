@@ -28,7 +28,7 @@ import (
 
 func TestGas(t *testing.T) {
 	constructorTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{0},
@@ -37,7 +37,7 @@ func TestGas(t *testing.T) {
 	}
 
 	noopEOACallTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.RandAddress(),
@@ -46,7 +46,7 @@ func TestGas(t *testing.T) {
 	}
 
 	noopFuncCallTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
@@ -55,7 +55,7 @@ func TestGas(t *testing.T) {
 	}
 
 	storeFuncCallTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -64,7 +64,7 @@ func TestGas(t *testing.T) {
 	}
 
 	store2FuncCallTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(4),
 		DestAddress: connAddress1,

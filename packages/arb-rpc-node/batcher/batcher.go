@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -62,7 +63,7 @@ type batch interface {
 	isFull() bool
 	getAppliedTxes() []*types.Transaction
 	addIncludedTx(tx *types.Transaction) error
-	updateCurrentSnap(pendingSentBatches *list.List)
+	updateCurrentSnap(pendingSentBatches *list.List) error
 	getLatestSnap() *snapshot.Snapshot
 }
 
@@ -75,7 +76,7 @@ type TransactionBatcher interface {
 	SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription
 
 	// Return nil if no pending snapshot is available
-	PendingSnapshot() *snapshot.Snapshot
+	PendingSnapshot() (*snapshot.Snapshot, error)
 }
 
 type pendingSentBatch struct {
@@ -101,16 +102,20 @@ func NewStatefulBatcher(
 	receiptFetcher ethutils.ReceiptFetcher,
 	globalInbox l2TxSender,
 	maxBatchTime time.Duration,
-) *Batcher {
+) (*Batcher, error) {
 	signer := types.NewEIP155Signer(chainId)
+	batch, err := newStatefulBatch(db, maxBatchSize, signer)
+	if err != nil {
+		return nil, err
+	}
 	return newBatcher(
 		ctx,
 		chainId,
 		receiptFetcher,
 		globalInbox,
 		maxBatchTime,
-		newStatefulBatch(db, maxBatchSize, signer),
-	)
+		batch,
+	), nil
 }
 
 func NewStatelessBatcher(
@@ -207,6 +212,8 @@ func newBatcher(
 						logger.Fatal().Stack().Err(err).Msg("Error submitted batch")
 					}
 
+					monitor.GlobalMonitor.BatchAccepted(common.NewHashFromEth(receipt.TxHash))
+
 					receiptJSON, err := receipt.MarshalJSON()
 					if err != nil {
 						logger.Error().Stack().Err(err).Msg("failed to generate json for receipt")
@@ -244,6 +251,12 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
 
+	for _, tx := range txes {
+		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(tx.Hash()), txHash)
+	}
+
+	monitor.GlobalMonitor.SubmittedBatch(txHash)
+
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 		return
@@ -256,11 +269,13 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 	})
 }
 
-func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {
+func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	m.Lock()
 	defer m.Unlock()
-	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
-	return m.pendingBatch.getLatestSnap()
+	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {
+		return nil, err
+	}
+	return m.pendingBatch.getLatestSnap(), nil
 }
 
 func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Address) *uint64 {
@@ -283,6 +298,8 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return err
 	}
 
+	monitor.GlobalMonitor.GotTransactionFromUser(common.NewHashFromEth(tx.Hash()))
+
 	m.Lock()
 	defer m.Unlock()
 
@@ -291,7 +308,9 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		return errors.Wrap(err, "transaction rejected")
 	}
 
-	m.pendingBatch.updateCurrentSnap(m.pendingSentBatches)
+	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {
+		return err
+	}
 
 	if err := m.queuedTxes.addTransaction(tx, sender); err != nil {
 		return err

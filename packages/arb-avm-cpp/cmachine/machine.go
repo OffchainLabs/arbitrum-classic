@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
 #include "../cavm/cmachine.h"
 #include "../cavm/carbstorage.h"
 #include <stdio.h>
@@ -27,6 +27,8 @@ package cmachine
 import "C"
 
 import (
+	"github.com/ethereum/go-ethereum/common/math"
+	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -51,13 +53,18 @@ func New(codeFile string) (*Machine, error) {
 	defer C.free(unsafe.Pointer(cFilename))
 	cMachine := C.machineCreate(cFilename)
 	if cMachine == nil {
+
 		return nil, errors.Errorf("error creating machine from file %s", codeFile)
+
 	}
+
 	return WrapCMachine(cMachine), nil
 }
 
 func cdestroyVM(cMachine *Machine) {
+
 	C.machineDestroy(cMachine.c)
+
 }
 
 func WrapCMachine(cMachine unsafe.Pointer) *Machine {
@@ -66,8 +73,12 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 	return ret
 }
 
-func (m *Machine) Hash() (ret common.Hash) {
-	C.machineHash(m.c, unsafe.Pointer(&ret[0]))
+func (m *Machine) Hash() (ret common.Hash, err error) {
+	success := C.machineHash(m.c, unsafe.Pointer(&ret[0]))
+	if success == 0 {
+		err = errors.New("Cannot get machine hash")
+	}
+
 	return
 }
 
@@ -186,14 +197,16 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
 
-	finalMessageOfBlockInt := C.int(0)
-	if finalMessageOfBlock {
-		finalMessageOfBlockInt = 1
-	}
-
 	msgData := inboxMessagesToByteSliceArray(messages)
 	defer C.free(msgData.slices)
-	C.machineExecutionConfigSetInboxMessages(conf, msgData, finalMessageOfBlockInt)
+	C.machineExecutionConfigSetInboxMessages(conf, msgData)
+
+	C.machineExecutionConfigSetInboxMessages(conf, msgData)
+	if finalMessageOfBlock && len(messages) > 0 {
+		nextBlockHeight := new(big.Int).Add(messages[len(messages)-1].ChainTime.BlockNum.AsInt(), big.NewInt(1))
+		nextBlockHeightData := math.U256Bytes(nextBlockHeight)
+		C.machineExecutionConfigSetNextBlockHeight(conf, unsafeDataPointer(nextBlockHeightData))
+	}
 
 	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
 	defer C.free(sideloadsData.slices)
@@ -223,11 +236,4 @@ func (m *Machine) MarshalForProof() ([]byte, []byte, error) {
 func (m *Machine) MarshalState() ([]byte, error) {
 	stateData := C.machineMarshallState(m.c)
 	return receiveByteSlice(stateData), nil
-}
-
-func (m *Machine) Checkpoint(storage machine.ArbStorage) bool {
-	cArbStorage := storage.(*ArbStorage)
-	success := C.checkpointMachine(m.c, cArbStorage.c)
-
-	return success == 1
 }

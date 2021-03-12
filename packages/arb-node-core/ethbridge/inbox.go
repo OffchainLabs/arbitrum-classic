@@ -2,8 +2,10 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/pkg/errors"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -15,6 +17,16 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
+
+var l2MessageFromOriginCallABI abi.Method
+
+func init() {
+	parsedABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.InboxABI))
+	if err != nil {
+		panic(err)
+	}
+	l2MessageFromOriginCallABI = parsedABI.Methods["sendL2MessageFromOrigin"]
+}
 
 type StandardInboxWatcher struct {
 	con     *ethbridgecontracts.Inbox

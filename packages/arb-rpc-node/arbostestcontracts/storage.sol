@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.17;
+pragma solidity >=0.4.21 <0.7.0;
 
 interface Sys2 {
     // Send given Eth to dest.

@@ -19,19 +19,9 @@
 pragma solidity ^0.6.11;
 
 import "./IBridge.sol";
+import "./IMessageProvider.sol";
 
-interface IInbox {
-    event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
-
-    event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum);
-
-    function deployL2ContractPair(
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        uint256 payment,
-        bytes calldata contractData
-    ) external;
-
+interface IInbox is IMessageProvider {
     function sendL2Message(bytes calldata messageData) external;
 
     function sendUnsignedTransaction(

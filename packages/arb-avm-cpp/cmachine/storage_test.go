@@ -17,32 +17,22 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"os"
 	"testing"
 )
 
-var codeFile = arbos.Path()
+var codeFile = gotest.OpCodeTestFiles()[0]
 
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"
 
-	arbStorage, err := NewArbStorage(dePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := arbStorage.Initialize(codeFile); err != nil {
-		t.Fatal(err)
-	}
-	defer arbStorage.CloseArbStorage()
-
-	if err := os.RemoveAll(dePath); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestCheckpointMachine(t *testing.T) {
-	dePath := "dbPath2"
+	defer func() {
+		if err := os.RemoveAll(dePath); err != nil {
+			logger.Error().Stack().Err(err).Send()
+			t.Fatal(err)
+		}
+	}()
 
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
@@ -52,37 +42,4 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer arbStorage.CloseArbStorage()
-
-	mach, err := arbStorage.GetInitialMachine()
-	if err != nil {
-		t.Error(err)
-	}
-
-	t.Log("Initial machine hash", mach.Hash())
-
-	_, _, numSteps := mach.ExecuteAssertion(
-		1000,
-		true,
-		nil,
-		false,
-	)
-
-	t.Log("Ran machine for", numSteps, "steps")
-
-	if !mach.Checkpoint(arbStorage) {
-		t.Error("Failed to checkpoint machine")
-	}
-
-	loadedMach, err := arbStorage.GetMachine(mach.Hash())
-	if err != nil {
-		t.Error(err)
-	}
-
-	if mach.Hash() != loadedMach.Hash() {
-		t.Error("Restored machine with wrong hash", mach.Hash(), loadedMach.Hash())
-	}
-
-	if err := os.RemoveAll(dePath); err != nil {
-		t.Fatal(err)
-	}
 }

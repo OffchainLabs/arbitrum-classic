@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
 #include "../cavm/carbstorage.h"
 #include "../cavm/cvaluecache.h"
 #include <stdio.h>
@@ -102,18 +102,12 @@ func (s *ArbStorage) GetMachine(machineHash common.Hash) (machine.Machine, error
 	return ret, nil
 }
 
-func (s *ArbStorage) DeleteCheckpoint(machineHash common.Hash) bool {
-	success := C.deleteCheckpoint(s.c, unsafe.Pointer(&machineHash[0]))
-
-	return success == 1
-}
-
 func (s *ArbStorage) GetArbCore() core.ArbCore {
 	ac := C.createArbCore(s.c)
 	return NewArbCore(ac, s)
 }
 
-func (s *ArbStorage) GetAggregatorStore() *AggregatorStore {
+func (s *ArbStorage) GetNodeStore() machine.NodeStore {
 	as := C.createAggregatorStore(s.c)
-	return NewAggregatorStore(as)
+	return NewNodeStore(as)
 }

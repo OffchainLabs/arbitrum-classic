@@ -2,18 +2,26 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types'
 import { DeployFunction } from 'hardhat-deploy/types'
 
 const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployments, getNamedAccounts } = hre
+  const { deployments, getNamedAccounts, ethers } = hre
   const { deploy } = deployments
-  const { deployer } = await getNamedAccounts()
+  const [deployer] = await ethers.getSigners()
 
   const rollup = await deployments.get('Rollup')
   const challengeFactory = await deployments.get('ChallengeFactory')
   const nodeFactory = await deployments.get('NodeFactory')
 
-  await deploy('RollupCreator', {
-    from: deployer,
+  const dep = await deploy('RollupCreator', {
+    from: await deployer.getAddress(),
     args: [],
   })
+
+  const RollupCreator = await ethers.getContractFactory('RollupCreator')
+  const rollupCreator = RollupCreator.attach(dep.address).connect(deployer)
+  await rollupCreator.setTemplates(
+    rollup.address,
+    challengeFactory.address,
+    nodeFactory.address
+  )
 }
 
 module.exports = func

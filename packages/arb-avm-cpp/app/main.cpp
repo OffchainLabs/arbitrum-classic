@@ -23,7 +23,6 @@
 
 #include <iostream>
 #include <string>
-#include <thread>
 
 constexpr auto temp_db_path = "arb_runner_temp_db";
 
@@ -92,7 +91,7 @@ int main(int argc, char* argv[]) {
             auto inbox_val = std::get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
                 inbox_messages.push_back(InboxMessage::fromTuple(
-                    std::move(std::get<Tuple>(inbox_val.get_element(1)))));
+                    std::get<Tuple>(inbox_val.get_element(1))));
                 inbox_val =
                     std::get<Tuple>(std::move(inbox_val.get_element(0)));
             }
@@ -111,7 +110,7 @@ int main(int argc, char* argv[]) {
 
     MachineExecutionConfig execConfig;
     execConfig.inbox_messages = inbox_messages;
-    execConfig.final_message_of_block = true;
+    execConfig.next_block_height = 100000000;
     auto assertion = mach->run(execConfig);
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
@@ -120,11 +119,15 @@ int main(int argc, char* argv[]) {
               << assertion.gasCount << " gas ending in state "
               << static_cast<int>(mach->currentStatus()) << "\n";
 
-    auto tx = storage.makeTransaction();
+    auto tx = storage.makeReadWriteTransaction();
     saveMachine(*tx, *mach);
     tx->commit();
 
-    auto mach2 = storage.getMachine(mach->hash(), value_cache);
+    auto mach_hash = mach->hash();
+    if (!mach_hash.has_value()) {
+        throw std::runtime_error("Can't get machine hash");
+    }
+    auto mach2 = storage.getMachine(*mach->hash(), value_cache);
     execConfig.inbox_messages = std::vector<InboxMessage>();
     mach2->run(execConfig);
     return 0;

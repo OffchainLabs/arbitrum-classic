@@ -20,8 +20,33 @@
 
 #include <iostream>
 
-Tuple::Tuple(value val) : tpl(TuplePool::get_impl().getResource(1)) {
-    tpl->data.push_back(std::move(val));
+Tuple Tuple::createSizedTuple(const size_t size) {
+    if (size == 0) {
+        return {};
+    }
+
+    auto tpl = TuplePool::get_impl().getResource(size);
+    tpl->data.resize(size);
+
+    return Tuple(std::move(tpl));
+}
+
+Tuple Tuple::createTuple(std::vector<value> values) {
+    if (!values.empty() && values.size() > 8) {
+        return {};
+    }
+
+    auto tpl = TuplePool::get_impl().getResource(values.size());
+    tpl->data.insert(tpl->data.end(), values.begin(), values.end());
+
+    return Tuple(std::move(tpl));
+}
+
+Tuple Tuple::createTuple(value val) {
+    auto tpl = TuplePool::get_impl().getResource(1);
+    tpl->data.emplace_back(std::move(val));
+
+    return Tuple(std::move(tpl));
 }
 
 Tuple::Tuple(value val1, value val2)
@@ -105,15 +130,6 @@ Tuple::Tuple(value val1,
     tpl->data.push_back(std::move(val8));
 }
 
-Tuple::Tuple(std::vector<value> values) {
-    if (!values.empty() && values.size() < 9) {
-        tpl = TuplePool::get_impl().getResource(values.size());
-        for (auto& val : values) {
-            tpl->data.push_back(std::move(val));
-        }
-    }
-}
-
 constexpr uint64_t hash_size = 32;
 
 // BasicValChecker checks to see whether a value can be hashed without
@@ -132,7 +148,7 @@ struct BasicValChecker {
 };
 
 HashPreImage calcHashPreImage(const Tuple& tup) {
-    std::array<unsigned char, 1 + 8 * 32> tupData;
+    std::array<unsigned char, 1 + 8 * 32> tupData{};
     uint256_t size = 1;
 
     tupData[0] = tup.tuple_size();
@@ -148,7 +164,7 @@ HashPreImage calcHashPreImage(const Tuple& tup) {
     auto hash_val = ethash::keccak256(
         tupData.data(),
         static_cast<unsigned int>(1 + hash_size * (tup.tuple_size())));
-    std::array<unsigned char, 32> hashData;
+    std::array<unsigned char, 32> hashData{};
     std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
 
     return HashPreImage{hashData, size};
@@ -180,12 +196,12 @@ void Tuple::calculateHashPreImage() const {
 }
 
 HashPreImage zeroPreimage() {
-    std::array<unsigned char, 1> tupData;
+    std::array<unsigned char, 1> tupData{};
     tupData[0] = 0;
 
     auto hash_val = ethash::keccak256(tupData.data(), 1);
 
-    std::array<unsigned char, 32> hashData;
+    std::array<unsigned char, 32> hashData{};
     std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
 
     return HashPreImage(hashData, 1);

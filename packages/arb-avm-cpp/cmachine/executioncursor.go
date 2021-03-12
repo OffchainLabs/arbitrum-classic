@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
 #include "../cavm/cexecutioncursor.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +31,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/pkg/errors"
 )
 
@@ -39,7 +38,9 @@ type ExecutionCursor struct {
 	c                 unsafe.Pointer
 	machineHash       common.Hash
 	totalMessagesRead *big.Int
-	inboxHash         common.Hash
+	inboxAcc          common.Hash
+	sendAcc           common.Hash
+	logAcc            common.Hash
 	totalGasConsumed  *big.Int
 	totalSendCount    *big.Int
 	totalLogCount     *big.Int
@@ -67,23 +68,14 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		c:                 C.executionCursorClone(ec.c),
 		machineHash:       ec.machineHash,
 		totalMessagesRead: ec.totalMessagesRead,
-		inboxHash:         ec.inboxHash,
+		inboxAcc:          ec.inboxAcc,
+		sendAcc:           ec.sendAcc,
+		logAcc:            ec.logAcc,
 		totalGasConsumed:  ec.totalGasConsumed,
 		totalSendCount:    ec.totalSendCount,
 		totalLogCount:     ec.totalLogCount,
 		totalSteps:        ec.totalSteps,
 	}
-}
-
-func (ec *ExecutionCursor) TakeMachine() (machine.Machine, error) {
-	cMachine := C.executionCursorTakeMachine(ec.c)
-	if cMachine == nil {
-		return nil, errors.Errorf("error taking machine from execution cursor")
-	}
-	ret := &Machine{cMachine}
-
-	runtime.SetFinalizer(ret, cdestroyVM)
-	return ret, nil
 }
 
 func (ec *ExecutionCursor) updateValues() error {
@@ -92,9 +84,19 @@ func (ec *ExecutionCursor) updateValues() error {
 		return errors.New("failed to load machine hash")
 	}
 
-	status = C.executionCursorInboxHash(ec.c, unsafe.Pointer(&ec.inboxHash[0]))
+	status = C.executionCursorInboxAcc(ec.c, unsafe.Pointer(&ec.inboxAcc[0]))
 	if status == 0 {
-		return errors.New("failed to load inbox hash")
+		return errors.New("failed to load inbox acc")
+	}
+
+	status = C.executionCursorSendAcc(ec.c, unsafe.Pointer(&ec.sendAcc[0]))
+	if status == 0 {
+		return errors.New("failed to load send acc")
+	}
+
+	status = C.executionCursorLogAcc(ec.c, unsafe.Pointer(&ec.logAcc[0]))
+	if status == 0 {
+		return errors.New("failed to load log acc")
 	}
 
 	result := C.executionCursorTotalMessagesRead(ec.c)
@@ -130,12 +132,20 @@ func (ec *ExecutionCursor) updateValues() error {
 	return nil
 }
 
-func (ec *ExecutionCursor) MachineHash() common.Hash {
-	return ec.machineHash
+func (ec *ExecutionCursor) MachineHash() (common.Hash, error) {
+	return ec.machineHash, nil
 }
 
-func (ec *ExecutionCursor) InboxHash() common.Hash {
-	return ec.inboxHash
+func (ec *ExecutionCursor) InboxAcc() common.Hash {
+	return ec.inboxAcc
+}
+
+func (ec *ExecutionCursor) SendAcc() common.Hash {
+	return ec.sendAcc
+}
+
+func (ec *ExecutionCursor) LogAcc() common.Hash {
+	return ec.logAcc
 }
 
 func (ec *ExecutionCursor) TotalMessagesRead() *big.Int {

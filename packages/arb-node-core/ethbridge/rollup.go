@@ -2,10 +2,11 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -39,19 +40,28 @@ func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *Bu
 	}, nil
 }
 
-func (r *Rollup) RejectNextNode(ctx context.Context, node *big.Int, staker common.Address) error {
-	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), node, staker.ToEthAddress())
+func (r *Rollup) RejectNextNode(ctx context.Context, staker common.Address) error {
+	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), staker.ToEthAddress())
 	return err
 }
 
-func (r *Rollup) ConfirmNextNode(ctx context.Context, logAcc common.Hash, sends [][]byte) error {
+func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion, sends [][]byte) error {
 	var sendsData []byte
 	sendLengths := make([]*big.Int, 0, len(sends))
 	for _, msg := range sends {
 		sendsData = append(sendsData, msg...)
 		sendLengths = append(sendLengths, new(big.Int).SetInt64(int64(len(msg))))
 	}
-	_, err := r.builderCon.ConfirmNextNode(authWithContext(ctx, r.builderAuth), logAcc, sendsData, sendLengths)
+
+	_, err := r.builderCon.ConfirmNextNode(
+		authWithContext(ctx, r.builderAuth),
+		assertion.Before.SendAcc,
+		sendsData,
+		sendLengths,
+		assertion.After.TotalSendCount,
+		assertion.After.LogAcc,
+		assertion.After.TotalLogCount,
+	)
 	return err
 }
 
@@ -70,29 +80,29 @@ func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {
 	}
 }
 
-func (r *Rollup) StakeOnExistingNode(ctx context.Context, block *common.BlockId, node core.NodeID) error {
+func (r *Rollup) StakeOnExistingNode(ctx context.Context, nodeNumber core.NodeID, nodeHash [32]byte) error {
 	_, err := r.builderCon.StakeOnExistingNode(
 		authWithContext(ctx, r.builderAuth),
-		block.HeaderHash.ToEthHash(),
-		block.Height.AsInt(),
-		node,
+		nodeNumber,
+		nodeHash,
 	)
 	return err
 }
 
 func (r *Rollup) StakeOnNewNode(
 	ctx context.Context,
-	block *common.BlockId,
-	node core.NodeID,
+	nodeHash [32]byte,
 	assertion *core.Assertion,
+	prevProposedBlock *big.Int,
+	prevInboxMaxCount *big.Int,
 ) error {
 	_, err := r.builderCon.StakeOnNewNode(
 		authWithContext(ctx, r.builderAuth),
-		block.HeaderHash.ToEthHash(),
-		block.Height.AsInt(),
-		node,
+		nodeHash,
 		assertion.BytesFields(),
 		assertion.IntFields(),
+		prevProposedBlock,
+		prevInboxMaxCount,
 	)
 	return err
 }

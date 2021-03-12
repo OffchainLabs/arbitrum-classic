@@ -57,7 +57,7 @@ CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-void machineHash(CMachine* m, void* ret);
+int machineHash(CMachine* m, void* ret);
 CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
@@ -75,8 +75,6 @@ ByteSlice machineMarshallState(CMachine* m);
 
 char* machineInfo(CMachine* m);
 
-int checkpointMachine(CMachine* m, CArbStorage* storage);
-
 CMachineExecutionConfig* machineExecutionConfigCreate();
 void machineExecutionConfigDestroy(CMachineExecutionConfig* m);
 void* machineExecutionConfigClone(CMachineExecutionConfig* c);
@@ -84,8 +82,9 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
                                      uint64_t max_gas,
                                      int go_over_gas);
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
-                                            ByteSliceArray bytes,
-                                            int final_message_of_block);
+                                            ByteSliceArray bytes);
+void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
+                                              void* next_block_height);
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
                                         ByteSliceArray bytes);
 void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,

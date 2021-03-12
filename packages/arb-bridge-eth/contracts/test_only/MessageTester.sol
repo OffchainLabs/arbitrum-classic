@@ -27,6 +27,7 @@ contract MessageTester {
         uint256 blockNumber,
         uint256 timestamp,
         uint256 inboxSeqNum,
+        uint256 gasPriceL1,
         bytes32 messageDataHash
     ) public pure returns (bytes32) {
         return
@@ -36,6 +37,7 @@ contract MessageTester {
                 blockNumber,
                 timestamp,
                 inboxSeqNum,
+                gasPriceL1,
                 messageDataHash
             );
     }

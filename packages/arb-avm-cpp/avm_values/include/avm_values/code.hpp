@@ -122,6 +122,9 @@ class Code {
     void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_id = segment->segmentID();
+        if (segment_id >= next_segment_num) {
+            throw std::runtime_error("code segment loaded incorrectly");
+        }
         if (segments.find(segment->segmentID()) == segments.end()) {
             segments[segment_id] = std::move(segment);
         }

@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -L../build/rocksdb -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
 #include "../cavm/carbcore.h"
 #include "../cavm/cvaluecache.h"
 #include <stdio.h>
@@ -28,6 +28,7 @@ import "C"
 import (
 	"bytes"
 	"math/big"
+	"runtime"
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -77,9 +78,15 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxHash common.Hash, lastBlockComplete bool) bool {
+func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgMessageCount *big.Int) bool {
 	rawInboxData := encodeInboxMessages(messages)
 	byteSlices := encodeByteSliceList(rawInboxData)
+
+	var cReorgMessageCount unsafe.Pointer
+	if reorgMessageCount != nil {
+		reorgMessageCount := math.U256Bytes(reorgMessageCount)
+		cReorgMessageCount = unsafeDataPointer(reorgMessageCount)
+	}
 
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
 	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
@@ -88,13 +95,12 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxH
 	}
 	defer C.free(sliceArrayData)
 	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-
 	cLastBlockComplete := 0
 	if lastBlockComplete {
 		cLastBlockComplete = 1
 	}
 
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxHash.Bytes()), C.int(cLastBlockComplete))
+	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete), cReorgMessageCount)
 	return status == 1
 }
 
@@ -130,7 +136,7 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetSends(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get log")
+		return nil, errors.New("failed to get sends")
 	}
 
 	return receiveByteSliceArray(result.array), nil
@@ -141,7 +147,7 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, 
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetLogs(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get log")
+		return nil, errors.New("failed to get logs")
 	}
 
 	marshaledValues := receiveByteSliceArray(result.array)
@@ -162,7 +168,7 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 
 	result := C.arbCoreGetMessages(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
 	if result.found == 0 {
-		return nil, errors.New("failed to get log")
+		return nil, errors.New("failed to get messages")
 	}
 
 	data := receiveByteSliceArray(result.array)
@@ -182,6 +188,18 @@ func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 	startIndexData := math.U256Bytes(index)
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
+	if status == 0 {
+		err = errors.Errorf("failed to get inbox acc for %v", index)
+	}
+
+	return
+}
+
+func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 common.Hash, ret2 common.Hash, err error) {
+	startIndex1Data := math.U256Bytes(index1)
+	startIndex2Data := math.U256Bytes(index2)
+
+	status := C.arbCoreGetInboxAccPair(ac.c, unsafeDataPointer(startIndex1Data), unsafeDataPointer(startIndex2Data), unsafe.Pointer(&ret1[0]), unsafe.Pointer(&ret2[0]))
 	if status == 0 {
 		err = errors.New("failed to get inbox acc")
 	}
@@ -239,7 +257,7 @@ func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCurs
 func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, maxGas *big.Int, goOverGas bool) error {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
-		return errors.New("unsupported execution cursor type")
+		return errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
 	maxGasData := math.U256Bytes(maxGas)
 
@@ -254,6 +272,31 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	}
 
 	return cursor.updateValues()
+}
+
+func (ec *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
+	cursor, ok := executionCursor.(*ExecutionCursor)
+	if !ok {
+		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
+	}
+	cMachine := C.arbCoreTakeMachine(ec.c, cursor.c)
+	if cMachine == nil {
+		return nil, errors.Errorf("error taking machine from execution cursor")
+	}
+	ret := &Machine{cMachine}
+
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
+}
+
+func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
+	cursorIndexData := math.U256Bytes(cursorIndex)
+	result := C.arbCoreLogsCursorGetPosition(ac.c, unsafeDataPointer(cursorIndexData))
+	if result.found == 0 {
+		return nil, errors.New("failed to load logs cursor position")
+	}
+
+	return receiveBigInt(result.value), nil
 }
 
 func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error {
@@ -273,55 +316,45 @@ func (ac *ArbCore) LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	return nil
 }
 
-func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) ([]value.Value, error) {
+func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []value.Value, []value.Value, error) {
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
 	if result.found == 0 {
 		err := ac.LogsCursorCheckError(cursorIndex)
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 
 		// Nothing found, try again later
-		return nil, nil
+		return nil, nil, nil, nil
 	}
 
-	data := receiveByteSliceArray(result.array)
+	firstIndex := receiveBigInt(result.first_index)
+	data := receiveByteSliceArray(result.first_array)
 	logs := make([]value.Value, len(data))
 	for i, slice := range data {
 		var err error
 		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 	}
 
-	return logs, nil
-}
-
-func (ac *ArbCore) LogsCursorGetDeletedLogs(cursorIndex *big.Int) ([]value.Value, error) {
-	cursorIndexData := math.U256Bytes(cursorIndex)
-	result := C.arbCoreLogsCursorGetDeletedLogs(ac.c, unsafeDataPointer(cursorIndexData))
-	if result.found == 0 {
-		err := ac.LogsCursorCheckError(cursorIndex)
-		if err != nil {
-			return nil, err
-		}
-
-		// Nothing found, try again later
-		return nil, nil
-	}
-
-	data := receiveByteSliceArray(result.array)
-	logs := make([]value.Value, len(data))
-	for i, slice := range data {
+	deletedData := receiveByteSliceArray(result.second_array)
+	deletedLogs := make([]value.Value, len(deletedData))
+	for i, slice := range deletedData {
 		var err error
-		logs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
+		deletedLogs[i], err = value.UnmarshalValue(bytes.NewReader(slice[:]))
 		if err != nil {
-			return nil, err
+			return nil, nil, nil, err
 		}
 	}
-	return logs, nil
+
+	if len(logs) == 0 && len(deletedLogs) == 0 {
+		return nil, nil, nil, errors.New("logs cursor missing response")
+	}
+
+	return firstIndex, logs, deletedLogs, nil
 }
 
 func (ac *ArbCore) LogsCursorCheckError(cursorIndex *big.Int) error {

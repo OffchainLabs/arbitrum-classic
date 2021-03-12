@@ -17,7 +17,6 @@
 #include <data_storage/arbstorage.hpp>
 
 #include <data_storage/aggregator.hpp>
-#include <data_storage/blockstore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/code.hpp>
 
@@ -50,14 +49,6 @@ bool ArbStorage::closeArbStorage() {
     return status.ok();
 }
 
-std::unique_ptr<KeyValueStore> ArbStorage::makeKeyValueStore() {
-    return std::make_unique<KeyValueStore>(datastorage);
-}
-
-std::unique_ptr<BlockStore> ArbStorage::getBlockStore() const {
-    return std::make_unique<BlockStore>(datastorage);
-}
-
 std::unique_ptr<AggregatorStore> ArbStorage::getAggregatorStore() const {
     return std::make_unique<AggregatorStore>(datastorage);
 }
@@ -68,7 +59,13 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
 
 std::unique_ptr<Machine> ArbStorage::getInitialMachine(
     ValueCache& value_cache) const {
-    return arb_core->getInitialMachine<Machine>(value_cache);
+    auto cursor = arb_core->getExecutionCursor(0, value_cache);
+    if (!cursor.status.ok()) {
+        throw std::runtime_error(
+            "failed to get initial machine. Database not initialized of "
+            "corrupted");
+    }
+    return arb_core->takeExecutionCursorMachine(*cursor.data, value_cache);
 }
 
 std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
@@ -78,14 +75,14 @@ std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
 
 DbResult<value> ArbStorage::getValue(uint256_t value_hash,
                                      ValueCache& value_cache) const {
-    auto tx = arb_core->makeConstTransaction();
-    return ::getValue(*tx, value_hash, value_cache);
+    ReadTransaction tx(datastorage);
+    return ::getValue(tx, value_hash, value_cache);
 }
 
-std::unique_ptr<Transaction> ArbStorage::makeTransaction() {
-    return arb_core->makeTransaction();
+std::unique_ptr<ReadTransaction> ArbStorage::makeReadTransaction() {
+    return std::make_unique<ReadTransaction>(datastorage);
 }
 
-std::unique_ptr<const Transaction> ArbStorage::makeConstTransaction() const {
-    return arb_core->makeConstTransaction();
+std::unique_ptr<ReadWriteTransaction> ArbStorage::makeReadWriteTransaction() {
+    return std::make_unique<ReadWriteTransaction>(datastorage);
 }

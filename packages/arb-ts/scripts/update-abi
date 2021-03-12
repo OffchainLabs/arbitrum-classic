@@ -1,0 +1,30 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### update-ts-abi
+### --------------------------------------------------------------------
+echo 'Generating typechain interfaces for arb-bridge-eth:'
+yarn workspace arb-bridge-eth typechain
+
+echo 'Generating typechain interfaces for arbos-contracts:'
+yarn workspace arbos-contracts typechain
+
+echo 'Generating typechain interfaces for arb-bridge-peripherals:'
+yarn workspace arb-bridge-peripherals typechain
+
+echo 'Copying interfaces into arb-ts'
+
+cd ../arb-bridge-eth/build/types
+
+\cp -rf Outbox* Bridge* Inbox.* InboxFactory.* ../../../arb-ts/src/lib/abi
+            
+cd ../../../arb-os/contracts/src/types
+
+# TODO: why does arb-os contracts generate factories w/ this different structure
+\cp -rf ArbSys* ../../../../arb-ts/src/lib/abi
+\cp -rf factories/ArbSys* ../../../../arb-ts/src/lib/abi/factories
+
+cd ../../../../arb-bridge-peripherals/build/types
+
+\cp -rf ERC20* ERC777* StandardArbERC20* StandardArbERC777* EthERC20Bridge* ArbTokenBridge* IArbToken* ../../../arb-ts/src/lib/abi
+
+cd ../../../arb-ts

@@ -40,7 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -69,15 +68,20 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 	}
 
 	maxSteps := uint64(100000)
-	db := core.NewValidatorLookupMock(mach)
+	messages := make([]inbox.InboxMessage, 0)
 	for i := 0; i < 100; i++ {
-		db.AddMessage(inbox.NewRandomInboxMessage())
+		messages = append(messages, inbox.NewRandomInboxMessage())
+	}
+
+	hash, err := mach.Hash()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	beforeCut := ExecutionCutJSON{
 		GasUsed:           0,
 		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
-		MachineState:      mach.Hash().ToEthHash(),
+		MachineState:      hash.ToEthHash(),
 		SendAcc:           ethcommon.Hash{},
 		SendCount:         (*hexutil.Big)(big.NewInt(0)),
 		LogAcc:            ethcommon.Hash{},
@@ -95,10 +99,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return nil, nil, err
 		}
 
-		messages, err := db.GetMessages(big.NewInt(0), big.NewInt(1))
-		if err != nil {
-			return nil, nil, err
-		}
+		messages := messages[:1]
 
 		a, _, ranSteps := mach.ExecuteAssertionAdvanced(
 			1,
@@ -122,10 +123,15 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return proofs, nil, nil
 		}
 
+		hash, err := mach.Hash()
+		if err != nil {
+			return nil, nil, err
+		}
+
 		afterCut := ExecutionCutJSON{
 			GasUsed:           beforeCut.GasUsed + a.NumGas,
 			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
-			MachineState:      mach.Hash().ToEthHash(),
+			MachineState:      hash.ToEthHash(),
 			SendAcc:           ethcommon.Hash{},
 			SendCount:         (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
 			LogAcc:            ethcommon.Hash{},

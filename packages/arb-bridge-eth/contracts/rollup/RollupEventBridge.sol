@@ -21,9 +21,10 @@ pragma solidity ^0.6.11;
 import "./Rollup.sol";
 
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/IMessageProvider.sol";
 import "./INode.sol";
 
-contract RollupEventBridge {
+contract RollupEventBridge is IMessageProvider {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
@@ -55,19 +56,19 @@ contract RollupEventBridge {
         address owner,
         bytes calldata extraConfig
     ) external onlyRollup {
-        bytes32 initMsgHash =
-            keccak256(
-                abi.encodePacked(
-                    confirmPeriodBlocks,
-                    extraChallengeTimeBlocks,
-                    arbGasSpeedLimitPerBlock,
-                    baseStake,
-                    uint256(uint160(bytes20(stakeToken))),
-                    uint256(uint160(bytes20(owner))),
-                    extraConfig
-                )
+        bytes memory initMsg =
+            abi.encodePacked(
+                confirmPeriodBlocks,
+                extraChallengeTimeBlocks,
+                arbGasSpeedLimitPerBlock,
+                baseStake,
+                uint256(uint160(bytes20(stakeToken))),
+                uint256(uint160(bytes20(owner))),
+                extraConfig
             );
-        bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, msg.sender, initMsgHash);
+        uint256 num =
+            bridge.deliverMessageToInbox(INITIALIZATION_MSG_TYPE, msg.sender, keccak256(initMsg));
+        emit InboxMessageDelivered(num, initMsg);
     }
 
     function nodeCreated(
@@ -76,41 +77,35 @@ contract RollupEventBridge {
         uint256 deadline,
         address asserter
     ) external onlyRollup {
-        bytes32 messageHash =
-            keccak256(
-                abi.encodePacked(
-                    CREATE_NODE_EVENT,
-                    nodeNum,
-                    prev,
-                    block.number,
-                    deadline,
-                    uint256(uint160(bytes20(asserter)))
-                )
-            );
-        deliverToBridge(messageHash);
+        deliverToBridge(
+            abi.encodePacked(
+                CREATE_NODE_EVENT,
+                nodeNum,
+                prev,
+                block.number,
+                deadline,
+                uint256(uint160(bytes20(asserter)))
+            )
+        );
     }
 
     function nodeConfirmed(uint256 nodeNum) external onlyRollup {
-        bytes32 messageHash = keccak256(abi.encodePacked(CONFIRM_NODE_EVENT, nodeNum));
-        deliverToBridge(messageHash);
+        deliverToBridge(abi.encodePacked(CONFIRM_NODE_EVENT, nodeNum));
     }
 
     function nodeRejected(uint256 nodeNum) external onlyRollup {
-        bytes32 messageHash = keccak256(abi.encodePacked(REJECT_NODE_EVENT, nodeNum));
-        deliverToBridge(messageHash);
+        deliverToBridge(abi.encodePacked(REJECT_NODE_EVENT, nodeNum));
     }
 
     function stakeCreated(address staker, uint256 nodeNum) external onlyRollup {
-        bytes32 messageHash =
-            keccak256(
-                abi.encodePacked(
-                    STAKE_CREATED_EVENT,
-                    uint256(uint160(bytes20(staker))),
-                    nodeNum,
-                    block.number
-                )
-            );
-        deliverToBridge(messageHash);
+        deliverToBridge(
+            abi.encodePacked(
+                STAKE_CREATED_EVENT,
+                uint256(uint160(bytes20(staker))),
+                nodeNum,
+                block.number
+            )
+        );
     }
 
     function claimNode(uint256 nodeNum, address staker) external onlyRollup {
@@ -119,14 +114,19 @@ contract RollupEventBridge {
         require(node.stakers(staker), "NOT_STAKED");
         r.requireUnresolved(nodeNum);
 
-        bytes32 messageHash =
-            keccak256(
-                abi.encodePacked(CLAIM_NODE_EVENT, nodeNum, uint256(uint160(bytes20(staker))))
-            );
-        deliverToBridge(messageHash);
+        deliverToBridge(
+            abi.encodePacked(CLAIM_NODE_EVENT, nodeNum, uint256(uint160(bytes20(staker))))
+        );
     }
 
-    function deliverToBridge(bytes32 messageHash) private returns (uint256) {
-        return bridge.deliverMessageToInbox(ROLLUP_PROTOCOL_EVENT_TYPE, msg.sender, messageHash);
+    function deliverToBridge(bytes memory message) private {
+        emit InboxMessageDelivered(
+            bridge.deliverMessageToInbox(
+                ROLLUP_PROTOCOL_EVENT_TYPE,
+                msg.sender,
+                keccak256(message)
+            ),
+            message
+        );
     }
 }

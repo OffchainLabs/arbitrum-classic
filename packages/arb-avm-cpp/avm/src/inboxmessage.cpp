@@ -20,7 +20,7 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t InboxMessage::hash(const uint256_t& previous_inbox_hash) const {
+uint256_t InboxMessage::hash(const uint256_t& previous_inbox_acc) const {
     std::vector<unsigned char> inbox_vector;
 
     inbox_vector.push_back(kind);
@@ -28,16 +28,17 @@ uint256_t InboxMessage::hash(const uint256_t& previous_inbox_hash) const {
     marshal_uint256_t(block_number, inbox_vector);
     marshal_uint256_t(timestamp, inbox_vector);
     marshal_uint256_t(inbox_sequence_number, inbox_vector);
+    marshal_uint256_t(gas_price_l1, inbox_vector);
     auto data_hash = ::hash(data);
     marshal_uint256_t(data_hash, inbox_vector);
 
     auto message_hash = ::hash(inbox_vector);
 
-    return ::hash(previous_inbox_hash, message_hash);
+    return ::hash(previous_inbox_acc, message_hash);
 }
 
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {
-    constexpr auto message_fixed_size = 1 + 20 + 32 * 3;
+    constexpr auto message_fixed_size = 1 + 20 + 32 * 4;
 
     // Calculate hash of variable length data
     std::vector<unsigned char> variable_data{
@@ -51,10 +52,9 @@ uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {
     return hash(fixed_data);
 }
 
-uint256_t hash_inbox(const uint256_t& previous_inbox_hash,
+uint256_t hash_inbox(const uint256_t& previous_inbox_acc,
                      const std::vector<unsigned char>& stored_state) {
-    return hash(previous_inbox_hash, hash_raw_message(stored_state));
-    ;
+    return hash(previous_inbox_acc, hash_raw_message(stored_state));
 }
 
 namespace {
@@ -71,6 +71,12 @@ InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state) {
     auto current_iter = stored_state.begin();
 
+    return extractInboxMessageImpl(current_iter, stored_state.end());
+}
+
+InboxMessage extractInboxMessageImpl(
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end) {
     auto kind = *reinterpret_cast<const uint8_t*>(&*current_iter);
     current_iter++;
     Address sender;
@@ -79,41 +85,49 @@ InboxMessage extractInboxMessage(
     auto block_number = extractUint256(current_iter);
     auto timestamp = extractUint256(current_iter);
     auto inbox_sequence_number = extractUint256(current_iter);
+    auto gas_price_l1 = extractUint256(current_iter);
 
     std::vector<unsigned char> data;
-    data.insert(data.end(), current_iter, stored_state.end());
+    data.insert(data.end(), current_iter, end);
 
     return InboxMessage{
-        kind, sender, block_number, timestamp, inbox_sequence_number, data};
+        kind,         sender, block_number, timestamp, inbox_sequence_number,
+        gas_price_l1, data};
 }
 
-std::vector<unsigned char> InboxMessage::serialize() const {
-    std::vector<unsigned char> state_data_vector;
+void InboxMessage::serializeHeader(
+    std::vector<unsigned char>& state_data_vector) const {
     state_data_vector.push_back(kind);
     state_data_vector.insert(state_data_vector.end(), sender.begin(),
                              sender.end());
     marshal_uint256_t(block_number, state_data_vector);
     marshal_uint256_t(timestamp, state_data_vector);
     marshal_uint256_t(inbox_sequence_number, state_data_vector);
+    marshal_uint256_t(gas_price_l1, state_data_vector);
+}
+
+void InboxMessage::serializeImpl(
+    std::vector<unsigned char>& state_data_vector) const {
+    serializeHeader(state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
+}
+
+std::vector<unsigned char> InboxMessage::serialize() const {
+    std::vector<unsigned char> state_data_vector;
+    this->serializeImpl(state_data_vector);
     return state_data_vector;
 }
 
 std::vector<unsigned char> InboxMessage::serializeForProof() const {
     std::vector<unsigned char> state_data_vector;
-    state_data_vector.push_back(kind);
-    state_data_vector.insert(state_data_vector.end(), sender.begin(),
-                             sender.end());
-    marshal_uint256_t(block_number, state_data_vector);
-    marshal_uint256_t(timestamp, state_data_vector);
-    marshal_uint256_t(inbox_sequence_number, state_data_vector);
+    serializeHeader(state_data_vector);
     uint256_t proofLength = state_data_vector.size();
     marshal_uint256_t(proofLength, state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
     return state_data_vector;
 }
 
-Tuple InboxMessage::toTuple() {
+Tuple InboxMessage::toTuple() const {
     uint8_t raw_sender[32];
     std::fill_n(&raw_sender[0], 12, 0);
     std::copy(sender.begin(), sender.end(), &raw_sender[12]);
@@ -122,12 +136,13 @@ Tuple InboxMessage::toTuple() {
             timestamp,
             intx::be::load<uint256_t>(raw_sender),
             inbox_sequence_number,
+            gas_price_l1,
             uint256_t{data.size()},
             Buffer{data}};
 }
 
 InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
-    if (tup.tuple_size() != 7) {
+    if (tup.tuple_size() != 8) {
         throw std::runtime_error("wrong tup size");
     }
     auto kind = intx::narrow_cast<uint8_t>(
@@ -136,9 +151,10 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
     auto timestamp = std::get<uint256_t>(tup.get_element_unsafe(2));
     auto sender_int = std::get<uint256_t>(tup.get_element_unsafe(3));
     auto inbox_sequence_number = std::get<uint256_t>(tup.get_element_unsafe(4));
+    auto gas_price_l1 = std::get<uint256_t>(tup.get_element_unsafe(5));
     auto data_size = intx::narrow_cast<uint64_t>(
-        std::get<uint256_t>(tup.get_element_unsafe(5)));
-    auto data_buf = std::get<Buffer>(tup.get_element_unsafe(6));
+        std::get<uint256_t>(tup.get_element_unsafe(6)));
+    auto data_buf = std::get<Buffer>(tup.get_element_unsafe(7));
 
     uint8_t raw_sender[32];
     intx::be::store(raw_sender, sender_int);
@@ -152,5 +168,6 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
         data.push_back(data_buf.get(i));
     }
     return InboxMessage{
-        kind, sender, block_number, timestamp, inbox_sequence_number, data};
+        kind,         sender, block_number, timestamp, inbox_sequence_number,
+        gas_price_l1, data};
 }

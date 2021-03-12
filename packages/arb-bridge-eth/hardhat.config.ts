@@ -1,5 +1,6 @@
 import { task } from 'hardhat/config'
 import 'dotenv/config'
+import * as fs from 'fs'
 
 import 'hardhat-deploy'
 
@@ -22,22 +23,46 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
+task('create-chain', 'Creates a rollup chain').setAction(
+  async (taskArguments, hre) => {
+    const machineHash = fs.readFileSync('../MACHINEHASH').toString()
+    console.log(`Creating chain for machine with hash ${machineHash}`)
+    const { deployments, ethers } = hre
+    const [deployer] = await ethers.getSigners()
+    const rollupCreatorDep = await deployments.get('RollupCreator')
+    const RollupCreator = await ethers.getContractFactory('RollupCreator')
+    const rollupCreator = RollupCreator.attach(
+      rollupCreatorDep.address
+    ).connect(deployer)
+    const tx = await rollupCreator.createRollup(
+      machineHash,
+      900,
+      0,
+      2000000000,
+      ethers.utils.parseEther('.1'),
+      ethers.constants.AddressZero,
+      await deployer.getAddress(),
+      '0x'
+    )
+    const receipt = await tx.wait()
+    const ev = rollupCreator.interface.parseLog(
+      receipt.logs[receipt.logs.length - 1]
+    )
+    console.log(ev)
+  }
+)
+
 task('deposit', 'Deposit coins into ethbridge')
-  .addPositionalParam('chain', "The rollup chain's address")
+  .addPositionalParam('inboxAddress', "The rollup chain's address")
   .addPositionalParam('privkey', 'The private key of the depositer')
   .addPositionalParam('dest', "The destination account's address")
   .addPositionalParam('amount', 'The amount to deposit')
-  .setAction(async ({ chain, privkey, dest, amount }, bre) => {
-    const { deployments, ethers } = bre
-    const inboxDep = await deployments.getOrNull('GlobalInbox')
-    if (!inboxDep) {
-      throw Error('GlobalInbox not deployed')
-    }
-
+  .setAction(async ({ inboxAddress, privkey, dest, amount }, bre) => {
+    const { ethers } = bre
     const wallet = new ethers.Wallet(privkey, ethers.provider)
-    const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
-    const inbox = GlobalInbox.attach(inboxDep.address).connect(wallet)
-    await inbox.depositEthMessage(chain, dest, { value: amount })
+    const GlobalInbox = await ethers.getContractFactory('Inbox')
+    const inbox = GlobalInbox.attach(inboxAddress).connect(wallet)
+    await inbox.depositEth(dest, { value: amount })
   })
 
 const config = {
@@ -73,10 +98,35 @@ const config = {
   networks: {
     hardhat: {
       allowUnlimitedContractSize: true,
+      accounts: {
+        accountsBalance: '10000000000000000000000000',
+      },
     },
     parity: {
       url: 'http://127.0.0.1:7545',
     },
+    devnet: {
+      url: 'https://devnet.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbitrum: {
+      url: 'http://127.0.0.1:8547',
+      // url: 'https://kovan3.arbitrum.io/rpc',
+      gas: 999999999999999,
+      accounts: {
+        mnemonic:
+          'jar deny prosper gasp flush glass core corn alarm treat leg smart',
+        path: "m/44'/60'/0'/0",
+        initialIndex: 0,
+        count: 10,
+      },
+      timeout: 100000,
+    },
+  },
+  mocha: {
+    timeout: 0,
   },
   etherscan: {
     apiKey: process.env['ETHERSCAN_API_KEY'],

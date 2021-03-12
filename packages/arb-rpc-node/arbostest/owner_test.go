@@ -17,9 +17,8 @@
 package arbostest
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
@@ -38,7 +37,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GiveOwnershipData(common.RandAddress()),
+		Data:        arbos.GiveOwnershipData(common.RandAddress()),
 	}
 
 	tx2 := message.Transaction{
@@ -47,7 +46,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.GiveOwnershipData(sender),
+		Data:        arbos.GiveOwnershipData(sender),
 	}
 
 	tx3 := message.Transaction{
@@ -56,7 +55,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.StartArbOSUpgradeData(),
+		Data:        arbos.StartArbOSUpgradeData(),
 	}
 
 	tx4 := message.Transaction{
@@ -65,7 +64,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(2),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.ContinueArbOSUpgradeData([]byte{}),
+		Data:        arbos.ContinueArbOSUpgradeData([]byte{}),
 	}
 
 	tx5 := message.Transaction{
@@ -74,16 +73,16 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(3),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        snapshot.FinishArbOSUpgradeData(),
+		Data:        arbos.FinishArbOSUpgradeData(),
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(3), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(4), chainTime),
+		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(3), big.NewInt(0), chainTime),
+		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
 	logs, _, _, _ := runAssertion(t, messages, 5, 0)

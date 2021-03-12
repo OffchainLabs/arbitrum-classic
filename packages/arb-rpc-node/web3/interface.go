@@ -27,6 +27,8 @@ type GetBlockResult struct {
 	Timestamp        *hexutil.Uint64   `json:"timestamp"`
 	Transactions     interface{}       `json:"transactions"`
 	Uncles           *[]hexutil.Bytes  `json:"uncles"`
+
+	L1BlockNumber *hexutil.Big `json:"l1BlockNumber"`
 }
 
 type CallTxArgs struct {
@@ -36,6 +38,19 @@ type CallTxArgs struct {
 	GasPrice *hexutil.Big    `json:"gasPrice"`
 	Value    *hexutil.Big    `json:"value"`
 	Data     *hexutil.Bytes  `json:"data"`
+}
+
+type FeeSetResult struct {
+	L1Transaction *hexutil.Big `json:"l1Transaction"`
+	L1Calldata    *hexutil.Big `json:"l1Calldata"`
+	L2Storage     *hexutil.Big `json:"l2Storage"`
+	L2Computation *hexutil.Big `json:"l2Computation"`
+}
+
+type FeeStatsResult struct {
+	Prices    *FeeSetResult `json:"prices"`
+	UnitsUsed *FeeSetResult `json:"unitsUsed"`
+	Paid      *FeeSetResult `json:"paid"`
 }
 
 // Receipt represents the results of a transaction.
@@ -54,8 +69,10 @@ type GetTransactionReceiptResult struct {
 	Status            hexutil.Uint64  `json:"status"`
 
 	// Arbitrum Specific Fields
-	ReturnCode hexutil.Uint64 `json:"returnCode"`
-	ReturnData hexutil.Bytes  `json:"returnData"`
+	ReturnCode    hexutil.Uint64  `json:"returnCode"`
+	ReturnData    hexutil.Bytes   `json:"returnData"`
+	FeeStats      *FeeStatsResult `json:"feeStats"`
+	L1BlockNumber *hexutil.Big    `json:"l1BlockNumber"`
 }
 
 type TransactionResult struct {
@@ -80,4 +97,5 @@ type TransactionResult struct {
 	IndexInParent   *hexutil.Big    `json:"indexInParent"`
 	ArbType         hexutil.Uint64  `json:"arbType"`
 	ArbSubType      *hexutil.Uint64 `json:"arbSubType"`
+	L1BlockNumber   *hexutil.Big    `json:"l1BlockNumber"`
 }
