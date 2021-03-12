@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, providers, constants } from 'ethers'
+import { Signer, BigNumber, providers, constants, utils } from 'ethers'
 import { EthERC20BridgeFactory } from './abi/EthERC20BridgeFactory'
 import { EthERC20Bridge } from './abi/EthERC20Bridge'
 import { Inbox } from './abi/Inbox'
@@ -24,14 +24,32 @@ import { ERC20 } from './abi/ERC20'
 
 import { ERC20Factory } from './abi/ERC20Factory'
 import { ERC777Factory } from './abi/ERC777Factory'
+import { addressToSymbol } from './bridge_helpers'
 
+utils.computeAddress
 const MIN_APPROVAL = constants.MaxUint256
 //TODO handle address update / lowercase
 
-interface L1TokenData {
-  ERC20?: { contract: ERC20; balance: BigNumber; allowed: boolean }
-  ERC777?: { contract: ERC777Factory; balance: BigNumber; allowed: boolean }
-  CUSTOM?: { contract: ERC20; balance: BigNumber; allowed: boolean }
+export interface L1TokenData {
+  ERC20?: {
+    contract: ERC20
+    balance: BigNumber
+    allowed: boolean
+    symbol: string
+    decimals: number
+  }
+  ERC777?: {
+    contract: ERC777Factory
+    balance: BigNumber
+    allowed: boolean
+    symbol: string
+  }
+  CUSTOM?: {
+    contract: ERC20
+    balance: BigNumber
+    allowed: boolean
+    symbol: string
+  }
 }
 
 export interface Tokens {
@@ -45,6 +63,7 @@ export class L1Bridge {
   inboxCached?: Inbox
   l1Tokens: Tokens
   l1Provider: providers.Provider
+  l1EthBalance: BigNumber
 
   constructor(erc20BridgeAddress: string, l1Signer: Signer) {
     this.l1Signer = l1Signer
@@ -60,6 +79,7 @@ export class L1Bridge {
       erc20BridgeAddress,
       l1Signer
     )
+    this.l1EthBalance = BigNumber.from(0)
   }
 
   public async updateAllL1Tokens() {
@@ -70,19 +90,17 @@ export class L1Bridge {
   }
 
   public async getAndUpdateL1TokenData(erc20L1Address: string) {
-    if (!this.l1Tokens[erc20L1Address]) {
-      this.l1Tokens[erc20L1Address] = {
-        ERC20: undefined,
-        ERC777: undefined,
-        CUSTOM: undefined,
-      }
+    const tokenData = this.l1Tokens[erc20L1Address] || {
+      ERC20: undefined,
+      ERC777: undefined,
+      CUSTOM: undefined,
     }
-    const tokenData = this.l1Tokens[erc20L1Address] as L1TokenData // truthiness is ensured above
     const walletAddress = await this.getWalletAddress()
     const indboxAddress = (await this.getInbox()).address
 
     if (!tokenData.ERC20) {
       if ((await this.l1Provider.getCode(erc20L1Address)).length > 2) {
+        // If this will throw if not an ERC20, which is what we *want*.
         const ethERC20TokenContract = await ERC20Factory.connect(
           erc20L1Address,
           this.l1Signer
@@ -93,14 +111,29 @@ export class L1Bridge {
           walletAddress,
           indboxAddress
         )
+        // non-standard
+        let symbol, decimals
+        try {
+          symbol = await ethERC20TokenContract.symbol()
+          decimals = await ethERC20TokenContract.decimals()
+        } catch (e) {
+          console.info(
+            `Weird but technically standard ERC20! ah! ${erc20L1Address}`
+          )
+          symbol = addressToSymbol(erc20L1Address)
+          decimals = 18 // 🤷‍♂️
+        }
+
         const allowed = await allowance.gte(MIN_APPROVAL.div(2))
         tokenData.ERC20 = {
           contract: ethERC20TokenContract,
           balance,
           allowed,
+          symbol,
+          decimals,
         }
       } else {
-        console.warn(`ERC20 at ${erc20L1Address} not found on L1`)
+        throw new Error(`No ERC20 at ${erc20L1Address} `)
       }
     } else {
       const ethERC20TokenContract = await ERC20Factory.connect(
@@ -149,6 +182,10 @@ export class L1Bridge {
     destinationAddress?: string
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
+    const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
+    if (!tokenData.ERC20) {
+      throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
+    }
     return this.ethERC20Bridge.depositAsERC20(
       erc20L1Address,
       destination,
@@ -212,5 +249,11 @@ export class L1Bridge {
     const inboxAddress = await this.ethERC20Bridge.inbox()
     this.inboxCached = InboxFactory.connect(inboxAddress, this.l1Signer)
     return this.inboxCached
+  }
+
+  public async getAndUpdateL1EthBalance(): Promise<BigNumber> {
+    const bal = await this.l1Signer.getBalance()
+    this.l1EthBalance = bal
+    return bal
   }
 }
