@@ -156,16 +156,29 @@ library RollupLib {
             confirmHash(
                 assertion.beforeState.sendAcc,
                 assertion.afterState.sendAcc,
-                assertion.afterState.logAcc
+                assertion.afterState.logAcc,
+                assertion.afterState.sendCount,
+                assertion.afterState.logCount
             );
     }
 
     function confirmHash(
         bytes32 beforeSendAcc,
         bytes32 afterSendAcc,
-        bytes32 logAcc
+        bytes32 afterLogAcc,
+        uint256 afterSendCount,
+        uint256 afterLogCount
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(beforeSendAcc, afterSendAcc, logAcc));
+        return
+            keccak256(
+                abi.encodePacked(
+                    beforeSendAcc,
+                    afterSendAcc,
+                    afterSendCount,
+                    afterLogAcc,
+                    afterLogCount
+                )
+            );
     }
 
     function feedAccumulator(

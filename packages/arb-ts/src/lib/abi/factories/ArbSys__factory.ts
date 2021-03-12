@@ -84,6 +84,73 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'caller',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'destination',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'uniqueId',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'batchNumber',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'indexInBatch',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'arbBlockNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'ethBlockNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'timestamp',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'callvalue',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'L2ToL1Transaction',
+    type: 'event',
+  },
+  {
     inputs: [],
     name: 'arbBlockNumber',
     outputs: [
@@ -169,7 +236,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'destAddr',
+        name: 'destination',
         type: 'address',
       },
       {
@@ -179,7 +246,13 @@ const _abi = [
       },
     ],
     name: 'sendTxToL1',
-    outputs: [],
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
     stateMutability: 'payable',
     type: 'function',
   },
@@ -187,12 +260,18 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'dest',
+        name: 'destination',
         type: 'address',
       },
     ],
     name: 'withdrawEth',
-    outputs: [],
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
     stateMutability: 'payable',
     type: 'function',
   },

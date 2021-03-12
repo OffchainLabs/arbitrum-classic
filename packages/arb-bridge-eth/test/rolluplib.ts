@@ -338,17 +338,21 @@ export class RollupContract {
   }
 
   confirmNextNode(
-    logAcc: BytesLike,
     prevSendAcc: BytesLike,
-    messages: BytesLike[]
+    prevSendCount: BigNumberish,
+    sends: BytesLike[],
+    afterlogAcc: BytesLike,
+    afterLogCount: BigNumberish
   ): Promise<ContractTransaction> {
-    const messageData = ethers.utils.concat(messages)
-    const messageLengths = messages.map(msg => msg.length)
+    const messageData = ethers.utils.concat(sends)
+    const messageLengths = sends.map(msg => msg.length)
     return this.rollup.confirmNextNode(
-      logAcc,
       prevSendAcc,
       messageData,
-      messageLengths
+      messageLengths,
+      BigNumber.from(prevSendCount).add(sends.length),
+      afterlogAcc,
+      afterLogCount
     )
   }
 

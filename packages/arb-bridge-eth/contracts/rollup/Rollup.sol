@@ -299,19 +299,26 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         }
         rejectNextNode();
         rollupEventBridge.nodeRejected(firstUnresolved);
+
+        emit NodeRejected(firstUnresolved);
     }
 
     /**
      * @notice Confirm the next unresolved node
-     * @param logAcc Accumulator of the AVM logs in the confirmed node
+     * @param beforeSendAcc Accumulator of the AVM sends from the beginning of time up to the end of the previous confirmed node
      * @param sendsData Concatenated data of the sends included in the confirmed node
      * @param sendLengths Lengths of the included sends
+     * @param afterSendCount Total number of AVM sends emitted from the beginning of time after this node is confirmed
+     * @param afterLogAcc Accumulator of the AVM logs from the beginning of time up to the end of this node
+     * @param afterLogCount Total number of AVM logs emitted from the beginning of time after this node is confirmed
      */
     function confirmNextNode(
-        bytes32 logAcc,
         bytes32 beforeSendAcc,
         bytes calldata sendsData,
-        uint256[] calldata sendLengths
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
     ) external whenNotPaused {
         requireUnresolvedExists();
 
@@ -339,7 +346,14 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         bytes32 afterSendAcc = RollupLib.feedAccumulator(sendsData, sendLengths, beforeSendAcc);
         require(
-            node.confirmData() == RollupLib.confirmHash(beforeSendAcc, afterSendAcc, logAcc),
+            node.confirmData() ==
+                RollupLib.confirmHash(
+                    beforeSendAcc,
+                    afterSendAcc,
+                    afterLogAcc,
+                    afterSendCount,
+                    afterLogCount
+                ),
             "CONFIRM_DATA"
         );
 
@@ -349,7 +363,13 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         rollupEventBridge.nodeConfirmed(firstUnresolved);
 
-        emit SentLogs(logAcc);
+        emit NodeConfirmed(
+            firstUnresolved,
+            afterSendAcc,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount
+        );
     }
 
     /**
