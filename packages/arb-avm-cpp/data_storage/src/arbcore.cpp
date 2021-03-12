@@ -34,7 +34,6 @@
 #include <vector>
 
 namespace {
-constexpr auto initial_machine_hash_key = std::array<char, 1>{-10};
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
@@ -162,90 +161,58 @@ bool ArbCore::deliverMessages(
 }
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
-    ValueResult<uint256_t> result;
-    {
-        ReadTransaction tx(data_storage);
-        result = getInitialMachineHash(tx);
+    // Use latest existing checkpoint
+    ValueCache cache;
+
+    auto status = reorgToMessageOrBefore(0, true, cache);
+    if (status.ok()) {
+        return status;
+    }
+    if (!status.IsNotFound()) {
+        std::cerr << "Error with initial reorg: " << status.ToString()
+                  << std::endl;
+        return status;
     }
 
-    if (result.status.ok() && machine->hash() == result.data) {
-        if (machine->hash() != result.data) {
-            // Need to delete database and start from scratch
-            std::cerr << "Incorrect initial machine in database" << std::endl;
-            return rocksdb::Status::Corruption();
-        }
+    code->addSegment(executable.code);
+    machine = std::make_unique<MachineThread>(
+        MachineState{code, executable.static_val});
 
-        // Use latest existing checkpoint
-        ValueCache cache;
-        auto status = reorgToMessageOrBefore(0, true, cache);
+    ReadWriteTransaction tx(data_storage);
+    // Need to initialize database from scratch
+
+    auto s = saveCheckpoint(tx);
+    if (!s.ok()) {
+        std::cerr << "failed to save initial checkpoint into db: "
+                  << s.ToString() << std::endl;
+        return s;
+    }
+
+    status = updateLogInsertedCount(tx, 0);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to initialize log inserted count");
+    }
+    status = updateSendInsertedCount(tx, 0);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to initialize log inserted count");
+    }
+    status = updateMessageEntryInsertedCount(tx, 0);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to initialize log inserted count");
+    }
+
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        status = logsCursorSaveCurrentTotalCount(tx, i, 0);
         if (!status.ok()) {
-            std::cerr << "Error with initial reorg: " << status.ToString()
-                      << std::endl;
-            return status;
+            throw std::runtime_error("failed to initialize logscursor counts");
         }
-    } else {
-        code->addSegment(executable.code);
-        machine = std::make_unique<MachineThread>(
-            MachineState{code, executable.static_val});
+    }
 
-        ReadWriteTransaction tx(data_storage);
-        // Need to initialize database from scratch
-        auto res = saveMachine(tx, *machine);
-        if (!res.status.ok()) {
-            std::cerr << "failed to save initial machine: "
-                      << res.status.ToString() << std::endl;
-            return res.status;
-        }
-
-        std::vector<unsigned char> value_data;
-        auto machine_hash = machine->hash();
-        if (!machine_hash) {
-            std::cerr << "failed to compute initial machine hash" << std::endl;
-            return rocksdb::Status::Corruption();
-        }
-        marshal_uint256_t(*machine_hash, value_data);
-        auto s = tx.statePut(vecToSlice(initial_machine_hash_key),
-                             vecToSlice(value_data));
-        if (!s.ok()) {
-            std::cerr << "failed to save initial machine values into db: "
-                      << res.status.ToString() << std::endl;
-            return s;
-        }
-
-        s = saveCheckpoint(tx);
-        if (!s.ok()) {
-            std::cerr << "failed to save initial checkpoint into db: "
-                      << s.ToString() << std::endl;
-            return s;
-        }
-
-        auto status = updateLogInsertedCount(tx, 0);
-        if (!status.ok()) {
-            throw std::runtime_error("failed to initialize log inserted count");
-        }
-        status = updateSendInsertedCount(tx, 0);
-        if (!status.ok()) {
-            throw std::runtime_error("failed to initialize log inserted count");
-        }
-        status = updateMessageEntryInsertedCount(tx, 0);
-        if (!status.ok()) {
-            throw std::runtime_error("failed to initialize log inserted count");
-        }
-
-        for (size_t i = 0; i < logs_cursors.size(); i++) {
-            status = logsCursorSaveCurrentTotalCount(tx, i, 0);
-            if (!status.ok()) {
-                throw std::runtime_error(
-                    "failed to initialize logscursor counts");
-            }
-        }
-
-        s = tx.commit();
-        if (!s.ok()) {
-            std::cerr << "failed to commit initial state into db: "
-                      << s.ToString() << std::endl;
-            return s;
-        }
+    s = tx.commit();
+    if (!s.ok()) {
+        std::cerr << "failed to commit initial state into db: " << s.ToString()
+                  << std::endl;
+        return s;
     }
 
     return rocksdb::Status::OK();
@@ -253,45 +220,10 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
 bool ArbCore::initialized() const {
     ReadTransaction tx(data_storage);
-    std::string initial_raw;
-    auto s = tx.stateGet(vecToSlice(initial_machine_hash_key), &initial_raw);
-    return s.ok();
+    std::vector<unsigned char> key;
+    marshal_uint256_t(0, key);
+    return tx.checkpointGetVector(vecToSlice(key)).status.ok();
 }
-
-ValueResult<uint256_t> ArbCore::getInitialMachineHash(ReadTransaction& tx) {
-    std::string initial_raw;
-    auto s = tx.stateGet(vecToSlice(initial_machine_hash_key), &initial_raw);
-    if (!s.ok()) {
-        return {s, 0};
-    }
-
-    return {rocksdb::Status::OK(),
-            intx::be::unsafe::load<uint256_t>(
-                reinterpret_cast<const unsigned char*>(initial_raw.data()))};
-}
-
-template <class T>
-std::unique_ptr<T> ArbCore::getInitialMachineImpl(ReadTransaction& tx,
-                                                  ValueCache& value_cache) {
-    auto machine_hash = getInitialMachineHash(tx);
-    return getMachine<T>(machine_hash.data, value_cache);
-}
-
-template std::unique_ptr<Machine> ArbCore::getInitialMachineImpl(
-    ReadTransaction& tx,
-    ValueCache& value_cache);
-template std::unique_ptr<MachineThread> ArbCore::getInitialMachineImpl(
-    ReadTransaction& tx,
-    ValueCache& value_cache);
-
-template <class T>
-std::unique_ptr<T> ArbCore::getInitialMachine(ValueCache& value_cache) {
-    ReadSnapshotTransaction tx(data_storage);
-    return getInitialMachineImpl<T>(tx, value_cache);
-}
-
-template std::unique_ptr<Machine> ArbCore::getInitialMachine(ValueCache&);
-template std::unique_ptr<MachineThread> ArbCore::getInitialMachine(ValueCache&);
 
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
@@ -395,6 +327,10 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
             return it->status();
         }
 
+        if (!it->Valid()) {
+            return rocksdb::Status::NotFound();
+        }
+
         // Delete each checkpoint until at or below message_sequence_number
         setup = [&]() -> std::variant<MachineStateKeys, rocksdb::Status> {
             if (use_latest) {
@@ -492,7 +428,9 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 
     // Machine was executing obsolete messages so restore machine
     // from last checkpoint
-    machine->abortMachine();
+    if (machine != nullptr) {
+        machine->abortMachine();
+    }
 
     machine = getMachineUsingStateKeys<MachineThread>(tx, checkpoint, cache);
 
@@ -1142,20 +1080,17 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     ValueCache& cache) {
     ReadSnapshotTransaction tx(data_storage);
 
-    auto initial_hash = getInitialMachineHash(tx);
-    if (!initial_hash.status.ok()) {
-        return {initial_hash.status, nullptr};
-    }
-    auto result = getMachineStateKeys(tx, initial_hash.data);
-    if (std::holds_alternative<rocksdb::Status>(result)) {
-        return {std::get<rocksdb::Status>(result), nullptr};
+    auto closest_checkpoint =
+        getClosestExecutionMachine(tx, total_gas_used, true);
+    if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
+        return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
     }
 
     auto execution_cursor = std::make_unique<ExecutionCursor>(
-        std::get<CountedData<MachineStateKeys>>(result).data);
+        std::get<MachineStateKeys>(closest_checkpoint));
 
-    auto status = getExecutionCursorImpl(tx, *execution_cursor, total_gas_used,
-                                         false, 10, cache, false);
+    auto status = advanceExecutionCursorImpl(
+        tx, *execution_cursor, total_gas_used, false, 10, cache, false);
 
     return {status, std::move(execution_cursor)};
 }
@@ -1167,7 +1102,30 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     ValueCache& cache) {
     ReadTransaction tx(data_storage);
 
-    return getExecutionCursorImpl(
+    auto closest_checkpoint = getClosestExecutionMachine(tx, max_gas);
+    if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
+        return std::get<rocksdb::Status>(closest_checkpoint);
+    }
+
+    auto machine_state_keys = std::get<MachineStateKeys>(closest_checkpoint);
+    bool already_newer = false;
+    if (execution_cursor.getOutput().arb_gas_used >
+        machine_state_keys.output.arb_gas_used) {
+        // Execution cursor used more gas than checkpoint so use it if inbox
+        // hash valid
+        auto result = executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
+        if (result.status.ok() && result.data.first) {
+            // Execution cursor machine still valid, so use it
+            already_newer = true;
+        }
+    }
+
+    if (!already_newer) {
+        execution_cursor.machine =
+            std::get<MachineStateKeys>(closest_checkpoint);
+    }
+
+    return advanceExecutionCursorImpl(
         tx, execution_cursor,
         execution_cursor.getOutput().arb_gas_used + max_gas, go_over_gas, 10,
         cache, true);
@@ -1211,7 +1169,7 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
     return takeExecutionCursorMachineImpl(tx, execution_cursor, cache);
 }
 
-rocksdb::Status ArbCore::getExecutionCursorImpl(
+rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     ReadTransaction& tx,
     ExecutionCursor& execution_cursor,
     uint256_t total_gas_used,
@@ -1222,12 +1180,6 @@ rocksdb::Status ArbCore::getExecutionCursorImpl(
     auto handle_reorg = true;
     while (handle_reorg) {
         handle_reorg = false;
-
-        auto status =
-            executionCursorSetup(tx, execution_cursor, total_gas_used);
-        if (!status.ok()) {
-            return status;
-        }
 
         while (true) {
             auto get_messages_result = executionCursorGetMessages(
@@ -1313,10 +1265,10 @@ rocksdb::Status ArbCore::resolveStagedMessage(const ReadTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-rocksdb::Status ArbCore::executionCursorSetup(ReadTransaction& tx,
-                                              ExecutionCursor& execution_cursor,
-                                              const uint256_t& total_gas_used,
-                                              bool is_for_sideload) {
+std::variant<rocksdb::Status, MachineStateKeys>
+ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
+                                    const uint256_t& total_gas_used,
+                                    bool is_for_sideload) {
     auto target_gas_used = total_gas_used;
     while (true) {
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
@@ -1324,39 +1276,10 @@ rocksdb::Status ArbCore::executionCursorSetup(ReadTransaction& tx,
             getCheckpointUsingGas(tx, target_gas_used, false);
 
         if (std::holds_alternative<rocksdb::Status>(checkpoint_result)) {
-            auto status = std::get<rocksdb::Status>(checkpoint_result);
-            if (!status.IsNotFound()) {
-                return status;
-            }
-
-            // Initialize machine to starting state
-            auto initial_hash = getInitialMachineHash(tx);
-            if (!initial_hash.status.ok()) {
-                return initial_hash.status;
-            }
-            auto result = getMachineStateKeys(tx, initial_hash.data);
-            if (std::holds_alternative<rocksdb::Status>(result)) {
-                return std::get<rocksdb::Status>(result);
-            }
-            execution_cursor.machine =
-                std::get<CountedData<MachineStateKeys>>(result).data;
-
-            // Use execution cursor as is
-            return rocksdb::Status::OK();
+            return std::get<rocksdb::Status>(checkpoint_result);
         }
 
         auto machine_state_keys = std::get<MachineStateKeys>(checkpoint_result);
-        if (execution_cursor.getOutput().arb_gas_used >
-            machine_state_keys.output.arb_gas_used) {
-            // Execution cursor used more gas than checkpoint so use it if inbox
-            // hash valid
-            auto result =
-                executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
-            if (result.status.ok() && result.data.first) {
-                // Execution cursor machine still valid, so use it
-                return rocksdb::Status::OK();
-            }
-        }
 
         if (!is_for_sideload) {
             auto resolve_status = resolveStagedMessage(tx, machine_state_keys);
@@ -1371,8 +1294,7 @@ rocksdb::Status ArbCore::executionCursorSetup(ReadTransaction& tx,
             }
         }
 
-        execution_cursor.machine = machine_state_keys;
-        return rocksdb::Status::OK();
+        return checkpoint_result;
     }
 }
 
@@ -1394,18 +1316,34 @@ ArbCore::executionCursorGetMessagesNoLock(
     auto message_group_size = orig_message_group_size;
     std::vector<InboxMessage> messages;
 
-    // Check if current machine is obsolete
-    uint256_t totalRead = execution_cursor.getTotalMessagesRead();
-    if (totalRead > 0) {
-        auto stored_result = getMessageEntry(tx, totalRead - 1);
-        auto inboxAcc = execution_cursor.getInboxAcc();
-        if (!stored_result.status.ok() || !inboxAcc) {
+    auto inbox_accumulator =
+        execution_cursor.getOutput().fully_processed_inbox_accumulator;
+    auto total_read = execution_cursor.getOutput().fully_processed_messages;
+    auto possible_inbox_acc = execution_cursor.getInboxAcc();
+    if (possible_inbox_acc) {
+        inbox_accumulator = *possible_inbox_acc;
+        total_read = execution_cursor.getTotalMessagesRead();
+    }
+
+    if (total_read > 0) {
+        auto stored_result = getMessageEntry(tx, total_read - 1);
+        if (!stored_result.status.ok()) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), std::make_pair(false, messages)};
         }
-        if (*inboxAcc != stored_result.data.inbox_acc) {
+
+        if (inbox_accumulator != stored_result.data.inbox_acc) {
             // Obsolete machine, reorg occurred
             return {rocksdb::Status::OK(), std::make_pair(false, messages)};
+        }
+
+        if (!possible_inbox_acc.has_value()) {
+            // We must have an unresolved staged message
+            // Verify that the last consumed is still the last in the block
+            if (!stored_result.data.last_message_in_block) {
+                // Reorg occured
+                return {rocksdb::Status::OK(), std::make_pair(false, messages)};
+            }
         }
     }
 
@@ -2180,20 +2118,17 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
         return {position_res.status, std::unique_ptr<Machine>(nullptr)};
     }
 
-    auto initial_hash = getInitialMachineHash(tx);
-    if (!initial_hash.status.ok()) {
-        return {initial_hash.status, nullptr};
-    }
-    auto result = getMachineStateKeys(tx, initial_hash.data);
-    if (std::holds_alternative<rocksdb::Status>(result)) {
-        return {std::get<rocksdb::Status>(result), nullptr};
+    auto closest_checkpoint =
+        getClosestExecutionMachine(tx, position_res.data, true);
+    if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
+        return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
     }
 
     auto execution_cursor = std::make_unique<ExecutionCursor>(
-        std::get<CountedData<MachineStateKeys>>(result).data);
+        std::get<MachineStateKeys>(closest_checkpoint));
 
-    auto status =
-        executionCursorSetup(tx, *execution_cursor, position_res.data, true);
+    auto status = advanceExecutionCursorImpl(
+        tx, *execution_cursor, position_res.data, false, 10, cache, false);
 
     return {status,
             takeExecutionCursorMachineImpl(tx, *execution_cursor, cache)};
