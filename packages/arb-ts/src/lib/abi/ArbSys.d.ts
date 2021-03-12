@@ -84,11 +84,13 @@ interface ArbSysInterface extends ethers.utils.Interface {
     'ERC20Withdrawal(address,address,uint256)': EventFragment
     'ERC721Withdrawal(address,address,uint256)': EventFragment
     'EthWithdrawal(address,uint256)': EventFragment
+    'L2ToL1Transaction(address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'ERC20Withdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'ERC721Withdrawal'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'EthWithdrawal'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'L2ToL1Transaction'): EventFragment
 }
 
 export class ArbSys extends Contract {
@@ -140,24 +142,24 @@ export class ArbSys extends Contract {
     'isTopLevelCall()'(overrides?: CallOverrides): Promise<[boolean]>
 
     sendTxToL1(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'sendTxToL1(address,bytes)'(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     withdrawEth(
-      dest: string,
+      destination: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'withdrawEth(address)'(
-      dest: string,
+      destination: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
   }
@@ -197,24 +199,24 @@ export class ArbSys extends Contract {
   'isTopLevelCall()'(overrides?: CallOverrides): Promise<boolean>
 
   sendTxToL1(
-    destAddr: string,
+    destination: string,
     calldataForL1: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'sendTxToL1(address,bytes)'(
-    destAddr: string,
+    destination: string,
     calldataForL1: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   withdrawEth(
-    dest: string,
+    destination: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'withdrawEth(address)'(
-    dest: string,
+    destination: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
@@ -254,23 +256,26 @@ export class ArbSys extends Contract {
     'isTopLevelCall()'(overrides?: CallOverrides): Promise<boolean>
 
     sendTxToL1(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendTxToL1(address,bytes)'(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
-    withdrawEth(dest: string, overrides?: CallOverrides): Promise<void>
+    withdrawEth(
+      destination: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     'withdrawEth(address)'(
-      dest: string,
+      destination: string,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
   }
 
   filters: {
@@ -287,6 +292,19 @@ export class ArbSys extends Contract {
     ): EventFilter
 
     EthWithdrawal(destAddr: string | null, amount: null): EventFilter
+
+    L2ToL1Transaction(
+      caller: null,
+      destination: string | null,
+      uniqueId: BigNumberish | null,
+      batchNumber: BigNumberish | null,
+      indexInBatch: null,
+      arbBlockNum: null,
+      ethBlockNum: null,
+      timestamp: null,
+      callvalue: null,
+      data: null
+    ): EventFilter
   }
 
   estimateGas: {
@@ -325,21 +343,24 @@ export class ArbSys extends Contract {
     'isTopLevelCall()'(overrides?: CallOverrides): Promise<BigNumber>
 
     sendTxToL1(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'sendTxToL1(address,bytes)'(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    withdrawEth(dest: string, overrides?: PayableOverrides): Promise<BigNumber>
+    withdrawEth(
+      destination: string,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
 
     'withdrawEth(address)'(
-      dest: string,
+      destination: string,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
   }
@@ -380,24 +401,24 @@ export class ArbSys extends Contract {
     'isTopLevelCall()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     sendTxToL1(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'sendTxToL1(address,bytes)'(
-      destAddr: string,
+      destination: string,
       calldataForL1: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     withdrawEth(
-      dest: string,
+      destination: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'withdrawEth(address)'(
-      dest: string,
+      destination: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
   }

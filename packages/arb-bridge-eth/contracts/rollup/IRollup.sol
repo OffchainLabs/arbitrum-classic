@@ -32,14 +32,22 @@ interface IRollup {
         uint256[4][2] assertionIntFields
     );
 
+    event NodeConfirmed(
+        uint256 indexed nodeNum,
+        bytes32 afterSendAcc,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    );
+
+    event NodeRejected(uint256 indexed nodeNum);
+
     event RollupChallengeStarted(
         address indexed challengeContract,
         address asserter,
         address challenger,
         uint256 challengedNode
     );
-
-    event SentLogs(bytes32 logsAccHash);
 
     function initialize(
         bytes32 _machineHash,

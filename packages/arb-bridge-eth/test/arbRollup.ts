@@ -211,12 +211,12 @@ describe('ArbRollup', () => {
 
   it('should confirm node', async function () {
     await tryAdvanceChain(confirmationPeriodBlocks * 2)
-    await rollup.confirmNextNode(zerobytes32, zerobytes32, [])
+    await rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
   })
 
   it('should confirm next node', async function () {
     await tryAdvanceChain(minimumAssertionPeriod)
-    await rollup.confirmNextNode(zerobytes32, zerobytes32, [])
+    await rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
   })
 
   let challengedNode: Node
@@ -245,7 +245,7 @@ describe('ArbRollup', () => {
         challengedNode.checkTime(arbGasSpeedLimitPerBlock)
     )
     await expect(
-      rollup.confirmNextNode(zerobytes32, zerobytes32, [])
+      rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
     ).to.be.revertedWith('NOT_ALL_STAKED')
   })
 
@@ -298,7 +298,7 @@ describe('ArbRollup', () => {
   })
 
   it('confirm first staker node', async function () {
-    await rollup.confirmNextNode(zerobytes32, zerobytes32, [])
+    await rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
   })
 
   it('should reject out of order second node', async function () {
@@ -359,7 +359,7 @@ describe('ArbRollup', () => {
 
   it('confirm next node', async function () {
     await tryAdvanceChain(confirmationPeriodBlocks)
-    await rollup.confirmNextNode(zerobytes32, zerobytes32, [])
+    await rollup.confirmNextNode(zerobytes32, 0, [], zerobytes32, 0)
   })
 
   it('can add stake', async function () {

@@ -45,14 +45,23 @@ func (r *Rollup) RejectNextNode(ctx context.Context, staker common.Address) erro
 	return err
 }
 
-func (r *Rollup) ConfirmNextNode(ctx context.Context, logAcc common.Hash, beforeSendAcc common.Hash, sends [][]byte) error {
+func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion, sends [][]byte) error {
 	var sendsData []byte
 	sendLengths := make([]*big.Int, 0, len(sends))
 	for _, msg := range sends {
 		sendsData = append(sendsData, msg...)
 		sendLengths = append(sendLengths, new(big.Int).SetInt64(int64(len(msg))))
 	}
-	_, err := r.builderCon.ConfirmNextNode(authWithContext(ctx, r.builderAuth), logAcc, beforeSendAcc, sendsData, sendLengths)
+
+	_, err := r.builderCon.ConfirmNextNode(
+		authWithContext(ctx, r.builderAuth),
+		assertion.Before.SendAcc,
+		sendsData,
+		sendLengths,
+		assertion.After.TotalSendCount,
+		assertion.After.LogAcc,
+		assertion.After.TotalLogCount,
+	)
 	return err
 }
 
