@@ -1285,7 +1285,8 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
             return std::get<rocksdb::Status>(checkpoint_result);
         }
 
-        auto machine_state_keys = std::get<MachineStateKeys>(checkpoint_result);
+        auto& machine_state_keys =
+            std::get<MachineStateKeys>(checkpoint_result);
 
         if (!is_for_sideload) {
             auto resolve_status = resolveStagedMessage(tx, machine_state_keys);
@@ -1300,7 +1301,7 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
             }
         }
 
-        return checkpoint_result;
+        return machine_state_keys;
     }
 }
 
