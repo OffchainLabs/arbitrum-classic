@@ -1301,7 +1301,7 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
             }
         }
 
-        return machine_state_keys;
+        return checkpoint_result;
     }
 }
 
