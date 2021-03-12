@@ -126,7 +126,6 @@ class ArbCore {
 
    private:
     // Private database interaction
-    ValueResult<uint256_t> getInitialMachineHash(ReadTransaction& tx);
     rocksdb::Status saveAssertion(ReadWriteTransaction& tx,
                                   const Assertion& assertion,
                                   uint256_t arb_gas_used);
@@ -150,15 +149,10 @@ class ArbCore {
    public:
     // To be deprecated, use checkpoints instead
     template <class T>
-    std::unique_ptr<T> getInitialMachine(ValueCache& value_cache);
-    template <class T>
     std::unique_ptr<T> getMachine(uint256_t machineHash,
                                   ValueCache& value_cache);
 
    private:
-    template <class T>
-    std::unique_ptr<T> getInitialMachineImpl(ReadTransaction& tx,
-                                             ValueCache& value_cache);
     template <class T>
     std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
                                       uint256_t machineHash,
@@ -218,13 +212,14 @@ class ArbCore {
 
    private:
     // Execution cursor internal functions
-    rocksdb::Status getExecutionCursorImpl(ReadTransaction& tx,
-                                           ExecutionCursor& execution_cursor,
-                                           uint256_t total_gas_used,
-                                           bool go_over_gas,
-                                           uint256_t message_group_size,
-                                           ValueCache& cache,
-                                           bool possible_reorg);
+    rocksdb::Status advanceExecutionCursorImpl(
+        ReadTransaction& tx,
+        ExecutionCursor& execution_cursor,
+        uint256_t total_gas_used,
+        bool go_over_gas,
+        uint256_t message_group_size,
+        ValueCache& cache,
+        bool possible_reorg);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -316,10 +311,11 @@ class ArbCore {
     executionCursorGetMessagesNoLock(ReadTransaction& tx,
                                      const ExecutionCursor& execution_cursor,
                                      const uint256_t& orig_message_group_size);
-    rocksdb::Status executionCursorSetup(ReadTransaction& tx,
-                                         ExecutionCursor& execution_cursor,
-                                         const uint256_t& total_gas_used,
-                                         bool is_for_sideload = false);
+
+    std::variant<rocksdb::Status, MachineStateKeys> getClosestExecutionMachine(
+        ReadTransaction& tx,
+        const uint256_t& total_gas_used,
+        bool is_for_sideload = false);
 
     rocksdb::Status updateLogInsertedCount(ReadWriteTransaction& tx,
                                            const uint256_t& log_index);

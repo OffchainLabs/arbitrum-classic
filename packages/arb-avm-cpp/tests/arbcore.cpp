@@ -90,11 +90,6 @@ TEST_CASE("ArbCore tests") {
     DBDeleter deleter;
     ValueCache value_cache{};
 
-    ArbStorage storage(dbpath);
-    REQUIRE(storage.initialize(arb_os_path).ok());
-    auto arbCore = storage.getArbCore();
-    REQUIRE(arbCore->startThread());
-
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
         "evm_test_arbsys", "evm_xcontract_call_with_constructors"};
@@ -103,6 +98,12 @@ TEST_CASE("ArbCore tests") {
 
     for (const auto& filename : files) {
         INFO("Testing " << filename);
+
+        ArbStorage storage(dbpath);
+        REQUIRE(storage.initialize(arb_os_path).ok());
+        auto arbCore = storage.getArbCore();
+        REQUIRE(arbCore->startThread());
+
         auto test_file =
             std::string{arb_os_test_cases_path} + "/" + filename + ".aoslog";
 
@@ -210,21 +211,6 @@ TEST_CASE("ArbCore tests") {
         //        REQUIRE(before_sideload.data->machine_state.loadCurrentInstruction()
         //                    .op.opcode == OpCode::SIDELOAD);
     }
-
-    // Reorg to first message
-    std::vector<std::vector<unsigned char>> empty_messages;
-    REQUIRE(arbCore->deliverMessages(empty_messages, 0, false, 1));
-
-    ArbCore::message_status_enum status;
-    while (true) {
-        status = arbCore->messagesStatus();
-        if (status != ArbCore::MESSAGES_EMPTY &&
-            status != ArbCore::MESSAGES_READY) {
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
 }
 
 /*

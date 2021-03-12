@@ -59,7 +59,13 @@ std::shared_ptr<ArbCore> ArbStorage::getArbCore() {
 
 std::unique_ptr<Machine> ArbStorage::getInitialMachine(
     ValueCache& value_cache) const {
-    return arb_core->getInitialMachine<Machine>(value_cache);
+    auto cursor = arb_core->getExecutionCursor(0, value_cache);
+    if (!cursor.status.ok()) {
+        throw std::runtime_error(
+            "failed to get initial machine. Database not initialized of "
+            "corrupted");
+    }
+    return arb_core->takeExecutionCursorMachine(*cursor.data, value_cache);
 }
 
 std::unique_ptr<Machine> ArbStorage::getMachine(uint256_t machineHash,
