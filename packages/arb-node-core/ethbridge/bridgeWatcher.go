@@ -2,6 +2,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
 	"sort"
 	"strings"
@@ -85,6 +86,9 @@ func (r *BridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
 		return nil, err
+	}
+	for _, evmLog := range logs {
+		monitor.GlobalMonitor.ReaderGotBatch(common.NewHashFromEth(evmLog.TxHash))
 	}
 	return r.logsToDeliveredMessages(ctx, logs)
 }

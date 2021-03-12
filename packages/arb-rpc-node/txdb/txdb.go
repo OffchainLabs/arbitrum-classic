@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
 	"sync"
 	"time"
@@ -198,9 +199,10 @@ func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 		return db.handleBlockReceipt(res)
 	case *evm.MerkleRootResult:
 		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
-	default:
-		return nil
+	case *evm.TxResult:
+		monitor.GlobalMonitor.GotLog(res.IncomingRequest.MessageID)
 	}
+	return nil
 }
 
 func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
