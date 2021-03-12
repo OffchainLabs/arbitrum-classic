@@ -52,7 +52,7 @@ type ChainTimeGetter interface {
 }
 
 type TxDB struct {
-	lookup    core.ArbOutputLookup
+	Lookup    core.ArbOutputLookup
 	as        machine.NodeStore
 	chain     common.Address
 	logReader *core.LogReader
@@ -76,7 +76,7 @@ func New(
 	updateFrequency time.Duration,
 ) (*TxDB, error) {
 	db := &TxDB{
-		lookup: arbCore,
+		Lookup: arbCore,
 		as:     as,
 		chain:  chain,
 	}
@@ -103,7 +103,7 @@ func (db *TxDB) Close() {
 }
 
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
-	avmLogs, err := db.lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
+	avmLogs, err := db.Lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +322,7 @@ func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
 	if logIndex == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*logIndex))
+	logVal, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(*logIndex))
 	if err != nil {
 		return nil, err
 	}
@@ -360,7 +360,7 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	if requestCandidate == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*requestCandidate))
+	logVal, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(*requestCandidate))
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 }
 
 func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
-	blockLog, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(block.BlockLog))
+	blockLog, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(block.BlockLog))
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +413,7 @@ func (db *TxDB) LatestBlock() (uint64, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
-	mach, err := db.lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
 	}
