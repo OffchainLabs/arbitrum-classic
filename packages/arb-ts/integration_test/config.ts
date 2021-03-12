@@ -1,7 +1,6 @@
 export default {
-  ethRPC: '',
-  arbRPC: '',
+  ethRPC: 'https://devnet.arbitrum.io/rpc',
+  arbRPC: 'https://devnet-l2.arbitrum.io/rpc',
   preFundedSignerPK: '',
-  inboxAddress: '',
   erc20BridgeAddress: '',
 }
