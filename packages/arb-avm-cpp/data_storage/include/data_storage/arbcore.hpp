@@ -138,7 +138,6 @@ class ArbCore {
         const uint256_t& total_gas,
         bool after_gas);
     rocksdb::Status reorgToMessageOrBefore(
-        ReadWriteTransaction& tx,
         const uint256_t& message_sequence_number,
         bool use_latest,
         ValueCache& cache);
@@ -199,8 +198,7 @@ class ArbCore {
     void handleLogsCursorRequested(ReadTransaction& tx,
                                    size_t cursor_index,
                                    ValueCache& cache);
-    rocksdb::Status handleLogsCursorReorg(ReadWriteTransaction& tx,
-                                          size_t cursor_index,
+    rocksdb::Status handleLogsCursorReorg(size_t cursor_index,
                                           uint256_t log_count,
                                           ValueCache& cache);
 

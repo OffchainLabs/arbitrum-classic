@@ -162,9 +162,12 @@ bool ArbCore::deliverMessages(
 }
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
-    ReadWriteTransaction tx(data_storage);
+    ValueResult<uint256_t> result;
+    {
+        ReadTransaction tx(data_storage);
+        result = getInitialMachineHash(tx);
+    }
 
-    auto result = getInitialMachineHash(tx);
     if (result.status.ok() && machine->hash() == result.data) {
         if (machine->hash() != result.data) {
             // Need to delete database and start from scratch
@@ -174,7 +177,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 
         // Use latest existing checkpoint
         ValueCache cache;
-        auto status = reorgToMessageOrBefore(tx, 0, true, cache);
+        auto status = reorgToMessageOrBefore(0, true, cache);
         if (!status.ok()) {
             std::cerr << "Error with initial reorg: " << status.ToString()
                       << std::endl;
@@ -185,6 +188,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         machine = std::make_unique<MachineThread>(
             MachineState{code, executable.static_val});
 
+        ReadWriteTransaction tx(data_storage);
         // Need to initialize database from scratch
         auto res = saveMachine(tx, *machine);
         if (!res.status.ok()) {
@@ -235,13 +239,13 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
                     "failed to initialize logscursor counts");
             }
         }
-    }
 
-    auto s = tx.commit();
-    if (!s.ok()) {
-        std::cerr << "failed to commit initial state into db: " << s.ToString()
-                  << std::endl;
-        return s;
+        s = tx.commit();
+        if (!s.ok()) {
+            std::cerr << "failed to commit initial state into db: "
+                      << s.ToString() << std::endl;
+            return s;
+        }
     }
 
     return rocksdb::Status::OK();
@@ -374,71 +378,73 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
 // If use_latest is true, message_sequence_number is ignored and the latest
 // checkpoint is used.
 rocksdb::Status ArbCore::reorgToMessageOrBefore(
-    ReadWriteTransaction& tx,
     const uint256_t& message_sequence_number,
     bool use_latest,
     ValueCache& cache) {
-    auto it = tx.checkpointGetIterator();
+    std::variant<MachineStateKeys, rocksdb::Status> setup =
+        rocksdb::Status::OK();
 
-    // Find first checkpoint to delete
-    it->SeekToLast();
-    if (!it->status().ok()) {
-        return it->status();
-    }
+    {
+        ReadWriteTransaction tx(data_storage);
 
-    // Delete each checkpoint until at or below message_sequence_number
-    auto setup = [&]() -> std::variant<MachineStateKeys, rocksdb::Status> {
-        if (use_latest) {
-            std::vector<unsigned char> checkpoint_vector(
-                it->value().data(), it->value().data() + it->value().size());
-            return extractMachineStateKeys(checkpoint_vector.begin(),
-                                           checkpoint_vector.end());
-        } else {
-            while (it->Valid()) {
+        auto it = tx.checkpointGetIterator();
+
+        // Find first checkpoint to delete
+        it->SeekToLast();
+        if (!it->status().ok()) {
+            return it->status();
+        }
+
+        // Delete each checkpoint until at or below message_sequence_number
+        setup = [&]() -> std::variant<MachineStateKeys, rocksdb::Status> {
+            if (use_latest) {
                 std::vector<unsigned char> checkpoint_vector(
                     it->value().data(),
                     it->value().data() + it->value().size());
-                auto checkpoint = extractMachineStateKeys(
-                    checkpoint_vector.begin(), checkpoint_vector.end());
-                if (checkpoint.getTotalMessagesRead() == 0 ||
-                    message_sequence_number >=
-                        checkpoint.getTotalMessagesRead() - 1) {
-                    // Good checkpoint
-                    return checkpoint;
+                return extractMachineStateKeys(checkpoint_vector.begin(),
+                                               checkpoint_vector.end());
+            } else {
+                while (it->Valid()) {
+                    std::vector<unsigned char> checkpoint_vector(
+                        it->value().data(),
+                        it->value().data() + it->value().size());
+                    auto checkpoint = extractMachineStateKeys(
+                        checkpoint_vector.begin(), checkpoint_vector.end());
+                    if (checkpoint.getTotalMessagesRead() == 0 ||
+                        message_sequence_number >=
+                            checkpoint.getTotalMessagesRead() - 1) {
+                        // Good checkpoint
+                        return checkpoint;
+                    }
+
+                    // Obsolete checkpoint, need to delete referenced machine
+                    deleteMachineState(tx, checkpoint);
+
+                    // Delete checkpoint to make sure it isn't used later
+                    tx.checkpointDelete(it->key());
+
+                    it->Prev();
+                    if (!it->status().ok()) {
+                        return it->status();
+                    }
                 }
-
-                // Obsolete checkpoint, need to delete referenced machine
-                deleteMachineState(tx, checkpoint);
-
-                // Delete checkpoint to make sure it isn't used later
-                tx.checkpointDelete(it->key());
-
-                it->Prev();
-                if (!it->status().ok()) {
-                    return it->status();
-                }
+                return it->status();
             }
-            return it->status();
-        }
-    }();
+        }();
 
-    it = nullptr;
-    if (std::holds_alternative<rocksdb::Status>(setup)) {
-        return std::get<rocksdb::Status>(setup);
+        it = nullptr;
+        if (std::holds_alternative<rocksdb::Status>(setup)) {
+            return std::get<rocksdb::Status>(setup);
+        }
+
+        auto status = tx.commit();
+        if (!status.ok()) {
+            return status;
+        }
     }
     MachineStateKeys checkpoint = std::get<MachineStateKeys>(std::move(setup));
 
-    uint256_t next_sideload_block_number = 0;
-    if (checkpoint.output.last_sideload) {
-        next_sideload_block_number = *checkpoint.output.last_sideload + 1;
-    }
-
-    auto status = deleteSideloadsStartingAt(tx, next_sideload_block_number);
-    if (!status.ok()) {
-        return status;
-    }
-
-    auto log_inserted_count = logInsertedCountImpl(tx);
+    auto log_inserted_count = logInsertedCount();
     if (!log_inserted_count.status.ok()) {
         std::cerr << "Error getting inserted count in Cursor Reorg: "
                   << log_inserted_count.status.ToString() << "\n";
@@ -448,12 +454,23 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
     if (checkpoint.output.log_count < log_inserted_count.data) {
         // Update log cursors, must be called before logs are deleted
         for (size_t i = 0; i < logs_cursors.size(); i++) {
-            status = handleLogsCursorReorg(tx, i, checkpoint.output.log_count,
-                                           cache);
+            auto status =
+                handleLogsCursorReorg(i, checkpoint.output.log_count, cache);
             if (!status.ok()) {
                 return status;
             }
         }
+    }
+
+    uint256_t next_sideload_block_number = 0;
+    if (checkpoint.output.last_sideload) {
+        next_sideload_block_number = *checkpoint.output.last_sideload + 1;
+    }
+
+    ReadWriteTransaction tx(data_storage);
+    auto status = deleteSideloadsStartingAt(tx, next_sideload_block_number);
+    if (!status.ok()) {
+        return status;
     }
 
     // Delete logs individually to handle reference counts
@@ -479,7 +496,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 
     machine = getMachineUsingStateKeys<MachineThread>(tx, checkpoint, cache);
 
-    return rocksdb::Status::OK();
+    return tx.commit();
 }
 
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
@@ -1514,92 +1531,115 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     const uint256_t& message_count_in_machine,
     const std::optional<uint256_t>& reorg_message_count,
     ValueCache& cache) {
-    ReadWriteTransaction tx(data_storage);
+    uint256_t first_sequence_number = 0;
+    uint256_t current_sequence_number = 0;
+    uint256_t existing_message_count = 0;
+    uint256_t previous_inbox_acc = 0;
 
-    auto message_count_result = messageEntryInsertedCountImpl(tx);
-    if (!message_count_result.status.ok()) {
-        return message_count_result.status;
-    }
-    auto existing_message_count = message_count_result.data;
+    {
+        ReadWriteTransaction tx(data_storage);
+        auto message_count_result = messageEntryInsertedCountImpl(tx);
+        if (!message_count_result.status.ok()) {
+            std::cerr << "error in addMessages getting message entry count: "
+                      << message_count_result.status.ToString() << std::endl;
+            return message_count_result.status;
+        }
+        existing_message_count = message_count_result.data;
 
-    auto previous_inbox_acc = prev_inbox_acc;
+        previous_inbox_acc = prev_inbox_acc;
 
-    uint256_t first_sequence_number;
-    uint256_t current_sequence_number;
-    if (!new_messages.empty()) {
-        auto first_message = extractInboxMessage(new_messages[0]);
-        first_sequence_number = first_message.inbox_sequence_number;
+        if (!new_messages.empty()) {
+            auto first_message = extractInboxMessage(new_messages[0]);
+            first_sequence_number = first_message.inbox_sequence_number;
 
-        if (first_message.inbox_sequence_number > 0) {
-            if (first_message.inbox_sequence_number > existing_message_count) {
-                // Not allowed to skip message sequence numbers, ask for older
-                // messages
+            if (first_message.inbox_sequence_number > 0) {
+                if (first_message.inbox_sequence_number >
+                    existing_message_count) {
+                    // Not allowed to skip message sequence numbers, ask for
+                    // older messages
+                    return std::nullopt;
+                }
+
+                // Check that previous_inbox_acc matches acc from previous
+                // message
+                auto previous_sequence_number =
+                    first_message.inbox_sequence_number - 1;
+                auto previous_result =
+                    getMessageEntry(tx, previous_sequence_number);
+                if (!previous_result.status.ok()) {
+                    std::cerr
+                        << "error in addMessages getting previous message: "
+                        << previous_result.status.ToString() << std::endl;
+                    return previous_result.status;
+                }
+
+                if (previous_result.data.inbox_acc != previous_inbox_acc) {
+                    // Previous inbox doesn't match which means reorg happened
+                    // and caller needs to try again with messages from earlier
+                    // block
+                    return std::nullopt;
+                }
+
+                current_sequence_number = first_sequence_number;
+            }
+        } else {
+            if (!reorg_message_count) {
+                std::cerr << "reorg_sequence_number must be provided if no "
+                          << "messages provided" << std::endl;
                 return std::nullopt;
             }
 
-            // Check that previous_inbox_acc matches acc from previous message
-            auto previous_sequence_number =
-                first_message.inbox_sequence_number - 1;
-            auto previous_result =
-                getMessageEntry(tx, previous_sequence_number);
-            if (!previous_result.status.ok()) {
-                return previous_result.status;
-            }
-
-            if (previous_result.data.inbox_acc != previous_inbox_acc) {
-                // Previous inbox doesn't match which means reorg happened and
-                // caller needs to try again with messages from earlier block
+            if (*reorg_message_count == 0) {
+                std::cerr << "cannot reorg past first message right now"
+                          << std::endl;
                 return std::nullopt;
             }
-
-            current_sequence_number = first_sequence_number;
-        }
-    } else {
-        if (!reorg_message_count) {
-            std::cerr << "reorg_sequence_number must be provided if no "
-                         "messages provided"
-                      << std::endl;
-            return std::nullopt;
+            current_sequence_number = *reorg_message_count;
+            first_sequence_number = current_sequence_number;
         }
 
-        if (*reorg_message_count == 0) {
-            std::cerr << "cannot reorg past first message right now"
-                      << std::endl;
-            return std::nullopt;
+        auto status = tx.commit();
+        if (!status.ok()) {
+            std::cerr << "error committing first part of addMessages: "
+                      << status.ToString() << std::endl;
+            return status;
         }
-        current_sequence_number = *reorg_message_count;
-        first_sequence_number = current_sequence_number;
     }
 
-    // Skip any valid messages that we already have in database
-    auto new_messages_count = new_messages.size();
+    size_t new_messages_count = new_messages.size();
     size_t new_messages_index = 0;
-    while ((current_sequence_number < existing_message_count) &&
-           (new_messages_index < new_messages_count)) {
-        auto existing_message_entry =
-            getMessageEntry(tx, current_sequence_number);
-        if (!existing_message_entry.status.ok()) {
-            return existing_message_entry.status;
-        }
-        auto current_inbox_acc =
-            hash_inbox(previous_inbox_acc, new_messages[new_messages_index]);
-        if (existing_message_entry.data.inbox_acc != current_inbox_acc) {
-            // Entry doesn't match because of reorg
-            break;
-        }
+    {
+        ReadTransaction tx(data_storage);
 
-        if (existing_message_entry.data.last_message_in_block &&
-            !(last_block_complete &&
-              new_messages_index == new_messages_count - 1)) {
-            // existing message was marked as last message in block but
-            // new message is not marked as last message, so they should be
-            // considered different
-            break;
-        }
+        // Skip any valid messages that we already have in database
+        while ((current_sequence_number < existing_message_count) &&
+               (new_messages_index < new_messages_count)) {
+            auto existing_message_entry =
+                getMessageEntry(tx, current_sequence_number);
+            if (!existing_message_entry.status.ok()) {
+                return existing_message_entry.status;
+            }
+            auto current_inbox_acc = hash_inbox(
+                previous_inbox_acc, new_messages[new_messages_index]);
+            if (existing_message_entry.data.inbox_acc != current_inbox_acc) {
+                // Entry doesn't match because of reorg
+                break;
+            }
 
-        new_messages_index++;
-        previous_inbox_acc = current_inbox_acc;
-        current_sequence_number = first_sequence_number + new_messages_index;
+            if (existing_message_entry.data.last_message_in_block &&
+                !(last_block_complete &&
+                  new_messages_index == new_messages_count - 1)) {
+                // existing message was marked as last message in block but
+                // new message is not marked as last message, so they should be
+                // considered different
+                break;
+            }
+
+            new_messages_index++;
+            previous_inbox_acc = current_inbox_acc;
+            current_sequence_number =
+                first_sequence_number + new_messages_index;
+        }
     }
 
     std::optional<uint256_t> previous_valid_sequence_number;
@@ -1607,20 +1647,35 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         // Reorg occurred
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
+        {
+            ReadWriteTransaction tx(data_storage);
+
+            // Truncate MessageEntries to last valid message
+            updateMessageEntryInsertedCount(tx, current_sequence_number);
+
+            auto status = tx.commit();
+            if (!status.ok()) {
+                std::cerr << "error committing first part of addMessages: "
+                          << status.ToString() << std::endl;
+                return status;
+            }
+        }
+
         previous_valid_sequence_number = current_sequence_number - 1;
-
-        // Truncate MessageEntries to last valid message
-        updateMessageEntryInsertedCount(tx, current_sequence_number);
-
         if (current_sequence_number <= message_count_in_machine - 1) {
             // Reorg checkpoint and everything else
             auto reorg_status = reorgToMessageOrBefore(
-                tx, *previous_valid_sequence_number, false, cache);
+                *previous_valid_sequence_number, false, cache);
             if (!reorg_status.ok()) {
+                std::cerr
+                    << "error in addMessages calling reorgToMessageOrBefore: "
+                    << reorg_status.ToString() << std::endl;
                 return reorg_status;
             }
         }
     }
+
+    ReadWriteTransaction tx(data_storage);
 
     while (new_messages_index < new_messages_count) {
         // Encode key
@@ -1661,6 +1716,8 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         auto put_status = tx.messageEntryPut(
             vecToSlice(key), vecToSlice(serialized_messageentry));
         if (!put_status.ok()) {
+            std::cerr << "error saving message entry into database: "
+                      << put_status.ToString() << std::endl;
             return put_status;
         }
 
@@ -1671,7 +1728,13 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
     updateMessageEntryInsertedCount(tx, current_sequence_number);
 
-    return tx.commit();
+    auto status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "error committing final part of addMessages: "
+                  << status.ToString() << std::endl;
+    }
+
+    return status;
 }
 
 // deleteLogsStartingAt deletes the given index along with any
@@ -1794,14 +1857,15 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
 // because it is happening out of line.
 // Note that cursor reorg never adds new messages, but might add deleted
 // messages.
-rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
-                                               size_t cursor_index,
+rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
                                                uint256_t log_count,
                                                ValueCache& cache) {
     if (cursor_index >= logs_cursors.size()) {
         std::cerr << "Invalid logsCursor index: " << cursor_index << "\n";
         throw std::runtime_error("Invalid logsCursor index");
     }
+
+    ReadWriteTransaction tx(data_storage);
 
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
@@ -1867,7 +1931,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(ReadWriteTransaction& tx,
         }
     }
 
-    return rocksdb::Status::OK();
+    return tx.commit();
 }
 
 bool ArbCore::logsCursorRequest(size_t cursor_index, uint256_t count) {
