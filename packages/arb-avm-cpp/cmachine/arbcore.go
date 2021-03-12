@@ -27,6 +27,7 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -143,6 +144,14 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 }
 
 func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, error) {
+	if count.Cmp(big.NewInt(0)) == 0 {
+		return nil, nil
+	}
+	currentCount, err := ac.GetLogCount()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("GetLogs", startIndex, count, currentCount)
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetLogs(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
@@ -274,12 +283,12 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
-func (ec *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
+func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
-	cMachine := C.arbCoreTakeMachine(ec.c, cursor.c)
+	cMachine := C.arbCoreTakeMachine(ac.c, cursor.c)
 	if cMachine == nil {
 		return nil, errors.Errorf("error taking machine from execution cursor")
 	}
