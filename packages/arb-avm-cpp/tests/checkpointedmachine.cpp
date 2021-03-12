@@ -31,6 +31,7 @@ TEST_CASE("CheckpointedMachine tests") {
     SECTION("CheckpointedMachine basic") {
         ReadWriteTransaction tx(storage);
         REQUIRE(arbcore->initialized());
+        REQUIRE(arbcore->startThread());
         REQUIRE(arbcore->maxCheckpointGas() == 0);
 
         REQUIRE(arbcore->triggerSaveCheckpoint().ok());
