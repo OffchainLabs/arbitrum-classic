@@ -19,6 +19,7 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"github.com/pkg/errors"
 	"math/big"
 	"sync"
@@ -211,6 +212,8 @@ func newBatcher(
 						logger.Fatal().Stack().Err(err).Msg("Error submitted batch")
 					}
 
+					monitor.GlobalMonitor.BatchAccepted(common.NewHashFromEth(receipt.TxHash))
+
 					receiptJSON, err := receipt.MarshalJSON()
 					if err != nil {
 						logger.Error().Stack().Err(err).Msg("failed to generate json for receipt")
@@ -247,6 +250,12 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 		ctx,
 		message.NewSafeL2Message(batchTx).AsData(),
 	)
+
+	for _, tx := range txes {
+		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(tx.Hash()), txHash)
+	}
+
+	monitor.GlobalMonitor.SubmittedBatch(txHash)
 
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
@@ -288,6 +297,8 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		logger.Error().Stack().Err(err).Msg("error processing user transaction")
 		return err
 	}
+
+	monitor.GlobalMonitor.GotTransactionFromUser(common.NewHashFromEth(tx.Hash()))
 
 	m.Lock()
 	defer m.Unlock()
