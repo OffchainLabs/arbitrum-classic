@@ -17,9 +17,10 @@
 package core
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/pkg/errors"
 
@@ -125,8 +126,10 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 		if status != MessagesReady {
 			break
 		}
-		if time.Since(start) > time.Second*30 {
-			return 0, errors.New("timed out adding messages")
+		duration := time.Since(start)
+		if duration > time.Second*30 {
+			logger.Warn().Dur("elapsed", duration).Msg("Message delivery taking too long")
+			start = time.Now()
 		}
 		<-time.After(time.Millisecond * 50)
 	}
