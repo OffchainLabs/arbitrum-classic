@@ -33,11 +33,30 @@ export class Bridge extends L2Bridge {
     // TODO can presumably get arbERC20BridgeAddress directly from the L! bridge
     this.l1Bridge = new L1Bridge(arbERC20BridgeAddress, arbSigner)
   }
+  public updateAllBalances() {
+    this.updateAllTokens()
+    this.getAndUpdateL1EthBalance()
+    this.getAndUpdateL2EthBalance()
+  }
 
   public async updateAllTokens() {
     const l1Tokens = await this.l1Bridge.updateAllL1Tokens()
     const l2Tokens = await this.updateAllL2Tokens()
     return { l1Tokens, l2Tokens }
+  }
+
+  public async updateTokenData(erc20l1Address: string) {
+    const l1Data = await this.getAndUpdateL1TokenData(erc20l1Address)
+    const l2Data = await this.getAndUpdateL2TokenData(erc20l1Address)
+    return { l1Data, l2Data }
+  }
+
+  get l1Tokens() {
+    return this.l1Bridge.l1Tokens
+  }
+
+  get l1EthBalance() {
+    return this.l1Bridge.l1EthBalance
   }
 
   public async approveToken(erc20L1Address: string) {
@@ -77,5 +96,12 @@ export class Bridge extends L2Bridge {
       gasPriceBid,
       destinationAddress
     )
+  }
+  public getAndUpdateL1TokenData(erc20l1Address: string) {
+    return this.l1Bridge.getAndUpdateL1TokenData(erc20l1Address)
+  }
+
+  public async getAndUpdateL1EthBalance() {
+    return this.l1Bridge.getAndUpdateL1EthBalance()
   }
 }
