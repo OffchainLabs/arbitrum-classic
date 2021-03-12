@@ -82,7 +82,11 @@ func (m *Server) GetBlockCount() (uint64, error) {
 
 func (m *Server) BlockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
-		return m.db.LatestBlock()
+		latest, err := m.db.LatestBlock()
+		if err != nil {
+			return 0, err
+		}
+		return latest.Header.Number.Uint64(), nil
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {

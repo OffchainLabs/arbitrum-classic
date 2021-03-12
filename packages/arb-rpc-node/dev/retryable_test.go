@@ -272,9 +272,7 @@ func TestRetryableTimeout(t *testing.T) {
 	_, err = backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress())
 	test.FailIfError(t, err)
 
-	latestBlock, err := db.LatestBlock()
-	test.FailIfError(t, err)
-	l2Block, err := db.GetBlock(latestBlock)
+	l2Block, err := db.LatestBlock()
 	test.FailIfError(t, err)
 
 	if timeout.Uint64() >= l2Block.Header.Time {

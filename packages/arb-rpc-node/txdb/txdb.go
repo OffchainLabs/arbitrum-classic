@@ -401,15 +401,27 @@ func (db *TxDB) BlockCount() (uint64, error) {
 	return db.as.BlockCount()
 }
 
-func (db *TxDB) LatestBlock() (uint64, error) {
+func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 	blockCount, err := db.as.BlockCount()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	if blockCount == 0 {
-		return 0, errors.New("can't get latest block because there are no blocks")
+	totalLogCountBig, err := db.Lookup.GetLogCount()
+	if err != nil {
+		return nil, err
 	}
-	return blockCount - 1, nil
+	totalLogCount := totalLogCountBig.Uint64()
+	for blockCount > 0 {
+		blockData, err := db.as.GetBlockInfo(blockCount - 1)
+		if err != nil {
+			return nil, err
+		}
+		if blockData.BlockLog < totalLogCount {
+			return blockData, nil
+		}
+		blockCount--
+	}
+	return nil, errors.New("can't get latest block because there are no blocks")
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
@@ -438,7 +450,7 @@ func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db.GetSnapshot(block)
+	return db.getSnapshotForInfo(block)
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {
