@@ -814,16 +814,17 @@ void ArbCore::operator()() {
             }
         }
 
+        if (save_checkpoint) {
+            ReadWriteTransaction tx(data_storage);
+            save_checkpoint_status = saveCheckpoint(tx);
+            tx.commit();
+            save_checkpoint = false;
+        }
+
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
             // Machine is already running or new messages, so sleep for a short
             // while
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-
-        if (save_checkpoint) {
-            ReadWriteTransaction tx(data_storage);
-            save_checkpoint_status = saveCheckpoint(tx);
-            save_checkpoint = false;
         }
     }
 
