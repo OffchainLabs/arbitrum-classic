@@ -1080,9 +1080,9 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     ValueCache& cache) {
     ReadSnapshotTransaction tx(data_storage);
 
-    auto closest_checkpoint =
-        getClosestExecutionMachine(tx, total_gas_used, true);
+    auto closest_checkpoint = getClosestExecutionMachine(tx, total_gas_used);
     if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
+        std::cerr << "No execution machine available" << std::endl;
         return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
     }
 
@@ -1091,6 +1091,10 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
 
     auto status = advanceExecutionCursorImpl(
         tx, *execution_cursor, total_gas_used, false, 10, cache, false);
+
+    if (!status.ok()) {
+        std::cerr << "Couldn't advance execution machine" << std::endl;
+    }
 
     return {status, std::move(execution_cursor)};
 }
@@ -1185,6 +1189,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
             auto get_messages_result = executionCursorGetMessages(
                 tx, execution_cursor, message_group_size);
             if (!get_messages_result.status.ok()) {
+                std::cout << "Error getting messages for execution cursor"
+                          << std::endl;
                 return get_messages_result.status;
             }
             if (!get_messages_result.data.first) {
@@ -1351,6 +1357,15 @@ ArbCore::executionCursorGetMessagesNoLock(
         execution_cursor.getTotalMessagesRead();
 
     auto inserted_message_count_result = messageEntryInsertedCountImpl(tx);
+    if (!inserted_message_count_result.status.ok()) {
+        return {inserted_message_count_result.status,
+                std::make_pair(false, messages)};
+    }
+
+    if (current_message_sequence_number > inserted_message_count_result.data) {
+        // No messages to read
+        return {rocksdb::Status::OK(), std::make_pair(true, messages)};
+    }
 
     if (current_message_sequence_number + message_group_size >
         inserted_message_count_result.data) {
@@ -1371,6 +1386,9 @@ ArbCore::executionCursorGetMessagesNoLock(
     auto results = tx.messageEntryGetVectorVector(
         message_key_slice, intx::narrow_cast<size_t>(message_group_size));
     if (!results.status.ok()) {
+        std::cerr
+            << "Failed getting set of message entries for execution cursor"
+            << std::endl;
         return {results.status, std::make_pair(false, messages)};
     }
 

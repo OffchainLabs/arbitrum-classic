@@ -95,7 +95,6 @@ func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxA
 	}
 	defer C.free(sliceArrayData)
 	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-
 	cLastBlockComplete := 0
 	if lastBlockComplete {
 		cLastBlockComplete = 1

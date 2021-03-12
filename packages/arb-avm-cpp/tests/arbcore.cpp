@@ -265,11 +265,12 @@ TEST_CASE("ArbCore inbox") {
         inbox_acc = hash_inbox(inbox_acc, message.serialize());
     }
     auto tx = storage.makeReadTransaction();
-    auto position = arbCore->getSideloadPosition(*tx, 2);
+    auto position = arbCore->getSideloadPosition(*tx, 1);
     REQUIRE(position.status.ok());
 
     auto cursor = arbCore->getExecutionCursor(position.data, value_cache);
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
+    REQUIRE(cursor.data->machineHash().has_value());
 }
