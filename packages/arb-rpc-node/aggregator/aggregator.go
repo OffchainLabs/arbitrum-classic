@@ -24,11 +24,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 
-	"math/big"
-	"time"
-
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -47,13 +45,11 @@ import (
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain       common.Address
-	batch       batcher.TransactionBatcher
-	db          *txdb.TxDB
-	lookup      core.ArbCoreLookup
-	maxCallTime time.Duration
-	maxCallGas  *big.Int
-	scope       event.SubscriptionScope
+	chain      common.Address
+	batch      batcher.TransactionBatcher
+	db         *txdb.TxDB
+	maxCallGas *big.Int
+	scope      event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
@@ -63,11 +59,10 @@ func NewServer(
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain:       rollupAddress,
-		batch:       batch,
-		db:          db,
-		maxCallTime: 0,
-		maxCallGas:  big.NewInt(1000000000),
+		chain:      rollupAddress,
+		batch:      batch,
+		db:         db,
+		maxCallGas: big.NewInt(1000000000),
 	}
 }
 
@@ -87,7 +82,11 @@ func (m *Server) GetBlockCount() (uint64, error) {
 
 func (m *Server) BlockNum(block *rpc.BlockNumber) (uint64, error) {
 	if *block == rpc.LatestBlockNumber || *block == rpc.PendingBlockNumber {
-		return m.db.LatestBlock()
+		latest, err := m.db.LatestBlock()
+		if err != nil {
+			return 0, err
+		}
+		return latest.Header.Number.Uint64(), nil
 	} else if *block >= 0 {
 		return uint64(*block), nil
 	} else {
@@ -122,7 +121,7 @@ func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {
 }
 
 func (m *Server) BlockLogFromInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
-	blockLog, err := core.GetSingleLog(m.lookup, new(big.Int).SetUint64(block.BlockLog))
+	blockLog, err := core.GetSingleLog(m.db.Lookup, new(big.Int).SetUint64(block.BlockLog))
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +141,7 @@ func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*
 	if index >= txCount {
 		return nil, errors.New("index out of bounds")
 	}
-	avmLog, err := core.GetSingleLog(m.lookup, new(big.Int).Add(res.FirstAVMLog(), new(big.Int).SetUint64(index)))
+	avmLog, err := core.GetSingleLog(m.db.Lookup, new(big.Int).Add(res.FirstAVMLog(), new(big.Int).SetUint64(index)))
 	if err != nil {
 		return nil, err
 	}

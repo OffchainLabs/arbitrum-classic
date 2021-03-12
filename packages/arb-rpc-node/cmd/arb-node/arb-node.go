@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"flag"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	golog "log"
 	"net/http"
@@ -57,6 +58,8 @@ func main() {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Str("component", "arb-node").Logger()

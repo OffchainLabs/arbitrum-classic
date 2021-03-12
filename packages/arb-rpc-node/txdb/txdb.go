@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
 	"sync"
 	"time"
@@ -51,7 +52,7 @@ type ChainTimeGetter interface {
 }
 
 type TxDB struct {
-	lookup    core.ArbOutputLookup
+	Lookup    core.ArbOutputLookup
 	as        machine.NodeStore
 	chain     common.Address
 	logReader *core.LogReader
@@ -75,7 +76,7 @@ func New(
 	updateFrequency time.Duration,
 ) (*TxDB, error) {
 	db := &TxDB{
-		lookup: arbCore,
+		Lookup: arbCore,
 		as:     as,
 		chain:  chain,
 	}
@@ -102,7 +103,7 @@ func (db *TxDB) Close() {
 }
 
 func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
-	avmLogs, err := db.lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
+	avmLogs, err := db.Lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
 	if err != nil {
 		return nil, err
 	}
@@ -198,9 +199,10 @@ func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 		return db.handleBlockReceipt(res)
 	case *evm.MerkleRootResult:
 		return db.as.SaveMessageBatch(res.BatchNumber, logIndex)
-	default:
-		return nil
+	case *evm.TxResult:
+		monitor.GlobalMonitor.GotLog(res.IncomingRequest.MessageID)
 	}
+	return nil
 }
 
 func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
@@ -320,7 +322,7 @@ func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
 	if logIndex == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*logIndex))
+	logVal, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(*logIndex))
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +360,7 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	if requestCandidate == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(*requestCandidate))
+	logVal, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(*requestCandidate))
 	if err != nil {
 		return nil, err
 	}
@@ -373,7 +375,7 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 }
 
 func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
-	blockLog, err := core.GetSingleLog(db.lookup, new(big.Int).SetUint64(block.BlockLog))
+	blockLog, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(block.BlockLog))
 	if err != nil {
 		return nil, err
 	}
@@ -399,19 +401,31 @@ func (db *TxDB) BlockCount() (uint64, error) {
 	return db.as.BlockCount()
 }
 
-func (db *TxDB) LatestBlock() (uint64, error) {
+func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 	blockCount, err := db.as.BlockCount()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	if blockCount == 0 {
-		return 0, errors.New("can't get latest block because there are no blocks")
+	totalLogCountBig, err := db.Lookup.GetLogCount()
+	if err != nil {
+		return nil, err
 	}
-	return blockCount - 1, nil
+	totalLogCount := totalLogCountBig.Uint64()
+	for blockCount > 0 {
+		blockData, err := db.as.GetBlockInfo(blockCount - 1)
+		if err != nil {
+			return nil, err
+		}
+		if blockData.BlockLog < totalLogCount {
+			return blockData, nil
+		}
+		blockCount--
+	}
+	return nil, errors.New("can't get latest block because there are no blocks")
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
-	mach, err := db.lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
 	}
@@ -436,7 +450,7 @@ func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db.GetSnapshot(block)
+	return db.getSnapshotForInfo(block)
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {
