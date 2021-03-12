@@ -15,6 +15,6 @@
  */
 
 export { Bridge } from './lib/bridge'
-export { L1Bridge } from './lib/l1bridge'
-export { L2Bridge } from './lib/l2bridge'
+export { L1Bridge, L1TokenData } from './lib/l1Bridge'
+export { L2Bridge, L2TokenData } from './lib/l2Bridge'
 export { ArbConversion } from './lib/conversion'

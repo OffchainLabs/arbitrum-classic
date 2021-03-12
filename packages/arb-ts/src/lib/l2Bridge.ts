@@ -30,10 +30,10 @@ import { StandardArbERC777 } from './abi/StandardArbERC777'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 
-interface L2TokenData {
+export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
   ERC777?: { contract: StandardArbERC777; balance: BigNumber }
-  CUSTOM?: { contract: IArbToken; balance: BigNumber }
+  CUSTOM?: { contract: IArbToken; balance: BigNumber } // Force custom to have l1Address (in, ie., IArbToken)
 }
 
 export interface Tokens {
@@ -46,6 +46,7 @@ export class L2Bridge {
   arbTokenBridge: ArbTokenBridge
   l2Tokens: Tokens
   l2Provider: providers.Provider
+  l2EthBalance: BigNumber
   walletAddressCache?: string
 
   constructor(arbTokenBridgeAddress: string, l2Signer: Signer) {
@@ -66,6 +67,7 @@ export class L2Bridge {
       arbTokenBridgeAddress,
       l2Signer
     )
+    this.l2EthBalance = BigNumber.from(0)
   }
 
   public async withdrawETH(value: BigNumber, destinationAddress?: string) {
@@ -82,7 +84,7 @@ export class L2Bridge {
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
 
-    const tokenData = await this.getAndUpdateTokenData(erc20l1Address)
+    const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
     const erc20TokenData = tokenData.ERC20
 
     if (!erc20TokenData) {
@@ -100,7 +102,7 @@ export class L2Bridge {
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
 
-    const tokenData = await this.getAndUpdateTokenData(erc20l1Address)
+    const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
     const erc777TokenData = tokenData.ERC777
 
     if (!erc777TokenData) {
@@ -113,23 +115,20 @@ export class L2Bridge {
 
   public async updateAllL2Tokens() {
     for (const l1Address in this.l2Tokens) {
-      await this.getAndUpdateTokenData(l1Address)
+      await this.getAndUpdateL2TokenData(l1Address)
     }
     return this.l2Tokens
   }
 
-  public async getAndUpdateTokenData(erc20L1Address: string) {
-    if (!this.l2Tokens[erc20L1Address]) {
-      this.l2Tokens[erc20L1Address] = {
-        ERC20: undefined,
-        ERC777: undefined,
-        CUSTOM: undefined,
-      }
+  public async getAndUpdateL2TokenData(erc20L1Address: string) {
+    const tokenData = this.l2Tokens[erc20L1Address] || {
+      ERC20: undefined,
+      ERC777: undefined,
+      CUSTOM: undefined,
     }
-
-    const tokenData = this.l2Tokens[erc20L1Address] as L2TokenData // truthiness is ensured above
     const walletAddress = await this.getWalletAddress()
 
+    // handle custom L2 token:
     const customTokenAddress = await this.arbTokenBridge.customToken(
       erc20L1Address
     )
@@ -156,6 +155,7 @@ export class L2Bridge {
     const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
     const l2ERC777Address = await this.getERC777L2Address(erc20L1Address)
 
+    // check if standard arb erc20:
     if (!tokenData.ERC20) {
       if ((await this.l2Provider.getCode(l2ERC20Address)).length > 2) {
         const arbERC20TokenContract = await StandardArbERC20Factory.connect(
@@ -179,6 +179,7 @@ export class L2Bridge {
       )
       const balance = await arbERC20TokenContract.balanceOf(walletAddress)
       tokenData.ERC20.balance = balance
+      return tokenData
     }
 
     if (!tokenData.ERC777) {
@@ -192,8 +193,12 @@ export class L2Bridge {
           contract: arbERC77TokenContract,
           balance,
         }
+        return tokenData
+      } else {
+        console.info(
+          `Corresponding ArbERC777 for ${erc20L1Address} not yet deployed`
+        )
       }
-      // else: : ERC777 not deployed
     } else {
       const arbERC777TokenContract = await StandardArbERC777Factory.connect(
         l2ERC777Address,
@@ -201,9 +206,9 @@ export class L2Bridge {
       )
       const balance = await arbERC777TokenContract.balanceOf(walletAddress)
       tokenData.ERC777.balance = balance
+      return tokenData
     }
-
-    return tokenData
+    throw new Error(`No L2 token for ${erc20L1Address} found`)
   }
 
   public getERC20L2Address(erc20L1Address: string) {
@@ -212,6 +217,20 @@ export class L2Bridge {
       return address
     }
     return this.arbTokenBridge.calculateBridgedERC20Address(erc20L1Address)
+  }
+
+  public getERC20L1Address(erc20L2Address: string) {
+    try {
+      const arbERC20 = StandardArbERC20Factory.connect(
+        erc20L2Address,
+        this.l2Signer
+      )
+      return arbERC20.l1Address()
+    } catch (e) {
+      console.warn('Could not get L1 Address')
+
+      return
+    }
   }
 
   public getERC777L2Address(erc20L1Address: string) {
@@ -228,5 +247,11 @@ export class L2Bridge {
     }
     this.walletAddressCache = await this.l2Signer.getAddress()
     return this.walletAddressCache
+  }
+
+  public async getAndUpdateL2EthBalance(): Promise<BigNumber> {
+    const bal = await this.l2Signer.getBalance()
+    this.l2EthBalance = bal
+    return bal
   }
 }
