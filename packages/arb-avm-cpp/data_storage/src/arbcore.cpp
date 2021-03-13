@@ -1065,37 +1065,6 @@ ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
             {result1.data.inbox_acc, result2.data.inbox_acc}};
 }
 
-ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
-                                           uint256_t start_index,
-                                           uint256_t count) const {
-    auto sends_result = getSends(start_index, count);
-    if (!sends_result.status.ok()) {
-        return {sends_result.status, 0};
-    }
-
-    auto combined_hash = start_acc_hash;
-    for (const auto& send : sends_result.data) {
-        combined_hash = hash(combined_hash, hash(send));
-    }
-    return {rocksdb::Status::OK(), combined_hash};
-}
-
-ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
-                                          uint256_t start_index,
-                                          uint256_t count,
-                                          ValueCache& cache) {
-    auto sends_result = getLogs(start_index, count, cache);
-    if (!sends_result.status.ok()) {
-        return {sends_result.status, 0};
-    }
-
-    auto combined_hash = start_acc_hash;
-    for (const auto& send : sends_result.data) {
-        combined_hash = hash(combined_hash, hash_value(send));
-    }
-    return {rocksdb::Status::OK(), combined_hash};
-}
-
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     uint256_t total_gas_used,
     ValueCache& cache) {

@@ -58,16 +58,6 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
                            const void* index2_ptr,
                            void* ret1,
                            void* ret2);
-int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
-                      const void* start_acc_hash,
-                      const void* start_index_ptr,
-                      const void* count_ptr,
-                      void* ret);
-int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
-                     const void* start_acc_hash,
-                     const void* start_index_ptr,
-                     const void* count_ptr,
-                     void* ret);
 
 Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
                                            const void* index_ptr);
