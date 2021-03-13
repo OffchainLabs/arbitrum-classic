@@ -67,7 +67,8 @@ TEST_CASE("ARBOS test vectors") {
             auto mach = storage.getInitialMachine(value_cache);
             MachineExecutionConfig config;
             config.inbox_messages = messages;
-            auto assertion = mach->run(config);
+            mach->machine_state.context = AssertionContext(config);
+            auto assertion = mach->run();
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.gasCount == total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());

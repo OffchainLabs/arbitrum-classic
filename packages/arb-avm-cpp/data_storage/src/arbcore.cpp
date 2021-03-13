@@ -1223,7 +1223,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 }
                 auto& mach =
                     resolveExecutionCursorMachine(tx, execution_cursor, cache);
-                auto assertion = mach->run(execConfig);
+                mach->machine_state.context = AssertionContext(execConfig);
+                auto assertion = mach->run();
                 if (assertion.gasCount == 0) {
                     // Nothing was executed
                     break;

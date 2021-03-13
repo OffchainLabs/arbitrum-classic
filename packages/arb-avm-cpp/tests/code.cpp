@@ -63,7 +63,8 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     MachineExecutionConfig execConfig;
     execConfig.max_gas = gas_count_target;
     execConfig.next_block_height = 7;
-    auto assertion = mach.run(execConfig);
+    mach.machine_state.context = AssertionContext(execConfig);
+    auto assertion = mach.run();
     REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
@@ -107,7 +108,8 @@ TEST_CASE("Code serialization") {
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
         execConfig.next_block_height = 8;
-        mach2.run(execConfig);
+        mach2.machine_state.context = AssertionContext(execConfig);
+        mach2.run();
         auto save_ret = saveMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
         save_ret = saveMachine(*tx, mach2);

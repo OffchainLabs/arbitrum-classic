@@ -63,7 +63,6 @@ class MachineThread : public Machine {
     Assertion nextAssertion();
 
     void operator()();
-    void operator()(MachineExecutionConfig config);
 };
 
 #endif /* machine_hpp */

@@ -71,8 +71,7 @@ class Machine {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion run(MachineExecutionConfig config);
-    Assertion continueRunning();
+    Assertion run();
 
     Status currentStatus() const { return machine_state.state; }
     std::optional<uint256_t> hash() const { return machine_state.hash(); }
