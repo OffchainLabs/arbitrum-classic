@@ -27,10 +27,12 @@ bool MachineThread::runMachine(MachineExecutionConfig config) {
         return false;
     }
 
+    machine_state.context = AssertionContext(std::move(config));
+
     machine_status = MACHINE_RUNNING;
 
     machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)), std::move(config));
+        (std::reference_wrapper<MachineThread>(*this)));
 
     return true;
 }
@@ -39,6 +41,8 @@ bool MachineThread::continueRunningMachine() {
     if (machine_status != MACHINE_NONE) {
         return false;
     }
+
+    machine_state.context.resetForContinuedRun();
 
     machine_status = MACHINE_RUNNING;
 
@@ -78,12 +82,7 @@ void MachineThread::clearError() {
     machine_error_string.clear();
 }
 
-void MachineThread::operator()(MachineExecutionConfig config) {
-    last_assertion = run(std::move(config));
-    machine_status = MACHINE_SUCCESS;
-}
-
 void MachineThread::operator()() {
-    last_assertion = continueRunning();
+    last_assertion = run();
     machine_status = MACHINE_SUCCESS;
 }

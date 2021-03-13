@@ -80,7 +80,8 @@ TEST_CASE("Checkpoint State") {
     MachineExecutionConfig execConfig;
     execConfig.max_gas = 3;
     execConfig.next_block_height = 3;
-    machine->run(execConfig);
+    machine->machine_state.context = AssertionContext(execConfig);
+    machine->run();
 
     SECTION("default") { checkpointState(storage, *machine); }
     SECTION("save twice") { checkpointStateTwice(storage, *machine); }
@@ -108,11 +109,13 @@ TEST_CASE("Delete machine checkpoint") {
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 4;
         execConfig.next_block_height = 3;
-        machine->run(execConfig);
+        machine->machine_state.context = AssertionContext(execConfig);
+        machine->run();
         auto transaction = storage.makeReadWriteTransaction();
         saveMachine(*transaction, *machine);
         execConfig.max_gas = 0;
-        machine->run(execConfig);
+        machine->machine_state.context = AssertionContext(execConfig);
+        machine->run();
         saveMachine(*transaction, *machine);
         deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
@@ -141,7 +144,8 @@ TEST_CASE("Proof") {
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 3;
         execConfig.next_block_height = 3;
-        auto assertion = machine.run(execConfig);
+        machine.machine_state.context = AssertionContext(execConfig);
+        auto assertion = machine.run();
         machine.marshalForProof();
         if (assertion.stepCount == 0) {
             break;
@@ -213,7 +217,7 @@ TEST_CASE("MachineTestVectors") {
             auto mach = Machine::loadFromFile(test_file);
             MachineExecutionConfig execConfig;
             while (std::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
-                mach.run(execConfig);
+                mach.run();
             }
             REQUIRE(mach.currentStatus() == Status::Halted);
         }
@@ -227,7 +231,8 @@ TEST_CASE("Stopping on sideload") {
 
     // First, test running straight past the sideload
     Machine machine = orig_machine;
-    auto assertion = machine.run(execConfig);
+    machine.machine_state.context = AssertionContext(execConfig);
+    auto assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideloadBlockNumber);
     REQUIRE(assertion.gasCount == 13);
@@ -236,7 +241,8 @@ TEST_CASE("Stopping on sideload") {
     machine = orig_machine;
     execConfig.sideloads.emplace_back(InboxMessage());
     execConfig.stop_on_sideload = true;  // Shouldn't matter
-    assertion = machine.run(execConfig);
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
     REQUIRE(!assertion.sideloadBlockNumber);
     REQUIRE(assertion.gasCount == 23);
@@ -245,25 +251,28 @@ TEST_CASE("Stopping on sideload") {
     machine = orig_machine;
     execConfig.sideloads.clear();
     execConfig.stop_on_sideload = true;
-    assertion = machine.run(execConfig);
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
     REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
     REQUIRE(assertion.gasCount == 1);
-
-    assertion = machine.run(execConfig);
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Error);
     REQUIRE(!assertion.sideloadBlockNumber);
     REQUIRE(assertion.gasCount == 12);
 
     // Next, test stopping on the sideload and adding a value
     machine = orig_machine;
-    assertion = machine.run(execConfig);
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Extensive);
     REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
     REQUIRE(assertion.gasCount == 1);
 
     execConfig.sideloads.emplace_back(InboxMessage());
-    assertion = machine.run(execConfig);
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
     REQUIRE(machine.currentStatus() == Status::Halted);
     REQUIRE(!assertion.sideloadBlockNumber);
     REQUIRE(assertion.gasCount == 22);
