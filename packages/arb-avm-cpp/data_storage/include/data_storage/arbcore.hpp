@@ -294,7 +294,6 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& new_messages,
         bool last_block_complete,
         const uint256_t& prev_inbox_acc,
-        const uint256_t& message_count_in_machine,
         const std::optional<uint256_t>& reorg_message_count,
         ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,

@@ -610,7 +610,6 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
 // `delivering_messages` is set to MESSAGES_READY
 void ArbCore::operator()() {
     ValueCache cache;
-    uint256_t message_count_in_machine = 0;
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
     uint256_t max_message_batch_size = 10;
@@ -620,7 +619,7 @@ void ArbCore::operator()() {
             // Reorg might occur while adding messages
             auto add_status = addMessages(
                 message_data.messages, message_data.last_block_complete,
-                message_data.previous_inbox_acc, message_count_in_machine,
+                message_data.previous_inbox_acc,
                 message_data.reorg_message_count, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
@@ -790,8 +789,6 @@ void ArbCore::operator()() {
             }
 
             if (!messages.empty() || resolved_staged) {
-                message_count_in_machine =
-                    total_messages_read + messages.size();
                 execConfig.setInboxMessagesFromBytes(messages);
 
                 auto status = machine->runMachine(execConfig);
@@ -1487,7 +1484,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     const std::vector<std::vector<unsigned char>>& new_messages,
     bool last_block_complete,
     const uint256_t& prev_inbox_acc,
-    const uint256_t& message_count_in_machine,
     const std::optional<uint256_t>& reorg_message_count,
     ValueCache& cache) {
     uint256_t current_sequence_number = 0;
@@ -1594,6 +1590,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
         // Reorg occurred
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
+        bool isMachineValid;
         {
             ReadWriteTransaction tx(data_storage);
 
@@ -1606,13 +1603,15 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                           << status.ToString() << std::endl;
                 return status;
             }
+
+            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
+                                     machine->getReorgData().max_staged);
         }
 
-        auto previous_valid_sequence_number = current_sequence_number - 1;
-        if (current_sequence_number <= message_count_in_machine - 1) {
+        if (!isMachineValid) {
             // Reorg checkpoint and everything else
             auto reorg_status = reorgToMessageOrBefore(
-                previous_valid_sequence_number, false, cache);
+                current_sequence_number - 1, false, cache);
             if (!reorg_status.ok()) {
                 std::cerr
                     << "error in addMessages calling reorgToMessageOrBefore: "
