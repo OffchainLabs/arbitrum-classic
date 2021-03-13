@@ -41,13 +41,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 			return addr, nil, err
 		}
 
-		txJSON, err := tx.MarshalJSON()
-		if err != nil {
-			logger.Error().Stack().Err(err).Str("nonce", "nil").Msg("failed to marshal tx into json")
-			return addr, tx, err
-		}
-
-		logger.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
+		logger.Info().Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
 		return addr, tx, err
 	}
 
