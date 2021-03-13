@@ -95,6 +95,10 @@ TEST_CASE("ValueCache reload max") {
     // Cache 1
     cache.maybeSave(val1);
     cache.maybeSave(val2);
+
+    // Cache 2
+    // max elements in cache, now using cache 2
+    // loads from cache 1
     auto retrieved_val = cache.loadIfExists(hash_value(val1));
     REQUIRE(retrieved_val != std::nullopt);
     REQUIRE(hash_value(val1) == hash_value(*retrieved_val));
@@ -102,16 +106,8 @@ TEST_CASE("ValueCache reload max") {
     REQUIRE(retrieved_val != std::nullopt);
     REQUIRE(hash_value(val2) == hash_value(*retrieved_val));
 
-    // Cache 2
-    // Saving two values changed to cache 2
-    retrieved_val = cache.loadIfExists(hash_value(val1));
-    REQUIRE(retrieved_val != std::nullopt);
-    REQUIRE(hash_value(val1) == hash_value(*retrieved_val));
-    retrieved_val = cache.loadIfExists(hash_value(val2));
-    REQUIRE(retrieved_val != std::nullopt);
-    REQUIRE(hash_value(val2) == hash_value(*retrieved_val));
-
     // Cache 3
+    // max elements in cache, now using cache 3
     // Leave cache empty
     cache.nextCache();
 
@@ -120,18 +116,13 @@ TEST_CASE("ValueCache reload max") {
     cache.nextCache();
 
     // Cache 1
+    // Leave cache empty
     cache.nextCache();
-    // Loads from cache 2
-    retrieved_val = cache.loadIfExists(hash_value(val1));
-    REQUIRE(retrieved_val != std::nullopt);
-    REQUIRE(hash_value(val1) == hash_value(*retrieved_val));
 
     // Cache 2
-    cache.nextCache();
-    // Loads from cache 1
+    // Loads from cache 2
     retrieved_val = cache.loadIfExists(hash_value(val1));
-    REQUIRE(retrieved_val != std::nullopt);
-    REQUIRE(hash_value(val1) == hash_value(*retrieved_val));
+    REQUIRE(retrieved_val == std::nullopt);
 }
 
 TEST_CASE("ValueCache disabled") {
