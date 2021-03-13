@@ -28,4 +28,14 @@ contract Mock {
     receive() external payable {}
 
     fallback() external payable {}
+
+    function sendContractTransaction(
+        uint256,
+        uint256,
+        address,
+        uint256,
+        bytes calldata
+    ) external returns (uint256) {
+        return 0;
+    }
 }
