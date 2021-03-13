@@ -158,6 +158,13 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 		if err != nil {
 			return err
 		}
+		if logBlockInfo == nil {
+			logger.Warn().
+				Str("tx", txRes.IncomingRequest.MessageID.String()).
+				Uint64("block", currentBlockHeight).
+				Msg("tried to delete tx from non-existent block")
+			continue
+		}
 		logs := txRes.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))
 		lastLogIndex := len(logs) - 1
 		oldEthLogs := make([]*types.Log, 0)
