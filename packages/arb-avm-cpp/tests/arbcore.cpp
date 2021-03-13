@@ -88,7 +88,7 @@ void runCheckArbCore(
 
 TEST_CASE("ArbCore tests") {
     DBDeleter deleter;
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
@@ -245,7 +245,7 @@ TEST_CASE("ArbCore tests") {
  */
 TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     ArbStorage storage(dbpath);
     REQUIRE(

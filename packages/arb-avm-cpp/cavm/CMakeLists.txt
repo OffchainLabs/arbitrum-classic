@@ -26,7 +26,6 @@ set(LIB_HEADERS
   cexecutioncursor.h
   cmachine.h
   ctypes.h
-  cvaluecache.h
   utils.hpp
 )
 
@@ -36,7 +35,6 @@ set(LIB_SOURCES
   carbstorage.cpp
   cexecutioncursor.cpp
   cmachine.cpp
-  cvaluecache.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})

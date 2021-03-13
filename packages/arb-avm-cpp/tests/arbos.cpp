@@ -28,7 +28,7 @@
 
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",

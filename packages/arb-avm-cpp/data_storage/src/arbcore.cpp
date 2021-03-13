@@ -162,7 +162,7 @@ bool ArbCore::deliverMessages(
 
 rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
-    ValueCache cache;
+    ValueCache cache{1, 0};
 
     auto status = reorgToMessageOrBefore(0, true, cache);
     if (status.ok()) {
@@ -609,7 +609,7 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
 // This thread will update `delivering_messages` if and only if
 // `delivering_messages` is set to MESSAGES_READY
 void ArbCore::operator()() {
-    ValueCache cache;
+    ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
     uint256_t max_message_batch_size = 10;
@@ -690,9 +690,8 @@ void ArbCore::operator()() {
                     break;
                 }
 
-                // TODO Decide how often to clear ValueCache
-                // (only clear cache when machine thread stopped)
-                cache.clear();
+                // Clear oldest cache and start populating next cache
+                cache.nextCache();
 
                 // Machine was stopped to save sideload, update execConfig
                 // and start machine back up where it stopped

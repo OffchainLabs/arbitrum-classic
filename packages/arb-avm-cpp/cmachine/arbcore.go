@@ -20,7 +20,6 @@ package cmachine
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
 #include "../cavm/carbcore.h"
-#include "../cavm/cvaluecache.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
