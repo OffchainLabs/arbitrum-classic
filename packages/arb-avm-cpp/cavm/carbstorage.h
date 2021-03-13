@@ -28,8 +28,6 @@ CArbStorage* createArbStorage(const char* filename);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
-CMachine* getInitialMachine(const CArbStorage* storage_ptr);
-CMachine* getMachine(const CArbStorage* storage_ptr, const void* machine_hash);
 int closeArbStorage(CArbStorage* storage_ptr);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
