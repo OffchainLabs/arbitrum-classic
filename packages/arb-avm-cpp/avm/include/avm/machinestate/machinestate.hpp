@@ -111,6 +111,16 @@ struct InboxState {
             return std::nullopt;
         }
     }
+
+    std::optional<InboxState> inboxWithStaged(
+        const staged_variant& staged_message) {
+        auto acc = accWithStaged(staged_message);
+        if (acc) {
+            return InboxState{countWithStaged(staged_message), *acc};
+        } else {
+            return std::nullopt;
+        }
+    }
 };
 
 struct MachineOutput {
