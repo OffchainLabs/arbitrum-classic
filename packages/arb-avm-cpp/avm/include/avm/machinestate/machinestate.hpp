@@ -82,9 +82,39 @@ struct OneStepProof {
     std::vector<unsigned char> buffer_proof;
 };
 
+struct InboxState {
+    uint256_t count;
+    uint256_t accumulator;
+
+    void addMessage(const InboxMessage& message) {
+        accumulator = hash_inbox(accumulator, message.serialize());
+        count += 1;
+    }
+
+    uint256_t countWithStaged(const staged_variant& staged_message) const {
+        if (std::holds_alternative<std::monostate>(staged_message)) {
+            return count;
+        } else {
+            return count + 1;
+        }
+    }
+
+    std::optional<uint256_t> accWithStaged(
+        const staged_variant& staged_message) const {
+        if (std::holds_alternative<InboxMessage>(staged_message)) {
+            return hash_inbox(
+                accumulator,
+                std::get<InboxMessage>(staged_message).serialize());
+        } else if (std::holds_alternative<std::monostate>(staged_message)) {
+            return accumulator;
+        } else {
+            return std::nullopt;
+        }
+    }
+};
+
 struct MachineOutput {
-    uint256_t fully_processed_messages;
-    uint256_t fully_processed_inbox_accumulator;
+    InboxState fully_processed_inbox;
     uint256_t total_steps;
     uint256_t arb_gas_used;
     uint256_t send_acc;

@@ -1306,6 +1306,42 @@ ArbCore::executionCursorGetMessages(ReadTransaction& tx,
                                             orig_message_group_size);
 }
 
+bool ArbCore::isValid(ReadTransaction& tx,
+                      const InboxState& fully_processed_inbox,
+                      const staged_variant& staged_message) {
+    auto inbox_accumulator = fully_processed_inbox.accumulator;
+    auto total_read = fully_processed_inbox.count;
+    auto possible_inbox_acc =
+        fully_processed_inbox.accWithStaged(staged_message);
+    if (possible_inbox_acc) {
+        inbox_accumulator = *possible_inbox_acc;
+        total_read = fully_processed_inbox.countWithStaged(staged_message);
+    }
+
+    if (total_read > 0) {
+        auto stored_result = getMessageEntry(tx, total_read - 1);
+        if (!stored_result.status.ok()) {
+            // Obsolete machine, reorg occurred
+            return false;
+        }
+
+        if (inbox_accumulator != stored_result.data.inbox_acc) {
+            // Obsolete machine, reorg occurred
+            return false;
+        }
+
+        if (!possible_inbox_acc.has_value()) {
+            // We must have an unresolved staged message
+            // Verify that the last consumed is still the last in the block
+            if (!stored_result.data.last_message_in_block) {
+                // Reorg occured
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 ValueResult<std::pair<bool, std::vector<InboxMessage>>>
 ArbCore::executionCursorGetMessagesNoLock(
     ReadTransaction& tx,
@@ -1314,35 +1350,10 @@ ArbCore::executionCursorGetMessagesNoLock(
     auto message_group_size = orig_message_group_size;
     std::vector<InboxMessage> messages;
 
-    auto inbox_accumulator =
-        execution_cursor.getOutput().fully_processed_inbox_accumulator;
-    auto total_read = execution_cursor.getOutput().fully_processed_messages;
-    auto possible_inbox_acc = execution_cursor.getInboxAcc();
-    if (possible_inbox_acc) {
-        inbox_accumulator = *possible_inbox_acc;
-        total_read = execution_cursor.getTotalMessagesRead();
-    }
-
-    if (total_read > 0) {
-        auto stored_result = getMessageEntry(tx, total_read - 1);
-        if (!stored_result.status.ok()) {
-            // Obsolete machine, reorg occurred
-            return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-        }
-
-        if (inbox_accumulator != stored_result.data.inbox_acc) {
-            // Obsolete machine, reorg occurred
-            return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-        }
-
-        if (!possible_inbox_acc.has_value()) {
-            // We must have an unresolved staged message
-            // Verify that the last consumed is still the last in the block
-            if (!stored_result.data.last_message_in_block) {
-                // Reorg occured
-                return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-            }
-        }
+    if (!isValid(tx, execution_cursor.getOutput().fully_processed_inbox,
+                 execution_cursor.getStaged())) {
+        // Obsolete machine, reorg occurred
+        return {rocksdb::Status::OK(), std::make_pair(false, messages)};
     }
 
     auto current_message_sequence_number =

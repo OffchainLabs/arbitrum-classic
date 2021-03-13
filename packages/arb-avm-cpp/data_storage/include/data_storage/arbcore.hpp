@@ -302,6 +302,10 @@ class ArbCore {
                                                   uint256_t count,
                                                   ValueCache& valueCache);
 
+    bool isValid(ReadTransaction& tx,
+                 const InboxState& fully_processed_inbox,
+                 const staged_variant& staged_message);
+
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>
     executionCursorGetMessages(ReadTransaction& tx,
                                const ExecutionCursor& execution_cursor,
