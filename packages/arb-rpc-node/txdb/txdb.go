@@ -102,11 +102,43 @@ func (db *TxDB) Close() {
 	db.logReader.Stop()
 }
 
-func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
+func (db *TxDB) GetBlockResults(block *machine.BlockInfo) (*evm.BlockInfo, []*evm.TxResult, error) {
+	startLog := new(big.Int).SetUint64(block.InitialLogIndex())
+	logCount := new(big.Int).SetUint64(block.LogCount + 1)
+
+	avmLogs, err := db.Lookup.GetLogs(startLog, logCount)
+	if err != nil {
+		return nil, nil, err
+	}
+	if uint64(len(avmLogs)) != block.LogCount+1 {
+		logger.Warn().Msg("reorged getting block results")
+		return nil, nil, nil
+	}
+	l2Block, err := evm.NewBlockResultFromValue(avmLogs[len(avmLogs)-1])
+	if err != nil {
+		logger.Warn().Msg("reorged getting block results")
+		return nil, nil, nil
+	}
+	if l2Block.BlockStats.AVMLogCount.Cmp(new(big.Int).SetUint64(block.LogCount)) != 0 ||
+		l2Block.BlockNum.Cmp(block.Header.Number) != 0 {
+		fmt.Println(l2Block.BlockStats.AVMLogCount, block.LogCount)
+		fmt.Println(l2Block.BlockNum, block.Header.Number)
+		logger.Warn().Msg("reorged getting block results")
+		return nil, nil, nil
+	}
+	txResults, err := processBlockResults(l2Block, avmLogs[:l2Block.BlockStats.TxCount.Uint64()])
+	return l2Block, txResults, err
+}
+
+func (db *TxDB) getBlockResultsUnsafe(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 	avmLogs, err := db.Lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
 	if err != nil {
 		return nil, err
 	}
+	return processBlockResults(res, avmLogs)
+}
+
+func processBlockResults(block *evm.BlockInfo, avmLogs []value.Value) ([]*evm.TxResult, error) {
 	results := make([]*evm.TxResult, 0, len(avmLogs))
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -115,8 +147,10 @@ func (db *TxDB) GetBlockResults(res *evm.BlockInfo) ([]*evm.TxResult, error) {
 		}
 		txRes, ok := res.(*evm.TxResult)
 		if !ok {
-			logger.Warn().Str("type", fmt.Sprintf("%T", res)).Msg("expected tx result but got something else")
-			continue
+			return nil, errors.Errorf("expected tx result but got %T", res)
+		}
+		if txRes.IncomingRequest.L2BlockNumber.Cmp(block.BlockNum) != 0 {
+			return nil, errors.New("tx from wrong block")
 		}
 		results = append(results, txRes)
 	}
@@ -220,7 +254,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		Uint64("block_sendcount", blockInfo.BlockStats.AVMSendCount.Uint64()).
 		Msg("produced l2 block")
 
-	txResults, err := db.GetBlockResults(blockInfo)
+	txResults, err := db.getBlockResultsUnsafe(blockInfo)
 	if err != nil {
 		return err
 	}
@@ -312,7 +346,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		})
 	}
 
-	if err := db.as.SaveBlock(block.Header(), avmLogIndex, requests); err != nil {
+	if err := db.as.SaveBlock(block.Header(), avmLogIndex, blockInfo.BlockStats.AVMLogCount.Uint64(), requests); err != nil {
 		return err
 	}
 
@@ -329,8 +363,8 @@ func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
 	if logIndex == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(*logIndex))
-	if err != nil {
+	logVal, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(*logIndex))
+	if err != nil || logVal == nil {
 		return nil, err
 	}
 	res, err := evm.NewResultFromValue(logVal)
@@ -367,8 +401,8 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	if requestCandidate == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(*requestCandidate))
-	if err != nil {
+	logVal, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(*requestCandidate))
+	if err != nil || logVal == nil {
 		return nil, err
 	}
 	res, err := evm.NewTxResultFromValue(logVal)
@@ -381,16 +415,12 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	return res, nil
 }
 
-func (db *TxDB) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
-	blockLog, err := core.GetSingleLog(db.Lookup, new(big.Int).SetUint64(block.BlockLog))
-	if err != nil {
+func (db *TxDB) GetL2Block(block *machine.BlockInfo) (*evm.BlockInfo, error) {
+	blockLog, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(block.BlockLog))
+	if err != nil || blockLog == nil {
 		return nil, err
 	}
-	res, err := evm.NewBlockResultFromValue(blockLog)
-	if err != nil {
-		return nil, err
-	}
-	return db.GetBlockResults(res)
+	return evm.NewBlockResultFromValue(blockLog)
 }
 
 func (db *TxDB) GetBlock(height uint64) (*machine.BlockInfo, error) {

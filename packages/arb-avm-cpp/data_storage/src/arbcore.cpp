@@ -892,7 +892,7 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
     }
     auto max_log_count = log_count.data;
     if (index >= max_log_count) {
-        return {rocksdb::Status::NotFound(), {}};
+        return {rocksdb::Status::OK(), {}};
     }
     if (index + count > max_log_count) {
         count = max_log_count - index;
