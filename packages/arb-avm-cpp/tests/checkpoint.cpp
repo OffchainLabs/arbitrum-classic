@@ -414,7 +414,7 @@ Machine getComplexMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
-    auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 65};
+    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
 
     staged_variant staged_message;
 
@@ -435,7 +435,7 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 34};
+    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
     staged_variant staged_message;
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
