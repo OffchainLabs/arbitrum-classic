@@ -1478,13 +1478,12 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     const uint256_t& message_count_in_machine,
     const std::optional<uint256_t>& reorg_message_count,
     ValueCache& cache) {
-    uint256_t first_sequence_number = 0;
     uint256_t current_sequence_number = 0;
     uint256_t existing_message_count = 0;
     uint256_t previous_inbox_acc = 0;
 
     {
-        ReadWriteTransaction tx(data_storage);
+        ReadTransaction tx(data_storage);
         auto message_count_result = messageEntryInsertedCountImpl(tx);
         if (!message_count_result.status.ok()) {
             std::cerr << "error in addMessages getting message entry count: "
@@ -1497,7 +1496,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
         if (!new_messages.empty()) {
             auto first_message = extractInboxMessage(new_messages[0]);
-            first_sequence_number = first_message.inbox_sequence_number;
 
             if (first_message.inbox_sequence_number > 0) {
                 if (first_message.inbox_sequence_number >
@@ -1527,7 +1525,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                     return std::nullopt;
                 }
 
-                current_sequence_number = first_sequence_number;
+                current_sequence_number = first_message.inbox_sequence_number;
             }
         } else {
             if (!reorg_message_count) {
@@ -1542,14 +1540,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                 return std::nullopt;
             }
             current_sequence_number = *reorg_message_count;
-            first_sequence_number = current_sequence_number;
-        }
-
-        auto status = tx.commit();
-        if (!status.ok()) {
-            std::cerr << "error committing first part of addMessages: "
-                      << status.ToString() << std::endl;
-            return status;
         }
     }
 
@@ -1584,12 +1574,10 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
             new_messages_index++;
             previous_inbox_acc = current_inbox_acc;
-            current_sequence_number =
-                first_sequence_number + new_messages_index;
+            current_sequence_number += 1;
         }
     }
 
-    std::optional<uint256_t> previous_valid_sequence_number;
     if (current_sequence_number < existing_message_count) {
         // Reorg occurred
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
@@ -1608,11 +1596,11 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             }
         }
 
-        previous_valid_sequence_number = current_sequence_number - 1;
+        auto previous_valid_sequence_number = current_sequence_number - 1;
         if (current_sequence_number <= message_count_in_machine - 1) {
             // Reorg checkpoint and everything else
             auto reorg_status = reorgToMessageOrBefore(
-                *previous_valid_sequence_number, false, cache);
+                previous_valid_sequence_number, false, cache);
             if (!reorg_status.ok()) {
                 std::cerr
                     << "error in addMessages calling reorgToMessageOrBefore: "
