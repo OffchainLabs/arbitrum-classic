@@ -17,6 +17,7 @@
 package message
 
 import (
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -76,4 +77,12 @@ func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 	default:
 		return nil, errors.New("unknown inbox l2message type")
 	}
+}
+
+func CalculateRequestId(chainId *big.Int, msgCount *big.Int) common.Hash {
+	return hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Uint256(msgCount))
+}
+
+func RetryableId(requestId common.Hash) common.Hash {
+	return hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 }

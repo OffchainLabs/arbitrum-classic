@@ -1,6 +1,7 @@
 package message
 
 import (
+	"bytes"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -51,4 +52,14 @@ func (t RetryableTx) AsData() []byte {
 
 func (t RetryableTx) Type() inbox.Type {
 	return RetryableType
+}
+
+func (t RetryableTx) Equals(o RetryableTx) bool {
+	return t.Destination == o.Destination &&
+		t.Value.Cmp(o.Value) == 0 &&
+		t.Deposit.Cmp(o.Deposit) == 0 &&
+		t.MaxSubmissionCost.Cmp(o.MaxSubmissionCost) == 0 &&
+		t.CreditBack == o.CreditBack &&
+		t.Beneficiary == o.Beneficiary &&
+		bytes.Equal(t.Data, o.Data)
 }

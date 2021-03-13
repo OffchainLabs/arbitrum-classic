@@ -54,3 +54,4 @@ abigen --sol=$PREFIX/test_only/MachineTester.sol --pkg=$PACKAGE --out=machineTes
 abigen --sol=$PREFIX/arch/OneStepProof.sol --pkg=$PACKAGE --out=onestepproof.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 abigen --sol=$PREFIX/arch/OneStepProof2.sol --pkg=$PACKAGE --out=onestepproof2.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 abigen --sol=$PREFIX/arch/OneStepProofHash.sol --pkg=$PACKAGE --out=onestepproofhash.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
+abigen --sol=$PREFIX/test_only/InboxHelperTester.sol --pkg=$PACKAGE --out=inboxhelpertester.go --exc=$IGNORED_MORE
