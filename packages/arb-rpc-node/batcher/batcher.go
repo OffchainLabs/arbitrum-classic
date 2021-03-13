@@ -214,12 +214,13 @@ func newBatcher(
 
 					monitor.GlobalMonitor.BatchAccepted(common.NewHashFromEth(receipt.TxHash))
 
-					receiptJSON, err := receipt.MarshalJSON()
-					if err != nil {
-						logger.Error().Stack().Err(err).Msg("failed to generate json for receipt")
-					} else {
-						logger.Info().RawJSON("receipt", receiptJSON).Msg("batch receipt")
-					}
+					logger.Info().
+						Str("hash", receipt.TxHash.Hex()).
+						Uint64("status", receipt.Status).
+						Uint64("gasUsed", receipt.GasUsed).
+						Str("blockHash", receipt.BlockHash.Hex()).
+						Uint64("blockNumber", receipt.BlockNumber.Uint64()).
+						Msg("batch receipt")
 
 					// batch succeeded
 					server.Lock()
@@ -318,12 +319,20 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	m.newTxFeed.Send(core.NewTxsEvent{Txs: []*types.Transaction{tx}})
 
-	txJSON, err := tx.MarshalJSON()
-	if err != nil {
-		logger.Error().Stack().Err(err).Msg("failed to marshal tx into json")
+	logItem := logger.Info().
+		Str("sender", sender.Hex()).
+		Uint64("nonce", tx.Nonce()).
+		Uint64("gas", tx.Gas()).
+		Str("gasPrice", tx.GasPrice().String()).
+		Int("calldatasize", len(tx.Data())).
+		Str("value", tx.Value().String()).
+		Str("hash", tx.Hash().Hex())
+	if tx.To() != nil {
+		logItem = logItem.Str("dest", tx.To().Hex())
 	} else {
-		logger.Info().RawJSON("tx", txJSON).Hex("sender", sender.Bytes()).Msg("user tx")
+		logItem = logItem.Str("dest", "contract-creation")
 	}
+	logItem.Msg("user tx")
 	return nil
 }
 
