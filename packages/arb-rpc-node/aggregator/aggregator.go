@@ -121,31 +121,30 @@ func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {
 }
 
 func (m *Server) BlockLogFromInfo(block *machine.BlockInfo) (*evm.BlockInfo, error) {
-	blockLog, err := core.GetSingleLog(m.db.Lookup, new(big.Int).SetUint64(block.BlockLog))
-	if err != nil {
-		return nil, err
-	}
-	return evm.NewBlockResultFromValue(blockLog)
+	return m.db.GetL2Block(block)
 }
 
 func (m *Server) BlockInfoByHash(hash common.Hash) (*machine.BlockInfo, error) {
 	return m.db.GetBlockWithHash(hash)
 }
 
-func (m *Server) GetMachineBlockResults(block *machine.BlockInfo) ([]*evm.TxResult, error) {
-	return m.db.GetMachineBlockResults(block)
+func (m *Server) GetMachineBlockResults(block *machine.BlockInfo) (*evm.BlockInfo, []*evm.TxResult, error) {
+	return m.db.GetBlockResults(block)
 }
 
-func (m *Server) GetTxInBlockAtIndexResults(res *evm.BlockInfo, index uint64) (*evm.TxResult, error) {
-	txCount := res.BlockStats.TxCount.Uint64()
-	if index >= txCount {
-		return nil, errors.New("index out of bounds")
+func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64) (*evm.TxResult, error) {
+	avmLog, err := core.GetZeroOrOneLog(m.db.Lookup, new(big.Int).SetUint64(res.InitialLogIndex()+index))
+	if err != nil || avmLog == nil {
+		return nil, err
 	}
-	avmLog, err := core.GetSingleLog(m.db.Lookup, new(big.Int).Add(res.FirstAVMLog(), new(big.Int).SetUint64(index)))
+	evmRes, err := evm.NewTxResultFromValue(avmLog)
 	if err != nil {
 		return nil, err
 	}
-	return evm.NewTxResultFromValue(avmLog)
+	if evmRes.IncomingRequest.L2BlockNumber.Cmp(res.Header.Number) != 0 {
+		return nil, nil
+	}
+	return evmRes, nil
 }
 
 func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTransaction {
@@ -227,9 +226,8 @@ func (m *Server) GetReceipts(_ context.Context, blockHash ethcommon.Hash) (types
 	if err != nil || info == nil {
 		return nil, err
 	}
-
-	results, err := m.db.GetMachineBlockResults(info)
-	if err != nil {
+	_, results, err := m.GetMachineBlockResults(info)
+	if err != nil || results == nil {
 		return nil, err
 	}
 	receipts := make(types.Receipts, 0, len(results))
@@ -244,9 +242,8 @@ func (m *Server) GetLogs(_ context.Context, blockHash ethcommon.Hash) ([][]*type
 	if err != nil || info == nil {
 		return nil, err
 	}
-
-	results, err := m.db.GetMachineBlockResults(info)
-	if err != nil {
+	_, results, err := m.GetMachineBlockResults(info)
+	if err != nil || results == nil {
 		return nil, err
 	}
 	logs := make([][]*types.Log, 0, len(results))

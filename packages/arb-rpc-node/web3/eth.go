@@ -344,7 +344,7 @@ func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index 
 	if err != nil || info == nil {
 		return nil, err
 	}
-	return s.getTransactionByBlockAndIndex(info.Header.Number.Uint64(), index)
+	return s.getTransactionByBlockAndIndex(info, index)
 }
 
 func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, index hexutil.Uint64) (*TransactionResult, error) {
@@ -352,8 +352,12 @@ func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, 
 	if err != nil {
 		return nil, err
 	}
+	info, err := s.srv.BlockInfoByNumber(height)
+	if err != nil || info == nil {
+		return nil, err
+	}
 
-	return s.getTransactionByBlockAndIndex(height, index)
+	return s.getTransactionByBlockAndIndex(info, index)
 }
 
 func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
@@ -411,22 +415,14 @@ func feeSetToFeeSetResult(feeset *evm.FeeSet) *FeeSetResult {
 
 func (s *Server) getBlockTransactionCount(block *machine.BlockInfo) (*hexutil.Big, error) {
 	info, err := s.srv.BlockLogFromInfo(block)
-	if err != nil {
+	if err != nil || info == nil {
 		return nil, err
 	}
 	return (*hexutil.Big)(info.BlockStats.TxCount), nil
 }
 
-func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint64) (*TransactionResult, error) {
-	block, err := s.srv.BlockInfoByNumber(height)
-	if err != nil || block == nil {
-		return nil, err
-	}
-	info, err := s.srv.BlockLogFromInfo(block)
-	if err != nil {
-		return nil, err
-	}
-	txRes, err := s.srv.GetTxInBlockAtIndexResults(info, uint64(index))
+func (s *Server) getTransactionByBlockAndIndex(block *machine.BlockInfo, index hexutil.Uint64) (*TransactionResult, error) {
+	txRes, err := s.srv.GetTxInBlockAtIndexResults(block, uint64(index))
 	if err != nil {
 		return nil, err
 	}
@@ -439,12 +435,8 @@ func (s *Server) getTransactionByBlockAndIndex(height uint64, index hexutil.Uint
 }
 
 func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlockResult, error) {
-	blockLog, err := s.srv.BlockLogFromInfo(block)
-	if err != nil {
-		return nil, err
-	}
-	results, err := s.srv.GetMachineBlockResults(block)
-	if err != nil {
+	l2Block, results, err := s.srv.GetMachineBlockResults(block)
+	if err != nil || results == nil {
 		return nil, err
 	}
 
@@ -466,7 +458,7 @@ func (s *Server) getBlock(block *machine.BlockInfo, includeTxData bool) (*GetBlo
 		transactions = txHashes
 	}
 
-	return makeBlockResult(blockLog, block.Header, transactions), nil
+	return makeBlockResult(l2Block, block.Header, transactions), nil
 }
 
 func makeBlockResult(blockLog *evm.BlockInfo, header *types.Header, transactions interface{}) *GetBlockResult {
