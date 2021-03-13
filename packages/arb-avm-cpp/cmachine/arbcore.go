@@ -210,42 +210,6 @@ func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 commo
 	return
 }
 
-func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
-
-	status := C.arbCoreGetSendAcc(
-		ac.c,
-		unsafeDataPointer(startAcc.Bytes()),
-		unsafeDataPointer(startIndexData),
-		unsafeDataPointer(countData),
-		unsafe.Pointer(&ret[0]),
-	)
-	if status == 0 {
-		err = errors.New("failed to get send acc")
-	}
-
-	return
-}
-
-func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
-
-	status := C.arbCoreGetLogAcc(
-		ac.c,
-		unsafeDataPointer(startAcc.Bytes()),
-		unsafeDataPointer(startIndexData),
-		unsafeDataPointer(countData),
-		unsafe.Pointer(&ret[0]),
-	)
-	if status == 0 {
-		err = errors.New("failed to get log acc")
-	}
-
-	return
-}
-
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
 	totalGasUsedData := math.U256Bytes(totalGasUsed)
 

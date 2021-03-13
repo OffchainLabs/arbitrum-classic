@@ -56,8 +56,6 @@ type ExecutionCursor interface {
 type ArbCoreLookup interface {
 	ArbOutputLookup
 
-	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
-	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetInboxAcc(index *big.Int) (common.Hash, error)
 	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
 
