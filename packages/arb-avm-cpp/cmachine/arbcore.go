@@ -27,7 +27,6 @@ package cmachine
 import "C"
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"runtime"
 	"unsafe"
@@ -147,11 +146,6 @@ func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, 
 	if count.Cmp(big.NewInt(0)) == 0 {
 		return nil, nil
 	}
-	currentCount, err := ac.GetLogCount()
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println("GetLogs", startIndex, count, currentCount)
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetLogs(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
