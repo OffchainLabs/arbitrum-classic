@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto mach = storage.getInitialMachine(value_cache);
 
     std::vector<InboxMessage> inbox_messages;

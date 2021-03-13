@@ -76,7 +76,7 @@ TEST_CASE("Code works correctly") {
     ArbStorage storage(dbpath);
     storage.initialize(
         LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto mach = storage.getInitialMachine(value_cache);
     generateTestMachine(mach);
     checkRun(*mach);
@@ -87,7 +87,7 @@ TEST_CASE("Code serialization") {
     ArbStorage storage(dbpath);
     storage.initialize(
         LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine(value_cache);
     generateTestMachine(mach);

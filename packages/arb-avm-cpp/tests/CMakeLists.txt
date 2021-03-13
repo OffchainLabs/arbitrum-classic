@@ -47,7 +47,7 @@ add_executable(
         messagestore.cpp
 		opcodes.cpp
 		value.cpp
-)
+        valuecache.cpp)
 
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
