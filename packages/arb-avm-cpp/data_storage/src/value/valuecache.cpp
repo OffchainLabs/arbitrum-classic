@@ -56,13 +56,14 @@ std::optional<value> ValueCache::loadIfExists(const uint256_t& hash) {
                 caches[saving_cache_index].insert(
                     std::make_pair(hash, iter->second));
             }
+
+            if (max_cache_size > 0 &&
+                caches[saving_cache_index].size() >= max_cache_size) {
+                nextCache();
+            }
+
             return iter->second;
         }
-    }
-
-    if (max_cache_size > 0 &&
-        caches[saving_cache_index].size() >= max_cache_size) {
-        nextCache();
     }
 
     return std::nullopt;
