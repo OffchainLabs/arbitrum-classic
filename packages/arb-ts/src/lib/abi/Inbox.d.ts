@@ -24,6 +24,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
+    'createRetryableTicket(address,uint256,uint256,address,address,bytes)': FunctionFragment
     'depositEth(address)': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
@@ -34,6 +35,10 @@ interface InboxInterface extends ethers.utils.Interface {
   }
 
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'createRetryableTicket',
+    values: [string, BigNumberish, BigNumberish, string, string, BytesLike]
+  ): string
   encodeFunctionData(functionFragment: 'depositEth', values: [string]): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
@@ -68,6 +73,10 @@ interface InboxInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'createRetryableTicket',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
@@ -122,6 +131,26 @@ export class Inbox extends Contract {
     bridge(overrides?: CallOverrides): Promise<[string]>
 
     'bridge()'(overrides?: CallOverrides): Promise<[string]>
+
+    createRetryableTicket(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
 
     depositEth(
       destAddr: string,
@@ -230,6 +259,26 @@ export class Inbox extends Contract {
 
   'bridge()'(overrides?: CallOverrides): Promise<string>
 
+  createRetryableTicket(
+    destAddr: string,
+    value: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    submissionRefundAddress: string,
+    valueRefundAddress: string,
+    data: BytesLike,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+    destAddr: string,
+    value: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    submissionRefundAddress: string,
+    valueRefundAddress: string,
+    data: BytesLike,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
   depositEth(
     destAddr: string,
     overrides?: PayableOverrides
@@ -337,12 +386,32 @@ export class Inbox extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<string>
 
-    depositEth(destAddr: string, overrides?: CallOverrides): Promise<void>
+    createRetryableTicket(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    depositEth(destAddr: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'depositEth(address)'(
       destAddr: string,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -351,7 +420,7 @@ export class Inbox extends Contract {
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
       maxGas: BigNumberish,
@@ -360,7 +429,7 @@ export class Inbox extends Contract {
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     sendL1FundedContractTransaction(
       maxGas: BigNumberish,
@@ -368,7 +437,7 @@ export class Inbox extends Contract {
       destAddr: string,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)'(
       maxGas: BigNumberish,
@@ -376,7 +445,7 @@ export class Inbox extends Contract {
       destAddr: string,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     sendL1FundedUnsignedTransaction(
       maxGas: BigNumberish,
@@ -385,7 +454,7 @@ export class Inbox extends Contract {
       destAddr: string,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)'(
       maxGas: BigNumberish,
@@ -394,27 +463,27 @@ export class Inbox extends Contract {
       destAddr: string,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     sendL2Message(
       messageData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendL2Message(bytes)'(
       messageData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     sendL2MessageFromOrigin(
       messageData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendL2MessageFromOrigin(bytes)'(
       messageData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     sendUnsignedTransaction(
       maxGas: BigNumberish,
@@ -424,7 +493,7 @@ export class Inbox extends Contract {
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)'(
       maxGas: BigNumberish,
@@ -434,7 +503,7 @@ export class Inbox extends Contract {
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
   }
 
   filters: {
@@ -452,6 +521,26 @@ export class Inbox extends Contract {
     bridge(overrides?: CallOverrides): Promise<BigNumber>
 
     'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    createRetryableTicket(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
 
     depositEth(
       destAddr: string,
@@ -560,6 +649,26 @@ export class Inbox extends Contract {
     bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    createRetryableTicket(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+      destAddr: string,
+      value: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      submissionRefundAddress: string,
+      valueRefundAddress: string,
+      data: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
 
     depositEth(
       destAddr: string,
