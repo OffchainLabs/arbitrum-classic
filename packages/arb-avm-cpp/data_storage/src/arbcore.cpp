@@ -1203,11 +1203,12 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                     return resolve_status;
                 }
 
-                if (go_over_gas && execution_cursor.getOutput().arb_gas_used >=
-                                       total_gas_used) {
+                uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
+                if (go_over_gas && gas_used >= total_gas_used) {
                     break;
                 } else if (!go_over_gas &&
-                           mach->machine_state.nextGasCost() > total_gas_used) {
+                           gas_used + mach->machine_state.nextGasCost() >
+                               total_gas_used) {
                     break;
                 }
 
