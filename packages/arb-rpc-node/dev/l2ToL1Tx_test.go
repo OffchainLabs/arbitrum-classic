@@ -76,6 +76,14 @@ func TestL2ToL1Tx(t *testing.T) {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
+	latest, err := backend.db.LatestBlock()
+	test.FailIfError(t, err)
+	blockInfo, _, err := backend.db.GetBlockResults(latest)
+	test.FailIfError(t, err)
+	if blockInfo == nil {
+		t.Fatal("should get block info")
+	}
+
 	rand.Seed(534523435)
 
 	withdrawAmount := big.NewInt(1)

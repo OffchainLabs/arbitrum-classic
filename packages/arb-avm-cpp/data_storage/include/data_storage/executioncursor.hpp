@@ -94,28 +94,11 @@ class ExecutionCursor {
     }
 
     [[nodiscard]] std::optional<uint256_t> getInboxAcc() const {
-        auto fully_processed_acc =
-            getOutput().fully_processed_inbox_accumulator;
-        auto& staged_message = getStaged();
-        if (std::holds_alternative<InboxMessage>(staged_message)) {
-            return hash_inbox(
-                fully_processed_acc,
-                std::get<InboxMessage>(staged_message).serialize());
-        } else if (std::holds_alternative<std::monostate>(staged_message)) {
-            return fully_processed_acc;
-        } else {
-            return std::nullopt;
-        }
+        return getOutput().fully_processed_inbox.accWithStaged(getStaged());
     }
 
     [[nodiscard]] uint256_t getTotalMessagesRead() const {
-        auto fully_processed_messages = getOutput().fully_processed_messages;
-        auto& staged_message = getStaged();
-        if (std::holds_alternative<std::monostate>(staged_message)) {
-            return fully_processed_messages;
-        } else {
-            return fully_processed_messages + 1;
-        }
+        return getOutput().fully_processed_inbox.countWithStaged(getStaged());
     }
 };
 

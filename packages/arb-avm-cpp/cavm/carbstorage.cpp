@@ -82,24 +82,3 @@ CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
     return storage->getAggregatorStore().release();
 }
-
-CMachine* getInitialMachine(const CArbStorage* storage_ptr) {
-    auto storage = static_cast<const ArbStorage*>(storage_ptr);
-    ValueCache value_cache;
-    try {
-        return new Machine(*storage->getInitialMachine(value_cache).release());
-    } catch (const std::exception&) {
-        return nullptr;
-    }
-}
-
-CMachine* getMachine(const CArbStorage* storage_ptr, const void* machine_hash) {
-    auto storage = static_cast<const ArbStorage*>(storage_ptr);
-    auto hash = receiveUint256(machine_hash);
-    ValueCache value_cache;
-    try {
-        return new Machine(*storage->getMachine(hash, value_cache).release());
-    } catch (const std::exception&) {
-        return nullptr;
-    }
-}

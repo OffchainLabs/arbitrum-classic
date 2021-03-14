@@ -216,54 +216,6 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
     }
 }
 
-int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
-                      const void* start_acc_hash,
-                      const void* start_index_ptr,
-                      const void* count_ptr,
-                      void* ret) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    try {
-        auto index_result = arb_core->getSendAcc(
-            receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
-            receiveUint256(count_ptr));
-        if (!index_result.status.ok()) {
-            return false;
-        }
-
-        std::array<unsigned char, 32> val{};
-        to_big_endian(index_result.data, val.begin());
-        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
-        return true;
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
-int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
-                     const void* start_acc_hash,
-                     const void* start_index_ptr,
-                     const void* count_ptr,
-                     void* ret) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    ValueCache cache;
-
-    try {
-        auto index_result = arbcore->getLogAcc(
-            receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
-            receiveUint256(count_ptr), cache);
-        if (!index_result.status.ok()) {
-            return false;
-        }
-
-        std::array<unsigned char, 32> val{};
-        to_big_endian(index_result.data, val.begin());
-        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
-        return true;
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
 Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
                                            const void* index_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);

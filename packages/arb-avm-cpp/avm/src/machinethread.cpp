@@ -27,10 +27,38 @@ bool MachineThread::runMachine(MachineExecutionConfig config) {
         return false;
     }
 
+    machine_state.context = AssertionContext(std::move(config));
+
+    auto inbox_opt = machine_state.output.fully_processed_inbox.inboxWithStaged(
+        machine_state.staged_message);
+    if (!inbox_opt.has_value()) {
+        if (machine_state.context.inbox_messages.empty()) {
+            reorg_check_data =
+                ReorgState{machine_state.output.fully_processed_inbox,
+                           machine_state.staged_message};
+        } else {
+            std::cerr << "Tried to run machine adding messages without "
+                         "resolving staged message"
+                      << std::endl;
+            return false;
+        }
+    } else {
+        for (const auto& message : machine_state.context.inbox_messages) {
+            inbox_opt->addMessage(message);
+        }
+        if (machine_state.context.next_block_height) {
+            reorg_check_data = {
+                *inbox_opt,
+                staged_variant{*machine_state.context.next_block_height}};
+        } else {
+            reorg_check_data = {*inbox_opt, staged_variant{std::monostate{}}};
+        }
+    }
+
     machine_status = MACHINE_RUNNING;
 
     machine_thread = std::make_unique<std::thread>(
-        (std::reference_wrapper<MachineThread>(*this)), std::move(config));
+        (std::reference_wrapper<MachineThread>(*this)));
 
     return true;
 }
@@ -39,6 +67,8 @@ bool MachineThread::continueRunningMachine() {
     if (machine_status != MACHINE_NONE) {
         return false;
     }
+
+    machine_state.context.resetForContinuedRun();
 
     machine_status = MACHINE_RUNNING;
 
@@ -78,12 +108,7 @@ void MachineThread::clearError() {
     machine_error_string.clear();
 }
 
-void MachineThread::operator()(MachineExecutionConfig config) {
-    last_assertion = run(std::move(config));
-    machine_status = MACHINE_SUCCESS;
-}
-
 void MachineThread::operator()() {
-    last_assertion = continueRunning();
+    last_assertion = run();
     machine_status = MACHINE_SUCCESS;
 }

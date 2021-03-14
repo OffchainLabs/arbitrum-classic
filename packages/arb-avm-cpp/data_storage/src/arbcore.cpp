@@ -610,7 +610,6 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
 // `delivering_messages` is set to MESSAGES_READY
 void ArbCore::operator()() {
     ValueCache cache;
-    uint256_t message_count_in_machine = 0;
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
     uint256_t max_message_batch_size = 10;
@@ -620,7 +619,7 @@ void ArbCore::operator()() {
             // Reorg might occur while adding messages
             auto add_status = addMessages(
                 message_data.messages, message_data.last_block_complete,
-                message_data.previous_inbox_acc, message_count_in_machine,
+                message_data.previous_inbox_acc,
                 message_data.reorg_message_count, cache);
             if (!add_status) {
                 // Messages from previous block invalid because of reorg so
@@ -790,8 +789,6 @@ void ArbCore::operator()() {
             }
 
             if (!messages.empty() || resolved_staged) {
-                message_count_in_machine =
-                    total_messages_read + messages.size();
                 execConfig.setInboxMessagesFromBytes(messages);
 
                 auto status = machine->runMachine(execConfig);
@@ -892,7 +889,7 @@ ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
     }
     auto max_log_count = log_count.data;
     if (index >= max_log_count) {
-        return {rocksdb::Status::NotFound(), {}};
+        return {rocksdb::Status::OK(), {}};
     }
     if (index + count > max_log_count) {
         count = max_log_count - index;
@@ -1065,37 +1062,6 @@ ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
             {result1.data.inbox_acc, result2.data.inbox_acc}};
 }
 
-ValueResult<uint256_t> ArbCore::getSendAcc(uint256_t start_acc_hash,
-                                           uint256_t start_index,
-                                           uint256_t count) const {
-    auto sends_result = getSends(start_index, count);
-    if (!sends_result.status.ok()) {
-        return {sends_result.status, 0};
-    }
-
-    auto combined_hash = start_acc_hash;
-    for (const auto& send : sends_result.data) {
-        combined_hash = hash(combined_hash, hash(send));
-    }
-    return {rocksdb::Status::OK(), combined_hash};
-}
-
-ValueResult<uint256_t> ArbCore::getLogAcc(uint256_t start_acc_hash,
-                                          uint256_t start_index,
-                                          uint256_t count,
-                                          ValueCache& cache) {
-    auto sends_result = getLogs(start_index, count, cache);
-    if (!sends_result.status.ok()) {
-        return {sends_result.status, 0};
-    }
-
-    auto combined_hash = start_acc_hash;
-    for (const auto& send : sends_result.data) {
-        combined_hash = hash(combined_hash, hash_value(send));
-    }
-    return {rocksdb::Status::OK(), combined_hash};
-}
-
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     uint256_t total_gas_used,
     ValueCache& cache) {
@@ -1254,7 +1220,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 }
                 auto& mach =
                     resolveExecutionCursorMachine(tx, execution_cursor, cache);
-                auto assertion = mach->run(execConfig);
+                mach->machine_state.context = AssertionContext(execConfig);
+                auto assertion = mach->run();
                 if (assertion.gasCount == 0) {
                     // Nothing was executed
                     break;
@@ -1336,6 +1303,42 @@ ArbCore::executionCursorGetMessages(ReadTransaction& tx,
                                             orig_message_group_size);
 }
 
+bool ArbCore::isValid(ReadTransaction& tx,
+                      const InboxState& fully_processed_inbox,
+                      const staged_variant& staged_message) {
+    auto inbox_accumulator = fully_processed_inbox.accumulator;
+    auto total_read = fully_processed_inbox.count;
+    auto possible_inbox_acc =
+        fully_processed_inbox.accWithStaged(staged_message);
+    if (possible_inbox_acc) {
+        inbox_accumulator = *possible_inbox_acc;
+        total_read = fully_processed_inbox.countWithStaged(staged_message);
+    }
+
+    if (total_read > 0) {
+        auto stored_result = getMessageEntry(tx, total_read - 1);
+        if (!stored_result.status.ok()) {
+            // Obsolete machine, reorg occurred
+            return false;
+        }
+
+        if (inbox_accumulator != stored_result.data.inbox_acc) {
+            // Obsolete machine, reorg occurred
+            return false;
+        }
+
+        if (!possible_inbox_acc.has_value()) {
+            // We must have an unresolved staged message
+            // Verify that the last consumed is still the last in the block
+            if (!stored_result.data.last_message_in_block) {
+                // Reorg occured
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 ValueResult<std::pair<bool, std::vector<InboxMessage>>>
 ArbCore::executionCursorGetMessagesNoLock(
     ReadTransaction& tx,
@@ -1344,35 +1347,10 @@ ArbCore::executionCursorGetMessagesNoLock(
     auto message_group_size = orig_message_group_size;
     std::vector<InboxMessage> messages;
 
-    auto inbox_accumulator =
-        execution_cursor.getOutput().fully_processed_inbox_accumulator;
-    auto total_read = execution_cursor.getOutput().fully_processed_messages;
-    auto possible_inbox_acc = execution_cursor.getInboxAcc();
-    if (possible_inbox_acc) {
-        inbox_accumulator = *possible_inbox_acc;
-        total_read = execution_cursor.getTotalMessagesRead();
-    }
-
-    if (total_read > 0) {
-        auto stored_result = getMessageEntry(tx, total_read - 1);
-        if (!stored_result.status.ok()) {
-            // Obsolete machine, reorg occurred
-            return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-        }
-
-        if (inbox_accumulator != stored_result.data.inbox_acc) {
-            // Obsolete machine, reorg occurred
-            return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-        }
-
-        if (!possible_inbox_acc.has_value()) {
-            // We must have an unresolved staged message
-            // Verify that the last consumed is still the last in the block
-            if (!stored_result.data.last_message_in_block) {
-                // Reorg occured
-                return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-            }
-        }
+    if (!isValid(tx, execution_cursor.getOutput().fully_processed_inbox,
+                 execution_cursor.getStaged())) {
+        // Obsolete machine, reorg occurred
+        return {rocksdb::Status::OK(), std::make_pair(false, messages)};
     }
 
     auto current_message_sequence_number =
@@ -1506,16 +1484,14 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
     const std::vector<std::vector<unsigned char>>& new_messages,
     bool last_block_complete,
     const uint256_t& prev_inbox_acc,
-    const uint256_t& message_count_in_machine,
     const std::optional<uint256_t>& reorg_message_count,
     ValueCache& cache) {
-    uint256_t first_sequence_number = 0;
     uint256_t current_sequence_number = 0;
     uint256_t existing_message_count = 0;
     uint256_t previous_inbox_acc = 0;
 
     {
-        ReadWriteTransaction tx(data_storage);
+        ReadTransaction tx(data_storage);
         auto message_count_result = messageEntryInsertedCountImpl(tx);
         if (!message_count_result.status.ok()) {
             std::cerr << "error in addMessages getting message entry count: "
@@ -1528,7 +1504,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
         if (!new_messages.empty()) {
             auto first_message = extractInboxMessage(new_messages[0]);
-            first_sequence_number = first_message.inbox_sequence_number;
 
             if (first_message.inbox_sequence_number > 0) {
                 if (first_message.inbox_sequence_number >
@@ -1558,7 +1533,7 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                     return std::nullopt;
                 }
 
-                current_sequence_number = first_sequence_number;
+                current_sequence_number = first_message.inbox_sequence_number;
             }
         } else {
             if (!reorg_message_count) {
@@ -1573,14 +1548,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                 return std::nullopt;
             }
             current_sequence_number = *reorg_message_count;
-            first_sequence_number = current_sequence_number;
-        }
-
-        auto status = tx.commit();
-        if (!status.ok()) {
-            std::cerr << "error committing first part of addMessages: "
-                      << status.ToString() << std::endl;
-            return status;
         }
     }
 
@@ -1615,16 +1582,15 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
             new_messages_index++;
             previous_inbox_acc = current_inbox_acc;
-            current_sequence_number =
-                first_sequence_number + new_messages_index;
+            current_sequence_number += 1;
         }
     }
 
-    std::optional<uint256_t> previous_valid_sequence_number;
     if (current_sequence_number < existing_message_count) {
         // Reorg occurred
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
 
+        bool isMachineValid;
         {
             ReadWriteTransaction tx(data_storage);
 
@@ -1637,13 +1603,15 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
                           << status.ToString() << std::endl;
                 return status;
             }
+
+            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
+                                     machine->getReorgData().max_staged);
         }
 
-        previous_valid_sequence_number = current_sequence_number - 1;
-        if (current_sequence_number <= message_count_in_machine - 1) {
+        if (!isMachineValid) {
             // Reorg checkpoint and everything else
             auto reorg_status = reorgToMessageOrBefore(
-                *previous_valid_sequence_number, false, cache);
+                current_sequence_number - 1, false, cache);
             if (!reorg_status.ok()) {
                 std::cerr
                     << "error in addMessages calling reorgToMessageOrBefore: "

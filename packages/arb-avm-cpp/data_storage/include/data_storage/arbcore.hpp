@@ -254,13 +254,6 @@ class ArbCore {
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
         uint256_t index2);
-    ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
-                                      uint256_t start_index,
-                                      uint256_t count) const;
-    ValueResult<uint256_t> getLogAcc(uint256_t start_acc_hash,
-                                     uint256_t start_index,
-                                     uint256_t count,
-                                     ValueCache& cache);
 
    private:
     ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
@@ -301,13 +294,16 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& new_messages,
         bool last_block_complete,
         const uint256_t& prev_inbox_acc,
-        const uint256_t& message_count_in_machine,
         const std::optional<uint256_t>& reorg_message_count,
         ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
                                                   ValueCache& valueCache);
+
+    bool isValid(ReadTransaction& tx,
+                 const InboxState& fully_processed_inbox,
+                 const staged_variant& staged_message);
 
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>
     executionCursorGetMessages(ReadTransaction& tx,

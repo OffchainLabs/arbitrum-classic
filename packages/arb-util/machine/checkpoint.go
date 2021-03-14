@@ -25,9 +25,6 @@ type ArbStorage interface {
 	Initialize(contractPath string) error
 	Initialized() bool
 	CloseArbStorage() bool
-	GetInitialMachine() (Machine, error)
-
-	GetMachine(machineHash common.Hash) (Machine, error)
 
 	GetNodeStore() NodeStore
 }

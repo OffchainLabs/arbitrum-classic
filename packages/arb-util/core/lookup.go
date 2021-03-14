@@ -56,8 +56,6 @@ type ExecutionCursor interface {
 type ArbCoreLookup interface {
 	ArbOutputLookup
 
-	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
-	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetInboxAcc(index *big.Int) (common.Hash, error)
 	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
 
@@ -173,13 +171,13 @@ func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetSingleLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
+func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
 	}
 	if len(logs) == 0 {
-		return nil, errors.New("no log found")
+		return nil, nil
 	}
 	if len(logs) > 1 {
 		return nil, errors.New("too many logs")
