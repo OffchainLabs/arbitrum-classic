@@ -423,8 +423,8 @@ GetResults processFirstVal(const ReadTransaction& tx,
                            std::set<uint64_t>&,
                            const uint32_t reference_count,
                            ValueCache& val_cache) {
-    return applyValue(processBuffer(tx, val, val_cache), reference_count,
-                      val_stack);
+    val_stack.emplace_back(processBuffer(tx, val, val_cache), reference_count);
+    return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const ReadTransaction&,
