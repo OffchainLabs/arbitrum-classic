@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include "helper.hpp"
+
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm/machinestate/datastack.hpp>
@@ -116,5 +119,30 @@ TEST_CASE("Buffer") {
         REQUIRE(buf.lastIndex() == 20000);
         buf = buf.set(300000, 123);
         REQUIRE(buf.lastIndex() == 300000);
+    }
+}
+
+TEST_CASE("Buffer Serialization") {
+    DBDeleter deleter;
+    ArbStorage storage(dbpath);
+
+    ValueCache value_cache{0, 0};
+
+    Buffer buf;
+    buf = buf.set(69080, 123);
+
+    {
+        auto transaction = storage.makeReadWriteTransaction();
+        auto results = saveValue(*transaction, buf);
+        transaction->commit();
+        REQUIRE(results.status.ok());
+    }
+
+    {
+        auto transaction = storage.makeReadTransaction();
+        auto res = getValue(*transaction, hash_value(buf), value_cache);
+        REQUIRE(std::holds_alternative<CountedData<value>>(res));
+        REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+                hash_value(buf));
     }
 }

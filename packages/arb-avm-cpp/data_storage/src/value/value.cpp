@@ -550,6 +550,10 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
     if (val_stack[0].raw_vals.empty()) {
         // First value has no child values, so just return single value without
         // populating cache
+        assert(hash_value(val_stack[0].val) == value_hash);
+        if (hash_value(val_stack[0].val) != value_hash) {
+            throw std::runtime_error("deserialized with incorrect hash");
+        }
         return CountedData<value>{result.reference_count,
                                   std::move(val_stack[0].val)};
     }
@@ -580,6 +584,11 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
             if (val_stack.empty()) {
                 // All values resolved
                 value_cache.maybeSave(val);
+                assert(hash_value(val) == value_hash);
+                if (hash_value(val) != value_hash) {
+                    throw std::runtime_error(
+                        "deserialized with incorrect hash");
+                }
                 return CountedData<value>{reference_count, std::move(val)};
             }
 
