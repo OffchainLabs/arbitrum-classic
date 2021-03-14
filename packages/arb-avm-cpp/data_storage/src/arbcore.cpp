@@ -947,7 +947,7 @@ rocksdb::Status ArbCore::saveSends(
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t index,
     uint256_t count) const {
-    ReadTransaction tx(data_storage);
+    ReadSnapshotTransaction tx(data_storage);
 
     auto result = getMessagesImpl(tx, index, count);
 
@@ -1006,7 +1006,7 @@ ArbCore::getMessagesImpl(const ReadTransaction& tx,
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
     uint256_t index,
     uint256_t count) const {
-    ReadTransaction tx(data_storage);
+    ReadSnapshotTransaction tx(data_storage);
 
     if (count == 0) {
         return {rocksdb::Status::OK(), {}};
@@ -1091,7 +1091,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     uint256_t max_gas,
     bool go_over_gas,
     ValueCache& cache) {
-    ReadTransaction tx(data_storage);
+    ReadSnapshotTransaction tx(data_storage);
 
     auto closest_checkpoint = getClosestExecutionMachine(tx, max_gas);
     if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
@@ -1156,7 +1156,7 @@ std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachineImpl(
 std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachine(
     ExecutionCursor& execution_cursor,
     ValueCache& cache) const {
-    ReadTransaction tx(data_storage);
+    ReadSnapshotTransaction tx(data_storage);
     return takeExecutionCursorMachineImpl(tx, execution_cursor, cache);
 }
 

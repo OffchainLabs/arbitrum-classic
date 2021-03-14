@@ -196,7 +196,7 @@ void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
 
 std::optional<uint64_t> AggregatorStore::getMessageBatch(
     const uint256_t& batchNum) {
-    ReadWriteTransaction tx(data_storage);
+    ReadTransaction tx(data_storage);
     return returnIndex(tx, messageBatchKey(batchNum));
 }
 
@@ -241,7 +241,7 @@ void AggregatorStore::saveBlock(uint64_t height,
 }
 
 std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
-    ReadWriteTransaction tx(data_storage);
+    ReadSnapshotTransaction tx(data_storage);
     uint64_t current_count = blockCountImpl(tx);
     if (height >= current_count) {
         std::stringstream ss;
@@ -264,7 +264,7 @@ void AggregatorStore::reorg(uint64_t block_height) {
 }
 
 ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
-    ReadWriteTransaction tx(data_storage);
+    ReadTransaction tx(data_storage);
     return tx.aggregatorGetUint256(vecToSlice(logs_processed_key));
 }
 
