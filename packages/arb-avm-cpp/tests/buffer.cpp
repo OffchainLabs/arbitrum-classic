@@ -129,7 +129,7 @@ TEST_CASE("Buffer Serialization") {
     ValueCache value_cache{0, 0};
 
     Buffer buf;
-    buf = buf.set(69080, 123);
+    buf = buf.set(8192, 123);
 
     {
         auto transaction = storage.makeReadWriteTransaction();
