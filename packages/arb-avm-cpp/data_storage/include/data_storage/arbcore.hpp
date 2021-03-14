@@ -219,7 +219,6 @@ class ArbCore {
    private:
     // Execution cursor internal functions
     rocksdb::Status advanceExecutionCursorImpl(
-        ReadTransaction& tx,
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
