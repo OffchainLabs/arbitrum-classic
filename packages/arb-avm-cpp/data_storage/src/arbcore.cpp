@@ -1081,7 +1081,7 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     }
 
     auto status = advanceExecutionCursorImpl(*execution_cursor, total_gas_used,
-                                             false, 10, cache, false);
+                                             false, 10, cache);
 
     if (!status.ok()) {
         std::cerr << "Couldn't advance execution machine" << std::endl;
@@ -1126,7 +1126,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
 
     return advanceExecutionCursorImpl(
         execution_cursor, execution_cursor.getOutput().arb_gas_used + max_gas,
-        go_over_gas, 10, cache, true);
+        go_over_gas, 10, cache);
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -1172,8 +1172,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     uint256_t total_gas_used,
     bool go_over_gas,
     uint256_t message_group_size,
-    ValueCache& cache,
-    bool possible_reorg) {
+    ValueCache& cache) {
     auto handle_reorg = true;
     while (handle_reorg) {
         handle_reorg = false;
@@ -1204,7 +1203,9 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 }
 
                 uint256_t gas_used = execution_cursor.getOutput().arb_gas_used;
-                if (go_over_gas && gas_used >= total_gas_used) {
+                if (gas_used == total_gas_used) {
+                    break;
+                } else if (go_over_gas && gas_used > total_gas_used) {
                     break;
                 } else if (!go_over_gas &&
                            gas_used + mach->machine_state.nextGasCost() >
@@ -1222,12 +1223,6 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 if (!get_messages_result.data.first) {
                     // Reorg occurred, need to recreate machine
                     handle_reorg = true;
-                    if (!possible_reorg) {
-                        std::cerr << "Warning: Unexpected execution cursor "
-                                     "reorg detected"
-                                  << std::endl;
-                    }
-                    possible_reorg = false;
                     break;
                 }
                 execConfig.inbox_messages =
@@ -1237,7 +1232,23 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
             auto& mach =
                 std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
             mach->machine_state.context = AssertionContext(execConfig);
-            mach->run();
+            auto assertion = mach->run();
+            if (assertion.gasCount == 0) {
+                break;
+            }
+        }
+
+        if (handle_reorg) {
+            ReadSnapshotTransaction tx(data_storage);
+
+            auto closest_checkpoint =
+                getClosestExecutionMachine(tx, total_gas_used);
+            if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
+                std::cerr << "No execution machine available" << std::endl;
+                return std::get<rocksdb::Status>(closest_checkpoint);
+            }
+            execution_cursor.machine =
+                std::get<MachineStateKeys>(closest_checkpoint);
         }
     }
 
@@ -2144,7 +2155,7 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     }
 
     auto status = advanceExecutionCursorImpl(*execution_cursor, gas_target,
-                                             false, 10, cache, false);
+                                             false, 10, cache);
 
     ReadSnapshotTransaction tx(data_storage);
     return {status,

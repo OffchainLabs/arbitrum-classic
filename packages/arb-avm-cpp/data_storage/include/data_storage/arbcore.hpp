@@ -223,8 +223,7 @@ class ArbCore {
         uint256_t total_gas_used,
         bool go_over_gas,
         uint256_t message_group_size,
-        ValueCache& cache,
-        bool possible_reorg);
+        ValueCache& cache);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
