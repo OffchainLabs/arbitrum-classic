@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,16 @@
 
 pragma solidity ^0.6.11;
 
-contract Mock {
-    string public mocked;
-
-    constructor(string memory _mocked) public {
-        mocked = _mocked;
+library InboxHelper {
+    function chainId(address rollup) internal pure returns (uint256) {
+        return uint256(uint48(uint160(bytes20(rollup))));
     }
 
-    receive() external payable {}
+    function requestID(uint256 messageNum, address rollup) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(chainId(rollup), messageNum));
+    }
 
-    fallback() external payable {}
-
-    function sendContractTransaction(
-        uint256,
-        uint256,
-        address,
-        uint256,
-        bytes calldata
-    ) external returns (uint256) {
-        return 0;
+    function retryableTicketID(uint256 messageNum, address rollup) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(requestID(messageNum, rollup), uint256(0)));
     }
 }

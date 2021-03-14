@@ -27,6 +27,7 @@ contract Inbox is IInbox {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant L1MessageType_L2FundedByL1 = 7;
+    uint8 internal constant L1MessageType_submitRetryableTx = 9;
 
     uint8 internal constant L2MessageType_unsignedEOATx = 0;
     uint8 internal constant L2MessageType_unsignedContractTx = 1;
@@ -42,11 +43,12 @@ contract Inbox is IInbox {
      * @dev This method is an optimization to avoid having to emit the entirety of the messageData in a log. Instead validators are expected to be able to parse the data from the transaction's input
      * @param messageData Data of the message being sent
      */
-    function sendL2MessageFromOrigin(bytes calldata messageData) external {
+    function sendL2MessageFromOrigin(bytes calldata messageData) external returns (uint256) {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
         emit InboxMessageDeliveredFromOrigin(msgNum);
+        return msgNum;
     }
 
     /**
@@ -54,9 +56,10 @@ contract Inbox is IInbox {
      * @dev This method can be used to send any type of message that doesn't require L1 validation
      * @param messageData Data of the message being sent
      */
-    function sendL2Message(bytes calldata messageData) external override {
+    function sendL2Message(bytes calldata messageData) external override returns (uint256) {
         uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
         emit InboxMessageDelivered(msgNum, messageData);
+        return msgNum;
     }
 
     function sendL1FundedUnsignedTransaction(
@@ -65,20 +68,21 @@ contract Inbox is IInbox {
         uint256 nonce,
         address destAddr,
         bytes calldata data
-    ) external payable override {
-        _deliverMessage(
-            L1MessageType_L2FundedByL1,
-            msg.sender,
-            abi.encodePacked(
-                L2MessageType_unsignedEOATx,
-                maxGas,
-                gasPriceBid,
-                nonce,
-                uint256(uint160(bytes20(destAddr))),
-                msg.value,
-                data
-            )
-        );
+    ) external payable override returns (uint256) {
+        return
+            _deliverMessage(
+                L1MessageType_L2FundedByL1,
+                msg.sender,
+                abi.encodePacked(
+                    L2MessageType_unsignedEOATx,
+                    maxGas,
+                    gasPriceBid,
+                    nonce,
+                    uint256(uint160(bytes20(destAddr))),
+                    msg.value,
+                    data
+                )
+            );
     }
 
     function sendL1FundedContractTransaction(
@@ -86,19 +90,20 @@ contract Inbox is IInbox {
         uint256 gasPriceBid,
         address destAddr,
         bytes calldata data
-    ) external payable override {
-        _deliverMessage(
-            L1MessageType_L2FundedByL1,
-            msg.sender,
-            abi.encodePacked(
-                L2MessageType_unsignedContractTx,
-                maxGas,
-                gasPriceBid,
-                uint256(uint160(bytes20(destAddr))),
-                msg.value,
-                data
-            )
-        );
+    ) external payable override returns (uint256) {
+        return
+            _deliverMessage(
+                L1MessageType_L2FundedByL1,
+                msg.sender,
+                abi.encodePacked(
+                    L2MessageType_unsignedContractTx,
+                    maxGas,
+                    gasPriceBid,
+                    uint256(uint160(bytes20(destAddr))),
+                    msg.value,
+                    data
+                )
+            );
     }
 
     function sendUnsignedTransaction(
@@ -108,20 +113,21 @@ contract Inbox is IInbox {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external override {
-        _deliverMessage(
-            L2_MSG,
-            msg.sender,
-            abi.encodePacked(
-                L2MessageType_unsignedEOATx,
-                maxGas,
-                gasPriceBid,
-                nonce,
-                uint256(uint160(bytes20(destAddr))),
-                amount,
-                data
-            )
-        );
+    ) external override returns (uint256) {
+        return
+            _deliverMessage(
+                L2_MSG,
+                msg.sender,
+                abi.encodePacked(
+                    L2MessageType_unsignedEOATx,
+                    maxGas,
+                    gasPriceBid,
+                    nonce,
+                    uint256(uint160(bytes20(destAddr))),
+                    amount,
+                    data
+                )
+            );
     }
 
     function sendContractTransaction(
@@ -130,42 +136,70 @@ contract Inbox is IInbox {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external override {
-        _deliverMessage(
-            L2_MSG,
-            msg.sender,
-            abi.encodePacked(
-                L2MessageType_unsignedContractTx,
-                maxGas,
-                gasPriceBid,
-                uint256(uint160(bytes20(destAddr))),
-                amount,
-                data
-            )
-        );
+    ) external override returns (uint256) {
+        return
+            _deliverMessage(
+                L2_MSG,
+                msg.sender,
+                abi.encodePacked(
+                    L2MessageType_unsignedContractTx,
+                    maxGas,
+                    gasPriceBid,
+                    uint256(uint160(bytes20(destAddr))),
+                    amount,
+                    data
+                )
+            );
     }
 
-    function depositEth(address destAddr) external payable override {
-        _deliverMessage(
-            L1MessageType_L2FundedByL1,
-            destAddr,
-            abi.encodePacked(
-                L2MessageType_unsignedContractTx,
-                uint256(0),
-                uint256(0),
-                uint256(uint160(bytes20(destAddr))),
-                msg.value
-            )
-        );
+    function depositEth(address destAddr) external payable override returns (uint256) {
+        return
+            _deliverMessage(
+                L1MessageType_L2FundedByL1,
+                destAddr,
+                abi.encodePacked(
+                    L2MessageType_unsignedContractTx,
+                    uint256(0),
+                    uint256(0),
+                    uint256(uint160(bytes20(destAddr))),
+                    msg.value
+                )
+            );
+    }
+
+    function createRetryableTicket(
+        address destAddr,
+        uint256 value,
+        uint256 maxSubmissionCost,
+        address submissionRefundAddress,
+        address valueRefundAddress,
+        bytes calldata data
+    ) external payable override returns (uint256) {
+        return
+            _deliverMessage(
+                L1MessageType_submitRetryableTx,
+                destAddr,
+                abi.encodePacked(
+                    uint256(uint160(bytes20(destAddr))),
+                    value,
+                    msg.value,
+                    maxSubmissionCost,
+                    uint256(uint160(bytes20(submissionRefundAddress))),
+                    uint256(uint160(bytes20(valueRefundAddress))),
+                    data.length,
+                    data
+                )
+            );
     }
 
     function _deliverMessage(
         uint8 _kind,
         address _sender,
         bytes memory _messageData
-    ) private {
+    ) private returns (uint256) {
         uint256 msgNum = deliverToBridge(_kind, _sender, keccak256(_messageData));
         emit InboxMessageDelivered(msgNum, _messageData);
+        return msgNum;
     }
 
     function deliverToBridge(

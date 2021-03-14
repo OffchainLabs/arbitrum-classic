@@ -2,7 +2,6 @@ package dev
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -261,7 +260,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 	}
 	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), big.NewInt(0), chainTime)
 
-	requestId := hashing.SoliditySHA3(hashing.Uint256(b.signer.ChainID()), hashing.Uint256(msgCount))
+	requestId := message.CalculateRequestId(b.signer.ChainID(), msgCount)
 	var prevHash common.Hash
 	if msgCount.Cmp(big.NewInt(0)) > 0 {
 		prevHash, err = b.arbcore.GetInboxAcc(msgCount.Sub(msgCount, big.NewInt(1)))
