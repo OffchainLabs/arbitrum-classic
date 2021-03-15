@@ -375,8 +375,7 @@ Buffer processBuffer(const ReadTransaction& tx,
         auto val_hash = ValueHash{val.nodes[i]};
         if (auto cached_val = val_cache.loadIfExists(val_hash.hash)) {
             RawBuffer buf = *std::get<Buffer>(cached_val.value()).buf;
-            buf.level = val.level - 1;
-            (*vec)[i] = buf;
+            (*vec)[i] = buf.toLevel(val.level-1);
             continue;
         }
 
@@ -392,13 +391,14 @@ Buffer processBuffer(const ReadTransaction& tx,
 
         if (std::holds_alternative<Buffer>(record)) {
             Buffer buf = std::get<Buffer>(record);
+            // Check that it has correct height
             val_cache.maybeSave(buf);
-            (*vec)[i] = *buf.buf;
+            (*vec)[i] = buf.buf->toLevel(val.level-1);
         } else if (std::holds_alternative<ParsedBuffer>(record)) {
             Buffer buf =
                 processBuffer(tx, std::get<ParsedBuffer>(record), val_cache);
             val_cache.maybeSave(buf);
-            (*vec)[i] = *buf.buf;
+            (*vec)[i] = buf.buf->toLevel(val.level-1);
         } else {
             std::cerr << "Error loading buffer from record" << std::endl;
             return Buffer();
