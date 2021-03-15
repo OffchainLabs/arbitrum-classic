@@ -1,17 +1,26 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { DeployFunction } from 'hardhat-deploy/types'
+import { ethers } from 'hardhat'
+import { writeFileSync } from 'fs'
 
+const main = async () => {
+  const BuddyDeployer = await ethers.getContractFactory('BuddyDeployer')
+  const buddyDeployer = await BuddyDeployer.deploy()
+  console.log('BuddyDeployer deployed to:', buddyDeployer.address)
 
-const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-  const { deployments, getNamedAccounts } = hre
-  const { deploy } = deployments
-  const { deployer } = await getNamedAccounts()
-
-  await deploy('BuddyDeployer', {
-    from: deployer,
-    args: [],
+  const contracts = JSON.stringify({
+    buddyDeployer: buddyDeployer.address,
   })
+  const path = './deployment.json'
+  console.log(`Writing to JSON at ${path}`)
+
+  // TODO: should append/check if previous entries
+  writeFileSync(path, contracts)
+  
+  console.log('Done')
 }
 
-module.exports = func
-module.exports.tags = ['BuddyDeployer']
+main()
+  .then(() => process.exit(0))
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })

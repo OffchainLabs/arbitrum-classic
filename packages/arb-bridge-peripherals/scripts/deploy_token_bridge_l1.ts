@@ -1,24 +1,27 @@
 import { ethers } from 'hardhat'
-import { deploy1820Registry } from './utils'
-import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import hre from 'hardhat'
+import deployments from '../deployment.json'
 
 const main = async () => {
-  const accounts = await ethers.getSigners()
-  const { deployments } = hre
-
   // TODO: check buddy deployer address available
   // TODO: check 1820 registry
+  const inboxAddress =
+    process.env.INBOX_ADDRESS || '0xda0bB0f7aB435B0Fd3dD6Eac8c75D80A3daD6d1F'
 
-  const inbox = await deployments.get('Inbox')
-  const buddyDeployer = await deployments.get('BuddyDeployer')
+  if (inboxAddress === '' || inboxAddress === undefined)
+    throw new Error('Please set inbox address! INBOX_ADDRESS')
 
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
+
+
+  const gasPrice = 0
+  const maxGas = 100000000000
   const ethERC20Bridge = await EthERC20Bridge.deploy(
-    inbox.address,
-    buddyDeployer.address,
-    10000000,
-    10000000
+    inboxAddress,
+    deployments.buddyDeployer,
+    maxGas,
+    gasPrice,
+    deployments.standardArbERC20,
+    deployments.standardArbERC777
   )
 
   console.log('EthERC20Bridge deployed to:', ethERC20Bridge.address)
