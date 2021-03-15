@@ -375,8 +375,7 @@ Buffer processBuffer(const ReadTransaction& tx,
         auto val_hash = ValueHash{val.nodes[i]};
         if (auto cached_val = val_cache.loadIfExists(val_hash.hash)) {
             RawBuffer buf = *std::get<Buffer>(cached_val.value()).buf;
-            buf.level = val.level - 1;
-            (*vec)[i] = buf;
+            (*vec)[i] = buf.toLevel(val.level-1);
             continue;
         }
 
@@ -392,13 +391,14 @@ Buffer processBuffer(const ReadTransaction& tx,
 
         if (std::holds_alternative<Buffer>(record)) {
             Buffer buf = std::get<Buffer>(record);
+            // Check that it has correct height
             val_cache.maybeSave(buf);
-            (*vec)[i] = *buf.buf;
+            (*vec)[i] = buf.buf->toLevel(val.level-1);
         } else if (std::holds_alternative<ParsedBuffer>(record)) {
             Buffer buf =
                 processBuffer(tx, std::get<ParsedBuffer>(record), val_cache);
             val_cache.maybeSave(buf);
-            (*vec)[i] = *buf.buf;
+            (*vec)[i] = buf.buf->toLevel(val.level-1);
         } else {
             std::cerr << "Error loading buffer from record" << std::endl;
             return Buffer();
@@ -423,8 +423,8 @@ GetResults processFirstVal(const ReadTransaction& tx,
                            std::set<uint64_t>&,
                            const uint32_t reference_count,
                            ValueCache& val_cache) {
-    return applyValue(processBuffer(tx, val, val_cache), reference_count,
-                      val_stack);
+    val_stack.emplace_back(processBuffer(tx, val, val_cache), reference_count);
+    return GetResults{reference_count, rocksdb::Status::OK(), {}};
 }
 
 GetResults processVal(const ReadTransaction&,
@@ -550,6 +550,10 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
     if (val_stack[0].raw_vals.empty()) {
         // First value has no child values, so just return single value without
         // populating cache
+        assert(hash_value(val_stack[0].val) == value_hash);
+        if (hash_value(val_stack[0].val) != value_hash) {
+            throw std::runtime_error("deserialized with incorrect hash");
+        }
         return CountedData<value>{result.reference_count,
                                   std::move(val_stack[0].val)};
     }
@@ -580,6 +584,11 @@ DbResult<value> getValueImpl(const ReadTransaction& tx,
             if (val_stack.empty()) {
                 // All values resolved
                 value_cache.maybeSave(val);
+                assert(hash_value(val) == value_hash);
+                if (hash_value(val) != value_hash) {
+                    throw std::runtime_error(
+                        "deserialized with incorrect hash");
+                }
                 return CountedData<value>{reference_count, std::move(val)};
             }
 

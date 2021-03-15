@@ -17,6 +17,7 @@
 package cmachine
 
 import (
+	"math/big"
 	"os"
 	"testing"
 )
@@ -52,9 +53,13 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer arbStorage.CloseArbStorage()
-	mach2, err := arbStorage.GetInitialMachine()
+	core := arbStorage.GetArbCore()
+	cursor, err := core.GetExecutionCursor(big.NewInt(0))
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
+		t.Fatal(err)
+	}
+	mach2, err := core.TakeMachine(cursor)
+	if err != nil {
 		t.Fatal(err)
 	}
 

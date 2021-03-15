@@ -63,14 +63,28 @@ func makeInitMsg() inbox.InboxMessage {
 }
 
 func TestChallengeToOSPWithMessage(t *testing.T) {
-	runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, big.NewInt(1200000), big.NewInt(1300000), FaultConfig{DistortMachineAtGas: big.NewInt(1250000)}, false)
+	inboxGas := calculateGasToFirstInbox(t)
+	start := new(big.Int).Sub(inboxGas, big.NewInt(50000))
+	end := new(big.Int).Add(inboxGas, big.NewInt(50000))
+	runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{DistortMachineAtGas: inboxGas}, false)
 }
 
 func TestChallengeToUnreachable(t *testing.T) {
-	rounds := runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, big.NewInt(1200000), big.NewInt(1300000), FaultConfig{MessagesReadCap: big.NewInt(0)}, true)
+	inboxGas := calculateGasToFirstInbox(t)
+	start := new(big.Int).Sub(inboxGas, big.NewInt(50000))
+	end := new(big.Int).Add(inboxGas, big.NewInt(50000))
+	rounds := runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{MessagesReadCap: big.NewInt(0)}, true)
 	if rounds < 2 {
 		t.Fatal("TestChallengeToUnreachable failed too early")
 	}
+}
+
+func calculateGasToFirstInbox(t *testing.T) *big.Int {
+	arbCore, shutdown := test.PrepareArbCore(t, nil)
+	defer shutdown()
+	cursor, err := arbCore.GetExecutionCursor(big.NewInt(100000000))
+	test.FailIfError(t, err)
+	return cursor.TotalGasConsumed()
 }
 
 func TestChallengeToUnreachableSmall(t *testing.T) {

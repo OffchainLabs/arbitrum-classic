@@ -103,9 +103,7 @@ std::optional<uint256_t> MachineStateKeys::machineHash() const {
 }
 
 void MachineState::addProcessedMessage(const InboxMessage& message) {
-    output.fully_processed_inbox_accumulator = hash_inbox(
-        output.fully_processed_inbox_accumulator, message.serialize());
-    output.fully_processed_messages += 1;
+    output.fully_processed_inbox.addMessage(message);
 }
 
 void MachineState::addProcessedSend(std::vector<uint8_t> data) {
@@ -973,9 +971,5 @@ std::optional<uint256_t> MachineState::getStagedMessageBlockHeight() const {
 }
 
 uint256_t MachineState::getTotalMessagesRead() const {
-    if (stagedMessageEmpty()) {
-        return output.fully_processed_messages;
-    }
-
-    return output.fully_processed_messages + 1;
+    return output.fully_processed_inbox.countWithStaged(staged_message);
 }

@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto mach = storage.getInitialMachine(value_cache);
 
     std::vector<InboxMessage> inbox_messages;
@@ -111,7 +111,8 @@ int main(int argc, char* argv[]) {
     MachineExecutionConfig execConfig;
     execConfig.inbox_messages = inbox_messages;
     execConfig.next_block_height = 100000000;
-    auto assertion = mach->run(execConfig);
+    mach->machine_state.context = AssertionContext{execConfig};
+    auto assertion = mach->run();
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
@@ -129,6 +130,7 @@ int main(int argc, char* argv[]) {
     }
     auto mach2 = storage.getMachine(*mach->hash(), value_cache);
     execConfig.inbox_messages = std::vector<InboxMessage>();
-    mach2->run(execConfig);
+    mach2->machine_state.context = AssertionContext{execConfig};
+    mach2->run();
     return 0;
 }

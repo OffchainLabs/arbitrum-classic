@@ -91,7 +91,7 @@ ByteSliceArrayResult arbCoreGetLogs(CArbCore* arbcore_ptr,
                                     const void* start_index_ptr,
                                     const void* count_ptr) {
     try {
-        ValueCache cache;
+        ValueCache cache{0, 0};
         auto logs = static_cast<ArbCore*>(arbcore_ptr)
                         ->getLogs(receiveUint256(start_index_ptr),
                                   receiveUint256(count_ptr), cache);
@@ -210,54 +210,6 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
         std::array<unsigned char, 32> val2{};
         to_big_endian(result.data.first, val2.begin());
         std::copy(val2.begin(), val2.end(), reinterpret_cast<char*>(ret2));
-        return true;
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
-int arbCoreGetSendAcc(CArbCore* arbcore_ptr,
-                      const void* start_acc_hash,
-                      const void* start_index_ptr,
-                      const void* count_ptr,
-                      void* ret) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    try {
-        auto index_result = arb_core->getSendAcc(
-            receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
-            receiveUint256(count_ptr));
-        if (!index_result.status.ok()) {
-            return false;
-        }
-
-        std::array<unsigned char, 32> val{};
-        to_big_endian(index_result.data, val.begin());
-        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
-        return true;
-    } catch (const std::exception& e) {
-        return false;
-    }
-}
-
-int arbCoreGetLogAcc(CArbCore* arbcore_ptr,
-                     const void* start_acc_hash,
-                     const void* start_index_ptr,
-                     const void* count_ptr,
-                     void* ret) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    ValueCache cache;
-
-    try {
-        auto index_result = arbcore->getLogAcc(
-            receiveUint256(start_acc_hash), receiveUint256(start_index_ptr),
-            receiveUint256(count_ptr), cache);
-        if (!index_result.status.ok()) {
-            return false;
-        }
-
-        std::array<unsigned char, 32> val{};
-        to_big_endian(index_result.data, val.begin());
-        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
         return true;
     } catch (const std::exception& e) {
         return false;
@@ -403,7 +355,7 @@ char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    ValueCache cache;
+    ValueCache cache{1, 0};
     auto total_gas_used = receiveUint256(total_gas_used_ptr);
 
     try {
@@ -430,7 +382,7 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
     auto max_gas = receiveUint256(max_gas_ptr);
     try {
-        ValueCache cache;
+        ValueCache cache{1, 0};
         auto status = arbCore->advanceExecutionCursor(*executionCursor, max_gas,
                                                       go_over_gas, cache);
         if (!status.ok()) {
@@ -449,7 +401,7 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
     auto executionCursor = static_cast<ExecutionCursor*>(execution_cursor_ptr);
-    ValueCache cache;
+    ValueCache cache{1, 0};
     return static_cast<void*>(
         arbCore->takeExecutionCursorMachine(*executionCursor, cache).release());
 }
@@ -457,7 +409,7 @@ CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
 CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,
                                        uint64_t block_number) {
     auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    ValueCache cache;
+    ValueCache cache{1, 0};
 
     try {
         auto machine = arbcore->getMachineForSideload(block_number, cache);

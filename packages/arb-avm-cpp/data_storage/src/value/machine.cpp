@@ -94,9 +94,9 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
     state_data.pc.marshal(state_data_vector);
     state_data.err_pc.marshal(state_data_vector);
 
-    marshal_uint256_t(state_data.output.fully_processed_messages,
+    marshal_uint256_t(state_data.output.fully_processed_inbox.count,
                       state_data_vector);
-    marshal_uint256_t(state_data.output.fully_processed_inbox_accumulator,
+    marshal_uint256_t(state_data.output.fully_processed_inbox.accumulator,
                       state_data_vector);
     marshal_uint256_t(state_data.output.total_steps, state_data_vector);
     marshal_uint256_t(state_data.output.arb_gas_used, state_data_vector);
@@ -154,8 +154,13 @@ MachineStateKeys extractMachineStateKeys(
         err_pc,
         std::move(staged_message),
         status,
-        {fully_processed_messages, fully_processed_inbox_accumulator,
-         total_steps, arb_gas_used, send_acc, log_acc, send_count, log_count,
+        {{fully_processed_messages, fully_processed_inbox_accumulator},
+         total_steps,
+         arb_gas_used,
+         send_acc,
+         log_acc,
+         send_count,
+         log_count,
          last_sideload}};
 }
 
@@ -307,20 +312,9 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
 }
 
 std::optional<uint256_t> MachineStateKeys::getInboxAcc() const {
-    if (std::holds_alternative<InboxMessage>(staged_message)) {
-        return hash_inbox(output.fully_processed_inbox_accumulator,
-                          std::get<InboxMessage>(staged_message).serialize());
-    } else if (std::holds_alternative<std::monostate>(staged_message)) {
-        return output.fully_processed_inbox_accumulator;
-    } else {
-        return std::nullopt;
-    }
+    return output.fully_processed_inbox.accWithStaged(staged_message);
 }
 
 uint256_t MachineStateKeys::getTotalMessagesRead() const {
-    if (std::holds_alternative<std::monostate>(staged_message)) {
-        return output.fully_processed_messages;
-    } else {
-        return output.fully_processed_messages + 1;
-    }
+    return output.fully_processed_inbox.countWithStaged(staged_message);
 }

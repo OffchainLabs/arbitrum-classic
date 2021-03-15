@@ -161,7 +161,7 @@ if (process.env['ROPSTEN_URL'] && process.env['ROPSTEN_MNEMONIC']) {
 }
 
 if (process.env['KOVAN_URL'] && process.env['KOVAN_MNEMONIC']) {
-  ;(config.networks as any)['ropsten'] = {
+  ;(config.networks as any)['kovan'] = {
     url: process.env['KOVAN_URL'] || '',
     accounts: [process.env['KOVAN_MNEMONIC'] || ''],
     network_id: 42,

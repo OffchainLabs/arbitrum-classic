@@ -57,17 +57,7 @@ void MachineExecutionConfig::setSideloadsFromBytes(
     convertInboxMessagesFromBytes(bytes, sideloads);
 }
 
-Assertion Machine::run(MachineExecutionConfig config) {
-    machine_state.context = AssertionContext(std::move(config));
-    return runImpl();
-}
-
-Assertion Machine::continueRunning() {
-    machine_state.context.resetForContinuedRun();
-    return runImpl();
-}
-
-Assertion Machine::runImpl() {
+Assertion Machine::run() {
     uint256_t start_steps = machine_state.output.total_steps;
     uint256_t start_gas = machine_state.output.arb_gas_used;
 

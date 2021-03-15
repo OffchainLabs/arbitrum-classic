@@ -21,19 +21,19 @@
 #include <fstream>
 #include <iostream>
 
-const std::string INT_VAL_LABEL = "Int";
-const std::string TUP_VAL_LABEL = "Tuple";
-const std::string CP_VAL_LABEL = "CodePoint";
-const std::string BUF_LABEL = "Buffer";
-const std::string BUF_ELEM_LABEL = "elem";
-const std::string BUF_LEAF_LABEL = "Leaf";
-const std::string BUF_NODE_LABEL = "Node";
-const std::string CP_INTERNAL_LABEL = "Internal";
-const std::string OPCODE_LABEL = "opcode";
-const std::string OPCODE_SUB_LABEL = "AVMOpcode";
-const std::string IMMEDIATE_LABEL = "immediate";
-const std::string CODE_LABEL = "code";
-const std::string STATIC_LABEL = "static_val";
+constexpr auto INT_VAL_LABEL = "Int";
+constexpr auto TUP_VAL_LABEL = "Tuple";
+constexpr auto CP_VAL_LABEL = "CodePoint";
+constexpr auto BUF_LABEL = "Buffer";
+constexpr auto BUF_ELEM_LABEL = "elem";
+constexpr auto BUF_LEAF_LABEL = "Leaf";
+constexpr auto BUF_NODE_LABEL = "Node";
+constexpr auto CP_INTERNAL_LABEL = "Internal";
+constexpr auto OPCODE_LABEL = "opcode";
+constexpr auto OPCODE_SUB_LABEL = "AVMOpcode";
+constexpr auto IMMEDIATE_LABEL = "immediate";
+constexpr auto CODE_LABEL = "code";
+constexpr auto STATIC_LABEL = "static_val";
 
 namespace {
 
@@ -64,7 +64,7 @@ RawBuffer buffer_value_from_json(const nlohmann::json& buffer_json) {
             return res;
         }
         data->resize(LEAF_SIZE, 0);
-        return {std::move(data)};
+        return {RawBuffer(data)};
     } else if (elem_json.contains(BUF_NODE_LABEL)) {
         auto& node_data = elem_json[BUF_NODE_LABEL];
         if (!node_data.is_array()) {
@@ -85,14 +85,14 @@ RawBuffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     }
 }
 
-value value_from_json(nlohmann::json full_value_json,
+value value_from_json(const nlohmann::json& full_value_json,
                       size_t op_count,
                       const CodeSegment& code) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
     while (!json_values.empty()) {
-        auto value_json = std::move(json_values.back());
+        auto value_json = json_values.back();
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
@@ -103,10 +103,10 @@ value value_from_json(nlohmann::json full_value_json,
                 throw std::runtime_error(
                     "tuple must contain array of size less than 9");
             }
-            values.push_back(
+            values.emplace_back(
                 TuplePlaceholder{static_cast<uint8_t>(json_tup.size())});
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
-                json_values.push_back(*it);
+                json_values.emplace_back(*it);
             }
         } else if (value_json.get().contains(CP_VAL_LABEL)) {
             auto& cp_json = value_json.get()[CP_VAL_LABEL];
@@ -149,7 +149,7 @@ Operation operation_from_json(const nlohmann::json& op_json,
     if (imm.is_null()) {
         return {opcode};
     }
-    return {opcode, value_from_json(std::move(imm), op_count, code)};
+    return {opcode, value_from_json(imm, op_count, code)};
 }
 }  // namespace
 
@@ -169,10 +169,10 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
                 throw std::runtime_error(
                     "tuple must contain array of size less than 9");
             }
-            values.push_back(
+            values.emplace_back(
                 TuplePlaceholder{static_cast<uint8_t>(json_tup.size())});
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
-                json_values.push_back(*it);
+                json_values.emplace_back(*it);
             }
         } else if (value_json.get().contains(BUF_LABEL)) {
             values.emplace_back(

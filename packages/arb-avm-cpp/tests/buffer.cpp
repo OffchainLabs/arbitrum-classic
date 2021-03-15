@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include "helper.hpp"
+
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <avm/machinestate/datastack.hpp>
@@ -58,6 +61,43 @@ uint256_t hash_acc(uint8_t* buf, int sz) {
 }
 
 TEST_CASE("Buffer") {
+    SECTION("calc len") {
+        REQUIRE(calc_len(0) == 1024UL);
+        REQUIRE(calc_len(1) == 8UL * 1024UL);
+        REQUIRE(calc_len(16) == 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 1024UL);
+        REQUIRE(calc_len(17) == 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 8UL * 1024UL);
+        REQUIRE(calc_len(18) == 0);  // Overflow
+    }
+
+    SECTION("calc height") {
+        REQUIRE(calc_height(0) == 10UL);
+        REQUIRE(calc_height(1) == 1UL * 3UL + 10UL);
+        REQUIRE(calc_height(10) == 10UL * 3UL + 10UL);
+        REQUIRE(calc_height(1000) == 1000UL * 3UL + 10UL);
+    }
+
+    SECTION("needed height") {
+        REQUIRE(needed_height(0) == 1);
+        REQUIRE(needed_height(1) == 1);
+        REQUIRE(needed_height(2) == 2);
+        REQUIRE(needed_height(3) == 2);
+        REQUIRE(needed_height(4) == 3);
+        REQUIRE(needed_height(7) == 3);
+        REQUIRE(needed_height(8) == 4);
+        REQUIRE(needed_height(16) == 5);
+        REQUIRE(needed_height(32) == 6);
+        REQUIRE(needed_height(64) == 7);
+        REQUIRE(needed_height(128) == 8);
+        REQUIRE(needed_height(256) == 9);
+        REQUIRE(needed_height(512) == 10);
+        REQUIRE(needed_height(1023) == 10);
+        REQUIRE(needed_height(1024) == 11);
+    }
+
     SECTION("empty buffer") {
         Buffer buf;
         REQUIRE(buf.hash() == hash(0));
@@ -116,5 +156,30 @@ TEST_CASE("Buffer") {
         REQUIRE(buf.lastIndex() == 20000);
         buf = buf.set(300000, 123);
         REQUIRE(buf.lastIndex() == 300000);
+    }
+}
+
+TEST_CASE("Buffer Serialization") {
+    DBDeleter deleter;
+    ArbStorage storage(dbpath);
+
+    ValueCache value_cache{0, 0};
+
+    Buffer buf;
+    buf = buf.set(8192, 123);
+
+    {
+        auto transaction = storage.makeReadWriteTransaction();
+        auto results = saveValue(*transaction, buf);
+        transaction->commit();
+        REQUIRE(results.status.ok());
+    }
+
+    {
+        auto transaction = storage.makeReadTransaction();
+        auto res = getValue(*transaction, hash_value(buf), value_cache);
+        REQUIRE(std::holds_alternative<CountedData<value>>(res));
+        REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+                hash_value(buf));
     }
 }

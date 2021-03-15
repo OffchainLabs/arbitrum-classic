@@ -48,7 +48,7 @@ void initializeDatastack(const ReadTransaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
                          uint64_t expected_size) {
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto results = ::getValue(transaction, tuple_hash, value_cache);
     REQUIRE(std::holds_alternative<CountedData<value>>(results));
     REQUIRE(std::holds_alternative<Tuple>(
@@ -96,7 +96,7 @@ void saveAndGetDataStack(ReadWriteTransaction& transaction,
     REQUIRE(results.status.ok());
     transaction.commit();
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto get_results = getValue(transaction, expected_hash, value_cache);
     checkGetTupleResult(get_results, 1, expected_hash);
 }
@@ -111,7 +111,7 @@ void saveTwiceAndGetDataStack(ReadWriteTransaction& transaction,
     REQUIRE(results2.status.ok());
     transaction.commit();
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto get_results = getValue(transaction, expected_hash, value_cache);
     checkGetTupleResult(get_results, 2, expected_hash);
 }

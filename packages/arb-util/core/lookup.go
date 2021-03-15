@@ -17,9 +17,10 @@
 package core
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/pkg/errors"
 
@@ -55,8 +56,6 @@ type ExecutionCursor interface {
 type ArbCoreLookup interface {
 	ArbOutputLookup
 
-	GetSendAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
-	GetLogAcc(startAcc common.Hash, startIndex, count *big.Int) (common.Hash, error)
 	GetInboxAcc(index *big.Int) (common.Hash, error)
 	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
 
@@ -125,8 +124,10 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 		if status != MessagesReady {
 			break
 		}
-		if time.Since(start) > time.Second*30 {
-			return 0, errors.New("timed out adding messages")
+		duration := time.Since(start)
+		if duration > time.Second*30 {
+			logger.Warn().Dur("elapsed", duration).Msg("Message delivery taking too long")
+			start = time.Now()
 		}
 		<-time.After(time.Millisecond * 50)
 	}
@@ -170,13 +171,13 @@ func GetSingleSend(lookup ArbOutputLookup, index *big.Int) ([]byte, error) {
 	return sends[0], nil
 }
 
-func GetSingleLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
+func GetZeroOrOneLog(lookup ArbOutputLookup, index *big.Int) (value.Value, error) {
 	logs, err := lookup.GetLogs(index, big.NewInt(1))
 	if err != nil {
 		return nil, err
 	}
 	if len(logs) == 0 {
-		return nil, errors.New("no log found")
+		return nil, nil
 	}
 	if len(logs) > 1 {
 		return nil, errors.New("too many logs")

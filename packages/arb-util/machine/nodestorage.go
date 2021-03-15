@@ -24,7 +24,12 @@ import (
 
 type BlockInfo struct {
 	BlockLog uint64
+	LogCount uint64
 	Header   *types.Header
+}
+
+func (b *BlockInfo) InitialLogIndex() uint64 {
+	return b.BlockLog - b.LogCount
 }
 
 type EVMRequestInfo struct {
@@ -40,6 +45,6 @@ type NodeStore interface {
 
 	SaveMessageBatch(batchNum *big.Int, logIndex uint64) error
 	GetMessageBatch(batchNum *big.Int) *uint64
-	SaveBlock(header *types.Header, logIndex uint64, requests []EVMRequestInfo) error
+	SaveBlock(header *types.Header, logIndex, logCount uint64, requests []EVMRequestInfo) error
 	Reorg(height uint64) error
 }

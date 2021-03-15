@@ -75,6 +75,10 @@ class ArbCore {
     // Core thread input
     std::atomic<bool> arbcore_abort{false};
 
+    // Core thread input
+    std::atomic<bool> save_checkpoint{false};
+    rocksdb::Status save_checkpoint_status;
+
     // Core thread holds mutex only during reorg.
     // Routines accessing database for log entries will need to acquire mutex
     // because obsolete log entries have `Value` references removed causing
@@ -157,10 +161,12 @@ class ArbCore {
     std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
                                       uint256_t machineHash,
                                       ValueCache& value_cache);
+    rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
 
    public:
     // Useful for unit tests
-    rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
+    // Do not call triggerSaveCheckpoint from multiple threads at the same time
+    rocksdb::Status triggerSaveCheckpoint();
     bool isCheckpointsEmpty(ReadTransaction& tx) const;
     uint256_t maxCheckpointGas();
 
@@ -213,13 +219,11 @@ class ArbCore {
    private:
     // Execution cursor internal functions
     rocksdb::Status advanceExecutionCursorImpl(
-        ReadTransaction& tx,
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
         uint256_t message_group_size,
-        ValueCache& cache,
-        bool possible_reorg);
+        ValueCache& cache);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
         const ReadTransaction& tx,
@@ -248,13 +252,6 @@ class ArbCore {
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
         uint256_t index2);
-    ValueResult<uint256_t> getSendAcc(uint256_t start_acc_hash,
-                                      uint256_t start_index,
-                                      uint256_t count) const;
-    ValueResult<uint256_t> getLogAcc(uint256_t start_acc_hash,
-                                     uint256_t start_index,
-                                     uint256_t count,
-                                     ValueCache& cache);
 
    private:
     ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
@@ -295,13 +292,16 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& new_messages,
         bool last_block_complete,
         const uint256_t& prev_inbox_acc,
-        const uint256_t& message_count_in_machine,
         const std::optional<uint256_t>& reorg_message_count,
         ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
                                                   ValueCache& valueCache);
+
+    bool isValid(ReadTransaction& tx,
+                 const InboxState& fully_processed_inbox,
+                 const staged_variant& staged_message);
 
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>
     executionCursorGetMessages(ReadTransaction& tx,

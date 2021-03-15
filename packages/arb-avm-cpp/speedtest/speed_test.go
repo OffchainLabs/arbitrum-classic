@@ -20,6 +20,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/rs/zerolog/log"
 	"io/ioutil"
+	"math/big"
 	"strconv"
 	"strings"
 	"testing"
@@ -65,7 +66,12 @@ func runExecutableFile(b *testing.B, filePath string) {
 	if err := ckp.Initialize(filePath); err != nil {
 		b.Fatal(err)
 	}
-	mach, err := ckp.GetInitialMachine()
+	core := ckp.GetArbCore()
+	cursor, err := core.GetExecutionCursor(big.NewInt(0))
+	if err != nil {
+		b.Fatal(err)
+	}
+	mach, err := core.TakeMachine(cursor)
 	if err != nil {
 		b.Fatal(err)
 	}

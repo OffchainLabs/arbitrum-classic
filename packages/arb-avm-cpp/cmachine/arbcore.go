@@ -20,7 +20,6 @@ package cmachine
 #cgo CFLAGS: -I.
 #cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
 #include "../cavm/carbcore.h"
-#include "../cavm/cvaluecache.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -143,6 +142,9 @@ func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, erro
 }
 
 func (ac *ArbCore) GetLogs(startIndex *big.Int, count *big.Int) ([]value.Value, error) {
+	if count.Cmp(big.NewInt(0)) == 0 {
+		return nil, nil
+	}
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
 	result := C.arbCoreGetLogs(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
@@ -207,42 +209,6 @@ func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 commo
 	return
 }
 
-func (ac *ArbCore) GetSendAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
-
-	status := C.arbCoreGetSendAcc(
-		ac.c,
-		unsafeDataPointer(startAcc.Bytes()),
-		unsafeDataPointer(startIndexData),
-		unsafeDataPointer(countData),
-		unsafe.Pointer(&ret[0]),
-	)
-	if status == 0 {
-		err = errors.New("failed to get send acc")
-	}
-
-	return
-}
-
-func (ac *ArbCore) GetLogAcc(startAcc common.Hash, startIndex *big.Int, count *big.Int) (ret common.Hash, err error) {
-	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
-
-	status := C.arbCoreGetLogAcc(
-		ac.c,
-		unsafeDataPointer(startAcc.Bytes()),
-		unsafeDataPointer(startIndexData),
-		unsafeDataPointer(countData),
-		unsafe.Pointer(&ret[0]),
-	)
-	if status == 0 {
-		err = errors.New("failed to get log acc")
-	}
-
-	return
-}
-
 func (ac *ArbCore) GetExecutionCursor(totalGasUsed *big.Int) (core.ExecutionCursor, error) {
 	totalGasUsedData := math.U256Bytes(totalGasUsed)
 
@@ -274,12 +240,12 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
-func (ec *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
+func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {
 		return nil, errors.Errorf("unsupported execution cursor type %T", executionCursor)
 	}
-	cMachine := C.arbCoreTakeMachine(ec.c, cursor.c)
+	cMachine := C.arbCoreTakeMachine(ac.c, cursor.c)
 	if cMachine == nil {
 		return nil, errors.Errorf("error taking machine from execution cursor")
 	}

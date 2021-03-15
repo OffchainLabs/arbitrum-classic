@@ -135,7 +135,7 @@ TEST_CASE("Save and get value") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
     auto transaction = storage.makeReadWriteTransaction();
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     SECTION("save empty tuple") {
         auto tuple = Tuple();
@@ -163,7 +163,7 @@ TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
     auto transaction = storage.makeReadWriteTransaction();
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     SECTION("save num tuple") {
         uint256_t num = 1;
@@ -219,23 +219,23 @@ TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
     auto transaction = storage.makeReadWriteTransaction();
-    ValueCache value_cache{};
 
     SECTION("save 1 num tuple") {
+        ValueCache value_cache{1, 0};
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save codepoint in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         CodePointStub code_point_stub({0, 1}, 654546);
         auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save 1 num tuple twice") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         auto transaction2 = storage.makeReadWriteTransaction();
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(num);
@@ -247,7 +247,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 0, true, value_cache);
     }
     SECTION("save 2 num tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         std::vector<CodePoint> code;
         uint256_t num = 1;
         uint256_t num2 = 2;
@@ -256,7 +256,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save tuple in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         uint256_t num = 1;
         auto inner_tuple = Tuple::createTuple(num);
         auto tuple = Tuple::createTuple(inner_tuple);
@@ -266,7 +266,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
     }
     SECTION("save 2 tuples in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         uint256_t num = 1;
         value inner_tuple = Tuple::createTuple(num);
         uint256_t num2 = 2;
@@ -278,7 +278,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, inner_tuple2, 1, true, value_cache);
     }
     SECTION("save saved tuple in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         auto transaction2 = storage.makeReadWriteTransaction();
         uint256_t num = 1;
         value inner_tuple = Tuple::createTuple(num);
@@ -288,12 +288,12 @@ TEST_CASE("Save And Get Tuple") {
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
 
-        // Clear cache to get real reference count
-        value_cache.clear();
-        getTuple(*transaction, inner_tuple, 2, true, value_cache);
+        // Use different cache to get real reference count
+        ValueCache value_cache2{1, 0};
+        getTuple(*transaction, inner_tuple, 2, true, value_cache2);
 
         // Test cache
-        getTuple(*transaction, inner_tuple, 0, true, value_cache);
+        getTuple(*transaction, inner_tuple, 0, true, value_cache2);
     }
 }
 
@@ -307,7 +307,7 @@ TEST_CASE("Checkpoint Benchmark") {
         tuple = Tuple::createTuple(tuple);
     }
     saveValue(*transaction, tuple);
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     auto tuple_hash = hash_value(tuple);
     // Initial get to populate cache
@@ -352,7 +352,7 @@ void checkSavedState(const ReadWriteTransaction& transaction,
     REQUIRE(data.register_hash ==
             hash_value(expected_machine.machine_state.registerVal));
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
         getValue(transaction, data.datastack_hash, value_cache)));
     REQUIRE(!std::holds_alternative<rocksdb::Status>(
@@ -372,7 +372,7 @@ void checkDeletedCheckpoint(ReadTransaction& transaction,
         deleted_machine.machine_state.stack.getTupleRepresentation();
     auto auxstack_tup =
         deleted_machine.machine_state.auxstack.getTupleRepresentation();
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     REQUIRE(std::holds_alternative<rocksdb::Status>(
         getValue(transaction, hash(datastack_tup), value_cache)));
     REQUIRE(std::holds_alternative<rocksdb::Status>(
@@ -414,7 +414,7 @@ Machine getComplexMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
-    auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 65};
+    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
 
     staged_variant staged_message;
 
@@ -435,7 +435,7 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    auto output = MachineOutput{42, 54, 23, 54, 12, 65, 76, 43, 34};
+    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
     staged_variant staged_message;
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,

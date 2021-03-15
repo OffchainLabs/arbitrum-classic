@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2012, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,18 @@
 
 pragma solidity ^0.6.11;
 
-contract Mock {
-    string public mocked;
+import "../bridge/InboxHelper.sol";
 
-    constructor(string memory _mocked) public {
-        mocked = _mocked;
+contract InboxHelperTester {
+    function chainId(address rollup) external pure returns (uint256) {
+        return InboxHelper.chainId(rollup);
     }
 
-    receive() external payable {}
+    function requestID(uint256 messageNum, address rollup) external pure returns (bytes32) {
+        return InboxHelper.requestID(messageNum, rollup);
+    }
 
-    fallback() external payable {}
-
-    function sendContractTransaction(
-        uint256,
-        uint256,
-        address,
-        uint256,
-        bytes calldata
-    ) external returns (uint256) {
-        return 0;
+    function retryableTicketID(uint256 messageNum, address rollup) external pure returns (bytes32) {
+        return InboxHelper.retryableTicketID(messageNum, rollup);
     }
 }

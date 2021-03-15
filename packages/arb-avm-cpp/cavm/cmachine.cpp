@@ -209,7 +209,8 @@ RawAssertion executeAssertion(CMachine* m,
     auto before_log_acc = receiveUint256(before_log_acc_data);
 
     try {
-        Assertion assertion = mach->run(*config);
+        mach->machine_state.context = AssertionContext{*config};
+        Assertion assertion = mach->run();
         return makeRawAssertion(assertion, before_send_acc, before_log_acc);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";

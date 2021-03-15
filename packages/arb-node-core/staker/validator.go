@@ -175,7 +175,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		if cursor.TotalMessagesRead().Cmp(startState.TotalMessagesRead) < 0 {
 			return nil, false, errors.New("catching up to chain")
 		}
-		return nil, false, errors.New("local machine doesn't match chain")
+		return nil, false, errors.Errorf("local machine doesn't match chain %v %v", cursor.TotalGasConsumed(), startState.TotalGasConsumed)
 	}
 
 	// Not necessarily successors
