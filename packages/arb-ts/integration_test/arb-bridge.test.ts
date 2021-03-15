@@ -2,10 +2,15 @@ import { providers, utils, Wallet, BigNumber, constants } from 'ethers'
 import { Bridge } from '../src/lib/bridge'
 import { expect } from 'chai'
 import config from './config'
-import { EthERC20BridgeFactory } from '../src/lib/abi/EthERC20BridgeFactory'
 
 const { parseEther } = utils
-const { ethRPC, arbRPC, preFundedSignerPK, erc20BridgeAddress } = config
+const {
+  ethRPC,
+  arbRPC,
+  preFundedSignerPK,
+  erc20BridgeAddress,
+  arbTokenBridgeAddress,
+} = config
 
 const ethProvider = new providers.JsonRpcProvider(ethRPC)
 const arbProvider = new providers.JsonRpcProvider(arbRPC)
@@ -15,26 +20,14 @@ const preFundedWallet = new Wallet(preFundedSignerPK, ethProvider)
 const l1TestWallet = Wallet.createRandom(ethProvider)
 const l2TestWallet = Wallet.createRandom(arbProvider)
 
-let arb20BridgeAddress: string
+const bridge = new Bridge(
+  erc20BridgeAddress,
+  arbTokenBridgeAddress,
+  l1TestWallet,
+  l2TestWallet
+)
 
-let bridge: Bridge | undefined
-
-describe('setup bridge', () => {
-  it('instantiate bridge ', async () => {
-    const ethBridge = EthERC20BridgeFactory.connect(
-      erc20BridgeAddress,
-      l1TestWallet
-    )
-    arb20BridgeAddress = await ethBridge.l2Buddy()
-    bridge = new Bridge(
-      erc20BridgeAddress,
-      arb20BridgeAddress,
-      l1TestWallet,
-      l2TestWallet
-    )
-    expect(true).to.be.true
-  })
-
+describe('setup', () => {
   it('fund l1 test wallet with eth', async () => {
     const res = await preFundedWallet.sendTransaction({
       to: l1TestWallet.address,

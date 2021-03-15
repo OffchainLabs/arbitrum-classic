@@ -3,4 +3,5 @@ export default {
   arbRPC: 'https://devnet-l2.arbitrum.io/rpc',
   preFundedSignerPK: '',
   erc20BridgeAddress: '',
+  arbTokenBridgeAddress: '',
 }
