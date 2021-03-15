@@ -78,14 +78,14 @@ contract EthERC20Bridge is L1Buddy {
      */
     function notifyCustomToken(
         address l1Address,
-        uint256 gasPriceBid,
-        uint256 maxGas
+        uint256 maxGas,
+        uint256 gasPriceBid
     ) external payable {
         address l2Address = customL2Tokens[l1Address];
         require(l2Address != address(0), "NOT_REGISTERED");
         sendPairedContractTransaction(
-            gasPriceBid,
             maxGas,
+            gasPriceBid,
             abi.encodeWithSignature("customTokenRegistered(address,address)", l1Address, l2Address)
         );
     }
@@ -154,8 +154,8 @@ contract EthERC20Bridge is L1Buddy {
                 : ArbTokenBridge.updateERC20TokenInfo.selector;
 
         sendPairedContractTransaction(
-            gasPriceBid,
             maxGas,
+            gasPriceBid,
             abi.encodeWithSelector(_selector, erc20, name, symbol, decimals)
         );
     }
@@ -178,8 +178,8 @@ contract EthERC20Bridge is L1Buddy {
         }
         // This transfers along any ETH sent for to pay for gas in L2
         sendPairedContractTransaction(
-            gasPriceBid,
             maxGas,
+            gasPriceBid,
             abi.encodeWithSelector(selector, erc20, destination, amount, decimals)
         );
     }
@@ -215,8 +215,8 @@ contract EthERC20Bridge is L1Buddy {
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         // This transfers along any ETH sent for to pay for gas in L2
         sendPairedContractTransaction(
-            gasPriceBid,
             maxGas,
+            gasPriceBid,
             abi.encodeWithSelector(
                 ArbTokenBridge.mintCustomtokenFromL1.selector,
                 erc20,
@@ -238,8 +238,8 @@ contract EthERC20Bridge is L1Buddy {
 
     // TODO: does this carry over the msg.value of the internal call implicitly?
     function sendPairedContractTransaction(
-        uint256 gasPriceBid,
         uint256 maxGas,
+        uint256 gasPriceBid,
         bytes memory data
     ) private {
         inbox.depositEth{ value: msg.value }(L1Buddy.l2Buddy);
