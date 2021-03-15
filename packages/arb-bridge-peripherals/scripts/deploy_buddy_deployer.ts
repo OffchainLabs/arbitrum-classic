@@ -1,13 +1,17 @@
-import { ethers } from 'hardhat'
-const main = async () => {
-  const BuddyDeployer = await ethers.getContractFactory('BuddyDeployer')
-  const buddyDeployer = await BuddyDeployer.deploy()
-  console.log('BuddyDeployer deployed to:', buddyDeployer.address)
+import { HardhatRuntimeEnvironment } from 'hardhat/types'
+import { DeployFunction } from 'hardhat-deploy/types'
+
+
+const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+  const { deployments, getNamedAccounts } = hre
+  const { deploy } = deployments
+  const { deployer } = await getNamedAccounts()
+
+  await deploy('BuddyDeployer', {
+    from: deployer,
+    args: [],
+  })
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch(error => {
-    console.error(error)
-    process.exit(1)
-  })
+module.exports = func
+module.exports.tags = ['BuddyDeployer']

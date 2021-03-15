@@ -7,6 +7,9 @@ const main = async () => {
   const accounts = await ethers.getSigners()
   const { deployments } = hre
 
+  // TODO: check buddy deployer address available
+  // TODO: check 1820 registry
+
   const inbox = await deployments.get('Inbox')
   const buddyDeployer = await deployments.get('BuddyDeployer')
 
@@ -20,7 +23,7 @@ const main = async () => {
 
   console.log('EthERC20Bridge deployed to:', ethERC20Bridge.address)
 
-  await deploy1820Registry(accounts[0])
+  // TODO: check if L2 counterpart worked
 }
 
 main()
