@@ -100,6 +100,16 @@ class RawBuffer {
         return set_many(offset, arr);
     }
 
+    RawBuffer toLevel(int new_level) {
+        if (level == new_level) {
+            return *this;
+        } else {
+            RawBuffer res = RawBuffer(std::make_shared<std::vector<RawBuffer>>(make_empty(new_level)), new_level);
+            (*res.node)[0] = this->toLevel(new_level-1);
+            return res;
+        }
+    }
+
     // Note: pos and len must be aligned so that the data to be written is in
     // one leaf
     RawBuffer set_many(uint64_t offset, std::vector<uint8_t>& arr) const {
