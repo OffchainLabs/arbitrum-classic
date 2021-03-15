@@ -10,9 +10,17 @@ const main = async () => {
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')
 
-  const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
+    console.log("deployer", (await ethers.getSigners())[0].address)
 
+  const SafeERC20Namer = await ethers.getContractFactory('SafeERC20Namer')
+  const safeERC20Namer = await SafeERC20Namer.deploy()
 
+  const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge', {
+    libraries: {
+      SafeERC20Namer: safeERC20Namer.address,
+    },
+  })
+  
   const gasPrice = 0
   const maxGas = 100000000000
   const ethERC20Bridge = await EthERC20Bridge.deploy(
@@ -20,11 +28,12 @@ const main = async () => {
     deployments.buddyDeployer,
     maxGas,
     gasPrice,
-    deployments.standardArbERC20,
-    deployments.standardArbERC777
+    deployments.standardArbERC777,
+    deployments.standardArbERC20
   )
 
   console.log('EthERC20Bridge deployed to:', ethERC20Bridge.address)
+  console.log('L2 ArbBridge deployed to:', await ethERC20Bridge.l2Buddy())
 
   // TODO: check if L2 counterpart worked
 }

@@ -29,7 +29,7 @@ describe('Bridge peripherals layer 2', () => {
   before(async function () {
     // constructor(uint256 _gasPrice, uint256 _maxGas, address erc777Template, address erc20Template)
     accounts = await ethers.getSigners()
-    TestBridge = await ethers.getContractFactory('TestBridge')
+    TestBridge = await ethers.getContractFactory('ArbTokenBridge')
     const StandardArbERC20 = await ethers.getContractFactory(
       'StandardArbERC20'
     )
@@ -38,8 +38,7 @@ describe('Bridge peripherals layer 2', () => {
     )
     const standardArbERC20 = await StandardArbERC20.deploy()
     const standardArbERC777 = await StandardArbERC777.deploy()
-    testBridge = await TestBridge.deploy(0, 999999999, standardArbERC20.address, standardArbERC777.address)
-
+    testBridge = await TestBridge.deploy(accounts[0].address, standardArbERC777.address, standardArbERC20.address)
 
     await deploy1820Registry(accounts[0])
   })

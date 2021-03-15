@@ -28,11 +28,12 @@ library BuddyUtil {
         pure
         returns (address)
     {
+        bytes32 salt = bytes32(uint256(_l1Address));
         bytes32 hash = keccak256(
             abi.encodePacked(
                 bytes1(0xff),
                 _deployer,
-                _l1Address,
+                salt,
                 _codeHash
             )
         );
