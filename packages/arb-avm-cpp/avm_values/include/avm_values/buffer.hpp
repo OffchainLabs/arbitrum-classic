@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <utility>
 #include <vector>
 
 const uint64_t LEAF_SIZE2 = 10;
@@ -30,31 +31,38 @@ const uint64_t NODE_SIZE = 1 << NODE_SIZE2;
 const uint64_t ALIGN = LEAF_SIZE;
 
 inline uint64_t calc_len(int h) {
-    if (h == 0) {
-        return LEAF_SIZE;
+    uint64_t result = LEAF_SIZE;
+
+    for (int i = 0; i < h; i++) {
+        result *= NODE_SIZE;
     }
-    return NODE_SIZE * calc_len(h - 1);
+
+    return result;
 }
 
 inline uint64_t calc_height(int h) {
-    if (h == 0) {
-        return LEAF_SIZE2;
-    }
-    return NODE_SIZE2 + calc_height(h - 1);
+    return NODE_SIZE2 * h + LEAF_SIZE2;
 }
 
 inline uint64_t needed_height(uint64_t offset) {
-    if (offset <= 1) {
-        return 1;
-    } else {
-        return 1 + needed_height(offset / 2);
+    uint64_t result = 1;
+    uint64_t current_offset = 1;
+    while (true) {
+        current_offset *= 2;
+        if (current_offset < offset) {
+            break;
+        }
+        result++;
     }
+
+    return result;
 }
+
 struct Packed {
     uint256_t hash;
-    uint64_t size;  // total height
-    int packed;     // packed levels
-    uint64_t lastIndex;
+    uint64_t size{};  // total height
+    int packed{};     // packed levels
+    uint64_t lastIndex{};
 };
 
 Packed zero_packed(uint64_t sz);
@@ -71,13 +79,13 @@ class RawBuffer {
     int level;
 
     RawBuffer(std::shared_ptr<std::vector<RawBuffer>> node_, int level_)
-        : leaf(nullptr), node(node_) {
+        : leaf(nullptr), node(std::move(node_)) {
         level = level_;
         saved = false;
     }
 
-    RawBuffer(std::shared_ptr<std::vector<uint8_t>> leaf_)
-        : leaf(leaf_), node(nullptr) {
+    explicit RawBuffer(std::shared_ptr<std::vector<uint8_t>> leaf_)
+        : leaf(std::move(leaf_)), node(nullptr) {
         level = 0;
         saved = false;
     }
@@ -158,7 +166,7 @@ class RawBuffer {
     static std::vector<RawBuffer> make_empty(int level) {
         auto vec = std::vector<RawBuffer>();
         for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            vec.push_back(RawBuffer(level, true));
+            vec.emplace_back(level, true);
         }
         return vec;
     }
@@ -174,9 +182,7 @@ class RawBuffer {
         if (level == 0) {
             auto res = std::vector<uint8_t>(len, 0);
             for (int i = 0; i < len; i++) {
-                if (!leaf) {
-                    res[i] = 0;
-                } else if (leaf->size() <= pos + i) {
+                if (!leaf || leaf->size() <= pos + i) {
                     res[i] = 0;
                 } else {
                     res[i] = (*leaf)[pos + i];
@@ -196,7 +202,7 @@ class RawBuffer {
     Packed hash_aux() const;
     uint256_t hash() const { return hash_aux().hash; }
 
-    uint64_t lastIndex() { return hash_aux().lastIndex; }
+    uint64_t lastIndex() const { return hash_aux().lastIndex; }
 
     std::vector<RawBuffer> serialize(std::vector<unsigned char>& value_vector);
 
@@ -221,37 +227,38 @@ class Buffer {
    public:
     std::shared_ptr<RawBuffer> buf;
 
-    Buffer(const RawBuffer& buffer) {
+    explicit Buffer(const RawBuffer& buffer) {
         buf = std::make_shared<RawBuffer>(buffer);
     }
 
     Buffer() { buf = std::make_shared<RawBuffer>(); }
 
-    Buffer(const std::vector<uint8_t>& data) : Buffer() {
+    explicit Buffer(const std::vector<uint8_t>& data) : Buffer() {
         for (uint64_t i = 0; i < data.size(); i++) {
             buf = std::make_shared<RawBuffer>(buf->set(i, data[i]));
         }
     }
 
-    Buffer set(uint64_t offset, uint8_t v) const {
+    [[nodiscard]] Buffer set(uint64_t offset, uint8_t v) const {
         return Buffer(buf->set(offset, v));
     }
 
-    Buffer set_many(uint64_t offset, std::vector<uint8_t> arr) const {
+    [[nodiscard]] Buffer set_many(uint64_t offset,
+                                  std::vector<uint8_t> arr) const {
         return Buffer(buf->set_many(offset, arr));
     }
 
-    uint8_t get(uint64_t pos) const { return buf->get(pos); }
+    [[nodiscard]] uint8_t get(uint64_t pos) const { return buf->get(pos); }
 
-    std::vector<uint8_t> get_many(uint64_t pos, int len) const {
+    [[nodiscard]] std::vector<uint8_t> get_many(uint64_t pos, int len) const {
         return buf->get_many(pos, len);
     }
 
-    uint64_t size() const { return buf->size(); }
+    [[nodiscard]] uint64_t size() const { return buf->size(); }
 
-    uint64_t lastIndex() const { return buf->lastIndex(); }
+    [[nodiscard]] uint64_t lastIndex() const { return buf->lastIndex(); }
 
-    uint64_t data_length() const {
+    [[nodiscard]] uint64_t data_length() const {
         auto last = buf->lastIndex();
         if (last == 0 && get(0) == 0) {
             return 0;
@@ -259,14 +266,14 @@ class Buffer {
         return last + 1;
     }
 
-    uint256_t hash() const { return buf->hash(); }
+    [[nodiscard]] uint256_t hash() const { return buf->hash(); }
 
-    std::vector<unsigned char> makeProof(uint64_t loc) const {
+    [[nodiscard]] std::vector<unsigned char> makeProof(uint64_t loc) const {
         RawBuffer nbuf = buf->normalize();
         return nbuf.makeProof(loc);
     }
 
-    std::vector<unsigned char> makeNormalizationProof() {
+    [[nodiscard]] std::vector<unsigned char> makeNormalizationProof() const {
         RawBuffer nbuf = buf->normalize();
         return nbuf.makeNormalizationProof();
     }
@@ -278,7 +285,7 @@ class Buffer {
         return nbuf.serialize(value_vector);
     }
 
-    std::vector<uint8_t> toFlatVector() const {
+    [[nodiscard]] std::vector<uint8_t> toFlatVector() const {
         std::vector<uint8_t> data;
         if (size() == 0) {
             return data;
@@ -292,7 +299,7 @@ class Buffer {
             }
             i++;
         }
-        while (data.size() > 0 && data.back() == 0) {
+        while (!data.empty() && data.back() == 0) {
             data.pop_back();
         }
         return data;

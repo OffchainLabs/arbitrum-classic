@@ -61,6 +61,43 @@ uint256_t hash_acc(uint8_t* buf, int sz) {
 }
 
 TEST_CASE("Buffer") {
+    SECTION("calc len") {
+        REQUIRE(calc_len(0) == 1024UL);
+        REQUIRE(calc_len(1) == 8UL * 1024UL);
+        REQUIRE(calc_len(16) == 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 1024UL);
+        REQUIRE(calc_len(17) == 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 8UL * 8UL * 8UL * 8UL * 8UL * 8UL *
+                                    8UL * 8UL * 1024UL);
+        REQUIRE(calc_len(18) == 0);  // Overflow
+    }
+
+    SECTION("calc height") {
+        REQUIRE(calc_height(0) == 10UL);
+        REQUIRE(calc_height(1) == 1UL * 3UL + 10UL);
+        REQUIRE(calc_height(10) == 10UL * 3UL + 10UL);
+        REQUIRE(calc_height(1000) == 1000UL * 3UL + 10UL);
+    }
+
+    SECTION("needed height") {
+        REQUIRE(needed_height(0) == 1);
+        REQUIRE(needed_height(1) == 1);
+        REQUIRE(needed_height(2) == 2);
+        REQUIRE(needed_height(3) == 2);
+        REQUIRE(needed_height(4) == 3);
+        REQUIRE(needed_height(7) == 3);
+        REQUIRE(needed_height(8) == 4);
+        REQUIRE(needed_height(16) == 5);
+        REQUIRE(needed_height(32) == 6);
+        REQUIRE(needed_height(64) == 7);
+        REQUIRE(needed_height(128) == 8);
+        REQUIRE(needed_height(256) == 9);
+        REQUIRE(needed_height(512) == 10);
+        REQUIRE(needed_height(1023) == 10);
+        REQUIRE(needed_height(1024) == 11);
+    }
+
     SECTION("empty buffer") {
         Buffer buf;
         REQUIRE(buf.hash() == hash(0));
@@ -129,7 +166,7 @@ TEST_CASE("Buffer Serialization") {
     ValueCache value_cache{0, 0};
 
     Buffer buf;
-    buf = buf.set(8192, 123);
+    buf = buf.set(8191, 123);
 
     {
         auto transaction = storage.makeReadWriteTransaction();
