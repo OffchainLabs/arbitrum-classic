@@ -46,12 +46,7 @@ inline uint64_t calc_height(int h) {
 
 inline uint64_t needed_height(uint64_t offset) {
     uint64_t result = 1;
-    uint64_t current_offset = 1;
-    while (true) {
-        current_offset *= 2;
-        if (current_offset < offset) {
-            break;
-        }
+    for (uint64_t i = 2; i <= offset; i *= 2) {
         result++;
     }
 
