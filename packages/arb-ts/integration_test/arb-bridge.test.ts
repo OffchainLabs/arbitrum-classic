@@ -17,8 +17,16 @@ const arbProvider = new providers.JsonRpcProvider(arbRPC)
 
 const preFundedWallet = new Wallet(preFundedSignerPK, ethProvider)
 
-const l1TestWallet = Wallet.createRandom(ethProvider)
-const l2TestWallet = Wallet.createRandom(arbProvider)
+const testPk = utils.formatBytes32String(Math.random().toString())
+
+const l1TestWallet = new Wallet(testPk, ethProvider)
+const l2TestWallet = new Wallet(testPk, arbProvider)
+
+const depositAmount = '0.001'
+
+console.info('preFundedWallet', preFundedWallet.address)
+
+console.info('test wallet', l1TestWallet.address)
 
 const bridge = new Bridge(
   erc20BridgeAddress,
@@ -31,11 +39,11 @@ describe('setup', () => {
   it('fund l1 test wallet with eth', async () => {
     const res = await preFundedWallet.sendTransaction({
       to: l1TestWallet.address,
-      value: utils.parseEther('0.01'),
+      value: utils.parseEther(depositAmount),
     })
-    await res.wait()
+    const rec = await res.wait()
     const testWAlletBalance = await l1TestWallet.getBalance()
-    expect(testWAlletBalance.eq(parseEther('0.01'))).to.be.true
+    expect(testWAlletBalance.eq(parseEther(depositAmount))).to.be.true
   })
 })
 
@@ -46,12 +54,12 @@ describe('deposit ether', () => {
   it('has expected intial values', async () => {
     testWalletL1EthBalance = await bridge.getAndUpdateL1EthBalance()
     testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
-    expect(testWalletL1EthBalance.eq(parseEther('0.01'))).to.be.true
+    expect(testWalletL1EthBalance.eq(parseEther(depositAmount))).to.be.true
     expect(testWalletL2EthBalance.eq(constants.Zero)).to.be.true
   })
 
   it('deposits ether', async () => {
-    const depositAmount = parseEther('0.001')
+    const depositAmount = parseEther('0.0001')
     const res = await bridge.depositETH(depositAmount)
     const rec = await res.wait()
 
