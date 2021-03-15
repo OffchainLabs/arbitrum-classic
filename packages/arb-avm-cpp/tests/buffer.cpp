@@ -188,13 +188,14 @@ TEST_CASE("Buffer Serialization") {
                              // rd()
     std::uniform_int_distribution<> distrib(0, 20000);
 
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 1000; i++) {
         Buffer buf;
-        for (int j = 0; j < 30; j++) {
-            buf = buf.set(distrib(gen), 100);
+        for (int j = 0; j < 10; j++) {
+            auto index = distrib(gen);
+            buf = buf.set(index, 100);
         }
         auto buf2 = checkBuffer(storage, buf);
-        for (int j = 0; j < 30; j++) {
+        for (int j = 0; j < 10; j++) {
             auto index = distrib(gen);
             buf = buf.set(index, 100);
             buf2 = buf2.set(index, 100);
@@ -203,4 +204,18 @@ TEST_CASE("Buffer Serialization") {
         checkBuffer(storage, buf);
         checkBuffer(storage, buf2);
     }
+}
+
+TEST_CASE("Buffer Hash Failure") {
+    DBDeleter deleter;
+    ArbStorage storage(dbpath);
+
+    ValueCache value_cache{0, 0};
+
+    Buffer buf;
+    buf = buf.set(17750, 100);
+    auto buf2 = checkBuffer(storage, buf);
+    buf = buf.set(14721, 100);
+    buf2 = buf2.set(14721, 100);
+    REQUIRE(buf.hash() == buf2.hash());
 }
