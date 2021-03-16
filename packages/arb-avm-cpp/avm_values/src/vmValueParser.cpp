@@ -47,7 +47,7 @@ Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     }
     auto hexstr = buffer_json.get<std::string>();
     std::vector<uint8_t> bytes;
-    bytes.reserve(hexstr.size() / 2);
+    bytes.resize(hexstr.size() / 2);
     boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
     return Buffer::fromData(bytes);
 }
