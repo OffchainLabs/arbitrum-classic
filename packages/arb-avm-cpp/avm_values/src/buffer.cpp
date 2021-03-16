@@ -21,7 +21,7 @@
 
 // Returns the length of a buffer with a given depth
 inline uint256_t length_of_depth(uint64_t depth) {
-    return Buffer::leaf_size << depth;
+    return uint256_t(Buffer::leaf_size) << depth;
 }
 
 // Returns the necessary depth of a buffer to hold a given number of bytes
@@ -39,7 +39,7 @@ const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth =
     []() -> std::vector<std::shared_ptr<Buffer>> {
     std::vector<std::shared_ptr<Buffer>> buffers;
     auto last_buffer = std::make_shared<Buffer>();
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 64; i++) {
         buffers.push_back(last_buffer);
         last_buffer = std::make_shared<Buffer>(last_buffer, last_buffer);
     }
