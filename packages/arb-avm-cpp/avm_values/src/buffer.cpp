@@ -124,7 +124,7 @@ Buffer Buffer::trim() const {
 }
 
 Buffer Buffer::set_many_without_resize(uint64_t offset,
-                                       std::vector<uint8_t> arr,
+                                       const std::vector<uint8_t>& arr,
                                        uint64_t arr_offset,
                                        uint64_t arr_length) const {
     Buffer ret(*this);
@@ -168,9 +168,10 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
 
 Buffer::Buffer() : Buffer(std::array<unsigned char, 32>{}) {}
 
-Buffer::Buffer(const std::vector<uint8_t>& data) : Buffer() {
+Buffer Buffer::fromData(const std::vector<uint8_t>& data) {
     // Grow the buffer to the necessary length
-    *this = grow(needed_depth(data.size()));
+    Buffer buf;
+    buf = buf.grow(needed_depth(data.size()));
     // Set each up to 32 byte chunk of the buffer
     for (uint64_t i = 0; i < data.size(); i += 32) {
         uint64_t len = 32;
@@ -178,9 +179,9 @@ Buffer::Buffer(const std::vector<uint8_t>& data) : Buffer() {
             // The last chunk might be smaller than 32 bytes
             len = data.size() - i;
         }
-        *this = set_many_without_resize(i, data, i, len);
+        buf = buf.set_many_without_resize(i, data, i, len);
     }
-    *this = trim();
+    return buf.trim();
 }
 
 uint64_t Buffer::size() const {

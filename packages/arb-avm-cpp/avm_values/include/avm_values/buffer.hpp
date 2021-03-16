@@ -65,10 +65,11 @@ class Buffer {
     // Like the public method, but requires that the buffer must not need
     // growing or trimming, and specifying an offset and length to the passed
     // in array. The bytes set must be within a single 32 byte chunk.
-    [[nodiscard]] Buffer set_many_without_resize(uint64_t offset,
-                                                 std::vector<uint8_t> arr,
-                                                 uint64_t arr_offset,
-                                                 uint64_t arr_length) const;
+    [[nodiscard]] Buffer set_many_without_resize(
+        uint64_t offset,
+        const std::vector<uint8_t>& arr,
+        uint64_t arr_offset,
+        uint64_t arr_length) const;
 
    public:
     // Creates an "empty" buffer (actually has 32 zero bytes)
@@ -77,13 +78,8 @@ class Buffer {
     // Create a branch node composed of two buffers with equal depths
     Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right);
 
-    // Copy constructor
-    Buffer(const Buffer&) = default;
-    // Destructor
-    ~Buffer() = default;
-
     // Creates a buffer representing the given bytes
-    explicit Buffer(const std::vector<uint8_t>& data);
+    static Buffer fromData(const std::vector<uint8_t>& data);
 
     // Returns the size of the buffer, **including** any trailing zeroes
     [[nodiscard]] uint64_t size() const;

@@ -53,7 +53,7 @@ uint256_t hash_buffer(uint8_t* buf, int offset, int sz) {
 }
 
 uint256_t hash_acc(uint8_t* buf, int sz) {
-    Buffer acc(std::vector<uint8_t>(buf, buf + sz));
+    auto acc = Buffer::fromData(std::vector<uint8_t>(buf, buf + sz));
     return acc.hash();
 }
 
@@ -94,6 +94,24 @@ TEST_CASE("Buffer") {
             uint8_t arr[SIZE] = {};
             arr[j * 32] = 123;
             REQUIRE(hash_buffer(arr, 0, SIZE) == hash_acc(arr, SIZE));
+        }
+    }
+
+    SECTION("set and read clone") {
+        Buffer buf;
+        Buffer buf2 = buf.set(10, 100);
+        Buffer buf3 = buf.set(10, 150);
+        REQUIRE(buf2.get(10) == 100);
+        REQUIRE(buf3.get(10) == 150);
+    }
+
+    SECTION("flat construction") {
+        std::vector<uint8_t> data;
+        data.resize(32);
+        std::fill(data.begin(), data.end(), 1);
+        auto buf = Buffer::fromData(data);
+        for (uint64_t i = 0; i < data.size(); i++) {
+            REQUIRE(buf.get(i) == data[i]);
         }
     }
 
