@@ -106,3 +106,48 @@ TEST_CASE("ARBOS test vectors") {
         }
     }
 }
+
+TEST_CASE("ARBOS Checkpointing Diff") {
+    DBDeleter deleter;
+    ValueCache value_cache{0, 0};
+
+    auto test_file = std::string{arb_os_test_cases_path} +
+                     "/evm_xcontract_call_with_constructors.aoslog";
+
+    std::ifstream i(test_file);
+    nlohmann::json j;
+    i >> j;
+
+    std::vector<InboxMessage> messages;
+    for (auto& json_message : j.at("inbox")) {
+        messages.push_back(InboxMessage::fromTuple(
+            std::get<Tuple>(simple_value_from_json(json_message))));
+    }
+
+    ArbStorage storage(dbpath);
+    REQUIRE(storage.initialize(arb_os_path).ok());
+    std::vector<std::unique_ptr<Machine>> machines;
+    machines.emplace_back(storage.getInitialMachine(value_cache));
+
+    for (const auto& message : messages) {
+        for (auto& mach : machines) {
+            MachineExecutionConfig config;
+            config.inbox_messages = {message};
+            mach->machine_state.context = AssertionContext(config);
+            mach->run();
+        }
+        REQUIRE(machines.back()->hash().has_value());
+        auto target_hash = *machines.front()->hash();
+        {
+            auto tx = storage.makeReadWriteTransaction();
+            saveMachine(*tx, *machines.back());
+            tx->commit();
+        }
+        machines.emplace_back(storage.getMachine(target_hash, value_cache));
+
+        for (auto& mach : machines) {
+            REQUIRE(mach->hash().has_value());
+            REQUIRE(target_hash == *mach->hash());
+        }
+    }
+}
