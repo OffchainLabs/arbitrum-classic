@@ -70,7 +70,6 @@ TEST_CASE("ARBOS test vectors") {
             mach->machine_state.context = AssertionContext(config);
             auto assertion = mach->run();
             INFO("Machine ran for " << assertion.stepCount << " steps");
-            REQUIRE(assertion.gasCount == total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
                 REQUIRE(assertion.logs[k] == logs[k]);
@@ -79,6 +78,7 @@ TEST_CASE("ARBOS test vectors") {
             for (size_t k = 0; k < assertion.sends.size(); ++k) {
                 REQUIRE(assertion.sends[k] == sends[k]);
             }
+            REQUIRE(assertion.gasCount == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
                 saveMachine(*tx, *mach);
