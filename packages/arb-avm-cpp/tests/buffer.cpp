@@ -160,7 +160,7 @@ TEST_CASE("Buffer") {
 }
 
 Buffer checkBuffer(ArbStorage& storage, Buffer& buf) {
-    ValueCache value_cache{0, 0};
+    ValueCache value_cache{1, 0};
     {
         auto transaction = storage.makeReadWriteTransaction();
         auto results = saveValue(*transaction, buf);
@@ -180,7 +180,7 @@ TEST_CASE("Buffer Serialization") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
 
-    ValueCache value_cache{0, 0};
+    ValueCache value_cache{1, 0};
 
     std::random_device
         rd;  // Will be used to obtain a seed for the random number engine
@@ -215,7 +215,7 @@ TEST_CASE("Buffer Hash Failure") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
 
-    ValueCache value_cache{0, 0};
+    ValueCache value_cache{1, 0};
 
     Buffer buf;
     buf = buf.set(17750, 100);
