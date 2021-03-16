@@ -137,6 +137,23 @@ TEST_CASE("Buffer") {
         }
     }
 
+    SECTION("hashing random buffer") {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        const int SIZE = 1024 * 32;
+        std::uniform_int_distribution<> distrib(0, SIZE);
+        for (int i = 0; i < 100; i++) {
+            Buffer buf;
+            uint8_t arr[SIZE] = {};
+            for (int j = 0; j < 3; j++) {
+                auto index = distrib(gen);
+                buf = buf.set(index, 100);
+                arr[index] = 100;
+                REQUIRE(hash_buffer(arr, 0, SIZE) == buf.hash());
+            }
+        }
+    }
+
     SECTION("last index") {
         Buffer buf;
         REQUIRE(buf.lastIndex() == 0);
