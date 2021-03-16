@@ -71,12 +71,12 @@ Packed hash_buf(uint8_t* buf, uint64_t offset, uint64_t sz) {
         return normal(res, 5, lastIndex);
     }
     auto h1 = hash_buf(buf, offset, sz - 1);
-    auto h2 = hash_buf(buf, offset + (1 << (sz - 1)), sz - 1);
+    auto h2 = hash_buf(buf, offset + (1L << (sz - 1)), sz - 1);
     if (is_zero_hash(h2)) {
         return pack(h1);
     }
     return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
+                  h2.lastIndex + (1L << (sz - 1)));
 }
 
 Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
@@ -90,7 +90,7 @@ Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
         return pack(h1);
     }
     return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
+                  h2.lastIndex + (1L << (sz - 1)));
 }
 
 Packed RawBuffer::hash_aux() const {

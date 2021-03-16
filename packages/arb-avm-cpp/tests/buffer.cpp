@@ -96,6 +96,7 @@ TEST_CASE("Buffer") {
         REQUIRE(needed_height(512) == 10);
         REQUIRE(needed_height(1023) == 10);
         REQUIRE(needed_height(1024) == 11);
+        REQUIRE(needed_height(1L << 63) == 64);
     }
 
     SECTION("empty buffer") {
@@ -128,7 +129,7 @@ TEST_CASE("Buffer") {
         REQUIRE(hash_buffer(arr, 0, 131072) == hash_acc(arr, SIZE));
     }
 
-    SECTION("hashing with single zeroes") {
+    SECTION("hashing with single items") {
         const int SIZE = 1024 * 32;
         for (int j = 0; j < 1024; j++) {
             uint8_t arr[SIZE] = {};
@@ -173,6 +174,12 @@ TEST_CASE("Buffer") {
         REQUIRE(buf.lastIndex() == 20000);
         buf = buf.set(300000, 123);
         REQUIRE(buf.lastIndex() == 300000);
+        uint64_t idx = 300000L*300000L;
+        buf = buf.set(idx, 123);
+        REQUIRE(buf.lastIndex() == idx);
+        uint64_t idx2 = (1L << 63L);
+        buf = buf.set(idx2, 123);
+        REQUIRE(buf.lastIndex() == idx2);
     }
 }
 
