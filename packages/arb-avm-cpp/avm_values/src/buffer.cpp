@@ -205,10 +205,10 @@ std::vector<unsigned char> RawBuffer::makeProof(uint64_t offset,
             offset % calc_len(level - 1), sz, loc % calc_len(level - 1));
     } else if (loc < offset + (1L << (sz - 1))) {
         auto proof = makeProof(offset, sz - 1, loc);
-        marshal_uint256_t(merkleHash(offset + (1L << (sz - 1)), sz - 1), proof);
+        marshal_uint256_t(merkleHash(offset + (1UL << (sz - 1)), sz - 1), proof);
         return proof;
     } else {
-        auto proof = makeProof(offset + (1L << (sz - 1)), sz - 1, loc);
+        auto proof = makeProof(offset + (1UL << (sz - 1)), sz - 1, loc);
         marshal_uint256_t(merkleHash(offset, sz - 1), proof);
         return proof;
     }
@@ -226,13 +226,13 @@ uint256_t RawBuffer::merkleHash(uint64_t offset, uint64_t sz) {
         return (*node)[offset / calc_len(level - 1)].merkleHash(0, sz);
     }
     auto h1 = merkleHash(offset, sz - 1);
-    auto h2 = merkleHash(offset + (1L << (sz - 1)), sz - 1);
+    auto h2 = merkleHash(offset + (1UL << (sz - 1)), sz - 1);
     return hash2(h1, h2);
 }
 
 std::vector<unsigned char> RawBuffer::makeProof(uint64_t loc) {
     auto size = sizePow2();
-    auto res = makeProof(0, size, ((loc / 32) % (1L << (size - 5))) * 32);
+    auto res = makeProof(0, size, ((loc / 32) % (1UL << (size - 5))) * 32);
     return res;
 }
 

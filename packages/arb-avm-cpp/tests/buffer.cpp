@@ -96,7 +96,7 @@ TEST_CASE("Buffer") {
         REQUIRE(needed_height(512) == 10);
         REQUIRE(needed_height(1023) == 10);
         REQUIRE(needed_height(1024) == 11);
-        REQUIRE(needed_height(1L << 63) == 64);
+        REQUIRE(needed_height(1UL << 63) == 64);
     }
 
     SECTION("empty buffer") {
@@ -177,7 +177,7 @@ TEST_CASE("Buffer") {
         uint64_t idx = 300000L*300000L;
         buf = buf.set(idx, 123);
         REQUIRE(buf.lastIndex() == idx);
-        uint64_t idx2 = (1L << 63L);
+        uint64_t idx2 = (1UL << 63UL);
         buf = buf.set(idx2, 123);
         REQUIRE(buf.lastIndex() == idx2);
     }
