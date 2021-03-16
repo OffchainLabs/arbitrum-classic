@@ -71,6 +71,8 @@ namespace {
 
 template <class T>
 T parseBuffer(const char* buf, int& len) {
+    throw std::runtime_error("TODO");
+    /*
     uint8_t level = buf[0];
     len++;
     // Empty
@@ -96,6 +98,7 @@ T parseBuffer(const char* buf, int& len) {
         len += 32;
     }
     return ParsedBuffer{level, res};
+    */
 }
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
@@ -224,6 +227,8 @@ std::vector<value> serializeValue(const HashPreImage&,
 std::vector<value> serializeValue(const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
+    throw new std::runtime_error("TODO: unimplemented");
+    /*
     value_vector.push_back(BUFFER);
     int l1 = value_vector.size();
     std::vector<RawBuffer> res = b.serialize(value_vector);
@@ -235,6 +240,7 @@ std::vector<value> serializeValue(const Buffer& b,
         ret.emplace_back(Buffer(re));
     }
     return ret;
+    */
 }
 
 std::vector<value> serializeValue(
@@ -369,6 +375,8 @@ GetResults processFirstVal(const ReadTransaction&,
 Buffer processBuffer(const ReadTransaction& tx,
                      const ParsedBuffer& val,
                      ValueCache& val_cache) {
+    throw new std::runtime_error("TODO: unimplemented");
+    /*
     std::shared_ptr<std::vector<RawBuffer>> vec =
         std::make_shared<std::vector<RawBuffer>>(NODE_SIZE);
     for (uint64_t i = 0; i < NODE_SIZE; i++) {
@@ -405,6 +413,7 @@ Buffer processBuffer(const ReadTransaction& tx,
         }
     }
     return Buffer(RawBuffer(vec, val.level));
+    */
 }
 
 GetResults processVal(const ReadTransaction& tx,

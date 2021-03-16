@@ -42,10 +42,12 @@ uint256_t int_value_from_json(const nlohmann::json& value_json) {
         "0x" + value_json[INT_VAL_LABEL].get<std::string>());
 }
 
-RawBuffer buffer_value_from_json(const nlohmann::json& buffer_json) {
+Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     if (!buffer_json.contains(BUF_ELEM_LABEL)) {
         throw std::runtime_error("buffer must contain elem");
     }
+    throw std::runtime_error("TODO: unimplemented");
+    /*
     auto elem_json = buffer_json[BUF_ELEM_LABEL];
     if (elem_json.contains(BUF_LEAF_LABEL)) {
         auto& leaf_data = elem_json[BUF_LEAF_LABEL];
@@ -83,6 +85,7 @@ RawBuffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     } else {
         throw std::runtime_error("unhandled buffer member type");
     }
+    */
 }
 
 value value_from_json(const nlohmann::json& full_value_json,

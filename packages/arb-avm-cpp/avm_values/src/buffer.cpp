@@ -19,239 +19,267 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t zero_hash(uint64_t sz) {
-    if (sz == 5) {
-        return hash(0);
+const uint256_t zero_hash = hash(0);
+
+// Returns the length of a buffer with a given depth
+inline uint64_t length_of_depth(uint64_t depth) {
+    return 32 << depth;
+}
+
+// Returns the necessary depth of a buffer to hold a given number of bytes
+inline uint64_t needed_depth(uint64_t size) {
+    uint64_t depth = 0;
+    while (size > 32) {
+        // Divide rounding up
+        size = (size + 1) / 2;
+        depth += 1;
     }
-    auto h1 = zero_hash(sz - 1);
-    return hash(h1, h1);
+    return depth;
 }
 
-uint256_t hash2(uint256_t a, uint256_t b) {
-    return hash(a, b);
+// TODO populate this with a zero buffer at each given depth
+const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth;
+
+Buffer::Buffer(std::array<unsigned char, 32> bytes) : components(bytes) {
+    recompute();
 }
 
-Packed normal(uint256_t hash, uint64_t sz, uint64_t lastIndex) {
-    return Packed{hash, sz, 0, lastIndex};
+Buffer::Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right)
+    : components(std::make_pair(left, right)) {
+    recompute();
 }
 
-Packed pack(const Packed& packed) {
-    return Packed{packed.hash, packed.size, packed.packed + 1,
-                  packed.lastIndex};
+std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>*
+Buffer::get_children() {
+    return std::get_if<
+        std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>>(
+        &components);
 }
 
-bool is_zero_hash(const Packed& packed) {
-    return packed.hash == hash(0);
+const std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>*
+Buffer::get_children_const() const {
+    return std::get_if<
+        std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>>(
+        &components);
 }
 
-uint256_t unpack(const Packed& packed) {
-    uint256_t res = packed.hash;
-    uint64_t sz = packed.size;
-    for (int i = 0; i < packed.packed; i++) {
-        res = hash(res, zero_hash(sz));
-        sz = sz + 1;
-    }
-    return res;
-}
-
-Packed zero_packed(uint64_t sz) {
-    if (sz == 5) {
-        return normal(hash(0), 5, 0);
-    }
-    return pack(zero_packed(sz - 1));
-}
-
-Packed hash_buf(uint8_t* buf, uint64_t offset, uint64_t sz) {
-    if (sz == 5) {
-        auto hash_val = ethash::keccak256(buf + offset, 32);
-        uint256_t res = intx::be::load<uint256_t>(hash_val);
-        uint64_t lastIndex = 31;
-        while (buf[offset + lastIndex] == 0 && lastIndex > 0)
-            lastIndex--;
-        return normal(res, 5, lastIndex);
-    }
-    auto h1 = hash_buf(buf, offset, sz - 1);
-    auto h2 = hash_buf(buf, offset + (1 << (sz - 1)), sz - 1);
-    if (is_zero_hash(h2)) {
-        return pack(h1);
-    }
-    return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
-}
-
-Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
-    if (len == 1) {
-        auto res = buf[offset].hash_aux();
-        return res;
-    }
-    auto h1 = hash_node(buf, offset, len / 2, sz - 1);
-    auto h2 = hash_node(buf, offset + len / 2, len / 2, sz - 1);
-    if (is_zero_hash(h2)) {
-        return pack(h1);
-    }
-    return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
-}
-
-Packed RawBuffer::hash_aux() const {
-    if (saved) {
-        return savedHash;
-    }
-    Packed res;
-    if (level == 0) {
-        if (!leaf || leaf->size() == 0)
-            res = zero_packed(LEAF_SIZE2);
-        else
-            res = hash_buf(leaf->data(), 0, LEAF_SIZE2);
+void Buffer::recompute() {
+    if (auto children = get_children()) {
+        if (children->first->depth != children->second->depth) {
+            throw new std::runtime_error("Attempted to create uneven buffer");
+        }
+        depth = children->first->depth + 1;
+        // Ignore any trailing zeroes in the left half of the buffer
+        packed_size = length_of_depth(children->first->depth) +
+                      children->second->packed_size;
+        if (children->second->packed_hash == zero_hash) {
+            // Ignore the second half as it's all zeroes and we're packing
+            packed_hash = children->first->packed_hash;
+        } else {
+            // Here, we pack the right side but not the left side,
+            // as there's non-zero data after the left side.
+            packed_hash = ::hash(children->first->unpacked_hash,
+                                 children->second->packed_hash);
+        }
     } else {
-        if (!node)
-            res = zero_packed(calc_height(level));
-        else {
-            res = hash_node(node->data(), 0, NODE_SIZE, calc_height(level));
+        auto& bytes = std::get<std::array<unsigned char, 32>>(components);
+        unpacked_hash = ::hash(bytes);
+        packed_hash = unpacked_hash;
+        depth = 0;
+        // Go backwards through the bytes to find the last non-zero byte
+        packed_size = 32;
+        while (packed_size > 0) {
+            if (bytes[packed_size - 1] != 0) {
+                break;
+            }
+            packed_size--;
         }
     }
-    saved = true;
-    savedHash = res;
-    return res;
 }
 
-RawBuffer RawBuffer::normalize() const {
-    if (hash() == zero_hash(5)) {
-        return RawBuffer();
+Buffer Buffer::grow(uint64_t new_depth) const {
+    Buffer ret(*this);
+    while (ret.depth < new_depth) {
+        ret = Buffer(std::make_shared<Buffer>(ret),
+                     zero_buffers_of_depth[new_depth]);
     }
-    if (level == 0) {
-        return *this;
-    }
-    // check if is a shrinkable node
-    // cannot be null, otherwise the hash would have been zero
-    bool shrinkable = true;
-    for (uint64_t i = 1; i < NODE_SIZE; i++) {
-        if ((*node)[i].hash() != zero_hash(5)) {
-            shrinkable = false;
+    return ret;
+}
+
+Buffer Buffer::trim() const {
+    Buffer ret(*this);
+    while (true) {
+        if (auto children = ret.get_children()) {
+            if (children->second->packed_hash == zero_hash) {
+                ret = *children->first;
+            }
+        } else {
             break;
-        }
-    }
-    if (shrinkable) {
-        return (*node)[0].normalize();
-    }
-    return *this;
-}
-
-std::vector<RawBuffer> RawBuffer::serialize(
-    std::vector<unsigned char>& value_vector) {
-    // first check if it's empty
-    std::vector<RawBuffer> ret{};
-    if (hash() == zero_hash(5)) {
-        value_vector.push_back(0);
-        return ret;
-    }
-    // save leaf (just save all the data)
-    if (level == 0) {
-        value_vector.push_back(1);
-        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            if (leaf->size() <= i)
-                value_vector.push_back(0);
-            else
-                value_vector.push_back((*leaf)[i]);
-        }
-    }
-
-    if (level > 0) {
-        value_vector.push_back(1);
-        for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            uint256_t hash_ = hash2(123, (*node)[i].hash());
-            marshal_uint256_t(hash_, value_vector);
-            ret.push_back((*node)[i]);
         }
     }
     return ret;
 }
 
-uint64_t RawBuffer::sizePow2() const {
-    uint64_t size = 0;
-    if (level == 0 && leaf && leaf->size() > 0) {
-        for (int i = LEAF_SIZE - 1; i >= 0; i--) {
-            if ((*leaf)[i] != 0) {
-                size = i;
-                break;
+Buffer Buffer::set_many_without_resize(uint64_t offset,
+                                       std::vector<uint8_t> arr,
+                                       uint64_t arr_offset,
+                                       uint64_t arr_length) const {
+    Buffer ret(*this);
+    Buffer* target = &ret;
+    while (true) {
+        if (auto children = target->get_children()) {
+            // Clone each buffer on our way down, and adjust the offset.
+            auto child_size = children->first->size();
+            if (offset >= child_size) {
+                offset -= child_size;
+                children->second = std::make_shared<Buffer>(*children->second);
+                target = children->second.get();
+            } else {
+                children->first = std::make_shared<Buffer>(*children->first);
+                target = children->first.get();
             }
-        }
-    } else if (node && node->size() > 0) {
-        for (int i = NODE_SIZE - 1; i >= 0; i--) {
-            if ((*node)[i].hash() != zero_hash(5)) {
-                size = i * calc_len(level - 1) - 1 + calc_len(level - 1);
-                break;
+        } else {
+            // We've found the target leaf
+            auto& bytes =
+                std::get<std::array<unsigned char, 32>>(target->components);
+            if (offset >= 32) {
+                throw new std::runtime_error(
+                    "Buffer set_many_without_resize called but resize needed");
+            } else if (offset + arr_length > 32) {
+                throw new std::runtime_error(
+                    "Buffer set_many called with misaligned bytes");
             }
+            auto output = bytes.begin() + offset;
+            auto start = arr.begin() + arr_offset;
+            auto end = start + arr_length;
+            std::copy(start, end, output);
+            return ret;
         }
     }
-    uint64_t size_ext = needed_height(size);
-    if (size_ext < 5)
-        size_ext = 5;
-    return size_ext;
 }
 
-std::vector<unsigned char> RawBuffer::makeProof(uint64_t offset,
-                                                uint64_t sz,
-                                                uint64_t loc) {
-    if (sz == 5) {
-        if (!leaf || leaf->size() == 0) {
-            return std::vector<unsigned char>(32, 0);
+Buffer::Buffer() : Buffer(std::array<unsigned char, 32>{}) {}
+
+Buffer::Buffer(const std::vector<uint8_t>& data) : Buffer() {
+    // Grow the buffer to the necessary length
+    *this = grow(needed_depth(data.size()));
+    // Set each up to 32 byte chunk of the buffer
+    for (uint64_t i = 0; i < data.size(); i += 32) {
+        uint64_t len = 32;
+        if (i + len > data.size()) {
+            // The last chunk might be smaller than 32 bytes
+            len = data.size() - i;
         }
-        auto res = std::vector<unsigned char>(leaf->begin() + loc,
-                                              leaf->begin() + loc + 32);
-        return res;
-    } else if (level > 0 && sz == calc_height(level - 1) && node) {
-        return (*node)[offset / calc_len(level - 1)].makeProof(
-            offset % calc_len(level - 1), sz, loc % calc_len(level - 1));
-    } else if (loc < offset + (1L << (sz - 1))) {
-        auto proof = makeProof(offset, sz - 1, loc);
-        marshal_uint256_t(merkleHash(offset + (1L << (sz - 1)), sz - 1), proof);
-        return proof;
+        *this = set_many_without_resize(i, data, i, len);
+    }
+}
+
+uint64_t Buffer::size() const {
+    return length_of_depth(depth);
+}
+
+uint64_t Buffer::lastIndex() const {
+    if (packed_size == 0) {
+        return 0;
     } else {
-        auto proof = makeProof(offset + (1L << (sz - 1)), sz - 1, loc);
-        marshal_uint256_t(merkleHash(offset, sz - 1), proof);
-        return proof;
+        return packed_size - 1;
     }
 }
 
-uint256_t RawBuffer::merkleHash(uint64_t offset, uint64_t sz) {
-    if (hash() == zero_hash(5)) {
-        return zero_hash(sz);
-    }
-    if (sz == 5) {
-        auto hash_val = ethash::keccak256(leaf->data() + offset, 32);
-        uint256_t res = intx::be::load<uint256_t>(hash_val);
-        return res;
-    } else if (level > 0 && sz == calc_height(level - 1) && node) {
-        return (*node)[offset / calc_len(level - 1)].merkleHash(0, sz);
-    }
-    auto h1 = merkleHash(offset, sz - 1);
-    auto h2 = merkleHash(offset + (1L << (sz - 1)), sz - 1);
-    return hash2(h1, h2);
+uint64_t Buffer::data_length() const {
+    return packed_size;
 }
 
-std::vector<unsigned char> RawBuffer::makeProof(uint64_t loc) {
-    auto size = sizePow2();
-    auto res = makeProof(0, size, ((loc / 32) % (1L << (size - 5))) * 32);
-    return res;
+uint256_t Buffer::hash() const {
+    return packed_hash;
 }
 
-std::vector<unsigned char> RawBuffer::makeNormalizationProof() {
-    uint64_t sz = sizePow2();
-    std::vector<unsigned char> res;
-    for (int i = 0; i < 31; i++) {
-        res.push_back(0);
+Buffer Buffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {
+    Buffer ret(*this);
+    if (offset + arr.size() > ret.size()) {
+        ret = ret.grow(needed_depth(offset + arr.size()));
     }
+    ret = ret.set_many_without_resize(offset, arr, 0, arr.size());
+    return ret.trim();
+}
 
-    if (sz == 5) {
-        res.push_back(0);
-        marshal_uint256_t(merkleHash(0, sz), res);
-        marshal_uint256_t(merkleHash(0, sz), res);
-        return res;
+Buffer Buffer::set(uint64_t offset, uint8_t v) const {
+    return set_many(offset, std::vector(1, v));
+}
+
+std::vector<uint8_t> Buffer::get_many(uint64_t offset, size_t len) const {
+    const Buffer* target = this;
+    while (true) {
+        if (auto children = target->get_children_const()) {
+            // Move downwards towards the target
+            auto child_size = children->first->size();
+            if (offset >= child_size) {
+                offset -= child_size;
+                target = children->second.get();
+            } else {
+                target = children->first.get();
+            }
+        } else {
+            // We've found the target leaf
+            auto& bytes =
+                std::get<std::array<unsigned char, 32>>(target->components);
+            if (offset >= 32) {
+                return std::vector<uint8_t>(len, (unsigned char)0);
+            } else if (offset + len > 32) {
+                throw new std::runtime_error(
+                    "Buffer get_many called with misaligned bytes");
+            }
+            auto start = bytes.begin() + offset;
+            return std::vector<uint8_t>(start, start + len);
+        }
     }
+}
 
-    res.push_back(makeProof(0, sz, 0).size() / 32);
-    marshal_uint256_t(merkleHash(0, sz - 1), res);
-    marshal_uint256_t(merkleHash(1L << (sz - 1), sz - 1), res);
-    return res;
+uint8_t Buffer::get(uint64_t offset) const {
+    return get_many(offset, 1)[0];
+}
+
+std::vector<uint8_t> Buffer::toFlatVector() const {
+    std::vector<uint8_t> ret;
+    ret.reserve(size());
+    std::vector<const Buffer*> to_visit;
+    to_visit.reserve(depth);
+    const Buffer* current = this;
+    // Visit the tree depth first
+    while (true) {
+        if (auto children = current->get_children_const()) {
+            // Visit the left side of the buffer now, and save the right side
+            // for later
+            current = children->first.get();
+            to_visit.push_back(children->second.get());
+        } else {
+            const auto& bytes =
+                std::get<std::array<unsigned char, 32>>(current->components);
+            std::copy(bytes.begin(), bytes.end(), std::back_inserter(ret));
+            if (to_visit.empty()) {
+                // We've visited all the leaves
+                // Trim the result and return it
+                while (!ret.empty() && ret.back() == 0) {
+                    ret.pop_back();
+                }
+                return ret;
+            } else {
+                current = to_visit.back();
+                to_visit.pop_back();
+            }
+        }
+    }
+}
+
+std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
+    throw new std::runtime_error("TODO");
+}
+
+std::vector<unsigned char> Buffer::makeNormalizationProof() const {
+    throw new std::runtime_error("TODO");
+}
+
+std::vector<Buffer> Buffer::serialize(
+    std::vector<unsigned char>& value_vector) const {
+    throw new std::runtime_error("TODO");
 }
