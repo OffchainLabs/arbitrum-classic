@@ -53,10 +53,7 @@ uint256_t hash_buffer(uint8_t* buf, int offset, int sz) {
 }
 
 uint256_t hash_acc(uint8_t* buf, int sz) {
-    Buffer acc;
-    for (int i = 0; i < sz; i++) {
-        acc = acc.set(i, buf[i]);
-    }
+    Buffer acc(std::vector<uint8_t>(buf, buf + sz));
     return acc.hash();
 }
 

@@ -19,8 +19,6 @@
 
 #include <ethash/keccak.hpp>
 
-const uint256_t zero_hash = hash(0);
-
 // Returns the length of a buffer with a given depth
 inline uint64_t length_of_depth(uint64_t depth) {
     return 32 << depth;
@@ -37,8 +35,16 @@ inline uint64_t needed_depth(uint64_t size) {
     return depth;
 }
 
-// TODO populate this with a zero buffer at each given depth
-const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth;
+const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth =
+    []() -> std::vector<std::shared_ptr<Buffer>> {
+    std::vector<std::shared_ptr<Buffer>> buffers;
+    auto last_buffer = std::make_shared<Buffer>();
+    for (int i = 0; i < 50; i++) {
+        buffers.push_back(last_buffer);
+        last_buffer = std::make_shared<Buffer>(last_buffer, last_buffer);
+    }
+    return buffers;
+}();
 
 Buffer::Buffer(std::array<unsigned char, 32> bytes) : components(bytes) {
     recompute();
@@ -69,22 +75,19 @@ void Buffer::recompute() {
             throw new std::runtime_error("Attempted to create uneven buffer");
         }
         depth = children->first->depth + 1;
-        // Ignore any trailing zeroes in the left half of the buffer
-        packed_size = length_of_depth(children->first->depth) +
-                      children->second->packed_size;
-        if (children->second->packed_hash == zero_hash) {
-            // Ignore the second half as it's all zeroes and we're packing
-            packed_hash = children->first->packed_hash;
+        saved_hash = ::hash(children->first->hash(), children->second->hash());
+        if (children->second->packed_size == 0) {
+            // Ignore the second half as it's all zeroes
+            packed_size = children->first->packed_size;
         } else {
-            // Here, we pack the right side but not the left side,
-            // as there's non-zero data after the left side.
-            packed_hash = ::hash(children->first->unpacked_hash,
-                                 children->second->packed_hash);
+            // Ignore any trailing zeroes in the left half of the buffer, as
+            // they're followed by non-zero data in the right half of the buffer
+            packed_size = length_of_depth(children->first->depth) +
+                          children->second->packed_size;
         }
     } else {
         auto& bytes = std::get<std::array<unsigned char, 32>>(components);
-        unpacked_hash = ::hash(bytes);
-        packed_hash = unpacked_hash;
+        saved_hash = ::hash(bytes);
         depth = 0;
         // Go backwards through the bytes to find the last non-zero byte
         packed_size = 32;
@@ -101,7 +104,7 @@ Buffer Buffer::grow(uint64_t new_depth) const {
     Buffer ret(*this);
     while (ret.depth < new_depth) {
         ret = Buffer(std::make_shared<Buffer>(ret),
-                     zero_buffers_of_depth[new_depth]);
+                     zero_buffers_of_depth[ret.depth]);
     }
     return ret;
 }
@@ -110,12 +113,12 @@ Buffer Buffer::trim() const {
     Buffer ret(*this);
     while (true) {
         if (auto children = ret.get_children()) {
-            if (children->second->packed_hash == zero_hash) {
+            if (children->second->packed_size == 0) {
                 ret = *children->first;
+                continue;
             }
-        } else {
-            break;
         }
+        break;
     }
     return ret;
 }
@@ -125,8 +128,10 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
                                        uint64_t arr_offset,
                                        uint64_t arr_length) const {
     Buffer ret(*this);
+    std::vector<Buffer*> path;
     Buffer* target = &ret;
     while (true) {
+        path.push_back(target);
         if (auto children = target->get_children()) {
             // Clone each buffer on our way down, and adjust the offset.
             auto child_size = children->first->size();
@@ -153,6 +158,9 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
             auto start = arr.begin() + arr_offset;
             auto end = start + arr_length;
             std::copy(start, end, output);
+            for (auto it = path.rbegin(); it != path.rend(); it++) {
+                (*it)->recompute();
+            }
             return ret;
         }
     }
@@ -172,6 +180,7 @@ Buffer::Buffer(const std::vector<uint8_t>& data) : Buffer() {
         }
         *this = set_many_without_resize(i, data, i, len);
     }
+    *this = trim();
 }
 
 uint64_t Buffer::size() const {
@@ -191,7 +200,7 @@ uint64_t Buffer::data_length() const {
 }
 
 uint256_t Buffer::hash() const {
-    return packed_hash;
+    return saved_hash;
 }
 
 Buffer Buffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {

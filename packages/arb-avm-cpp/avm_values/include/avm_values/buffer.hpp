@@ -29,12 +29,8 @@ constexpr uint64_t ALIGN = 32;
 
 class Buffer {
    protected:
-    // Hash of this buffer if there's data after it (important if there's 0s at
-    // the end, as they wouldn't be trailing)
-    uint256_t unpacked_hash;
-    // Hash of this buffer if there's no data after it (meaning 0s at the end
-    // are "packed")
-    uint256_t packed_hash;
+    // The hash of the buffer (always cached)
+    uint256_t saved_hash;
 
     // The depth of this buffer as a tree. A leaf node (32 bytes) is depth 0.
     size_t depth;
@@ -50,8 +46,6 @@ class Buffer {
 
     // Create a leaf node
     explicit Buffer(std::array<unsigned char, 32> bytes);
-    // Create a branch node
-    Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right);
 
     // Returns a pointer to this buffer's children, or null if this is a leaf
     std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>* get_children();
@@ -79,6 +73,9 @@ class Buffer {
    public:
     // Creates an "empty" buffer (actually has 32 zero bytes)
     Buffer();
+
+    // Create a branch node composed of two buffers with equal depths
+    Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right);
 
     // Copy constructor
     Buffer(const Buffer&) = default;
