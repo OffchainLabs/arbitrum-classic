@@ -63,7 +63,7 @@ class Buffer {
     void recompute();
 
     // Returns a buffer with a depth of at least new_depth and the same data
-    [[nodiscard]] Buffer grow(size_t new_depth) const;
+    [[nodiscard]] Buffer grow(uint64_t new_depth) const;
 
     // Returns the smallest possible buffer representing the same data
     [[nodiscard]] Buffer trim() const;
@@ -73,8 +73,8 @@ class Buffer {
     // in array. The bytes set must be within a single 32 byte chunk.
     [[nodiscard]] Buffer set_many_without_resize(uint64_t offset,
                                                  std::vector<uint8_t> arr,
-                                                 size_t arr_offset,
-                                                 size_t arr_length) const;
+                                                 uint64_t arr_offset,
+                                                 uint64_t arr_length) const;
 
    public:
     // Creates an "empty" buffer (actually has 32 zero bytes)
