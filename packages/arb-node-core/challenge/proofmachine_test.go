@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -226,7 +225,8 @@ func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestco
 }
 
 func TestValidateProof(t *testing.T) {
-	testMachines := gotest.OpCodeTestFiles()
+	//testMachines := gotest.OpCodeTestFiles()
+	testMachines := []string{"/home/lee/programming/go/arbitrum/packages/arb-avm-cpp/tests/machine-cases/buffer_test.mexe"}
 	backend, pks := test.SimulatedBackend()
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])

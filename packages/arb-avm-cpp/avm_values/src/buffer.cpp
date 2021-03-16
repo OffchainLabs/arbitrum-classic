@@ -284,11 +284,56 @@ std::vector<uint8_t> Buffer::toFlatVector() const {
 }
 
 std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
-    throw new std::runtime_error("TODO");
+    // Return a standard merkle proof
+    const Buffer* target = this;
+    std::vector<uint256_t> proof;
+    while (true) {
+        if (auto children = target->get_children_const()) {
+            // Move downwards towards the target
+            // Add the sibling hash to the proof each step of the way
+            auto child_size = children->first->size();
+            if (loc & 1) {
+                target = children->second.get();
+                proof.push_back(children->first->hash());
+            } else {
+                target = children->first.get();
+                proof.push_back(children->second->hash());
+            }
+            loc >>= 1;
+        } else {
+            // We've found the target leaf
+            auto& bytes = std::get<LeafData>(target->components);
+            proof.push_back(intx::be::unsafe::load<uint256_t>(bytes.data()));
+            break;
+        }
+    }
+    std::vector<unsigned char> proof_bytes;
+    for (auto it = proof.rbegin(); it != proof.rend(); it++) {
+        unsigned char bytes[32]{0};
+        intx::be::store(bytes, *it);
+        std::copy(bytes, bytes + 32, std::back_inserter(proof_bytes));
+    }
+    return proof_bytes;
 }
 
 std::vector<unsigned char> Buffer::makeNormalizationProof() const {
-    throw new std::runtime_error("TODO");
+    // Return the height, left subtree hash (or our hash if a leaf), and right
+    // subtree hash (irrelevant if a leaf)
+    std::vector<unsigned char> proof_bytes;
+    proof_bytes.resize(32);
+    intx::be::unsafe::store(proof_bytes.data(), uint256_t(depth));
+    unsigned char left_hash[32]{0};
+    unsigned char right_hash[32]{0};
+    if (auto children = get_children_const()) {
+        intx::be::store(left_hash, children->first->hash());
+        intx::be::store(right_hash, children->second->hash());
+    } else {
+        intx::be::store(left_hash, hash());
+        // right_hash is ignored here
+    }
+    std::copy(left_hash, left_hash + 32, std::back_inserter(proof_bytes));
+    std::copy(right_hash, right_hash + 32, std::back_inserter(proof_bytes));
+    return proof_bytes;
 }
 
 std::vector<Buffer> Buffer::serialize(
