@@ -42,6 +42,10 @@ set(LIB_SOURCES
   src/machinethread.cpp
 )
 
+if ( CMAKE_SYSTEM_NAME MATCHES "Linux" )
+    set(LIBATOMIC_LIBRARY atomic)
+endif ()
+
 add_library(avm STATIC ${LIB_HEADERS} ${LIB_SOURCES} ${KECCAK_SOURCES} )
 
 set_target_properties(
@@ -79,7 +83,7 @@ PUBLIC
         picosha2
         ${GMP_LIBRARY}
         ${GMPXX_LIBRARY}
-        atomic
+        ${LIBATOMIC_LIBRARY}
 PRIVATE
         Boost::boost
 )
