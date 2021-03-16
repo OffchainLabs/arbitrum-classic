@@ -17,9 +17,8 @@
 #include "helper.hpp"
 
 #include <data_storage/arbstorage.hpp>
-#include <data_storage/storageresult.hpp>
 
-#include <avm/machinestate/datastack.hpp>
+#include <avm_values/buffer.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -73,7 +72,7 @@ TEST_CASE("Buffer") {
         const int SIZE = 1048576;
         uint8_t arr[SIZE];
         for (int i = 0; i < SIZE; i++) {
-            arr[i] = rand() % 256;
+            arr[i] = static_cast<uint8_t>(rand() % 256);
         }
         REQUIRE(hash_buffer(arr, 0, SIZE) == hash_acc(arr, SIZE));
     }
@@ -83,7 +82,7 @@ TEST_CASE("Buffer") {
         const int FILL = 100000;
         uint8_t arr[SIZE];
         for (int i = 0; i < SIZE; i++) {
-            arr[i] = i < FILL ? rand() % 256 : 0;
+            arr[i] = i < FILL ? static_cast<uint8_t>(rand() % 256) : 0;
         }
         REQUIRE(hash_buffer(arr, 0, 131072) == hash_acc(arr, SIZE));
     }
@@ -119,7 +118,7 @@ TEST_CASE("Buffer") {
         std::random_device rd;
         std::mt19937 gen(rd());
         const int SIZE = 1024 * 32;
-        std::uniform_int_distribution<> distrib(0, SIZE);
+        std::uniform_int_distribution<uint64_t> distrib(0, SIZE);
         for (int i = 0; i < 100; i++) {
             Buffer buf;
             uint8_t arr[SIZE] = {};
@@ -187,7 +186,7 @@ TEST_CASE("Buffer Serialization") {
         rd;  // Will be used to obtain a seed for the random number engine
     std::mt19937 gen(rd());  // Standard mersenne_twister_engine seeded with
                              // rd()
-    std::uniform_int_distribution<> distrib(0, 20000);
+    std::uniform_int_distribution<uint64_t> distrib(0, 20000);
 
     for (int i = 0; i < 1000; i++) {
         Buffer buf;
@@ -265,7 +264,7 @@ uint256_t getByte(Buffer buf, uint64_t loc) {
 TEST_CASE("Buffer get proofs") {
     SECTION("Empty buffer") {
         Buffer buf;
-        for (int i = 0; i < 10000; i++) {
+        for (uint64_t i = 0; i < 10000; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
@@ -275,7 +274,7 @@ TEST_CASE("Buffer get proofs") {
     SECTION("Buffer with one element") {
         Buffer buf;
         buf = buf.set(10000 * 32 + 31, 123);
-        for (int i = 0; i < 11000; i++) {
+        for (uint64_t i = 0; i < 11000; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
@@ -284,15 +283,15 @@ TEST_CASE("Buffer get proofs") {
 
     SECTION("Full buffer") {
         Buffer buf;
-        for (int i = 0; i < 10000; i++) {
-            buf = buf.set(i * 32 + 31, i % 256);
+        for (uint64_t i = 0; i < 10000; i++) {
+            buf = buf.set(i * 32 + 31, static_cast<uint8_t>(i % 256));
         }
-        for (int i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 1000; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
         }
-        for (int i = 10000; i < 11000; i++) {
+        for (uint64_t i = 10000; i < 11000; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
@@ -302,7 +301,7 @@ TEST_CASE("Buffer get proofs") {
     SECTION("Random buffer") {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distrib(0, 20000);
+        std::uniform_int_distribution<uint64_t> distrib(0, 20000);
         for (int i = 0; i < 1000; i++) {
             Buffer buf;
             for (int j = 0; j < 3; j++) {
@@ -324,13 +323,13 @@ std::vector<uint256_t> makeZeros() {
     std::vector<uint256_t> zeros;
     zeros.resize(64);
     zeros[0] = hash(0);
-    for (int i = 1; i < 64; i++) {
+    for (size_t i = 1; i < 64; i++) {
         zeros[i] = hash(zeros[i - 1], zeros[i - 1]);
     }
     return zeros;
 }
 
-int calcHeight(uint64_t loc) {
+size_t calcHeight(uint64_t loc) {
     if (loc == 0)
         return 1;
     else
@@ -355,12 +354,12 @@ uint256_t setProof(uint256_t buf,
     if (loc >= uint64_t(1 << (proof.size() - 1))) {
         if (v == 0)
             return buf;
-        int height = calcHeight(loc);
+        size_t height = calcHeight(loc);
         // build the left branch
-        for (int i = proof.size(); i < height - 1; i++) {
+        for (size_t i = proof.size(); i < height - 1; i++) {
             buf = hash(buf, zeros[i - 1]);
         }
-        for (int i = 1; i < height - 1; i++) {
+        for (size_t i = 1; i < height - 1; i++) {
             if (loc & 1)
                 acc = hash(zeros[i - 1], acc);
             else
@@ -404,7 +403,7 @@ void testSetProof(Buffer buf, uint64_t loc, uint8_t val) {
 TEST_CASE("Buffer set proofs") {
     SECTION("Empty buffer") {
         Buffer buf;
-        for (int i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 1000; i++) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
             Buffer nbuf = buf.set(i * 32 + 31, 123);
@@ -415,7 +414,7 @@ TEST_CASE("Buffer set proofs") {
     SECTION("Buffer with one elem") {
         Buffer buf;
         buf = buf.set(500 * 32 + 31, 123);
-        for (int i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 1000; i++) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
             Buffer nbuf = buf.set(i * 32 + 31, 123);
@@ -429,14 +428,14 @@ TEST_CASE("Buffer set proofs") {
 
     SECTION("Full buffer") {
         Buffer buf;
-        for (int i = 0; i < 10000; i++) {
-            buf = buf.set(i * 32 + 31, i % 256);
+        for (uint64_t i = 0; i < 10000; i++) {
+            buf = buf.set(i * 32 + 31, static_cast<uint8_t>(i % 256));
         }
-        for (int i = 0; i < 1000; i += 10) {
+        for (uint64_t i = 0; i < 1000; i += 10) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
         }
-        for (int i = 10000; i < 11000; i += 10) {
+        for (uint64_t i = 10000; i < 11000; i += 10) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
         }
@@ -445,15 +444,15 @@ TEST_CASE("Buffer set proofs") {
     SECTION("Random buffer") {
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_int_distribution<> distrib(0, 20000);
-        for (int i = 0; i < 1000; i++) {
+        std::uniform_int_distribution<uint64_t> distrib(0, 20000);
+        for (uint64_t i = 0; i < 1000; i++) {
             Buffer buf;
-            for (int j = 0; j < 3; j++) {
+            for (uint64_t j = 0; j < 3; j++) {
                 auto index = distrib(gen);
                 buf = buf.set(index * 32 + 31, 100);
                 testSetProof(buf, index, 0);
             }
-            for (int j = 0; j < 10; j++) {
+            for (uint64_t j = 0; j < 10; j++) {
                 auto index = distrib(gen);
                 testSetProof(buf, index, 123);
             }
