@@ -228,6 +228,12 @@ TEST_CASE("Buffer Serialization") {
         checkBuffer(storage, buf);
         checkBuffer(storage, buf2);
     }
+    Buffer buf;
+    buf = buf.set(300000L*300000L, 12);
+    checkBuffer(storage, buf);
+    buf = buf.set(1UL << 63UL, 13);
+    checkBuffer(storage, buf);
+
 }
 
 TEST_CASE("Buffer Hash Failure") {
@@ -428,6 +434,10 @@ TEST_CASE("Buffer set proofs") {
             Buffer nbuf = buf.set(i*32+31, 123);
             testSetProof(nbuf, i, 0);
         }
+        uint64_t idx = 300000L*300000L;
+        testSetProof(buf, idx, 12);
+        uint64_t idx2 = (1UL << 58UL);
+        testSetProof(buf, idx2, 12);
     }
 
     SECTION("Full buffer") {
