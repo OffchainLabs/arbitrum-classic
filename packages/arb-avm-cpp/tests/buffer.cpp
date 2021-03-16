@@ -380,8 +380,6 @@ uint256_t setProof(uint256_t buf,
     if (!(normal2 != zeros[nh] || nh == 0))
         throw std::runtime_error("fail");
     uint256_t res = nh == 0 ? normal1 : hash(normal1, normal2);
-    if (nh > 0)
-        nh--;
     uint256_t acc2 = res;
     for (uint64_t i = nh; i < proof.size() - 1; i++) {
         acc2 = hash(acc2, zeros[i]);

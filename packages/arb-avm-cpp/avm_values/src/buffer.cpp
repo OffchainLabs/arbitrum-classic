@@ -290,7 +290,7 @@ std::vector<uint8_t> Buffer::toFlatVector() const {
 }
 
 std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
-    if (loc > size()) {
+    if (loc >= size()) {
         // If we're trying to prove an element outside the buffer, we instead
         // need to prove the buffer's size, which we do by proving this element
         // instead. Proving this element specifically keeps compatiblity with
