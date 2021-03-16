@@ -20,12 +20,12 @@
 #include <ethash/keccak.hpp>
 
 // Returns the length of a buffer with a given depth
-inline uint64_t length_of_depth(uint64_t depth) {
+inline uint256_t length_of_depth(uint64_t depth) {
     return Buffer::leaf_size << depth;
 }
 
 // Returns the necessary depth of a buffer to hold a given number of bytes
-inline uint64_t needed_depth(uint64_t size) {
+inline uint64_t needed_depth(uint256_t size) {
     uint64_t depth = 0;
     while (size > Buffer::leaf_size) {
         // Divide rounding up
@@ -80,11 +80,11 @@ uint256_t Buffer::hash() const {
     return calculated_hash;
 }
 
-uint64_t Buffer::packed_size() const {
+uint256_t Buffer::packed_size() const {
     if (packed_size_cache) {
         return *packed_size_cache;
     }
-    uint64_t calculated_packed_size = 0;
+    uint256_t calculated_packed_size = 0;
     if (auto children = get_children_const()) {
         auto first_packed_size = children->first->packed_size();
         auto second_packed_size = children->second->packed_size();
@@ -102,10 +102,10 @@ uint64_t Buffer::packed_size() const {
         // Go backwards through the bytes to find the last non-zero byte
         calculated_packed_size = leaf_size;
         while (calculated_packed_size > 0) {
-            if (bytes[calculated_packed_size - 1] != 0) {
+            if (bytes[size_t(calculated_packed_size - 1)] != 0) {
                 break;
             }
-            calculated_packed_size--;
+            calculated_packed_size -= 1;
         }
     }
     packed_size_cache = calculated_packed_size;
@@ -148,7 +148,7 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
             // Clone each buffer on our way down, and adjust the offset.
             auto child_size = children->first->size();
             if (offset >= child_size) {
-                offset -= child_size;
+                offset -= uint64_t(child_size);
                 children->second = std::make_shared<Buffer>(*children->second);
                 target = children->second.get();
             } else {
@@ -183,16 +183,16 @@ Buffer Buffer::fromData(const std::vector<uint8_t>& data) {
     // Set each up to 32 byte chunk of the buffer
     for (uint64_t i = 0; i < data.size(); i += leaf_size) {
         uint64_t len = leaf_size;
-        if (i + len > data.size()) {
+        if (uint256_t(i) + uint256_t(len) > data.size()) {
             // The last chunk might be smaller than 32 bytes
-            len = data.size() - i;
+            len = uint64_t(data.size() - uint256_t(i));
         }
         buf = buf.set_many_without_resize(i, data, i, len);
     }
     return buf.trim();
 }
 
-uint64_t Buffer::size() const {
+uint256_t Buffer::size() const {
     return length_of_depth(depth);
 }
 
@@ -200,18 +200,22 @@ uint64_t Buffer::lastIndex() const {
     if (packed_size() == 0) {
         return 0;
     } else {
-        return packed_size() - 1;
+        auto ret = packed_size() - 1;
+        if (ret > std::numeric_limits<uint64_t>::max()) {
+            throw new std::runtime_error("Buffer is too big");
+        }
+        return uint64_t(ret);
     }
 }
 
-uint64_t Buffer::data_length() const {
+uint256_t Buffer::data_length() const {
     return packed_size();
 }
 
 Buffer Buffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {
     Buffer ret(*this);
-    if (offset + arr.size() > ret.size()) {
-        ret = ret.grow(needed_depth(offset + arr.size()));
+    if (uint256_t(offset) + arr.size() > ret.size()) {
+        ret = ret.grow(needed_depth(uint256_t(offset) + arr.size()));
     }
     ret = ret.set_many_without_resize(offset, arr, 0, arr.size());
     return ret.trim();
@@ -228,7 +232,7 @@ std::vector<uint8_t> Buffer::get_many(uint64_t offset, size_t len) const {
             // Move downwards towards the target
             auto child_size = children->first->size();
             if (offset >= child_size) {
-                offset -= child_size;
+                offset -= uint64_t(child_size);
                 target = children->second.get();
             } else {
                 target = children->first.get();
@@ -254,7 +258,7 @@ uint8_t Buffer::get(uint64_t offset) const {
 
 std::vector<uint8_t> Buffer::toFlatVector() const {
     std::vector<uint8_t> ret;
-    ret.reserve(size());
+    ret.reserve(uint64_t(size()));  // If this overflows we have bigger problems
     std::vector<const Buffer*> to_visit;
     to_visit.reserve(depth);
     const Buffer* current = this;
@@ -284,12 +288,14 @@ std::vector<uint8_t> Buffer::toFlatVector() const {
 }
 
 std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
-    // If we're trying to prove an element outside the buffer, we instead need
-    // to prove the buffer's size, which we do by proving this element instead.
-    // Proving this element specifically keeps compatiblity with the Solidity
-    // visitor, as it looks at each bit of the location to determine if it's on
-    // the left or right branch.
-    loc %= size();
+    if (loc > size()) {
+        // If we're trying to prove an element outside the buffer, we instead
+        // need to prove the buffer's size, which we do by proving this element
+        // instead. Proving this element specifically keeps compatiblity with
+        // the Solidity visitor, as it looks at each bit of the location to
+        // determine if it's on the left or right branch.
+        loc %= uint64_t(size());
+    }
     // Return a standard merkle proof
     const Buffer* target = this;
     std::vector<uint256_t> proof;
@@ -299,7 +305,7 @@ std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
             // Add the sibling hash to the proof each step of the way
             auto child_size = children->first->size();
             if (loc >= child_size) {
-                loc -= child_size;
+                loc -= uint64_t(child_size);
                 target = children->second.get();
                 proof.push_back(children->first->hash());
             } else {

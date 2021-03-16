@@ -39,7 +39,7 @@ class Buffer {
 
    private:
     mutable std::optional<uint256_t> hash_cache;
-    mutable std::optional<uint64_t> packed_size_cache;
+    mutable std::optional<uint256_t> packed_size_cache;
 
     // The depth of this buffer as a tree. A leaf node (32 bytes) is depth 0.
     size_t depth;
@@ -55,7 +55,7 @@ class Buffer {
     const NodeData* get_children_const() const;
 
     // The size of this buffer after trimming any zero bytes at the end
-    uint64_t packed_size() const;
+    uint256_t packed_size() const;
 
     // Returns a buffer with a depth of at least new_depth and the same data
     [[nodiscard]] Buffer grow(uint64_t new_depth) const;
@@ -86,14 +86,14 @@ class Buffer {
     static Buffer fromData(const std::vector<uint8_t>& data);
 
     // Returns the size of the buffer, **including** any trailing zeroes
-    [[nodiscard]] uint64_t size() const;
+    [[nodiscard]] uint256_t size() const;
 
     // Returns the last non-zero index of the buffer, or 0 if the buffer is
     // entirely zeroes
     [[nodiscard]] uint64_t lastIndex() const;
 
     // Returns the size of the buffer, **not including** any trailing zeroes
-    [[nodiscard]] uint64_t data_length() const;
+    [[nodiscard]] uint256_t data_length() const;
 
     // Returns the hash of the buffer, "packing" any trailing zero segments
     [[nodiscard]] uint256_t hash() const;
