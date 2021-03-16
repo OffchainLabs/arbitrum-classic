@@ -29,6 +29,19 @@
 
 constexpr uint64_t ALIGN = 32;
 
+struct CachedCalculation {
+    std::atomic<std::optional<uint256_t>> val;
+
+    CachedCalculation() : val(std::nullopt) {}
+
+    CachedCalculation(const CachedCalculation& o) : val(o.val.load()) {}
+
+    CachedCalculation& operator=(const CachedCalculation& o) {
+        val = o.val.load();
+        return *this;
+    }
+};
+
 class Buffer {
    public:
     static constexpr uint64_t leaf_size = 32;
@@ -38,8 +51,8 @@ class Buffer {
         std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>;
 
    private:
-    mutable std::optional<uint256_t> hash_cache;
-    mutable std::optional<uint256_t> packed_size_cache;
+    mutable CachedCalculation hash_cache;
+    mutable CachedCalculation packed_size_cache;
 
     // The depth of this buffer as a tree. A leaf node (32 bytes) is depth 0.
     size_t depth;
