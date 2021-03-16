@@ -46,13 +46,14 @@ const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth =
     return buffers;
 }();
 
-Buffer::Buffer(LeafData bytes) : components(bytes) {
-    recompute();
-}
+Buffer::Buffer(LeafData bytes) : depth(0), components(bytes) {}
 
 Buffer::Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right)
-    : components(std::make_pair(left, right)) {
-    recompute();
+    : depth(left->depth + 1), components(std::make_pair(left, right)) {
+    auto children = get_children_const();
+    if (children->first->depth != children->second->depth) {
+        throw new std::runtime_error("Attempted to create uneven buffer");
+    }
 }
 
 Buffer::NodeData* Buffer::get_children() {
@@ -63,35 +64,52 @@ const Buffer::NodeData* Buffer::get_children_const() const {
     return std::get_if<NodeData>(&components);
 }
 
-void Buffer::recompute() {
-    if (auto children = get_children()) {
-        if (children->first->depth != children->second->depth) {
-            throw new std::runtime_error("Attempted to create uneven buffer");
-        }
-        depth = children->first->depth + 1;
-        saved_hash = ::hash(children->first->hash(), children->second->hash());
-        if (children->second->packed_size == 0) {
+uint256_t Buffer::hash() const {
+    if (hash_cache) {
+        return *hash_cache;
+    }
+    uint256_t calculated_hash;
+    if (auto children = get_children_const()) {
+        calculated_hash =
+            ::hash(children->first->hash(), children->second->hash());
+    } else {
+        auto& bytes = std::get<LeafData>(components);
+        calculated_hash = ::hash(bytes);
+    }
+    hash_cache = calculated_hash;
+    return calculated_hash;
+}
+
+uint64_t Buffer::packed_size() const {
+    if (packed_size_cache) {
+        return *packed_size_cache;
+    }
+    uint64_t calculated_packed_size = 0;
+    if (auto children = get_children_const()) {
+        auto first_packed_size = children->first->packed_size();
+        auto second_packed_size = children->second->packed_size();
+        if (second_packed_size == 0) {
             // Ignore the second half as it's all zeroes
-            packed_size = children->first->packed_size;
+            calculated_packed_size = first_packed_size;
         } else {
             // Ignore any trailing zeroes in the left half of the buffer, as
             // they're followed by non-zero data in the right half of the buffer
-            packed_size = length_of_depth(children->first->depth) +
-                          children->second->packed_size;
+            calculated_packed_size =
+                length_of_depth(children->first->depth) + second_packed_size;
         }
     } else {
         auto& bytes = std::get<LeafData>(components);
-        saved_hash = ::hash(bytes);
-        depth = 0;
         // Go backwards through the bytes to find the last non-zero byte
-        packed_size = leaf_size;
-        while (packed_size > 0) {
-            if (bytes[packed_size - 1] != 0) {
+        calculated_packed_size = leaf_size;
+        while (calculated_packed_size > 0) {
+            if (bytes[calculated_packed_size - 1] != 0) {
                 break;
             }
-            packed_size--;
+            calculated_packed_size--;
         }
     }
+    packed_size_cache = calculated_packed_size;
+    return calculated_packed_size;
 }
 
 Buffer Buffer::grow(uint64_t new_depth) const {
@@ -107,7 +125,7 @@ Buffer Buffer::trim() const {
     Buffer ret(*this);
     while (true) {
         if (auto children = ret.get_children()) {
-            if (children->second->packed_size == 0) {
+            if (children->second->packed_size() == 0) {
                 ret = *children->first;
                 continue;
             }
@@ -122,10 +140,10 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
                                        uint64_t arr_offset,
                                        uint64_t arr_length) const {
     Buffer ret(*this);
-    std::vector<Buffer*> path;
     Buffer* target = &ret;
     while (true) {
-        path.push_back(target);
+        target->hash_cache = std::nullopt;
+        target->packed_size_cache = std::nullopt;
         if (auto children = target->get_children()) {
             // Clone each buffer on our way down, and adjust the offset.
             auto child_size = children->first->size();
@@ -151,9 +169,6 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
             auto start = arr.begin() + arr_offset;
             auto end = start + arr_length;
             std::copy(start, end, output);
-            for (auto it = path.rbegin(); it != path.rend(); it++) {
-                (*it)->recompute();
-            }
             return ret;
         }
     }
@@ -182,19 +197,15 @@ uint64_t Buffer::size() const {
 }
 
 uint64_t Buffer::lastIndex() const {
-    if (packed_size == 0) {
+    if (packed_size() == 0) {
         return 0;
     } else {
-        return packed_size - 1;
+        return packed_size() - 1;
     }
 }
 
 uint64_t Buffer::data_length() const {
-    return packed_size;
-}
-
-uint256_t Buffer::hash() const {
-    return saved_hash;
+    return packed_size();
 }
 
 Buffer Buffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {

@@ -18,9 +18,11 @@
 #define buffer_hpp
 
 #include <avm_values/bigint.hpp>
+
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -36,13 +38,11 @@ class Buffer {
         std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>;
 
    private:
-    // The hash of the buffer (always cached)
-    uint256_t saved_hash;
+    mutable std::optional<uint256_t> hash_cache;
+    mutable std::optional<uint64_t> packed_size_cache;
 
     // The depth of this buffer as a tree. A leaf node (32 bytes) is depth 0.
     size_t depth;
-    // The size of this buffer after trimming any zero bytes at the end
-    uint64_t packed_size;
 
     // The components of this buffer. If this is a leaf (at the bottom of the
     // tree, depth == 0), it'll contain raw bytes. If it's a branch (higher up
@@ -54,8 +54,8 @@ class Buffer {
     // Like get_children but const
     const NodeData* get_children_const() const;
 
-    // Recompute the secondary values such as the hashes and size from children
-    void recompute();
+    // The size of this buffer after trimming any zero bytes at the end
+    uint64_t packed_size() const;
 
     // Returns a buffer with a depth of at least new_depth and the same data
     [[nodiscard]] Buffer grow(uint64_t new_depth) const;
