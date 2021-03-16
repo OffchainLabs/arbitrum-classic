@@ -28,7 +28,14 @@
 constexpr uint64_t ALIGN = 32;
 
 class Buffer {
-   protected:
+   public:
+    static constexpr uint64_t leaf_size = 32;
+    static constexpr uint64_t children_size = 2;
+    using LeafData = std::array<unsigned char, leaf_size>;
+    using NodeData =
+        std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>;
+
+   private:
     // The hash of the buffer (always cached)
     uint256_t saved_hash;
 
@@ -40,18 +47,12 @@ class Buffer {
     // The components of this buffer. If this is a leaf (at the bottom of the
     // tree, depth == 0), it'll contain raw bytes. If it's a branch (higher up
     // in the tree, depth > 0), it'll contain child buffers.
-    std::variant<std::array<unsigned char, 32>,
-                 std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>>
-        components;
-
-    // Create a leaf node
-    explicit Buffer(std::array<unsigned char, 32> bytes);
+    std::variant<LeafData, NodeData> components;
 
     // Returns a pointer to this buffer's children, or null if this is a leaf
-    std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>* get_children();
+    NodeData* get_children();
     // Like get_children but const
-    const std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>*
-    get_children_const() const;
+    const NodeData* get_children_const() const;
 
     // Recompute the secondary values such as the hashes and size from children
     void recompute();
@@ -74,6 +75,9 @@ class Buffer {
    public:
     // Creates an "empty" buffer (actually has 32 zero bytes)
     Buffer();
+
+    // Create a leaf node
+    explicit Buffer(LeafData bytes);
 
     // Create a branch node composed of two buffers with equal depths
     Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right);

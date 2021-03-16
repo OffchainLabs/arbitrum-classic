@@ -21,13 +21,13 @@
 
 // Returns the length of a buffer with a given depth
 inline uint64_t length_of_depth(uint64_t depth) {
-    return 32 << depth;
+    return Buffer::leaf_size << depth;
 }
 
 // Returns the necessary depth of a buffer to hold a given number of bytes
 inline uint64_t needed_depth(uint64_t size) {
     uint64_t depth = 0;
-    while (size > 32) {
+    while (size > Buffer::leaf_size) {
         // Divide rounding up
         size = (size + 1) / 2;
         depth += 1;
@@ -46,7 +46,7 @@ const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth =
     return buffers;
 }();
 
-Buffer::Buffer(std::array<unsigned char, 32> bytes) : components(bytes) {
+Buffer::Buffer(LeafData bytes) : components(bytes) {
     recompute();
 }
 
@@ -55,18 +55,12 @@ Buffer::Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right)
     recompute();
 }
 
-std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>*
-Buffer::get_children() {
-    return std::get_if<
-        std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>>(
-        &components);
+Buffer::NodeData* Buffer::get_children() {
+    return std::get_if<NodeData>(&components);
 }
 
-const std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>*
-Buffer::get_children_const() const {
-    return std::get_if<
-        std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>>(
-        &components);
+const Buffer::NodeData* Buffer::get_children_const() const {
+    return std::get_if<NodeData>(&components);
 }
 
 void Buffer::recompute() {
@@ -86,11 +80,11 @@ void Buffer::recompute() {
                           children->second->packed_size;
         }
     } else {
-        auto& bytes = std::get<std::array<unsigned char, 32>>(components);
+        auto& bytes = std::get<LeafData>(components);
         saved_hash = ::hash(bytes);
         depth = 0;
         // Go backwards through the bytes to find the last non-zero byte
-        packed_size = 32;
+        packed_size = leaf_size;
         while (packed_size > 0) {
             if (bytes[packed_size - 1] != 0) {
                 break;
@@ -145,12 +139,11 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
             }
         } else {
             // We've found the target leaf
-            auto& bytes =
-                std::get<std::array<unsigned char, 32>>(target->components);
-            if (offset >= 32) {
+            auto& bytes = std::get<LeafData>(target->components);
+            if (offset >= leaf_size) {
                 throw new std::runtime_error(
                     "Buffer set_many_without_resize called but resize needed");
-            } else if (offset + arr_length > 32) {
+            } else if (offset + arr_length > leaf_size) {
                 throw new std::runtime_error(
                     "Buffer set_many called with misaligned bytes");
             }
@@ -166,15 +159,15 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
     }
 }
 
-Buffer::Buffer() : Buffer(std::array<unsigned char, 32>{}) {}
+Buffer::Buffer() : Buffer(LeafData{}) {}
 
 Buffer Buffer::fromData(const std::vector<uint8_t>& data) {
     // Grow the buffer to the necessary length
     Buffer buf;
     buf = buf.grow(needed_depth(data.size()));
     // Set each up to 32 byte chunk of the buffer
-    for (uint64_t i = 0; i < data.size(); i += 32) {
-        uint64_t len = 32;
+    for (uint64_t i = 0; i < data.size(); i += leaf_size) {
+        uint64_t len = leaf_size;
         if (i + len > data.size()) {
             // The last chunk might be smaller than 32 bytes
             len = data.size() - i;
@@ -231,11 +224,10 @@ std::vector<uint8_t> Buffer::get_many(uint64_t offset, size_t len) const {
             }
         } else {
             // We've found the target leaf
-            auto& bytes =
-                std::get<std::array<unsigned char, 32>>(target->components);
-            if (offset >= 32) {
+            auto& bytes = std::get<LeafData>(target->components);
+            if (offset >= leaf_size) {
                 return std::vector<uint8_t>(len, (unsigned char)0);
-            } else if (offset + len > 32) {
+            } else if (offset + len > leaf_size) {
                 throw new std::runtime_error(
                     "Buffer get_many called with misaligned bytes");
             }
@@ -263,8 +255,7 @@ std::vector<uint8_t> Buffer::toFlatVector() const {
             current = children->first.get();
             to_visit.push_back(children->second.get());
         } else {
-            const auto& bytes =
-                std::get<std::array<unsigned char, 32>>(current->components);
+            const auto& bytes = std::get<LeafData>(current->components);
             std::copy(bytes.begin(), bytes.end(), std::back_inserter(ret));
             if (to_visit.empty()) {
                 // We've visited all the leaves
@@ -291,5 +282,17 @@ std::vector<unsigned char> Buffer::makeNormalizationProof() const {
 
 std::vector<Buffer> Buffer::serialize(
     std::vector<unsigned char>& value_vector) const {
-    throw new std::runtime_error("TODO");
+    // first check if it's empty
+    std::vector<Buffer> ret{};
+    value_vector.push_back(depth);
+    if (auto children = get_children_const()) {
+        marshal_uint256_t(::hash(*children->first), value_vector);
+        marshal_uint256_t(::hash(*children->second), value_vector);
+        ret.push_back(*children->first);
+        ret.push_back(*children->second);
+    } else {
+        auto& bytes = std::get<LeafData>(components);
+        std::copy(bytes.begin(), bytes.end(), std::back_inserter(value_vector));
+    }
+    return ret;
 }
