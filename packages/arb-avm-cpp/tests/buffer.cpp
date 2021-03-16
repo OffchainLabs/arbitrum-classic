@@ -183,3 +183,84 @@ TEST_CASE("Buffer Serialization") {
                 hash_value(buf));
     }
 }
+
+using BufferTestCase = std::vector<std::pair<uint64_t, uint8_t>>;
+
+TEST_CASE("BufferType") {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(0, 20000);
+
+    std::vector<BufferTestCase> test_cases;
+    {
+        std::vector<int> sizes = {32, 128, 256, 1024};
+        for (auto sz : sizes) {
+            BufferTestCase test;
+            for (int i = 0; i * sz < 32000; i++) {
+                test.push_back({i * sz, i + 1});
+            }
+            test_cases.push_back(test);
+        }
+        for (auto sz : sizes) {
+            BufferTestCase test;
+            for (int i = 0; i * sz + 1 < 32000; i++) {
+                test.push_back({i * sz + 1, i + 1});
+            }
+            test_cases.push_back(test);
+        }
+
+        for (auto sz : sizes) {
+            BufferTestCase test;
+            for (int i = 1; i * sz - 1 < 32000; i++) {
+                test.push_back({i * sz - 1, i + 1});
+            }
+            test_cases.push_back(test);
+        }
+    }
+    {
+        BufferTestCase test;
+        for (int i = 2; i < 14; i++) {
+            test.push_back({1 << i, i + 1});
+        }
+        test_cases.push_back(test);
+    }
+    // Random cases
+    std::vector<int> sizes = {1, 2, 5, 10, 50, 100, 1000, 10000};
+    for (auto sz : sizes) {
+        for (int i = 0; i < 20; i++) {
+            BufferTestCase test;
+            for (int j = 0; j < sz; j++) {
+                auto index = distrib(gen);
+                test.push_back({index, index % 256});
+            }
+            test_cases.push_back(test);
+        }
+    }
+
+    SECTION("Get/Set") {
+        for (const auto& test : test_cases) {
+            auto raw = std::make_unique<std::array<uint8_t, 32768>>();
+            Buffer buf;
+            for (const auto& unit : test) {
+                buf = buf.set(unit.first, unit.second);
+                (*raw)[unit.first] = unit.second;
+            }
+
+            for (const auto& unit : test) {
+                REQUIRE(buf.get(unit.first) == (*raw)[unit.first]);
+            }
+        }
+    }
+
+    SECTION("Hashing") {
+        for (const auto& test : test_cases) {
+            auto raw = std::make_unique<std::array<uint8_t, 32768>>();
+            Buffer buf;
+            for (const auto& unit : test) {
+                buf = buf.set(unit.first, unit.second);
+                (*raw)[unit.first] = unit.second;
+            }
+            REQUIRE(hash_buffer(raw->data(), 0, raw->size()) == buf.hash());
+        }
+    }
+}

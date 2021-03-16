@@ -46,7 +46,7 @@ inline uint64_t calc_height(int h) {
 
 inline uint64_t needed_height(uint64_t offset) {
     uint64_t result = 1;
-    for (uint64_t i = 2; i <= offset; i *= 2) {
+    for (uint256_t i = 2; i <= offset; i *= 2) {
         result++;
     }
 
@@ -107,8 +107,10 @@ class RawBuffer {
         if (level == new_level) {
             return *this;
         } else {
-            RawBuffer res = RawBuffer(std::make_shared<std::vector<RawBuffer>>(make_empty(new_level)), new_level);
-            (*res.node)[0] = this->toLevel(new_level-1);
+            RawBuffer res = RawBuffer(
+                std::make_shared<std::vector<RawBuffer>>(make_empty(new_level)),
+                new_level);
+            (*res.node)[0] = this->toLevel(new_level - 1);
             return res;
         }
     }
