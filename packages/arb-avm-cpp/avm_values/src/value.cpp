@@ -218,7 +218,7 @@ void marshalForProof(const Buffer& val,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(BUFFER);
-    marshal_uint256_t(hash(val), buf);
+    marshal_uint256_t(val.hash(), buf);
 }
 
 }  // namespace
