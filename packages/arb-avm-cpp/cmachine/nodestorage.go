@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl -latomic
 #include "../cavm/caggregator.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,10 +26,11 @@ package cmachine
 import "C"
 import (
 	"encoding/binary"
-	"github.com/pkg/errors"
 	"math/big"
 	"runtime"
 	"unsafe"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"

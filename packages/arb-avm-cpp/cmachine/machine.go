@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl -latomic
 #include "../cavm/cmachine.h"
 #include "../cavm/carbstorage.h"
 #include <stdio.h>
@@ -27,10 +27,11 @@ package cmachine
 import "C"
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
 	"runtime"
 	"unsafe"
+
+	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"

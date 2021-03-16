@@ -19,6 +19,7 @@
 
 #include <avm_values/bigint.hpp>
 
+#include <atomic>
 #include <cstdint>
 #include <iostream>
 #include <memory>

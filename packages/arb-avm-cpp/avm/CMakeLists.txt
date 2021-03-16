@@ -79,6 +79,7 @@ PUBLIC
         picosha2
         ${GMP_LIBRARY}
         ${GMPXX_LIBRARY}
+        atomic
 PRIVATE
         Boost::boost
 )
