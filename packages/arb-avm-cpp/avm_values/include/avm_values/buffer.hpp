@@ -107,7 +107,7 @@ class RawBuffer {
         if (level == new_level) {
             return *this;
         } else {
-            RawBuffer res = RawBuffer(std::make_shared<std::vector<RawBuffer>>(make_empty(new_level)), new_level);
+            RawBuffer res = RawBuffer(std::make_shared<std::vector<RawBuffer>>(make_empty(new_level-1)), new_level);
             (*res.node)[0] = this->toLevel(new_level-1);
             return res;
         }
