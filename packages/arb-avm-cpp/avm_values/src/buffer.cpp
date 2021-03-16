@@ -284,6 +284,12 @@ std::vector<uint8_t> Buffer::toFlatVector() const {
 }
 
 std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
+    // If we're trying to prove an element outside the buffer, we instead need
+    // to prove the buffer's size, which we do by proving this element instead.
+    // Proving this element specifically keeps compatiblity with the Solidity
+    // visitor, as it looks at each bit of the location to determine if it's on
+    // the left or right branch.
+    loc %= size();
     // Return a standard merkle proof
     const Buffer* target = this;
     std::vector<uint256_t> proof;
@@ -292,14 +298,14 @@ std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
             // Move downwards towards the target
             // Add the sibling hash to the proof each step of the way
             auto child_size = children->first->size();
-            if (loc & 1) {
+            if (loc >= child_size) {
+                loc -= child_size;
                 target = children->second.get();
                 proof.push_back(children->first->hash());
             } else {
                 target = children->first.get();
                 proof.push_back(children->second->hash());
             }
-            loc >>= 1;
         } else {
             // We've found the target leaf
             auto& bytes = std::get<LeafData>(target->components);
