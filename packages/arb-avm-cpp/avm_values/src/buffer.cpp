@@ -243,10 +243,8 @@ std::vector<unsigned char> RawBuffer::makeNormalizationProof() {
         res.push_back(0);
     }
 
-    // std::cerr << "got size " << sz << "\n";
     if (sz == 5) {
         res.push_back(0);
-        // std::cerr << "computing hash " << intx::to_string(merkleHash(0, sz), 10) << "\n";
         marshal_uint256_t(merkleHash(0, sz), res);
         marshal_uint256_t(merkleHash(0, sz), res);
         return res;

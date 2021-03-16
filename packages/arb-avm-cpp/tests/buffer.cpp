@@ -228,8 +228,9 @@ std::vector<uint256_t> splitProof(std::vector<unsigned char> data) {
         res.push_back(a);
     }
     return res;
-}  
+}
 
+// From OneStepProof2.sol
 uint256_t getProof(uint256_t buf, uint64_t loc, std::vector<uint256_t> proof) {
     // empty tree is full of zeros
     if (proof.size() == 0) {
@@ -327,11 +328,11 @@ int calcHeight(uint64_t loc) {
     else return 1 + calcHeight(loc >> 1);
 }
 
+// From OneStepProof2.sol
 uint256_t setProof(uint256_t buf, uint64_t loc, uint256_t v, std::vector<uint256_t> proof,
     uint64_t nh,
     uint256_t normal1,
     uint256_t normal2) {
-    // std::cerr << "Proof size " << proof.size() << " nh " << nh << "\n";
     // three possibilities, the tree depth stays same, it becomes lower or it's extended
     uint256_t acc = hash(v);
     // check that the proof matches original
@@ -361,7 +362,6 @@ uint256_t setProof(uint256_t buf, uint64_t loc, uint256_t v, std::vector<uint256
     if (v != 0) return acc;
     if (!(normal2 != zeros[nh] || nh == 0)) throw std::runtime_error("fail");
     uint256_t res = nh == 0 ? normal1 : hash(normal1, normal2);
-    // std::cerr << "prelim res " << res << "\n";
     if (nh > 0) nh--;
     uint256_t acc2 = res;
     for (uint64_t i = nh; i < proof.size() - 1; i++) {
