@@ -118,7 +118,7 @@ export class Bridge extends L2Bridge {
       l2TransactionHash
     )
 
-    if(!txReceipt) throw new Error("Can't find L2 transaction receipt?")
+    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
 
     const logs = txReceipt.logs.filter(log => log.topics[0] === eventTopic)
 
@@ -189,6 +189,50 @@ export class Bridge extends L2Bridge {
 
   private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
 
+  private getOutboxEntry = async (
+    batchNumber: BigNumber,
+    outboxAddress: string
+  ): Promise<string> => {
+    const iface = new ethers.utils.Interface([
+      'function outboxes(uint256) public view returns (address)',
+    ])
+    const outbox = new ethers.Contract(outboxAddress, iface).connect(
+      this.l1Bridge.l1Provider
+    )
+    return outbox.outboxes(batchNumber)
+  }
+
+  public waitUntilOutboxEntryCreated = async (
+    batchNumber: BigNumber,
+    activeOutboxAddress: string,
+    retryDelay: number = 500
+  ): Promise<string> => {
+    try {
+      // if outbox entry not created yet, this reads from array out of bounds
+      const expectedEntry = await this.getOutboxEntry(
+        batchNumber,
+        activeOutboxAddress
+      )
+      console.log('Found entry index!')
+      return expectedEntry
+    } catch (e) {
+      console.log("can't find entry, lets wait a bit?")
+      if (e.message === 'invalid opcode: opcode 0xfe not defined') {
+        console.log('Array out of bounds, wait until the entry is posted')
+      } else {
+        console.log(e)
+        console.log(e.message)
+      }
+      await this.wait(retryDelay)
+      console.log('trying again')
+      return this.waitUntilOutboxEntryCreated(
+        batchNumber,
+        activeOutboxAddress,
+        retryDelay
+      )
+    }
+  }
+
   public tryOutboxExecute = async (
     activeOutboxAddress: string,
     batchNumber: BigNumber,
@@ -203,43 +247,11 @@ export class Bridge extends L2Bridge {
     calldataForL1: string,
     retryDelay = 500
   ): Promise<ContractReceipt> => {
-    console.log("{activeOutboxAddress}")
-    console.log({activeOutboxAddress})
     const outbox = OutboxFactory.connect(
       activeOutboxAddress,
       this.l1Bridge.l1Signer
     )
-    const l2ToL1Block = await outbox.l2ToL1Block()
-    console.log({l2ToL1Block})
-    console.log("{l2ToL1Block}")
-    console.log(await outbox.outboxes(BigNumber.from(0)))
-
-    try {
-      // if outbox entry not created yet, this reads from array out of bounds
-      const expectedEntry = await outbox.outboxes(batchNumber)
-      console.log('Found entry index!')
-      console.log(expectedEntry)
-    } catch (e) {
-      console.log("can't find entry, lets wait a bit?")
-      console.log(e)
-      await this.wait(retryDelay)
-      console.log('trying again')
-      return this.tryOutboxExecute(
-        activeOutboxAddress,
-        batchNumber,
-        proof,
-        path,
-        l2Sender,
-        l1Dest,
-        l2Block,
-        l1Block,
-        timestamp,
-        amount,
-        calldataForL1,
-        retryDelay
-      )
-    }
-
+    await this.waitUntilOutboxEntryCreated(batchNumber, activeOutboxAddress)
     try {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
