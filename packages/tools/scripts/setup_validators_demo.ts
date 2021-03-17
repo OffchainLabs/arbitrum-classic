@@ -1,8 +1,6 @@
 import * as ethers from 'ethers'
 import { EventFragment } from '@ethersproject/abi'
-import { ArbConversion, L1Bridge } from 'arb-ts'
-import { RollupCreator__factory } from 'arb-ts/dist/lib/abi/factories/RollupCreator__factory'
-import { Inbox__factory } from 'arb-ts/dist/lib/abi/factories/Inbox__factory'
+import { ArbConversion, L1Bridge, RollupCreatorFactory, InboxFactory  } from 'arb-ts'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
@@ -31,7 +29,7 @@ async function setupRollup(): Promise<RollupCreatedEvent> {
   console.log(`Creating chain for machine with hash ${machineHash}`)
 
   const factoryAddress = addresses['contracts']['RollupCreator'].address
-  const rollupCreator = RollupCreator__factory.connect(factoryAddress, wallet)
+  const rollupCreator = RollupCreatorFactory.connect(factoryAddress, wallet)
 
   const tx = await rollupCreator.createRollup(
     machineHash,
@@ -84,7 +82,7 @@ async function initializeClientWallets(inboxAddress: string): Promise<void> {
     '0x755449b9901f91deC52DB39AF8c655206C63eD8e',
   ]
 
-  const inbox = Inbox__factory.connect(inboxAddress, wallet)
+  const inbox = InboxFactory.connect(inboxAddress, wallet)
   const amount = ethers.utils.parseEther('100')
 
   for (const address of addresses) {
