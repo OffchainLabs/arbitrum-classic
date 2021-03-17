@@ -31,7 +31,6 @@ class ReadWriteTransaction : public ReadTransaction {
 
     rocksdb::Status defaultPut(const rocksdb::Slice& key,
                                const rocksdb::Slice& value);
-    rocksdb::Status defaultDelete(const rocksdb::Slice& key);
     rocksdb::Status statePut(const rocksdb::Slice& key,
                              const rocksdb::Slice& value);
     rocksdb::Status checkpointPut(const rocksdb::Slice& key,
@@ -44,6 +43,10 @@ class ReadWriteTransaction : public ReadTransaction {
                             const rocksdb::Slice& value);
     rocksdb::Status sideloadPut(const rocksdb::Slice& key,
                                 const rocksdb::Slice& value);
+    rocksdb::Status refCountedPut(const rocksdb::Slice& key,
+                                  const rocksdb::Slice& value);
+
+    rocksdb::Status defaultDelete(const rocksdb::Slice& key);
     rocksdb::Status stateDelete(const rocksdb::Slice& key);
     rocksdb::Status checkpointDelete(const rocksdb::Slice& key);
     rocksdb::Status messageEntryDelete(const rocksdb::Slice& key);
@@ -53,6 +56,7 @@ class ReadWriteTransaction : public ReadTransaction {
     rocksdb::Status aggregatorPut(const rocksdb::Slice& key,
                                   const rocksdb::Slice& value);
     rocksdb::Status aggregatorDelete(const rocksdb::Slice& key);
+    rocksdb::Status refCountedDelete(const rocksdb::Slice& key);
 };
 
 #endif  // data_storage_readwritetransaction_hpp

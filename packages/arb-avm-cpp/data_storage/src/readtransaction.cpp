@@ -24,148 +24,206 @@ ReadTransaction::ReadTransaction(std::shared_ptr<DataStorage> store)
 rocksdb::Status ReadTransaction::defaultGet(const rocksdb::Slice& key,
                                             std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->default_column.get(), key,
-        value);
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
+        key, value);
 }
 rocksdb::Status ReadTransaction::stateGet(const rocksdb::Slice& key,
                                           std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->state_column.get(), key, value);
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::STATE_COLUMN],
+        key, value);
 }
 rocksdb::Status ReadTransaction::checkpointGet(const rocksdb::Slice& key,
                                                std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->checkpoint_column.get(), key,
-        value);
+        read_options,
+        transaction->datastorage
+            ->column_handles[DataStorage::CHECKPOINT_COLUMN],
+        key, value);
 }
 rocksdb::Status ReadTransaction::messageEntryGet(const rocksdb::Slice& key,
                                                  std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->messageentry_column.get(), key,
-        value);
+        read_options,
+        transaction->datastorage
+            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
+        key, value);
 }
 rocksdb::Status ReadTransaction::logGet(const rocksdb::Slice& key,
                                         std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->log_column.get(), key, value);
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::LOG_COLUMN], key,
+        value);
 }
 rocksdb::Status ReadTransaction::sendGet(const rocksdb::Slice& key,
                                          std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->send_column.get(), key, value);
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::SEND_COLUMN], key,
+        value);
 }
 rocksdb::Status ReadTransaction::sideloadGet(const rocksdb::Slice& key,
                                              std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->sideload_column.get(), key,
-        value);
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN],
+        key, value);
 }
 
 rocksdb::Status ReadTransaction::aggregatorGet(const rocksdb::Slice& key,
                                                std::string* value) const {
     return transaction->transaction->Get(
-        read_options, transaction->datastorage->aggregator_column.get(), key,
-        value);
+        read_options,
+        transaction->datastorage
+            ->column_handles[DataStorage::AGGREGATOR_COLUMN],
+        key, value);
+}
+
+rocksdb::Status ReadTransaction::refCountedGet(const rocksdb::Slice& key,
+                                               std::string* value) const {
+    return transaction->transaction->Get(
+        read_options,
+        transaction->datastorage
+            ->column_handles[DataStorage::REFCOUNTED_COLUMN],
+        key, value);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::defaultGetIterator() const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->default_column.get());
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::stateGetIterator() const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->state_column.get());
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::STATE_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::checkpointGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->checkpoint_column.get());
+        read_options, transaction->datastorage
+                          ->column_handles[DataStorage::CHECKPOINT_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::messageEntryGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->messageentry_column.get());
+        read_options, transaction->datastorage
+                          ->column_handles[DataStorage::MESSAGEENTRY_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::logGetIterator() const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->log_column.get());
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::LOG_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::sendGetIterator() const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->send_column.get());
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::SEND_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::sideloadGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->sideload_column.get());
+        read_options,
+        transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::aggregatorGetIterator()
     const {
     auto it = transaction->transaction->GetIterator(
-        read_options, transaction->datastorage->aggregator_column.get());
+        read_options, transaction->datastorage
+                          ->column_handles[DataStorage::AGGREGATOR_COLUMN]);
+    return std::unique_ptr<rocksdb::Iterator>(it);
+}
+
+std::unique_ptr<rocksdb::Iterator> ReadTransaction::refCountedGetIterator()
+    const {
+    auto it = transaction->transaction->GetIterator(
+        read_options, transaction->datastorage
+                          ->column_handles[DataStorage::REFCOUNTED_COLUMN]);
     return std::unique_ptr<rocksdb::Iterator>(it);
 }
 
 ValueResult<uint256_t> ReadTransaction::defaultGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->default_column.get(), key_slice);
+        transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::stateGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->state_column.get(), key_slice);
+        transaction->datastorage->column_handles[DataStorage::STATE_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::checkpointGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->checkpoint_column.get(), key_slice);
+        transaction->datastorage
+            ->column_handles[DataStorage::CHECKPOINT_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::messageEntryGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->messageentry_column.get(), key_slice);
+        transaction->datastorage
+            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::logGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->log_column.get(), key_slice);
+        transaction->datastorage->column_handles[DataStorage::LOG_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::sendGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->send_column.get(), key_slice);
+        transaction->datastorage->column_handles[DataStorage::SEND_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::sideloadGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->sideload_column.get(), key_slice);
+        transaction->datastorage->column_handles[DataStorage::SIDELOAD_COLUMN],
+        key_slice);
 }
 
 ValueResult<uint256_t> ReadTransaction::aggregatorGetUint256(
     const rocksdb::Slice key_slice) const {
     return getUint256UsingFamilyAndKey(
-        transaction->datastorage->aggregator_column.get(), key_slice);
+        transaction->datastorage
+            ->column_handles[DataStorage::AGGREGATOR_COLUMN],
+        key_slice);
+}
+
+ValueResult<uint256_t> ReadTransaction::refCountedGetUint256(
+    const rocksdb::Slice key_slice) const {
+    return getUint256UsingFamilyAndKey(
+        transaction->datastorage
+            ->column_handles[DataStorage::REFCOUNTED_COLUMN],
+        key_slice);
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
@@ -173,34 +231,41 @@ ReadTransaction::messageEntryGetVectorVector(
     const rocksdb::Slice first_key_slice,
     size_t count) const {
     return getVectorVectorUsingFamilyAndKey(
-        transaction->datastorage->messageentry_column.get(), first_key_slice,
-        count);
+        transaction->datastorage
+            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
+        first_key_slice, count);
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
 ReadTransaction::sendGetVectorVector(const rocksdb::Slice first_key_slice,
                                      size_t count) const {
     return getVectorVectorUsingFamilyAndKey(
-        transaction->datastorage->send_column.get(), first_key_slice, count);
+        transaction->datastorage->column_handles[DataStorage::SEND_COLUMN],
+        first_key_slice, count);
 }
 
 ValueResult<std::vector<unsigned char>> ReadTransaction::messageEntryGetVector(
     const rocksdb::Slice first_key_slice) const {
     return getVectorUsingFamilyAndKey(
-        transaction->datastorage->messageentry_column.get(), first_key_slice);
+        transaction->datastorage
+            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
+        first_key_slice);
 }
 
 ValueResult<std::vector<unsigned char>> ReadTransaction::checkpointGetVector(
     const rocksdb::Slice first_key_slice) const {
     return getVectorUsingFamilyAndKey(
-        transaction->datastorage->checkpoint_column.get(), first_key_slice);
+        transaction->datastorage
+            ->column_handles[DataStorage::CHECKPOINT_COLUMN],
+        first_key_slice);
 }
 
 ValueResult<std::vector<uint256_t>> ReadTransaction::logGetUint256Vector(
     const rocksdb::Slice first_key_slice,
     size_t count) const {
     return getUint256VectorUsingFamilyAndKey(
-        transaction->datastorage->log_column.get(), first_key_slice, count);
+        transaction->datastorage->column_handles[DataStorage::LOG_COLUMN],
+        first_key_slice, count);
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>

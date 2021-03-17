@@ -795,12 +795,31 @@ void ArbCore::operator()() {
             if (!messages.empty() || resolved_staged) {
                 execConfig.setInboxMessagesFromBytes(messages);
 
-                auto status = machine->runMachine(execConfig);
-                if (!status) {
+                auto success = machine->runMachine(execConfig);
+                if (!success) {
                     core_error_string = "Error starting machine thread";
                     machine_error = true;
                     std::cerr << "ArbCore error: " << core_error_string << "\n";
                     break;
+                }
+
+                auto status = data_storage->flushNextColumn();
+                if (!status.ok()) {
+                    std::cerr
+                        << "Error flushing database: " << status.ToString()
+                        << std::endl;
+                    break;
+                }
+
+                if (delete_checkpoints_before_message != uint256_t(0)) {
+                    /*
+                    deleteOldCheckpoints(delete_checkpoints_before_message,
+                                         save_checkpoint_message_interval,
+                                         ignore_checkpoints_after_message);
+                    */
+                    ignore_checkpoints_after_message = 0;
+                    save_checkpoint_message_interval = 0;
+                    delete_checkpoints_before_message = 0;
                 }
             } else {
                 // Machine all caught up, no messages to process
