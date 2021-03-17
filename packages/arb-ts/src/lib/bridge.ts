@@ -20,6 +20,8 @@ import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 import { BridgeFactory } from './abi/BridgeFactory'
 import { OutboxFactory } from './abi/OutboxFactory'
+import { Outbox } from './abi/Outbox'
+import { OutboxEntryFactory } from './abi/OutboxEntryFactory'
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -161,15 +163,15 @@ export class Bridge extends L2Bridge {
     try {
       // index 1 should not exist
       await bridge.allowedOutboxList(1)
-      console.error("There is more than 1 outbox registered with the bridge?!")
-    } catch(e) {
+      console.error('There is more than 1 outbox registered with the bridge?!')
+    } catch (e) {
       // this should fail!
-      console.log("All is good")
+      console.log('All is good')
     }
 
     const outboxExecuteTransactionReceipt = await this.tryOutboxExecute(
       activeOutbox,
-      outboxIndex,
+      batchNumber,
       proof,
       path,
       l2Sender,
@@ -184,9 +186,9 @@ export class Bridge extends L2Bridge {
   }
 
   private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
-  public tryOutboxExecute = async (
-    activeOutboxAddress: string,
-    outboxNumber: BigNumber,
+
+  public tryFindOutboxEntryWithRoot = async (
+    outbox: Outbox,
     proof: Array<string>,
     path: BigNumber,
     l2Sender: string,
@@ -196,12 +198,93 @@ export class Bridge extends L2Bridge {
     timestamp: BigNumber,
     amount: BigNumber,
     calldataForL1: string,
-    retryDelay: number = 500
+    retryDelay = 500
+  ): Promise<BigNumber> => {
+    // try to find outbox that contains given root
+    // check if current root is available in chain
+    const item = await outbox.calculateItemHash(
+      l2Sender,
+      l1Dest,
+      l2Block,
+      l1Block,
+      timestamp,
+      amount,
+      calldataForL1
+    )
+    const root = await outbox.calculateMerkleRoot(proof, path, item)
+    console.log(`expected root: ${root}`)
+    const outboxesLength = await outbox.outboxesLength()
+    const outboxEntries = await outbox.getEntries()
+
+    for(let i=0; i<outboxEntries.length; i++) {
+      const entryAddress = outboxEntries[i];
+      console.log("curr entry address", entryAddress)
+      const outboxEntry = OutboxEntryFactory.connect(
+        entryAddress,
+        this.l1Bridge.l1Provider
+      )
+      const entryRoot = await outboxEntry.root()
+      console.log(`curr entry root: ${entryRoot}`)
+      if (entryRoot === root) {
+        console.log(`Current root is a match! At index ${i}`)
+        return BigNumber.from(i)
+      } else {
+        console.log('Current root not a match')
+      }
+    }
+    console.log('No outbox with given root was found. Trying again after delay')
+    await this.wait(retryDelay)
+    return this.tryFindOutboxEntryWithRoot(
+      outbox,
+      proof,
+      path,
+      l2Sender,
+      l1Dest,
+      l2Block,
+      l1Block,
+      timestamp,
+      amount,
+      calldataForL1,
+      retryDelay
+    )
+  }
+
+  public tryOutboxExecute = async (
+    activeOutboxAddress: string,
+    batchNumber: BigNumber,
+    proof: Array<string>,
+    path: BigNumber,
+    l2Sender: string,
+    l1Dest: string,
+    l2Block: BigNumber,
+    l1Block: BigNumber,
+    timestamp: BigNumber,
+    amount: BigNumber,
+    calldataForL1: string,
+    retryDelay = 500
   ): Promise<ContractReceipt> => {
-    const outbox = await OutboxFactory.connect(
+    const outbox = OutboxFactory.connect(
       activeOutboxAddress,
       this.l1Bridge.l1Provider
     ).connect(this.l1Bridge.l1Signer)
+
+    const outboxNumber = await this.tryFindOutboxEntryWithRoot(
+      outbox,
+      proof,
+      path,
+      l2Sender,
+      l1Dest,
+      l2Block,
+      l1Block,
+      timestamp,
+      amount,
+      calldataForL1,
+      retryDelay
+    )
+    // Are these always the same? I don't think so!
+    // Lets find out
+    console.log(`Using outbox number ${outboxNumber.toString()}`)
+    console.log(`The batch number in L2 was: ${batchNumber.toString()}`)
 
     try {
       // TODO: wait until assertion is confirmed before execute
@@ -251,7 +334,7 @@ export class Bridge extends L2Bridge {
   public tryGetProof = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    retryDelay: number = 500
+    retryDelay = 500
   ): Promise<{
     proof: Array<string>
     path: BigNumber
