@@ -102,7 +102,7 @@ const config = {
         accountsBalance: '10000000000000000000000000',
       },
     },
-    parity: {
+    local_development: {
       url: 'http://127.0.0.1:7545',
     },
     devnet: {

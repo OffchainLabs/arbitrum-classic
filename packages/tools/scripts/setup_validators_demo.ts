@@ -1,5 +1,8 @@
 import * as ethers from 'ethers'
-import { abi, Program, ArbConversion, L1Bridge } from 'arb-provider-ethers'
+import { EventFragment } from '@ethersproject/abi'
+import { ArbConversion, L1Bridge } from 'arb-ts'
+import { RollupCreator__factory } from 'arb-ts/dist/lib/abi/factories/RollupCreator__factory'
+import { Inbox__factory } from 'arb-ts/dist/lib/abi/factories/Inbox__factory'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
@@ -18,39 +21,41 @@ const wallet = provider.getSigner(0)
 const root = '../../'
 const rollupsPath = root + 'rollups/'
 
-async function setupRollup(arbOSData: string): Promise<string> {
-  const arbOSHash = Program.programMachineHash(arbOSData)
+export interface RollupCreatedEvent {
+  rollupAddress: string
+  inboxAddress: string
+}
 
-  const factoryAddress = addresses['contracts']['ArbFactory'].address
+async function setupRollup(): Promise<RollupCreatedEvent> {
+  const machineHash = fs.readFileSync('../MACHINEHASH').toString()
+  console.log(`Creating chain for machine with hash ${machineHash}`)
 
-  const factory = abi.ArbFactoryFactory.connect(factoryAddress, wallet)
+  const factoryAddress = addresses['contracts']['RollupCreator'].address
+  const rollupCreator = RollupCreator__factory.connect(factoryAddress, wallet)
 
-  console.log(`Initializing rollup chain for machine with hash ${arbOSHash}`)
-
-  const tx = await factory.createRollup(
-    arbOSHash,
-    arbConversion.blocksToTicks(30),
-    80000000,
-    10000000000,
-    ethers.utils.parseEther('.01'),
-    ethers.utils.hexZeroPad('0x', 20),
-    ethers.utils.hexZeroPad('0x', 20),
+  const tx = await rollupCreator.createRollup(
+    machineHash,
+    900,
+    0,
+    2000000000,
+    ethers.utils.parseEther('.1'),
+    ethers.constants.AddressZero,
+    await wallet.getAddress(),
     '0x'
   )
-  const result = await tx.wait()
-
-  const e = result.events?.find((e: ethers.Event) =>
-    e.topics.includes(
-      (factory.interface.events.RollupCreated as ethers.utils.EventDescription)
-        .topic
-    )
+  const receipt = await tx.wait()
+  const ev = rollupCreator.interface.parseLog(
+    receipt.logs[receipt.logs.length - 1]
   )
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const {
-    rollupAddress,
-  }: RollupCreatedParams = (e?.args as any) as RollupCreatedParams
 
-  return rollupAddress
+  if (ev.name != 'RollupCreated') {
+    throw 'expected RollupCreated event'
+  }
+
+  const parsedEv = (ev as any) as {
+    args: RollupCreatedEvent
+  }
+  return parsedEv.args
 }
 
 async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
@@ -70,7 +75,7 @@ async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
   return wallets
 }
 
-async function initializeClientWallets(rollupAddress: string): Promise<void> {
+async function initializeClientWallets(inboxAddress: string): Promise<void> {
   const addresses = [
     '0xc7711f36b2C13E00821fFD9EC54B04A60AEfbd1b',
     '0x38299D74a169e68df4Da85Fb12c6Fd22246aDD9F',
@@ -79,11 +84,11 @@ async function initializeClientWallets(rollupAddress: string): Promise<void> {
     '0x755449b9901f91deC52DB39AF8c655206C63eD8e',
   ]
 
-  const bridge = new L1Bridge(wallet, rollupAddress)
+  const inbox = Inbox__factory.connect(inboxAddress, wallet)
   const amount = ethers.utils.parseEther('100')
 
   for (const address of addresses) {
-    await bridge.depositETH(address, amount)
+    await inbox.depositEth(address, { value: amount })
   }
 }
 
@@ -92,9 +97,8 @@ async function setupValidators(
   blocktime: number,
   force: boolean
 ): Promise<void> {
-  const arbOSData = fs.readFileSync('../../arbos.mexe', 'utf8')
-  const rollup = await setupRollup(arbOSData)
-  console.log('Created rollup', rollup)
+  const { rollupAddress, inboxAddress } = await setupRollup()
+  console.log('Created rollup', rollupAddress)
 
   const validatorsPath = rollupsPath + 'local/'
 
@@ -117,7 +121,9 @@ async function setupValidators(
   }
 
   const config = {
-    rollup_address: rollup,
+    rollup_address: rollupAddress,
+    inbox_address: inboxAddress,
+    validator_utils_address: addresses['contracts']['ValidatorUtils'].address,
     eth_url: 'http://localhost:7545',
     password: 'pass',
     blocktime: blocktime,
@@ -136,7 +142,7 @@ async function setupValidators(
     i++
   }
 
-  await initializeClientWallets(rollup)
+  await initializeClientWallets(inboxAddress)
 }
 
 if (require.main === module) {

@@ -6,6 +6,8 @@ const rollupsPath = root + 'rollups/'
 
 export interface Config {
   rollup_address: string
+  inbox_address: string
+  validator_utils_address: string
   eth_url: string
   password?: string
   blocktime: number
@@ -23,7 +25,7 @@ export async function setupValidatorStates(
     fs.mkdirSync(rollupsPath)
   }
 
-  const arbOSData = fs.readFileSync('../../arbos.mexe', 'utf8')
+  const arbOSData = fs.readFileSync('../arb-os/arb_os/arbos.mexe', 'utf8')
 
   const rollupPath = rollupsPath + folder + '/'
   if (fs.existsSync(rollupPath)) {
@@ -35,7 +37,7 @@ export async function setupValidatorStates(
     const valPath = rollupPath + 'validator' + i + '/'
     fs.mkdirSync(valPath)
     fs.writeFileSync(valPath + 'config.json', JSON.stringify(config))
-    fs.writeFileSync(valPath + 'contract.mexe', arbOSData)
+    fs.writeFileSync(valPath + 'arbos.mexe', arbOSData)
   }
 }
 
@@ -47,6 +49,16 @@ if (require.main === module) {
       yargsBuilder
         .positional('rollup', {
           describe: 'address of the rollup chain',
+          type: 'string',
+          demandOption: true,
+        })
+        .positional('inbox', {
+          describe: 'address of the rollup chain inbox',
+          type: 'string',
+          demandOption: true,
+        })
+        .positional('validatorutils', {
+          describe: 'address of the validator utils contract',
           type: 'string',
           demandOption: true,
         })
@@ -72,6 +84,8 @@ if (require.main === module) {
       }
       const config: Config = {
         rollup_address: args.rollup,
+        inbox_address: args.inbox,
+        validator_utils_address: args.validatorutils,
         eth_url: args.ethurl,
         blocktime: args.blocktime,
       }

@@ -86,17 +86,25 @@ func main() {
 
 	folder := os.Args[1]
 
-	rollupAddr := ethcommon.HexToAddress(os.Args[3])
-	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
-	auth, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error loading wallet keystore")
-	}
-	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error creating Ethereum RPC client")
 	}
+
+	l1ChainId, err := client.ChainID(context.Background())
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error getting chain ID")
+	}
+	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+
+	rollupAddr := ethcommon.HexToAddress(os.Args[3])
+	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
+	auth, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error loading wallet keystore")
+	}
+	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
+
 	strategyString := os.Args[5]
 	var strategy staker.Strategy
 	if strategyString == "MakeNodes" {
