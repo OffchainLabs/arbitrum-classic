@@ -155,10 +155,21 @@ export class Bridge extends L2Bridge {
       bridgeAddress,
       this.l1Bridge.l1Provider
     )
-    const activeOutbox = await bridge.activeOutbox()
+
+    const outboxIndex = BigNumber.from(0)
+    const activeOutbox = await bridge.allowedOutboxList(outboxIndex)
+    try {
+      // index 1 should not exist
+      await bridge.allowedOutboxList(1)
+      console.error("There is more than 1 outbox registered with the bridge?!")
+    } catch(e) {
+      // this should fail!
+      console.log("All is good")
+    }
+
     const outboxExecuteTransactionReceipt = await this.tryOutboxExecute(
       activeOutbox,
-      batchNumber,
+      outboxIndex,
       proof,
       path,
       l2Sender,
@@ -175,7 +186,7 @@ export class Bridge extends L2Bridge {
   private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
   public tryOutboxExecute = async (
     activeOutboxAddress: string,
-    batchNumber: BigNumber,
+    outboxNumber: BigNumber,
     proof: Array<string>,
     path: BigNumber,
     l2Sender: string,
@@ -197,7 +208,7 @@ export class Bridge extends L2Bridge {
       // We can predict and print number of missing blocks
       // if not challenged
       const outboxExecute = await outbox.executeTransaction(
-        batchNumber,
+        outboxNumber,
         proof,
         path,
         l2Sender,
@@ -208,9 +219,9 @@ export class Bridge extends L2Bridge {
         amount,
         calldataForL1
       )
+      console.log(`Transaction hash: ${outboxExecute.hash}`)
       console.log('Waiting for receipt')
       const receipt = await outboxExecute.wait()
-      console.log(receipt)
       console.log('Receipt emitted')
       return receipt
     } catch (e) {
@@ -222,7 +233,7 @@ export class Bridge extends L2Bridge {
       console.log('Retrying now')
       return this.tryOutboxExecute(
         activeOutboxAddress,
-        batchNumber,
+        outboxNumber,
         proof,
         path,
         l2Sender,
