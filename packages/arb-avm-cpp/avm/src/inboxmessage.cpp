@@ -138,7 +138,7 @@ Tuple InboxMessage::toTuple() const {
             inbox_sequence_number,
             gas_price_l1,
             uint256_t{data.size()},
-            Buffer{data}};
+            Buffer::fromData(data)};
 }
 
 InboxMessage InboxMessage::fromTuple(const Tuple& tup) {

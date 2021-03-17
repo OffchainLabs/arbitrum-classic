@@ -132,9 +132,9 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			GasUsed:           beforeCut.GasUsed + a.NumGas,
 			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
 			MachineState:      hash.ToEthHash(),
-			SendAcc:           ethcommon.Hash{},
+			SendAcc:           a.SendAcc.ToEthHash(),
 			SendCount:         (*hexutil.Big)(new(big.Int).Add(beforeCut.SendCount.ToInt(), big.NewInt(int64(len(a.Sends))))),
-			LogAcc:            ethcommon.Hash{},
+			LogAcc:            a.LogAcc.ToEthHash(),
 			LogCount:          (*hexutil.Big)(new(big.Int).Add(beforeCut.LogCount.ToInt(), big.NewInt(int64(len(a.Logs))))),
 		}
 

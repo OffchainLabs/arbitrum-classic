@@ -210,6 +210,8 @@ RawAssertion executeAssertion(CMachine* m,
 
     try {
         mach->machine_state.context = AssertionContext{*config};
+        mach->machine_state.context.max_gas +=
+            mach->machine_state.output.arb_gas_used;
         Assertion assertion = mach->run();
         return makeRawAssertion(assertion, before_send_acc, before_log_acc);
     } catch (const std::exception& e) {

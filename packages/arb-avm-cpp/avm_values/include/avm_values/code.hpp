@@ -59,7 +59,11 @@ class CodeSegment {
         // Make endpoint pc + 1 since pc should be included in segment
         return std::make_shared<CodeSegment>(
             new_segment_id,
-            std::vector<CodePoint>{code.begin(), code.begin() + pc + 1});
+            std::vector<CodePoint>{
+                code.begin(),
+                code.begin() +
+                    static_cast<std::vector<CodePoint>::difference_type>(pc) +
+                    1});
     }
 
    public:

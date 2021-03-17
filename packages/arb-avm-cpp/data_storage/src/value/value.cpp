@@ -37,7 +37,7 @@ struct ValueHash {
 };
 
 struct ParsedBuffer {
-    uint64_t level;
+    uint64_t depth;
     std::vector<uint256_t> nodes;
 };
 
@@ -71,31 +71,23 @@ namespace {
 
 template <class T>
 T parseBuffer(const char* buf, int& len) {
-    uint8_t level = buf[0];
+    uint8_t depth = buf[0];
     len++;
-    // Empty
-    if (buf[1] == 0) {
-        len++;
-        return Buffer(RawBuffer(level, true));
+    buf += 1;
+    if (depth == 0) {
+        len += Buffer::leaf_size;
+        const unsigned char* data = reinterpret_cast<const unsigned char*>(buf);
+        Buffer::LeafData leaf;
+        std::copy(data, data + Buffer::leaf_size, leaf.begin());
+        return Buffer{leaf};
     }
-    len++;
-    if (level == 0) {
-        auto res = std::make_shared<std::vector<uint8_t>>();
-        res->resize(LEAF_SIZE, 0);
-        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            (*res)[i] = buf[i + 2];
-        }
-        len += LEAF_SIZE;
-        return Buffer(RawBuffer(res));
-    }
-    buf += 2;
     auto res = std::vector<uint256_t>();
-    for (uint64_t i = 0; i < NODE_SIZE; i++) {
+    for (uint64_t i = 0; i < Buffer::children_size; i++) {
         uint256_t hash = deserializeUint256t(buf);
         res.push_back(hash);
         len += 32;
     }
-    return ParsedBuffer{level, res};
+    return ParsedBuffer{depth, res};
 }
 
 std::vector<ParsedTupVal> parseTuple(const std::vector<unsigned char>& data) {
@@ -225,10 +217,7 @@ std::vector<value> serializeValue(const Buffer& b,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>&) {
     value_vector.push_back(BUFFER);
-    int l1 = value_vector.size();
-    std::vector<RawBuffer> res = b.serialize(value_vector);
-    int len = 0;
-    parseBuffer<ParsedBufVal>((char*)value_vector.data() + l1, len);
+    std::vector<Buffer> res = b.serialize(value_vector);
     std::vector<value> ret{};
     ret.reserve(res.size());
     for (auto& re : res) {
@@ -369,16 +358,14 @@ GetResults processFirstVal(const ReadTransaction&,
 Buffer processBuffer(const ReadTransaction& tx,
                      const ParsedBuffer& val,
                      ValueCache& val_cache) {
-    std::shared_ptr<std::vector<RawBuffer>> vec =
-        std::make_shared<std::vector<RawBuffer>>(NODE_SIZE);
-    for (uint64_t i = 0; i < NODE_SIZE; i++) {
-        auto val_hash = ValueHash{val.nodes[i]};
-        if (auto cached_val = val_cache.loadIfExists(val_hash.hash)) {
-            RawBuffer buf = *std::get<Buffer>(cached_val.value()).buf;
-            (*vec)[i] = buf.toLevel(val.level-1);
+    std::vector<std::shared_ptr<Buffer>> vec;
+    for (const auto& node_hash : val.nodes) {
+        if (auto cached_val = val_cache.loadIfExists(node_hash)) {
+            vec.push_back(
+                std::make_shared<Buffer>(std::get<Buffer>(cached_val.value())));
             continue;
         }
-
+        auto val_hash = ValueHash{node_hash};
         // Value not in cache, so need to load from database
         auto results = getStoredValue(tx, val_hash);
         if (!results.status.ok()) {
@@ -393,18 +380,19 @@ Buffer processBuffer(const ReadTransaction& tx,
             Buffer buf = std::get<Buffer>(record);
             // Check that it has correct height
             val_cache.maybeSave(buf);
-            (*vec)[i] = buf.buf->toLevel(val.level-1);
+            vec.push_back(std::make_shared<Buffer>(buf));
         } else if (std::holds_alternative<ParsedBuffer>(record)) {
             Buffer buf =
                 processBuffer(tx, std::get<ParsedBuffer>(record), val_cache);
             val_cache.maybeSave(buf);
-            (*vec)[i] = buf.buf->toLevel(val.level-1);
+            vec.push_back(std::make_shared<Buffer>(buf));
         } else {
             std::cerr << "Error loading buffer from record" << std::endl;
             return Buffer();
         }
     }
-    return Buffer(RawBuffer(vec, val.level));
+
+    return {std::move(vec[0]), std::move(vec[1])};
 }
 
 GetResults processVal(const ReadTransaction& tx,
