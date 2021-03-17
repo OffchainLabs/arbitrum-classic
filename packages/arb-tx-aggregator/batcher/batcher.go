@@ -19,7 +19,6 @@ package batcher
 import (
 	"container/list"
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -222,35 +221,30 @@ func newBatcher(
 }
 
 func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSender) {
-	for i := 0; i < ethbridge.SmallNonceRepeatCount; i++ {
-		txes := m.pendingBatch.getAppliedTxes()
-		if len(txes) == 0 {
-			return
-		}
-		batchTxes := make([]message.AbstractL2Message, 0, len(txes))
-		for _, tx := range txes {
-			batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
-		}
-		var err error
-		batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
-		if err != nil {
-			if strings.Contains(err.Error(), ethbridge.SmallNonceError) {
-				time.Sleep(10 * time.Millisecond)
-				continue
-			}
+	txes := m.pendingBatch.getAppliedTxes()
+	if len(txes) == 0 {
+		return
+	}
+	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
+	for _, tx := range txes {
+		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
+	}
+	var err error
+	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
+		return
+	}
 
-			logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
-		}
-
+	for {
 		logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
 		txHash, err := inbox.SendL2MessageNoWait(
 			ctx,
 			message.NewSafeL2Message(batchTx).AsData(),
 		)
-
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
-			return
+			time.Sleep(5 * time.Second)
+			continue
 		}
 
 		m.pendingBatch = m.pendingBatch.newFromExisting()
@@ -258,8 +252,9 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox arbbridge.GlobalInboxSend
 			txHash: txHash,
 			txes:   txes,
 		})
-	}
 
+		return
+	}
 }
 
 func (m *Batcher) PendingSnapshot() *snapshot.Snapshot {

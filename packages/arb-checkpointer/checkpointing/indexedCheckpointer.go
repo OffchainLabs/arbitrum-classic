@@ -220,6 +220,7 @@ func restoreLatestState(
 
 		return nil
 	}
+
 	return errNoMatchingCheckpoint
 }
 
