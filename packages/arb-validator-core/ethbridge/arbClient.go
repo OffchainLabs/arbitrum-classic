@@ -37,8 +37,8 @@ import (
 var logger = log.With().Caller().Str("component", "ethbridge").Logger()
 
 const (
-	smallNonceRepeatCount = 5
-	smallNonceError       = "Try increasing the gas price or incrementing the nonce."
+	SmallNonceRepeatCount = 30
+	SmallNonceError       = "incrementing the nonce"
 )
 
 type EthArbClient struct {
@@ -227,13 +227,15 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 		return addr, nil, err
 	}
 
-	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
+	for i := 0; i < SmallNonceRepeatCount && err != nil && strings.Contains(err.Error(), SmallNonceError); i++ {
 		// Increment nonce and try again
 		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("incrementing nonce and submitting tx again")
 
 		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		auth.Nonce = t.auth.Nonce
 		addr, tx, _, err = contractFunc(auth)
+
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	if err != nil {

@@ -64,10 +64,12 @@ int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
     return storage->closeCheckpointStorage();
 }
 
-void destroyCheckpointStorage(CCheckpointStorage* storage) {
+void destroyCheckpointStorage(CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     if (storage == nullptr) {
         return;
     }
+    storage->closeCheckpointStorage();
     delete static_cast<CheckpointStorage*>(storage);
 }
 

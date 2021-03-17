@@ -217,10 +217,8 @@ func restoreLatestState(
 			logger.Error().Msg("Failed flushing database")
 		}
 		logger.Info().Msg("Flushed database")
-		db.CloseCheckpointStorage()
-		return errors.New("Exiting after flushing database")
 
-		//return nil
+		return nil
 	}
 	return errNoMatchingCheckpoint
 }
