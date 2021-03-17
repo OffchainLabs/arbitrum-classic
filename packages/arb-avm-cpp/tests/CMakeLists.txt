@@ -52,6 +52,8 @@ add_executable(
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
+set_source_files_properties( buffer.cpp PROPERTIES COMPILE_FLAGS "-Wconversion -Wparentheses" )
+
 target_link_libraries(
 	avm_tests
 PRIVATE

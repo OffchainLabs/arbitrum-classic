@@ -86,7 +86,7 @@ class Datastack {
         return val;
     }
 
-    void prepForMod(int count) {
+    void prepForMod(size_t count) {
         if (static_cast<size_t>(count) > values.size()) {
             throw stack_too_small();
         }

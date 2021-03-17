@@ -30,6 +30,7 @@ inline int get_sign(uint256_t v) {
 
 uint256_t hash(const uint256_t& val);
 uint256_t hash(const std::vector<unsigned char>& data);
+uint256_t hash(const std::array<unsigned char, 32>& data);
 uint256_t hash(const uint256_t& val, const uint256_t& val2);
 
 void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf);

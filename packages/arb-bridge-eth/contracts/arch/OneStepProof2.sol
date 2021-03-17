@@ -162,9 +162,17 @@ contract OneStepProof2 is OneStepProofCommon {
             loc = loc >> 1;
         }
         if (v != bytes32(0)) return acc;
-        require(normal2 != zeros[nh] || nh == 0, "right subtree cannot be zero");
-        bytes32 res = nh == 0 ? normal1 : keccak2(normal1, normal2);
-        if (nh > 0) nh--;
+        bytes32 res;
+        if (nh == 0) {
+            // Here we specify the leaf hash directly, since we're at height 0
+            // There's no need for the leaf to be non-zero
+            res = normal1;
+        } else {
+            // Since this is a branch, prove that its right side isn't 0,
+            // as that wouldn't be normalized
+            require(normal2 != zeros[nh], "right subtree cannot be zero");
+            res = keccak2(normal1, normal2);
+        }
         bytes32 acc2 = res;
         for (uint256 i = nh; i < proof.length - 1; i++) {
             acc2 = keccak2(acc2, zeros[i]);
