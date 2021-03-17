@@ -179,19 +179,42 @@ Buffer Buffer::set_many_without_resize(uint64_t offset,
 Buffer::Buffer() : Buffer(LeafData{}) {}
 
 Buffer Buffer::fromData(const std::vector<uint8_t>& data) {
-    // Grow the buffer to the necessary length
-    Buffer buf;
-    buf = buf.grow(needed_depth(data.size()));
-    // Set each up to 32 byte chunk of the buffer
-    for (uint64_t i = 0; i < data.size(); i += leaf_size) {
-        uint64_t len = leaf_size;
-        if (uint256_t(i) + uint256_t(len) > data.size()) {
-            // The last chunk might be smaller than 32 bytes
-            len = uint64_t(data.size() - uint256_t(i));
+    std::vector<Buffer> leftwards_buffers;
+    size_t i = 0;
+    while (i < data.size()) {
+        LeafData new_leaf{};
+        size_t len = Buffer::leaf_size;
+        if (i + len > data.size()) {
+            len = data.size() - i;
         }
-        buf = buf.set_many_without_resize(i, data, i, len);
+        std::copy(data.begin() + i, data.begin() + i + len, new_leaf.begin());
+        i += len;
+        // Add the new leaf to leftwards_buffers, collapsing where possible
+        Buffer inserting(new_leaf);
+        while (!leftwards_buffers.empty() &&
+               leftwards_buffers.back().depth == inserting.depth) {
+            inserting = Buffer(
+                std::make_shared<Buffer>(std::move(leftwards_buffers.back())),
+                std::make_shared<Buffer>(inserting));
+            leftwards_buffers.pop_back();
+        }
+        leftwards_buffers.push_back(inserting);
     }
-    return buf.trim();
+    while (leftwards_buffers.size() > 1) {
+        // Forcibly collapse the last two buffers by adding padding to the
+        // rightmost one. This is more efficient than inserting more zero leafs,
+        // as this uses zero_buffers_of_depth.
+        Buffer right = std::move(leftwards_buffers.back());
+        leftwards_buffers.pop_back();
+        Buffer& left = leftwards_buffers.back();
+        right = right.grow(left.depth);
+        left = Buffer(std::make_shared<Buffer>(std::move(left)),
+                      std::make_shared<Buffer>(std::move(right)));
+    }
+    if (leftwards_buffers.empty()) {
+        return Buffer();
+    }
+    return std::move(leftwards_buffers[0]).trim();
 }
 
 uint256_t Buffer::size() const {
