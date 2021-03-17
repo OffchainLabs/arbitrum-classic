@@ -15,9 +15,12 @@ echo 'Copying interfaces into arb-ts'
 
 cd ../arb-bridge-eth/build/types
 
-\cp -rf Outbox* Bridge* Inbox.* InboxFactory.* ../../../arb-ts/src/lib/abi
+\cp -rf Outbox* Bridge* Inbox.* RollupCreator* ../../../arb-ts/src/lib/abi
+
+cd factories
+\cp -rf Outbox* Bridge* Inbox__* RollupCreator* ../../../../arb-ts/src/lib/abi/factories
             
-cd ../../../arb-os/contracts/src/types
+cd ../../../../arb-os/contracts/src/types
 
 # TODO: why does arb-os contracts generate factories w/ this different structure
 \cp -rf ArbSys* ../../../../arb-ts/src/lib/abi
