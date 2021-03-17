@@ -264,7 +264,17 @@ uint256_t getByte(Buffer buf, uint64_t loc) {
 TEST_CASE("Buffer get proofs") {
     SECTION("Empty buffer") {
         Buffer buf;
-        for (uint64_t i = 0; i < 10000; i++) {
+        for (uint64_t i = 0; i < 33; i++) {
+            auto proof = buf.makeProof(i * 32);
+            auto proof2 = splitProof(proof);
+            REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
+        }
+        for (uint64_t i = 0; i < 32 * 33; i += 32) {
+            auto proof = buf.makeProof(i * 32);
+            auto proof2 = splitProof(proof);
+            REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
+        }
+        for (uint64_t i = 32 * 32; i < 32 * 32 + 33; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
@@ -274,7 +284,17 @@ TEST_CASE("Buffer get proofs") {
     SECTION("Buffer with one element") {
         Buffer buf;
         buf = buf.set(10000 * 32 + 31, 123);
-        for (uint64_t i = 0; i < 11000; i++) {
+        for (uint64_t i = 0; i < 33; i++) {
+            auto proof = buf.makeProof(i * 32);
+            auto proof2 = splitProof(proof);
+            REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
+        }
+        for (uint64_t i = 0; i < 32 * 33; i += 32) {
+            auto proof = buf.makeProof(i * 32);
+            auto proof2 = splitProof(proof);
+            REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
+        }
+        for (uint64_t i = 32 * 32; i < 32 * 32 + 33; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
@@ -286,12 +306,12 @@ TEST_CASE("Buffer get proofs") {
         for (uint64_t i = 0; i < 10000; i++) {
             buf = buf.set(i * 32 + 31, static_cast<uint8_t>(i % 256));
         }
-        for (uint64_t i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 100; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
         }
-        for (uint64_t i = 10000; i < 11000; i++) {
+        for (uint64_t i = 10000; i < 10100; i++) {
             auto proof = buf.makeProof(i * 32);
             auto proof2 = splitProof(proof);
             REQUIRE(getByte(buf, i) == getProof(buf.hash(), i, proof2));
@@ -302,7 +322,7 @@ TEST_CASE("Buffer get proofs") {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<uint64_t> distrib(0, 20000);
-        for (int i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 100; i++) {
             Buffer buf;
             for (int j = 0; j < 3; j++) {
                 auto index = distrib(gen);
@@ -403,7 +423,19 @@ void testSetProof(Buffer buf, uint64_t loc, uint8_t val) {
 TEST_CASE("Buffer set proofs") {
     SECTION("Empty buffer") {
         Buffer buf;
-        for (uint64_t i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 33; i++) {
+            testSetProof(buf, i, 0);
+            testSetProof(buf, i, 123);
+            Buffer nbuf = buf.set(i * 32 + 31, 123);
+            testSetProof(nbuf, i, 0);
+        }
+        for (uint64_t i = 0; i < 32 * 33; i += 32) {
+            testSetProof(buf, i, 0);
+            testSetProof(buf, i, 123);
+            Buffer nbuf = buf.set(i * 32 + 31, 123);
+            testSetProof(nbuf, i, 0);
+        }
+        for (uint64_t i = 32 * 32; i < 32 * 32 + 33; i++) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
             Buffer nbuf = buf.set(i * 32 + 31, 123);
@@ -414,7 +446,19 @@ TEST_CASE("Buffer set proofs") {
     SECTION("Buffer with one elem") {
         Buffer buf;
         buf = buf.set(500 * 32 + 31, 123);
-        for (uint64_t i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 33; i++) {
+            testSetProof(buf, i, 0);
+            testSetProof(buf, i, 123);
+            Buffer nbuf = buf.set(i * 32 + 31, 123);
+            testSetProof(nbuf, i, 0);
+        }
+        for (uint64_t i = 0; i < 32 * 33; i += 32) {
+            testSetProof(buf, i, 0);
+            testSetProof(buf, i, 123);
+            Buffer nbuf = buf.set(i * 32 + 31, 123);
+            testSetProof(nbuf, i, 0);
+        }
+        for (uint64_t i = 32 * 32; i < 32 * 32 + 33; i++) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
             Buffer nbuf = buf.set(i * 32 + 31, 123);
@@ -431,11 +475,11 @@ TEST_CASE("Buffer set proofs") {
         for (uint64_t i = 0; i < 10000; i++) {
             buf = buf.set(i * 32 + 31, static_cast<uint8_t>(i % 256));
         }
-        for (uint64_t i = 0; i < 1000; i += 10) {
+        for (uint64_t i = 0; i < 100; i += 10) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
         }
-        for (uint64_t i = 10000; i < 11000; i += 10) {
+        for (uint64_t i = 10000; i < 10100; i += 10) {
             testSetProof(buf, i, 0);
             testSetProof(buf, i, 123);
         }
@@ -445,7 +489,7 @@ TEST_CASE("Buffer set proofs") {
         std::random_device rd;
         std::mt19937 gen(rd());
         std::uniform_int_distribution<uint64_t> distrib(0, 20000);
-        for (uint64_t i = 0; i < 1000; i++) {
+        for (uint64_t i = 0; i < 100; i++) {
             Buffer buf;
             for (uint64_t j = 0; j < 3; j++) {
                 auto index = distrib(gen);
