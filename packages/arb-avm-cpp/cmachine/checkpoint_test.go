@@ -97,6 +97,11 @@ func TestCheckpointMachine(t *testing.T) {
 		t.Error("Restored machine with wrong hash", mach.Hash(), loadedMach.Hash())
 	}
 
+	status := checkpointStorage.FlushCheckpointStorage()
+	if !status {
+		t.Error(err)
+	}
+
 	if err := os.RemoveAll(dePath); err != nil {
 		t.Fatal(err)
 	}

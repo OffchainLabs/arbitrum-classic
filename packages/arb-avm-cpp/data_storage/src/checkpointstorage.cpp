@@ -77,6 +77,11 @@ bool CheckpointStorage::initialized() const {
     return s.ok();
 }
 
+bool CheckpointStorage::flushCheckpointStorage() {
+    auto status = datastorage->flush();
+    return status.ok();
+}
+
 bool CheckpointStorage::closeCheckpointStorage() {
     auto status = datastorage->closeDb();
     return status.ok();

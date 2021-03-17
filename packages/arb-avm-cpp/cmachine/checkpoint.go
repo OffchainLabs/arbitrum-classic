@@ -71,6 +71,10 @@ func (checkpoint *CheckpointStorage) Initialized() bool {
 	return C.checkpointStorageInitialized(checkpoint.c) == 1
 }
 
+func (checkpoint *CheckpointStorage) FlushCheckpointStorage() bool {
+	return C.flushCheckpointStorage(checkpoint.c) == 1
+}
+
 func (checkpoint *CheckpointStorage) CloseCheckpointStorage() bool {
 	return C.closeCheckpointStorage(checkpoint.c) == 1
 }

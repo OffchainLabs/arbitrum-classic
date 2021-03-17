@@ -54,6 +54,11 @@ int checkpointStorageInitialized(CCheckpointStorage* storage_ptr) {
     return static_cast<CheckpointStorage*>(storage_ptr)->initialized();
 }
 
+int flushCheckpointStorage(CCheckpointStorage* storage_ptr) {
+    auto storage = static_cast<CheckpointStorage*>(storage_ptr);
+    return storage->flushCheckpointStorage();
+}
+
 int closeCheckpointStorage(CCheckpointStorage* storage_ptr) {
     auto storage = static_cast<CheckpointStorage*>(storage_ptr);
     return storage->closeCheckpointStorage();

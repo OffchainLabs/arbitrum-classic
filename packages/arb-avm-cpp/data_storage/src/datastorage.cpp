@@ -62,6 +62,14 @@ DataStorage::DataStorage(const std::string& db_path) {
     node_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
 }
 
+rocksdb::Status DataStorage::flush() {
+    auto flush_options = rocksdb::FlushOptions();
+    flush_options.wait = true;
+    return txn_db->Flush(flush_options, default_column.get());
+    return txn_db->Flush(flush_options, blocks_column.get());
+    return txn_db->Flush(flush_options, node_column.get());
+}
+
 rocksdb::Status DataStorage::closeDb() {
     blocks_column.reset();
     default_column.reset();

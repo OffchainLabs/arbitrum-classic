@@ -27,6 +27,7 @@ type CheckpointStorage interface {
 	Initialize(contractPath string) error
 	Initialized() bool
 	CloseCheckpointStorage() bool
+	FlushCheckpointStorage() bool
 	GetInitialMachine(valueCache ValueCache) (Machine, error)
 	GetMachine(machineHash common.Hash, valueCache ValueCache) (Machine, error)
 	SaveValue(val value.Value) bool

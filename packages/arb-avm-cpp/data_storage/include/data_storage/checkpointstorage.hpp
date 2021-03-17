@@ -40,6 +40,7 @@ class CheckpointStorage {
 
    public:
     explicit CheckpointStorage(const std::string& db_path);
+    bool flushCheckpointStorage();
     bool closeCheckpointStorage();
     void initialize(LoadedExecutable executable);
     void initialize(const std::string& executable_path);
