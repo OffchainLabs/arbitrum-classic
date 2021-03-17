@@ -210,6 +210,7 @@ export class Bridge extends L2Bridge {
       )
       console.log('Waiting for receipt')
       const receipt = await outboxExecute.wait()
+      console.log(receipt)
       console.log('Receipt emitted')
       return receipt
     } catch (e) {
@@ -282,7 +283,12 @@ export class Bridge extends L2Bridge {
       return res
     } catch (e) {
       const expectedError = "batch doesn't exist"
-      if (e.error.message === expectedError) {
+      if (
+        e &&
+        e.error &&
+        e.error.message &&
+        e.error.message === expectedError
+      ) {
         console.log(
           'Withdrawal detected, but batch not created yet. Going to wait a bit.'
         )
