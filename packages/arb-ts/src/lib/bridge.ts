@@ -118,6 +118,8 @@ export class Bridge extends L2Bridge {
       l2TransactionHash
     )
 
+    if(!txReceipt) throw new Error("Can't find L2 transaction receipt?")
+
     const logs = txReceipt.logs.filter(log => log.topics[0] === eventTopic)
 
     if (logs.length !== 1)
@@ -159,8 +161,7 @@ export class Bridge extends L2Bridge {
       this.l1Bridge.l1Provider
     )
 
-    const outboxIndex = BigNumber.from(0)
-    const activeOutbox = await bridge.allowedOutboxList(outboxIndex)
+    const activeOutbox = await bridge.allowedOutboxList(0)
     try {
       // index 1 should not exist
       await bridge.allowedOutboxList(1)
@@ -202,10 +203,16 @@ export class Bridge extends L2Bridge {
     calldataForL1: string,
     retryDelay = 500
   ): Promise<ContractReceipt> => {
+    console.log("{activeOutboxAddress}")
+    console.log({activeOutboxAddress})
     const outbox = OutboxFactory.connect(
       activeOutboxAddress,
-      this.l1Bridge.l1Provider
-    ).connect(this.l1Bridge.l1Signer)
+      this.l1Bridge.l1Signer
+    )
+    const l2ToL1Block = await outbox.l2ToL1Block()
+    console.log({l2ToL1Block})
+    console.log("{l2ToL1Block}")
+    console.log(await outbox.outboxes(BigNumber.from(0)))
 
     try {
       // if outbox entry not created yet, this reads from array out of bounds
