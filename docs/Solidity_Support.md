@@ -14,7 +14,7 @@ Although Arbitrum supports Solidity code, there are differences in the effects o
 - `blockhash(x)` will always return zero
 - `block.coinbase` will return zero
 - `block.difficulty` will return the constant 2500000000000000
-- `block.gaslimit` will return the constant 10000000000
+- `block.gaslimit` will return the block's ArbGas limit
 - `gasleft` will return the amount of ArbGas remaining
 
 # Time
