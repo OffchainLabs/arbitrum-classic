@@ -35,18 +35,27 @@ class DataStorage {
     friend Transaction;
 
    public:
+    enum column_family_indexes {
+        DEFAULT_COLUMN = 0,
+        STATE_COLUMN,
+        CHECKPOINT_COLUMN,
+        MESSAGEENTRY_COLUMN,
+        LOG_COLUMN,
+        SEND_COLUMN,
+        SIDELOAD_COLUMN,
+        AGGREGATOR_COLUMN,
+        REFCOUNTED_COLUMN,
+        FAMILY_COLUMN_COUNT
+    };
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> default_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> state_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> checkpoint_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> messageentry_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> log_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> send_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> sideload_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> aggregator_column;
+    std::vector<rocksdb::ColumnFamilyHandle*> column_handles;
+    rocksdb::FlushOptions flush_options;
+    size_t next_column_to_flush{0};
 
     explicit DataStorage(const std::string& db_path);
+
+    rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
 
    private:
