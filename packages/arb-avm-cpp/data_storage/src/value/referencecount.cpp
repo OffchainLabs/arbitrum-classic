@@ -35,7 +35,7 @@ SaveResults saveValueWithRefCount(ReadWriteTransaction& tx,
     updated_entry.insert(updated_entry.end(), value.begin(), value.end());
 
     std::string value_str(updated_entry.begin(), updated_entry.end());
-    auto status = tx.defaultPut(hash_key, value_str);
+    auto status = tx.refCountedPut(hash_key, value_str);
 
     if (status.ok()) {
         return SaveResults{updated_ref_count, status};
@@ -97,7 +97,7 @@ DeleteResults deleteRefCountedData(ReadWriteTransaction& tx,
 
     if (results.status.ok()) {
         if (results.reference_count <= deleted_references) {
-            auto delete_status = tx.defaultDelete(hash_key);
+            auto delete_status = tx.refCountedDelete(hash_key);
             return DeleteResults{0, delete_status,
                                  std::move(results.stored_value)};
         } else {
@@ -116,9 +116,8 @@ DeleteResults deleteRefCountedData(ReadWriteTransaction& tx,
 
 GetResults getRefCountedData(const ReadTransaction& tx,
                              const rocksdb::Slice& hash_key) {
-    auto read_options = rocksdb::ReadOptions();
     std::string return_value;
-    auto get_status = tx.defaultGet(hash_key, &return_value);
+    auto get_status = tx.refCountedGet(hash_key, &return_value);
 
     if (!get_status.ok()) {
         auto unsuccessful = rocksdb::Status::NotFound();

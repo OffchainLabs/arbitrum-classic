@@ -44,6 +44,11 @@ class ReadTransaction {
                             std::string* value) const;
     rocksdb::Status sideloadGet(const rocksdb::Slice& key,
                                 std::string* value) const;
+    rocksdb::Status aggregatorGet(const rocksdb::Slice& key,
+                                  std::string* value) const;
+    rocksdb::Status refCountedGet(const rocksdb::Slice& key,
+                                  std::string* value) const;
+
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> defaultGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> stateGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> checkpointGetIterator()
@@ -53,6 +58,10 @@ class ReadTransaction {
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> logGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sendGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sideloadGetIterator()
+        const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> aggregatorGetIterator()
+        const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> refCountedGetIterator()
         const;
 
     [[nodiscard]] ValueResult<uint256_t> defaultGetUint256(
@@ -81,12 +90,9 @@ class ReadTransaction {
         rocksdb::Slice first_key_slice) const;
     [[nodiscard]] ValueResult<std::vector<unsigned char>> checkpointGetVector(
         rocksdb::Slice first_key_slice) const;
-
-    rocksdb::Status aggregatorGet(const rocksdb::Slice& key,
-                                  std::string* value) const;
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> aggregatorGetIterator()
-        const;
     [[nodiscard]] ValueResult<uint256_t> aggregatorGetUint256(
+        rocksdb::Slice key_slice) const;
+    [[nodiscard]] ValueResult<uint256_t> refCountedGetUint256(
         rocksdb::Slice key_slice) const;
 
    private:

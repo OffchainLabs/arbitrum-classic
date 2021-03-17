@@ -19,6 +19,7 @@
 #include "value/utils.hpp"
 
 #include <rocksdb/convenience.h>
+#include <rocksdb/filter_policy.h>
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
 
@@ -28,7 +29,10 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::TransactionDBOptions txn_options;
     rocksdb::Options options = rocksdb::Options();
     rocksdb::ColumnFamilyOptions cf_options;
+    rocksdb::ColumnFamilyOptions small_cf_options;
+    rocksdb::ColumnFamilyOptions refcounted_cf_options;
     rocksdb::BlockBasedTableOptions table_options;
+    rocksdb::BlockBasedTableOptions bloom_table_options;
     options.create_if_missing = true;
     options.create_missing_column_families = true;
 
@@ -42,54 +46,71 @@ DataStorage::DataStorage(const std::string& db_path) {
     table_options.block_size = 16 * 1024;
     table_options.cache_index_and_filter_blocks = true;
     table_options.pin_l0_filter_and_index_blocks_in_cache = true;
-    table_options.format_version = 5;
+    // table_options.format_version = 5;
     options.table_factory.reset(
         rocksdb::NewBlockBasedTableFactory(table_options));
 
+    // Increase the number of threads to open files to offset slow disk access
+    options.max_file_opening_threads = 50;
+
+    // Decrease the WAL log size to 50MB so that DB is flushed regularly
+    options.max_total_wal_size = 52428800;
+
+    // No need to wait for manual flush to finish
+    flush_options.wait = false;
+
+    // Settings for small tables
+    small_cf_options = cf_options;
+    small_cf_options.OptimizeForSmallDb();
+
+    bloom_table_options = table_options;
+    // bloom_table_options.filter_policy.reset(
+    //   rocksdb::NewBloomFilterPolicy(10, false));
+    // bloom_table_options.optimize_filters_for_memory = true;
+
+    // Settings for refcounted data table using bloom filters and no iterators
+    refcounted_cf_options = cf_options;
+    refcounted_cf_options.OptimizeForPointLookup(16);
+    refcounted_cf_options.level_compaction_dynamic_level_bytes = true;
+    refcounted_cf_options.table_factory =
+        std::unique_ptr<rocksdb::TableFactory>(
+            rocksdb::NewBlockBasedTableFactory(bloom_table_options));
+
     txn_db_path = db_path;
 
-    std::vector<rocksdb::ColumnFamilyDescriptor> column_families;
-    column_families.emplace_back(rocksdb::kDefaultColumnFamilyName, cf_options);
-    column_families.emplace_back("states", cf_options);
-    column_families.emplace_back("checkpoints", cf_options);
-    column_families.emplace_back("messageentries", cf_options);
-    column_families.emplace_back("logs", cf_options);
-    column_families.emplace_back("sends", cf_options);
-    column_families.emplace_back("sideloads", cf_options);
-    column_families.emplace_back("aggregator", cf_options);
+    std::vector<rocksdb::ColumnFamilyDescriptor> column_descriptors{
+        FAMILY_COLUMN_COUNT};
+    column_descriptors[DEFAULT_COLUMN] = {rocksdb::kDefaultColumnFamilyName,
+                                          cf_options};
+    column_descriptors[STATE_COLUMN] = {"states", small_cf_options};
+    column_descriptors[CHECKPOINT_COLUMN] = {"checkpoints", cf_options};
+    column_descriptors[MESSAGEENTRY_COLUMN] = {"messageentries", cf_options};
+    column_descriptors[LOG_COLUMN] = {"logs", cf_options};
+    column_descriptors[SEND_COLUMN] = {"sends", cf_options};
+    column_descriptors[SIDELOAD_COLUMN] = {"sideloads", cf_options};
+    column_descriptors[AGGREGATOR_COLUMN] = {"aggregator", cf_options};
+    column_descriptors[REFCOUNTED_COLUMN] = {"refcounted",
+                                             refcounted_cf_options};
 
     rocksdb::TransactionDB* db = nullptr;
-    std::vector<rocksdb::ColumnFamilyHandle*> handles;
-    auto status = rocksdb::TransactionDB::Open(
-        options, txn_options, txn_db_path, column_families, &handles, &db);
+    auto status =
+        rocksdb::TransactionDB::Open(options, txn_options, txn_db_path,
+                                     column_descriptors, &column_handles, &db);
 
     if (!status.ok()) {
         throw std::runtime_error(status.ToString());
     }
     assert(status.ok());
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
-    default_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[0]);
-    state_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[1]);
-    checkpoint_column =
-        std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[2]);
-    messageentry_column =
-        std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[3]);
-    log_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[4]);
-    send_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[5]);
-    sideload_column = std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[6]);
-    aggregator_column =
-        std::unique_ptr<rocksdb::ColumnFamilyHandle>(handles[7]);
+}
+
+rocksdb::Status DataStorage::flushNextColumn() {
+    next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
+    return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
 }
 
 rocksdb::Status DataStorage::closeDb() {
-    default_column.reset();
-    state_column.reset();
-    checkpoint_column.reset();
-    messageentry_column.reset();
-    log_column.reset();
-    send_column.reset();
-    sideload_column.reset();
-    aggregator_column.reset();
+    column_handles.clear();
     auto s = txn_db->Close();
     txn_db.reset();
     return s;
