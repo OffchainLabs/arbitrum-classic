@@ -50,6 +50,12 @@ DataStorage::DataStorage(const std::string& db_path) {
     options.table_factory.reset(
         rocksdb::NewBlockBasedTableFactory(table_options));
 
+    // Increase the number of threads to open files to offset slow disk access
+    options.max_file_opening_threads = 50;
+
+    // Decrease the WAL log size to 20MB so that DB is flushed regularly
+    options.max_total_wal_size = 20971520;
+
     // No need to wait for manual flush to finish
     flush_options.wait = false;
 
