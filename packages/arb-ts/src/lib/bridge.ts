@@ -29,9 +29,9 @@ export class Bridge extends L2Bridge {
     ethSigner: Signer,
     arbSigner: Signer
   ) {
-    super(arbERC20BridgeAddress, ethSigner)
-    // TODO can presumably get arbERC20BridgeAddress directly from the L! bridge
-    this.l1Bridge = new L1Bridge(erc20BridgeAddress, arbSigner)
+    super(arbERC20BridgeAddress, arbSigner)
+    
+    this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner )
   }
   public updateAllBalances() {
     this.updateAllTokens()
