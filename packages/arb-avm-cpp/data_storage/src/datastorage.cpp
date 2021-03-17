@@ -58,9 +58,9 @@ DataStorage::DataStorage(const std::string& db_path) {
     small_cf_options.OptimizeForSmallDb();
 
     bloom_table_options = table_options;
-    bloom_table_options.filter_policy.reset(
-        rocksdb::NewBloomFilterPolicy(10, false));
-    bloom_table_options.optimize_filters_for_memory = true;
+    // bloom_table_options.filter_policy.reset(
+    //   rocksdb::NewBloomFilterPolicy(10, false));
+    // bloom_table_options.optimize_filters_for_memory = true;
 
     // Settings for refcounted data table using bloom filters and no iterators
     refcounted_cf_options = cf_options;
