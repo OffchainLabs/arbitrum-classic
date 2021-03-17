@@ -30,8 +30,8 @@ export class Bridge extends L2Bridge {
     arbSigner: Signer
   ) {
     super(arbERC20BridgeAddress, arbSigner)
-    
-    this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner )
+
+    this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner)
   }
   public updateAllBalances() {
     this.updateAllTokens()
