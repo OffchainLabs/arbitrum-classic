@@ -23,6 +23,8 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface EthERC20BridgeInterface extends ethers.utils.Interface {
   functions: {
+    'calculateL2ERC20Address(address)': FunctionFragment
+    'calculateL2ERC777Address(address)': FunctionFragment
     'codeHash()': FunctionFragment
     'customL2Tokens(address)': FunctionFragment
     'depositAsCustomToken(address,address,uint256,uint256,uint256)': FunctionFragment
@@ -41,6 +43,14 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'calculateL2ERC20Address',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'calculateL2ERC777Address',
+    values: [string]
+  ): string
   encodeFunctionData(functionFragment: 'codeHash', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'customL2Tokens',
@@ -94,6 +104,14 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     values: [BigNumberish, string, string, BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'calculateL2ERC20Address',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'calculateL2ERC777Address',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'codeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'customL2Tokens',
@@ -164,6 +182,26 @@ export class EthERC20Bridge extends Contract {
   interface: EthERC20BridgeInterface
 
   functions: {
+    calculateL2ERC20Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateL2ERC20Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    calculateL2ERC777Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateL2ERC777Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     codeHash(overrides?: CallOverrides): Promise<[string]>
 
     'codeHash()'(overrides?: CallOverrides): Promise<[string]>
@@ -343,6 +381,26 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  calculateL2ERC20Address(
+    erc20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateL2ERC20Address(address)'(
+    erc20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  calculateL2ERC777Address(
+    erc20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateL2ERC777Address(address)'(
+    erc20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   codeHash(overrides?: CallOverrides): Promise<string>
 
@@ -524,6 +582,26 @@ export class EthERC20Bridge extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    calculateL2ERC20Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateL2ERC20Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    calculateL2ERC777Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateL2ERC777Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     codeHash(overrides?: CallOverrides): Promise<string>
 
     'codeHash()'(overrides?: CallOverrides): Promise<string>
@@ -707,6 +785,26 @@ export class EthERC20Bridge extends Contract {
   filters: {}
 
   estimateGas: {
+    calculateL2ERC20Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateL2ERC20Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    calculateL2ERC777Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateL2ERC777Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     codeHash(overrides?: CallOverrides): Promise<BigNumber>
 
     'codeHash()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -888,6 +986,26 @@ export class EthERC20Bridge extends Contract {
   }
 
   populateTransaction: {
+    calculateL2ERC20Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateL2ERC20Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    calculateL2ERC777Address(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateL2ERC777Address(address)'(
+      erc20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     codeHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'codeHash()'(overrides?: CallOverrides): Promise<PopulatedTransaction>

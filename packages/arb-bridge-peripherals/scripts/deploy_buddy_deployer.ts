@@ -17,7 +17,7 @@ const main = async () => {
 
   // TODO: should append/check if previous entries
   writeFileSync(path, contracts)
-  
+
   console.log('Done')
 }
 

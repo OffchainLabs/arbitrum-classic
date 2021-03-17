@@ -2,9 +2,11 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
+
 import {BridgeFactory} from "arb-ts/src/lib/abi/BridgeFactory"
 import {InboxFactory} from "arb-ts/src/lib/abi/InboxFactory"
 import {OutboxFactory} from "arb-ts/src/lib/abi/OutboxFactory"
+import { writeFileSync } from 'fs'
 
 const main = async () => {
   const accounts = await ethers.getSigners()
@@ -15,6 +17,7 @@ const main = async () => {
 
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')
+
 
   console.log('deployer', accounts[0].address)
 
@@ -37,9 +40,18 @@ const main = async () => {
     deployments.standardArbERC777,
     deployments.standardArbERC20
   )
-
+  const arbTokenBridge = await ethERC20Bridge.l2Buddy()
   console.log('EthERC20Bridge deployed to:', ethERC20Bridge.address)
-  console.log('L2 ArbBridge deployed to:', await ethERC20Bridge.l2Buddy())
+  console.log('L2 ArbBridge deployed to:', arbTokenBridge)
+
+  const contracts = JSON.stringify({
+    ...deployments,
+    ethERC20Bridge: ethERC20Bridge.address,
+    arbTokenBridge: arbTokenBridge,
+  })
+  const deployFilePath = './deployment.json'
+  console.log(`Writing to JSON at ${deployFilePath}`)
+  writeFileSync(deployFilePath, contracts)
 
   const deployReceipt = await ethers.provider.getTransactionReceipt(
     ethERC20Bridge.deployTransaction.hash

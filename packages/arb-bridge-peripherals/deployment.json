@@ -1,1 +1,8 @@
-{"buddyDeployer":"","standardArbERC20":"","standardArbERC777":""}
+{
+  "l2ChainId": "",
+  "buddyDeployer": "",
+  "standardArbERC20": "",
+  "standardArbERC777": "",
+  "ethERC20Bridge": "",
+  "arbTokenBridge": ""
+}
