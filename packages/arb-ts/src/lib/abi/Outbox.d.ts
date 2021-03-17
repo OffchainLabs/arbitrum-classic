@@ -22,15 +22,34 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface OutboxInterface extends ethers.utils.Interface {
   functions: {
+    'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
+    'calculateMerkleRoot(bytes32[],uint256,bytes32)': FunctionFragment
     'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'l2ToL1Block()': FunctionFragment
     'l2ToL1EthBlock()': FunctionFragment
     'l2ToL1Sender()': FunctionFragment
     'l2ToL1Timestamp()': FunctionFragment
     'outboxes(uint256)': FunctionFragment
+    'outboxesLength()': FunctionFragment
     'processOutgoingMessages(bytes,uint256[])': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'calculateItemHash',
+    values: [
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'calculateMerkleRoot',
+    values: [BytesLike[], BigNumberish, BytesLike]
+  ): string
   encodeFunctionData(
     functionFragment: 'executeTransaction',
     values: [
@@ -67,10 +86,22 @@ interface OutboxInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'outboxesLength',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'processOutgoingMessages',
     values: [BytesLike, BigNumberish[]]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'calculateItemHash',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'calculateMerkleRoot',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'executeTransaction',
     data: BytesLike
@@ -89,6 +120,10 @@ interface OutboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'outboxes', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'outboxesLength',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'processOutgoingMessages',
     data: BytesLike
@@ -115,6 +150,42 @@ export class Outbox extends Contract {
   interface: OutboxInterface
 
   functions: {
+    calculateItemHash(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)'(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    calculateMerkleRoot(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateMerkleRoot(bytes32[],uint256,bytes32)'(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -166,6 +237,10 @@ export class Outbox extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
+    outboxesLength(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'outboxesLength()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
@@ -178,6 +253,42 @@ export class Outbox extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  calculateItemHash(
+    l2Sender: string,
+    destAddr: string,
+    l2Block: BigNumberish,
+    l1Block: BigNumberish,
+    l2Timestamp: BigNumberish,
+    amount: BigNumberish,
+    calldataForL1: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)'(
+    l2Sender: string,
+    destAddr: string,
+    l2Block: BigNumberish,
+    l1Block: BigNumberish,
+    l2Timestamp: BigNumberish,
+    amount: BigNumberish,
+    calldataForL1: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  calculateMerkleRoot(
+    proof: BytesLike[],
+    path: BigNumberish,
+    item: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateMerkleRoot(bytes32[],uint256,bytes32)'(
+    proof: BytesLike[],
+    path: BigNumberish,
+    item: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   executeTransaction(
     outboxIndex: BigNumberish,
@@ -230,6 +341,10 @@ export class Outbox extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  outboxesLength(overrides?: CallOverrides): Promise<BigNumber>
+
+  'outboxesLength()'(overrides?: CallOverrides): Promise<BigNumber>
+
   processOutgoingMessages(
     sendsData: BytesLike,
     sendLengths: BigNumberish[],
@@ -243,6 +358,42 @@ export class Outbox extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    calculateItemHash(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)'(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    calculateMerkleRoot(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateMerkleRoot(bytes32[],uint256,bytes32)'(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -294,6 +445,10 @@ export class Outbox extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    outboxesLength(overrides?: CallOverrides): Promise<BigNumber>
+
+    'outboxesLength()'(overrides?: CallOverrides): Promise<BigNumber>
+
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
@@ -317,6 +472,42 @@ export class Outbox extends Contract {
   }
 
   estimateGas: {
+    calculateItemHash(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)'(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    calculateMerkleRoot(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateMerkleRoot(bytes32[],uint256,bytes32)'(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -368,6 +559,10 @@ export class Outbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    outboxesLength(overrides?: CallOverrides): Promise<BigNumber>
+
+    'outboxesLength()'(overrides?: CallOverrides): Promise<BigNumber>
+
     processOutgoingMessages(
       sendsData: BytesLike,
       sendLengths: BigNumberish[],
@@ -382,6 +577,42 @@ export class Outbox extends Contract {
   }
 
   populateTransaction: {
+    calculateItemHash(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)'(
+      l2Sender: string,
+      destAddr: string,
+      l2Block: BigNumberish,
+      l1Block: BigNumberish,
+      l2Timestamp: BigNumberish,
+      amount: BigNumberish,
+      calldataForL1: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    calculateMerkleRoot(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateMerkleRoot(bytes32[],uint256,bytes32)'(
+      proof: BytesLike[],
+      path: BigNumberish,
+      item: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     executeTransaction(
       outboxIndex: BigNumberish,
       proof: BytesLike[],
@@ -437,6 +668,10 @@ export class Outbox extends Contract {
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    outboxesLength(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'outboxesLength()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     processOutgoingMessages(
       sendsData: BytesLike,

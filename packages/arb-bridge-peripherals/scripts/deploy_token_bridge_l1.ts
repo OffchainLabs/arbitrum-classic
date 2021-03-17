@@ -1,8 +1,13 @@
+import { BigNumber } from '@ethersproject/bignumber'
+import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
+
+import { Bridge } from 'arb-ts/src'
 import { writeFileSync } from 'fs'
 
 const main = async () => {
+  const accounts = await ethers.getSigners()
   // TODO: check buddy deployer address available
   // TODO: check 1820 registry
   const inboxAddress =
@@ -11,7 +16,7 @@ const main = async () => {
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')
 
-  console.log('deployer', (await ethers.getSigners())[0].address)
+  console.log('deployer', accounts[0].address)
 
   const SafeERC20Namer = await ethers.getContractFactory('SafeERC20Namer')
   const safeERC20Namer = await SafeERC20Namer.deploy()
@@ -21,6 +26,7 @@ const main = async () => {
       SafeERC20Namer: safeERC20Namer.address,
     },
   })
+
   const gasPrice = 0
   const maxGas = 100000000000
   const ethERC20Bridge = await EthERC20Bridge.deploy(
@@ -40,11 +46,53 @@ const main = async () => {
     ethERC20Bridge: ethERC20Bridge.address,
     arbTokenBridge: arbTokenBridge,
   })
-  const path = './deployment.json'
-  console.log(`Writing to JSON at ${path}`)
-  writeFileSync(path, contracts)
+  const deployFilePath = './deployment.json'
+  console.log(`Writing to JSON at ${deployFilePath}`)
+  writeFileSync(deployFilePath, contracts)
 
-  // TODO: check if L2 counterpart worked
+  const deployReceipt = await ethers.provider.getTransactionReceipt(
+    ethERC20Bridge.deployTransaction.hash
+  )
+
+  const inboxEventSignature = [
+    id('InboxMessageDelivered(uint256,bytes)'),
+    id('InboxMessageDeliveredFromOrigin(uint256)'),
+  ]
+  const inboxEvent = deployReceipt.logs.filter(
+    log =>
+      log.topics[0] === inboxEventSignature[0] ||
+      log.topics[0] === inboxEventSignature[1]
+  )
+
+  if (inboxEvent.length !== 1) {
+    console.log(inboxEvent)
+    throw new Error('Triggered inbox multiple times?')
+  }
+  const inboxSequenceNumber = inboxEvent[0].topics[1]
+
+  const l2DeployTxHash = keccak256(
+    concat([
+      zeroPad(deployments.l2ChainId, 32),
+      zeroPad(inboxSequenceNumber, 32),
+    ])
+  )
+
+  const l2Provider = new ethers.providers.JsonRpcProvider(
+    'https://devnet-l2.arbitrum.io/rpc'
+  )
+  const l2PrivKey = process.env['DEVNET_PRIVKEY']
+  if (!l2PrivKey) throw new Error('Missing l2 priv key')
+  const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
+
+  const bridge = new Bridge(
+    ethERC20Bridge.address,
+    arbTokenBridge,
+    accounts[0],
+    l2Signer
+  )
+  const l1TxReceipt = await bridge.triggerL2ToL1Transaction(l2DeployTxHash)
+  console.log("Transaction executed in L1")
+  console.log(l1TxReceipt)
 }
 
 main()

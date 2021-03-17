@@ -10,6 +10,9 @@ const main = async () => {
   const contracts = JSON.stringify({
     ...deployments,
     buddyDeployer: buddyDeployer.address,
+    l2ChainId: ethers.BigNumber.from(
+      ethers.provider.network.chainId
+    ).toHexString(),
   })
   const path = './deployment.json'
   console.log(`Writing to JSON at ${path}`)

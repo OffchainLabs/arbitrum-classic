@@ -15,9 +15,14 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber } from 'ethers'
+import { Signer, BigNumber, ethers, ContractReceipt } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
+import { BridgeFactory } from './abi/BridgeFactory'
+import { OutboxFactory } from './abi/OutboxFactory'
+import { Outbox } from './abi/Outbox'
+import { OutboxEntryFactory } from './abi/OutboxEntryFactory'
+import { entropyToMnemonic } from '@ethersproject/hdnode'
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -103,5 +108,259 @@ export class Bridge extends L2Bridge {
 
   public async getAndUpdateL1EthBalance() {
     return this.l1Bridge.getAndUpdateL1EthBalance()
+  }
+
+  public async triggerL2ToL1Transaction(l2TransactionHash: string) {
+    const l2ToL1Event = this.arbSys.interface.getEvent('L2ToL1Transaction')
+    const eventTopic = this.arbSys.interface.getEventTopic(l2ToL1Event)
+
+    const txReceipt = await this.l2Provider.getTransactionReceipt(
+      l2TransactionHash
+    )
+
+    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
+
+    const logs = txReceipt.logs.filter(log => log.topics[0] === eventTopic)
+
+    if (logs.length !== 1)
+      throw new Error('Not exactly 1 log emitted of L2 to L1 tx?')
+
+    const log = this.arbSys.interface.parseLog(logs[0])
+    const {
+      caller,
+      destination,
+      uniqueId,
+      batchNumber,
+      indexInBatch,
+      arbBlockNum,
+      ethBlockNum,
+      timestamp: l2LogTimestamp,
+      callvalue,
+      data,
+    } = log.args
+
+    console.log('going to get proof')
+    const {
+      proof,
+      path,
+      l2Sender,
+      l1Dest,
+      l2Block,
+      l1Block,
+      timestamp: proofTimestamp,
+      amount,
+      calldataForL1,
+    } = await this.tryGetProof(batchNumber, indexInBatch)
+
+    console.log('got proof')
+
+    const inbox = await this.l1Bridge.getInbox()
+    const bridgeAddress = await inbox.bridge()
+    const bridge = await BridgeFactory.connect(
+      bridgeAddress,
+      this.l1Bridge.l1Provider
+    )
+
+    const activeOutbox = await bridge.allowedOutboxList(0)
+    try {
+      // index 1 should not exist
+      await bridge.allowedOutboxList(1)
+      console.error('There is more than 1 outbox registered with the bridge?!')
+    } catch (e) {
+      // this should fail!
+      console.log('All is good')
+    }
+
+    const outboxExecuteTransactionReceipt = await this.tryOutboxExecute(
+      activeOutbox,
+      batchNumber,
+      proof,
+      path,
+      l2Sender,
+      l1Dest,
+      l2Block,
+      l1Block,
+      proofTimestamp,
+      amount,
+      calldataForL1
+    )
+    return outboxExecuteTransactionReceipt
+  }
+
+  public tryOutboxExecute = async (
+    activeOutboxAddress: string,
+    batchNumber: BigNumber,
+    proof: Array<string>,
+    path: BigNumber,
+    l2Sender: string,
+    l1Dest: string,
+    l2Block: BigNumber,
+    l1Block: BigNumber,
+    timestamp: BigNumber,
+    amount: BigNumber,
+    calldataForL1: string,
+    retryDelay = 500
+  ): Promise<ContractReceipt> => {
+    const outbox = OutboxFactory.connect(
+      activeOutboxAddress,
+      this.l1Bridge.l1Signer
+    )
+    await this.waitUntilOutboxEntryCreated(batchNumber, activeOutboxAddress)
+    try {
+      // TODO: wait until assertion is confirmed before execute
+      // We can predict and print number of missing blocks
+      // if not challenged
+      const outboxExecute = await outbox.executeTransaction(
+        batchNumber,
+        proof,
+        path,
+        l2Sender,
+        l1Dest,
+        l2Block,
+        l1Block,
+        timestamp,
+        amount,
+        calldataForL1
+      )
+      console.log(`Transaction hash: ${outboxExecute.hash}`)
+      console.log('Waiting for receipt')
+      const receipt = await outboxExecute.wait()
+      console.log('Receipt emitted')
+      return receipt
+    } catch (e) {
+      console.log('failed to execute tx')
+      console.log(e)
+      console.log('Waiting for delay before retrying')
+      // TODO: should exponential backoff?
+      await this.wait(retryDelay)
+      console.log('Retrying now')
+      return this.tryOutboxExecute(
+        activeOutboxAddress,
+        batchNumber,
+        proof,
+        path,
+        l2Sender,
+        l1Dest,
+        l2Block,
+        l1Block,
+        timestamp,
+        amount,
+        calldataForL1,
+        retryDelay
+      )
+    }
+  }
+
+  public tryGetProof = async (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
+    retryDelay = 500
+  ): Promise<{
+    proof: Array<string>
+    path: BigNumber
+    l2Sender: string
+    l1Dest: string
+    l2Block: BigNumber
+    l1Block: BigNumber
+    timestamp: BigNumber
+    amount: BigNumber
+    calldataForL1: string
+  }> => {
+    const nodeInterfaceAddress = '0x00000000000000000000000000000000000000C8'
+
+    const contractInterface = new ethers.utils.Interface([
+      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
+          external
+          view
+          returns (
+              bytes32[] memory proof,
+              uint256 path,
+              address l2Sender,
+              address l1Dest,
+              uint256 l2Block,
+              uint256 l1Block,
+              uint256 timestamp,
+              uint256 amount,
+              bytes memory calldataForL1
+          )`,
+    ])
+    const nodeInterface = new ethers.Contract(
+      nodeInterfaceAddress,
+      contractInterface
+    ).connect(this.l2Signer.provider!)
+
+    try {
+      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
+        batchNumber,
+        indexInBatch
+      )
+      return res
+    } catch (e) {
+      const expectedError = "batch doesn't exist"
+      if (
+        e &&
+        e.error &&
+        e.error.message &&
+        e.error.message === expectedError
+      ) {
+        console.log(
+          'Withdrawal detected, but batch not created yet. Going to wait a bit.'
+        )
+      } else {
+        console.log("Withdrawal proof didn't work. Not sure why")
+        console.log(e)
+        console.log('Going to try again after waiting')
+      }
+      await this.wait(retryDelay)
+      console.log('New attempt starting')
+      // TODO: should exponential backoff?
+      return this.tryGetProof(batchNumber, indexInBatch, retryDelay)
+    }
+  }
+
+  private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+  public waitUntilOutboxEntryCreated = async (
+    batchNumber: BigNumber,
+    activeOutboxAddress: string,
+    retryDelay: number = 500
+  ): Promise<string> => {
+    try {
+      // if outbox entry not created yet, this reads from array out of bounds
+      const expectedEntry = await this.getOutboxEntry(
+        batchNumber,
+        activeOutboxAddress
+      )
+      console.log('Found entry index!')
+      return expectedEntry
+    } catch (e) {
+      console.log("can't find entry, lets wait a bit?")
+      if (e.message === 'invalid opcode: opcode 0xfe not defined') {
+        console.log('Array out of bounds, wait until the entry is posted')
+      } else {
+        console.log(e)
+        console.log(e.message)
+      }
+      await this.wait(retryDelay)
+      console.log('Starting new attempt')
+      return this.waitUntilOutboxEntryCreated(
+        batchNumber,
+        activeOutboxAddress,
+        retryDelay
+      )
+    }
+  }
+
+  private getOutboxEntry = async (
+    batchNumber: BigNumber,
+    outboxAddress: string
+  ): Promise<string> => {
+    const iface = new ethers.utils.Interface([
+      'function outboxes(uint256) public view returns (address)',
+    ])
+    const outbox = new ethers.Contract(outboxAddress, iface).connect(
+      this.l1Bridge.l1Provider
+    )
+    return outbox.outboxes(batchNumber)
   }
 }
