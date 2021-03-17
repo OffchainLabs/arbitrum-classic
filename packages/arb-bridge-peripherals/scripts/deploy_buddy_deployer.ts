@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat'
 import { writeFileSync } from 'fs'
-import deployments from "../deployment.json"
+import deployments from '../deployment.json'
 
 const main = async () => {
   const BuddyDeployer = await ethers.getContractFactory('BuddyDeployer')
@@ -10,7 +10,9 @@ const main = async () => {
   const contracts = JSON.stringify({
     ...deployments,
     buddyDeployer: buddyDeployer.address,
-    l2ChainId: ethers.BigNumber.from(ethers.provider.network.chainId).toHexString(),
+    l2ChainId: ethers.BigNumber.from(
+      ethers.provider.network.chainId
+    ).toHexString(),
   })
   const path = './deployment.json'
   console.log(`Writing to JSON at ${path}`)

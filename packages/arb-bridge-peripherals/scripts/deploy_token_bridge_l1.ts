@@ -3,9 +3,7 @@ import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
 
-import {BridgeFactory} from "arb-ts/src/lib/abi/BridgeFactory"
-import {InboxFactory} from "arb-ts/src/lib/abi/InboxFactory"
-import {OutboxFactory} from "arb-ts/src/lib/abi/OutboxFactory"
+import { Bridge } from 'arb-ts/src'
 import { writeFileSync } from 'fs'
 
 const main = async () => {
@@ -17,7 +15,6 @@ const main = async () => {
 
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')
-
 
   console.log('deployer', accounts[0].address)
 
@@ -83,119 +80,19 @@ const main = async () => {
   const l2Provider = new ethers.providers.JsonRpcProvider(
     'https://devnet-l2.arbitrum.io/rpc'
   )
-  const l2TxReceipt = await l2Provider.getTransactionReceipt(l2DeployTxHash)
+  const l2PrivKey = process.env['DEVNET_PRIVKEY']
+  if (!l2PrivKey) throw new Error('Missing l2 priv key')
+  const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
 
-  const l2ToL1EventId = id(
-    'L2ToL1Transaction(address,address,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bytes)'
+  const bridge = new Bridge(
+    ethERC20Bridge.address,
+    arbTokenBridge,
+    accounts[0],
+    l2Signer
   )
-  const logs = l2TxReceipt.logs.filter(log => log.topics[0] === l2ToL1EventId)
-
-  if (logs.length !== 1)
-    throw new Error('Not exactly 1 log emitted of L2 to L1 tx?')
-
-  const abi = [
-    `event L2ToL1Transaction(address caller, address indexed destination, uint indexed uniqueId,
-      uint indexed batchNumber, uint indexInBatch, uint arbBlockNum,
-      uint ethBlockNum, uint timestamp, uint callvalue, bytes data)`,
-  ]
-  const iface = new ethers.utils.Interface(abi)
-
-  const {
-    caller,
-    destination,
-    uniqueId,
-    batchNumber,
-    indexInBatch,
-    arbBlockNum,
-    ethBlockNum,
-    timestamp,
-    callvalue,
-    data,
-  } = iface.parseLog(logs[0]).args
-
-  const wait = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-  const getProof = async (): Promise<{
-    proof: Array<string>
-    path: BigNumber
-    l2Sender: string
-    l1Dest: string
-    l2Block: BigNumber
-    l1Block: BigNumber
-    timestamp: BigNumber
-    amount: BigNumber
-    calldataForL1: string
-  }> => {
-    const nodeInterfaceAddress = '0x00000000000000000000000000000000000000C8'
-    const foo = new ethers.utils.Interface([
-      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
-          external
-          view
-          returns (
-              bytes32[] memory proof,
-              uint256 path,
-              address l2Sender,
-              address l1Dest,
-              uint256 l2Block,
-              uint256 l1Block,
-              uint256 timestamp,
-              uint256 amount,
-              bytes memory calldataForL1
-          )`,
-    ])
-    const nodeInterface = new ethers.Contract(
-      nodeInterfaceAddress,
-      foo
-    ).connect(l2Provider)
-    try {
-      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
-        batchNumber,
-        indexInBatch
-      )
-      return res
-    } catch (e) {
-      const expectedError = "batch doesn't exist"
-      if (e.error.message === expectedError) {
-        console.log(
-          'Withdrawal detected, but batch not created yet. Going to wait a bit.'
-        )
-        await wait(1000)
-      } else {
-        console.log("Withdrawal proof didn't work. Not sure why")
-        console.log(e)
-        console.log('Going to try again after waiting')
-        await wait(1000)
-      }
-      console.log('New attempt starting')
-      return getProof()
-    }
-  }
-
-  const {
-    proof,
-    path,
-    l2Sender,
-    l1Dest,
-    l2Block,
-    l1Block,
-    timestamp: proofTimestamp,
-    amount,
-    calldataForL1,
-  } = await getProof()
-  
-    const inbox = InboxFactory.connect(inboxAddress, ethers.provider)
-    const bridge = BridgeFactory.connect(await inbox.bridge(), ethers.provider)
-    const outbox = OutboxFactory.connect(await bridge.activeOutbox(), ethers.provider).connect(accounts[0])
-
-    // TODO: wait until assertion is confirmed before execute
-    console.log("executing outbox")
-    const outboxExecute = await outbox.executeTransaction(
-      batchNumber, proof, path, l2Sender, l1Dest, l2Block,
-      l1Block, proofTimestamp, amount, calldataForL1
-    )
-    console.log("executed")
-    console.log(outboxExecute)
-
+  const l1TxReceipt = await bridge.triggerL2ToL1Transaction(l2DeployTxHash)
+  console.log("Transaction executed in L1")
+  console.log(l1TxReceipt)
 }
 
 main()
