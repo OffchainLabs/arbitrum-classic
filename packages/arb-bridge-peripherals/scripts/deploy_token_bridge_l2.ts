@@ -19,6 +19,7 @@ const main = async () => {
     ...deployments,
     standardArbERC20: standardArbERC20.address,
     standardArbERC777: standardArbERC777.address,
+    l2ChainId: ethers.BigNumber.from(ethers.provider.network.chainId).toHexString(),
   })
 
   const path = './deployment.json'
