@@ -187,52 +187,6 @@ export class Bridge extends L2Bridge {
     return outboxExecuteTransactionReceipt
   }
 
-  private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-  private getOutboxEntry = async (
-    batchNumber: BigNumber,
-    outboxAddress: string
-  ): Promise<string> => {
-    const iface = new ethers.utils.Interface([
-      'function outboxes(uint256) public view returns (address)',
-    ])
-    const outbox = new ethers.Contract(outboxAddress, iface).connect(
-      this.l1Bridge.l1Provider
-    )
-    return outbox.outboxes(batchNumber)
-  }
-
-  public waitUntilOutboxEntryCreated = async (
-    batchNumber: BigNumber,
-    activeOutboxAddress: string,
-    retryDelay: number = 500
-  ): Promise<string> => {
-    try {
-      // if outbox entry not created yet, this reads from array out of bounds
-      const expectedEntry = await this.getOutboxEntry(
-        batchNumber,
-        activeOutboxAddress
-      )
-      console.log('Found entry index!')
-      return expectedEntry
-    } catch (e) {
-      console.log("can't find entry, lets wait a bit?")
-      if (e.message === 'invalid opcode: opcode 0xfe not defined') {
-        console.log('Array out of bounds, wait until the entry is posted')
-      } else {
-        console.log(e)
-        console.log(e.message)
-      }
-      await this.wait(retryDelay)
-      console.log('trying again')
-      return this.waitUntilOutboxEntryCreated(
-        batchNumber,
-        activeOutboxAddress,
-        retryDelay
-      )
-    }
-  }
-
   public tryOutboxExecute = async (
     activeOutboxAddress: string,
     batchNumber: BigNumber,
@@ -362,5 +316,51 @@ export class Bridge extends L2Bridge {
       // TODO: should exponential backoff?
       return this.tryGetProof(batchNumber, indexInBatch, retryDelay)
     }
+  }
+
+  private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
+
+  public waitUntilOutboxEntryCreated = async (
+    batchNumber: BigNumber,
+    activeOutboxAddress: string,
+    retryDelay: number = 500
+  ): Promise<string> => {
+    try {
+      // if outbox entry not created yet, this reads from array out of bounds
+      const expectedEntry = await this.getOutboxEntry(
+        batchNumber,
+        activeOutboxAddress
+      )
+      console.log('Found entry index!')
+      return expectedEntry
+    } catch (e) {
+      console.log("can't find entry, lets wait a bit?")
+      if (e.message === 'invalid opcode: opcode 0xfe not defined') {
+        console.log('Array out of bounds, wait until the entry is posted')
+      } else {
+        console.log(e)
+        console.log(e.message)
+      }
+      await this.wait(retryDelay)
+      console.log('Starting new attempt')
+      return this.waitUntilOutboxEntryCreated(
+        batchNumber,
+        activeOutboxAddress,
+        retryDelay
+      )
+    }
+  }
+
+  private getOutboxEntry = async (
+    batchNumber: BigNumber,
+    outboxAddress: string
+  ): Promise<string> => {
+    const iface = new ethers.utils.Interface([
+      'function outboxes(uint256) public view returns (address)',
+    ])
+    const outbox = new ethers.Contract(outboxAddress, iface).connect(
+      this.l1Bridge.l1Provider
+    )
+    return outbox.outboxes(batchNumber)
   }
 }
