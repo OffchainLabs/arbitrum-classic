@@ -2,6 +2,9 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
+import {BridgeFactory} from "arb-ts/src/lib/abi/BridgeFactory"
+import {InboxFactory} from "arb-ts/src/lib/abi/InboxFactory"
+import {OutboxFactory} from "arb-ts/src/lib/abi/OutboxFactory"
 
 const main = async () => {
   const accounts = await ethers.getSigners()
@@ -168,9 +171,19 @@ const main = async () => {
     calldataForL1,
   } = await getProof()
   
-  
+    const inbox = InboxFactory.connect(inboxAddress, ethers.provider)
+    const bridge = BridgeFactory.connect(await inbox.bridge(), ethers.provider)
+    const outbox = OutboxFactory.connect(await bridge.activeOutbox(), ethers.provider).connect(accounts[0])
 
-  // TODO: check if L2 counterpart worked
+    // TODO: wait until assertion is confirmed before execute
+    console.log("executing outbox")
+    const outboxExecute = await outbox.executeTransaction(
+      batchNumber, proof, path, l2Sender, l1Dest, l2Block,
+      l1Block, proofTimestamp, amount, calldataForL1
+    )
+    console.log("executed")
+    console.log(outboxExecute)
+
 }
 
 main()
