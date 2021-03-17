@@ -63,6 +63,7 @@ func GetKeystore(
 	validatorFolder string,
 	args WalletFlags,
 	flags *flag.FlagSet,
+	chainId *big.Int,
 ) (*bind.TransactOpts, error) {
 	ks := keystore.NewKeyStore(
 		filepath.Join(validatorFolder, "wallets"),
@@ -110,7 +111,7 @@ func GetKeystore(
 	if err != nil {
 		return nil, err
 	}
-	auth, err := bind.NewKeyStoreTransactor(ks, account)
+	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
 	if err != nil {
 		return nil, err
 	}

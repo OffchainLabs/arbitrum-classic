@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	gethlog "github.com/ethereum/go-ethereum/log"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	golog "log"
 	"net/http"
@@ -66,7 +67,7 @@ func main() {
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	walletArgs := utils.AddWalletFlags(fs)
+	walletArgs := cmdhelp.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
 
@@ -90,7 +91,7 @@ func main() {
 	if fs.NArg() != 3 {
 		logger.Fatal().Msgf(
 			"usage: arb-node [--maxBatchTime=NumSeconds] %s %s",
-			utils.WalletArgsString,
+			cmdhelp.WalletArgsString,
 			utils.RollupArgsString,
 		)
 	}
@@ -109,6 +110,12 @@ func main() {
 		logger.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
 	}
 
+	l1ChainId, err := ethclint.ChainID(context.Background())
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error getting chain ID")
+	}
+	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
 	var batcherMode rpc.BatcherMode
@@ -116,7 +123,7 @@ func main() {
 		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
 	} else {
-		auth, err := utils.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs)
+		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
 		if err != nil {
 			logger.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
 		}
