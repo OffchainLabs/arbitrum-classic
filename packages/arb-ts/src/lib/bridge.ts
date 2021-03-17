@@ -22,6 +22,7 @@ import { BridgeFactory } from './abi/BridgeFactory'
 import { OutboxFactory } from './abi/OutboxFactory'
 import { Outbox } from './abi/Outbox'
 import { OutboxEntryFactory } from './abi/OutboxEntryFactory'
+import { entropyToMnemonic } from '@ethersproject/hdnode'
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -187,68 +188,6 @@ export class Bridge extends L2Bridge {
 
   private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
 
-  public tryFindOutboxEntryWithRoot = async (
-    outbox: Outbox,
-    proof: Array<string>,
-    path: BigNumber,
-    l2Sender: string,
-    l1Dest: string,
-    l2Block: BigNumber,
-    l1Block: BigNumber,
-    timestamp: BigNumber,
-    amount: BigNumber,
-    calldataForL1: string,
-    retryDelay = 500
-  ): Promise<BigNumber> => {
-    // try to find outbox that contains given root
-    // check if current root is available in chain
-    const item = await outbox.calculateItemHash(
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      timestamp,
-      amount,
-      calldataForL1
-    )
-    const root = await outbox.calculateMerkleRoot(proof, path, item)
-    console.log(`expected root: ${root}`)
-    const outboxesLength = await outbox.outboxesLength()
-    const outboxEntries = await outbox.getEntries()
-
-    for(let i=0; i<outboxEntries.length; i++) {
-      const entryAddress = outboxEntries[i];
-      console.log("curr entry address", entryAddress)
-      const outboxEntry = OutboxEntryFactory.connect(
-        entryAddress,
-        this.l1Bridge.l1Provider
-      )
-      const entryRoot = await outboxEntry.root()
-      console.log(`curr entry root: ${entryRoot}`)
-      if (entryRoot === root) {
-        console.log(`Current root is a match! At index ${i}`)
-        return BigNumber.from(i)
-      } else {
-        console.log('Current root not a match')
-      }
-    }
-    console.log('No outbox with given root was found. Trying again after delay')
-    await this.wait(retryDelay)
-    return this.tryFindOutboxEntryWithRoot(
-      outbox,
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      timestamp,
-      amount,
-      calldataForL1,
-      retryDelay
-    )
-  }
-
   public tryOutboxExecute = async (
     activeOutboxAddress: string,
     batchNumber: BigNumber,
@@ -268,30 +207,38 @@ export class Bridge extends L2Bridge {
       this.l1Bridge.l1Provider
     ).connect(this.l1Bridge.l1Signer)
 
-    const outboxNumber = await this.tryFindOutboxEntryWithRoot(
-      outbox,
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      timestamp,
-      amount,
-      calldataForL1,
-      retryDelay
-    )
-    // Are these always the same? I don't think so!
-    // Lets find out
-    console.log(`Using outbox number ${outboxNumber.toString()}`)
-    console.log(`The batch number in L2 was: ${batchNumber.toString()}`)
+    try {
+      // if outbox entry not created yet, this reads from array out of bounds
+      const expectedEntry = await outbox.outboxes(batchNumber)
+      console.log('Found entry index!')
+      console.log(expectedEntry)
+    } catch (e) {
+      console.log("can't find entry, lets wait a bit?")
+      console.log(e)
+      await this.wait(retryDelay)
+      console.log('trying again')
+      return this.tryOutboxExecute(
+        activeOutboxAddress,
+        batchNumber,
+        proof,
+        path,
+        l2Sender,
+        l1Dest,
+        l2Block,
+        l1Block,
+        timestamp,
+        amount,
+        calldataForL1,
+        retryDelay
+      )
+    }
 
     try {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
       // if not challenged
       const outboxExecute = await outbox.executeTransaction(
-        outboxNumber,
+        batchNumber,
         proof,
         path,
         l2Sender,
@@ -316,7 +263,7 @@ export class Bridge extends L2Bridge {
       console.log('Retrying now')
       return this.tryOutboxExecute(
         activeOutboxAddress,
-        outboxNumber,
+        batchNumber,
         proof,
         path,
         l2Sender,

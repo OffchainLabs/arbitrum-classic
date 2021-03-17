@@ -25,7 +25,6 @@ interface OutboxInterface extends ethers.utils.Interface {
     'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'calculateMerkleRoot(bytes32[],uint256,bytes32)': FunctionFragment
     'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
-    'getEntries()': FunctionFragment
     'l2ToL1Block()': FunctionFragment
     'l2ToL1EthBlock()': FunctionFragment
     'l2ToL1Sender()': FunctionFragment
@@ -66,7 +65,6 @@ interface OutboxInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
-  encodeFunctionData(functionFragment: 'getEntries', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'l2ToL1Block',
     values?: undefined
@@ -108,7 +106,6 @@ interface OutboxInterface extends ethers.utils.Interface {
     functionFragment: 'executeTransaction',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'getEntries', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l2ToL1Block', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'l2ToL1EthBlock',
@@ -217,10 +214,6 @@ export class Outbox extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    getEntries(overrides?: CallOverrides): Promise<[string[]]>
-
-    'getEntries()'(overrides?: CallOverrides): Promise<[string[]]>
-
     l2ToL1Block(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'l2ToL1Block()'(overrides?: CallOverrides): Promise<[BigNumber]>
@@ -325,10 +318,6 @@ export class Outbox extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  getEntries(overrides?: CallOverrides): Promise<string[]>
-
-  'getEntries()'(overrides?: CallOverrides): Promise<string[]>
-
   l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
   'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -432,10 +421,6 @@ export class Outbox extends Contract {
       calldataForL1: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
-
-    getEntries(overrides?: CallOverrides): Promise<string[]>
-
-    'getEntries()'(overrides?: CallOverrides): Promise<string[]>
 
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -551,10 +536,6 @@ export class Outbox extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    getEntries(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getEntries()'(overrides?: CallOverrides): Promise<BigNumber>
-
     l2ToL1Block(overrides?: CallOverrides): Promise<BigNumber>
 
     'l2ToL1Block()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -659,10 +640,6 @@ export class Outbox extends Contract {
       calldataForL1: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
-
-    getEntries(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'getEntries()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     l2ToL1Block(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
