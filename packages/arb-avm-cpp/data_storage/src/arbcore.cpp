@@ -803,14 +803,6 @@ void ArbCore::operator()() {
                     break;
                 }
 
-                auto status = data_storage->flushNextColumn();
-                if (!status.ok()) {
-                    std::cerr
-                        << "Error flushing database: " << status.ToString()
-                        << std::endl;
-                    break;
-                }
-
                 if (delete_checkpoints_before_message != uint256_t(0)) {
                     /*
                     deleteOldCheckpoints(delete_checkpoints_before_message,
