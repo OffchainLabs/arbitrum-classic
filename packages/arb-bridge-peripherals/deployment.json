@@ -1,1 +1,7 @@
-{"buddyDeployer":"","standardArbERC20":"","standardArbERC777":""}
+{
+  "buddyDeployer": "",
+  "standardArbERC20": "",
+  "standardArbERC777": "",
+  "ethERC20Bridge": "",
+  "arbTokenBridge": ""
+}

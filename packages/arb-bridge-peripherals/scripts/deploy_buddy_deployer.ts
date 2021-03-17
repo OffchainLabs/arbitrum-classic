@@ -1,5 +1,6 @@
 import { ethers } from 'hardhat'
 import { writeFileSync } from 'fs'
+import deployments from '../deployment.json'
 
 const main = async () => {
   const BuddyDeployer = await ethers.getContractFactory('BuddyDeployer')
@@ -7,6 +8,7 @@ const main = async () => {
   console.log('BuddyDeployer deployed to:', buddyDeployer.address)
 
   const contracts = JSON.stringify({
+    ...deployments,
     buddyDeployer: buddyDeployer.address,
   })
   const path = './deployment.json'
@@ -14,7 +16,7 @@ const main = async () => {
 
   // TODO: should append/check if previous entries
   writeFileSync(path, contracts)
-  
+
   console.log('Done')
 }
 
