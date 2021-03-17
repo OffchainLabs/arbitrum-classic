@@ -33,6 +33,10 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::Options options;
     options.create_if_missing = true;
     options.create_missing_column_families = true;
+    options.max_file_opening_threads = 200;
+
+    // Decrease the WAL log size to 50MB so that DB is flushed regularly
+    options.max_total_wal_size = 52428800;
 
     txn_db_path = std::move(db_path);
 
