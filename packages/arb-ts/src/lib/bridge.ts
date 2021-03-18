@@ -40,9 +40,6 @@ interface BuddyDeployEventResult {
 }
 import { Bridge__factory } from './abi/factories/Bridge__Factory'
 import { Outbox__factory } from './abi/factories/Outbox__Factory'
-import { Outbox } from './abi/Outbox'
-import { OutboxEntry__factory } from './abi/factories/OutboxEntry__Factory'
-import { entropyToMnemonic } from '@ethersproject/hdnode'
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
