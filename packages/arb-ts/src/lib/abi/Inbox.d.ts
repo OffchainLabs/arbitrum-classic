@@ -122,12 +122,10 @@ interface InboxInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
-    'DepositEthRetryable(address,uint256,uint256)': EventFragment
     'InboxMessageDelivered(uint256,bytes)': EventFragment
     'InboxMessageDeliveredFromOrigin(uint256)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'DepositEthRetryable'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'InboxMessageDelivered'): EventFragment
   getEvent(
     nameOrSignatureOrTopic: 'InboxMessageDeliveredFromOrigin'
@@ -587,12 +585,6 @@ export class Inbox extends Contract {
   }
 
   filters: {
-    DepositEthRetryable(
-      destination: string | null,
-      seqNum: BigNumberish | null,
-      value: null
-    ): EventFilter
-
     InboxMessageDelivered(
       messageNum: BigNumberish | null,
       data: null
