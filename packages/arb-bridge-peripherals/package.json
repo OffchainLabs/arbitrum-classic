@@ -5,7 +5,12 @@
   "scripts": {
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
-    "typechain": "hardhat typechain"
+    "typechain": "hardhat typechain",
+    "deploy:tokenbridge:l1": "hardhat run scripts/deploy_token_bridge_l1.ts --network devnet",
+    "deploy:tokenbridge:l2": "hardhat run scripts/deploy_token_bridge_l2.ts --network devnetL2",
+    "deploy:tokenbridge": "yarn deploy:tokenbridge:l2 && yarn deploy:tokenbridge:l1",
+    "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network devnetL2",
+    "deploy": "yarn deploy:buddydeployer && yarn deploy:tokenbridge"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",

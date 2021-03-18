@@ -24,7 +24,7 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 contract BuddyDeployer {
     constructor() public {}
 
-    event Deployed(address indexed _sender, address indexed _contract, bool _success);
+    event Deployed(address indexed _sender, address indexed _contract, uint256 indexed withdrawalId, bool _success);
 
     function executeBuddyDeploy(bytes memory contractInitCode) external payable {
         // we don't want nasty address clashes
@@ -50,7 +50,7 @@ contract BuddyDeployer {
         */
         bytes memory calldataForL1 =
             abi.encodeWithSelector(L1Buddy.finalizeBuddyDeploy.selector, success);
-        ArbSys(100).sendTxToL1(user, calldataForL1);
-        emit Deployed(user, addr, success);
+        uint256 withdrawalId = ArbSys(100).sendTxToL1(user, calldataForL1);
+        emit Deployed(user, addr, withdrawalId, success);
     }
 }

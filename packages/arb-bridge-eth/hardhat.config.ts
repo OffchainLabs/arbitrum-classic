@@ -15,6 +15,8 @@ const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @types
 const setupVerifyTask = verifyTask.default
 setupVerifyTask()
 
+if(!process.env['DEVNET_PRIVKEY']) console.warn("No devnet privkey set")
+
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()
 
@@ -107,6 +109,12 @@ const config = {
     },
     devnet: {
       url: 'https://devnet.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    devnetL2: {
+      url: 'https://devnet-l2.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]
         : [],

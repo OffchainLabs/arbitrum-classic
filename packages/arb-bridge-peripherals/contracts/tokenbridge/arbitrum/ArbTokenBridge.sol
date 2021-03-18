@@ -78,10 +78,11 @@ contract ArbTokenBridge is CloneFactory {
         _;
     }
 
-    constructor(address _l1Pair) public {
+    constructor(address _l1Pair, address _templateERC777, address _templateERC20) public {
         require(_l1Pair != address(0), "L1 pair can't be address 0");
-        templateERC20 = new StandardArbERC20();
-        templateERC777 = new StandardArbERC777();
+        templateERC20 = ICloneable(_templateERC20);
+        templateERC777 = ICloneable(_templateERC777);
+
         l1Pair = _l1Pair;
     }
 
@@ -210,9 +211,4 @@ contract ArbTokenBridge is CloneFactory {
     function ensureERC20TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
         return ensureTokenExists(l1ERC20, decimals, StandardTokenType.ERC20);
     }
-}
-
-contract ArbSymmetricTokenBridge is ArbTokenBridge {
-    // assumes the L1 pair is deployed to the same address
-    constructor() public ArbTokenBridge(address(this)) {}
 }

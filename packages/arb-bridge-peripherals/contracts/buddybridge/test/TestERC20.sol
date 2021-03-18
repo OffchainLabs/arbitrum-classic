@@ -18,9 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../ArbTokenBridge.sol";
+import "../../tokenbridge/arbitrum/open-zeppelin/OZERC20.sol";
 
-contract TestBridge is ArbTokenBridge {
-    // msg.sender is able to arbitrarily trigger bridge actions for testing
-    constructor() ArbTokenBridge(msg.sender) public {}
+contract TestERC20 is OZERC20 {
+    constructor() public {
+        _mint(msg.sender, 50000000);
+    }
 }
