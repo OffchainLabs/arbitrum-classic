@@ -192,5 +192,6 @@ func main() {
 	}
 	reader.Start(ctx)
 
+	logger.Info().Msg("Initialized validator")
 	<-stakerManager.RunInBackground(ctx)
 }

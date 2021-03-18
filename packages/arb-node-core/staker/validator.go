@@ -3,6 +3,7 @@ package staker
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -168,7 +169,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
-		return nil, false, errors.New("catching up to chain")
+		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
 	}
 	cursor, err := v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
 	if err != nil {
