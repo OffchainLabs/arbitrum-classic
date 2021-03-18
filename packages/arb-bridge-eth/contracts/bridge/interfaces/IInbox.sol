@@ -61,15 +61,9 @@ interface IInbox is IMessageProvider {
         uint256 arbTxCallValue,
         uint256 maxSubmissionCost,
         address submissionRefundAddress,
-<<<<<<< HEAD
         address valueRefundAddress,
         uint256 maxGas,
         uint256 gasPriceBid,
-=======
-        address benficiary,
-        uint256 maxImmediateRedemptionGas,
-        uint256 immediateRedemptionPrice,
->>>>>>> use retryabletxns for all deposits (eth, erc20, erc777, customtoken)
         bytes calldata data
     ) external payable returns (uint256);
 

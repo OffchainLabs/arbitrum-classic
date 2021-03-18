@@ -151,7 +151,7 @@ contract Inbox is IInbox {
                 )
             );
     }
-    
+
     function depositEth(address destAddr) external payable override returns (uint256) {
         return
             _deliverMessage(
@@ -182,10 +182,10 @@ contract Inbox is IInbox {
 
     function createRetryableTicket(
         address destAddr,
-        uint256 arbTxCallValue,
+        uint256 l2CallValue,
         uint256 maxSubmissionCost,
-        address submissionRefundAddress,
-        address valueRefundAddress,
+        address excessFeeRefundAddress,
+        address callValueRefundAddress,
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata data
@@ -196,11 +196,11 @@ contract Inbox is IInbox {
                 destAddr,
                 abi.encodePacked(
                     uint256(uint160(bytes20(destAddr))),
-                    arbTxCallValue,
+                    l2CallValue,
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(submissionRefundAddress))),
-                    uint256(uint160(bytes20(valueRefundAddress))),
+                    uint256(uint160(bytes20(excessFeeRefundAddress))),
+                    uint256(uint160(bytes20(callValueRefundAddress))),
                     maxGas,
                     gasPriceBid,
                     data.length,
