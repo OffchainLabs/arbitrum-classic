@@ -78,7 +78,7 @@ contract ArbTokenBridge is CloneFactory {
         _;
     }
 
-    constructor(address _l1Pair, address _templateERC20, address _templateERC777) public {
+    constructor(address _l1Pair, address _templateERC777, address _templateERC20) public {
         require(_l1Pair != address(0), "L1 pair can't be address 0");
         templateERC20 = ICloneable(_templateERC20);
         templateERC777 = ICloneable(_templateERC777);
