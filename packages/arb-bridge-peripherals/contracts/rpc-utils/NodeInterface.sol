@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 pragma solidity >=0.4.21 <0.7.0;
 
 // This contract doesn't exist on-chain. Instead it is a virtual interface

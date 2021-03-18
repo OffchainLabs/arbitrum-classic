@@ -36,7 +36,7 @@ interface BuddyDeployerInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
-    'Deployed(address,address,bool)': EventFragment
+    'Deployed(address,address,uint256,bool)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'Deployed'): EventFragment
@@ -93,6 +93,7 @@ export class BuddyDeployer extends Contract {
     Deployed(
       _sender: string | null,
       _contract: string | null,
+      withdrawalId: BigNumberish | null,
       _success: null
     ): EventFilter
   }
