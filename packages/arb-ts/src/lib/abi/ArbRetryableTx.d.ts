@@ -27,7 +27,6 @@ interface ArbRetryableTxInterface extends ethers.utils.Interface {
     'getBeneficiary(bytes32)': FunctionFragment
     'getKeepalivePrice(bytes32)': FunctionFragment
     'getLifetime()': FunctionFragment
-    'getSubmissionPrice(uint256)': FunctionFragment
     'getTimeout(bytes32)': FunctionFragment
     'keepalive(bytes32)': FunctionFragment
     'redeem(bytes32)': FunctionFragment
@@ -47,10 +46,6 @@ interface ArbRetryableTxInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'getSubmissionPrice',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
     functionFragment: 'getTimeout',
     values: [BytesLike]
   ): string
@@ -67,10 +62,6 @@ interface ArbRetryableTxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'getLifetime', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'getSubmissionPrice',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'getTimeout', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'keepalive', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'redeem', data: BytesLike): Result
@@ -131,16 +122,6 @@ export class ArbRetryableTx extends Contract {
 
     'getLifetime()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    getSubmissionPrice(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
     getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<[BigNumber]>
 
     'getTimeout(bytes32)'(
@@ -194,16 +175,6 @@ export class ArbRetryableTx extends Contract {
 
   'getLifetime()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  getSubmissionPrice(
-    calldataSize: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, BigNumber]>
-
-  'getSubmissionPrice(uint256)'(
-    calldataSize: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[BigNumber, BigNumber]>
-
   getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
 
   'getTimeout(bytes32)'(
@@ -253,16 +224,6 @@ export class ArbRetryableTx extends Contract {
     getLifetime(overrides?: CallOverrides): Promise<BigNumber>
 
     'getLifetime()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    getSubmissionPrice(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
-
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber, BigNumber]>
 
     getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
 
@@ -323,16 +284,6 @@ export class ArbRetryableTx extends Contract {
 
     'getLifetime()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    getSubmissionPrice(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
 
     'getTimeout(bytes32)'(
@@ -389,16 +340,6 @@ export class ArbRetryableTx extends Contract {
     getLifetime(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'getLifetime()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    getSubmissionPrice(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'getSubmissionPrice(uint256)'(
-      calldataSize: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
 
     getTimeout(
       txId: BytesLike,
