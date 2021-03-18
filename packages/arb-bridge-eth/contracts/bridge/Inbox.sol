@@ -151,6 +151,7 @@ contract Inbox is IInbox {
                 )
             );
     }
+    
     function depositEth(address destAddr) external payable override returns (uint256) {
         return
             _deliverMessage(
