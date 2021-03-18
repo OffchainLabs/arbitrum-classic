@@ -50,33 +50,6 @@ const main = async () => {
   console.log(`Writing to JSON at ${deployFilePath}`)
   writeFileSync(deployFilePath, contracts)
 
-  const deployReceipt = await ethers.provider.getTransactionReceipt(
-    ethERC20Bridge.deployTransaction.hash
-  )
-
-  const inboxEventSignature = [
-    id('InboxMessageDelivered(uint256,bytes)'),
-    id('InboxMessageDeliveredFromOrigin(uint256)'),
-  ]
-  const inboxEvent = deployReceipt.logs.filter(
-    log =>
-      log.topics[0] === inboxEventSignature[0] ||
-      log.topics[0] === inboxEventSignature[1]
-  )
-
-  if (inboxEvent.length !== 1) {
-    console.log(inboxEvent)
-    throw new Error('Triggered inbox multiple times?')
-  }
-  const inboxSequenceNumber = inboxEvent[0].topics[1]
-
-  const l2DeployTxHash = keccak256(
-    concat([
-      zeroPad(deployments.l2ChainId, 32),
-      zeroPad(inboxSequenceNumber, 32),
-    ])
-  )
-
   const l2Provider = new ethers.providers.JsonRpcProvider(
     'https://devnet-l2.arbitrum.io/rpc'
   )
@@ -90,9 +63,27 @@ const main = async () => {
     accounts[0],
     l2Signer
   )
+
+  const deployReceipt = await bridge.getL1Transaction(
+    ethERC20Bridge.deployTransaction.hash
+  )
+
+  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(
+    deployReceipt
+  )
+
+  if (!seqNums) throw new Error("Transaction didn't trigger inbox")
+  if (seqNums.length !== 1)
+    throw new Error('Transaction triggered inbox more than once')
+
+  const inboxSequenceNumber = seqNums[0]
+
+  const l2DeployTxHash = await bridge.calculateL2TransactionHash(
+    inboxSequenceNumber
+  )
   const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
 
-  const buddyDeployEvents = await bridge.getBuddyDeployesInL2Transaction(
+  const buddyDeployEvents = await bridge.getBuddyDeployInL2Transaction(
     l2TransactionReceipt
   )
 

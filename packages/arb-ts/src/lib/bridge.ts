@@ -137,7 +137,59 @@ export class Bridge extends L2Bridge {
     return txReceipt
   }
 
-  public getBuddyDeployesInL2Transaction(
+  public async getL1Transaction(l1TransactionHash: string) {
+    const txReceipt = await this.l1Bridge.l1Provider.getTransactionReceipt(
+      l1TransactionHash
+    )
+
+    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
+
+    return txReceipt
+  }
+
+  public async calculateL2TransactionHash(
+    inboxSequenceNumber: BigNumber,
+    l2ChainId?: BigNumber
+  ) {
+    if (!l2ChainId)
+      l2ChainId = BigNumber.from((await this.l2Provider.getNetwork()).chainId)
+
+    return ethers.utils.keccak256(
+      ethers.utils.concat([
+        ethers.utils.zeroPad(l2ChainId.toHexString(), 32),
+        ethers.utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
+      ])
+    )
+  }
+
+  public async getInboxSeqNumFromContractTransaction(
+    l2Transaction: ethers.providers.TransactionReceipt
+  ): Promise<Array<BigNumber> | undefined> {
+    const Inbox = await this.l1Bridge.getInbox()
+    const iface = Inbox.interface
+    const messageDelivered = iface.getEvent('InboxMessageDelivered')
+    const messageDeliveredFromOrigin = iface.getEvent(
+      'InboxMessageDeliveredFromOrigin'
+    )
+
+    const eventTopics = {
+      InboxMessageDelivered: iface.getEventTopic(messageDelivered),
+      InboxMessageDeliveredFromOrigin: iface.getEventTopic(
+        messageDeliveredFromOrigin
+      ),
+    }
+
+    const logs = l2Transaction.logs.filter(
+      log =>
+        log.topics[0] === eventTopics.InboxMessageDelivered ||
+        log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
+    )
+
+    if (logs.length === 0) return undefined
+    return logs.map(log => BigNumber.from(log.topics[1]))
+  }
+
+  public getBuddyDeployInL2Transaction(
     l2Transaction: ethers.providers.TransactionReceipt
   ) {
     const iface = new ethers.utils.Interface([
