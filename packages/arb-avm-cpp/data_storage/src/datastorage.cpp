@@ -36,6 +36,9 @@ DataStorage::DataStorage(const std::string& db_path) {
     options.create_if_missing = true;
     options.create_missing_column_families = true;
 
+    options.max_file_opening_threads = 200;
+    options.max_total_wal_size = 52428800;
+    /*
     // As recommended for new applications by
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning
     cf_options.level_compaction_dynamic_level_bytes = true;
@@ -46,7 +49,7 @@ DataStorage::DataStorage(const std::string& db_path) {
     table_options.block_size = 16 * 1024;
     table_options.cache_index_and_filter_blocks = true;
     table_options.pin_l0_filter_and_index_blocks_in_cache = true;
-    // table_options.format_version = 5;
+    table_options.format_version = 5;
     options.table_factory.reset(
         rocksdb::NewBlockBasedTableFactory(table_options));
 
@@ -64,9 +67,9 @@ DataStorage::DataStorage(const std::string& db_path) {
     small_cf_options.OptimizeForSmallDb();
 
     bloom_table_options = table_options;
-    // bloom_table_options.filter_policy.reset(
-    //   rocksdb::NewBloomFilterPolicy(10, false));
-    // bloom_table_options.optimize_filters_for_memory = true;
+    bloom_table_options.filter_policy.reset(
+      rocksdb::NewBloomFilterPolicy(10, false));
+    bloom_table_options.optimize_filters_for_memory = true;
 
     // Settings for refcounted data table using bloom filters and no iterators
     refcounted_cf_options = cf_options;
@@ -75,6 +78,7 @@ DataStorage::DataStorage(const std::string& db_path) {
     refcounted_cf_options.table_factory =
         std::unique_ptr<rocksdb::TableFactory>(
             rocksdb::NewBlockBasedTableFactory(bloom_table_options));
+    */
 
     txn_db_path = db_path;
 
