@@ -62,7 +62,7 @@ TEST_CASE("ARBOS test vectors") {
             }
             auto total_gas_target = j.at("total_gas").get<uint64_t>();
 
-            ArbStorage storage(dbpath);
+            ArbStorage storage(dbpath, 0);
             REQUIRE(storage.initialize(arb_os_path).ok());
             auto mach = storage.getInitialMachine(value_cache);
             MachineExecutionConfig config;
@@ -92,7 +92,7 @@ TEST_CASE("ARBOS test vectors") {
             REQUIRE(*mach_hash == *mach2_hash);
             storage.closeArbStorage();
 
-            ArbStorage storage2(dbpath);
+            ArbStorage storage2(dbpath, 0);
             auto mach3 = storage2.getMachine(*mach_hash, value_cache);
             auto mach3_hash = mach3->hash();
             REQUIRE(mach3_hash);

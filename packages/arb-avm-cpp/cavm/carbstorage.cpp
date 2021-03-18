@@ -29,10 +29,12 @@
 #include <iostream>
 #include <string>
 
-CArbStorage* createArbStorage(const char* db_path) {
+CArbStorage* createArbStorage(const char* db_path,
+                              const void* checkpoint_gas_interval) {
     auto string_filename = std::string(db_path);
     try {
-        auto storage = new ArbStorage(string_filename);
+        auto storage = new ArbStorage(string_filename,
+                                      receiveUint256(checkpoint_gas_interval));
         return static_cast<void*>(storage);
     } catch (const std::exception& e) {
         std::cerr << "Error creating storage " << e.what() << std::endl;

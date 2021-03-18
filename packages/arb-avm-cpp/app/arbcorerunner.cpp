@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     auto dbpath = std::string(argv[1]);
     auto arbospath = std::string(argv[2]);
     std::cout << "Loading db\n";
-    ArbStorage storage{dbpath};
+    ArbStorage storage{dbpath, 0};
     std::cout << "Initializing arbstorage\n";
     auto status = storage.initialize(arbospath);
     if (!status.ok()) {

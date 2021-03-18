@@ -99,10 +99,11 @@ TEST_CASE("ArbCore tests") {
     for (const auto& filename : files) {
         INFO("Testing " << filename);
 
-        ArbStorage storage(dbpath);
+        ArbStorage storage(dbpath, 0);
         REQUIRE(storage.initialize(arb_os_path).ok());
         auto arbCore = storage.getArbCore();
         REQUIRE(arbCore->startThread());
+        arbCore->checkpointsMinMessageIndex(500);
 
         auto test_file =
             std::string{arb_os_test_cases_path} + "/" + filename + ".aoslog";
@@ -247,7 +248,7 @@ TEST_CASE("ArbCore inbox") {
     DBDeleter deleter;
     ValueCache value_cache{1, 0};
 
-    ArbStorage storage(dbpath);
+    ArbStorage storage(dbpath, 0);
     REQUIRE(
         storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
             .ok());

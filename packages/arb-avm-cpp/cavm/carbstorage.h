@@ -24,7 +24,8 @@
 extern "C" {
 #endif
 
-CArbStorage* createArbStorage(const char* filename);
+CArbStorage* createArbStorage(const char* db_path,
+                              const void* checkpoint_gas_interval);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);

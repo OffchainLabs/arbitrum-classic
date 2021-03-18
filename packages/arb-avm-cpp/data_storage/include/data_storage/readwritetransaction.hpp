@@ -57,6 +57,9 @@ class ReadWriteTransaction : public ReadTransaction {
                                   const rocksdb::Slice& value);
     rocksdb::Status aggregatorDelete(const rocksdb::Slice& key);
     rocksdb::Status refCountedDelete(const rocksdb::Slice& key);
+
+    rocksdb::Status checkpointDeleteRange(const rocksdb::Slice& start,
+                                          const rocksdb::Slice& end);
 };
 
 #endif  // data_storage_readwritetransaction_hpp

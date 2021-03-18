@@ -39,7 +39,8 @@ class ArbStorage {
     std::shared_ptr<ArbCore> arb_core;
 
    public:
-    explicit ArbStorage(const std::string& db_path);
+    ArbStorage(const std::string& db_path,
+               const uint256_t checkpoint_gas_interval);
     bool closeArbStorage();
     rocksdb::Status initialize(const LoadedExecutable& executable);
     rocksdb::Status initialize(const std::string& executable_path);

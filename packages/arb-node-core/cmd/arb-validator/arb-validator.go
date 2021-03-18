@@ -170,7 +170,7 @@ func main() {
 
 	ctx := context.Background()
 
-	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"))
+	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"), big.NewInt(0))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error creating ArbStorage")
 	}

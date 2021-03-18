@@ -26,6 +26,8 @@ package cmachine
 */
 import "C"
 import (
+	"github.com/ethereum/go-ethereum/common/math"
+	"math/big"
 	"runtime"
 	"unsafe"
 
@@ -39,11 +41,12 @@ type ArbStorage struct {
 	c unsafe.Pointer
 }
 
-func NewArbStorage(dbPath string) (*ArbStorage, error) {
+func NewArbStorage(dbPath string, checkpointGasInterval *big.Int) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
+	checkpointGasIntervalData := math.U256Bytes(checkpointGasInterval)
 
-	cArbStorage := C.createArbStorage(cDbPath)
+	cArbStorage := C.createArbStorage(cDbPath, unsafeDataPointer(checkpointGasIntervalData))
 
 	if cArbStorage == nil {
 		return nil, errors.Errorf("error creating ArbStorage %v", dbPath)

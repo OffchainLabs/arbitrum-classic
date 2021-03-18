@@ -69,7 +69,7 @@ func FailIfError(t *testing.T, err error) {
 func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	FailIfError(t, err)
-	storage, err := cmachine.NewArbStorage(tmpDir)
+	storage, err := cmachine.NewArbStorage(tmpDir, big.NewInt(0))
 	if err != nil {
 		os.RemoveAll(tmpDir)
 	}

@@ -146,3 +146,12 @@ rocksdb::Status ReadWriteTransaction::refCountedDelete(
             ->column_handles[DataStorage::REFCOUNTED_COLUMN],
         key);
 }
+rocksdb::Status ReadWriteTransaction::checkpointDeleteRange(
+    const rocksdb::Slice& start,
+    const rocksdb::Slice& end) {
+    return transaction->datastorage->txn_db->DeleteRange(
+        write_options,
+        transaction->datastorage
+            ->column_handles[DataStorage::CHECKPOINT_COLUMN],
+        start, end);
+}
