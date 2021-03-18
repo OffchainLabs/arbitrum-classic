@@ -45,6 +45,7 @@ contract EthERC20Bridge is L1Buddy {
 
     event DepositERC20(
         address indexed destination,
+        address sender,
         uint256 indexed seqNum,
         uint256 amount,
         address tokenAddress
@@ -52,6 +53,7 @@ contract EthERC20Bridge is L1Buddy {
 
     event DepositERC777(
         address indexed destination,
+        address sender,
         uint256 indexed seqNum,
         uint256 amount,
         address tokenAddress
@@ -60,6 +62,7 @@ contract EthERC20Bridge is L1Buddy {
 
     event DepositCustomTokem(
         address indexed destination,
+        address sender,
         uint256 indexed seqNum,
         uint256 value,
         address tokenAddress
@@ -224,7 +227,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid
     ) external payable onlyIfConnected returns(uint256) {
         uint256 seqNum = depositToken(erc20, destination, amount, maxSubmissionCost, maxGas, gasPriceBid, StandardTokenType.ERC777);
-        emit DepositERC777(destination, seqNum, amount, erc20);
+        emit DepositERC777(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
 
@@ -237,7 +240,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid
     ) external payable onlyIfConnected returns(uint256) {
         uint256 seqNum = depositToken(erc20, destination, amount, maxSubmissionCost, maxGas, gasPriceBid, StandardTokenType.ERC20);
-        emit DepositERC20(destination, seqNum, amount, erc20);
+        emit DepositERC20(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
 
@@ -267,7 +270,7 @@ contract EthERC20Bridge is L1Buddy {
             gasPriceBid,
             data
         );
-        emit DepositCustomTokem(destination, seqNum, amount, erc20);
+        emit DepositCustomTokem(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
 
