@@ -90,8 +90,28 @@ const main = async () => {
     accounts[0],
     l2Signer
   )
-  const l1TxReceipt = await bridge.triggerL2ToL1Transaction(l2DeployTxHash)
-  console.log("Transaction executed in L1")
+  const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
+
+  const buddyDeployEvents = await bridge.getBuddyDeployesInL2Transaction(
+    l2TransactionReceipt
+  )
+
+  if (buddyDeployEvents.length !== 1)
+    throw new Error('Buddy deploy event was not triggered one time!')
+  const withdrawalId = buddyDeployEvents[0].withdrawalId
+
+  const logs = await bridge.getWithdrawalsInL2Transaction(l2TransactionReceipt)
+  const filteredLogs = logs.filter(log => log.uniqueId.eq(withdrawalId))
+
+  if (filteredLogs.length !== 1)
+    throw new Error('Should have exactly one matching unique id')
+  const { batchNumber, indexInBatch } = filteredLogs[0]
+
+  const l1TxReceipt = await bridge.triggerL2ToL1Transaction(
+    batchNumber,
+    indexInBatch
+  )
+  console.log('Transaction executed in L1')
   console.log(l1TxReceipt)
 }
 
