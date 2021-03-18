@@ -30,7 +30,9 @@ CExecutionCursor* executionCursorClone(CExecutionCursor* execution_cursor_ptr);
 
 int executionCursorMachineHash(CExecutionCursor* execution_cursor_ptr,
                                void* ret);
-int executionCursorInboxHash(CExecutionCursor* execution_cursor_ptr, void* ret);
+int executionCursorInboxAcc(CExecutionCursor* execution_cursor_ptr, void* ret);
+int executionCursorSendAcc(CExecutionCursor* execution_cursor_ptr, void* ret);
+int executionCursorLogAcc(CExecutionCursor* execution_cursor_ptr, void* ret);
 Uint256Result executionCursorTotalMessagesRead(
     CExecutionCursor* execution_cursor_ptr);
 Uint256Result executionCursorTotalSteps(CExecutionCursor* execution_cursor_ptr);
@@ -40,12 +42,6 @@ Uint256Result executionCursorTotalSendCount(
     CExecutionCursor* execution_cursor_ptr);
 Uint256Result executionCursorTotalLogCount(
     CExecutionCursor* execution_cursor_ptr);
-
-int executionCursorAdvance(CExecutionCursor* execution_cursor_ptr,
-                           const void* max_gas_ptr,
-                           int go_over_gas);
-
-CMachine* executionCursorTakeMachine(CExecutionCursor* execution_cursor_ptr);
 
 #ifdef __cplusplus
 }

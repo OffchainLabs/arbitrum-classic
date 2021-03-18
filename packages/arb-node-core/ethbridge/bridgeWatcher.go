@@ -1,7 +1,28 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
+	"math/big"
+	"sort"
+	"strings"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -10,11 +31,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
-	"math/big"
-	"sort"
-	"strings"
 )
 
 var bridgeABI abi.ABI
@@ -60,6 +79,7 @@ func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Br
 		con:     con,
 		address: address,
 		client:  client,
+		inboxes: make(map[ethcommon.Address]InboxMessageGetter),
 	}, nil
 }
 
@@ -82,6 +102,9 @@ func (r *BridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
 		return nil, err
+	}
+	for _, evmLog := range logs {
+		monitor.GlobalMonitor.ReaderGotBatch(common.NewHashFromEth(evmLog.TxHash))
 	}
 	return r.logsToDeliveredMessages(ctx, logs)
 }
@@ -179,8 +202,16 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 		if !ok {
 			return nil, errors.New("message not found")
 		}
+		if hashing.SoliditySHA3(data) != rawMsg.MessageDataHash {
+			return nil, errors.New("found message data with mismatched hash")
+		}
 
 		header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)
+		if err != nil {
+			return nil, err
+		}
+
+		txData, _, err := r.client.TransactionByHash(ctx, rawMsg.Raw.TxHash)
 		if err != nil {
 			return nil, err
 		}
@@ -189,9 +220,10 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 			BlockHash:      common.NewHashFromEth(rawMsg.Raw.BlockHash),
 			BeforeInboxAcc: rawMsg.BeforeInboxAcc,
 			Message: inbox.InboxMessage{
-				Kind:        0,
-				Sender:      common.Address{},
-				InboxSeqNum: nil,
+				Kind:        inbox.Type(rawMsg.Kind),
+				Sender:      common.NewAddressFromEth(rawMsg.Sender),
+				InboxSeqNum: rawMsg.MessageIndex,
+				GasPrice:    txData.GasPrice(),
 				Data:        data,
 				ChainTime: inbox.ChainTime{
 					BlockNum: common.NewTimeBlocks(

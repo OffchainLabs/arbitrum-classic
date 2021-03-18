@@ -17,6 +17,11 @@
 #ifndef avm_status_hpp
 #define avm_status_hpp
 
+#include <avm/inboxmessage.hpp>
+#include <variant>
+
+typedef std::variant<std::monostate, InboxMessage, uint256_t> staged_variant;
+
 enum class Status { Extensive, Halted, Error };
 
 #endif /* avm_status_hpp */

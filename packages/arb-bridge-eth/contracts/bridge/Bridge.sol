@@ -33,8 +33,8 @@ contract Bridge is Ownable, IBridge {
     mapping(address => InOutInfo) private allowedInboxesMap;
     mapping(address => InOutInfo) private allowedOutboxesMap;
 
-    address[] allowedInboxList;
-    address[] allowedOutboxList;
+    address[] public allowedInboxList;
+    address[] public allowedOutboxList;
 
     address public override activeOutbox;
     bytes32[] public override inboxAccs;
@@ -61,6 +61,7 @@ contract Bridge is Ownable, IBridge {
                 block.number,
                 block.timestamp, // solhint-disable-line not-rely-on-time
                 count,
+                tx.gasprice,
                 messageDataHash
             );
         bytes32 prevAcc = 0;

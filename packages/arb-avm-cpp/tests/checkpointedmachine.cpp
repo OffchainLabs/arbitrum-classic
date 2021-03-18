@@ -29,12 +29,13 @@ TEST_CASE("CheckpointedMachine tests") {
     arbcore->initialize(executable);
 
     SECTION("CheckpointedMachine basic") {
-        auto tx = arbcore->makeTransaction();
+        ReadWriteTransaction tx(storage);
         REQUIRE(arbcore->initialized());
+        REQUIRE(arbcore->startThread());
         REQUIRE(arbcore->maxCheckpointGas() == 0);
 
-        arbcore->saveCheckpoint(*tx);
-        REQUIRE(!arbcore->isCheckpointsEmpty(*tx));
+        REQUIRE(arbcore->triggerSaveCheckpoint().ok());
+        REQUIRE(!arbcore->isCheckpointsEmpty(tx));
         REQUIRE(arbcore->maxCheckpointGas() == 0);
     }
 }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.17;
+pragma solidity >=0.4.21 <0.7.0;
 
 interface Sys {
     // Send given Eth to dest.
@@ -35,7 +35,7 @@ contract FailedSend is IFailedSend {
         require(false, "force failure");
     }
 
-    function withdrawFunds(address payable dest) external {
+    function withdrawFunds(address payable dest) external override {
         Sys(100).withdrawEth.value(address(this).balance)(dest);
     }
 }

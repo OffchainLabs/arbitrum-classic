@@ -20,10 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/pkg/errors"
 	"math/big"
 	"testing"
@@ -51,7 +51,10 @@ func TestDeserializeMachine(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedHash := machine.Hash()
+	expectedHash, err := machine.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	offset, bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
 	if err != nil {

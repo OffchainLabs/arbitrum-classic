@@ -64,8 +64,8 @@ func (p *statelessBatch) getAppliedTxes() []*types.Transaction {
 	return p.appliedTxes
 }
 
-func (p *statelessBatch) updateCurrentSnap(*list.List) {
-
+func (p *statelessBatch) updateCurrentSnap(*list.List) error {
+	return nil
 }
 
 func (p *statelessBatch) getLatestSnap() *snapshot.Snapshot {
@@ -88,8 +88,11 @@ func (p *statelessBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 			rejectLogger.Info().Stack().Err(err).Str("reason", "sender").Msg(rejectMsg)
 			return REMOVE, errors.New("couldn't recover sender")
 		}
-
-		txCount, err := p.db.LatestSnapshot().GetTransactionCount(arbcommon.NewAddressFromEth(sender))
+		snap, err := p.db.LatestSnapshot()
+		if err != nil {
+			return SKIP, errors.New("couldn't fetch snapshot")
+		}
+		txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(sender))
 		if err != nil {
 			rejectLogger.Info().Stack().Err(err).Str("reason", "snapshot").Msg(rejectMsg)
 			return REMOVE, errors.New("aggregator failed to verify nonce")

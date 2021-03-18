@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ethbridge
 
 import (
@@ -9,12 +25,13 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 )
 
 var logger = log.With().Caller().Str("component", "ethbridge").Logger()
 
 const (
-	smallNonceRepeatCount = 5
+	smallNonceRepeatCount = 100
 	smallNonceError       = "Try increasing the gas price or incrementing the nonce."
 )
 
@@ -41,13 +58,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 			return addr, nil, err
 		}
 
-		txJSON, err := tx.MarshalJSON()
-		if err != nil {
-			logger.Error().Stack().Err(err).Str("nonce", "nil").Msg("failed to marshal tx into json")
-			return addr, tx, err
-		}
-
-		logger.Info().RawJSON("tx", txJSON).Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
+		logger.Info().Str("nonce", "nil").Hex("sender", t.auth.From.Bytes()).Send()
 		return addr, tx, err
 	}
 
@@ -58,6 +69,8 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		auth.Nonce = t.auth.Nonce
 		addr, tx, _, err = contractFunc(auth)
+
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	if err != nil {

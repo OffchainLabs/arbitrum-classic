@@ -91,8 +91,19 @@ inline std::vector<std::vector<unsigned char>> receiveByteSliceArray(
     const ByteSliceArray& bsa) {
     std::vector<std::vector<unsigned char>> data;
     auto slices = reinterpret_cast<ByteSlice*>(bsa.slices);
+    data.reserve(bsa.count);
     for (int i = 0; i < bsa.count; ++i) {
         data.emplace_back(receiveByteSlice(slices[i]));
+    }
+    return data;
+}
+
+inline std::vector<uint256_t> receiveUint256Array(const ByteSliceArray& bsa) {
+    std::vector<uint256_t> data;
+    auto slices = reinterpret_cast<ByteSlice*>(bsa.slices);
+    data.reserve(bsa.count);
+    for (int i = 0; i < bsa.count; ++i) {
+        data.emplace_back(receiveUint256(slices[i].data));
     }
     return data;
 }
@@ -118,18 +129,19 @@ inline Uint64Result returnUint64Result(const ValueResult<uint64_t>& val) {
 }
 
 inline ByteSlice returnValueResult(const DbResult<value>& res) {
-    if (!res.status.ok()) {
+    if (std::holds_alternative<rocksdb::Status>(res)) {
         return {nullptr, 0};
     }
 
-    std::vector<unsigned char> value;
-    marshal_value(res.data, value);
+    std::vector<unsigned char> serialized_value;
+    marshal_value(std::get<CountedData<value>>(res).data, serialized_value);
 
-    auto value_data = reinterpret_cast<unsigned char*>(malloc(value.size()));
-    std::copy(value.begin(), value.end(), value_data);
+    auto value_data =
+        reinterpret_cast<unsigned char*>(malloc(serialized_value.size()));
+    std::copy(serialized_value.begin(), serialized_value.end(), value_data);
 
     auto void_data = reinterpret_cast<void*>(value_data);
-    return {void_data, static_cast<int>(value.size())};
+    return {void_data, static_cast<int>(serialized_value.size())};
 }
 
 inline RawAssertion makeRawAssertion(Assertion& assertion,

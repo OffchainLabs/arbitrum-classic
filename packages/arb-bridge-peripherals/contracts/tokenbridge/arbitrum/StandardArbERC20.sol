@@ -23,7 +23,7 @@ import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
 import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 
-contract StandardArbERC20 is ERC20, Cloneable, IArbToken {
+contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
     ArbTokenBridge public bridge;
     address public l1Address;
     uint256 private immutable deploymentChainId;
@@ -41,8 +41,12 @@ contract StandardArbERC20 is ERC20, Cloneable, IArbToken {
         _;
     }
 
-    function initialize(address _bridge, address _l1Address, uint8 decimals_) external override {
-        require(address(bridge) != address(0), "ALREADY_INIT");
+    function initialize(
+        address _bridge,
+        address _l1Address,
+        uint8 decimals_
+    ) external override {
+        require(address(bridge) == address(0), "ALREADY_INIT");
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
         _decimals = decimals_;
@@ -67,7 +71,7 @@ contract StandardArbERC20 is ERC20, Cloneable, IArbToken {
         _mint(account, amount);
     }
 
-    function withdraw(address destination, uint256 amount) external {
+    function withdraw(address destination, uint256 amount) external override {
         _burn(msg.sender, amount);
         bridge.withdraw(l1Address, destination, amount);
     }

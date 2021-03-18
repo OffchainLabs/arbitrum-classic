@@ -29,10 +29,16 @@ import (
 
 type MerkleNode interface {
 	Hash() common.Hash
+	Lowest() uint64
+	Highest() uint64
+	ContainsIndex(index uint64) bool
+	Entries() [][]byte
 }
 
 type MerkleLeaf struct {
 	Data []byte
+
+	index uint64
 }
 
 func (m *MerkleLeaf) Hash() common.Hash {
@@ -43,9 +49,37 @@ func (m *MerkleLeaf) String() string {
 	return hexutil.Encode(m.Data)
 }
 
+func (m *MerkleLeaf) Lowest() uint64 {
+	return m.index
+}
+
+func (m *MerkleLeaf) Highest() uint64 {
+	return m.index
+}
+
+func (m *MerkleLeaf) ContainsIndex(index uint64) bool {
+	return index == m.index
+}
+
+func (m *MerkleLeaf) Entries() [][]byte {
+	return [][]byte{m.Data}
+}
+
 type MerkleInteriorNode struct {
 	Left  MerkleNode
 	Right MerkleNode
+
+	lowest  uint64
+	highest uint64
+}
+
+func NewMerkleInteriorNode(left, right MerkleNode) *MerkleInteriorNode {
+	return &MerkleInteriorNode{
+		Left:    left,
+		Right:   right,
+		lowest:  left.Lowest(),
+		highest: right.Highest(),
+	}
 }
 
 func (m *MerkleInteriorNode) String() string {
@@ -54,6 +88,22 @@ func (m *MerkleInteriorNode) String() string {
 
 func (m *MerkleInteriorNode) Hash() common.Hash {
 	return hashing.SoliditySHA3(hashing.Bytes32(m.Left.Hash()), hashing.Bytes32(m.Right.Hash()))
+}
+
+func (m *MerkleInteriorNode) Lowest() uint64 {
+	return m.lowest
+}
+
+func (m *MerkleInteriorNode) Highest() uint64 {
+	return m.highest
+}
+
+func (m *MerkleInteriorNode) ContainsIndex(index uint64) bool {
+	return index >= m.lowest && index <= m.highest
+}
+
+func (m *MerkleInteriorNode) Entries() [][]byte {
+	return append(m.Left.Entries(), m.Right.Entries()...)
 }
 
 type MerkleRootResult struct {
@@ -88,11 +138,10 @@ func NewMerkleRootLogResultFromValue(tup *value.TupleValue) (*MerkleRootResult, 
 	if !ok {
 		return nil, errors.New("numInBatch must be an int")
 	}
-	tree, err := newMerkleTreeFromValue(treeVal)
+	tree, err := newMerkleTreeFromValue(treeVal, 0)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Tree", tree)
 	return &MerkleRootResult{
 		BatchNumber: batchNumber.BigInt(),
 		NumInBatch:  numInBatch.BigInt(),
@@ -100,7 +149,7 @@ func NewMerkleRootLogResultFromValue(tup *value.TupleValue) (*MerkleRootResult, 
 	}, nil
 }
 
-func newMerkleTreeFromValue(val value.Value) (MerkleNode, error) {
+func newMerkleTreeFromValue(val value.Value, minIndex uint64) (MerkleNode, error) {
 	treeTup, ok := val.(*value.TupleValue)
 	if !ok {
 		return nil, errors.New("tree must be a 2-tuple")
@@ -108,18 +157,15 @@ func newMerkleTreeFromValue(val value.Value) (MerkleNode, error) {
 	if treeTup.Len() == 2 {
 		node1Val, _ := treeTup.GetByInt64(0)
 		node2Val, _ := treeTup.GetByInt64(1)
-		node1, err := newMerkleTreeFromValue(node1Val)
+		node1, err := newMerkleTreeFromValue(node1Val, minIndex)
 		if err != nil {
 			return nil, err
 		}
-		node2, err := newMerkleTreeFromValue(node2Val)
+		node2, err := newMerkleTreeFromValue(node2Val, node1.Highest()+1)
 		if err != nil {
 			return nil, err
 		}
-		return &MerkleInteriorNode{
-			Left:  node1,
-			Right: node2,
-		}, nil
+		return NewMerkleInteriorNode(node1, node2), nil
 	} else if treeTup.Len() == 3 {
 		dataSizeVal, _ := treeTup.GetByInt64(0)
 		dataContentsVal, _ := treeTup.GetByInt64(1)
@@ -136,9 +182,50 @@ func newMerkleTreeFromValue(val value.Value) (MerkleNode, error) {
 			return nil, err
 		}
 		return &MerkleLeaf{
-			Data: data,
+			Data:  data,
+			index: minIndex,
 		}, nil
 	} else {
 		return nil, errors.New("tree node must be a 2 or 3 tuple")
+	}
+}
+
+type MerkleRootProof struct {
+	Nodes []common.Hash
+	Path  []bool
+	Data  []byte
+}
+
+func (m *MerkleRootResult) GenerateProof(index uint64) (*MerkleRootProof, error) {
+	nodes := make([]common.Hash, 0)
+	path := make([]bool, 0)
+	nd := m.Tree
+	for {
+		switch node := nd.(type) {
+		case *MerkleInteriorNode:
+			if node.Left.ContainsIndex(index) {
+				nodes = append(nodes, node.Right.Hash())
+				path = append(path, true)
+				nd = node.Left
+			} else if node.Right.ContainsIndex(index) {
+				nodes = append(nodes, node.Left.Hash())
+				nd = node.Right
+				path = append(path, false)
+			} else {
+				return nil, errors.New("invalid merkle tree")
+			}
+		case *MerkleLeaf:
+			if index != node.index {
+				return nil, errors.New("invalid merkle tree")
+			}
+			for i, j := 0, len(nodes)-1; i < j; i, j = i+1, j-1 {
+				nodes[i], nodes[j] = nodes[j], nodes[i]
+			}
+			return &MerkleRootProof{
+				Nodes: nodes,
+				Path:  path,
+				Data:  node.Data,
+			}, nil
+		}
 	}
 }

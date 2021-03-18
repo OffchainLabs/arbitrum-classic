@@ -55,6 +55,9 @@ contract Node is Cloneable, INode {
     /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed
     uint256 public override firstChildBlock;
 
+    /// @notice The number of the latest child of this node to be created
+    uint256 public override latestChildNumber;
+
     modifier onlyRollup {
         require(msg.sender == rollup, "ROLLUP_ONLY");
         _;
@@ -117,10 +120,11 @@ contract Node is Cloneable, INode {
         stakerCount--;
     }
 
-    function childCreated() external override onlyRollup {
+    function childCreated(uint256 number) external override onlyRollup {
         if (firstChildBlock == 0) {
             firstChildBlock = block.number;
         }
+        latestChildNumber = number;
     }
 
     function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {
@@ -139,19 +143,5 @@ contract Node is Cloneable, INode {
      */
     function requirePastChildConfirmDeadline() external view override {
         require(block.number >= noChildConfirmedBeforeBlock, "CHILD_TOO_RECENT");
-    }
-
-    /**
-     * @notice Check whether the current block number has met or passed the node's deadline
-     * @param latestConfirmed Address of the node that should be this node's prev
-     * @param stakerAddress Address on the staker that should be staked on this node
-     */
-    function requireRejectExample(uint256 latestConfirmed, address stakerAddress)
-        external
-        view
-        override
-    {
-        require(prev == latestConfirmed, "BAD_SUCCESSOR");
-        require(stakers[stakerAddress], "BAD_STAKER");
     }
 }

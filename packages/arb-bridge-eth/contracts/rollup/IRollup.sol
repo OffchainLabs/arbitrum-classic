@@ -23,11 +23,24 @@ interface IRollup {
 
     event NodeCreated(
         uint256 indexed nodeNum,
+        bytes32 indexed parentNodeHash,
+        bytes32 nodeHash,
+        bytes32 executionHash,
         uint256 inboxMaxCount,
-        bytes32 afterInboxHash,
-        bytes32[4] assertionBytes32Fields,
-        uint256[10] assertionIntFields
+        bytes32 afterInboxAcc,
+        bytes32[3][2] assertionBytes32Fields,
+        uint256[4][2] assertionIntFields
     );
+
+    event NodeConfirmed(
+        uint256 indexed nodeNum,
+        bytes32 afterSendAcc,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    );
+
+    event NodeRejected(uint256 indexed nodeNum);
 
     event RollupChallengeStarted(
         address indexed challengeContract,
@@ -35,8 +48,6 @@ interface IRollup {
         address challenger,
         uint256 challengedNode
     );
-
-    event SentLogs(bytes32 logsAccHash);
 
     function initialize(
         bytes32 _machineHash,

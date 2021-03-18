@@ -37,7 +37,9 @@ func OpCodeTestFiles() []string {
 	}
 	filenames := make([]string, 0, len(files))
 	for _, file := range files {
-		filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		if file.Name() != "inbox.mexe" {
+			filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		}
 	}
 
 	return filenames

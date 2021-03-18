@@ -19,239 +19,373 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t zero_hash(uint64_t sz) {
-    if (sz == 5) {
-        return hash(0);
+// Returns the length of a buffer with a given depth
+inline uint256_t length_of_depth(uint64_t depth) {
+    return uint256_t(Buffer::leaf_size) << depth;
+}
+
+// Returns the necessary depth of a buffer to hold a given number of bytes
+inline uint64_t needed_depth(uint256_t size) {
+    uint64_t depth = 0;
+    while (size > Buffer::leaf_size) {
+        // Divide rounding up
+        size = (size + 1) / 2;
+        depth += 1;
     }
-    auto h1 = zero_hash(sz - 1);
-    return hash(h1, h1);
+    return depth;
 }
 
-uint256_t hash2(uint256_t a, uint256_t b) {
-    return hash(a, b);
-}
-
-Packed normal(uint256_t hash, uint64_t sz, uint64_t lastIndex) {
-    return Packed{hash, sz, 0, lastIndex};
-}
-
-Packed pack(const Packed& packed) {
-    return Packed{packed.hash, packed.size, packed.packed + 1,
-                  packed.lastIndex};
-}
-
-bool is_zero_hash(const Packed& packed) {
-    return packed.hash == hash(0);
-}
-
-uint256_t unpack(const Packed& packed) {
-    uint256_t res = packed.hash;
-    uint64_t sz = packed.size;
-    for (int i = 0; i < packed.packed; i++) {
-        res = hash(res, zero_hash(sz));
-        sz = sz + 1;
+const std::vector<std::shared_ptr<Buffer>> zero_buffers_of_depth =
+    []() -> std::vector<std::shared_ptr<Buffer>> {
+    std::vector<std::shared_ptr<Buffer>> buffers;
+    auto last_buffer = std::make_shared<Buffer>();
+    for (int i = 0; i < 64; i++) {
+        buffers.push_back(last_buffer);
+        last_buffer = std::make_shared<Buffer>(last_buffer, last_buffer);
     }
-    return res;
+    return buffers;
+}();
+
+Buffer::Buffer(LeafData bytes) : depth(0), components(bytes) {}
+
+Buffer::Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right)
+    : depth(left->depth + 1), components(std::make_pair(left, right)) {
+    auto children = get_children_const();
+    if (children->first->depth != children->second->depth) {
+        throw new std::runtime_error("Attempted to create uneven buffer");
+    }
 }
 
-Packed zero_packed(uint64_t sz) {
-    if (sz == 5) {
-        return normal(hash(0), 5, 0);
-    }
-    return pack(zero_packed(sz - 1));
+Buffer::NodeData* Buffer::get_children() {
+    return std::get_if<NodeData>(&components);
 }
 
-Packed hash_buf(uint8_t* buf, uint64_t offset, uint64_t sz) {
-    if (sz == 5) {
-        auto hash_val = ethash::keccak256(buf + offset, 32);
-        uint256_t res = intx::be::load<uint256_t>(hash_val);
-        uint64_t lastIndex = 31;
-        while (buf[offset + lastIndex] == 0 && lastIndex > 0)
-            lastIndex--;
-        return normal(res, 5, lastIndex);
-    }
-    auto h1 = hash_buf(buf, offset, sz - 1);
-    auto h2 = hash_buf(buf, offset + (1 << (sz - 1)), sz - 1);
-    if (is_zero_hash(h2)) {
-        return pack(h1);
-    }
-    return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
+const Buffer::NodeData* Buffer::get_children_const() const {
+    return std::get_if<NodeData>(&components);
 }
 
-Packed hash_node(RawBuffer* buf, uint64_t offset, uint64_t len, uint64_t sz) {
-    if (len == 1) {
-        auto res = buf[offset].hash_aux();
-        return res;
+uint256_t Buffer::hash() const {
+    auto current_hash_cache = hash_cache.val.load();
+    if (current_hash_cache) {
+        return *current_hash_cache;
     }
-    auto h1 = hash_node(buf, offset, len / 2, sz - 1);
-    auto h2 = hash_node(buf, offset + len / 2, len / 2, sz - 1);
-    if (is_zero_hash(h2)) {
-        return pack(h1);
-    }
-    return normal(hash(unpack(h1), unpack(h2)), sz,
-                  h2.lastIndex + (1 << (sz - 1)));
-}
-
-Packed RawBuffer::hash_aux() const {
-    if (saved) {
-        return savedHash;
-    }
-    Packed res;
-    if (level == 0) {
-        if (!leaf || leaf->size() == 0)
-            res = zero_packed(LEAF_SIZE2);
-        else
-            res = hash_buf(leaf->data(), 0, LEAF_SIZE2);
+    uint256_t calculated_hash;
+    if (auto children = get_children_const()) {
+        calculated_hash =
+            ::hash(children->first->hash(), children->second->hash());
     } else {
-        if (!node)
-            res = zero_packed(calc_height(level));
-        else {
-            res = hash_node(node->data(), 0, NODE_SIZE, calc_height(level));
-        }
+        auto& bytes = std::get<LeafData>(components);
+        calculated_hash = ::hash(bytes);
     }
-    saved = true;
-    savedHash = res;
-    return res;
+    hash_cache.val.store(calculated_hash);
+    return calculated_hash;
 }
 
-RawBuffer RawBuffer::normalize() const {
-    if (hash() == zero_hash(5)) {
-        return RawBuffer();
+uint256_t Buffer::packed_size() const {
+    auto current_packed = packed_size_cache.val.load();
+    if (current_packed) {
+        return *current_packed;
     }
-    if (level == 0) {
-        return *this;
-    }
-    // check if is a shrinkable node
-    // cannot be null, otherwise the hash would have been zero
-    bool shrinkable = true;
-    for (uint64_t i = 1; i < NODE_SIZE; i++) {
-        if ((*node)[i].hash() != zero_hash(5)) {
-            shrinkable = false;
-            break;
+    uint256_t calculated_packed_size = 0;
+    if (auto children = get_children_const()) {
+        auto first_packed_size = children->first->packed_size();
+        auto second_packed_size = children->second->packed_size();
+        if (second_packed_size == 0) {
+            // Ignore the second half as it's all zeroes
+            calculated_packed_size = first_packed_size;
+        } else {
+            // Ignore any trailing zeroes in the left half of the buffer, as
+            // they're followed by non-zero data in the right half of the buffer
+            calculated_packed_size =
+                length_of_depth(children->first->depth) + second_packed_size;
+        }
+    } else {
+        auto& bytes = std::get<LeafData>(components);
+        // Go backwards through the bytes to find the last non-zero byte
+        calculated_packed_size = leaf_size;
+        while (calculated_packed_size > 0) {
+            if (bytes[size_t(calculated_packed_size - 1)] != 0) {
+                break;
+            }
+            calculated_packed_size -= 1;
         }
     }
-    if (shrinkable) {
-        return (*node)[0].normalize();
-    }
-    return *this;
+    packed_size_cache.val.store(calculated_packed_size);
+    return calculated_packed_size;
 }
 
-std::vector<RawBuffer> RawBuffer::serialize(
-    std::vector<unsigned char>& value_vector) {
-    // first check if it's empty
-    std::vector<RawBuffer> ret{};
-    if (hash() == zero_hash(5)) {
-        value_vector.push_back(0);
-        return ret;
-    }
-    // save leaf (just save all the data)
-    if (level == 0) {
-        value_vector.push_back(1);
-        for (uint64_t i = 0; i < LEAF_SIZE; i++) {
-            if (leaf->size() <= i)
-                value_vector.push_back(0);
-            else
-                value_vector.push_back((*leaf)[i]);
-        }
-    }
-
-    if (level > 0) {
-        value_vector.push_back(1);
-        for (uint64_t i = 0; i < NODE_SIZE; i++) {
-            uint256_t hash_ = hash2(123, (*node)[i].hash());
-            marshal_uint256_t(hash_, value_vector);
-            ret.push_back((*node)[i]);
-        }
+Buffer Buffer::grow(uint64_t new_depth) const {
+    Buffer ret(*this);
+    while (ret.depth < new_depth) {
+        ret = Buffer(std::make_shared<Buffer>(ret),
+                     zero_buffers_of_depth[ret.depth]);
     }
     return ret;
 }
 
-uint64_t RawBuffer::sizePow2() const {
-    uint64_t size = 0;
-    if (level == 0 && leaf && leaf->size() > 0) {
-        for (int i = LEAF_SIZE - 1; i >= 0; i--) {
-            if ((*leaf)[i] != 0) {
-                size = i;
-                break;
+Buffer Buffer::trim() const {
+    Buffer ret(*this);
+    while (true) {
+        if (auto children = ret.get_children()) {
+            if (children->second->packed_size() == 0) {
+                ret = *children->first;
+                continue;
             }
         }
-    } else if (node && node->size() > 0) {
-        for (int i = NODE_SIZE - 1; i >= 0; i--) {
-            if ((*node)[i].hash() != zero_hash(5)) {
-                size = i * calc_len(level - 1) - 1 + calc_len(level - 1);
-                break;
-            }
-        }
+        break;
     }
-    uint64_t size_ext = needed_height(size);
-    if (size_ext < 5)
-        size_ext = 5;
-    return size_ext;
+    return ret;
 }
 
-std::vector<unsigned char> RawBuffer::makeProof(uint64_t offset,
-                                                uint64_t sz,
-                                                uint64_t loc) {
-    if (sz == 5) {
-        if (!leaf || leaf->size() == 0) {
-            return std::vector<unsigned char>(32, 0);
+Buffer Buffer::set_many_without_resize(uint64_t offset,
+                                       const std::vector<uint8_t>& arr,
+                                       uint64_t arr_offset,
+                                       uint64_t arr_length) const {
+    Buffer ret(*this);
+    Buffer* target = &ret;
+    while (true) {
+        target->hash_cache.val.store(std::nullopt);
+        target->packed_size_cache.val.store(std::nullopt);
+        if (auto children = target->get_children()) {
+            // Clone each buffer on our way down, and adjust the offset.
+            auto child_size = children->first->size();
+            if (offset >= child_size) {
+                offset -= uint64_t(child_size);
+                children->second = std::make_shared<Buffer>(*children->second);
+                target = children->second.get();
+            } else {
+                children->first = std::make_shared<Buffer>(*children->first);
+                target = children->first.get();
+            }
+        } else {
+            // We've found the target leaf
+            auto& bytes = std::get<LeafData>(target->components);
+            if (offset >= leaf_size) {
+                throw new std::runtime_error(
+                    "Buffer set_many_without_resize called but resize needed");
+            } else if (offset + arr_length > leaf_size) {
+                throw new std::runtime_error(
+                    "Buffer set_many called with misaligned bytes");
+            }
+            auto output = bytes.begin() + offset;
+            auto start = arr.begin() + arr_offset;
+            auto end = start + arr_length;
+            std::copy(start, end, output);
+            return ret;
         }
-        auto res = std::vector<unsigned char>(leaf->begin() + loc,
-                                              leaf->begin() + loc + 32);
-        return res;
-    } else if (level > 0 && sz == calc_height(level - 1) && node) {
-        return (*node)[offset / calc_len(level - 1)].makeProof(
-            offset % calc_len(level - 1), sz, loc % calc_len(level - 1));
-    } else if (loc < offset + (1L << (sz - 1))) {
-        auto proof = makeProof(offset, sz - 1, loc);
-        marshal_uint256_t(merkleHash(offset + (1L << (sz - 1)), sz - 1), proof);
-        return proof;
+    }
+}
+
+Buffer::Buffer() : Buffer(LeafData{}) {}
+
+Buffer Buffer::fromData(const std::vector<uint8_t>& data) {
+    std::vector<Buffer> leftwards_buffers;
+    size_t i = 0;
+    while (i < data.size()) {
+        LeafData new_leaf{};
+        size_t len = Buffer::leaf_size;
+        if (i + len > data.size()) {
+            len = data.size() - i;
+        }
+        std::copy(data.begin() + i, data.begin() + i + len, new_leaf.begin());
+        i += len;
+        // Add the new leaf to leftwards_buffers, collapsing where possible
+        Buffer inserting(new_leaf);
+        while (!leftwards_buffers.empty() &&
+               leftwards_buffers.back().depth == inserting.depth) {
+            inserting = Buffer(
+                std::make_shared<Buffer>(std::move(leftwards_buffers.back())),
+                std::make_shared<Buffer>(inserting));
+            leftwards_buffers.pop_back();
+        }
+        leftwards_buffers.push_back(inserting);
+    }
+    while (leftwards_buffers.size() > 1) {
+        // Forcibly collapse the last two buffers by adding padding to the
+        // rightmost one. This is more efficient than inserting more zero leafs,
+        // as this uses zero_buffers_of_depth.
+        Buffer right = std::move(leftwards_buffers.back());
+        leftwards_buffers.pop_back();
+        Buffer& left = leftwards_buffers.back();
+        right = right.grow(left.depth);
+        left = Buffer(std::make_shared<Buffer>(std::move(left)),
+                      std::make_shared<Buffer>(std::move(right)));
+    }
+    if (leftwards_buffers.empty()) {
+        return Buffer();
+    }
+    return std::move(leftwards_buffers[0]).trim();
+}
+
+uint256_t Buffer::size() const {
+    return length_of_depth(depth);
+}
+
+uint64_t Buffer::lastIndex() const {
+    if (packed_size() == 0) {
+        return 0;
     } else {
-        auto proof = makeProof(offset + (1L << (sz - 1)), sz - 1, loc);
-        marshal_uint256_t(merkleHash(offset, sz - 1), proof);
-        return proof;
+        auto ret = packed_size() - 1;
+        if (ret > std::numeric_limits<uint64_t>::max()) {
+            throw new std::runtime_error("Buffer is too big");
+        }
+        return uint64_t(ret);
     }
 }
 
-uint256_t RawBuffer::merkleHash(uint64_t offset, uint64_t sz) {
-    if (hash() == zero_hash(5)) {
-        return zero_hash(sz);
-    }
-    if (sz == 5) {
-        auto hash_val = ethash::keccak256(leaf->data() + offset, 32);
-        uint256_t res = intx::be::load<uint256_t>(hash_val);
-        return res;
-    } else if (level > 0 && sz == calc_height(level - 1) && node) {
-        return (*node)[offset / calc_len(level - 1)].merkleHash(0, sz);
-    }
-    auto h1 = merkleHash(offset, sz - 1);
-    auto h2 = merkleHash(offset + (1L << (sz - 1)), sz - 1);
-    return hash2(h1, h2);
+uint256_t Buffer::data_length() const {
+    return packed_size();
 }
 
-std::vector<unsigned char> RawBuffer::makeProof(uint64_t loc) {
-    auto size = sizePow2();
-    auto res = makeProof(0, size, ((loc / 32) % (1L << (size - 5))) * 32);
-    return res;
+Buffer Buffer::set_many(uint64_t offset, std::vector<uint8_t> arr) const {
+    Buffer ret(*this);
+    if (uint256_t(offset) + arr.size() > ret.size()) {
+        ret = ret.grow(needed_depth(uint256_t(offset) + arr.size()));
+    }
+    ret = ret.set_many_without_resize(offset, arr, 0, arr.size());
+    return ret.trim();
 }
 
-std::vector<unsigned char> RawBuffer::makeNormalizationProof() {
-    uint64_t sz = sizePow2();
-    std::vector<unsigned char> res;
-    for (int i = 0; i < 31; i++) {
-        res.push_back(0);
-    }
+Buffer Buffer::set(uint64_t offset, uint8_t v) const {
+    return set_many(offset, std::vector(1, v));
+}
 
-    if (sz == 5) {
-        res.push_back(0);
-        marshal_uint256_t(merkleHash(0, sz), res);
-        marshal_uint256_t(merkleHash(0, sz), res);
-        return res;
+std::vector<uint8_t> Buffer::get_many(uint64_t offset, size_t len) const {
+    const Buffer* target = this;
+    while (true) {
+        if (auto children = target->get_children_const()) {
+            // Move downwards towards the target
+            auto child_size = children->first->size();
+            if (offset >= child_size) {
+                offset -= uint64_t(child_size);
+                target = children->second.get();
+            } else {
+                target = children->first.get();
+            }
+        } else {
+            // We've found the target leaf
+            auto& bytes = std::get<LeafData>(target->components);
+            if (offset >= leaf_size) {
+                return std::vector<uint8_t>(len, (unsigned char)0);
+            } else if (offset + len > leaf_size) {
+                throw new std::runtime_error(
+                    "Buffer get_many called with misaligned bytes");
+            }
+            auto start = bytes.begin() + offset;
+            return std::vector<uint8_t>(start, start + len);
+        }
     }
+}
 
-    res.push_back(makeProof(0, sz, 0).size() / 32);
-    marshal_uint256_t(merkleHash(0, sz - 1), res);
-    marshal_uint256_t(merkleHash(1L << (sz - 1), sz - 1), res);
-    return res;
+uint8_t Buffer::get(uint64_t offset) const {
+    return get_many(offset, 1)[0];
+}
+
+std::vector<uint8_t> Buffer::toFlatVector() const {
+    std::vector<uint8_t> ret;
+    ret.reserve(uint64_t(size()));  // If this overflows we have bigger problems
+    std::vector<const Buffer*> to_visit;
+    to_visit.reserve(depth);
+    const Buffer* current = this;
+    // Visit the tree depth first
+    while (true) {
+        if (auto children = current->get_children_const()) {
+            // Visit the left side of the buffer now, and save the right side
+            // for later
+            current = children->first.get();
+            to_visit.push_back(children->second.get());
+        } else {
+            const auto& bytes = std::get<LeafData>(current->components);
+            std::copy(bytes.begin(), bytes.end(), std::back_inserter(ret));
+            if (to_visit.empty()) {
+                // We've visited all the leaves
+                // Trim the result and return it
+                while (!ret.empty() && ret.back() == 0) {
+                    ret.pop_back();
+                }
+                return ret;
+            } else {
+                current = to_visit.back();
+                to_visit.pop_back();
+            }
+        }
+    }
+}
+
+std::vector<unsigned char> Buffer::makeProof(uint64_t loc) const {
+    if (loc >= size()) {
+        // If we're trying to prove an element outside the buffer, we instead
+        // need to prove the buffer's size, which we do by proving this element
+        // instead. Proving this element specifically keeps compatiblity with
+        // the Solidity visitor, as it looks at each bit of the location to
+        // determine if it's on the left or right branch.
+        loc %= uint64_t(size());
+    }
+    // Return a standard merkle proof
+    const Buffer* target = this;
+    std::vector<uint256_t> proof;
+    while (true) {
+        if (auto children = target->get_children_const()) {
+            // Move downwards towards the target
+            // Add the sibling hash to the proof each step of the way
+            auto child_size = children->first->size();
+            if (loc >= child_size) {
+                loc -= uint64_t(child_size);
+                target = children->second.get();
+                proof.push_back(children->first->hash());
+            } else {
+                target = children->first.get();
+                proof.push_back(children->second->hash());
+            }
+        } else {
+            // We've found the target leaf
+            auto& bytes = std::get<LeafData>(target->components);
+            proof.push_back(intx::be::unsafe::load<uint256_t>(bytes.data()));
+            break;
+        }
+    }
+    std::vector<unsigned char> proof_bytes;
+    for (auto it = proof.rbegin(); it != proof.rend(); it++) {
+        unsigned char bytes[32]{0};
+        intx::be::store(bytes, *it);
+        std::copy(bytes, bytes + 32, std::back_inserter(proof_bytes));
+    }
+    return proof_bytes;
+}
+
+std::vector<unsigned char> Buffer::makeNormalizationProof() const {
+    // Return the height, left subtree hash (or our hash if a leaf), and right
+    // subtree hash (irrelevant if a leaf)
+    std::vector<unsigned char> proof_bytes;
+    proof_bytes.resize(32);
+    intx::be::unsafe::store(proof_bytes.data(), uint256_t(depth));
+    unsigned char left_hash[32]{0};
+    unsigned char right_hash[32]{0};
+    if (auto children = get_children_const()) {
+        intx::be::store(left_hash, children->first->hash());
+        intx::be::store(right_hash, children->second->hash());
+    } else {
+        intx::be::store(left_hash, hash());
+        // right_hash is ignored here
+    }
+    std::copy(left_hash, left_hash + 32, std::back_inserter(proof_bytes));
+    std::copy(right_hash, right_hash + 32, std::back_inserter(proof_bytes));
+    return proof_bytes;
+}
+
+std::vector<Buffer> Buffer::serialize(
+    std::vector<unsigned char>& value_vector) const {
+    // first check if it's empty
+    std::vector<Buffer> ret{};
+    value_vector.push_back(depth);
+    if (auto children = get_children_const()) {
+        marshal_uint256_t(::hash(*children->first), value_vector);
+        marshal_uint256_t(::hash(*children->second), value_vector);
+        ret.push_back(*children->first);
+        ret.push_back(*children->second);
+    } else {
+        auto& bytes = std::get<LeafData>(components);
+        std::copy(bytes.begin(), bytes.end(), std::back_inserter(value_vector));
+    }
+    return ret;
 }

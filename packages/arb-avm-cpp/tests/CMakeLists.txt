@@ -35,7 +35,6 @@ add_executable(
 		aggregator.cpp
 		arbos.cpp
 		arbcore.cpp
-		blockstore.cpp
 		buffer.cpp
 		checkpoint.cpp
 		checkpointedmachine.cpp
@@ -43,16 +42,17 @@ add_executable(
 		datastack.cpp
 		ecops.cpp
 		ecops.hpp
-		keyvaluestore.cpp
-		machine.cpp
+        machine.cpp
 		main.cpp
         messagestore.cpp
 		opcodes.cpp
 		value.cpp
-)
+        valuecache.cpp)
 
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
+
+set_source_files_properties( buffer.cpp PROPERTIES COMPILE_FLAGS "-Wconversion -Wparentheses" )
 
 target_link_libraries(
 	avm_tests

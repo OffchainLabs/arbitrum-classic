@@ -33,21 +33,21 @@ contract Outbox is CloneFactory, IOutbox {
 
     bytes1 internal constant MSG_ROOT = 0;
 
-    uint256 internal constant SendType_sendTxToL1 = 0;
-    uint256 internal constant SendType_buddyContractResult = 5;
+    uint8 internal constant SendType_sendTxToL1 = 3;
 
     address rollup;
     IBridge bridge;
 
     ICloneable outboxEntryTemplate;
-    OutboxEntry[] outboxes;
+    OutboxEntry[] public outboxes;
 
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
     // be empty outside of transactions
-    address private _l2ToL1Sender;
-    uint128 private _l2ToL1Block;
-    uint128 private _l2ToL1Timestamp;
+    address private _sender;
+    uint128 private _l2Block;
+    uint128 private _l1Block;
+    uint128 private _timestamp;
 
     constructor(address _rollup, IBridge _bridge) public {
         rollup = _rollup;
@@ -58,15 +58,19 @@ contract Outbox is CloneFactory, IOutbox {
     /// @notice When l2ToL1Sender returns a nonzero address, the message was originated by an L2 account
     /// When the return value is zero, that means this is a system message
     function l2ToL1Sender() external view override returns (address) {
-        return _l2ToL1Sender;
+        return _sender;
     }
 
     function l2ToL1Block() external view override returns (uint256) {
-        return uint256(_l2ToL1Sender);
+        return uint256(_l2Block);
+    }
+
+    function l2ToL1EthBlock() external view override returns (uint256) {
+        return uint256(_l1Block);
     }
 
     function l2ToL1Timestamp() external view override returns (uint256) {
-        return uint256(_l2ToL1Sender);
+        return uint256(_timestamp);
     }
 
     function processOutgoingMessages(bytes calldata sendsData, uint256[] calldata sendLengths)
@@ -86,6 +90,7 @@ contract Outbox is CloneFactory, IOutbox {
     function handleOutgoingMessage(bytes memory data) private {
         // Otherwise we have an unsupported message type and we skip the message
         if (data[0] == MSG_ROOT) {
+            require(data.length == 97, "BAD_LENGTH");
             uint256 batchNum = data.toUint(1);
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
@@ -105,6 +110,7 @@ contract Outbox is CloneFactory, IOutbox {
         address l2Sender,
         address destAddr,
         uint256 l2Block,
+        uint256 l1Block,
         uint256 l2Timestamp,
         uint256 amount,
         bytes calldata calldataForL1
@@ -116,6 +122,7 @@ contract Outbox is CloneFactory, IOutbox {
                     uint256(uint160(bytes20(l2Sender))),
                     uint256(uint160(bytes20(destAddr))),
                     l2Block,
+                    l1Block,
                     l2Timestamp,
                     amount,
                     calldataForL1
@@ -124,44 +131,22 @@ contract Outbox is CloneFactory, IOutbox {
 
         spendOutput(outboxIndex, proof, index, userTx);
 
-        address currentL2Sender = _l2ToL1Sender;
-        uint128 currentL2Block = _l2ToL1Block;
-        uint128 currentL2Timestamp = _l2ToL1Timestamp;
+        address currentSender = _sender;
+        uint128 currentL2Block = _l2Block;
+        uint128 currentL1Block = _l1Block;
+        uint128 currentTimestamp = _timestamp;
 
-        _l2ToL1Sender = l2Sender;
-        _l2ToL1Block = uint128(l2Block);
-        _l2ToL1Timestamp = uint128(l2Timestamp);
+        _sender = l2Sender;
+        _l2Block = uint128(l2Block);
+        _l1Block = uint128(l1Block);
+        _timestamp = uint128(l2Timestamp);
 
         executeBridgeCall(destAddr, amount, calldataForL1);
 
-        _l2ToL1Sender = currentL2Sender;
-        _l2ToL1Block = currentL2Block;
-        _l2ToL1Timestamp = currentL2Timestamp;
-    }
-
-    function executeBuddyContractReceipt(
-        uint256 outboxIndex,
-        bytes32[] calldata proof,
-        uint256 index,
-        address l2Contract,
-        bool createdSuccessfully
-    ) external {
-        bytes32 userTx =
-            keccak256(
-                abi.encodePacked(
-                    SendType_buddyContractResult,
-                    uint256(uint160(bytes20(l2Contract))),
-                    createdSuccessfully
-                )
-            );
-
-        spendOutput(outboxIndex, proof, index, userTx);
-
-        executeBridgeSystemCall(
-            l2Contract,
-            0,
-            abi.encodeWithSignature("buddyContractResult(bool)", createdSuccessfully)
-        );
+        _sender = currentSender;
+        _l2Block = currentL2Block;
+        _l1Block = currentL1Block;
+        _timestamp = currentTimestamp;
     }
 
     function spendOutput(
@@ -186,11 +171,15 @@ contract Outbox is CloneFactory, IOutbox {
         executeBridgeSystemCall(
             address(outbox),
             0,
-            abi.encodeWithSignature("spendOutput(bytes32,uint256)", calcRoot, uniqueKey)
+            abi.encodeWithSelector(OutboxEntry.spendOutput.selector, calcRoot, uniqueKey)
         );
 
         if (outbox.numRemaining() == 0) {
-            executeBridgeSystemCall(address(outbox), 0, abi.encodeWithSignature("destroy()"));
+            executeBridgeSystemCall(
+                address(outbox),
+                0,
+                abi.encodeWithSelector(OutboxEntry.destroy.selector)
+            );
             outboxes[outboxIndex] = OutboxEntry(address(0));
         }
     }
@@ -200,10 +189,10 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes memory data
     ) private {
-        address currentL2Sender = _l2ToL1Sender;
-        _l2ToL1Sender = address(0);
+        address currentSender = _sender;
+        _sender = address(0);
         executeBridgeCall(destAddr, amount, data);
-        _l2ToL1Sender = currentL2Sender;
+        _sender = currentSender;
     }
 
     function executeBridgeCall(

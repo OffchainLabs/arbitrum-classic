@@ -43,10 +43,23 @@ typedef struct ByteSliceArrayStruct {
     int count;
 } ByteSliceArray;
 
-typedef struct {
+typedef struct ByteSliceArrayResultStruct {
     ByteSliceArray array;
     int found;
 } ByteSliceArrayResult;
+
+typedef struct IndexedByteSliceArrayResultStruct {
+    void* first_index;
+    ByteSliceArray array;
+    int found;
+} IndexedByteSliceArrayResult;
+
+typedef struct IndexedDoubleByteSliceArrayResultStruct {
+    void* first_index;
+    ByteSliceArray first_array;
+    ByteSliceArray second_array;
+    int found;
+} IndexedDoubleByteSliceArrayResult;
 
 typedef struct Uint64ResultStruct {
     uint64_t value;
@@ -75,7 +88,6 @@ typedef struct {
 typedef void CAggregatorStore;
 typedef void CArbCore;
 typedef void CArbStorage;
-typedef void CBlockStore;
 typedef void CCheckpointedMachine;
 typedef void CExecutionCursor;
 typedef void CMachine;

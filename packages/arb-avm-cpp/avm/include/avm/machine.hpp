@@ -42,8 +42,7 @@ class MachineExecutionConfig {
     uint256_t max_gas;
     bool go_over_gas;
     std::vector<InboxMessage> inbox_messages;
-    uint256_t messages_to_skip;
-    bool final_message_of_block;
+    std::optional<uint256_t> next_block_height;
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
 
@@ -56,6 +55,8 @@ class MachineExecutionConfig {
 
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
+
+    Assertion runImpl();
 
    public:
     MachineState machine_state;
@@ -70,10 +71,10 @@ class Machine {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion run(MachineExecutionConfig config);
+    Assertion run();
 
     Status currentStatus() const { return machine_state.state; }
-    uint256_t hash() const { return machine_state.hash(); }
+    std::optional<uint256_t> hash() const { return machine_state.hash(); }
     BlockReason isBlocked(bool newMessages) const {
         return machine_state.isBlocked(newMessages);
     }

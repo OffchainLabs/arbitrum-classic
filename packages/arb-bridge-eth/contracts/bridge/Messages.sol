@@ -25,11 +25,20 @@ library Messages {
         uint256 blockNumber,
         uint256 timestamp,
         uint256 inboxSeqNum,
+        uint256 gasPriceL1,
         bytes32 messageDataHash
     ) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(kind, sender, blockNumber, timestamp, inboxSeqNum, messageDataHash)
+                abi.encodePacked(
+                    kind,
+                    sender,
+                    blockNumber,
+                    timestamp,
+                    inboxSeqNum,
+                    gasPriceL1,
+                    messageDataHash
+                )
             );
     }
 

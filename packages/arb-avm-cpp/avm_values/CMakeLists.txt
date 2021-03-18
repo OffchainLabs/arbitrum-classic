@@ -61,6 +61,10 @@ set_target_properties(
 target_compile_options(avm_values PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_values PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
+set_source_files_properties( src/buffer.cpp PROPERTIES COMPILE_FLAGS "-Wconversion -Wparentheses" )
+
+
+
 target_include_directories(avm_values PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>

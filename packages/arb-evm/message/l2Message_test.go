@@ -76,20 +76,6 @@ func TestL2MessageSerialization(t *testing.T) {
 	}
 }
 
-func TestTransactionHash(t *testing.T) {
-	txData, err := hexutil.Decode("0x000000000000000000000000000000000000000000000000000000174876e800000000000000000000000000000000000000000000000000000000000074aa31000000000000000000000000000000000000000000000000000000000052e4d40000000000000000000000007f6999eb9d18a44784045d87f3c67cf22746e99500000000000000000000000000000000000000000000000000000000051b5aa4af5a25367951baa2ff6cd471c483f15fb90badb37c5821b6d95526a41a9504680b4e7c8b763a1b1d49d4955c8486216325253fec738dd7a9e28bf921119c160f0702448615bbda08313f6a8eb668d20bf5059875921e668a5bdf2c7fc4844592d2572bcd")
-	if err != nil {
-		t.Fatal(err)
-	}
-	sender := common.HexToAddress("0xe91e00167939cb6694d2c422acd208a007293948")
-	chain := common.HexToAddress("0x037c4d7bbb0407d1e2c64981855ad8681d0d86d1")
-	targetHash := common.HexToHash("0x00532596242ba0ded0a8a17d8897344282fa1b29de676aa41aad6f737898e4a2")
-
-	if newTransactionFromData(txData).MessageID(sender, chain) != targetHash {
-		t.Error("incorrect hash")
-	}
-}
-
 func TestCompressedECDSAEncoding(t *testing.T) {
 	calldata := []byte{119, 22, 2, 247, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 	gasLimit, correct := new(big.Int).SetString("e8d4a51000", 16)

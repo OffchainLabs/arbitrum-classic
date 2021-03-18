@@ -17,6 +17,7 @@
 package cmachine
 
 import (
+	"math/big"
 	"os"
 	"testing"
 )
@@ -29,13 +30,20 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	defer func() {
+		if err := os.RemoveAll(dePath); err != nil {
+			logger.Error().Stack().Err(err).Send()
+			t.Fatal(err)
+		}
+	}()
+
 	mach1, err := New(codeFile)
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewArbStorage("dbPath")
+	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
@@ -45,18 +53,27 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer arbStorage.CloseArbStorage()
-	mach2, err := arbStorage.GetInitialMachine()
+	core := arbStorage.GetArbCore()
+	cursor, err := core.GetExecutionCursor(big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mach2, err := core.TakeMachine(cursor)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hash1, err := mach1.Hash()
 	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-
-	if mach1.Hash() != mach2.Hash() {
+	hash2, err := mach2.Hash()
+	if err != nil {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-
-	if err := os.RemoveAll(dePath); err != nil {
+	if hash1 != hash2 {
 		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}

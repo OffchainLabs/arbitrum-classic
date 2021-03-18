@@ -16,16 +16,6 @@ type ProcessedTx struct {
 
 func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 	msg := res.IncomingRequest
-	// Special handling for buddy deploy
-	if msg.Kind == message.L2BuddyDeploy {
-		buddyDeployMessage := message.NewBuddyDeploymentFromData(msg.Data)
-		return &ProcessedTx{
-			Result: res,
-			Tx:     buddyDeployMessage.AsEthTx(),
-			Kind:   msg.Kind,
-		}, nil
-	}
-
 	if msg.Kind != message.L2Type {
 		return nil, errors.New("result is not a transaction")
 	}
@@ -51,7 +41,7 @@ func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 	for _, res := range results {
 		kind := res.IncomingRequest.Kind
 		// Ignore other message types
-		if kind != message.L2Type && kind != message.L2BuddyDeploy {
+		if kind != message.L2Type {
 			continue
 		}
 		processed, err := GetTransaction(res)

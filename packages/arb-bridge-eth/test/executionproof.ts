@@ -91,7 +91,10 @@ describe('OneStepProof', function () {
     if (!filename.endsWith('json')) {
       continue
     }
-    if (filename != 'opcodetestecops.mexe-proofs.json') {
+    if (
+      filename == 'opcodetestecops.mexe-proofs.json' ||
+      filename == 'opcodeecpairing.mexe-proofs.json'
+    ) {
       continue
     }
     const file = fs.readFileSync('./test/proofs/' + filename)

@@ -18,6 +18,8 @@
 #define checkpoint_value_hpp
 
 #include <avm_values/value.hpp>
+#include <data_storage/readtransaction.hpp>
+#include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/valuecache.hpp>
 
 #include <map>
@@ -27,24 +29,21 @@ struct DeleteResults;
 struct SaveResults;
 class Transaction;
 
-template <typename T>
-struct DbResult;
-
-SaveResults saveValueImpl(Transaction& transaction,
+SaveResults saveValueImpl(ReadWriteTransaction& transaction,
                           const value& val,
                           std::map<uint64_t, uint64_t>& segment_counts);
-DeleteResults deleteValueImpl(Transaction& transaction,
+DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts);
-DbResult<value> getValueImpl(const Transaction& transaction,
+DbResult<value> getValueImpl(const ReadTransaction& tx,
                              uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
                              ValueCache& value_cache);
 
-DbResult<value> getValue(const Transaction& transaction,
+DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache);
-SaveResults saveValue(Transaction& transaction, const value& val);
-DeleteResults deleteValue(Transaction& transaction, uint256_t value_hash);
+SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
+DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
 
 #endif /* value_hpp */

@@ -19,20 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "./IBridge.sol";
+import "./IMessageProvider.sol";
 
-interface IInbox {
-    event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
-
-    event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum);
-
-    function deployL2ContractPair(
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        uint256 payment,
-        bytes calldata contractData
-    ) external;
-
-    function sendL2Message(bytes calldata messageData) external;
+interface IInbox is IMessageProvider {
+    function sendL2Message(bytes calldata messageData) external returns (uint256);
 
     function sendUnsignedTransaction(
         uint256 maxGas,
@@ -41,7 +31,7 @@ interface IInbox {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external;
+    ) external returns (uint256);
 
     function sendContractTransaction(
         uint256 maxGas,
@@ -49,7 +39,7 @@ interface IInbox {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external;
+    ) external returns (uint256);
 
     function sendL1FundedUnsignedTransaction(
         uint256 maxGas,
@@ -57,16 +47,25 @@ interface IInbox {
         uint256 nonce,
         address destAddr,
         bytes calldata data
-    ) external payable;
+    ) external payable returns (uint256);
 
     function sendL1FundedContractTransaction(
         uint256 maxGas,
         uint256 gasPriceBid,
         address destAddr,
         bytes calldata data
-    ) external payable;
+    ) external payable returns (uint256);
 
-    function depositEth(address destAddr) external payable;
+    function createRetryableTicket(
+        address destAddr,
+        uint256 value,
+        uint256 maxSubmissionCost,
+        address submissionRefundAddress,
+        address valueRefundAddress,
+        bytes calldata data
+    ) external payable returns (uint256);
+
+    function depositEth(address destAddr) external payable returns (uint256);
 
     function bridge() external view returns (IBridge);
 }

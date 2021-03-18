@@ -19,7 +19,6 @@
 
 #include <data_storage/aggregator.hpp>
 #include <data_storage/arbstorage.hpp>
-#include <data_storage/blockstore.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
@@ -67,10 +66,14 @@ int closeArbStorage(CArbStorage* storage_ptr) {
     return storage->closeArbStorage();
 }
 
-void destroyArbStorage(CArbStorage* storage) {
+void destroyArbStorage(CArbStorage* storage_ptr) {
+    auto storage = static_cast<ArbStorage*>(storage_ptr);
     if (storage == nullptr) {
         return;
     }
+    std::cerr << "closing ArbStorage" << std::endl;
+    storage->closeArbStorage();
+    std::cerr << "closed ArbStorage" << std::endl;
     delete static_cast<ArbStorage*>(storage);
 }
 
@@ -79,120 +82,7 @@ CArbCore* createArbCore(CArbStorage* storage_ptr) {
     return storage->getArbCore().get();
 }
 
-CBlockStore* createBlockStore(CArbStorage* storage_ptr) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    return storage->getBlockStore().release();
-}
-
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr) {
     auto storage = static_cast<ArbStorage*>(storage_ptr);
     return storage->getAggregatorStore().release();
-}
-
-CMachine* getInitialMachine(const CArbStorage* storage_ptr) {
-    auto storage = static_cast<const ArbStorage*>(storage_ptr);
-    ValueCache value_cache;
-    try {
-        return new Machine(*storage->getInitialMachine(value_cache).release());
-    } catch (const std::exception&) {
-        return nullptr;
-    }
-}
-
-CMachine* getMachine(const CArbStorage* storage_ptr, const void* machine_hash) {
-    auto storage = static_cast<const ArbStorage*>(storage_ptr);
-    auto hash = receiveUint256(machine_hash);
-    ValueCache value_cache;
-    try {
-        return new Machine(*storage->getMachine(hash, value_cache).release());
-    } catch (const std::exception&) {
-        return nullptr;
-    }
-}
-
-int deleteCheckpoint(CArbStorage* storage_ptr, const void* machine_hash) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto hash = receiveUint256(machine_hash);
-    auto transaction = storage->makeTransaction();
-    auto results = deleteMachine(*transaction, hash);
-    if (!results.status.ok()) {
-        return false;
-    }
-    return transaction->commit().ok();
-}
-
-int saveValue(CArbStorage* storage_ptr, const void* value_data) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto transaction = storage->makeTransaction();
-
-    auto data_ptr = reinterpret_cast<const char*>(value_data);
-
-    auto val = deserialize_value(data_ptr);
-    auto results = saveValue(*transaction, val);
-
-    if (!results.status.ok()) {
-        return false;
-    }
-    return transaction->commit().ok();
-}
-
-ByteSlice getValue(const CArbStorage* storage_ptr, const void* hash_key) {
-    auto storage = static_cast<const ArbStorage*>(storage_ptr);
-    auto hash = receiveUint256(hash_key);
-    ValueCache value_cache;
-
-    return returnValueResult(storage->getValue(hash, value_cache));
-}
-
-int deleteValue(CArbStorage* storage_ptr, const void* hash_key) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto hash = receiveUint256(hash_key);
-
-    auto transaction = storage->makeTransaction();
-    auto result = deleteValue(*transaction, hash);
-    if (!result.status.ok()) {
-        transaction->rollback();
-        return false;
-    }
-    return transaction->commit().ok();
-}
-
-int saveData(CArbStorage* storage_ptr,
-             const void* key,
-             int key_length,
-             const void* data,
-             int data_length) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto keyvalue_store = storage->makeKeyValueStore();
-
-    auto key_ptr = reinterpret_cast<const char*>(key);
-    auto data_ptr = reinterpret_cast<const char*>(data);
-
-    auto key_slice = rocksdb::Slice(key_ptr, key_length);
-    auto data_vector =
-        std::vector<unsigned char>(data_ptr, data_ptr + data_length);
-
-    return keyvalue_store->saveData(key_slice, data_vector).ok();
-}
-
-ByteSliceResult getData(CArbStorage* storage_ptr,
-                        const void* key,
-                        int key_length) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto keyvalue_store = storage->makeKeyValueStore();
-
-    auto key_ptr = reinterpret_cast<const char*>(key);
-    auto key_slice = rocksdb::Slice(key_ptr, key_length);
-
-    return returnDataResult(keyvalue_store->getData(key_slice));
-}
-
-int deleteData(CArbStorage* storage_ptr, const void* key, int key_length) {
-    auto storage = static_cast<ArbStorage*>(storage_ptr);
-    auto keyvalue_store = storage->makeKeyValueStore();
-
-    auto key_ptr = reinterpret_cast<const char*>(key);
-    auto key_slice = rocksdb::Slice(key_ptr, key_length);
-
-    return keyvalue_store->deleteData(key_slice).ok();
 }

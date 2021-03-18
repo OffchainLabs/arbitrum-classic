@@ -63,7 +63,6 @@ const (
 	CallType                L2SubType = 2
 	TransactionBatchType    L2SubType = 3
 	SignedTransactionType   L2SubType = 4
-	BuddyRequestType        L2SubType = 5
 	HeartbeatType           L2SubType = 6
 	CompressedECDSA         L2SubType = 7
 )

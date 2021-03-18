@@ -1,7 +1,24 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -18,7 +35,7 @@ func calculateBisectionChunkCount(segmentIndex, segmentCount int, totalLength *b
 	return size
 }
 
-func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *MerkleTree) {
+func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *protocol.MerkleTree) {
 	cutHashes := cutsToHashes(bisection.Cuts)
 	segmentCount := len(cutHashes) - 1
 	chunks := make([][32]byte, 0, segmentCount)
@@ -29,7 +46,7 @@ func calculateBisectionTree(bisection *core.Bisection) ([][32]byte, *MerkleTree)
 		chunks = append(chunks, chunkHash)
 		segmentStart = segmentStart.Add(segmentStart, segmentLength)
 	}
-	return cutHashes, NewMerkleTree(chunks)
+	return cutHashes, protocol.NewMerkleTree(chunks)
 }
 
 type Challenge struct {
@@ -71,8 +88,8 @@ func (c *Challenge) BisectExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		subCuts[0].(core.ExecutionCut).GasUsed,
-		subCuts[0].(core.ExecutionCut).RestHash(),
+		subCuts[0].(*core.ExecutionState).TotalGasConsumed,
+		subCuts[0].(*core.ExecutionState).RestHash(),
 		subCutHashes,
 	)
 	return err
@@ -83,7 +100,7 @@ func (c *Challenge) OneStepProveExecution(
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-	beforeCut core.ExecutionCut,
+	beforeCut *core.ExecutionState,
 	executionProof []byte,
 	bufferProof []byte,
 	opcode uint8,
@@ -112,9 +129,9 @@ func (c *Challenge) OneStepProveExecution(
 		beforeCut.SendAcc,
 		beforeCut.LogAcc,
 		[3]*big.Int{
-			beforeCut.GasUsed,
-			beforeCut.SendCount,
-			beforeCut.LogCount,
+			beforeCut.TotalGasConsumed,
+			beforeCut.TotalSendCount,
+			beforeCut.TotalLogCount,
 		},
 		executionProof,
 		bufferProof,
@@ -128,7 +145,7 @@ func (c *Challenge) ProveContinuedExecution(
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-	beforeCut core.ExecutionCut,
+	beforeCut *core.ExecutionState,
 ) error {
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
@@ -139,7 +156,7 @@ func (c *Challenge) ProveContinuedExecution(
 		challengedSegment.Start,
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
-		beforeCut.GasUsed,
+		beforeCut.TotalGasConsumed,
 		beforeCut.RestHash(),
 	)
 	return err

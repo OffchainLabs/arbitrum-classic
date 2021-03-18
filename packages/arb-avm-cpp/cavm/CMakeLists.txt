@@ -23,11 +23,9 @@ set(LIB_HEADERS
   caggregator.h
   carbcore.h
   carbstorage.h
-  cblockstore.h
   cexecutioncursor.h
   cmachine.h
   ctypes.h
-  cvaluecache.h
   utils.hpp
 )
 
@@ -35,10 +33,8 @@ set(LIB_SOURCES
   caggregator.cpp
   carbcore.cpp
   carbstorage.cpp
-  cblockstore.cpp
   cexecutioncursor.cpp
   cmachine.cpp
-  cvaluecache.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})

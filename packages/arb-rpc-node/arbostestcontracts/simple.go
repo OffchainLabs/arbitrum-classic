@@ -27,7 +27,7 @@ var (
 )
 
 // SimpleABI is the input ABI used to generate the binding from.
-const SimpleABI = "[{\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"constant\":false,\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const SimpleABI = "[{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
 // SimpleFuncSigs maps the 4-byte function signature to its string representation.
 var SimpleFuncSigs = map[string]string{
@@ -39,7 +39,7 @@ var SimpleFuncSigs = map[string]string{
 }
 
 // SimpleBin is the compiled bytecode used for deploying new contracts.
-var SimpleBin = "0x608060405234801561001057600080fd5b506101cf806100206000396000f3fe60806040526004361061004a5760003560e01c8063267c4ae4146100875780633bccbbc9146100ae5780639436bc1f146100c35780639b7c9da3146100d8578063ae0aba8c14610102575b6040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b34801561009357600080fd5b5061009c61010a565b60408051918252519081900360200190f35b3480156100ba57600080fd5b5061008561010f565b3480156100cf57600080fd5b5061008561014d565b3480156100e457600080fd5b50610085600480360360208110156100fb57600080fd5b503561014f565b61008561014d565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d806000811461018f576040519150601f19603f3d011682016040523d82523d6000602084013e610194565b606091505b5050505056fea265627a7a7231582027ea72df9c04bcf537d095f21a669aba2c6df70f9a0a63c115e2b810816e0aed64736f6c63430005110032"
+var SimpleBin = "0x608060405234801561001057600080fd5b506101de806100206000396000f3fe60806040526004361061004e5760003560e01c8063267c4ae4146100955780633bccbbc9146100bc5780639436bc1f146100d15780639b7c9da3146100e6578063ae0aba8c1461011057610090565b36610090576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100a157600080fd5b506100aa610118565b60408051918252519081900360200190f35b3480156100c857600080fd5b5061008e61011d565b3480156100dd57600080fd5b5061008e61015b565b3480156100f257600080fd5b5061008e6004803603602081101561010957600080fd5b503561015d565b61008e61015b565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d806000811461019d576040519150601f19603f3d011682016040523d82523d6000602084013e6101a2565b606091505b5050505056fea26469706673582212203fd4cf537d89fe44d609541d3dbe6ab55cb6cf4366dbdd2c259902863f9d8c0d64736f6c634300060c0033"
 
 // DeploySimple deploys a new Ethereum contract, binding an instance of Simple to it.
 func DeploySimple(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Simple, error) {
@@ -302,23 +302,23 @@ func (_Simple *SimpleTransactorSession) Reverts() (*types.Transaction, error) {
 	return _Simple.Contract.Reverts(&_Simple.TransactOpts)
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Receive is a paid mutator transaction binding the contract receive function.
 //
-// Solidity: fallback() payable returns()
-func (_Simple *SimpleTransactor) Fallback(opts *bind.TransactOpts, calldata []byte) (*types.Transaction, error) {
-	return _Simple.contract.RawTransact(opts, calldata)
+// Solidity: receive() payable returns()
+func (_Simple *SimpleTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Simple.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Receive is a paid mutator transaction binding the contract receive function.
 //
-// Solidity: fallback() payable returns()
-func (_Simple *SimpleSession) Fallback(calldata []byte) (*types.Transaction, error) {
-	return _Simple.Contract.Fallback(&_Simple.TransactOpts, calldata)
+// Solidity: receive() payable returns()
+func (_Simple *SimpleSession) Receive() (*types.Transaction, error) {
+	return _Simple.Contract.Receive(&_Simple.TransactOpts)
 }
 
-// Fallback is a paid mutator transaction binding the contract fallback function.
+// Receive is a paid mutator transaction binding the contract receive function.
 //
-// Solidity: fallback() payable returns()
-func (_Simple *SimpleTransactorSession) Fallback(calldata []byte) (*types.Transaction, error) {
-	return _Simple.Contract.Fallback(&_Simple.TransactOpts, calldata)
+// Solidity: receive() payable returns()
+func (_Simple *SimpleTransactorSession) Receive() (*types.Transaction, error) {
+	return _Simple.Contract.Receive(&_Simple.TransactOpts)
 }

@@ -31,7 +31,7 @@ func TestTransfer(t *testing.T) {
 	constructorData := hexutil.MustDecode(arbostestcontracts.TransferBin)
 
 	constructorTx1 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{0},
@@ -40,7 +40,7 @@ func TestTransfer(t *testing.T) {
 	}
 
 	constructorTx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.Address{0},
@@ -51,7 +51,7 @@ func TestTransfer(t *testing.T) {
 	transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
 	failIfError(t, err)
 	connCallTx := message.Transaction{
-		MaxGas:      big.NewInt(1000000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,

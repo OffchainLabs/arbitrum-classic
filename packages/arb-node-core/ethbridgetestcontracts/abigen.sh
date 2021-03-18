@@ -16,7 +16,7 @@ IGNORED_ARCH=$ARCH_PREFIX/Value.sol:Value,$ARCH_PREFIX/Marshaling.sol:Marshaling
 CHAL_PREFIX=$PREFIX/challenge
 IGNORED_CHALLENGE=$CHAL_PREFIX/Challenge.sol:Challenge,$CHAL_PREFIX/ChallengeLib.sol:ChallengeLib,$CHAL_PREFIX/IChallengeFactory.sol:IChallengeFactory,$CHAL_PREFIX/IChallenge.sol:IChallenge
 IGNORED_ROLLUP=$PREFIX/rollup/IInbox.sol:IInbox,$PREFIX/rollup/INodeFactory.sol:INodeFactory,$PREFIX/rollup/IRollup.sol:IRollup
-IGNORED=$IGNORED_LIB,$IGNORED_CHALLENGE,$IGNORED_ROLLUP,$IGNORED_ARCH,$PREFIX/bridge/interfaces/IBridge.sol:IBridge
+IGNORED=$IGNORED_LIB,$IGNORED_CHALLENGE,$IGNORED_ROLLUP,$IGNORED_ARCH,$PREFIX/bridge/interfaces/IBridge.sol:IBridge,$PREFIX/bridge/interfaces/IMessageProvider.sol:IMessageProvider
 ROLLUP_LIB=$PREFIX/rollup/RollupLib.sol:RollupLib
 ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup
 ROLLUP_CREATOR=$PREFIX/rollup/RollupCreator.sol:RollupCreator
@@ -54,3 +54,4 @@ abigen --sol=$PREFIX/test_only/MachineTester.sol --pkg=$PACKAGE --out=machineTes
 abigen --sol=$PREFIX/arch/OneStepProof.sol --pkg=$PACKAGE --out=onestepproof.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 abigen --sol=$PREFIX/arch/OneStepProof2.sol --pkg=$PACKAGE --out=onestepproof2.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 abigen --sol=$PREFIX/arch/OneStepProofHash.sol --pkg=$PACKAGE --out=onestepproofhash.go --exc=$IGNORED_MORE,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
+abigen --sol=$PREFIX/test_only/InboxHelperTester.sol --pkg=$PACKAGE --out=inboxhelpertester.go --exc=$IGNORED_MORE

@@ -59,7 +59,11 @@ class CodeSegment {
         // Make endpoint pc + 1 since pc should be included in segment
         return std::make_shared<CodeSegment>(
             new_segment_id,
-            std::vector<CodePoint>{code.begin(), code.begin() + pc + 1});
+            std::vector<CodePoint>{
+                code.begin(),
+                code.begin() +
+                    static_cast<std::vector<CodePoint>::difference_type>(pc) +
+                    1});
     }
 
    public:
@@ -122,6 +126,9 @@ class Code {
     void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_id = segment->segmentID();
+        if (segment_id >= next_segment_num) {
+            throw std::runtime_error("code segment loaded incorrectly");
+        }
         if (segments.find(segment->segmentID()) == segments.end()) {
             segments[segment_id] = std::move(segment);
         }

@@ -26,7 +26,7 @@ import "@openzeppelin/contracts/introspection/IERC1820Registry.sol";
  * - only defaultOperator is the initializer (bridge)
  * - granularity is not hardcoded and can be changed
  */
-contract ERC777 is IERC777, IERC20 {
+contract OZERC777 is IERC777, IERC20 {
     using SafeMath for uint256;
     using Address for address;
 

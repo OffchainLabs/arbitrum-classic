@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./INode.sol";
+import "./RollupLib.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
@@ -44,6 +45,7 @@ contract RollupCore {
     uint256 private _latestNodeCreated;
     uint256 private _lastStakeBlock;
     mapping(uint256 => INode) private _nodes;
+    mapping(uint256 => bytes32) private _nodeHashes;
 
     address payable[] private _stakerList;
     mapping(address => Staker) public _stakerMap;
@@ -178,10 +180,17 @@ contract RollupCore {
     /**
      * @notice React to a new node being created by storing it an incrementing the latest node counter
      * @param node Node that was newly created
+     * @param nodeHash The hash of said node
      */
-    function nodeCreated(INode node) internal {
+    function nodeCreated(INode node, bytes32 nodeHash) internal {
         _latestNodeCreated++;
         _nodes[_latestNodeCreated] = node;
+        _nodeHashes[_latestNodeCreated] = nodeHash;
+    }
+
+    /// @return Node hash as of this node number
+    function getNodeHash(uint256 index) public view returns (bytes32) {
+        return _nodeHashes[index];
     }
 
     /**

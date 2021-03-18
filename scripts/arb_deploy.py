@@ -46,20 +46,27 @@ networks:
         external:
             name: arb-network
 services:
-    arb-tx-aggregator:
+    arb-node:
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        entrypoint: '/home/user/go/bin/arb-tx-aggregator'
-        command: %s state %s %s
+        entrypoint: '/home/user/go/bin/arb-node'
+        command: %s --inbox=%s --maxBatchTime=2 state %s %s
         ports:
             - '1235:1235'
             - '8547:8547'
+            - '8548:8548'
 """
 
 
-def compose_header(state_abspath, extra_flags, ws_port, rollup_address):
-    return COMPOSE_HEADER % (state_abspath, extra_flags, ws_port, rollup_address)
+def compose_header(state_abspath, extra_flags, rpc_url, rollup_address, inbox_address):
+    return COMPOSE_HEADER % (
+        state_abspath,
+        extra_flags,
+        inbox_address,
+        rpc_url,
+        rollup_address,
+    )
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -69,20 +76,28 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: validate %s state %s %s
+        command: state %s %s %s %s %s
 """
 
 
 # Returns one arb-validator declaration for a docker compose file
 def compose_validator(
-    validator_id, state_abspath, extra_flags, ws_port, rollup_address
+    validator_id,
+    state_abspath,
+    extra_flags,
+    rpc_url,
+    rollup_address,
+    validator_utils_address,
+    strategy,
 ):
     return COMPOSE_VALIDATOR % (
         validator_id,
         state_abspath,
-        extra_flags,
-        ws_port,
+        rpc_url,
         rollup_address,
+        validator_utils_address,
+        strategy,
+        extra_flags,
     )
 
 
@@ -112,6 +127,8 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
         with open(os.path.join(states_path % i, "config.json")) as json_file:
             data = json.load(json_file)
             rollup_address = data["rollup_address"]
+            inbox_address = data["inbox_address"]
+            validator_utils_address = data["validator_utils_address"]
             extra_flags = ""
             eth_url = (
                 data["eth_url"]
@@ -120,22 +137,29 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
             )
 
             if not password and "password" in data:
-                extra_flags += " -password=" + data["password"]
+                extra_flags += " --password=" + data["password"]
             elif password:
-                extra_flags += " -password=" + password
+                extra_flags += " --password=" + password
             else:
                 raise Exception(
                     "arb_deploy requires validator password through [--password=pass] parameter or in config.json file"
                 )
         if i == 0:
             contents = compose_header(
-                states_path % 0, extra_flags, eth_url, rollup_address
+                states_path % 0, extra_flags, eth_url, rollup_address, inbox_address
             )
         else:
-            if "blocktime" in data:
-                extra_flags += " -blocktime=%s" % data["blocktime"]
+            strategy = "StakeLatest"
+            if i == 1:
+                strategy = "MakeNodes"
             contents += compose_validator(
-                i, states_path % i, extra_flags, eth_url, rollup_address
+                i,
+                states_path % i,
+                extra_flags,
+                eth_url,
+                rollup_address,
+                validator_utils_address,
+                strategy,
             )
 
     with open(compose, "w") as f:

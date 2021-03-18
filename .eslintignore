@@ -1,3 +1,3 @@
-packages/arb-provider-ethers/src/lib/abi/*
+**/src/lib/abi/**
 **/dist/main.js
 **/node_modules/**

@@ -28,25 +28,9 @@ CArbStorage* createArbStorage(const char* filename);
 int initializeArbStorage(CArbStorage* storage_ptr, const char* executable_path);
 int arbStorageInitialized(CArbStorage* storage_ptr);
 void destroyArbStorage(CArbStorage* storage);
-CMachine* getInitialMachine(const CArbStorage* storage_ptr);
-CMachine* getMachine(const CArbStorage* storage_ptr, const void* machine_hash);
 int closeArbStorage(CArbStorage* storage_ptr);
-int deleteCheckpoint(CArbStorage* storage_ptr, const void* machine_hash);
-int saveValue(CArbStorage* storage_ptr, const void* value_data);
-ByteSlice getValue(const CArbStorage* storage_ptr, const void* hash_key);
-int deleteValue(CArbStorage* storage_ptr, const void* hash_key);
-int saveData(CArbStorage* storage_ptr,
-             const void* key,
-             int key_length,
-             const void* data,
-             int data_length);
-ByteSliceResult getData(CArbStorage* storage_ptr,
-                        const void* key,
-                        int key_length);
-int deleteData(CArbStorage* storage_ptr, const void* key, int key_length);
 
 CArbCore* createArbCore(CArbStorage* storage_ptr);
-CBlockStore* createBlockStore(CArbStorage* storage_ptr);
 CAggregatorStore* createAggregatorStore(CArbStorage* storage_ptr);
 
 #ifdef __cplusplus
