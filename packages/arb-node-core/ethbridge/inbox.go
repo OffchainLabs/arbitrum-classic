@@ -62,7 +62,12 @@ func NewStandardInboxWatcher(address ethcommon.Address, client ethutils.EthClien
 	}, nil
 }
 
-func (r *StandardInboxWatcher) fillMessageDetails(ctx context.Context, messageNums []*big.Int, messages map[string][]byte) error {
+func (r *StandardInboxWatcher) fillMessageDetails(
+	ctx context.Context,
+	messageNums []*big.Int,
+	txData map[string]*types.Transaction,
+	messages map[string][]byte,
+) error {
 	msgQuery := make([]ethcommon.Hash, 0, len(messageNums))
 	for _, messageNum := range messageNums {
 		var msgNumBytes ethcommon.Hash
@@ -82,7 +87,7 @@ func (r *StandardInboxWatcher) fillMessageDetails(ctx context.Context, messageNu
 		return err
 	}
 	for _, ethLog := range logs {
-		msgNum, msg, err := r.parseMessage(ctx, ethLog)
+		msgNum, msg, err := r.parseMessage(txData, ethLog)
 		if err != nil {
 			return err
 		}
@@ -91,7 +96,7 @@ func (r *StandardInboxWatcher) fillMessageDetails(ctx context.Context, messageNu
 	return nil
 }
 
-func (r *StandardInboxWatcher) parseMessage(ctx context.Context, ethLog types.Log) (*big.Int, []byte, error) {
+func (r *StandardInboxWatcher) parseMessage(txData map[string]*types.Transaction, ethLog types.Log) (*big.Int, []byte, error) {
 	if ethLog.Topics[0] == inboxMessageDeliveredID {
 		parsedLog, err := r.con.ParseInboxMessageDelivered(ethLog)
 		if err != nil {
@@ -99,16 +104,16 @@ func (r *StandardInboxWatcher) parseMessage(ctx context.Context, ethLog types.Lo
 		}
 		return parsedLog.MessageNum, parsedLog.Data, nil
 	} else if ethLog.Topics[0] == inboxMessageFromOriginID {
-		tx, _, err := r.client.TransactionByHash(ctx, ethLog.TxHash)
+		parsedLog, err := r.con.ParseInboxMessageDeliveredFromOrigin(ethLog)
 		if err != nil {
 			return nil, nil, err
+		}
+		tx, ok := txData[string(parsedLog.MessageNum.Bytes())]
+		if !ok {
+			return nil, nil, errors.New("didn't have tx data")
 		}
 		args := make(map[string]interface{})
 		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
-		if err != nil {
-			return nil, nil, err
-		}
-		parsedLog, err := r.con.ParseInboxMessageDeliveredFromOrigin(ethLog)
 		if err != nil {
 			return nil, nil, err
 		}
