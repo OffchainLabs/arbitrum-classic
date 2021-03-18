@@ -19,6 +19,11 @@
 #include <iostream>
 #include <string>
 
+void sleep() {
+    std::chrono::seconds dura(2000);
+    std::this_thread::sleep_for(dura);  // this makes this thread sleep for 2s
+}
+
 int main(int argc, char* argv[]) {
     using namespace std::chrono_literals;
     if (argc < 3) {
@@ -27,7 +32,9 @@ int main(int argc, char* argv[]) {
     }
     auto dbpath = std::string(argv[1]);
     auto arbospath = std::string(argv[2]);
+    std::cout << "Loading db\n";
     ArbStorage storage{dbpath};
+    std::cout << "Initializing arbstorage\n";
     auto status = storage.initialize(arbospath);
     if (!status.ok()) {
         std::cerr << "Failed to get initialize storage" << status.ToString()
@@ -41,6 +48,9 @@ int main(int argc, char* argv[]) {
                   << std::endl;
         return -1;
     }
+    std::cout << "Starting machine thread\n";
+    core->startThread();
     std::cout << "Log count: " << log_count.data << "\n";
+    sleep();
     return 0;
 }
