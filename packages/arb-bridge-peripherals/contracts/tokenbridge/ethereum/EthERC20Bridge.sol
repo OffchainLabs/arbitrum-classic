@@ -164,10 +164,11 @@ contract EthERC20Bridge is L1Buddy {
         address erc20,
         address destination,
         uint256 amount,
+        uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid,
         StandardTokenType tokenType
-    ) private onlyIfConnected {
+    ) private onlyIfConnected returns(uint256) {
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         uint8 decimals = ERC20(erc20).decimals();
         bytes4 selector;
@@ -176,11 +177,17 @@ contract EthERC20Bridge is L1Buddy {
         } else if (tokenType == StandardTokenType.ERC777) {
             selector = ArbTokenBridge.mintERC777FromL1.selector;
         }
-        // This transfers along any ETH sent for to pay for gas in L2
-        sendPairedContractTransaction(
+
+        bytes memory data = abi.encodeWithSelector(selector, erc20, destination, amount, decimals);
+        return inbox.createRetryableTicket(
+            destination,
+            0,
+            maxSubmissionCost,
+            msg.sender,
+            msg.sender,
             maxGas,
             gasPriceBid,
-            abi.encodeWithSelector(selector, erc20, destination, amount, decimals)
+            data
         );
     }
 
@@ -188,41 +195,50 @@ contract EthERC20Bridge is L1Buddy {
         address erc20,
         address destination,
         uint256 amount,
+        uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected {
-        depositToken(erc20, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC777);
+    ) external payable onlyIfConnected returns(uint256) {
+        return depositToken(erc20, destination, amount, maxSubmissionCost, maxGas, gasPriceBid, StandardTokenType.ERC777);
     }
 
     function depositAsERC20(
         address erc20,
         address destination,
         uint256 amount,
+        uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected {
-        depositToken(erc20, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC20);
+    ) external payable onlyIfConnected returns(uint256) {
+        return depositToken(erc20, destination, amount, maxSubmissionCost, maxGas, gasPriceBid, StandardTokenType.ERC20);
     }
 
     function depositAsCustomToken(
         address erc20,
         address destination,
         uint256 amount,
+        uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected {
+    ) external payable onlyIfConnected returns(uint256) {
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
-        // This transfers along any ETH sent for to pay for gas in L2
-        sendPairedContractTransaction(
-            maxGas,
-            gasPriceBid,
-            abi.encodeWithSelector(
+
+        bytes memory data = abi.encodeWithSelector(
                 ArbTokenBridge.mintCustomtokenFromL1.selector,
                 erc20,
                 destination,
                 amount
-            )
+            );
+        return inbox.createRetryableTicket(
+            destination,
+            0,
+            maxSubmissionCost,
+            msg.sender,
+            msg.sender,
+            maxGas,
+            gasPriceBid,
+            data
         );
     }
 

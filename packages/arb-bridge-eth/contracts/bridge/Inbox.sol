@@ -151,7 +151,6 @@ contract Inbox is IInbox {
                 )
             );
     }
-
     function depositEth(address destAddr) external payable override returns (uint256) {
         return
             _deliverMessage(
@@ -165,6 +164,19 @@ contract Inbox is IInbox {
                     msg.value
                 )
             );
+    }
+
+    function depositEthRetryable(address destAddr, uint256 maxSubmissionCost, uint256 maxGas, uint256 maxGasPrice) external payable override returns (uint256) {
+        return this.createRetryableTicket(
+            destAddr,
+            msg.value,
+            maxSubmissionCost,
+            msg.sender,
+            msg.sender, 
+            maxGas,
+            maxGasPrice,
+            ""
+        );
     }
 
     function createRetryableTicket(
