@@ -16,15 +16,15 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, ethers } from 'ethers'
-import { ArbTokenBridgeFactory } from './abi/ArbTokenBridgeFactory'
+import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__Factory'
 import { ArbTokenBridge } from './abi/ArbTokenBridge'
 import { ArbSys } from './abi/ArbSys'
 import { ArbSys__factory } from './abi/factories/ArbSys__Factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
-import { StandardArbERC20Factory } from './abi/StandardArbERC20Factory'
-import { StandardArbERC777Factory } from './abi/StandardArbERC777Factory'
+import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__Factory'
+import { StandardArbERC777__factory } from './abi/factories/StandardArbERC777__Factory'
 import { IArbToken } from './abi/IArbToken'
-import { IArbTokenFactory } from './abi/IArbTokenFactory'
+import { IArbToken__factory } from './abi/factories/IArbToken__Factory'
 
 import { StandardArbERC777 } from './abi/StandardArbERC777'
 
@@ -63,7 +63,7 @@ export class L2Bridge {
 
     this.arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
 
-    this.arbTokenBridge = ArbTokenBridgeFactory.connect(
+    this.arbTokenBridge = ArbTokenBridge__factory.connect(
       arbTokenBridgeAddress,
       l2Signer
     )
@@ -133,7 +133,7 @@ export class L2Bridge {
       erc20L1Address
     )
     if (customTokenAddress !== ethers.constants.AddressZero) {
-      const customTokenContract = IArbTokenFactory.connect(
+      const customTokenContract = IArbToken__factory.connect(
         customTokenAddress,
         this.l2Signer
       )
@@ -158,7 +158,7 @@ export class L2Bridge {
     // check if standard arb erc20:
     if (!tokenData.ERC20) {
       if ((await this.l2Provider.getCode(l2ERC20Address)).length > 2) {
-        const arbERC20TokenContract = await StandardArbERC20Factory.connect(
+        const arbERC20TokenContract = await StandardArbERC20__factory.connect(
           l2ERC20Address,
           this.l2Signer
         )
@@ -173,7 +173,7 @@ export class L2Bridge {
         )
       }
     } else {
-      const arbERC20TokenContract = await StandardArbERC20Factory.connect(
+      const arbERC20TokenContract = await StandardArbERC20__factory.connect(
         l2ERC20Address,
         this.l2Signer
       )
@@ -184,7 +184,7 @@ export class L2Bridge {
 
     if (!tokenData.ERC777) {
       if ((await this.l2Provider.getCode(l2ERC777Address)).length > 2) {
-        const arbERC77TokenContract = await StandardArbERC777Factory.connect(
+        const arbERC77TokenContract = await StandardArbERC777__factory.connect(
           l2ERC777Address,
           this.l2Signer
         )
@@ -200,7 +200,7 @@ export class L2Bridge {
         )
       }
     } else {
-      const arbERC777TokenContract = await StandardArbERC777Factory.connect(
+      const arbERC777TokenContract = await StandardArbERC777__factory.connect(
         l2ERC777Address,
         this.l2Signer
       )
@@ -221,7 +221,7 @@ export class L2Bridge {
 
   public getERC20L1Address(erc20L2Address: string) {
     try {
-      const arbERC20 = StandardArbERC20Factory.connect(
+      const arbERC20 = StandardArbERC20__factory.connect(
         erc20L2Address,
         this.l2Signer
       )
