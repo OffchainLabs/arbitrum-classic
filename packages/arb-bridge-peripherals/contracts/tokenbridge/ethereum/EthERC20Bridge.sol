@@ -18,11 +18,13 @@
 
 pragma solidity ^0.6.11;
 
+import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
 import "../arbitrum/ArbTokenBridge.sol";
 
 import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../libraries/SafeERC20Namer.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
@@ -37,14 +39,29 @@ contract EthERC20Bridge is L1Buddy {
 
     mapping(address => address) public customL2Tokens;
 
+    address private immutable l2TemplateERC777;
+    address private immutable l2TemplateERC20;
+
+
     constructor(
         address _inbox,
         address _l2Deployer,
         uint256 _maxGas,
-        uint256 _gasPrice
+        uint256 _gasPrice,
+        address _l2TemplateERC777,
+        address _l2TemplateERC20
     ) public payable L1Buddy(_inbox, _l2Deployer) {
+        
+        l2TemplateERC777 = _l2TemplateERC777;
+        l2TemplateERC20 = _l2TemplateERC20;
+
+        bytes memory deployCode = abi.encodePacked(
+            type(ArbTokenBridge).creationCode,
+            abi.encode(address(this), _l2TemplateERC20, _l2TemplateERC777)
+        );
+
         // TODO: this stores the creation code in state, but we don't actually need that
-        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, type(ArbSymmetricTokenBridge).creationCode);
+        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, deployCode);
     }
 
     function handleDeploySuccess() internal override {
@@ -207,6 +224,16 @@ contract EthERC20Bridge is L1Buddy {
                 amount
             )
         );
+    }
+
+    function calculateL2ERC777Address(address erc20) external view returns (address) {
+        bytes32 salt = bytes32(uint256(erc20));
+        return Clones.predictDeterministicAddress(l2TemplateERC777, salt, L1Buddy.l2Buddy);
+    }
+
+    function calculateL2ERC20Address(address erc20) external view returns (address) {
+        bytes32 salt = bytes32(uint256(erc20));
+        return Clones.predictDeterministicAddress(l2TemplateERC20, salt, L1Buddy.l2Buddy);
     }
 
     // TODO: does this carry over the msg.value of the internal call implicitly?

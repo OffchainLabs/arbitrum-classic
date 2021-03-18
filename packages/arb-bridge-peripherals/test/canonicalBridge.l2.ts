@@ -27,9 +27,18 @@ describe('Bridge peripherals layer 2', () => {
   let testBridge: Contract
 
   before(async function () {
+    // constructor(uint256 _gasPrice, uint256 _maxGas, address erc777Template, address erc20Template)
     accounts = await ethers.getSigners()
-    TestBridge = await ethers.getContractFactory('TestBridge')
-    testBridge = await TestBridge.deploy()
+    TestBridge = await ethers.getContractFactory('ArbTokenBridge')
+    const StandardArbERC20 = await ethers.getContractFactory(
+      'StandardArbERC20'
+    )
+    const StandardArbERC777 = await ethers.getContractFactory(
+      'StandardArbERC777'
+    )
+    const standardArbERC20 = await StandardArbERC20.deploy()
+    const standardArbERC777 = await StandardArbERC777.deploy()
+    testBridge = await TestBridge.deploy(accounts[0].address, standardArbERC777.address, standardArbERC20.address)
 
     await deploy1820Registry(accounts[0])
   })
@@ -160,7 +169,6 @@ describe('Bridge peripherals layer 2', () => {
     // const balance777 = await erc777.balanceOf(account)
 
     const migrate = await erc20.migrate(amount, l2ERC777Address)
-
     const newBalance777 = await erc777.balanceOf(account)
     const newBalance20 = await erc20.balanceOf(account)
     assert.equal(
@@ -205,7 +213,7 @@ describe('Bridge peripherals layer 2', () => {
     }
   })
 
-  it.skip('should burn on withdraw', async function () {
+  it('should burn on withdraw', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
     const account = accounts[0].address
     const amount = '10'
@@ -232,33 +240,5 @@ describe('Bridge peripherals layer 2', () => {
 
     const newBalance = await erc777.balanceOf(account)
     assert.equal(newBalance.toString(), '0', 'Tokens not minted correctly')
-  })
-
-  it('should only allow transaction from self in symmetric bridge', async function () {
-    const SymmetricBridge = await ethers.getContractFactory(
-      'ArbSymmetricTokenBridge'
-    )
-    const symmetricBridge = await SymmetricBridge.deploy()
-
-    const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const account = '0x0000000000000000000000000000000000000002'
-    const amount = '1'
-    const decimals = '18'
-
-    try {
-      const tx = await symmetricBridge.mintERC20FromL1(
-        l1ERC20,
-        account,
-        amount,
-        decimals
-      )
-      assert.equal(true, false, 'Should have failed')
-    } catch (e) {
-      assert.equal(
-        e.message,
-        'execution reverted: ONLY_ETH_PAIR',
-        'Migration did not fail'
-      )
-    }
   })
 })

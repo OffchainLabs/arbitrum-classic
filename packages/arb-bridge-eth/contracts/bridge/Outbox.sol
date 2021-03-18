@@ -115,19 +115,15 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) external {
-        bytes32 userTx =
-            keccak256(
-                abi.encodePacked(
-                    SendType_sendTxToL1,
-                    uint256(uint160(bytes20(l2Sender))),
-                    uint256(uint160(bytes20(destAddr))),
-                    l2Block,
-                    l1Block,
-                    l2Timestamp,
-                    amount,
-                    calldataForL1
-                )
-            );
+        bytes32 userTx = calculateItemHash(
+            l2Sender,
+            destAddr,
+            l2Block,
+            l1Block,
+            l2Timestamp,
+            amount,
+            calldataForL1
+        );
 
         spendOutput(outboxIndex, proof, index, userTx);
 
@@ -159,7 +155,7 @@ contract Outbox is CloneFactory, IOutbox {
         require(path < 2**proof.length, "PATH_NOT_MINIMAL");
 
         // Hash the leaf an extra time to prove it's a leaf
-        bytes32 calcRoot = MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
+        bytes32 calcRoot = calculateMerkleRoot(proof, path, item);
         OutboxEntry outbox = outboxes[outboxIndex];
         require(address(outbox) != address(0), "NO_OUTBOX");
 
@@ -212,5 +208,40 @@ contract Outbox is CloneFactory, IOutbox {
                 revert("BRIDGE_CALL_FAILED");
             }
         }
+    }
+
+    function calculateItemHash(
+        address l2Sender,
+        address destAddr,
+        uint256 l2Block,
+        uint256 l1Block,
+        uint256 l2Timestamp,
+        uint256 amount,
+        bytes calldata calldataForL1
+    ) public pure returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                SendType_sendTxToL1,
+                uint256(uint160(bytes20(l2Sender))),
+                uint256(uint160(bytes20(destAddr))),
+                l2Block,
+                l1Block,
+                l2Timestamp,
+                amount,
+                calldataForL1
+            )
+        );
+    }
+
+    function calculateMerkleRoot(
+        bytes32[] memory proof,
+        uint256 path,
+        bytes32 item
+    ) public pure returns (bytes32) {
+        return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
+    }
+
+    function outboxesLength() public view returns (uint256) {
+        return outboxes.length;
     }
 }

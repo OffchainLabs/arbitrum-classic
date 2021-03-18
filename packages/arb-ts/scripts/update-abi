@@ -28,6 +28,6 @@ cd ../../../../arb-os/contracts/src/types
 
 cd ../../../../arb-bridge-peripherals/build/types
 
-\cp -rf ERC20* ERC777* StandardArbERC20* StandardArbERC777* EthERC20Bridge* ArbTokenBridge* IArbToken* ../../../arb-ts/src/lib/abi
+\cp -rf ERC20* ERC777* TestERC20* TestERC777* StandardArbERC20* StandardArbERC777* EthERC20Bridge* ArbTokenBridge* IArbToken* ../../../arb-ts/src/lib/abi
 
 cd ../../../arb-ts
