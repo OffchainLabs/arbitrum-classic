@@ -173,6 +173,8 @@ contract Inbox is IInbox {
         uint256 maxSubmissionCost,
         address submissionRefundAddress,
         address valueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
         bytes calldata data
     ) external payable override returns (uint256) {
         return
@@ -186,6 +188,8 @@ contract Inbox is IInbox {
                     maxSubmissionCost,
                     uint256(uint160(bytes20(submissionRefundAddress))),
                     uint256(uint160(bytes20(valueRefundAddress))),
+                    maxGas,
+                    gasPriceBid,
                     data.length,
                     data
                 )

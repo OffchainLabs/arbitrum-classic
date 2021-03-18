@@ -87,6 +87,16 @@ const _abi = [
         type: 'address',
       },
       {
+        internalType: 'uint256',
+        name: 'maxGas',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'gasPriceBid',
+        type: 'uint256',
+      },
+      {
         internalType: 'bytes',
         name: 'data',
         type: 'bytes',

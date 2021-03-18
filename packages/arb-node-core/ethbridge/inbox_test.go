@@ -59,6 +59,8 @@ func TestRetryable(t *testing.T) {
 		arbTx.MaxSubmissionCost,
 		arbTx.CreditBack.ToEthAddress(),
 		arbTx.Beneficiary.ToEthAddress(),
+		arbTx.MaxGas,
+		arbTx.GasPriceBid,
 		arbTx.Data,
 	)
 	test.FailIfError(t, err)
