@@ -71,7 +71,7 @@ abstract contract L1Buddy {
 
         if(msg.value > 0) {
             // gas paid in L1
-            inbox.sendL1FundedContractTransaction(maxGas, gasPriceBid, address(l2Deployer), data);
+            inbox.sendL1FundedContractTransaction{value: msg.value}(maxGas, gasPriceBid, address(l2Deployer), data);
         } else {
             // gas paid in L2
             inbox.sendContractTransaction(maxGas, gasPriceBid, address(l2Deployer), 0, data);
