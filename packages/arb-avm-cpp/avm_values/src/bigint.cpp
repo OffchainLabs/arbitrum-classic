@@ -53,3 +53,8 @@ void marshal_uint256_t(const uint256_t& val, std::vector<unsigned char>& buf) {
     buf.resize(buf.size() + 32);
     to_big_endian(val, &*(buf.end() - 32));
 }
+
+void marshal_uint256_t(const uint256_t& val,
+                       std::array<unsigned char, 32>& buf) {
+    to_big_endian(val, &*(buf.end() - 32));
+}
