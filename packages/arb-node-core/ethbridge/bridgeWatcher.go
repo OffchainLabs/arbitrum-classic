@@ -58,7 +58,7 @@ func init() {
 }
 
 type InboxMessageGetter interface {
-	fillMessageDetails(ctx context.Context, messageNums []*big.Int, messages map[string][]byte) error
+	fillMessageDetails(ctx context.Context, messageNums []*big.Int, txData map[string]*types.Transaction, messages map[string][]byte) error
 }
 
 type BridgeWatcher struct {
@@ -176,13 +176,21 @@ func (d DeliveredInboxMessageList) Less(i, j int) bool {
 func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []types.Log) ([]*DeliveredInboxMessage, error) {
 	messagesByInbox := make(map[ethcommon.Address][]*big.Int)
 	rawMessages := make(map[string]*ethbridgecontracts.BridgeMessageDelivered)
+	rawTransactions := make(map[string]*types.Transaction)
 	for _, ethLog := range logs {
 		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
 		}
 		messagesByInbox[parsedLog.Inbox] = append(messagesByInbox[parsedLog.Inbox], parsedLog.MessageIndex)
-		rawMessages[string(parsedLog.MessageIndex.Bytes())] = parsedLog
+		messageKey := string(parsedLog.MessageIndex.Bytes())
+		rawMessages[messageKey] = parsedLog
+
+		txData, err := r.client.TransactionInBlock(ctx, ethLog.BlockHash, ethLog.TxIndex)
+		if err != nil {
+			return nil, err
+		}
+		rawTransactions[messageKey] = txData
 	}
 
 	messageData := make(map[string][]byte)
@@ -191,10 +199,12 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 		if err != nil {
 			return nil, err
 		}
-		if err := inboxGetter.fillMessageDetails(ctx, indexes, messageData); err != nil {
+		if err := inboxGetter.fillMessageDetails(ctx, indexes, rawTransactions, messageData); err != nil {
 			return nil, err
 		}
 	}
+
+	blockTimes := make(map[ethcommon.Hash]*big.Int)
 
 	messages := make([]*DeliveredInboxMessage, 0, len(logs))
 	for msgNum, rawMsg := range rawMessages {
@@ -206,14 +216,14 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 			return nil, errors.New("found message data with mismatched hash")
 		}
 
-		header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)
-		if err != nil {
-			return nil, err
-		}
-
-		txData, _, err := r.client.TransactionByHash(ctx, rawMsg.Raw.TxHash)
-		if err != nil {
-			return nil, err
+		blockTime, ok := blockTimes[rawMsg.Raw.BlockHash]
+		if !ok {
+			header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)
+			if err != nil {
+				return nil, err
+			}
+			blockTime = new(big.Int).SetUint64(header.Time)
+			blockTimes[rawMsg.Raw.BlockHash] = blockTime
 		}
 
 		msg := &DeliveredInboxMessage{
@@ -223,13 +233,13 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 				Kind:        inbox.Type(rawMsg.Kind),
 				Sender:      common.NewAddressFromEth(rawMsg.Sender),
 				InboxSeqNum: rawMsg.MessageIndex,
-				GasPrice:    txData.GasPrice(),
+				GasPrice:    rawTransactions[string(rawMsg.MessageIndex.Bytes())].GasPrice(),
 				Data:        data,
 				ChainTime: inbox.ChainTime{
 					BlockNum: common.NewTimeBlocks(
 						new(big.Int).SetUint64(rawMsg.Raw.BlockNumber),
 					),
-					Timestamp: new(big.Int).SetUint64(header.Time),
+					Timestamp: blockTime,
 				},
 			},
 		}

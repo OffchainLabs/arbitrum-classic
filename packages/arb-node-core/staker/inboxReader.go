@@ -71,6 +71,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		return err
 	}
 	reorging := false
+	blocksToFetch := uint64(100)
 	for {
 		select {
 		case <-ctx.Done():
@@ -78,23 +79,35 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		default:
 		}
 
+		currentHeight, err := ir.bridge.CurrentBlockHeight(ctx)
+		if err != nil {
+			return err
+		}
 		for {
-			currentHeight, err := ir.bridge.CurrentBlockHeight(ctx)
-			if err != nil {
-				return err
-			}
 			if from.Cmp(currentHeight) >= 0 {
 				break
 			}
-			to := new(big.Int).Add(from, big.NewInt(100))
+			to := new(big.Int).Add(from, new(big.Int).SetUint64(blocksToFetch))
 			if to.Cmp(currentHeight) > 0 {
 				to = currentHeight
 			}
-
 			newMessages, err := ir.bridge.LookupMessagesInRange(ctx, from, to)
 			if err != nil {
 				return err
 			}
+			if len(newMessages) < 40 {
+				blocksToFetch += 20
+			} else if len(newMessages) > 90 {
+				blocksToFetch /= 2
+			}
+			if blocksToFetch == 0 {
+				blocksToFetch++
+			}
+			logger.Debug().
+				Str("from", from.String()).
+				Str("to", to.String()).
+				Int("count", len(newMessages)).
+				Msg("Looking up messages")
 			if len(newMessages) == 0 {
 				if reorging {
 					from, err = ir.getPrevBlockForReorg(from)
