@@ -46,4 +46,36 @@ DbResult<value> getValue(const ReadTransaction& tx,
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
 DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
 
+struct ValueHash {
+    uint256_t hash;
+};
+
+struct ParsedBuffer {
+    uint64_t depth;
+    std::vector<uint256_t> nodes;
+};
+
+using ParsedTupVal =
+    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
+
+using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
+
+using ParsedSerializedVal = std::variant<uint256_t,
+                                         CodePointStub,
+                                         Buffer,
+                                         std::vector<ParsedTupVal>,
+                                         ParsedBuffer>;
+
+DbResult<value> getValueRecord(const ReadTransaction& tx,
+                               const ParsedSerializedVal& record,
+                               std::set<uint64_t>& segment_ids,
+                               ValueCache& value_cache);
+ParsedSerializedVal parseRecord(std::vector<unsigned char>::const_iterator& it);
+std::vector<value> serializeValue(const value& val,
+                                  std::vector<unsigned char>& value_vector,
+                                  std::map<uint64_t, uint64_t>& segment_counts);
+DeleteResults deleteValueRecord(ReadWriteTransaction& tx,
+                                const ParsedSerializedVal& val,
+                                std::map<uint64_t, uint64_t>& segment_counts);
+
 #endif /* value_hpp */

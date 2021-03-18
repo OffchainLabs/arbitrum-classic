@@ -47,53 +47,74 @@ std::array<unsigned char, segment_key_size> segment_key(uint64_t segment_id) {
 
 struct RawCodePoint {
     OpCode opcode;
-    std::optional<uint256_t> immediateHash;
+    std::optional<ParsedSerializedVal> parsed_immediate;
     uint256_t next_hash;
 };
 
-RawCodePoint extractRawCodePoint(const char*& ptr) {
-    bool is_immediate = static_cast<bool>(*ptr);
-    ++ptr;
-    auto opcode = static_cast<OpCode>(*ptr);
-    ++ptr;
+RawCodePoint extractRawCodePoint(
+    std::vector<unsigned char>::const_iterator& it) {
+    bool is_immediate = *it;
+    ++it;
+    auto opcode = static_cast<OpCode>(*it);
+    ++it;
+    auto ptr = reinterpret_cast<const char*>(&*it);
     uint256_t next_hash = deserializeUint256t(ptr);
+    it += 32;
     if (!is_immediate) {
         return {opcode, std::nullopt, next_hash};
     }
-    uint256_t value_hash = deserializeUint256t(ptr);
-    return {opcode, value_hash, next_hash};
+    return {opcode, parseRecord(it), next_hash};
 }
 
 std::vector<RawCodePoint> extractRawCodeSegment(
     const std::vector<unsigned char>& stored_value) {
-    auto iter = stored_value.begin();
+    auto iter = stored_value.cbegin();
     auto ptr = reinterpret_cast<const char*>(&*iter);
     auto cp_count = deserialize_uint64_t(ptr);
+    iter += sizeof(cp_count);
     std::vector<RawCodePoint> cps;
     cps.reserve(cp_count);
     for (uint64_t i = 0; i < cp_count; i++) {
-        cps.push_back(extractRawCodePoint(ptr));
+        cps.push_back(extractRawCodePoint(iter));
     }
     return cps;
 }
 
-void serializeCodePoint(const CodePoint& cp,
-                        std::vector<unsigned char>& serialized_code) {
+std::vector<value> serializeCodePoint(
+    const CodePoint& cp,
+    std::vector<unsigned char>& serialized_code,
+    std::map<uint64_t, uint64_t>& segment_counts) {
     // Ignore referemces to other code segments
     serialized_code.push_back(cp.op.immediate ? 1 : 0);
     serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
     marshal_uint256_t(cp.nextHash, serialized_code);
     if (cp.op.immediate) {
-        marshal_uint256_t(hash_value(*cp.op.immediate), serialized_code);
+        return serializeValue(*cp.op.immediate, serialized_code,
+                              segment_counts);
     }
+    return {};
 }
 
 std::vector<unsigned char> serializeCodeSegment(
-    const CodeSegmentSnapshot& snapshot) {
+    ReadWriteTransaction& tx,
+    const CodeSegmentSnapshot& snapshot,
+    uint64_t existing_cp_count,
+    std::map<uint64_t, uint64_t>& segment_counts) {
     std::vector<unsigned char> serialized_code;
     marshal_uint64_t(snapshot.op_count, serialized_code);
     for (uint64_t i = 0; i < snapshot.op_count; ++i) {
-        serializeCodePoint((*snapshot.segment)[i], serialized_code);
+        auto values = serializeCodePoint((*snapshot.segment)[i],
+                                         serialized_code, segment_counts);
+        if (i > existing_cp_count) {
+            // Save the immediate values, that weren't already saved for this
+            // code segment
+            for (const auto& val : values) {
+                auto result = saveValueImpl(tx, val, segment_counts);
+                if (!result.status.ok()) {
+                    throw std::runtime_error("failed to save immediate value");
+                }
+            }
+        }
     }
     return serialized_code;
 }
@@ -119,8 +140,6 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
         }
     }
 
-    // Save the immediate values, that weren't already saved for this code
-    // segment
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
         const auto& cp = (*snapshot.segment)[i];
         if (cp.op.immediate) {
@@ -131,7 +150,8 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
         }
     }
 
-    return serializeCodeSegment(snapshot);
+    return serializeCodeSegment(tx, snapshot, existing_cp_count,
+                                segment_counts);
 }
 }  // namespace
 
@@ -151,11 +171,11 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
     std::vector<CodePoint> cps;
     cps.reserve(raw_cps.size());
     for (const auto& raw_cp : raw_cps) {
-        if (!raw_cp.immediateHash) {
+        if (!raw_cp.parsed_immediate) {
             cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
         } else {
-            auto imm = getValueImpl(tx, *raw_cp.immediateHash, segment_ids,
-                                    value_cache);
+            auto imm = getValueRecord(tx, *raw_cp.parsed_immediate, segment_ids,
+                                      value_cache);
             if (std::holds_alternative<rocksdb::Status>(imm)) {
                 throw std::runtime_error("failed to load immediate value");
             }
@@ -244,8 +264,9 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
             auto cps =
                 extractRawCodeSegment(current_value_it->second.stored_value);
             for (const auto& cp : cps) {
-                if (cp.immediateHash) {
-                    deleteValueImpl(tx, *cp.immediateHash, next_segment_counts);
+                if (cp.parsed_immediate) {
+                    deleteValueRecord(tx, *cp.parsed_immediate,
+                                      next_segment_counts);
                 }
             }
             return true;
