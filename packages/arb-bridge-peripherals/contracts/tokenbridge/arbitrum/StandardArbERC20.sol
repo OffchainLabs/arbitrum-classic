@@ -61,11 +61,6 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
         bridge.withdraw(l1Address, destination, amount);
     }
 
-    function migrate3() external {
-    }
-    function migrate2(uint256 amount, address target) external {
-        _mint(target, amount);
-    }
     function migrate(uint256 amount, address target) external {
         _burn(msg.sender, amount);
         bridge.migrate(l1Address, target, msg.sender, amount);

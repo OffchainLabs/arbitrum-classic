@@ -20,9 +20,26 @@ import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 import { BridgeFactory } from './abi/BridgeFactory'
 import { OutboxFactory } from './abi/OutboxFactory'
-import { Outbox } from './abi/Outbox'
-import { OutboxEntryFactory } from './abi/OutboxEntryFactory'
-import { entropyToMnemonic } from '@ethersproject/hdnode'
+
+interface L2ToL1EventResult {
+  caller: string
+  destination: string
+  uniqueId: BigNumber
+  batchNumber: BigNumber
+  indexInBatch: BigNumber
+  arbBlockNum: BigNumber
+  ethBlockNum: BigNumber
+  timestamp: string
+  callvalue: BigNumber
+  data: string
+}
+
+interface BuddyDeployEventResult {
+  _sender: string
+  _contract: string
+  withdrawalId: BigNumber
+  success: boolean
+}
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -110,35 +127,100 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.getAndUpdateL1EthBalance()
   }
 
-  public async triggerL2ToL1Transaction(l2TransactionHash: string) {
-    const l2ToL1Event = this.arbSys.interface.getEvent('L2ToL1Transaction')
-    const eventTopic = this.arbSys.interface.getEventTopic(l2ToL1Event)
-
+  public async getL2Transaction(l2TransactionHash: string) {
     const txReceipt = await this.l2Provider.getTransactionReceipt(
       l2TransactionHash
     )
 
     if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
 
-    const logs = txReceipt.logs.filter(log => log.topics[0] === eventTopic)
+    return txReceipt
+  }
 
-    if (logs.length !== 1)
-      throw new Error('Not exactly 1 log emitted of L2 to L1 tx?')
+  public async getL1Transaction(l1TransactionHash: string) {
+    const txReceipt = await this.l1Bridge.l1Provider.getTransactionReceipt(
+      l1TransactionHash
+    )
 
-    const log = this.arbSys.interface.parseLog(logs[0])
-    const {
-      caller,
-      destination,
-      uniqueId,
-      batchNumber,
-      indexInBatch,
-      arbBlockNum,
-      ethBlockNum,
-      timestamp: l2LogTimestamp,
-      callvalue,
-      data,
-    } = log.args
+    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
 
+    return txReceipt
+  }
+
+  public async calculateL2TransactionHash(
+    inboxSequenceNumber: BigNumber,
+    l2ChainId?: BigNumber
+  ) {
+    if (!l2ChainId)
+      l2ChainId = BigNumber.from((await this.l2Provider.getNetwork()).chainId)
+
+    return ethers.utils.keccak256(
+      ethers.utils.concat([
+        ethers.utils.zeroPad(l2ChainId.toHexString(), 32),
+        ethers.utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
+      ])
+    )
+  }
+
+  public async getInboxSeqNumFromContractTransaction(
+    l2Transaction: ethers.providers.TransactionReceipt
+  ): Promise<Array<BigNumber> | undefined> {
+    const Inbox = await this.l1Bridge.getInbox()
+    const iface = Inbox.interface
+    const messageDelivered = iface.getEvent('InboxMessageDelivered')
+    const messageDeliveredFromOrigin = iface.getEvent(
+      'InboxMessageDeliveredFromOrigin'
+    )
+
+    const eventTopics = {
+      InboxMessageDelivered: iface.getEventTopic(messageDelivered),
+      InboxMessageDeliveredFromOrigin: iface.getEventTopic(
+        messageDeliveredFromOrigin
+      ),
+    }
+
+    const logs = l2Transaction.logs.filter(
+      log =>
+        log.topics[0] === eventTopics.InboxMessageDelivered ||
+        log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
+    )
+
+    if (logs.length === 0) return undefined
+    return logs.map(log => BigNumber.from(log.topics[1]))
+  }
+
+  public getBuddyDeployInL2Transaction(
+    l2Transaction: ethers.providers.TransactionReceipt
+  ) {
+    const iface = new ethers.utils.Interface([
+      `event Deployed(address indexed _sender, address indexed _contract, uint256 indexed withdrawalId, bool _success)`,
+    ])
+    const DeployedEvent = iface.getEvent('Deployed')
+    const eventTopic = iface.getEventTopic(DeployedEvent)
+    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as BuddyDeployEventResult
+    )
+  }
+
+  public async getWithdrawalsInL2Transaction(
+    l2Transaction: ethers.providers.TransactionReceipt
+  ): Promise<Array<L2ToL1EventResult>> {
+    const iface = this.arbSys.interface
+    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
+    const eventTopic = iface.getEventTopic(l2ToL1Event)
+
+    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+    )
+  }
+
+  public async triggerL2ToL1Transaction(
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber
+  ) {
     console.log('going to get proof')
     const {
       proof,
@@ -323,7 +405,7 @@ export class Bridge extends L2Bridge {
   public waitUntilOutboxEntryCreated = async (
     batchNumber: BigNumber,
     activeOutboxAddress: string,
-    retryDelay: number = 500
+    retryDelay = 500
   ): Promise<string> => {
     try {
       // if outbox entry not created yet, this reads from array out of bounds
