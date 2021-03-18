@@ -41,11 +41,11 @@ describe('Buddy bridge layer 2', () => {
     const log = receipt.events
       .filter(
         (e: any) =>
-          e.eventSignature && e.eventSignature === 'Deployed(address,address,bool)'
+          e.eventSignature && e.eventSignature === 'Deployed(address,address,uint256,bool)'
       )
       .pop()
 
-    const [sender, contractAddress, success] = log.args
+    const [sender, contractAddress, withdrawalId, success] = log.args
     assert.equal(success, true, 'Not able to deploy greeter contract');
   })
 
@@ -63,11 +63,11 @@ describe('Buddy bridge layer 2', () => {
     const log = receipt.events
       .filter(
         (e: any) =>
-          e.eventSignature && e.eventSignature === 'Deployed(address,address,bool)'
+          e.eventSignature && e.eventSignature === 'Deployed(address,address,uint256,bool)'
       )
       .pop()
 
-    const [sender, contractAddress, success] = log.args
+    const [sender, contractAddress, withdrawalId, success] = log.args
     assert.equal(success, true, 'Not able to deploy mock contract with create2');
     
     const create2Mock = Mock.attach(contractAddress);

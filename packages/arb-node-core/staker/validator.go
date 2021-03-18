@@ -3,6 +3,7 @@ package staker
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -168,7 +169,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
-		return nil, false, errors.New("catching up to chain")
+		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
 	}
 	cursor, err := v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
 	if err != nil {
@@ -295,6 +296,14 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	}
 	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("node", int(lastNum.Int64())+1).Int("parentNode", int(base.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
+}
+
+func (v *Validator) GetInitialMachineHash(ctx context.Context) ([32]byte, error) {
+	creationEvent, err := v.rollup.LookupCreation(ctx)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return creationEvent.MachineHash, nil
 }
 
 func getBlockID(ctx context.Context, client ethutils.EthClient, number *big.Int) (*common.BlockId, error) {

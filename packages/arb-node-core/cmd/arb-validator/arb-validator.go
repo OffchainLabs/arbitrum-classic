@@ -18,10 +18,12 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"io/ioutil"
 	golog "log"
+	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -186,11 +188,28 @@ func main() {
 		logger.Fatal().Stack().Err(err).Msg("Error setting up staker")
 	}
 
+	chainMachineHash, err := stakerManager.GetInitialMachineHash(ctx)
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error checking initial chain state")
+	}
+	initialExecutionCursor, err := arbCore.GetExecutionCursor(big.NewInt(0))
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error loading initial ArbCore machine")
+	}
+	initialMachineHash, err := initialExecutionCursor.MachineHash()
+	if err != nil {
+		logger.Fatal().Stack().Err(err).Msg("Error getting initial machine hash")
+	}
+	if initialMachineHash != chainMachineHash {
+		logger.Fatal().Str("chain", hex.EncodeToString(chainMachineHash[:])).Str("arbCore", hex.EncodeToString(initialMachineHash[:])).Msg("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash")
+	}
+
 	reader, err := staker.NewInboxReader(ctx, bridge, arbCore)
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Failed to create inbox reader")
 	}
 	reader.Start(ctx)
 
+	logger.Info().Msg("Initialized validator")
 	<-stakerManager.RunInBackground(ctx)
 }
