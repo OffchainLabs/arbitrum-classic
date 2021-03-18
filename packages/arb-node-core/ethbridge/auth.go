@@ -25,12 +25,13 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 )
 
 var logger = log.With().Caller().Str("component", "ethbridge").Logger()
 
 const (
-	smallNonceRepeatCount = 5
+	smallNonceRepeatCount = 100
 	smallNonceError       = "Try increasing the gas price or incrementing the nonce."
 )
 
@@ -68,6 +69,8 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		auth.Nonce = t.auth.Nonce
 		addr, tx, _, err = contractFunc(auth)
+
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	if err != nil {

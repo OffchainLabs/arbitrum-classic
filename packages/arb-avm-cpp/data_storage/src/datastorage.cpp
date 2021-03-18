@@ -111,9 +111,13 @@ rocksdb::Status DataStorage::flushNextColumn() {
 
 rocksdb::Status DataStorage::closeDb() {
     column_handles.clear();
-    auto s = txn_db->Close();
-    txn_db.reset();
-    return s;
+    if (txn_db) {
+        auto s = txn_db->Close();
+        txn_db.reset();
+        return s;
+    }
+
+    return rocksdb::Status::OK();
 }
 
 std::unique_ptr<Transaction> Transaction::makeTransaction(

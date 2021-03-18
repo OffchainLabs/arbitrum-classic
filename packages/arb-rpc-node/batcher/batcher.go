@@ -246,28 +246,33 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
 	}
-	logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
-	txHash, err := inbox.SendL2MessageFromOrigin(
-		ctx,
-		message.NewSafeL2Message(batchTx).AsData(),
-	)
+	for {
+		logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
+		txHash, err := inbox.SendL2MessageFromOrigin(
+			ctx,
+			message.NewSafeL2Message(batchTx).AsData(),
+		)
 
-	for _, tx := range txes {
-		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(tx.Hash()), txHash)
-	}
+		if err != nil {
+			time.Sleep(5 * time.Second)
+			logger.Error().Err(err).Msg("error calling SendL2MessageFromOrigin, retrying")
+			continue
+		}
 
-	monitor.GlobalMonitor.SubmittedBatch(txHash)
+		for _, tx := range txes {
+			monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(tx.Hash()), txHash)
+		}
 
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
+		monitor.GlobalMonitor.SubmittedBatch(txHash)
+
+		m.pendingBatch = m.pendingBatch.newFromExisting()
+		m.pendingSentBatches.PushBack(&pendingSentBatch{
+			txHash: txHash,
+			txes:   txes,
+		})
+
 		return
 	}
-
-	m.pendingBatch = m.pendingBatch.newFromExisting()
-	m.pendingSentBatches.PushBack(&pendingSentBatch{
-		txHash: txHash,
-		txes:   txes,
-	})
 }
 
 func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, error) {
