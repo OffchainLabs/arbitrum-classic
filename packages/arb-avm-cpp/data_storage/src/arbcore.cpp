@@ -31,6 +31,7 @@
 
 #include <ethash/keccak.hpp>
 #include <set>
+#include <sstream>
 #include <vector>
 
 namespace {
@@ -529,13 +530,19 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                                          segment_ids, value_cache);
 
     if (std::holds_alternative<rocksdb::Status>(static_results)) {
-        throw std::runtime_error("failed loaded core machine static");
+        std::stringstream ss;
+        ss << "failed loaded core machine static: "
+           << std::get<rocksdb::Status>(static_results).ToString();
+        throw std::runtime_error(ss.str());
     }
 
     auto register_results = ::getValueImpl(
         transaction, state_data.register_hash, segment_ids, value_cache);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
-        throw std::runtime_error("failed to load machine register");
+        std::stringstream ss;
+        ss << "failed loaded core machine register: "
+           << std::get<rocksdb::Status>(register_results).ToString();
+        throw std::runtime_error(ss.str());
     }
 
     auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
