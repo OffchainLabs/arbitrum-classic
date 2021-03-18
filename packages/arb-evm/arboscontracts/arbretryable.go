@@ -27,7 +27,7 @@ var (
 )
 
 // ArbRetryableTxABI is the input ABI used to generate the binding from.
-const ArbRetryableTxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"Canceled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newTimeout\",\"type\":\"uint256\"}],\"name\":\"LifetimeExtended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"Redeemed\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"cancel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"getBeneficiary\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"getKeepalivePrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getLifetime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"getTimeout\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"keepalive\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"redeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbRetryableTxABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"Canceled\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newTimeout\",\"type\":\"uint256\"}],\"name\":\"LifetimeExtended\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"Redeemed\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"cancel\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"getBeneficiary\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"getKeepalivePrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getLifetime\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"calldataSize\",\"type\":\"uint256\"}],\"name\":\"getSubmissionPrice\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"getTimeout\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"keepalive\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"txId\",\"type\":\"bytes32\"}],\"name\":\"redeem\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbRetryableTxFuncSigs maps the 4-byte function signature to its string representation.
 var ArbRetryableTxFuncSigs = map[string]string{
@@ -35,6 +35,7 @@ var ArbRetryableTxFuncSigs = map[string]string{
 	"ba20dda4": "getBeneficiary(bytes32)",
 	"b16607e5": "getKeepalivePrice(bytes32)",
 	"81e6e083": "getLifetime()",
+	"f88029dc": "getSubmissionPrice(uint256)",
 	"9f1025c6": "getTimeout(bytes32)",
 	"f0b21a41": "keepalive(bytes32)",
 	"eda1122c": "redeem(bytes32)",
@@ -274,6 +275,38 @@ func (_ArbRetryableTx *ArbRetryableTxSession) GetLifetime() (*big.Int, error) {
 // Solidity: function getLifetime() view returns(uint256)
 func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetLifetime() (*big.Int, error) {
 	return _ArbRetryableTx.Contract.GetLifetime(&_ArbRetryableTx.CallOpts)
+}
+
+// GetSubmissionPrice is a free data retrieval call binding the contract method 0xf88029dc.
+//
+// Solidity: function getSubmissionPrice(uint256 calldataSize) view returns(uint256, uint256)
+func (_ArbRetryableTx *ArbRetryableTxCaller) GetSubmissionPrice(opts *bind.CallOpts, calldataSize *big.Int) (*big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _ArbRetryableTx.contract.Call(opts, &out, "getSubmissionPrice", calldataSize)
+
+	if err != nil {
+		return *new(*big.Int), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return out0, out1, err
+
+}
+
+// GetSubmissionPrice is a free data retrieval call binding the contract method 0xf88029dc.
+//
+// Solidity: function getSubmissionPrice(uint256 calldataSize) view returns(uint256, uint256)
+func (_ArbRetryableTx *ArbRetryableTxSession) GetSubmissionPrice(calldataSize *big.Int) (*big.Int, *big.Int, error) {
+	return _ArbRetryableTx.Contract.GetSubmissionPrice(&_ArbRetryableTx.CallOpts, calldataSize)
+}
+
+// GetSubmissionPrice is a free data retrieval call binding the contract method 0xf88029dc.
+//
+// Solidity: function getSubmissionPrice(uint256 calldataSize) view returns(uint256, uint256)
+func (_ArbRetryableTx *ArbRetryableTxCallerSession) GetSubmissionPrice(calldataSize *big.Int) (*big.Int, *big.Int, error) {
+	return _ArbRetryableTx.Contract.GetSubmissionPrice(&_ArbRetryableTx.CallOpts, calldataSize)
 }
 
 // GetTimeout is a free data retrieval call binding the contract method 0x9f1025c6.

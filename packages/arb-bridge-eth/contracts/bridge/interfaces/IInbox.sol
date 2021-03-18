@@ -62,6 +62,8 @@ interface IInbox is IMessageProvider {
         uint256 maxSubmissionCost,
         address submissionRefundAddress,
         address valueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
         bytes calldata data
     ) external payable returns (uint256);
 

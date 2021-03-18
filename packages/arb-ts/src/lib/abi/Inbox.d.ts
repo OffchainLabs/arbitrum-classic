@@ -24,7 +24,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
-    'createRetryableTicket(address,uint256,uint256,address,address,bytes)': FunctionFragment
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(address)': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
@@ -37,7 +37,16 @@ interface InboxInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'createRetryableTicket',
-    values: [string, BigNumberish, BigNumberish, string, string, BytesLike]
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
   ): string
   encodeFunctionData(functionFragment: 'depositEth', values: [string]): string
   encodeFunctionData(
@@ -138,16 +147,20 @@ export class Inbox extends Contract {
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
       destAddr: string,
       value: BigNumberish,
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
@@ -265,16 +278,20 @@ export class Inbox extends Contract {
     maxSubmissionCost: BigNumberish,
     submissionRefundAddress: string,
     valueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
     data: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+  'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
     destAddr: string,
     value: BigNumberish,
     maxSubmissionCost: BigNumberish,
     submissionRefundAddress: string,
     valueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
     data: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
@@ -392,16 +409,20 @@ export class Inbox extends Contract {
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
       destAddr: string,
       value: BigNumberish,
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -528,16 +549,20 @@ export class Inbox extends Contract {
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
       destAddr: string,
       value: BigNumberish,
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
@@ -656,16 +681,20 @@ export class Inbox extends Contract {
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'createRetryableTicket(address,uint256,uint256,address,address,bytes)'(
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
       destAddr: string,
       value: BigNumberish,
       maxSubmissionCost: BigNumberish,
       submissionRefundAddress: string,
       valueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
