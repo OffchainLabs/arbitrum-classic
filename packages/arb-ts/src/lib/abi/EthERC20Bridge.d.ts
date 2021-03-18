@@ -187,9 +187,9 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
-    'DepositCustomTokem(address,uint256,uint256,address)': EventFragment
-    'DepositERC20(address,uint256,uint256,address)': EventFragment
-    'DepositERC777(address,uint256,uint256,address)': EventFragment
+    'DepositCustomTokem(address,address,uint256,uint256,address)': EventFragment
+    'DepositERC20(address,address,uint256,uint256,address)': EventFragment
+    'DepositERC777(address,address,uint256,uint256,address)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DepositCustomTokem'): EventFragment
@@ -832,6 +832,7 @@ export class EthERC20Bridge extends Contract {
   filters: {
     DepositCustomTokem(
       destination: string | null,
+      sender: null,
       seqNum: BigNumberish | null,
       value: null,
       tokenAddress: null
@@ -839,6 +840,7 @@ export class EthERC20Bridge extends Contract {
 
     DepositERC20(
       destination: string | null,
+      sender: null,
       seqNum: BigNumberish | null,
       amount: null,
       tokenAddress: null
@@ -846,6 +848,7 @@ export class EthERC20Bridge extends Contract {
 
     DepositERC777(
       destination: string | null,
+      sender: null,
       seqNum: BigNumberish | null,
       amount: null,
       tokenAddress: null
