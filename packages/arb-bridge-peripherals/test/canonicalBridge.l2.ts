@@ -169,7 +169,6 @@ describe('Bridge peripherals layer 2', () => {
     // const balance777 = await erc777.balanceOf(account)
 
     const migrate = await erc20.migrate(amount, l2ERC777Address)
-
     const newBalance777 = await erc777.balanceOf(account)
     const newBalance20 = await erc20.balanceOf(account)
     assert.equal(
@@ -214,7 +213,7 @@ describe('Bridge peripherals layer 2', () => {
     }
   })
 
-  it.skip('should burn on withdraw', async function () {
+  it('should burn on withdraw', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
     const account = accounts[0].address
     const amount = '10'
@@ -241,33 +240,5 @@ describe('Bridge peripherals layer 2', () => {
 
     const newBalance = await erc777.balanceOf(account)
     assert.equal(newBalance.toString(), '0', 'Tokens not minted correctly')
-  })
-
-  it('should only allow transaction from self in symmetric bridge', async function () {
-    const SymmetricBridge = await ethers.getContractFactory(
-      'ArbSymmetricTokenBridge'
-    )
-    const symmetricBridge = await SymmetricBridge.deploy()
-
-    const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const account = '0x0000000000000000000000000000000000000002'
-    const amount = '1'
-    const decimals = '18'
-
-    try {
-      const tx = await symmetricBridge.mintERC20FromL1(
-        l1ERC20,
-        account,
-        amount,
-        decimals
-      )
-      assert.equal(true, false, 'Should have failed')
-    } catch (e) {
-      assert.equal(
-        e.message,
-        'execution reverted: ONLY_ETH_PAIR',
-        'Migration did not fail'
-      )
-    }
   })
 })
