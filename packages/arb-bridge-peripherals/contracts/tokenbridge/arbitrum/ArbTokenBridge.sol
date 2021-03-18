@@ -25,6 +25,7 @@ import "arb-bridge-eth/contracts/libraries/CloneFactory.sol";
 
 import "./IArbToken.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
+import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../ethereum/EthERC20Bridge.sol";
@@ -86,35 +87,85 @@ contract ArbTokenBridge is CloneFactory {
         l1Pair = _l1Pair;
     }
 
+    function executePostMintCall(
+        bytes memory postMintCall
+    ) internal returns (bool, address) {
+        // TODO: should first bit define if handleCallFail is called?
+        if(postMintCall.length < 40) return (false, address(0));
+
+        // TODO: build call() with assembly to avoid extra memory allocation
+        address destAddr = BytesLib.toAddress(postMintCall, 0);
+        address backupAddr = BytesLib.toAddress(postMintCall, 20);
+        bytes memory encodedFunction = BytesLib.slice(postMintCall, 40, postMintCall.length);
+
+        // TODO: what if user tries calling bridge mint from postMintCall?
+        // Set queryable variable and check if call originates from mint.
+        // TODO: Add this check to the token
+        (bool success, bytes memory ret) = destAddr.call(encodedFunction);
+
+        return (success, backupAddr);
+    }
+
+    function handleCallFail(
+        address token,
+        address account,
+        address backupAddr,
+        uint256 amount
+    ) internal {
+        // if user sent to bridge, then proxied a call that failed, send back to user
+        if(
+            account == address(this) &&
+            backupAddr != address(0) &&
+            backupAddr != account // I don't think this check is needed
+        ) {
+            // TODO: if this fails?
+            bool success = IERC20(token).transfer(backupAddr, amount);
+        } else {
+            // damn
+        }
+    }
+
     function mintERC777FromL1(
         address l1ERC20,
         address account,
         uint256 amount,
-        uint8 decimals
+        uint8 decimals,
+        bytes calldata postMintCall
     ) external onlyEthPair {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
         token.bridgeMint(account, amount);
+
+        (bool success, address backupAddr) = executePostMintCall(postMintCall);
+        if(!success) handleCallFail(address(token), account, backupAddr, amount);
     }
 
     function mintERC20FromL1(
         address l1ERC20,
         address account,
         uint256 amount,
-        uint8 decimals
+        uint8 decimals,
+        bytes calldata postMintCall
     ) external onlyEthPair {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
         token.bridgeMint(account, amount);
+
+        (bool success, address backupAddr) = executePostMintCall(postMintCall);
+        if(!success) handleCallFail(address(token), account, backupAddr, amount);
     }
 
     function mintCustomtokenFromL1(
         address l1ERC20,
         address account,
-        uint256 amount
+        uint256 amount,
+        bytes calldata postMintCall
     ) external onlyEthPair {
         address tokenAddress = customToken[l1ERC20];
         require(tokenAddress != address(0), "Custom Token doesn't exist");
         IArbToken token = IArbToken(tokenAddress);
         token.bridgeMint(account, amount);
+
+        (bool success, address backupAddr) = executePostMintCall(postMintCall);
+        if(!success) handleCallFail(address(token), account, backupAddr, amount);
     }
 
     function updateERC777TokenInfo(
