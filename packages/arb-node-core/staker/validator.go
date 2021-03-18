@@ -163,6 +163,13 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 
+	coreMessageCount, err := v.lookup.GetMessageCount()
+	if err != nil {
+		return nil, false, err
+	}
+	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
+		return nil, false, errors.New("catching up to chain")
+	}
 	cursor, err := v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
 	if err != nil {
 		return nil, false, err
@@ -172,9 +179,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 	if cursorHash != startState.MachineHash {
-		if cursor.TotalMessagesRead().Cmp(startState.TotalMessagesRead) < 0 {
-			return nil, false, errors.New("catching up to chain")
-		}
 		return nil, false, errors.Errorf("local machine doesn't match chain %v %v", cursor.TotalGasConsumed(), startState.TotalGasConsumed)
 	}
 
