@@ -16,14 +16,14 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, constants, utils } from 'ethers'
-import { EthERC20BridgeFactory } from './abi/EthERC20BridgeFactory'
+import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__Factory'
 import { EthERC20Bridge } from './abi/EthERC20Bridge'
 import { Inbox } from './abi/Inbox'
-import { InboxFactory } from './abi/InboxFactory'
+import { Inbox__factory } from './abi/factories/Inbox__Factory'
 import { ERC20 } from './abi/ERC20'
 
-import { ERC20Factory } from './abi/ERC20Factory'
-import { ERC777Factory } from './abi/ERC777Factory'
+import { ERC20__factory } from './abi/factories/ERC20__Factory'
+import { OZERC777__factory } from './abi/factories/OZERC777__Factory'
 import { addressToSymbol } from './bridge_helpers'
 
 utils.computeAddress
@@ -39,7 +39,7 @@ export interface L1TokenData {
     decimals: number
   }
   ERC777?: {
-    contract: ERC777Factory
+    contract: OZERC777__factory
     balance: BigNumber
     allowed: boolean
     symbol: string
@@ -75,7 +75,7 @@ export class L1Bridge {
       throw new Error('Signer must be connected to an Ethereum provider')
     }
     this.l1Provider = l1Provider
-    this.ethERC20Bridge = EthERC20BridgeFactory.connect(
+    this.ethERC20Bridge = EthERC20Bridge__factory.connect(
       erc20BridgeAddress,
       l1Signer
     )
@@ -101,7 +101,7 @@ export class L1Bridge {
     if (!tokenData.ERC20) {
       if ((await this.l1Provider.getCode(erc20L1Address)).length > 2) {
         // If this will throw if not an ERC20, which is what we *want*.
-        const ethERC20TokenContract = await ERC20Factory.connect(
+        const ethERC20TokenContract = await ERC20__factory.connect(
           erc20L1Address,
           this.l1Signer
         )
@@ -136,7 +136,7 @@ export class L1Bridge {
         throw new Error(`No ERC20 at ${erc20L1Address} `)
       }
     } else {
-      const ethERC20TokenContract = await ERC20Factory.connect(
+      const ethERC20TokenContract = await ERC20__factory.connect(
         erc20L1Address,
         this.l1Signer
       )
@@ -247,7 +247,7 @@ export class L1Bridge {
       return this.inboxCached
     }
     const inboxAddress = await this.ethERC20Bridge.inbox()
-    this.inboxCached = InboxFactory.connect(inboxAddress, this.l1Signer)
+    this.inboxCached = Inbox__factory.connect(inboxAddress, this.l1Signer)
     return this.inboxCached
   }
 
