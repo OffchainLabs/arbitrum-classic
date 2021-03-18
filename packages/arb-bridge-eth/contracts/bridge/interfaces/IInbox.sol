@@ -58,7 +58,7 @@ interface IInbox is IMessageProvider {
 
     function createRetryableTicket(
         address destAddr,
-        uint256 value,
+        uint256 arbTxCallValue,
         uint256 maxSubmissionCost,
         address submissionRefundAddress,
         address valueRefundAddress,

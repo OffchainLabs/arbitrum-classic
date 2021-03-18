@@ -169,7 +169,7 @@ contract Inbox is IInbox {
 
     function createRetryableTicket(
         address destAddr,
-        uint256 value,
+        uint256 arbTxCallValue,
         uint256 maxSubmissionCost,
         address submissionRefundAddress,
         address valueRefundAddress,
@@ -183,7 +183,7 @@ contract Inbox is IInbox {
                 destAddr,
                 abi.encodePacked(
                     uint256(uint160(bytes20(destAddr))),
-                    value,
+                    arbTxCallValue,
                     msg.value,
                     maxSubmissionCost,
                     uint256(uint160(bytes20(submissionRefundAddress))),
