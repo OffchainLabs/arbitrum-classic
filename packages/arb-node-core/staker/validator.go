@@ -164,10 +164,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 
-	coreMessageCount, err := v.lookup.GetMessageCount()
-	if err != nil {
-		return nil, false, err
-	}
+	coreMessageCount := v.lookup.MachineMessagesRead()
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
 		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
 	}
