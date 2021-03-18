@@ -34,6 +34,12 @@ contract Inbox is IInbox {
 
     IBridge public override bridge;
 
+    event DepositEthRetryable(
+        address indexed destination,
+        uint256 indexed seqNum,
+        uint256 value
+    );
+
     constructor(IBridge _bridge) public {
         bridge = _bridge;
     }
@@ -153,8 +159,7 @@ contract Inbox is IInbox {
     }
 
     function depositEth(address destAddr) external payable override returns (uint256) {
-        return
-            _deliverMessage(
+        uint256 seqNum = _deliverMessage(
                 L1MessageType_L2FundedByL1,
                 destAddr,
                 abi.encodePacked(
@@ -165,6 +170,8 @@ contract Inbox is IInbox {
                     msg.value
                 )
             );
+        emit DepositEthRetryable(destAddr, seqNum, msg.value);
+        return seqNum;
     }
 
     function depositEthRetryable(address destAddr, uint256 maxSubmissionCost, uint256 maxGas, uint256 maxGasPrice) external payable override returns (uint256) {
