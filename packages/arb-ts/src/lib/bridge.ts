@@ -18,8 +18,6 @@
 import { Signer, BigNumber, ethers, ContractReceipt } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
-import { BridgeFactory } from './abi/BridgeFactory'
-import { OutboxFactory } from './abi/OutboxFactory'
 
 interface L2ToL1EventResult {
   caller: string
@@ -40,6 +38,8 @@ interface BuddyDeployEventResult {
   withdrawalId: BigNumber
   success: boolean
 }
+import { Bridge__factory } from './abi/factories/Bridge__Factory'
+import { Outbox__factory } from './abi/factories/Outbox__Factory'
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -238,7 +238,7 @@ export class Bridge extends L2Bridge {
 
     const inbox = await this.l1Bridge.getInbox()
     const bridgeAddress = await inbox.bridge()
-    const bridge = await BridgeFactory.connect(
+    const bridge = await Bridge__factory.connect(
       bridgeAddress,
       this.l1Bridge.l1Provider
     )
@@ -283,7 +283,7 @@ export class Bridge extends L2Bridge {
     calldataForL1: string,
     retryDelay = 500
   ): Promise<ContractReceipt> => {
-    const outbox = OutboxFactory.connect(
+    const outbox = Outbox__factory.connect(
       activeOutboxAddress,
       this.l1Bridge.l1Signer
     )
