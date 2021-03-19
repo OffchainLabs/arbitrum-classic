@@ -52,7 +52,7 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
         }
     }
 
-    function bridgeMint(address account, uint256 amount) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount, bytes memory data) external override onlyBridge {
         _mint(account, amount);
     }
 
@@ -61,8 +61,9 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
         bridge.withdraw(l1Address, destination, amount);
     }
 
-    function migrate(uint256 amount, address target) external {
+    function migrate(uint256 amount, address target, bytes memory data) external {
         _burn(msg.sender, amount);
-        bridge.migrate(l1Address, target, msg.sender, amount);
+        // migrating from 20 to 777, so allow data
+        bridge.migrate(l1Address, target, msg.sender, amount, data);
     }
 }

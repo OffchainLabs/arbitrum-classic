@@ -162,11 +162,13 @@ contract EthERC20Bridge is L1Buddy {
 
     function depositToken(
         address erc20,
+        address sender,
         address destination,
         uint256 amount,
         uint256 maxGas,
         uint256 gasPriceBid,
-        StandardTokenType tokenType
+        StandardTokenType tokenType,
+        bytes memory callHookData
     ) private onlyIfConnected {
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         uint8 decimals = ERC20(erc20).decimals();
@@ -180,7 +182,7 @@ contract EthERC20Bridge is L1Buddy {
         sendPairedContractTransaction(
             maxGas,
             gasPriceBid,
-            abi.encodeWithSelector(selector, erc20, destination, amount, decimals)
+            abi.encodeWithSelector(selector, erc20, sender, destination, amount, decimals, callHookData)
         );
     }
 
@@ -189,9 +191,10 @@ contract EthERC20Bridge is L1Buddy {
         address destination,
         uint256 amount,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
+        bytes calldata callHookData
     ) external payable onlyIfConnected {
-        depositToken(erc20, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC777);
+        depositToken(erc20, msg.sender, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC777, callHookData);
     }
 
     function depositAsERC20(
@@ -200,8 +203,9 @@ contract EthERC20Bridge is L1Buddy {
         uint256 amount,
         uint256 maxGas,
         uint256 gasPriceBid
+        bytes calldata callHookData
     ) external payable onlyIfConnected {
-        depositToken(erc20, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC20);
+        depositToken(erc20, msg.sender, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC20, callHookData);
     }
 
     function depositAsCustomToken(
@@ -209,7 +213,8 @@ contract EthERC20Bridge is L1Buddy {
         address destination,
         uint256 amount,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
+        bytes calldata callHookData
     ) external payable onlyIfConnected {
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
@@ -218,10 +223,11 @@ contract EthERC20Bridge is L1Buddy {
             maxGas,
             gasPriceBid,
             abi.encodeWithSelector(
-                ArbTokenBridge.mintCustomtokenFromL1.selector,
+                ArbTokenBridge.mintCustomTokenFromL1.selector,
                 erc20,
                 destination,
-                amount
+                amount,
+                callHookData
             )
         );
     }

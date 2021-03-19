@@ -41,8 +41,8 @@ contract StandardArbERC777 is OZERC777, Cloneable, IArbToken {
         }
     }
 
-    function bridgeMint(address account, uint256 amount) external override onlyBridge {
-        _mint(account, amount.from20to777(l1Decimals), "", "");
+    function bridgeMint(address account, uint256 amount, bytes memory data) external override onlyBridge {
+        _mint(account, amount.from20to777(l1Decimals), data, "");
     }
 
     function withdraw(address destination, uint256 amount) external override {
@@ -52,6 +52,7 @@ contract StandardArbERC777 is OZERC777, Cloneable, IArbToken {
 
     function migrate(address target, uint256 amount) external {
         _burn(msg.sender, amount, "", "");
-        bridge.migrate(l1Address, target, msg.sender, amount);
+        // migrating from 777 to 20, so no data
+        bridge.migrate(l1Address, target, msg.sender, amount, '');
     }
 }
