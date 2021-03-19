@@ -28,9 +28,9 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'customTokenRegistered(address,address)': FunctionFragment
     'l1Pair()': FunctionFragment
     'migrate(address,address,address,uint256)': FunctionFragment
-    'mintCustomtokenFromL1(address,address,uint256)': FunctionFragment
-    'mintERC20FromL1(address,address,uint256,uint8)': FunctionFragment
-    'mintERC777FromL1(address,address,uint256,uint8)': FunctionFragment
+    'mintCustomtokenFromL1(address,address,uint256,bytes)': FunctionFragment
+    'mintERC20FromL1(address,address,uint256,uint8,bytes)': FunctionFragment
+    'mintERC777FromL1(address,address,uint256,uint8,bytes)': FunctionFragment
     'templateERC20()': FunctionFragment
     'templateERC777()': FunctionFragment
     'updateERC20TokenInfo(address,string,string,uint8)': FunctionFragment
@@ -58,15 +58,15 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'mintCustomtokenFromL1',
-    values: [string, string, BigNumberish]
+    values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'mintERC20FromL1',
-    values: [string, string, BigNumberish, BigNumberish]
+    values: [string, string, BigNumberish, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'mintERC777FromL1',
-    values: [string, string, BigNumberish, BigNumberish]
+    values: [string, string, BigNumberish, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'templateERC20',
@@ -214,13 +214,15 @@ export class ArbTokenBridge extends Contract {
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'mintCustomtokenFromL1(address,address,uint256)'(
+    'mintCustomtokenFromL1(address,address,uint256,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -229,14 +231,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'mintERC20FromL1(address,address,uint256,uint8)'(
+    'mintERC20FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -245,14 +249,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'mintERC777FromL1(address,address,uint256,uint8)'(
+    'mintERC777FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -374,13 +380,15 @@ export class ArbTokenBridge extends Contract {
     l1ERC20: string,
     account: string,
     amount: BigNumberish,
+    postMintCall: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'mintCustomtokenFromL1(address,address,uint256)'(
+  'mintCustomtokenFromL1(address,address,uint256,bytes)'(
     l1ERC20: string,
     account: string,
     amount: BigNumberish,
+    postMintCall: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -389,14 +397,16 @@ export class ArbTokenBridge extends Contract {
     account: string,
     amount: BigNumberish,
     decimals: BigNumberish,
+    postMintCall: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'mintERC20FromL1(address,address,uint256,uint8)'(
+  'mintERC20FromL1(address,address,uint256,uint8,bytes)'(
     l1ERC20: string,
     account: string,
     amount: BigNumberish,
     decimals: BigNumberish,
+    postMintCall: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -405,14 +415,16 @@ export class ArbTokenBridge extends Contract {
     account: string,
     amount: BigNumberish,
     decimals: BigNumberish,
+    postMintCall: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'mintERC777FromL1(address,address,uint256,uint8)'(
+  'mintERC777FromL1(address,address,uint256,uint8,bytes)'(
     l1ERC20: string,
     account: string,
     amount: BigNumberish,
     decimals: BigNumberish,
+    postMintCall: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -534,13 +546,15 @@ export class ArbTokenBridge extends Contract {
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'mintCustomtokenFromL1(address,address,uint256)'(
+    'mintCustomtokenFromL1(address,address,uint256,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -549,14 +563,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'mintERC20FromL1(address,address,uint256,uint8)'(
+    'mintERC20FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -565,14 +581,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'mintERC777FromL1(address,address,uint256,uint8)'(
+    'mintERC777FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -697,13 +715,15 @@ export class ArbTokenBridge extends Contract {
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'mintCustomtokenFromL1(address,address,uint256)'(
+    'mintCustomtokenFromL1(address,address,uint256,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -712,14 +732,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'mintERC20FromL1(address,address,uint256,uint8)'(
+    'mintERC20FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -728,14 +750,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'mintERC777FromL1(address,address,uint256,uint8)'(
+    'mintERC777FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -861,13 +885,15 @@ export class ArbTokenBridge extends Contract {
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'mintCustomtokenFromL1(address,address,uint256)'(
+    'mintCustomtokenFromL1(address,address,uint256,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -876,14 +902,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'mintERC20FromL1(address,address,uint256,uint8)'(
+    'mintERC20FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -892,14 +920,16 @@ export class ArbTokenBridge extends Contract {
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'mintERC777FromL1(address,address,uint256,uint8)'(
+    'mintERC777FromL1(address,address,uint256,uint8,bytes)'(
       l1ERC20: string,
       account: string,
       amount: BigNumberish,
       decimals: BigNumberish,
+      postMintCall: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

@@ -50,6 +50,7 @@ export type { IExitLiquidityProvider } from './IExitLiquidityProvider'
 export type { SignedLiquidityProvider } from './SignedLiquidityProvider'
 export type { StakedLiquidityProvider } from './StakedLiquidityProvider'
 export type { SafeERC20Namer } from './SafeERC20Namer'
+export type { L2Called } from './L2Called'
 
 export { Ownable__factory } from './factories/Ownable__factory'
 export { IERC1820Registry__factory } from './factories/IERC1820Registry__factory'
@@ -100,3 +101,4 @@ export { IExitLiquidityProvider__factory } from './factories/IExitLiquidityProvi
 export { SignedLiquidityProvider__factory } from './factories/SignedLiquidityProvider__factory'
 export { StakedLiquidityProvider__factory } from './factories/StakedLiquidityProvider__factory'
 export { SafeERC20Namer__factory } from './factories/SafeERC20Namer__factory'
+export { L2Called__factory } from './factories/L2Called__factory'

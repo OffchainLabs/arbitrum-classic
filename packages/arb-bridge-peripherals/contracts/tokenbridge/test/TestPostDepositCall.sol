@@ -18,8 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-import "../ethereum/EthERC20Bridge.sol";
-import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+// import "../ethereum/EthERC20Bridge.sol";
+// import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 // contract TestPostDepositCall {
 //     EthERC20Bridge tokenBridge;
@@ -44,13 +44,13 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 //     }
 // }
 
-// contract L2Called {
-//     event Called(bool success);
+contract L2Called {
+    event Called(uint256 num);
     
-//     constructor() {}
+    constructor() public {}
 
-//     // This function can be anything
-//     function postDepositHook(bool success) {
-//         emit Called(success);
-//     }
-// }
+    // This function can be anything
+    function postDepositHook(uint256 num) public {
+        emit Called(num);
+    }
+}
