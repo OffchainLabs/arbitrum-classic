@@ -31,7 +31,7 @@ import { ArbRetryableTx } from './abi/ArbRetryableTx'
 import { StandardArbERC777 } from './abi/StandardArbERC777'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E' // TODO
+const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
 
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
