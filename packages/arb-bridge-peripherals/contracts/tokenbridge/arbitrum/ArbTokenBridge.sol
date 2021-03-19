@@ -87,8 +87,6 @@ contract ArbTokenBridge is CloneFactory {
         l1Pair = _l1Pair;
     }
 
-    event Tester(bool success, address dest);
-
     function executePostMintCall(
         bytes memory postMintCall
     ) internal returns (bool, address) {

@@ -122,8 +122,6 @@ describe('Bridge peripherals layer 2', () => {
     
     const num = 5;
     const encodedFunction = l2Deployed.interface.encodeFunctionData("postDepositHook", [num])
-    console.log("encodedFunction")
-    console.log(encodedFunction)
 
     const postMintCall = ethers.utils.hexlify(ethers.utils.concat([
       account,
@@ -144,7 +142,6 @@ describe('Bridge peripherals layer 2', () => {
     const receipt = await tx.wait()
 
     const eventTopic = l2Deployed.interface.getEventTopic('Called(uint256)')
-    console.log("eventTopic", eventTopic)
 
     const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
 
@@ -153,7 +150,14 @@ describe('Bridge peripherals layer 2', () => {
       1,
       'Token post mint hook not triggered'
     )
-
+    
+    const actualNum = ethers.BigNumber.from(filteredEvents[0].data)
+    assert.equal(
+      actualNum.toNumber(),
+      num,
+      'Token event called in hook emitted wrong num'
+    )
+    
     const postTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.notEqual(
       postTokenCode,
