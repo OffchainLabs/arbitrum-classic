@@ -51,6 +51,11 @@ int arbCoreMachineIdle(CArbCore* arbcore_ptr) {
     return arb_core->machineIdle();
 }
 
+void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    return returnUint256(arb_core->machineMessagesRead());
+}
+
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            ByteSliceArray inbox_messages,
                            void* previous_inbox_acc_ptr,

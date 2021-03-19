@@ -16,6 +16,9 @@ type InboxReader struct {
 	bridge            *ethbridge.BridgeWatcher
 	db                core.ArbCore
 	firstMessageBlock *big.Int
+	caughtUp          bool
+	caughtUpChan      chan bool
+	caughtUpTarget    *big.Int
 
 	// Only in main thread
 	running    bool
@@ -33,6 +36,7 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db cor
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
 		completed:         make(chan bool, 1),
+		caughtUpChan:      make(chan bool, 1),
 	}, nil
 }
 
@@ -65,6 +69,11 @@ func (ir *InboxReader) IsRunning() bool {
 	return ir.running
 }
 
+// May only be called once
+func (ir *InboxReader) WaitToCatchUp() {
+	<-ir.caughtUpChan
+}
+
 func (ir *InboxReader) getMessages(ctx context.Context) error {
 	from, err := ir.getNextBlockToRead()
 	if err != nil {
@@ -84,6 +93,13 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			return err
 		}
 		for {
+			if !ir.caughtUp && ir.caughtUpTarget != nil {
+				arbCorePosition := ir.db.MachineMessagesRead()
+				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
+					ir.caughtUp = true
+					ir.caughtUpChan <- true
+				}
+			}
 			if from.Cmp(currentHeight) >= 0 {
 				break
 			}
@@ -94,6 +110,17 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			newMessages, err := ir.bridge.LookupMessagesInRange(ctx, from, to)
 			if err != nil {
 				return err
+			}
+			if ir.caughtUpTarget == nil && to.Cmp(currentHeight) == 0 {
+				if len(newMessages) > 0 {
+					ir.caughtUpTarget = newMessages[len(newMessages)-1].Message.InboxSeqNum
+				} else {
+					dbMessageCount, err := ir.db.GetMessageCount()
+					if err != nil {
+						return err
+					}
+					ir.caughtUpTarget = dbMessageCount
+				}
 			}
 			if len(newMessages) < 40 {
 				blocksToFetch += 20
