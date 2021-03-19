@@ -61,10 +61,16 @@ contract EthBatchTokenReceiver is L1Buddy {
     constructor(
         address _inbox,
         address _l2Deployer,
+        uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPrice
     ) public payable L1Buddy(_inbox, _l2Deployer) {
-        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, type(ArbBatchTokenMover).creationCode);
+        L1Buddy.initiateBuddyDeploy(
+            _maxSubmissionCost,
+            _maxGas,
+            _gasPrice,
+            type(ArbBatchTokenMover).creationCode
+        );
     }
 
     function handleDeploySuccess() internal override {

@@ -42,6 +42,16 @@ contract EthERC20Bridge is L1Buddy {
     address private immutable l2TemplateERC777;
     address private immutable l2TemplateERC20;
 
+    event ActivateCustomToken(uint256 indexed seqNum, address indexed l1Address, address l2Address);
+
+    event UpdateTokenInfo(
+        uint256 indexed seqNum,
+        address indexed l1Address,
+        string name,
+        string symbol,
+        uint8 decimals
+    );
+
     event DepositERC20(
         address indexed destination,
         address sender,
@@ -58,7 +68,7 @@ contract EthERC20Bridge is L1Buddy {
         address tokenAddress
     );
 
-    event DepositCustomTokem(
+    event DepositCustomToken(
         address indexed destination,
         address sender,
         uint256 indexed seqNum,
@@ -69,6 +79,7 @@ contract EthERC20Bridge is L1Buddy {
     constructor(
         address _inbox,
         address _l2Deployer,
+        uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPrice,
         address _l2TemplateERC777,
@@ -84,7 +95,7 @@ contract EthERC20Bridge is L1Buddy {
             );
 
         // TODO: this stores the creation code in state, but we don't actually need that
-        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, deployCode);
+        L1Buddy.initiateBuddyDeploy(_maxSubmissionCost, _maxGas, _gasPrice, deployCode);
     }
 
     function handleDeploySuccess() internal override {
@@ -101,16 +112,27 @@ contract EthERC20Bridge is L1Buddy {
      */
     function notifyCustomToken(
         address l1Address,
+        uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable {
+    ) external payable returns (uint256) {
         address l2Address = customL2Tokens[l1Address];
         require(l2Address != address(0), "NOT_REGISTERED");
-        sendPairedContractTransaction(
-            maxGas,
-            gasPriceBid,
-            abi.encodeWithSignature("customTokenRegistered(address,address)", l1Address, l2Address)
-        );
+        bytes memory data =
+            abi.encodeWithSignature("customTokenRegistered(address,address)", l1Address, l2Address);
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
+                L1Buddy.l2Buddy,
+                0,
+                maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                maxGas,
+                gasPriceBid,
+                data
+            );
+        emit ActivateCustomToken(seqNum, l1Address, l2Address);
+        return seqNum;
     }
 
     function registerCustomL2Token(address l2Address) external {
@@ -163,24 +185,38 @@ contract EthERC20Bridge is L1Buddy {
 
     function updateTokenInfo(
         address erc20,
+        bool isERC20,
+        uint256 maxSubmissionCost,
         uint256 maxGas,
-        uint256 gasPriceBid,
-        bool isERC20
-    ) external payable onlyIfConnected {
+        uint256 gasPriceBid
+    ) external payable onlyIfConnected returns (uint256) {
         string memory name = SafeERC20Namer.tokenName(erc20);
         string memory symbol = SafeERC20Namer.tokenSymbol(erc20);
         uint8 decimals = ERC20(erc20).decimals();
 
-        bytes4 _selector =
-            isERC20
-                ? ArbTokenBridge.updateERC777TokenInfo.selector
-                : ArbTokenBridge.updateERC20TokenInfo.selector;
-
-        sendPairedContractTransaction(
-            maxGas,
-            gasPriceBid,
-            abi.encodeWithSelector(_selector, erc20, name, symbol, decimals)
-        );
+        bytes memory data =
+            abi.encodeWithSelector(
+                isERC20
+                    ? ArbTokenBridge.updateERC777TokenInfo.selector
+                    : ArbTokenBridge.updateERC20TokenInfo.selector,
+                erc20,
+                name,
+                symbol,
+                decimals
+            );
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
+                L1Buddy.l2Buddy,
+                0,
+                maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                maxGas,
+                gasPriceBid,
+                data
+            );
+        emit UpdateTokenInfo(seqNum, erc20, name, symbol, decimals);
+        return seqNum;
     }
 
     function depositToken(
@@ -214,7 +250,7 @@ contract EthERC20Bridge is L1Buddy {
         );
 
         return
-            inbox.createRetryableTicket(
+            inbox.createRetryableTicket{ value: msg.value }(
                 destination,
                 0,
                 maxSubmissionCost,
@@ -297,7 +333,7 @@ contract EthERC20Bridge is L1Buddy {
                 callHookData
             );
         uint256 seqNum =
-            inbox.createRetryableTicket(
+            inbox.createRetryableTicket{ value: msg.value }(
                 destination,
                 0,
                 maxSubmissionCost,
@@ -307,7 +343,7 @@ contract EthERC20Bridge is L1Buddy {
                 gasPriceBid,
                 data
             );
-        emit DepositCustomTokem(destination, msg.sender, seqNum, amount, erc20);
+        emit DepositCustomToken(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
 
@@ -319,15 +355,5 @@ contract EthERC20Bridge is L1Buddy {
     function calculateL2ERC20Address(address erc20) external view returns (address) {
         bytes32 salt = bytes32(uint256(erc20));
         return Clones.predictDeterministicAddress(l2TemplateERC20, salt, L1Buddy.l2Buddy);
-    }
-
-    // TODO: does this carry over the msg.value of the internal call implicitly?
-    function sendPairedContractTransaction(
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes memory data
-    ) private {
-        inbox.depositEth{ value: msg.value }(L1Buddy.l2Buddy);
-        inbox.sendContractTransaction(maxGas, gasPriceBid, L1Buddy.l2Buddy, 0, data);
     }
 }
