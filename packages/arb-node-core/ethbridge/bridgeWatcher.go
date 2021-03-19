@@ -58,7 +58,7 @@ func init() {
 }
 
 type InboxMessageGetter interface {
-	fillMessageDetails(ctx context.Context, messageNums []*big.Int, txData map[string]*types.Transaction, messages map[string][]byte) error
+	fillMessageDetails(ctx context.Context, messageNums []*big.Int, txData map[string]*types.Transaction, messages map[string][]byte, minBlockNum, maxBlockNum uint64) error
 }
 
 type BridgeWatcher struct {
@@ -152,10 +152,21 @@ func (d DeliveredInboxMessageList) Less(i, j int) bool {
 }
 
 func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []types.Log) ([]*DeliveredInboxMessage, error) {
+	if len(logs) == 0 {
+		return nil, nil
+	}
 	messagesByInbox := make(map[ethcommon.Address][]*big.Int)
 	rawMessages := make(map[string]*ethbridgecontracts.BridgeMessageDelivered)
 	rawTransactions := make(map[string]*types.Transaction)
+	minBlockNum := uint64(math.MaxUint64)
+	maxBlockNum := uint64(0)
 	for _, ethLog := range logs {
+		if ethLog.BlockNumber < minBlockNum {
+			minBlockNum = ethLog.BlockNumber
+		}
+		if ethLog.BlockNumber > maxBlockNum {
+			maxBlockNum = ethLog.BlockNumber
+		}
 		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
 		if err != nil {
 			return nil, err
@@ -177,7 +188,7 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 		if err != nil {
 			return nil, err
 		}
-		if err := inboxGetter.fillMessageDetails(ctx, indexes, rawTransactions, messageData); err != nil {
+		if err := inboxGetter.fillMessageDetails(ctx, indexes, rawTransactions, messageData, minBlockNum, maxBlockNum); err != nil {
 			return nil, err
 		}
 	}
