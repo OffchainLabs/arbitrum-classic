@@ -42,7 +42,6 @@ contract EthERC20Bridge is L1Buddy {
     address private immutable l2TemplateERC777;
     address private immutable l2TemplateERC20;
 
-
     event DepositERC20(
         address indexed destination,
         address sender,
@@ -59,16 +58,13 @@ contract EthERC20Bridge is L1Buddy {
         address tokenAddress
     );
 
-
     event DepositCustomTokem(
         address indexed destination,
         address sender,
         uint256 indexed seqNum,
         uint256 value,
         address tokenAddress
-
     );
-
 
     constructor(
         address _inbox,
@@ -78,14 +74,14 @@ contract EthERC20Bridge is L1Buddy {
         address _l2TemplateERC777,
         address _l2TemplateERC20
     ) public payable L1Buddy(_inbox, _l2Deployer) {
-        
         l2TemplateERC777 = _l2TemplateERC777;
         l2TemplateERC20 = _l2TemplateERC20;
 
-        bytes memory deployCode = abi.encodePacked(
-            type(ArbTokenBridge).creationCode,
-            abi.encode(address(this), _l2TemplateERC20, _l2TemplateERC777)
-        );
+        bytes memory deployCode =
+            abi.encodePacked(
+                type(ArbTokenBridge).creationCode,
+                abi.encode(address(this), _l2TemplateERC20, _l2TemplateERC777)
+            );
 
         // TODO: this stores the creation code in state, but we don't actually need that
         L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, deployCode);
@@ -195,7 +191,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxGas,
         uint256 gasPriceBid,
         StandardTokenType tokenType
-    ) private onlyIfConnected returns(uint256) {
+    ) private returns (uint256) {
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
         uint8 decimals = ERC20(erc20).decimals();
         bytes4 selector;
@@ -206,16 +202,17 @@ contract EthERC20Bridge is L1Buddy {
         }
 
         bytes memory data = abi.encodeWithSelector(selector, erc20, destination, amount, decimals);
-        return inbox.createRetryableTicket(
-            destination,
-            0,
-            maxSubmissionCost,
-            msg.sender,
-            msg.sender,
-            maxGas,
-            gasPriceBid,
-            data
-        );
+        return
+            inbox.createRetryableTicket(
+                destination,
+                0,
+                maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                maxGas,
+                gasPriceBid,
+                data
+            );
     }
 
     function depositAsERC777(
@@ -225,8 +222,17 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected returns(uint256) {
-        uint256 seqNum = depositToken(erc20, destination, amount, maxSubmissionCost, maxGas, gasPriceBid, StandardTokenType.ERC777);
+    ) external payable returns (uint256) {
+        uint256 seqNum =
+            depositToken(
+                erc20,
+                destination,
+                amount,
+                maxSubmissionCost,
+                maxGas,
+                gasPriceBid,
+                StandardTokenType.ERC777
+            );
         emit DepositERC777(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
@@ -238,8 +244,17 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected returns(uint256) {
-        uint256 seqNum = depositToken(erc20, destination, amount, maxSubmissionCost, maxGas, gasPriceBid, StandardTokenType.ERC20);
+    ) external payable returns (uint256) {
+        uint256 seqNum =
+            depositToken(
+                erc20,
+                destination,
+                amount,
+                maxSubmissionCost,
+                maxGas,
+                gasPriceBid,
+                StandardTokenType.ERC20
+            );
         emit DepositERC20(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
@@ -251,25 +266,27 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected returns(uint256) {
+    ) external payable returns (uint256) {
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
         require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
-        bytes memory data = abi.encodeWithSelector(
+        bytes memory data =
+            abi.encodeWithSelector(
                 ArbTokenBridge.mintCustomtokenFromL1.selector,
                 erc20,
                 destination,
                 amount
             );
-        uint256 seqNum =  inbox.createRetryableTicket(
-            destination,
-            0,
-            maxSubmissionCost,
-            msg.sender,
-            msg.sender,
-            maxGas,
-            gasPriceBid,
-            data
-        );
+        uint256 seqNum =
+            inbox.createRetryableTicket(
+                destination,
+                0,
+                maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                maxGas,
+                gasPriceBid,
+                data
+            );
         emit DepositCustomTokem(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }
