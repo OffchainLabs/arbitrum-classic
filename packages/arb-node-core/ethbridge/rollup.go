@@ -23,6 +23,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -58,7 +59,7 @@ func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *Bu
 
 func (r *Rollup) RejectNextNode(ctx context.Context, staker common.Address) error {
 	_, err := r.builderCon.RejectNextNode(authWithContext(ctx, r.builderAuth), staker.ToEthAddress())
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion, sends [][]byte) error {
@@ -78,21 +79,21 @@ func (r *Rollup) ConfirmNextNode(ctx context.Context, assertion *core.Assertion,
 		assertion.After.LogAcc,
 		assertion.After.TotalLogCount,
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) NewStake(ctx context.Context, amount *big.Int) error {
 	tokenType, err := r.StakeToken(ctx)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	emptyAddress := common.Address{}
 	if tokenType != emptyAddress {
 		_, err := r.builderCon.NewStake(authWithContext(ctx, r.builderAuth), amount)
-		return err
+		return errors.WithStack(err)
 	} else {
 		_, err := r.builderCon.NewStake(authWithContextAndAmount(ctx, r.builderAuth, amount), big.NewInt(0))
-		return err
+		return errors.WithStack(err)
 	}
 }
 
@@ -102,7 +103,7 @@ func (r *Rollup) StakeOnExistingNode(ctx context.Context, nodeNumber core.NodeID
 		nodeNumber,
 		nodeHash,
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) StakeOnNewNode(
@@ -120,18 +121,18 @@ func (r *Rollup) StakeOnNewNode(
 		prevProposedBlock,
 		prevInboxMaxCount,
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) ReturnOldDeposit(ctx context.Context, staker common.Address) error {
 	_, err := r.builderCon.ReturnOldDeposit(authWithContext(ctx, r.builderAuth), staker.ToEthAddress())
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amount *big.Int) error {
 	tokenType, err := r.StakeToken(ctx)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	emptyAddress := common.Address{}
 	if tokenType != emptyAddress {
@@ -140,20 +141,20 @@ func (r *Rollup) AddToDeposit(ctx context.Context, address common.Address, amoun
 			address.ToEthAddress(),
 			amount,
 		)
-		return err
+		return errors.WithStack(err)
 	} else {
 		_, err := r.builderCon.AddToDeposit(
 			authWithContextAndAmount(ctx, r.builderAuth, amount),
 			address.ToEthAddress(),
 			big.NewInt(0),
 		)
-		return err
+		return errors.WithStack(err)
 	}
 }
 
 func (r *Rollup) ReduceDeposit(ctx context.Context, amount *big.Int) error {
 	_, err := r.builderCon.ReduceDeposit(authWithContext(ctx, r.builderAuth), amount)
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) CreateChallenge(
@@ -180,15 +181,15 @@ func (r *Rollup) CreateChallenge(
 			node2.Assertion.After.TotalMessagesRead,
 		},
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) RemoveZombie(ctx context.Context, zombieNum *big.Int, maxNodes *big.Int) error {
 	_, err := r.builderCon.RemoveZombie(authWithContext(ctx, r.builderAuth), zombieNum, maxNodes)
-	return err
+	return errors.WithStack(err)
 }
 
 func (r *Rollup) RemoveOldZombies(ctx context.Context, startIndex *big.Int) error {
 	_, err := r.builderCon.RemoveOldZombies(authWithContext(ctx, r.builderAuth), startIndex)
-	return err
+	return errors.WithStack(err)
 }
