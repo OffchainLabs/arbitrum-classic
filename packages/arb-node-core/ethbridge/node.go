@@ -22,6 +22,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/pkg/errors"
 	"math/big"
 )
 
@@ -32,7 +33,7 @@ type NodeWatcher struct {
 func NewNodeWatcher(address ethcommon.Address, client ethutils.EthClient) (*NodeWatcher, error) {
 	con, err := ethbridgecontracts.NewINode(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &NodeWatcher{
@@ -41,13 +42,16 @@ func NewNodeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Node
 }
 
 func (n *NodeWatcher) Prev(ctx context.Context) (*big.Int, error) {
-	return n.con.Prev(&bind.CallOpts{Context: ctx})
+	prev, err := n.con.Prev(&bind.CallOpts{Context: ctx})
+	return prev, errors.WithStack(err)
 }
 
 func (n *NodeWatcher) DeadlineBlock(ctx context.Context) (*big.Int, error) {
-	return n.con.DeadlineBlock(&bind.CallOpts{Context: ctx})
+	block, err := n.con.DeadlineBlock(&bind.CallOpts{Context: ctx})
+	return block, errors.WithStack(err)
 }
 
 func (n *NodeWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
-	return n.con.StakerCount(&bind.CallOpts{Context: ctx})
+	count, err := n.con.StakerCount(&bind.CallOpts{Context: ctx})
+	return count, errors.WithStack(err)
 }
