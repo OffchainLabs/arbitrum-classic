@@ -73,7 +73,7 @@ type BridgeWatcher struct {
 func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*BridgeWatcher, error) {
 	con, err := ethbridgecontracts.NewBridge(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &BridgeWatcher{
@@ -87,7 +87,7 @@ func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Br
 func (r *BridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
 	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return latestHeader.Number, nil
 }

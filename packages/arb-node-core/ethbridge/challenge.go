@@ -60,11 +60,11 @@ type Challenge struct {
 func NewChallenge(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
 	builderCon, err := ethbridgecontracts.NewChallenge(address, builder)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	watcher, err := NewChallengeWatcher(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &Challenge{
 		ChallengeWatcher: watcher,
