@@ -181,7 +181,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	}
 
 	// Not necessarily successors
-	successorNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash)
+	successorNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash, startState.ProposedBlock)
 	if err != nil {
 		return nil, false, err
 	}

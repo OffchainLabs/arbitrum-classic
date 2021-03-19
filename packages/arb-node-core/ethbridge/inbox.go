@@ -67,6 +67,7 @@ func (r *StandardInboxWatcher) fillMessageDetails(
 	messageNums []*big.Int,
 	txData map[string]*types.Transaction,
 	messages map[string][]byte,
+	minBlockNum, maxBlockNum uint64,
 ) error {
 	msgQuery := make([]ethcommon.Hash, 0, len(messageNums))
 	for _, messageNum := range messageNums {
@@ -77,8 +78,9 @@ func (r *StandardInboxWatcher) fillMessageDetails(
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
-		ToBlock:   nil,
+		FromBlock: new(big.Int).SetUint64(minBlockNum),
+		// Not sure whether this is inclusive or exclusive so adding 1 just in case
+		ToBlock:   new(big.Int).SetUint64(maxBlockNum + 1),
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{inboxMessageDeliveredID, inboxMessageFromOriginID}, msgQuery},
 	}

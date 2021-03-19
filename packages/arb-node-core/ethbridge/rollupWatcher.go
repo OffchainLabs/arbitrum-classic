@@ -99,7 +99,7 @@ func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*Ro
 func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupRollupCreated, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
@@ -123,7 +123,7 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	copy(numberAsHash[:], math.U256Bytes(number))
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {numberAsHash}},
@@ -157,13 +157,13 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	}, nil
 }
 
-func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]byte) ([]*core.NodeInfo, error) {
+func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]byte, fromBlock *big.Int) ([]*core.NodeInfo, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: fromBlock,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {}, {parentHash}},
+		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, nil, {parentHash}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{challengeCreatedID}, {addressQuery}},
