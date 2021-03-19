@@ -18,8 +18,10 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+	"github.com/pkg/errors"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -92,7 +94,7 @@ func (c *Challenge) BisectExecution(
 		subCuts[0].(*core.ExecutionState).RestHash(),
 		subCutHashes,
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func (c *Challenge) OneStepProveExecution(
@@ -137,7 +139,7 @@ func (c *Challenge) OneStepProveExecution(
 		bufferProof,
 		prover,
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func (c *Challenge) ProveContinuedExecution(
@@ -159,7 +161,7 @@ func (c *Challenge) ProveContinuedExecution(
 		beforeCut.TotalGasConsumed,
 		beforeCut.RestHash(),
 	)
-	return err
+	return errors.WithStack(err)
 }
 
 func cutsToHashes(cuts []core.Cut) [][32]byte {
