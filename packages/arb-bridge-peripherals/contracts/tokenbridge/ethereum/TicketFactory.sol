@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.6.0;
 
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
-contract TicketFactory is ERC721 {
-  constructor() ERC721("Arb Bridge Withdrawal Ticket", "WDRW") public {}
+contract TicketFactory is ERC1155 {
+  constructor() ERC1155("") public {}
 
   function createId(
     address bridge, 
@@ -22,20 +22,21 @@ contract TicketFactory is ERC721 {
     address recipient
   ) external returns (uint256 id) {
     id = createId(msg.sender, token, owner, exitNum);
-    _mint(recipient, id);
+    _mint(recipient, id, 1, '');
   }
 
-  function exists(uint256 tokenId) public view returns (bool) {
-    return _exists(tokenId);
+  function holdsTicket(address holder, uint256 tokenId) public view returns (bool) {
+    return balanceOf(holder, tokenId) == 1;
   }
 
-  function exists(
+  function holdsTicket(
+    address holder,
     address bridge, 
     address token, 
     address owner, 
     uint256 exitNum
   ) public view returns (bool) {
-    return _exists(createId(bridge, token, owner, exitNum));
+    return balanceOf(holder, createId(bridge, token, owner, exitNum)) == 1;
   }
 
   function burn(
@@ -45,6 +46,6 @@ contract TicketFactory is ERC721 {
   ) external returns (address tokenOwner) {
     uint256 id = createId(msg.sender, token, owner, exitNum);
     tokenOwner = ownerOf(id);
-    _burn(id);
+    _burn(id, 1);
   }
 }
