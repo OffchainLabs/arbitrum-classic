@@ -83,7 +83,8 @@ describe('Bridge peripherals layer 2', () => {
       l1ERC20,
       account,
       amount,
-      decimals
+      decimals,
+      '0x'
     )
 
     const postTokenCode = await ethers.provider.getCode(l2ERC20Address)
@@ -117,7 +118,8 @@ describe('Bridge peripherals layer 2', () => {
       l1ERC20,
       account,
       amount,
-      decimals
+      decimals,
+      '0x'
     )
 
     const postTokenCode = await ethers.provider.getCode(l2ERC777Address)
@@ -144,13 +146,15 @@ describe('Bridge peripherals layer 2', () => {
       l1ERC20,
       account,
       amount,
-      decimals
+      decimals,
+      '0x'
     )
     const tx777 = await testBridge.mintERC777FromL1(
       l1ERC20,
       account,
       amount,
-      decimals
+      decimals,
+      '0x'
     )
 
     const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
@@ -193,7 +197,8 @@ describe('Bridge peripherals layer 2', () => {
       l1ERC20,
       account,
       amount,
-      decimals
+      decimals,
+      '0x'
     )
 
     const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
@@ -227,7 +232,8 @@ describe('Bridge peripherals layer 2', () => {
       l1ERC20,
       account,
       amount,
-      decimals
+      decimals,
+      '0x'
     )
 
     const Erc777 = await ethers.getContractFactory('StandardArbERC777')
