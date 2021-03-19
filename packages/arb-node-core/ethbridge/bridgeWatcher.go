@@ -18,10 +18,11 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
 	"sort"
 	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -101,7 +102,7 @@ func (r *BridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	for _, evmLog := range logs {
 		monitor.GlobalMonitor.ReaderGotBatch(common.NewHashFromEth(evmLog.TxHash))
@@ -122,7 +123,7 @@ func (r *BridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if len(logs) == 0 {
 		return nil, errors.New("log not found")
@@ -154,7 +155,7 @@ func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return r.logsToDeliveredMessages(ctx, logs)
 }
@@ -180,7 +181,7 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 	for _, ethLog := range logs {
 		parsedLog, err := r.con.ParseMessageDelivered(ethLog)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		messagesByInbox[parsedLog.Inbox] = append(messagesByInbox[parsedLog.Inbox], parsedLog.MessageIndex)
 		messageKey := string(parsedLog.MessageIndex.Bytes())
@@ -188,7 +189,7 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 
 		txData, err := r.client.TransactionInBlock(ctx, ethLog.BlockHash, ethLog.TxIndex)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		rawTransactions[messageKey] = txData
 	}
@@ -197,10 +198,10 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 	for con, indexes := range messagesByInbox {
 		inboxGetter, err := r.getInboxGetter(con)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if err := inboxGetter.fillMessageDetails(ctx, indexes, rawTransactions, messageData); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 	}
 
@@ -220,7 +221,7 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 		if !ok {
 			header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 			blockTime = new(big.Int).SetUint64(header.Time)
 			blockTimes[rawMsg.Raw.BlockHash] = blockTime
@@ -259,7 +260,7 @@ func (r *BridgeWatcher) getInboxGetter(inboxAddress ethcommon.Address) (InboxMes
 
 	curInbox, err := NewStandardInboxWatcher(inboxAddress, r.client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	r.inboxes[inboxAddress] = curInbox
 	return curInbox, nil

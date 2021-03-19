@@ -18,14 +18,16 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var logger = log.With().Caller().Str("component", "ethbridge").Logger()
@@ -50,6 +52,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	auth := t.getAuth(ctx)
 
 	addr, tx, _, err := contractFunc(auth)
+	err = errors.WithStack(err)
 
 	if auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
@@ -69,6 +72,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		auth.Nonce = t.auth.Nonce
 		addr, tx, _, err = contractFunc(auth)
+		err = errors.WithStack(err)
 
 		time.Sleep(100 * time.Millisecond)
 	}
