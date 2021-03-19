@@ -229,6 +229,69 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
+  it.only('should revert post mint call if sent to EOA', async function () {
+    const l1ERC20 = '0x0000000000000000000000000000000000000325'
+    const sender = '0x0000000000000000000000000000000000000005'
+    const amount = '1'
+    const decimals = '18'
+
+    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
+      l1ERC20
+    )
+
+    const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
+    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
+
+    // const L2Called = await ethers.getContractFactory('L2Called')
+    // const l2Called = await L2Called.deploy()
+    const dest = sender;
+    const num = 7;
+    const callHookData = ethers.utils.defaultAbiCoder.encode(["uint256"], [num])
+
+    const tx = await testBridge.mintERC20FromL1(
+      l1ERC20,
+      sender,
+      dest,
+      amount,
+      decimals,
+      callHookData
+    )
+    const receipt = await tx.wait()
+
+    // MintAndCallTriggered(bool);
+    const eventTopic = "0x1a3c7fa31e7eb02a6858cb2f7c3c83ce0ef14f44eb7e454cff78462e9a931866"
+
+    const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
+
+    assert.equal(
+      filteredEvents.length,
+      1,
+      'Token post mint hook should have emitted event'
+    )
+    
+    const success: boolean = filteredEvents[0].args.success
+    assert.equal(
+      success,
+      false,
+      'Token post mint hook should have reverted'
+    )
+
+    // dest should hold not hold amount when reverted
+    const Erc20 = await ethers.getContractFactory('OZERC20')
+    const erc20 = await Erc20.attach(l2ERC20Address)
+
+    assert.equal(
+      (await erc20.balanceOf(dest)).toString(),
+      '0',
+      "L2Called contract should not be holding coins"
+    )
+    assert.equal(
+      (await erc20.balanceOf(sender)).toString(),
+      amount,
+      "Sender should hold coins"
+    )
+  })
+
   it('should mint erc777 tokens correctly', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
     const sender = '0x0000000000000000000000000000000000000002'

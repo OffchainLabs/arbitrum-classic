@@ -291,6 +291,7 @@ contract EthERC20Bridge is L1Buddy {
             abi.encodeWithSelector(
                 ArbTokenBridge.mintCustomTokenFromL1.selector,
                 erc20,
+                msg.sender,
                 destination,
                 amount,
                 callHookData

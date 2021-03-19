@@ -162,7 +162,8 @@ contract ArbTokenBridge is CloneFactory {
 
     function mintCustomTokenFromL1(
         address l1ERC20,
-        address account,
+        address sender,
+        address dest,
         uint256 amount,
         bytes calldata callHookData
     ) external onlyEthPair {

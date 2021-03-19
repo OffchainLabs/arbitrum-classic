@@ -29,7 +29,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'l1Pair()': FunctionFragment
     'migrate(address,address,address,uint256,bytes)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
-    'mintCustomTokenFromL1(address,address,uint256,bytes)': FunctionFragment
+    'mintCustomTokenFromL1(address,address,address,uint256,bytes)': FunctionFragment
     'mintERC20FromL1(address,address,address,uint256,uint8,bytes)': FunctionFragment
     'mintERC777FromL1(address,address,address,uint256,uint8,bytes)': FunctionFragment
     'templateERC20()': FunctionFragment
@@ -63,7 +63,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'mintCustomTokenFromL1',
-    values: [string, string, BigNumberish, BytesLike]
+    values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'mintERC20FromL1',
@@ -242,15 +242,17 @@ export class ArbTokenBridge extends Contract {
 
     mintCustomTokenFromL1(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'mintCustomTokenFromL1(address,address,uint256,bytes)'(
+    'mintCustomTokenFromL1(address,address,address,uint256,bytes)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: Overrides
@@ -432,15 +434,17 @@ export class ArbTokenBridge extends Contract {
 
   mintCustomTokenFromL1(
     l1ERC20: string,
-    account: string,
+    sender: string,
+    dest: string,
     amount: BigNumberish,
     callHookData: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'mintCustomTokenFromL1(address,address,uint256,bytes)'(
+  'mintCustomTokenFromL1(address,address,address,uint256,bytes)'(
     l1ERC20: string,
-    account: string,
+    sender: string,
+    dest: string,
     amount: BigNumberish,
     callHookData: BytesLike,
     overrides?: Overrides
@@ -622,15 +626,17 @@ export class ArbTokenBridge extends Contract {
 
     mintCustomTokenFromL1(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'mintCustomTokenFromL1(address,address,uint256,bytes)'(
+    'mintCustomTokenFromL1(address,address,address,uint256,bytes)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: CallOverrides
@@ -817,15 +823,17 @@ export class ArbTokenBridge extends Contract {
 
     mintCustomTokenFromL1(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'mintCustomTokenFromL1(address,address,uint256,bytes)'(
+    'mintCustomTokenFromL1(address,address,address,uint256,bytes)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: Overrides
@@ -1011,15 +1019,17 @@ export class ArbTokenBridge extends Contract {
 
     mintCustomTokenFromL1(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'mintCustomTokenFromL1(address,address,uint256,bytes)'(
+    'mintCustomTokenFromL1(address,address,address,uint256,bytes)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      dest: string,
       amount: BigNumberish,
       callHookData: BytesLike,
       overrides?: Overrides
