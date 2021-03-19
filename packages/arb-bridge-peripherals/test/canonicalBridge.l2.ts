@@ -195,8 +195,8 @@ describe('Bridge peripherals layer 2', () => {
     )
     const receipt = await tx.wait()
 
-    // MintAndCallTriggered(bool);
-    const eventTopic = "0x1a3c7fa31e7eb02a6858cb2f7c3c83ce0ef14f44eb7e454cff78462e9a931866"
+    // MintAndCallTriggered(bool,address,address,uint256)
+    const eventTopic = "0x1ae40885bec8e271ecdd13e172c58836ad9dd6f4098020ebeea97d6a22e1f26c"
 
     const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
 
@@ -254,8 +254,8 @@ describe('Bridge peripherals layer 2', () => {
     )
     const receipt = await tx.wait()
 
-    // MintAndCallTriggered(bool);
-    const eventTopic = "0x1a3c7fa31e7eb02a6858cb2f7c3c83ce0ef14f44eb7e454cff78462e9a931866"
+    // MintAndCallTriggered(bool,address,address,uint256)
+    const eventTopic = "0x1ae40885bec8e271ecdd13e172c58836ad9dd6f4098020ebeea97d6a22e1f26c"
 
     const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
 

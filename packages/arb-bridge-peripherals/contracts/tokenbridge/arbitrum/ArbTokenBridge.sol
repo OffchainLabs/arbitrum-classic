@@ -45,7 +45,7 @@ contract ArbTokenBridge is CloneFactory {
     ICloneable public immutable templateERC777;
     address public immutable l1Pair;
 
-    event MintAndCallTriggered(bool success);
+    event MintAndCallTriggered(bool success, address indexed sender, address indexed dest, uint256 amount);
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -101,10 +101,29 @@ contract ArbTokenBridge is CloneFactory {
     ) public {
         require(msg.sender == address(this), "Mint can only be called by self");
 
+        // the token's transfer hook does not get triggered here
+        // since the bridge already triggers a hook
         token.bridgeMint(dest, amount, '');
         bool success = ITransferReceiver(dest).onTokenTransfer(sender, amount, data);
 
         require(success, "External onTokenTransfer reverted");
+    }
+
+    function handleCallHookData(
+        IArbToken token,
+        uint256 amount,
+        address sender,
+        address dest,
+        bytes memory callHookData
+    ) internal {
+        try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
+            emit MintAndCallTriggered(true, sender, dest, amount);
+        } catch {
+            // if reverted, then credit sender's account
+            token.bridgeMint(sender, amount, '');
+            // TODO: should try to submit callHookData for the hook?
+            emit MintAndCallTriggered(false, sender, dest, amount);
+        }
     }
 
     function mintERC777FromL1(
@@ -118,19 +137,9 @@ contract ArbTokenBridge is CloneFactory {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
 
         if(callHookData.length > 0) {
-            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
-                // the token's transfer hook does not get triggered here
-                // since the bridge already triggers a hook
-                emit MintAndCallTriggered(true);
-            } catch {
-                // if reverted, then credit sender's account
-                // TODO: should try to submit callHookData for 777's hook?
-                // this could become error prone since this is only run if dest reverts
-                token.bridgeMint(sender, amount, '');
-                emit MintAndCallTriggered(false);
-            }
+            // this does not trigger 777's hook!
+            handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
-            // if no hook data, credit the dest
             token.bridgeMint(dest, amount, '');
         }
     }
@@ -146,15 +155,8 @@ contract ArbTokenBridge is CloneFactory {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
 
         if(callHookData.length > 0) {
-            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
-                emit MintAndCallTriggered(true);
-            } catch {
-                // if reverted, then credit sender's account
-                token.bridgeMint(sender, amount, '');
-                emit MintAndCallTriggered(false);
-            }
+            handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
-            // if no hook data, credit the dest
             token.bridgeMint(dest, amount, '');
         }
     }
@@ -171,18 +173,8 @@ contract ArbTokenBridge is CloneFactory {
         IArbToken token = IArbToken(tokenAddress);
 
         if(callHookData.length > 0) {
-            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
-                // the token's transfer hook does not get triggered here
-                // since the bridge already triggers a hook
-                emit MintAndCallTriggered(true);
-            } catch {
-                // if reverted, then credit sender's account
-                // TODO: should try to submit callHookData?
-                token.bridgeMint(sender, amount, '');
-                emit MintAndCallTriggered(false);
-            }
+            handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
-            // if no hook data, credit the dest
             token.bridgeMint(dest, amount, '');
         }
     }
