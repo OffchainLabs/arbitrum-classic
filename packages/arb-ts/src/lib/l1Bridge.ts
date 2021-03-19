@@ -177,6 +177,7 @@ export class L1Bridge {
   public async depositAsERC20(
     erc20L1Address: string,
     amount: BigNumber,
+    maxSubmissionCost: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string
@@ -190,6 +191,7 @@ export class L1Bridge {
       erc20L1Address,
       destination,
       amount,
+      maxSubmissionCost,
       maxGas,
       gasPriceBid
     )
@@ -197,6 +199,7 @@ export class L1Bridge {
   public async depositAsERC777(
     erc20L1Address: string,
     amount: BigNumber,
+    maxSubmissionCost: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string
@@ -206,6 +209,7 @@ export class L1Bridge {
       erc20L1Address,
       destination,
       amount,
+      maxSubmissionCost,
       maxGas,
       gasPriceBid
     )
@@ -214,6 +218,7 @@ export class L1Bridge {
   public async depositAsCustomToken(
     erc20L1Address: string,
     amount: BigNumber,
+    maxSubmissionCost: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string
@@ -229,6 +234,7 @@ export class L1Bridge {
       erc20L1Address,
       destination,
       amount,
+      maxSubmissionCost,
       maxGas,
       gasPriceBid
     )

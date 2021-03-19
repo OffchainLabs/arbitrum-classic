@@ -15,10 +15,11 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, ethers, ContractReceipt } from 'ethers'
+import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 
+const { Zero } = constants
 interface L2ToL1EventResult {
   caller: string
   destination: string
@@ -96,9 +97,12 @@ export class Bridge extends L2Bridge {
     gasPriceBid: BigNumber,
     destinationAddress?: string
   ) {
+    // TODO: this will need to (somehow) input the calldata size
+    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
     return this.l1Bridge.depositAsERC20(
       erc20L1Address,
       amount,
+      maxSubmissionPrice,
       maxGas,
       gasPriceBid,
       destinationAddress
@@ -111,9 +115,13 @@ export class Bridge extends L2Bridge {
     gasPriceBid: BigNumber,
     destinationAddress?: string
   ) {
+    // TODO: this will need to (somehow) input the calldata size
+    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
+
     return this.l1Bridge.depositAsERC777(
       erc20L1Address,
       amount,
+      maxSubmissionPrice,
       maxGas,
       gasPriceBid,
       destinationAddress
