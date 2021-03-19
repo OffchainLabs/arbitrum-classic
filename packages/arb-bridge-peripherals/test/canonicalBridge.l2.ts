@@ -230,7 +230,7 @@ describe('Bridge peripherals layer 2', () => {
   })
 
   it('should revert post mint call if sent to EOA', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000325'
+    const l1ERC20 = '0x0000000000000000000000000000000000000326'
     const sender = '0x0000000000000000000000000000000000000005'
     const amount = '1'
     const decimals = '18'
