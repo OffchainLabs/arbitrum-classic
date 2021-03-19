@@ -27,7 +27,7 @@ interface StandardArbERC777Interface extends ethers.utils.Interface {
     'authorizeOperator(address)': FunctionFragment
     'balanceOf(address)': FunctionFragment
     'bridge()': FunctionFragment
-    'bridgeMint(address,uint256)': FunctionFragment
+    'bridgeMint(address,uint256,bytes)': FunctionFragment
     'burn(uint256,bytes)': FunctionFragment
     'decimals()': FunctionFragment
     'defaultOperators()': FunctionFragment
@@ -67,7 +67,7 @@ interface StandardArbERC777Interface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'bridgeMint',
-    values: [string, BigNumberish]
+    values: [string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'burn',
@@ -269,12 +269,14 @@ export class StandardArbERC777 extends Contract {
     bridgeMint(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'bridgeMint(address,uint256)'(
+    'bridgeMint(address,uint256,bytes)'(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -521,12 +523,14 @@ export class StandardArbERC777 extends Contract {
   bridgeMint(
     account: string,
     amount: BigNumberish,
+    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'bridgeMint(address,uint256)'(
+  'bridgeMint(address,uint256,bytes)'(
     account: string,
     amount: BigNumberish,
+    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -776,12 +780,14 @@ export class StandardArbERC777 extends Contract {
     bridgeMint(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'bridgeMint(address,uint256)'(
+    'bridgeMint(address,uint256,bytes)'(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1074,12 +1080,14 @@ export class StandardArbERC777 extends Contract {
     bridgeMint(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'bridgeMint(address,uint256)'(
+    'bridgeMint(address,uint256,bytes)'(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -1327,12 +1335,14 @@ export class StandardArbERC777 extends Contract {
     bridgeMint(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'bridgeMint(address,uint256)'(
+    'bridgeMint(address,uint256,bytes)'(
       account: string,
       amount: BigNumberish,
+      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

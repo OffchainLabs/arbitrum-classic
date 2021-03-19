@@ -29,6 +29,10 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../ethereum/EthERC20Bridge.sol";
 
+interface ITransferReceiver {
+    function onTokenTransfer(address, uint, bytes calldata) external returns (bool);
+}
+
 contract ArbTokenBridge is CloneFactory {
     using Address for address;
 
@@ -40,6 +44,8 @@ contract ArbTokenBridge is CloneFactory {
     ICloneable public immutable templateERC20;
     ICloneable public immutable templateERC777;
     address public immutable l1Pair;
+
+    event MintAndCallTriggered(bool success, address indexed sender, address indexed dest, uint256 amount);
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -86,35 +92,91 @@ contract ArbTokenBridge is CloneFactory {
         l1Pair = _l1Pair;
     }
 
+    function mintAndCall(
+        IArbToken token,
+        uint256 amount,
+        address sender,
+        address dest,
+        bytes memory data
+    ) public {
+        require(msg.sender == address(this), "Mint can only be called by self");
+
+        // the token's transfer hook does not get triggered here
+        // since the bridge already triggers a hook
+        token.bridgeMint(dest, amount, '');
+        bool success = ITransferReceiver(dest).onTokenTransfer(sender, amount, data);
+
+        require(success, "External onTokenTransfer reverted");
+    }
+
+    function handleCallHookData(
+        IArbToken token,
+        uint256 amount,
+        address sender,
+        address dest,
+        bytes memory callHookData
+    ) internal {
+        try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
+            emit MintAndCallTriggered(true, sender, dest, amount);
+        } catch {
+            // if reverted, then credit sender's account
+            token.bridgeMint(sender, amount, '');
+            // TODO: should try to submit callHookData for the hook?
+            emit MintAndCallTriggered(false, sender, dest, amount);
+        }
+    }
+
     function mintERC777FromL1(
         address l1ERC20,
-        address account,
+        address sender,
+        address dest,
         uint256 amount,
-        uint8 decimals
+        uint8 decimals,
+        bytes calldata callHookData
     ) external onlyEthPair {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
-        token.bridgeMint(account, amount);
+
+        if(callHookData.length > 0) {
+            // this does not trigger 777's hook!
+            handleCallHookData(token, amount, sender, dest, callHookData);
+        } else {
+            token.bridgeMint(dest, amount, '');
+        }
     }
 
     function mintERC20FromL1(
         address l1ERC20,
-        address account,
+        address sender,
+        address dest,
         uint256 amount,
-        uint8 decimals
+        uint8 decimals,
+        bytes calldata callHookData
     ) external onlyEthPair {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        token.bridgeMint(account, amount);
+
+        if(callHookData.length > 0) {
+            handleCallHookData(token, amount, sender, dest, callHookData);
+        } else {
+            token.bridgeMint(dest, amount, '');
+        }
     }
 
-    function mintCustomtokenFromL1(
+    function mintCustomTokenFromL1(
         address l1ERC20,
-        address account,
-        uint256 amount
+        address sender,
+        address dest,
+        uint256 amount,
+        bytes calldata callHookData
     ) external onlyEthPair {
         address tokenAddress = customToken[l1ERC20];
         require(tokenAddress != address(0), "Custom Token doesn't exist");
         IArbToken token = IArbToken(tokenAddress);
-        token.bridgeMint(account, amount);
+
+        if(callHookData.length > 0) {
+            handleCallHookData(token, amount, sender, dest, callHookData);
+        } else {
+            token.bridgeMint(dest, amount, '');
+        }
     }
 
     function updateERC777TokenInfo(
@@ -165,9 +227,10 @@ contract ArbTokenBridge is CloneFactory {
         address l1ERC20,
         address target,
         address account,
-        uint256 amount
+        uint256 amount,
+        bytes memory data
     ) external onlyFromStandardL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) {
-        IArbToken(target).bridgeMint(account, amount);
+        IArbToken(target).bridgeMint(account, amount, data);
     }
 
     function calculateBridgedERC777Address(address l1ERC20) public view returns (address) {

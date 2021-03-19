@@ -25,7 +25,7 @@ interface IArbToken {
         uint8 _decimals
     ) external;
 
-    function bridgeMint(address account, uint256 amount) external;
+    function bridgeMint(address account, uint256 amount, bytes memory data) external;
 
     function withdraw(address destination, uint256 amount) external;
 
