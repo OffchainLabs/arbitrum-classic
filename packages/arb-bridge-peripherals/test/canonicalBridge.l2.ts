@@ -229,7 +229,7 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
-  it.only('should revert post mint call if sent to EOA', async function () {
+  it('should revert post mint call if sent to EOA', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000325'
     const sender = '0x0000000000000000000000000000000000000005'
     const amount = '1'
@@ -242,11 +242,7 @@ describe('Bridge peripherals layer 2', () => {
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    // const L2Called = await ethers.getContractFactory('L2Called')
-    // const l2Called = await L2Called.deploy()
-    const dest = sender;
-    const num = 7;
-    const callHookData = ethers.utils.defaultAbiCoder.encode(["uint256"], [num])
+    const dest = accounts[1].address;
 
     const tx = await testBridge.mintERC20FromL1(
       l1ERC20,
@@ -254,7 +250,7 @@ describe('Bridge peripherals layer 2', () => {
       dest,
       amount,
       decimals,
-      callHookData
+      "0x01"
     )
     const receipt = await tx.wait()
 
@@ -274,21 +270,6 @@ describe('Bridge peripherals layer 2', () => {
       success,
       false,
       'Token post mint hook should have reverted'
-    )
-
-    // dest should hold not hold amount when reverted
-    const Erc20 = await ethers.getContractFactory('OZERC20')
-    const erc20 = await Erc20.attach(l2ERC20Address)
-
-    assert.equal(
-      (await erc20.balanceOf(dest)).toString(),
-      '0',
-      "L2Called contract should not be holding coins"
-    )
-    assert.equal(
-      (await erc20.balanceOf(sender)).toString(),
-      amount,
-      "Sender should hold coins"
     )
   })
 
