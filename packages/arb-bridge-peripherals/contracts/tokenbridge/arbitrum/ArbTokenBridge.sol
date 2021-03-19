@@ -93,16 +93,24 @@ contract ArbTokenBridge is CloneFactory {
         // TODO: should first bit define if handleCallFail is called?
         if(postMintCall.length < 40) return (false, address(0));
 
-        // TODO: build call() with assembly to avoid extra memory allocation
         address destAddr = BytesLib.toAddress(postMintCall, 0);
         address backupAddr = BytesLib.toAddress(postMintCall, 20);
-        bytes memory encodedFunction = BytesLib.slice(postMintCall, 40, postMintCall.length);
+        bool success;
+        assembly {
+            success := call(
+                gas(),
+                destAddr,
+                callvalue(),
+                add(postMintCall, 40),
+                sub(postMintCall, add(postMintCall, 40)),
+                0,
+                0
+            )
+        }
 
         // TODO: what if user tries calling bridge mint from postMintCall?
         // Set queryable variable and check if call originates from mint.
         // TODO: Add this check to the token
-        (bool success, bytes memory ret) = destAddr.call(encodedFunction);
-
         return (success, backupAddr);
     }
 
