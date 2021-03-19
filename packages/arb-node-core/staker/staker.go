@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -56,15 +57,16 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 		backoff := time.Second
 		for {
 			tx, err := s.Act(ctx)
-			if tx != nil {
+			if err == nil && tx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = ethbridge.WaitForReceiptWithResults(ctx, s.client, s.wallet.From().ToEthAddress(), tx, "for staking")
+				err = errors.Wrap(err, "error waiting for tx receipt")
 				if err == nil {
 					logger.Info().Str("hash", tx.Hash().String()).Msg("Successfully executed transaction")
 				}
 			}
 			if err != nil {
-				logger.Warn().Stack().Err(err).Msg("Staking error (possible reorg?)")
+				logger.Warn().Stack().Err(err).Send()
 				<-time.After(backoff)
 				if backoff < 60*time.Second {
 					backoff *= 2

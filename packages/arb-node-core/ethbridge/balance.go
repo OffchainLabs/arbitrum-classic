@@ -18,11 +18,12 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/pkg/errors"
-	"math/big"
-	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,7 +34,7 @@ func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress
 	if tokenAddress == emptyAddress {
 		balance, err := client.BalanceAt(ctx, userAddress.ToEthAddress(), nil)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if balance.Cmp(big.NewInt(0)) > 0 {
 			return nil
@@ -47,7 +48,7 @@ func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress
 			case <-timer.C:
 				balance, err := client.BalanceAt(ctx, userAddress.ToEthAddress(), nil)
 				if err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				if balance.Cmp(big.NewInt(0)) > 0 {
 					return nil
@@ -57,11 +58,11 @@ func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress
 	} else {
 		erc20, err := ethbridgetestcontracts.NewIERC20(tokenAddress.ToEthAddress(), client)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		balance, err := erc20.BalanceOf(&bind.CallOpts{Context: ctx}, userAddress.ToEthAddress())
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if balance.Cmp(big.NewInt(0)) > 0 {
 			return nil
@@ -78,7 +79,7 @@ func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress
 			case <-timer.C:
 				balance, err := erc20.BalanceOf(&bind.CallOpts{Context: ctx}, userAddress.ToEthAddress())
 				if err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				if balance.Cmp(big.NewInt(0)) > 0 {
 					return nil
