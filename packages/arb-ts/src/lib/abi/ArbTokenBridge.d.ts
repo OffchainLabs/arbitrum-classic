@@ -141,7 +141,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {
-    'MintAndCallTriggered(bool)': EventFragment
+    'MintAndCallTriggered(bool,address,address,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'MintAndCallTriggered'): EventFragment
@@ -738,7 +738,12 @@ export class ArbTokenBridge extends Contract {
   }
 
   filters: {
-    MintAndCallTriggered(success: null): EventFilter
+    MintAndCallTriggered(
+      success: null,
+      sender: string | null,
+      dest: string | null,
+      amount: null
+    ): EventFilter
   }
 
   estimateGas: {
