@@ -134,10 +134,7 @@ describe('Bridge peripherals layer 2', () => {
       account,
       amount,
       decimals,
-      postMintCall,
-      {
-        gasLimit: 9490000
-      }
+      postMintCall
     )
     const receipt = await tx.wait()
 
