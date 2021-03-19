@@ -162,7 +162,7 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		FromBlock: fromBlock,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {}, {parentHash}},
+		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, nil, {parentHash}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
