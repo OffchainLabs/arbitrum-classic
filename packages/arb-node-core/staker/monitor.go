@@ -71,11 +71,11 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAdd
 	}
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), ethClient)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		return nil, err
 	}
 	bridgeAddress, err := rollup.Bridge(context.Background())
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		return nil, err
 	}
 	bridgeWatcher, err := ethbridge.NewBridgeWatcher(bridgeAddress.ToEthAddress(), ethClient)
 	if err != nil {
