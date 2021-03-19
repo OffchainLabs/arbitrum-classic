@@ -25,7 +25,6 @@ import "arb-bridge-eth/contracts/libraries/CloneFactory.sol";
 
 import "./IArbToken.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
-import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../ethereum/EthERC20Bridge.sol";
