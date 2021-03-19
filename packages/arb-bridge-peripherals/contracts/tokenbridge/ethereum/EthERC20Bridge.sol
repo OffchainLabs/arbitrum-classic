@@ -202,7 +202,7 @@ contract EthERC20Bridge is L1Buddy {
         address destination,
         uint256 amount,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable onlyIfConnected {
         depositToken(erc20, msg.sender, destination, amount, maxGas, gasPriceBid, StandardTokenType.ERC20, callHookData);
