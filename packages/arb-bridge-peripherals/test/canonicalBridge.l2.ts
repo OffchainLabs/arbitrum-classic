@@ -166,7 +166,7 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
-  it.only('should revert post mint call correctly', async function () {
+  it('should revert post mint call correctly', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000325'
     const sender = '0x0000000000000000000000000000000000000005'
     const amount = '1'
