@@ -100,7 +100,6 @@ contract ArbTokenBridge is CloneFactory {
         address dest,
         bytes memory data
     ) public {
-        // TODO: should this only be callable by mintERC20?
         require(msg.sender == address(this), "Mint can only be called by self");
 
         token.bridgeMint(dest, amount, '');
@@ -118,8 +117,23 @@ contract ArbTokenBridge is CloneFactory {
         bytes calldata callHookData
     ) external onlyEthPair {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
-        token.bridgeMint(dest, amount, callHookData);
-        // TODO: should we trigger mintAndCall or can 777's hook deal with it?
+
+        if(callHookData.length > 0) {
+            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
+                // the token's transfer hook does not get triggered here
+                // since the bridge already triggers a hook
+                emit MintAndCallTriggered(true);
+            } catch {
+                // if reverted, then credit sender's account
+                // TODO: should try to submit callHookData for 777's hook?
+                // this could become error prone since this is only run if dest reverts
+                token.bridgeMint(sender, amount, '');
+                emit MintAndCallTriggered(false);
+            }
+        } else {
+            // if no hook data, credit the dest
+            token.bridgeMint(dest, amount, '');
+        }
     }
 
     function mintERC20FromL1(
@@ -155,8 +169,22 @@ contract ArbTokenBridge is CloneFactory {
         address tokenAddress = customToken[l1ERC20];
         require(tokenAddress != address(0), "Custom Token doesn't exist");
         IArbToken token = IArbToken(tokenAddress);
-        token.bridgeMint(account, amount, callHookData);
-        // TODO: should we add postMintCall? custom token logic could implement it in bridgeMint
+
+        if(callHookData.length > 0) {
+            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
+                // the token's transfer hook does not get triggered here
+                // since the bridge already triggers a hook
+                emit MintAndCallTriggered(true);
+            } catch {
+                // if reverted, then credit sender's account
+                // TODO: should try to submit callHookData?
+                token.bridgeMint(sender, amount, '');
+                emit MintAndCallTriggered(false);
+            }
+        } else {
+            // if no hook data, credit the dest
+            token.bridgeMint(dest, amount, '');
+        }
     }
 
     function updateERC777TokenInfo(
