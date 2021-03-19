@@ -19,6 +19,7 @@ package ethbridge
 import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/pkg/errors"
 )
 
 type Bridge struct {
@@ -29,7 +30,7 @@ type Bridge struct {
 func NewBridge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Bridge, error) {
 	watcher, err := NewBridgeWatcher(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &Bridge{
 		BridgeWatcher: watcher,

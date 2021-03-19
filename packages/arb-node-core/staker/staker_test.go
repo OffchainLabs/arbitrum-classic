@@ -99,7 +99,7 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 	}
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{challenge.ToEthAddress()},
 		Topics:    [][]ethcommon.Hash{topicHashes},
