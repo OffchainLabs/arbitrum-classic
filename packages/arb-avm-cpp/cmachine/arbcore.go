@@ -67,6 +67,10 @@ func (ac *ArbCore) MachineIdle() bool {
 	return status == 1
 }
 
+func (ac *ArbCore) MachineMessagesRead() *big.Int {
+	return receiveBigInt(C.arbCoreMachineMessagesRead(ac.c))
+}
+
 func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	statusRaw := C.arbCoreMessagesStatus(ac.c)
 	status := core.MessageStatus(int(statusRaw))
