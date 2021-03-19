@@ -25,10 +25,13 @@ import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__Fac
 import { StandardArbERC777__factory } from './abi/factories/StandardArbERC777__Factory'
 import { IArbToken } from './abi/IArbToken'
 import { IArbToken__factory } from './abi/factories/IArbToken__Factory'
+import { ArbRetryableTx__factory } from './abi/factories/ArbRetryableTx__factory'
+import { ArbRetryableTx } from './abi/ArbRetryableTx'
 
 import { StandardArbERC777 } from './abi/StandardArbERC777'
 
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
+const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E' // TODO
 
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
@@ -47,6 +50,7 @@ export class L2Bridge {
   l2Tokens: Tokens
   l2Provider: providers.Provider
   l2EthBalance: BigNumber
+  arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
 
   constructor(arbTokenBridgeAddress: string, l2Signer: Signer) {
@@ -67,6 +71,12 @@ export class L2Bridge {
       arbTokenBridgeAddress,
       l2Signer
     )
+
+    this.arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      l2Signer
+    )
+
     this.l2EthBalance = BigNumber.from(0)
   }
 
@@ -231,6 +241,10 @@ export class L2Bridge {
 
       return
     }
+  }
+
+  public getTxnSubmissionPrice(dataSize: BigNumber) {
+    return this.arbRetryableTx.getSubmissionPrice(dataSize)
   }
 
   public getERC777L2Address(erc20L1Address: string) {
