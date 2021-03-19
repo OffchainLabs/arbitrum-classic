@@ -20,6 +20,7 @@ import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { Contract, ContractFactory } from 'ethers'
 import { deploy1820Registry } from '../scripts/utils'
+import { L2Called__factory } from "arb-ts/src/lib/abi/factories/L2Called__factory"
 
 describe('Bridge peripherals layer 2', () => {
   let accounts: SignerWithAddress[]
@@ -93,6 +94,74 @@ describe('Bridge peripherals layer 2', () => {
       '0x',
       'Token not deployed to correct address'
     )
+
+    const Erc20 = await ethers.getContractFactory('StandardArbERC20')
+    const erc20 = await Erc20.attach(l2ERC20Address)
+
+    const balance = await erc20.balanceOf(account)
+    assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
+  })
+
+  it('should execute post mint call', async function () {
+    const l1ERC20 = '0x0000000000000000000000000000000000000305'
+    const account = '0x0000000000000000000000000000000000000003'
+    const amount = '1'
+    const decimals = '18'
+
+    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
+      l1ERC20
+    )
+
+    const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
+    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
+
+    const L2Deployed = new L2Called__factory(accounts[0])
+    const l2Deployed = await L2Deployed.deploy()
+    
+    
+    
+    const num = 5;
+    const encodedFunction = l2Deployed.interface.encodeFunctionData("postDepositHook", [num])
+    console.log("encodedFunction")
+    console.log(encodedFunction)
+
+    const postMintCall = ethers.utils.hexlify(ethers.utils.concat([
+      account,
+      l2Deployed.address,
+      encodedFunction
+    ]))
+
+    const tx = await testBridge.mintERC20FromL1(
+      l1ERC20,
+      account,
+      amount,
+      decimals,
+      postMintCall,
+      {
+        gasLimit: 9490000
+      }
+    )
+    const receipt = await tx.wait()
+
+    const eventTopic = l2Deployed.interface.getEventTopic('Called(uint256)')
+    console.log("eventTopic", eventTopic)
+
+    const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
+
+    assert.equal(
+      filteredEvents.length,
+      1,
+      'Token post mint hook not triggered'
+    )
+
+    const postTokenCode = await ethers.provider.getCode(l2ERC20Address)
+    assert.notEqual(
+      postTokenCode,
+      '0x',
+      'Token not deployed to correct address'
+    )
+
+    
 
     const Erc20 = await ethers.getContractFactory('StandardArbERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)

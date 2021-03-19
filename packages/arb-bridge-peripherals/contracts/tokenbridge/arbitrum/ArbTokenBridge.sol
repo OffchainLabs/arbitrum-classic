@@ -87,22 +87,25 @@ contract ArbTokenBridge is CloneFactory {
         l1Pair = _l1Pair;
     }
 
+    event Tester(bool success, address dest);
+
     function executePostMintCall(
         bytes memory postMintCall
     ) internal returns (bool, address) {
         // TODO: should first bit define if handleCallFail is called?
         if(postMintCall.length < 40) return (false, address(0));
 
-        address destAddr = BytesLib.toAddress(postMintCall, 0);
-        address backupAddr = BytesLib.toAddress(postMintCall, 20);
+        address backupAddr = BytesLib.toAddress(postMintCall, 0);
+        address destAddr = BytesLib.toAddress(postMintCall, 20);
+
         bool success;
         assembly {
             success := call(
                 gas(),
                 destAddr,
                 callvalue(),
-                add(postMintCall, 40),
-                sub(postMintCall, add(postMintCall, 40)),
+                add(postMintCall, 72), // 32 bytes rlp encoded bytes param + 40 bytes addresses
+                sub(postMintCall, 40),
                 0,
                 0
             )
