@@ -190,7 +190,7 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 			return nil, errors.WithStack(err)
 		}
 		if err := inboxGetter.fillMessageDetails(ctx, indexes, rawTransactions, messageData, minBlockNum, maxBlockNum); err != nil {
-			return nil, errors.WithStack(err)
+			return nil, err
 		}
 	}
 

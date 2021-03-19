@@ -167,9 +167,17 @@ func main() {
 		logger.Fatal().Stack().Err(err).Send()
 	}
 
-	inboxReader, err := monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+	var inboxReader *staker.InboxReader
+	for {
+		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
+		if err == nil {
+			break
+		}
+		logger.Warn().Stack().Err(err).
+			Str("url", rollupArgs.EthURL).
+			Str("rollup", rollupArgs.Address.Hex()).
+			Msg("failed to start inbox reader, waiting and retrying")
+		time.Sleep(time.Second * 5)
 	}
 
 	if *waitToCatchUp {

@@ -28,6 +28,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -92,11 +93,16 @@ func main() {
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("Error creating Ethereum RPC client")
 	}
-
-	l1ChainId, err := client.ChainID(context.Background())
-	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error getting chain ID")
+	var l1ChainId *big.Int
+	for {
+		l1ChainId, err = client.ChainID(context.Background())
+		if err == nil {
+			break
+		}
+		logger.Warn().Stack().Err(err).Msg("Error getting chain ID")
+		time.Sleep(time.Second * 5)
 	}
+
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	rollupAddr := ethcommon.HexToAddress(os.Args[3])
@@ -139,9 +145,15 @@ func main() {
 
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
-		validatorAddress, _, _, err = ethbridgecontracts.DeployValidator(auth, client)
-		if err != nil {
-			logger.Fatal().Stack().Err(err).Msg("Failed to deploy validator wallet")
+		for {
+			validatorAddress, _, _, err = ethbridgecontracts.DeployValidator(auth, client)
+			if err == nil {
+				break
+			}
+			logger.Warn().Stack().Err(err).
+				Str("sender", auth.From.Hex()).
+				Msg("Failed to deploy validator wallet")
+			time.Sleep(time.Second * 5)
 		}
 		chainState.ValidatorWallet = validatorAddress.String()
 

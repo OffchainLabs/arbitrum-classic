@@ -20,7 +20,6 @@ import (
 	"container/list"
 	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
-	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
@@ -311,7 +310,7 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	action, err := m.pendingBatch.validateTx(tx)
 	if action == REMOVE {
-		return errors.Wrap(err, "transaction rejected")
+		return err
 	}
 
 	if err := m.pendingBatch.updateCurrentSnap(m.pendingSentBatches); err != nil {

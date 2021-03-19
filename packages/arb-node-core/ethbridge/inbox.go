@@ -80,7 +80,7 @@ func (r *StandardInboxWatcher) fillMessageDetails(
 		BlockHash: nil,
 		FromBlock: new(big.Int).SetUint64(minBlockNum),
 		// Not sure whether this is inclusive or exclusive so adding 1 just in case
-		ToBlock:   new(big.Int).SetUint64(maxBlockNum + 1),
+		ToBlock:   new(big.Int).SetUint64(maxBlockNum),
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{inboxMessageDeliveredID, inboxMessageFromOriginID}, msgQuery},
 	}
