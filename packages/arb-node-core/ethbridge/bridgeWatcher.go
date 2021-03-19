@@ -115,7 +115,7 @@ func (r *BridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{messageDeliveredID}, {msgNumBytes}},
@@ -135,28 +135,6 @@ func (r *BridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.
 		Height:     common.NewTimeBlocksInt(int64(ethLog.BlockNumber)),
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 	}, nil
-}
-
-func (r *BridgeWatcher) LookupMessagesByNum(ctx context.Context, messageNums []*big.Int) ([]*DeliveredInboxMessage, error) {
-	msgQuery := make([]ethcommon.Hash, 0, len(messageNums))
-	for _, messageNum := range messageNums {
-		var msgNumBytes ethcommon.Hash
-		copy(msgNumBytes[:], math.U256Bytes(messageNum))
-		msgQuery = append(msgQuery, msgNumBytes)
-	}
-
-	query := ethereum.FilterQuery{
-		BlockHash: nil,
-		FromBlock: nil,
-		ToBlock:   nil,
-		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{messageDeliveredID}, msgQuery},
-	}
-	logs, err := r.client.FilterLogs(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	return r.logsToDeliveredMessages(ctx, logs)
 }
 
 type DeliveredInboxMessageList []*DeliveredInboxMessage

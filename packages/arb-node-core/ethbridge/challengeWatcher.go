@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -115,7 +116,7 @@ func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, err
 func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*core.Bisection, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{c.address},
 		Topics:    [][]ethcommon.Hash{{bisectedID}, {challengeState.ToEthHash()}},
