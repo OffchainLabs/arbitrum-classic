@@ -76,6 +76,8 @@ func setupTicket(t *testing.T, backend *Backend, sender, destination, beneficiar
 		MaxSubmissionCost: big.NewInt(30),
 		CreditBack:        common.RandAddress(),
 		Beneficiary:       beneficiary,
+		MaxGas:            big.NewInt(0),
+		GasPriceBid:       big.NewInt(0),
 		Data:              nil,
 	}
 
@@ -286,6 +288,8 @@ func TestRetryableTimeout(t *testing.T) {
 		MaxSubmissionCost: big.NewInt(10),
 		CreditBack:        common.RandAddress(),
 		Beneficiary:       common.RandAddress(),
+		MaxGas:            big.NewInt(0),
+		GasPriceBid:       big.NewInt(0),
 		Data:              nil,
 	}
 

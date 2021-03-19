@@ -167,12 +167,27 @@ contract Inbox is IInbox {
             );
     }
 
+    function depositEthRetryable(address destAddr, uint256 maxSubmissionCost, uint256 maxGas, uint256 maxGasPrice) external payable override returns (uint256) {
+        return this.createRetryableTicket(
+            destAddr,
+            msg.value,
+            maxSubmissionCost,
+            msg.sender,
+            msg.sender, 
+            maxGas,
+            maxGasPrice,
+            ""
+        );
+    }
+
     function createRetryableTicket(
         address destAddr,
-        uint256 value,
+        uint256 l2CallValue,
         uint256 maxSubmissionCost,
-        address submissionRefundAddress,
-        address valueRefundAddress,
+        address excessFeeRefundAddress,
+        address callValueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
         bytes calldata data
     ) external payable override returns (uint256) {
         return
@@ -181,11 +196,13 @@ contract Inbox is IInbox {
                 destAddr,
                 abi.encodePacked(
                     uint256(uint160(bytes20(destAddr))),
-                    value,
+                    l2CallValue,
                     msg.value,
                     maxSubmissionCost,
-                    uint256(uint160(bytes20(submissionRefundAddress))),
-                    uint256(uint160(bytes20(valueRefundAddress))),
+                    uint256(uint160(bytes20(excessFeeRefundAddress))),
+                    uint256(uint160(bytes20(callValueRefundAddress))),
+                    maxGas,
+                    gasPriceBid,
                     data.length,
                     data
                 )

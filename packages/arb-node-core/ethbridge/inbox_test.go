@@ -44,6 +44,8 @@ func TestRetryable(t *testing.T) {
 		MaxSubmissionCost: common.RandBigInt(),
 		CreditBack:        common.RandAddress(),
 		Beneficiary:       common.RandAddress(),
+		MaxGas:            common.RandBigInt(),
+		GasPriceBid:       common.RandBigInt(),
 		Data:              common.RandBytes(100),
 	}
 	tx, err := inbox.CreateRetryableTicket(
@@ -57,6 +59,8 @@ func TestRetryable(t *testing.T) {
 		arbTx.MaxSubmissionCost,
 		arbTx.CreditBack.ToEthAddress(),
 		arbTx.Beneficiary.ToEthAddress(),
+		arbTx.MaxGas,
+		arbTx.GasPriceBid,
 		arbTx.Data,
 	)
 	test.FailIfError(t, err)
