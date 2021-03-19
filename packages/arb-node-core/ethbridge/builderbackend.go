@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/pkg/errors"
 )
 
 type BuilderBackend struct {
@@ -97,7 +98,7 @@ func (b *BuilderBackend) SendTransaction(ctx context.Context, tx *types.Transact
 		Data:     realData,
 	}
 	_, err = b.realClient.EstimateGas(ctx, msg)
-	return err
+	return errors.WithStack(err)
 }
 
 func (b *BuilderBackend) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {

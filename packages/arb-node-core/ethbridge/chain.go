@@ -18,8 +18,9 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -58,7 +59,7 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 					continue
 				}
 				logger.Error().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 			return receipt, nil
 		case <-ctx.Done():
@@ -70,7 +71,7 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
 	receipt, err := WaitForReceiptWithResultsSimple(ctx, client, tx.Hash())
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if receipt.Status != 1 {
 		callMsg := ethereum.CallMsg{

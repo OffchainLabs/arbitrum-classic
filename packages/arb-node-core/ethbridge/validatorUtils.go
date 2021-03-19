@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -55,7 +56,7 @@ type ValidatorUtils struct {
 func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils.EthClient) (*ValidatorUtils, error) {
 	con, err := ethbridgecontracts.NewValidatorUtils(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &ValidatorUtils{
@@ -69,7 +70,7 @@ func NewValidatorUtils(address, rollupAddress ethcommon.Address, client ethutils
 func (v *ValidatorUtils) RefundableStakers(ctx context.Context) ([]common.Address, error) {
 	addresses, err := v.con.RefundableStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return common.AddressArrayFromEth(addresses), nil
 }
@@ -82,7 +83,7 @@ func (v *ValidatorUtils) TimedOutChallenges(ctx context.Context, max int) ([]com
 		newAddrs, hasMore, err := v.con.TimedOutChallenges(&bind.CallOpts{Context: ctx}, v.rollupAddress, i, count)
 		addresses = append(addresses, newAddrs...)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if !hasMore {
 			break
@@ -109,7 +110,7 @@ type RollupConfig struct {
 func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 	config, err := v.con.GetConfig(&bind.CallOpts{Context: ctx}, v.rollupAddress)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &RollupConfig{
 		ConfirmPeriodBlocks:      config.ConfirmPeriodBlocks,
@@ -123,21 +124,24 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 func (v *ValidatorUtils) GetStakers(ctx context.Context) ([]common.Address, error) {
 	addresses, _, err := v.con.GetStakers(&bind.CallOpts{Context: ctx}, v.rollupAddress, big.NewInt(0), math.MaxBig256)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return common.AddressArrayFromEth(addresses), nil
 }
 
 func (v *ValidatorUtils) LatestStaked(ctx context.Context, staker common.Address) (*big.Int, [32]byte, error) {
-	return v.con.LatestStaked(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
+	amount, hash, err := v.con.LatestStaked(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
+	return amount, hash, errors.WithStack(err)
 }
 
 func (v *ValidatorUtils) StakedNodes(ctx context.Context, staker common.Address) ([]*big.Int, error) {
-	return v.con.StakedNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
+	nodes, err := v.con.StakedNodes(&bind.CallOpts{Context: ctx}, v.rollupAddress, staker.ToEthAddress())
+	return nodes, errors.WithStack(err)
 }
 
 func (v *ValidatorUtils) AreUnresolvedNodesLinear(ctx context.Context) (bool, error) {
-	return v.con.AreUnresolvedNodesLinear(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+	linear, err := v.con.AreUnresolvedNodesLinear(&bind.CallOpts{Context: ctx}, v.rollupAddress)
+	return linear, errors.WithStack(err)
 }
 
 func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmType, error) {
@@ -146,7 +150,7 @@ func (v *ValidatorUtils) CheckDecidableNextNode(ctx context.Context) (ConfirmTyp
 		v.rollupAddress,
 	)
 	if err != nil {
-		return CONFIRM_TYPE_NONE, err
+		return CONFIRM_TYPE_NONE, errors.WithStack(err)
 	}
 	return ConfirmType(confirmType), nil
 }
@@ -160,7 +164,7 @@ func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker1, staker
 		math.MaxBig256,
 	)
 	if err != nil {
-		return CONFLICT_TYPE_NONE, nil, nil, err
+		return CONFLICT_TYPE_NONE, nil, nil, errors.WithStack(err)
 	}
 	for ConflictType(conflictType) == CONFLICT_TYPE_INCOMPLETE {
 		conflictType, staker1Node, staker2Node, err = v.con.FindNodeConflict(
@@ -171,7 +175,7 @@ func (v *ValidatorUtils) FindStakerConflict(ctx context.Context, staker1, staker
 			math.MaxBig256,
 		)
 		if err != nil {
-			return CONFLICT_TYPE_NONE, nil, nil, err
+			return CONFLICT_TYPE_NONE, nil, nil, errors.WithStack(err)
 		}
 	}
 	return ConflictType(conflictType), staker1Node, staker2Node, nil

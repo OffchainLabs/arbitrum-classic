@@ -59,7 +59,7 @@ type ChallengeWatcher struct {
 func NewChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*ChallengeWatcher, error) {
 	con, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &ChallengeWatcher{
@@ -76,7 +76,7 @@ func (c *ChallengeWatcher) Address() common.Address {
 func (c *ChallengeWatcher) Turn(ctx context.Context) (ChallengeTurn, error) {
 	rawTurn, err := c.con.Turn(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return 0, err
+		return 0, errors.WithStack(err)
 	}
 	return ChallengeTurn(rawTurn), nil
 }
@@ -84,7 +84,7 @@ func (c *ChallengeWatcher) Turn(ctx context.Context) (ChallengeTurn, error) {
 func (c *ChallengeWatcher) Asserter(ctx context.Context) (common.Address, error) {
 	asserter, err := c.con.Asserter(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, errors.WithStack(err)
 	}
 	return common.NewAddressFromEth(asserter), nil
 }
@@ -92,7 +92,7 @@ func (c *ChallengeWatcher) Asserter(ctx context.Context) (common.Address, error)
 func (c *ChallengeWatcher) Challenger(ctx context.Context) (common.Address, error) {
 	challenger, err := c.con.Challenger(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, errors.WithStack(err)
 	}
 	return common.NewAddressFromEth(challenger), nil
 }
@@ -100,7 +100,7 @@ func (c *ChallengeWatcher) Challenger(ctx context.Context) (common.Address, erro
 func (c *ChallengeWatcher) CurrentResponder(ctx context.Context) (common.Address, error) {
 	responder, err := c.con.CurrentResponder(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, errors.WithStack(err)
 	}
 	return common.NewAddressFromEth(responder), nil
 }
@@ -108,7 +108,7 @@ func (c *ChallengeWatcher) CurrentResponder(ctx context.Context) (common.Address
 func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, error) {
 	challengeState, err := c.con.ChallengeState(&bind.CallOpts{Context: ctx})
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, errors.WithStack(err)
 	}
 	return common.NewHashFromEth(challengeState), nil
 }
@@ -123,7 +123,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 	}
 	logs, err := c.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if len(logs) == 0 {
 		return nil, nil
@@ -134,7 +134,7 @@ func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState c
 
 	parsedLog, err := c.con.ParseBisected(logs[0])
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	cuts := make([]core.Cut, 0, len(parsedLog.ChainHashes))
 	for _, ch := range parsedLog.ChainHashes {

@@ -53,7 +53,7 @@ type StandardInboxWatcher struct {
 func NewStandardInboxWatcher(address ethcommon.Address, client ethutils.EthClient) (*StandardInboxWatcher, error) {
 	con, err := ethbridgecontracts.NewInbox(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &StandardInboxWatcher{
 		con:     con,
@@ -86,7 +86,7 @@ func (r *StandardInboxWatcher) fillMessageDetails(
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	for _, ethLog := range logs {
 		msgNum, msg, err := r.parseMessage(txData, ethLog)
@@ -102,13 +102,13 @@ func (r *StandardInboxWatcher) parseMessage(txData map[string]*types.Transaction
 	if ethLog.Topics[0] == inboxMessageDeliveredID {
 		parsedLog, err := r.con.ParseInboxMessageDelivered(ethLog)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.WithStack(err)
 		}
 		return parsedLog.MessageNum, parsedLog.Data, nil
 	} else if ethLog.Topics[0] == inboxMessageFromOriginID {
 		parsedLog, err := r.con.ParseInboxMessageDeliveredFromOrigin(ethLog)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.WithStack(err)
 		}
 		tx, ok := txData[string(parsedLog.MessageNum.Bytes())]
 		if !ok {
@@ -117,7 +117,7 @@ func (r *StandardInboxWatcher) parseMessage(txData map[string]*types.Transaction
 		args := make(map[string]interface{})
 		err = l2MessageFromOriginCallABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.WithStack(err)
 		}
 		return parsedLog.MessageNum, args["messageData"].([]byte), nil
 	} else {
@@ -133,7 +133,7 @@ type StandardInbox struct {
 func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*StandardInbox, error) {
 	watcher, err := NewStandardInboxWatcher(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &StandardInbox{
 		StandardInboxWatcher: watcher,
