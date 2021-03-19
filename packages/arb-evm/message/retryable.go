@@ -15,6 +15,8 @@ type RetryableTx struct {
 	MaxSubmissionCost *big.Int
 	CreditBack        common.Address
 	Beneficiary       common.Address
+	MaxGas            *big.Int
+	GasPriceBid       *big.Int
 	Data              []byte
 }
 
@@ -25,6 +27,8 @@ func NewRetryableTxFromData(data []byte) RetryableTx {
 	maxSubmissionCost, data := extractUInt256(data)
 	creditBack, data := extractAddress(data)
 	beneficiary, data := extractAddress(data)
+	maxGas, data := extractUInt256(data)
+	gasPriceBid, data := extractUInt256(data)
 	dataLength, data := extractUInt256(data)
 	return RetryableTx{
 		Destination:       destination,
@@ -33,6 +37,8 @@ func NewRetryableTxFromData(data []byte) RetryableTx {
 		MaxSubmissionCost: maxSubmissionCost,
 		CreditBack:        creditBack,
 		Beneficiary:       beneficiary,
+		MaxGas:            maxGas,
+		GasPriceBid:       gasPriceBid,
 		Data:              data[:dataLength.Uint64()],
 	}
 }
@@ -45,6 +51,8 @@ func (t RetryableTx) AsData() []byte {
 	ret = append(ret, math.U256Bytes(t.MaxSubmissionCost)...)
 	ret = append(ret, addressData(t.CreditBack)...)
 	ret = append(ret, addressData(t.Beneficiary)...)
+	ret = append(ret, math.U256Bytes(t.MaxGas)...)
+	ret = append(ret, math.U256Bytes(t.GasPriceBid)...)
 	ret = append(ret, math.U256Bytes(big.NewInt(int64(len(t.Data))))...)
 	ret = append(ret, t.Data...)
 	return ret
@@ -61,5 +69,7 @@ func (t RetryableTx) Equals(o RetryableTx) bool {
 		t.MaxSubmissionCost.Cmp(o.MaxSubmissionCost) == 0 &&
 		t.CreditBack == o.CreditBack &&
 		t.Beneficiary == o.Beneficiary &&
+		t.MaxGas.Cmp(o.MaxGas) == 0 &&
+		t.GasPriceBid.Cmp(o.GasPriceBid) == 0 &&
 		bytes.Equal(t.Data, o.Data)
 }

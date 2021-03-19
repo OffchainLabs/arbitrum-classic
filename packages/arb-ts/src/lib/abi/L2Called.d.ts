@@ -22,14 +22,23 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L2CalledInterface extends ethers.utils.Interface {
   functions: {
+    'onTokenTransfer(address,uint256,bytes)': FunctionFragment
     'postDepositHook(uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'onTokenTransfer',
+    values: [string, BigNumberish, BytesLike]
+  ): string
   encodeFunctionData(
     functionFragment: 'postDepositHook',
     values: [BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'onTokenTransfer',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'postDepositHook',
     data: BytesLike
@@ -56,6 +65,20 @@ export class L2Called extends Contract {
   interface: L2CalledInterface
 
   functions: {
+    onTokenTransfer(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     postDepositHook(
       num: BigNumberish,
       overrides?: Overrides
@@ -66,6 +89,20 @@ export class L2Called extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  onTokenTransfer(
+    user: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'onTokenTransfer(address,uint256,bytes)'(
+    user: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   postDepositHook(
     num: BigNumberish,
@@ -78,6 +115,20 @@ export class L2Called extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    onTokenTransfer(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     postDepositHook(num: BigNumberish, overrides?: CallOverrides): Promise<void>
 
     'postDepositHook(uint256)'(
@@ -91,6 +142,20 @@ export class L2Called extends Contract {
   }
 
   estimateGas: {
+    onTokenTransfer(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     postDepositHook(
       num: BigNumberish,
       overrides?: Overrides
@@ -103,6 +168,20 @@ export class L2Called extends Contract {
   }
 
   populateTransaction: {
+    onTokenTransfer(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      user: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     postDepositHook(
       num: BigNumberish,
       overrides?: Overrides

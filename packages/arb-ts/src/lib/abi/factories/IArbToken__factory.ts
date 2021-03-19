@@ -29,6 +29,11 @@ const _abi = [
         name: 'amount',
         type: 'uint256',
       },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
     ],
     name: 'bridgeMint',
     outputs: [],

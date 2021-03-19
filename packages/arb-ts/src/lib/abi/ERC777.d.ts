@@ -20,27 +20,26 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface StandardArbERC20Interface extends ethers.utils.Interface {
+interface ERC777Interface extends ethers.utils.Interface {
   functions: {
     'allowance(address,address)': FunctionFragment
     'approve(address,uint256)': FunctionFragment
+    'authorizeOperator(address)': FunctionFragment
     'balanceOf(address)': FunctionFragment
-    'bridge()': FunctionFragment
-    'bridgeMint(address,uint256,bytes)': FunctionFragment
+    'burn(uint256,bytes)': FunctionFragment
     'decimals()': FunctionFragment
-    'decreaseAllowance(address,uint256)': FunctionFragment
-    'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(address,address,uint8)': FunctionFragment
-    'isMaster()': FunctionFragment
-    'l1Address()': FunctionFragment
-    'migrate(uint256,address,bytes)': FunctionFragment
+    'defaultOperators()': FunctionFragment
+    'granularity()': FunctionFragment
+    'isOperatorFor(address,address)': FunctionFragment
     'name()': FunctionFragment
+    'operatorBurn(address,uint256,bytes,bytes)': FunctionFragment
+    'operatorSend(address,address,uint256,bytes,bytes)': FunctionFragment
+    'revokeOperator(address)': FunctionFragment
+    'send(address,uint256,bytes)': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
-    'updateInfo(string,string)': FunctionFragment
-    'withdraw(address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -51,32 +50,45 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     functionFragment: 'approve',
     values: [string, BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
-  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'bridgeMint',
-    values: [string, BigNumberish, BytesLike]
+    functionFragment: 'authorizeOperator',
+    values: [string]
+  ): string
+  encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'burn',
+    values: [BigNumberish, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'decimals', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'decreaseAllowance',
-    values: [string, BigNumberish]
+    functionFragment: 'defaultOperators',
+    values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'increaseAllowance',
-    values: [string, BigNumberish]
+    functionFragment: 'granularity',
+    values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
-  ): string
-  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
-  encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'migrate',
-    values: [BigNumberish, string, BytesLike]
+    functionFragment: 'isOperatorFor',
+    values: [string, string]
   ): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'operatorBurn',
+    values: [string, BigNumberish, BytesLike, BytesLike]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'operatorSend',
+    values: [string, string, BigNumberish, BytesLike, BytesLike]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'revokeOperator',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'send',
+    values: [string, BigNumberish, BytesLike]
+  ): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'totalSupply',
@@ -90,34 +102,39 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     values: [string, string, BigNumberish]
   ): string
-  encodeFunctionData(
-    functionFragment: 'updateInfo',
-    values: [string, string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'withdraw',
-    values: [string, BigNumberish]
-  ): string
 
   decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'authorizeOperator',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'burn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'decreaseAllowance',
+    functionFragment: 'defaultOperators',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'granularity', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'isOperatorFor',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'operatorBurn',
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'increaseAllowance',
+    functionFragment: 'operatorSend',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'revokeOperator',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'send', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result
@@ -125,19 +142,27 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'updateInfo', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {
     'Approval(address,address,uint256)': EventFragment
+    'AuthorizedOperator(address,address)': EventFragment
+    'Burned(address,address,uint256,bytes,bytes)': EventFragment
+    'Minted(address,address,uint256,bytes,bytes)': EventFragment
+    'RevokedOperator(address,address)': EventFragment
+    'Sent(address,address,address,uint256,bytes,bytes)': EventFragment
     'Transfer(address,address,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'Approval'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'AuthorizedOperator'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'Burned'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'Minted'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'RevokedOperator'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'Sent'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
 }
 
-export class StandardArbERC20 extends Contract {
+export class ERC777 extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -148,53 +173,60 @@ export class StandardArbERC20 extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: StandardArbERC20Interface
+  interface: ERC777Interface
 
   functions: {
     allowance(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
     'allowance(address,address)'(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
     approve(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'approve(address,uint256)'(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    balanceOf(account: string, overrides?: CallOverrides): Promise<[BigNumber]>
+    authorizeOperator(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
-    'balanceOf(address)'(
-      account: string,
+    'authorizeOperator(address)'(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    balanceOf(
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    bridge(overrides?: CallOverrides): Promise<[string]>
+    'balanceOf(address)'(
+      tokenHolder: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
-
-    bridgeMint(
-      account: string,
+    burn(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'bridgeMint(address,uint256,bytes)'(
-      account: string,
+    'burn(uint256,bytes)'(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
@@ -204,69 +236,87 @@ export class StandardArbERC20 extends Contract {
 
     'decimals()'(overrides?: CallOverrides): Promise<[number]>
 
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    defaultOperators(overrides?: CallOverrides): Promise<[string[]]>
 
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'defaultOperators()'(overrides?: CallOverrides): Promise<[string[]]>
 
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    granularity(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'granularity()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    isOperatorFor(
+      operator: string,
+      tokenHolder: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
 
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    isMaster(overrides?: CallOverrides): Promise<[boolean]>
-
-    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
-
-    l1Address(overrides?: CallOverrides): Promise<[string]>
-
-    'l1Address()'(overrides?: CallOverrides): Promise<[string]>
-
-    migrate(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'migrate(uint256,address,bytes)'(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'isOperatorFor(address,address)'(
+      operator: string,
+      tokenHolder: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
 
     name(overrides?: CallOverrides): Promise<[string]>
 
     'name()'(overrides?: CallOverrides): Promise<[string]>
+
+    operatorBurn(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'operatorBurn(address,uint256,bytes,bytes)'(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    operatorSend(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'operatorSend(address,address,uint256,bytes,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    revokeOperator(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'revokeOperator(address)'(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    send(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'send(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     symbol(overrides?: CallOverrides): Promise<[string]>
 
@@ -289,88 +339,68 @@ export class StandardArbERC20 extends Contract {
     ): Promise<ContractTransaction>
 
     transferFrom(
-      sender: string,
+      holder: string,
       recipient: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
+      holder: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateInfo(string,string)'(
-      newName: string,
-      newSymbol: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
 
   allowance(
-    owner: string,
+    holder: string,
     spender: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
   'allowance(address,address)'(
-    owner: string,
+    holder: string,
     spender: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
   approve(
     spender: string,
-    amount: BigNumberish,
+    value: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'approve(address,uint256)'(
     spender: string,
-    amount: BigNumberish,
+    value: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
+  authorizeOperator(
+    operator: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'authorizeOperator(address)'(
+    operator: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  balanceOf(tokenHolder: string, overrides?: CallOverrides): Promise<BigNumber>
 
   'balanceOf(address)'(
-    account: string,
+    tokenHolder: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  bridge(overrides?: CallOverrides): Promise<string>
-
-  'bridge()'(overrides?: CallOverrides): Promise<string>
-
-  bridgeMint(
-    account: string,
+  burn(
     amount: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'bridgeMint(address,uint256,bytes)'(
-    account: string,
+  'burn(uint256,bytes)'(
     amount: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
@@ -380,69 +410,87 @@ export class StandardArbERC20 extends Contract {
 
   'decimals()'(overrides?: CallOverrides): Promise<number>
 
-  decreaseAllowance(
-    spender: string,
-    subtractedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  defaultOperators(overrides?: CallOverrides): Promise<string[]>
 
-  'decreaseAllowance(address,uint256)'(
-    spender: string,
-    subtractedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  'defaultOperators()'(overrides?: CallOverrides): Promise<string[]>
 
-  increaseAllowance(
-    spender: string,
-    addedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  granularity(overrides?: CallOverrides): Promise<BigNumber>
 
-  'increaseAllowance(address,uint256)'(
-    spender: string,
-    addedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  'granularity()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  initialize(
-    _bridge: string,
-    _l1Address: string,
-    decimals_: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  isOperatorFor(
+    operator: string,
+    tokenHolder: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
 
-  'initialize(address,address,uint8)'(
-    _bridge: string,
-    _l1Address: string,
-    decimals_: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  isMaster(overrides?: CallOverrides): Promise<boolean>
-
-  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
-
-  l1Address(overrides?: CallOverrides): Promise<string>
-
-  'l1Address()'(overrides?: CallOverrides): Promise<string>
-
-  migrate(
-    amount: BigNumberish,
-    target: string,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'migrate(uint256,address,bytes)'(
-    amount: BigNumberish,
-    target: string,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  'isOperatorFor(address,address)'(
+    operator: string,
+    tokenHolder: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
 
   name(overrides?: CallOverrides): Promise<string>
 
   'name()'(overrides?: CallOverrides): Promise<string>
+
+  operatorBurn(
+    account: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    operatorData: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'operatorBurn(address,uint256,bytes,bytes)'(
+    account: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    operatorData: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  operatorSend(
+    sender: string,
+    recipient: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    operatorData: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'operatorSend(address,address,uint256,bytes,bytes)'(
+    sender: string,
+    recipient: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    operatorData: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  revokeOperator(
+    operator: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'revokeOperator(address)'(
+    operator: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  send(
+    recipient: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'send(address,uint256,bytes)'(
+    recipient: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   symbol(overrides?: CallOverrides): Promise<string>
 
@@ -465,88 +513,71 @@ export class StandardArbERC20 extends Contract {
   ): Promise<ContractTransaction>
 
   transferFrom(
-    sender: string,
+    holder: string,
     recipient: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'transferFrom(address,address,uint256)'(
-    sender: string,
+    holder: string,
     recipient: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  updateInfo(
-    newName: string,
-    newSymbol: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateInfo(string,string)'(
-    newName: string,
-    newSymbol: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  withdraw(
-    destination: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'withdraw(address,uint256)'(
-    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   callStatic: {
     allowance(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     'allowance(address,address)'(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     approve(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
 
     'approve(address,uint256)'(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
+    authorizeOperator(
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    'balanceOf(address)'(
-      account: string,
+    'authorizeOperator(address)'(
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    balanceOf(
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<string>
+    'balanceOf(address)'(
+      tokenHolder: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
-    'bridge()'(overrides?: CallOverrides): Promise<string>
-
-    bridgeMint(
-      account: string,
+    burn(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'bridgeMint(address,uint256,bytes)'(
-      account: string,
+    'burn(uint256,bytes)'(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
@@ -556,69 +587,84 @@ export class StandardArbERC20 extends Contract {
 
     'decimals()'(overrides?: CallOverrides): Promise<number>
 
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
+    defaultOperators(overrides?: CallOverrides): Promise<string[]>
+
+    'defaultOperators()'(overrides?: CallOverrides): Promise<string[]>
+
+    granularity(overrides?: CallOverrides): Promise<BigNumber>
+
+    'granularity()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    isOperatorFor(
+      operator: string,
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
+    'isOperatorFor(address,address)'(
+      operator: string,
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    isMaster(overrides?: CallOverrides): Promise<boolean>
-
-    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
-
-    l1Address(overrides?: CallOverrides): Promise<string>
-
-    'l1Address()'(overrides?: CallOverrides): Promise<string>
-
-    migrate(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'migrate(uint256,address,bytes)'(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     name(overrides?: CallOverrides): Promise<string>
 
     'name()'(overrides?: CallOverrides): Promise<string>
+
+    operatorBurn(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'operatorBurn(address,uint256,bytes,bytes)'(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    operatorSend(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'operatorSend(address,address,uint256,bytes,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    revokeOperator(operator: string, overrides?: CallOverrides): Promise<void>
+
+    'revokeOperator(address)'(
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    send(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'send(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     symbol(overrides?: CallOverrides): Promise<string>
 
@@ -641,42 +687,18 @@ export class StandardArbERC20 extends Contract {
     ): Promise<boolean>
 
     transferFrom(
-      sender: string,
+      holder: string,
       recipient: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
+      holder: string,
       recipient: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateInfo(string,string)'(
-      newName: string,
-      newSymbol: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'withdraw(address,uint256)'(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
   }
 
   filters: {
@@ -686,54 +708,96 @@ export class StandardArbERC20 extends Contract {
       value: null
     ): EventFilter
 
+    AuthorizedOperator(
+      operator: string | null,
+      tokenHolder: string | null
+    ): EventFilter
+
+    Burned(
+      operator: string | null,
+      from: string | null,
+      amount: null,
+      data: null,
+      operatorData: null
+    ): EventFilter
+
+    Minted(
+      operator: string | null,
+      to: string | null,
+      amount: null,
+      data: null,
+      operatorData: null
+    ): EventFilter
+
+    RevokedOperator(
+      operator: string | null,
+      tokenHolder: string | null
+    ): EventFilter
+
+    Sent(
+      operator: string | null,
+      from: string | null,
+      to: string | null,
+      amount: null,
+      data: null,
+      operatorData: null
+    ): EventFilter
+
     Transfer(from: string | null, to: string | null, value: null): EventFilter
   }
 
   estimateGas: {
     allowance(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     'allowance(address,address)'(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     approve(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'approve(address,uint256)'(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
+    authorizeOperator(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
-    'balanceOf(address)'(
-      account: string,
+    'authorizeOperator(address)'(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    balanceOf(
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<BigNumber>
+    'balanceOf(address)'(
+      tokenHolder: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    bridgeMint(
-      account: string,
+    burn(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'bridgeMint(address,uint256,bytes)'(
-      account: string,
+    'burn(uint256,bytes)'(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
@@ -743,69 +807,84 @@ export class StandardArbERC20 extends Contract {
 
     'decimals()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
+    defaultOperators(overrides?: CallOverrides): Promise<BigNumber>
+
+    'defaultOperators()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    granularity(overrides?: CallOverrides): Promise<BigNumber>
+
+    'granularity()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    isOperatorFor(
+      operator: string,
+      tokenHolder: string,
+      overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    isMaster(overrides?: CallOverrides): Promise<BigNumber>
-
-    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    l1Address(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    migrate(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'migrate(uint256,address,bytes)'(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: Overrides
+    'isOperatorFor(address,address)'(
+      operator: string,
+      tokenHolder: string,
+      overrides?: CallOverrides
     ): Promise<BigNumber>
 
     name(overrides?: CallOverrides): Promise<BigNumber>
 
     'name()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    operatorBurn(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'operatorBurn(address,uint256,bytes,bytes)'(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    operatorSend(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'operatorSend(address,address,uint256,bytes,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    revokeOperator(operator: string, overrides?: Overrides): Promise<BigNumber>
+
+    'revokeOperator(address)'(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    send(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'send(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
     symbol(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -828,39 +907,15 @@ export class StandardArbERC20 extends Contract {
     ): Promise<BigNumber>
 
     transferFrom(
-      sender: string,
+      holder: string,
       recipient: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
+      holder: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateInfo(string,string)'(
-      newName: string,
-      newSymbol: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -868,52 +923,56 @@ export class StandardArbERC20 extends Contract {
 
   populateTransaction: {
     allowance(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'allowance(address,address)'(
-      owner: string,
+      holder: string,
       spender: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     approve(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'approve(address,uint256)'(
       spender: string,
-      amount: BigNumberish,
+      value: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    authorizeOperator(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'authorizeOperator(address)'(
+      operator: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     balanceOf(
-      account: string,
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'balanceOf(address)'(
-      account: string,
+      tokenHolder: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    bridgeMint(
-      account: string,
+    burn(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'bridgeMint(address,uint256,bytes)'(
-      account: string,
+    'burn(uint256,bytes)'(
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
@@ -923,69 +982,89 @@ export class StandardArbERC20 extends Contract {
 
     'decimals()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
+    defaultOperators(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'defaultOperators()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
+    granularity(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'granularity()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    isOperatorFor(
+      operator: string,
+      tokenHolder: string,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    migrate(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'migrate(uint256,address,bytes)'(
-      amount: BigNumberish,
-      target: string,
-      data: BytesLike,
-      overrides?: Overrides
+    'isOperatorFor(address,address)'(
+      operator: string,
+      tokenHolder: string,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     name(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'name()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    operatorBurn(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'operatorBurn(address,uint256,bytes,bytes)'(
+      account: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    operatorSend(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'operatorSend(address,address,uint256,bytes,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      operatorData: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    revokeOperator(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'revokeOperator(address)'(
+      operator: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    send(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'send(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
 
     symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
@@ -1008,39 +1087,15 @@ export class StandardArbERC20 extends Contract {
     ): Promise<PopulatedTransaction>
 
     transferFrom(
-      sender: string,
+      holder: string,
       recipient: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
+      holder: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateInfo(string,string)'(
-      newName: string,
-      newSymbol: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>

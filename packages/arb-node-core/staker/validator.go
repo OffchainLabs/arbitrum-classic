@@ -164,10 +164,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		return nil, false, err
 	}
 
-	coreMessageCount, err := v.lookup.GetMessageCount()
-	if err != nil {
-		return nil, false, err
-	}
+	coreMessageCount := v.lookup.MachineMessagesRead()
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
 		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
 	}
@@ -184,7 +181,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	}
 
 	// Not necessarily successors
-	successorNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash)
+	successorNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash, startState.ProposedBlock)
 	if err != nil {
 		return nil, false, err
 	}
@@ -273,9 +270,12 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 
 	inboxAcc := execState.InboxAcc
 	hasSiblingByte := [1]byte{0}
+	lastNum := base
 	lastHash := baseHash
 	if len(successorNodes) > 0 {
-		lastHash = successorNodes[len(successorNodes)-1].NodeHash
+		lastSuccessor := successorNodes[len(successorNodes)-1]
+		lastNum = lastSuccessor.NodeNum
+		lastHash = lastSuccessor.NodeHash
 		hasSiblingByte[0] = 1
 	}
 	assertion := &core.Assertion{
@@ -290,11 +290,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		prevProposedBlock: startState.ProposedBlock,
 		prevInboxMaxCount: startState.InboxMaxCount,
 	}
-	lastNum := base
-	if len(successorNodes) > 0 {
-		lastNum = successorNodes[len(successorNodes)-1].NodeNum
-	}
-	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("node", int(lastNum.Int64())+1).Int("parentNode", int(base.Int64())).Msg("Creating node")
+	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("lastNode", int(lastNum.Int64())).Int("parentNode", int(base.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
 }
 

@@ -86,7 +86,7 @@ type RollupWatcher struct {
 func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*RollupWatcher, error) {
 	con, err := ethbridgecontracts.NewRollup(address, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return &RollupWatcher{
@@ -99,14 +99,14 @@ func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*Ro
 func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupRollupCreated, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if len(logs) == 0 {
 		return nil, errors.New("rollup not created")
@@ -114,7 +114,8 @@ func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts
 	if len(logs) > 1 {
 		return nil, errors.New("rollup created multiple times")
 	}
-	return r.con.ParseRollupCreated(logs[0])
+	ev, err := r.con.ParseRollupCreated(logs[0])
+	return ev, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.NodeInfo, error) {
@@ -122,14 +123,14 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	copy(numberAsHash[:], math.U256Bytes(number))
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {numberAsHash}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if len(logs) == 0 {
 		return nil, errors.New("Couldn't find requested node")
@@ -140,7 +141,7 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	ethLog := logs[0]
 	parsedLog, err := r.con.ParseNodeCreated(ethLog)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	proposed := &common.BlockId{
 		Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
@@ -156,24 +157,24 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	}, nil
 }
 
-func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]byte) ([]*core.NodeInfo, error) {
+func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]byte, fromBlock *big.Int) ([]*core.NodeInfo, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: fromBlock,
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
-		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {}, {parentHash}},
+		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, nil, {parentHash}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	infos := make([]*core.NodeInfo, 0, len(logs))
 	lastHash := parentHash
 	for i, ethLog := range logs {
 		parsedLog, err := r.con.ParseNodeCreated(ethLog)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		proposed := &common.BlockId{
 			Height:     common.NewTimeBlocks(new(big.Int).SetUint64(ethLog.BlockNumber)),
@@ -202,14 +203,14 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: nil,
+		FromBlock: big.NewInt(0),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{challengeCreatedID}, {addressQuery}},
 	}
 	logs, err := r.client.FilterLogs(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(logs) == 0 {
@@ -222,7 +223,7 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 
 	challenge, err := r.con.ParseRollupChallengeStarted(logs[0])
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return challenge.ChallengedNode, nil
@@ -231,7 +232,7 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (*StakerInfo, error) {
 	info, err := r.con.StakerMap(&bind.CallOpts{Context: ctx}, staker.ToEthAddress())
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if !info.IsStaked {
 		return nil, nil
@@ -250,55 +251,64 @@ func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (
 }
 
 func (r *RollupWatcher) MinimumAssertionPeriod(ctx context.Context) (*big.Int, error) {
-	return r.con.MinimumAssertionPeriod(&bind.CallOpts{Context: ctx})
+	blocks, err := r.con.MinimumAssertionPeriod(&bind.CallOpts{Context: ctx})
+	return blocks, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) Bridge(ctx context.Context) (common.Address, error) {
 	addr, err := r.con.Bridge(&bind.CallOpts{Context: ctx})
-	return common.NewAddressFromEth(addr), err
+	return common.NewAddressFromEth(addr), errors.WithStack(err)
 }
 
 func (r *RollupWatcher) StakeToken(ctx context.Context) (common.Address, error) {
 	addr, err := r.con.StakeToken(&bind.CallOpts{Context: ctx})
-	return common.NewAddressFromEth(addr), err
+	return common.NewAddressFromEth(addr), errors.WithStack(err)
 }
 
 func (r *RollupWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
-	return r.con.StakerCount(&bind.CallOpts{Context: ctx})
+	count, err := r.con.StakerCount(&bind.CallOpts{Context: ctx})
+	return count, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) ArbGasSpeedLimitPerBlock(ctx context.Context) (*big.Int, error) {
-	return r.con.ArbGasSpeedLimitPerBlock(&bind.CallOpts{Context: ctx})
+	speed, err := r.con.ArbGasSpeedLimitPerBlock(&bind.CallOpts{Context: ctx})
+	return speed, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) CurrentRequiredStake(ctx context.Context) (*big.Int, error) {
-	return r.con.CurrentRequiredStake(&bind.CallOpts{Context: ctx})
+	stake, err := r.con.CurrentRequiredStake(&bind.CallOpts{Context: ctx})
+	return stake, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) BaseStake(ctx context.Context) (*big.Int, error) {
-	return r.con.BaseStake(&bind.CallOpts{Context: ctx})
+	stake, err := r.con.BaseStake(&bind.CallOpts{Context: ctx})
+	return stake, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) LatestConfirmedNode(ctx context.Context) (*big.Int, error) {
-	return r.con.LatestConfirmed(&bind.CallOpts{Context: ctx})
+	node, err := r.con.LatestConfirmed(&bind.CallOpts{Context: ctx})
+	return node, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) FirstUnresolvedNode(ctx context.Context) (*big.Int, error) {
-	return r.con.FirstUnresolvedNode(&bind.CallOpts{Context: ctx})
+	node, err := r.con.FirstUnresolvedNode(&bind.CallOpts{Context: ctx})
+	return node, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) LatestNodeCreated(ctx context.Context) (*big.Int, error) {
-	return r.con.LatestNodeCreated(&bind.CallOpts{Context: ctx})
+	node, err := r.con.LatestNodeCreated(&bind.CallOpts{Context: ctx})
+	return node, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) ConfirmPeriodBlocks(ctx context.Context) (*big.Int, error) {
-	return r.con.ConfirmPeriodBlocks(&bind.CallOpts{Context: ctx})
+	blocks, err := r.con.ConfirmPeriodBlocks(&bind.CallOpts{Context: ctx})
+	return blocks, errors.WithStack(err)
 }
 
 func (r *RollupWatcher) GetNode(ctx context.Context, node core.NodeID) (*NodeWatcher, error) {
 	nodeAddress, err := r.con.GetNode(&bind.CallOpts{Context: ctx}, node)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return NewNodeWatcher(nodeAddress, r.client)
 }

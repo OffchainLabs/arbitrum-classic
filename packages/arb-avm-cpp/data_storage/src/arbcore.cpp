@@ -449,6 +449,12 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 
     machine = getMachineUsingStateKeys<MachineThread>(tx, checkpoint, cache);
 
+    // Update last machine output
+    {
+        std::unique_lock<std::shared_mutex> guard(last_machine_output_mutex);
+        last_machine_output = machine->machine_state.output;
+    }
+
     return tx.commit();
 }
 
@@ -661,6 +667,13 @@ void ArbCore::operator()() {
             ReadWriteTransaction tx(data_storage);
 
             auto last_assertion = machine->nextAssertion();
+
+            // Save last machine output
+            {
+                std::unique_lock<std::shared_mutex> guard(
+                    last_machine_output_mutex);
+                last_machine_output = machine->machine_state.output;
+            }
 
             // Save logs and sends
             auto status = saveAssertion(
@@ -1082,6 +1095,11 @@ ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
 
     return {rocksdb::Status::OK(),
             {result1.data.inbox_acc, result2.data.inbox_acc}};
+}
+
+uint256_t ArbCore::machineMessagesRead() {
+    std::shared_lock<std::shared_mutex> guard(last_machine_output_mutex);
+    return last_machine_output.fully_processed_inbox.count;
 }
 
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(

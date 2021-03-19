@@ -68,7 +68,7 @@ const _abi = [
       },
       {
         internalType: 'uint256',
-        name: 'value',
+        name: 'arbTxCallValue',
         type: 'uint256',
       },
       {
@@ -85,6 +85,16 @@ const _abi = [
         internalType: 'address',
         name: 'valueRefundAddress',
         type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGas',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'gasPriceBid',
+        type: 'uint256',
       },
       {
         internalType: 'bytes',
@@ -112,6 +122,40 @@ const _abi = [
       },
     ],
     name: 'depositEth',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'destAddr',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGas',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGasPrice',
+        type: 'uint256',
+      },
+    ],
+    name: 'depositEthRetryable',
     outputs: [
       {
         internalType: 'uint256',

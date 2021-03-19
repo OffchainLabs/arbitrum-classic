@@ -58,14 +58,18 @@ interface IInbox is IMessageProvider {
 
     function createRetryableTicket(
         address destAddr,
-        uint256 value,
+        uint256 arbTxCallValue,
         uint256 maxSubmissionCost,
         address submissionRefundAddress,
         address valueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
         bytes calldata data
     ) external payable returns (uint256);
 
     function depositEth(address destAddr) external payable returns (uint256);
+
+    function depositEthRetryable(address destAddr, uint256 maxSubmissionCost, uint256 maxGas, uint256 maxGasPrice) external payable returns (uint256);
 
     function bridge() external view returns (IBridge);
 }
