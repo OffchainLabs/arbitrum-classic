@@ -30,6 +30,10 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../ethereum/EthERC20Bridge.sol";
 
+interface ITransferReceiver {
+    function onTokenTransfer(address, uint, bytes calldata) external returns (bool);
+}
+
 contract ArbTokenBridge is CloneFactory {
     using Address for address;
 
@@ -87,51 +91,19 @@ contract ArbTokenBridge is CloneFactory {
         l1Pair = _l1Pair;
     }
 
-    function executePostMintCall(
-        bytes memory postMintCall
-    ) internal returns (bool, address) {
-        // TODO: should first bit define if handleCallFail is called?
-        if(postMintCall.length < 40) return (false, address(0));
+    function mintAndCall(
+        IArbToken token,
+        uint256 amount,
+        address user,
+        address to,
+        bytes memory data
+    ) public {
+        // can only be called by self
+        require(msg.sender == address(this), "Not called by self");
 
-        address backupAddr = BytesLib.toAddress(postMintCall, 0);
-        address destAddr = BytesLib.toAddress(postMintCall, 20);
-
-        bool success;
-        assembly {
-            success := call(
-                gas(),
-                destAddr,
-                callvalue(),
-                add(postMintCall, 72), // 32 bytes rlp encoded bytes param + 40 bytes addresses
-                sub(postMintCall, 40),
-                0,
-                0
-            )
-        }
-
-        // TODO: what if user tries calling bridge mint from postMintCall?
-        // Set queryable variable and check if call originates from mint.
-        // TODO: Add this check to the token
-        return (success, backupAddr);
-    }
-
-    function handleCallFail(
-        address token,
-        address account,
-        address backupAddr,
-        uint256 amount
-    ) internal {
-        // if user sent to bridge, then proxied a call that failed, send back to user
-        if(
-            account == address(this) &&
-            backupAddr != address(0) &&
-            backupAddr != account // I don't think this check is needed
-        ) {
-            // TODO: if this fails?
-            bool success = IERC20(token).transfer(backupAddr, amount);
-        } else {
-            // damn
-        }
+        token.bridgeMint(to, amount);
+        bool success = ITransferReceiver(to).onTokenTransfer(user, amount, data);
+        require(success, "External onTokenTransfer reverted");
     }
 
     function mintERC777FromL1(
@@ -143,9 +115,6 @@ contract ArbTokenBridge is CloneFactory {
     ) external onlyEthPair {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
         token.bridgeMint(account, amount);
-
-        (bool success, address backupAddr) = executePostMintCall(postMintCall);
-        if(!success) handleCallFail(address(token), account, backupAddr, amount);
     }
 
     function mintERC20FromL1(
@@ -153,13 +122,23 @@ contract ArbTokenBridge is CloneFactory {
         address account,
         uint256 amount,
         uint8 decimals,
-        bytes calldata postMintCall
+        bytes calldata data
     ) external onlyEthPair {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        token.bridgeMint(account, amount);
 
-        (bool success, address backupAddr) = executePostMintCall(postMintCall);
-        if(!success) handleCallFail(address(token), account, backupAddr, amount);
+        if(data.length > 20) {
+            address to = BytesLib.toAddress(data, 0);
+            // TODO: does byte slice allocate extra memory? if so we can use assembly call
+            try ArbTokenBridge(this).mintAndCall(token, amount, account, to, bytes(data[20:])) {
+                // call was a success, emit event?
+            } catch {
+                // if reverted, then credit user account
+                token.bridgeMint(account, amount);
+                // TODO: emit fail MintAndCall event
+            }
+        } else {
+            token.bridgeMint(account, amount);
+        }
     }
 
     function mintCustomtokenFromL1(
@@ -172,9 +151,7 @@ contract ArbTokenBridge is CloneFactory {
         require(tokenAddress != address(0), "Custom Token doesn't exist");
         IArbToken token = IArbToken(tokenAddress);
         token.bridgeMint(account, amount);
-
-        (bool success, address backupAddr) = executePostMintCall(postMintCall);
-        if(!success) handleCallFail(address(token), account, backupAddr, amount);
+        // TODO: should we add postMintCall? custom token logic could implement it in bridgeMint
     }
 
     function updateERC777TokenInfo(
