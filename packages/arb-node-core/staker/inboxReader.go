@@ -160,7 +160,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				}
 			}
 		}
-		<-time.After(time.Second * 2)
+		<-time.After(time.Second * 1)
 	}
 }
 
