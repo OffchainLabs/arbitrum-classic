@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-// import "../ethereum/EthERC20Bridge.sol";
+import "../arbitrum/ArbTokenBridge.sol";
 // import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 // contract TestPostDepositCall {
@@ -44,7 +44,7 @@ pragma solidity ^0.6.11;
 //     }
 // }
 
-contract L2Called {
+contract L2Called is ITransferReceiver {
     event Called(uint256 num);
     
     constructor() public {}
@@ -52,5 +52,18 @@ contract L2Called {
     // This function can be anything
     function postDepositHook(uint256 num) public {
         emit Called(num);
+    }
+
+    function onTokenTransfer(address user, uint amount, bytes calldata data) external override returns (bool) {
+        uint256 num = abi.decode(data, (uint256));
+
+        if(num == 5) {
+            postDepositHook(num);
+            return true;
+        } else if(num == 7) {
+            revert();
+        } else {
+            return false;
+        }
     }
 }

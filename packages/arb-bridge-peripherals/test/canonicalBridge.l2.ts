@@ -20,7 +20,6 @@ import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { Contract, ContractFactory } from 'ethers'
 import { deploy1820Registry } from '../scripts/utils'
-import { L2Called__factory } from "arb-ts/src/lib/abi/factories/L2Called__factory"
 
 describe('Bridge peripherals layer 2', () => {
   let accounts: SignerWithAddress[]
@@ -69,7 +68,8 @@ describe('Bridge peripherals layer 2', () => {
   })
   it('should mint erc20 tokens correctly', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const account = '0x0000000000000000000000000000000000000002'
+    const sender = '0x0000000000000000000000000000000000000002'
+    const dest = sender;
     const amount = '1'
     const decimals = '18'
 
@@ -82,7 +82,8 @@ describe('Bridge peripherals layer 2', () => {
 
     const tx = await testBridge.mintERC20FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
       '0x'
@@ -98,13 +99,13 @@ describe('Bridge peripherals layer 2', () => {
     const Erc20 = await ethers.getContractFactory('StandardArbERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)
 
-    const balance = await erc20.balanceOf(account)
+    const balance = await erc20.balanceOf(dest)
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
   })
 
   it('should execute post mint call', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000305'
-    const account = '0x0000000000000000000000000000000000000003'
+    const sender = '0x0000000000000000000000000000000000000003'
     const amount = '1'
     const decimals = '18'
 
@@ -115,30 +116,24 @@ describe('Bridge peripherals layer 2', () => {
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    const L2Deployed = new L2Called__factory(accounts[0])
-    const l2Deployed = await L2Deployed.deploy()
-    
-    
-    
+    const L2Called = await ethers.getContractFactory('L2Called')
+    const l2Called = await L2Called.deploy()
+    const dest = l2Called.address;
     const num = 5;
-    const encodedFunction = l2Deployed.interface.encodeFunctionData("postDepositHook", [num])
-
-    const postMintCall = ethers.utils.hexlify(ethers.utils.concat([
-      account,
-      l2Deployed.address,
-      encodedFunction
-    ]))
+    const callHookData = ethers.utils.defaultAbiCoder.encode(["uint256"], [num])
 
     const tx = await testBridge.mintERC20FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
-      postMintCall
+      callHookData
     )
     const receipt = await tx.wait()
 
-    const eventTopic = l2Deployed.interface.getEventTopic('Called(uint256)')
+    // Called(uint256)
+    const eventTopic = "0xfea238a9794376fb3707dbbabe56f0fad5e4110a7839485387c458f2d1aa5d50"
 
     const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
 
@@ -154,26 +149,90 @@ describe('Bridge peripherals layer 2', () => {
       num,
       'Token event called in hook emitted wrong num'
     )
-    
-    const postTokenCode = await ethers.provider.getCode(l2ERC20Address)
-    assert.notEqual(
-      postTokenCode,
-      '0x',
-      'Token not deployed to correct address'
-    )
 
-    
-
-    const Erc20 = await ethers.getContractFactory('StandardArbERC20')
+    // dest should hold amount and sender 0
+    const Erc20 = await ethers.getContractFactory('OZERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)
 
-    const balance = await erc20.balanceOf(account)
-    assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
+    assert.equal(
+      (await erc20.balanceOf(dest)).toString(),
+      amount,
+      "L2Called contract not holding coins"
+    )
+    assert.equal(
+      (await erc20.balanceOf(sender)).toString(),
+      '0',
+      "Sender should not hold any coins"
+    )
+  })
+
+  it.only('should revert post mint call correctly', async function () {
+    const l1ERC20 = '0x0000000000000000000000000000000000000325'
+    const sender = '0x0000000000000000000000000000000000000005'
+    const amount = '1'
+    const decimals = '18'
+
+    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
+      l1ERC20
+    )
+
+    const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
+    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
+
+    const L2Called = await ethers.getContractFactory('L2Called')
+    const l2Called = await L2Called.deploy()
+    const dest = l2Called.address;
+    const num = 7;
+    const callHookData = ethers.utils.defaultAbiCoder.encode(["uint256"], [num])
+
+    const tx = await testBridge.mintERC20FromL1(
+      l1ERC20,
+      sender,
+      dest,
+      amount,
+      decimals,
+      callHookData
+    )
+    const receipt = await tx.wait()
+
+    // MintAndCallTriggered(bool);
+    const eventTopic = "0x1a3c7fa31e7eb02a6858cb2f7c3c83ce0ef14f44eb7e454cff78462e9a931866"
+
+    const filteredEvents: Array<any> = receipt.events.filter((event: any) => event.topics[0] === eventTopic)
+
+    assert.equal(
+      filteredEvents.length,
+      1,
+      'Token post mint hook should have emitted event'
+    )
+    
+    const success: boolean = filteredEvents[0].args.success
+    assert.equal(
+      success,
+      false,
+      'Token post mint hook should have reverted'
+    )
+
+    // dest should hold not hold amount when reverted
+    const Erc20 = await ethers.getContractFactory('OZERC20')
+    const erc20 = await Erc20.attach(l2ERC20Address)
+
+    assert.equal(
+      (await erc20.balanceOf(dest)).toString(),
+      '0',
+      "L2Called contract should not be holding coins"
+    )
+    assert.equal(
+      (await erc20.balanceOf(sender)).toString(),
+      amount,
+      "Sender should hold coins"
+    )
   })
 
   it('should mint erc777 tokens correctly', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const account = '0x0000000000000000000000000000000000000002'
+    const sender = '0x0000000000000000000000000000000000000002'
+    const dest = sender;
     const amount = '10'
     const decimals = '18'
 
@@ -186,7 +245,8 @@ describe('Bridge peripherals layer 2', () => {
 
     const tx = await testBridge.mintERC777FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
       '0x'
@@ -202,26 +262,29 @@ describe('Bridge peripherals layer 2', () => {
     const Erc777 = await ethers.getContractFactory('StandardArbERC777')
     const erc777 = await Erc777.attach(l2ERC777Address)
 
-    const balance = await erc777.balanceOf(account)
+    const balance = await erc777.balanceOf(dest)
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
   })
 
   it('should burn and mint tokens correctly on migrate', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000002'
-    const account = accounts[0].address
+    const sender = accounts[0].address
+    const dest = sender
     const amount = '1'
     const decimals = '18'
 
     const tx20 = await testBridge.mintERC20FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
       '0x'
     )
     const tx777 = await testBridge.mintERC777FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
       '0x'
@@ -242,9 +305,9 @@ describe('Bridge peripherals layer 2', () => {
     // const balance20 = await erc20.balanceOf(account)
     // const balance777 = await erc777.balanceOf(account)
 
-    const migrate = await erc20.migrate(amount, l2ERC777Address)
-    const newBalance777 = await erc777.balanceOf(account)
-    const newBalance20 = await erc20.balanceOf(account)
+    const migrate = await erc20.migrate(amount, l2ERC777Address, '0x')
+    const newBalance777 = await erc777.balanceOf(dest)
+    const newBalance20 = await erc20.balanceOf(dest)
     assert.equal(
       newBalance777.toString(),
       '2',
@@ -259,13 +322,15 @@ describe('Bridge peripherals layer 2', () => {
 
   it('should fail to migrate from erc20 to non-deployed erc777', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000003'
-    const account = accounts[0].address
+    const sender = accounts[0].address
+    const dest = sender
     const amount = '1'
     const decimals = '18'
 
     const tx20 = await testBridge.mintERC20FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
       '0x'
@@ -281,7 +346,7 @@ describe('Bridge peripherals layer 2', () => {
     const Erc20 = await ethers.getContractFactory('StandardArbERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)
     try {
-      const migrate = await erc20.migrate(amount, l2ERC777Address)
+      const migrate = await erc20.migrate(amount, l2ERC777Address, '0x')
       assert.equal(true, false, 'Migration should have failed')
     } catch (e) {
       assert.equal(e.message, 'execution reverted', 'Migration did not fail')
@@ -290,7 +355,8 @@ describe('Bridge peripherals layer 2', () => {
 
   it('should burn on withdraw', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const account = accounts[0].address
+    const sender = accounts[0].address
+    const dest = sender
     const amount = '10'
     const decimals = '18'
 
@@ -300,7 +366,8 @@ describe('Bridge peripherals layer 2', () => {
 
     const tx = await testBridge.mintERC777FromL1(
       l1ERC20,
-      account,
+      sender,
+      dest,
       amount,
       decimals,
       '0x'
@@ -309,12 +376,12 @@ describe('Bridge peripherals layer 2', () => {
     const Erc777 = await ethers.getContractFactory('StandardArbERC777')
     const erc777 = await Erc777.attach(l2ERC777Address)
 
-    const balance = await erc777.balanceOf(account)
+    const balance = await erc777.balanceOf(dest)
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
 
     await erc777.withdraw(accounts[1].address, balance)
 
-    const newBalance = await erc777.balanceOf(account)
+    const newBalance = await erc777.balanceOf(dest)
     assert.equal(newBalance.toString(), '0', 'Tokens not minted correctly')
   })
 })
