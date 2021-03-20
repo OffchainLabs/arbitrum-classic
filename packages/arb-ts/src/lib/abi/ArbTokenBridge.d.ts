@@ -142,9 +142,11 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
 
   events: {
     'MintAndCallTriggered(bool,address,address,uint256)': EventFragment
+    'WithdrawToken(uint256,address,uint256,address,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'MintAndCallTriggered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawToken'): EventFragment
 }
 
 export class ArbTokenBridge extends Contract {
@@ -743,6 +745,14 @@ export class ArbTokenBridge extends Contract {
       sender: string | null,
       dest: string | null,
       amount: null
+    ): EventFilter
+
+    WithdrawToken(
+      id: null,
+      l1Address: string | null,
+      amount: BigNumberish | null,
+      destination: string | null,
+      exitNum: null
     ): EventFilter
   }
 
