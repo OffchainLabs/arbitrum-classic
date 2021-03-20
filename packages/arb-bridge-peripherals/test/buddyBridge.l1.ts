@@ -44,11 +44,16 @@ describe('Buddy bridge layer 1', () => {
       '0x0000000000000000000000000000000000000000',
       'Initial L2 address not 0'
     )
-
+    const maxSubmissionCost = 0
     const maxGas = 999999999999
     const gasPrice = 0
     const deployCode = '0x000000000000000000000000'
-    await testBuddy.initiateBuddyDeploy(maxGas, gasPrice, deployCode)
+    await testBuddy.initiateBuddyDeploy(
+      maxSubmissionCost,
+      maxGas,
+      gasPrice,
+      deployCode
+    )
 
     assert.notEqual(
       await testBuddy.l2Buddy(),
