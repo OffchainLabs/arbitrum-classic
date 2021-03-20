@@ -177,7 +177,7 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
         throw std::runtime_error("expected code to be array");
     }
     auto op_count = json_code.size();
-    auto segment = std::make_shared<CodeSegment>(0);
+    auto segment = CodeSegment::new_segment();
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
         segment->addOperation(operation_from_json(*it, op_count, *segment));
     }

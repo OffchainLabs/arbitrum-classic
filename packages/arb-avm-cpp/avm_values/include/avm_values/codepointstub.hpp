@@ -18,16 +18,17 @@
 #define codepointstub_hpp
 
 #include <avm_values/bigint.hpp>
+#include <avm_values/code.hpp>
 #include <avm_values/opcodes.hpp>
 
 struct CodePoint;
 
 struct CodePointRef {
-    uint64_t segment;
+    CodeSegment segment;
     uint64_t pc;
 
-    CodePointRef(uint64_t segment_, uint64_t pc_)
-        : segment(segment_), pc(pc_) {}
+    CodePointRef(CodeSegment segment_, uint64_t pc_)
+        : segment(std::move(segment_)), pc(pc_) {}
 
     CodePointRef& operator++() {
         --pc;
