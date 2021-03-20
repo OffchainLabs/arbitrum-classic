@@ -32,8 +32,7 @@ struct Operation {
     Operation(OpCode opcode_, value val);
 
     void marshalForProof(std::vector<unsigned char>& buf,
-                         MarshalLevel marshal_level,
-                         const Code& code) const;
+                         MarshalLevel marshal_level) const;
 };
 
 bool operator==(const Operation& val1, const Operation& val2);

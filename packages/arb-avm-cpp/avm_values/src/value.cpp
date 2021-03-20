@@ -165,8 +165,7 @@ void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
 namespace {
 void marshalForProof(const HashPreImage& val,
                      MarshalLevel,
-                     std::vector<unsigned char>& buf,
-                     const Code&) {
+                     std::vector<unsigned char>& buf) {
     buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
 }
@@ -181,42 +180,38 @@ MarshalLevel childNestLevel(MarshalLevel level) {
 
 void marshalForProof(const Tuple& val,
                      MarshalLevel marshal_level,
-                     std::vector<unsigned char>& buf,
-                     const Code& code) {
+                     std::vector<unsigned char>& buf) {
     if (marshal_level == MarshalLevel::STUB) {
-        marshalForProof(val.getHashPreImage(), marshal_level, buf, code);
+        marshalForProof(val.getHashPreImage(), marshal_level, buf);
     } else {
         buf.push_back(TUPLE + val.tuple_size());
         MarshalLevel nested_level = childNestLevel(marshal_level);
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto itemval = val.get_element(i);
-            marshalForProof(itemval, nested_level, buf, code);
+            marshalForProof(itemval, nested_level, buf);
         }
     }
 }
 
 void marshalForProof(const CodePointStub& val,
                      MarshalLevel marshal_level,
-                     std::vector<unsigned char>& buf,
-                     const Code& code) {
-    auto& cp = code.loadCodePoint(val.pc);
+                     std::vector<unsigned char>& buf) {
+    auto& cp = val.pc.segment.load()[val.pc];
     buf.push_back(CODEPT);
-    cp.op.marshalForProof(buf, childNestLevel(marshal_level), code);
+    cp.op.marshalForProof(buf, childNestLevel(marshal_level));
     marshal_uint256_t(cp.nextHash, buf);
 }
 
 void marshalForProof(const uint256_t& val,
                      MarshalLevel,
-                     std::vector<unsigned char>& buf,
-                     const Code&) {
+                     std::vector<unsigned char>& buf) {
     buf.push_back(NUM);
     marshal_uint256_t(val, buf);
 }
 
 void marshalForProof(const Buffer& val,
                      MarshalLevel,
-                     std::vector<unsigned char>& buf,
-                     const Code&) {
+                     std::vector<unsigned char>& buf) {
     buf.push_back(BUFFER);
     marshal_uint256_t(val.hash(), buf);
 }
@@ -225,12 +220,9 @@ void marshalForProof(const Buffer& val,
 
 void marshalForProof(const value& val,
                      MarshalLevel marshal_level,
-                     std::vector<unsigned char>& buf,
-                     const Code& code) {
+                     std::vector<unsigned char>& buf) {
     return std::visit(
-        [&](const auto& v) {
-            return marshalForProof(v, marshal_level, buf, code);
-        },
+        [&](const auto& v) { return marshalForProof(v, marshal_level, buf); },
         val);
 }
 

@@ -28,27 +28,32 @@
 #include <vector>
 
 class CodeSegment;
+class LoadedCodeSegment;
 
 class CodeSegmentInner {
     friend CodeSegment;
+    friend LoadedCodeSegment;
 
     uint64_t segment_id;
     std::vector<CodePoint> code;
     std::shared_mutex mutex;
 
+    CodeSegmentInner(const CodeSegmentInner&) = delete;
+    CodeSegmentInner& operator=(const CodeSegmentInner&) = delete;
+
+    CodeSegmentInner(CodeSegmentInner&&) = default;
+    CodeSegmentInner& operator=(CodeSegmentInner&&) = default;
+
     CodeSegmentInner(uint64_t segment_id_) : segment_id(segment_id_) {}
 };
 
 class LoadedCodeSegment : private CodeSegment {
-    std::shared_guard<std::shared_mutex> guard;
+    std::shared_lock<std::shared_mutex> guard;
 
    public:
-    LoadedCodeSegment(CodeSegment segment_)
-        : CodeSegment(std::move(segment_)), guard(inner->mutex) {}
+    LoadedCodeSegment(CodeSegment segment_);
 
-    const CodePoint& operator[](uint64_t pc) const {
-        return inner->code.at(pc);
-    }
+    const CodePoint& operator[](uint64_t pc) const;
 };
 
 class CodeSegment {
@@ -64,18 +69,15 @@ class CodeSegment {
     CodeSegment cloneWithSize(uint64_t size) const;
 
    public:
-    CodeSegment(const CodeSegment&) = delete;
-    CodeSegment& operator=(const CodeSegment&) = delete;
+    static CodeSegment newSegment();
 
-    CodeSegment newSegment();
-
-    uint64_t segmentID() const { return segment_id; }
+    uint64_t segmentID() const { return inner->segment_id; }
 
     // Returns a fake hash-sized value to use as a key in the DB
     uint256_t dbHash() const {
         uint256_t res;
         res.hi.hi = 'c' << 24 | 'o' << 16 | 'd' << 8 | 'e';
-        res.lo.lo = segment_id;
+        res.lo.lo = inner->segment_id;
         return res;
     }
 

@@ -26,12 +26,11 @@ Operation::Operation(OpCode opcode_, value immediate_)
     : opcode(opcode_), immediate(std::move(immediate_)) {}
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
-                                MarshalLevel marshal_level,
-                                const Code& code) const {
+                                MarshalLevel marshal_level) const {
     if (immediate) {
         buf.push_back(1);
         buf.push_back(static_cast<uint8_t>(opcode));
-        ::marshalForProof(*immediate, marshal_level, buf, code);
+        ::marshalForProof(*immediate, marshal_level, buf);
     } else {
         buf.push_back(0);
         buf.push_back(static_cast<uint8_t>(opcode));

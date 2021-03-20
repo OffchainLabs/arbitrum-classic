@@ -16,6 +16,13 @@
 
 #include <avm_values/code.hpp>
 
+LoadedCodeSegment::LoadedCodeSegment(CodeSegment segment_)
+    : CodeSegment(std::move(segment_)), guard(inner->mutex) {}
+
+const CodePoint& LoadedCodeSegment::operator[](uint64_t pc) const {
+    return inner->code.at(pc);
+}
+
 CodeSegment CodeSegment::newSegment() {
     return CodeSegment(
         std::make_shared<CodeSegmentInner>(next_segment_id.fetch_add(1)));
@@ -28,7 +35,7 @@ CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
         throw new std::runtime_error(
             "Attempted to create code segment reaching past end");
     }
-    CodeSegment ret = newSegment();
+    CodeSegment ret = CodeSegment::newSegment();
     ret.inner->code.resize(size);
     std::copy(inner->code.begin(), inner->code.begin() + size,
               std::back_inserter(ret.inner->code));
@@ -36,7 +43,7 @@ CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
 }
 
 CodePointStub CodeSegment::addOperationAt(Operation op, uint64_t pc) {
-    std::unique_lock<std::shared_mutex> guard(inner->mutex, std::try_lock_t);
+    std::unique_lock<std::shared_mutex> guard(inner->mutex, std::try_to_lock);
     if (!guard.owns_lock()) {
         // This code segment is being concurrently accessed (probably currently
         // loaded)

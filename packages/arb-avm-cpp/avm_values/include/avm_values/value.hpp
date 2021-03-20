@@ -28,7 +28,6 @@ class Tuple;
 struct Operation;
 struct CodePoint;
 class HashPreImage;
-class Code;
 struct CodePointStub;
 struct CodePointRef;
 
@@ -55,8 +54,7 @@ void marshal_value(const value& val, std::vector<unsigned char>& buf);
 
 void marshalForProof(const value& val,
                      MarshalLevel marshal_level,
-                     std::vector<unsigned char>& buf,
-                     const Code& code);
+                     std::vector<unsigned char>& buf);
 
 uint256_t getSize(const value& val);
 
