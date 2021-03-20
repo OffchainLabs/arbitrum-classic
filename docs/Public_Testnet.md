@@ -12,13 +12,13 @@ For a convenient landing page for all your testnet needs, see our [website](http
 
 ## Connection Information
 
-Hosted Aggregator Node (JSON-RPC Endpoint): [https://kovan3.arbitrum.io/rpc](https://kovan3.arbitrum.io/rpc)
+Hosted Aggregator Node (JSON-RPC Endpoint): [https://kovan4.arbitrum.io/rpc](https://kovan4.arbitrum.io/rpc)
 
-Rollup Chain ID: 79377087078960
+Rollup Chain ID: 212984383488152
 
-Testnet Version: v3
+Testnet Version: v4
 
-Chain Launched on January 11, 2021
+Chain Launched on March 19, 2021
 
 ## Deploying your contracts
 
