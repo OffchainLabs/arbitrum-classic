@@ -28,9 +28,9 @@
 #include <vector>
 
 class LoadedCodeSegment;
-class CodePoint;
-class CodePointStub;
-class Operation;
+struct CodePoint;
+struct CodePointStub;
+struct Operation;
 
 struct CodeSegmentInner {
     uint64_t segment_id;
@@ -40,10 +40,10 @@ struct CodeSegmentInner {
     CodeSegmentInner(const CodeSegmentInner&) = delete;
     CodeSegmentInner& operator=(const CodeSegmentInner&) = delete;
 
-    CodeSegmentInner(CodeSegmentInner&&) = default;
-    CodeSegmentInner& operator=(CodeSegmentInner&&) = default;
+    CodeSegmentInner(CodeSegmentInner&&) = delete;
+    CodeSegmentInner& operator=(CodeSegmentInner&&) = delete;
 
-    CodeSegmentInner(uint64_t segment_id_) : segment_id(segment_id_) {}
+    CodeSegmentInner(uint64_t segment_id_);
 };
 
 class CodeSegment {

@@ -26,7 +26,7 @@
 
 struct Operation {
     OpCode opcode;
-    std::shared_ptr<value> immediate;
+    std::optional<value> immediate;
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);

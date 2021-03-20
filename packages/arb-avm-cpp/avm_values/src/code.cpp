@@ -18,6 +18,9 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/codepointstub.hpp>
 
+CodeSegmentInner::CodeSegmentInner(uint64_t segment_id_)
+    : segment_id(segment_id_) {}
+
 LoadedCodeSegment::LoadedCodeSegment(CodeSegment segment_)
     : CodeSegment(std::move(segment_)), guard(inner->mutex) {}
 
