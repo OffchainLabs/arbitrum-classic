@@ -8,8 +8,10 @@ export const deploy1820Registry = async (signer: SignerWithAddress) => {
   if (registry1820 === '0x') {
     console.log('Deploying registry')
     const balance = await ethers.provider.getBalance(signer.address)
+    console.warn('registry deployer  address', signer.address)
+
     const requiredBalance = ethers.utils.parseEther('0.08')
-    if(balance.gte(requiredBalance)) {
+    if (balance.gte(requiredBalance)) {
       await signer.sendTransaction({
         to: '0xa990077c3205cbDf861e17Fa532eeB069cE9fF96',
         value: requiredBalance,

@@ -11,7 +11,7 @@ const main = async () => {
   // TODO: check buddy deployer address available
   // TODO: check 1820 registry
   const inboxAddress =
-    process.env.INBOX_ADDRESS || '0x0d0c1aDf6523D422ec7192506A7F6790253399fB'
+    process.env.INBOX_ADDRESS || '0x97884F2B6A2AF19C38AA0a15716CF2aC931A3c73'
 
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')
@@ -53,7 +53,7 @@ const main = async () => {
   writeFileSync(deployFilePath, contracts)
 
   const l2Provider = new ethers.providers.JsonRpcProvider(
-    'https://devnet-l2.arbitrum.io/rpc'
+    'https://kovan4.arbitrum.io/rpc'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
@@ -69,10 +69,13 @@ const main = async () => {
   const deployReceipt = await bridge.getL1Transaction(
     ethERC20Bridge.deployTransaction.hash
   )
+  console.info('receipt', deployReceipt.status)
 
   const seqNums = await bridge.getInboxSeqNumFromContractTransaction(
     deployReceipt
   )
+
+  console.info('seqnum', seqNums)
 
   if (!seqNums) throw new Error("Transaction didn't trigger inbox")
   if (seqNums.length !== 1)
@@ -83,15 +86,20 @@ const main = async () => {
   const l2DeployTxHash = await bridge.calculateL2TransactionHash(
     inboxSequenceNumber
   )
+  console.info(2, l2DeployTxHash)
+
   const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
+  console.info(3, l2TransactionReceipt)
 
   const buddyDeployEvents = await bridge.getBuddyDeployInL2Transaction(
     l2TransactionReceipt
   )
+  console.info(4, buddyDeployEvents)
 
   if (buddyDeployEvents.length !== 1)
     throw new Error('Buddy deploy event was not triggered one time!')
   const withdrawalId = buddyDeployEvents[0].withdrawalId
+  console.info(5, withdrawalId)
 
   const logs = await bridge.getWithdrawalsInL2Transaction(l2TransactionReceipt)
   const filteredLogs = logs.filter(log => log.uniqueId.eq(withdrawalId))
