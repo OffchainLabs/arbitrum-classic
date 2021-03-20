@@ -29,12 +29,15 @@ contract Mock {
 
     fallback() external payable {}
 
-    function sendContractTransaction(
+    function createRetryableTicket(
+        address,
         uint256,
         uint256,
         address,
+        address,
         uint256,
-        bytes calldata
+        uint256,
+        bytes calldata data
     ) external returns (uint256) {
         return 0;
     }
