@@ -17,6 +17,7 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
+#include <avm_values/codepoint.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/pool.hpp>

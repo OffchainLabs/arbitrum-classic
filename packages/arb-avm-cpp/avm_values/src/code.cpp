@@ -15,6 +15,8 @@
  */
 
 #include <avm_values/code.hpp>
+#include <avm_values/codepoint.hpp>
+#include <avm_values/codepointstub.hpp>
 
 LoadedCodeSegment::LoadedCodeSegment(CodeSegment segment_)
     : CodeSegment(std::move(segment_)), guard(inner->mutex) {}
@@ -36,9 +38,10 @@ CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
             "Attempted to create code segment reaching past end");
     }
     CodeSegment ret = CodeSegment::newSegment();
-    ret.inner->code.resize(size);
+    auto& ret_code = ret.inner->code;
+    ret_code.erase(ret_code.begin() + size, ret_code.end());
     std::copy(inner->code.begin(), inner->code.begin() + size,
-              std::back_inserter(ret.inner->code));
+              std::back_inserter(ret_code));
     return ret;
 }
 
@@ -61,5 +64,9 @@ CodePointStub CodeSegment::addOperationAt(Operation op, uint64_t pc) {
         prev_hash = hash(inner->code.back());
     }
     inner->code.emplace_back(std::move(op), prev_hash);
-    return {{*this, pc}, hash(inner->code.back())};
+    return {CodePointRef(*this, pc), hash(inner->code.back())};
+}
+
+LoadedCodeSegment CodeSegment::load() const {
+    return LoadedCodeSegment(*this);
 }

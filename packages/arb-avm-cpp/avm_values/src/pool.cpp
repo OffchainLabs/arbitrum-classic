@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <avm_values/codepoint.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
 

@@ -15,6 +15,7 @@
  */
 
 #include <avm_values/code.hpp>
+#include <avm_values/codepoint.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
@@ -34,7 +35,8 @@ uint64_t deserialize_uint64_t(const char*& bufptr) {
 CodePointRef deserializeCodePointRef(const char*& bufptr) {
     uint64_t segment = deserialize_uint64_t(bufptr);
     uint64_t pc = deserialize_uint64_t(bufptr);
-    return {segment, pc};
+    // return {segment, pc};
+    throw new std::runtime_error("Unimplemented");
 }
 
 CodePointStub deserializeCodePointStub(const char*& bufptr) {
@@ -196,7 +198,7 @@ void marshalForProof(const Tuple& val,
 void marshalForProof(const CodePointStub& val,
                      MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf) {
-    auto& cp = val.pc.segment.load()[val.pc];
+    auto& cp = val.pc.segment.load()[val.pc.pc];
     buf.push_back(CODEPT);
     cp.op.marshalForProof(buf, childNestLevel(marshal_level));
     marshal_uint256_t(cp.nextHash, buf);

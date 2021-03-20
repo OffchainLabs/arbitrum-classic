@@ -17,7 +17,7 @@
 #ifndef code_hpp
 #define code_hpp
 
-#include <avm_values/codepoint.hpp>
+#include <avm_values/bigint.hpp>
 
 #include <atomic>
 #include <cassert>
@@ -27,13 +27,12 @@
 #include <unordered_map>
 #include <vector>
 
-class CodeSegment;
 class LoadedCodeSegment;
+class CodePoint;
+class CodePointStub;
+class Operation;
 
-class CodeSegmentInner {
-    friend CodeSegment;
-    friend LoadedCodeSegment;
-
+struct CodeSegmentInner {
     uint64_t segment_id;
     std::vector<CodePoint> code;
     std::shared_mutex mutex;
@@ -45,15 +44,6 @@ class CodeSegmentInner {
     CodeSegmentInner& operator=(CodeSegmentInner&&) = default;
 
     CodeSegmentInner(uint64_t segment_id_) : segment_id(segment_id_) {}
-};
-
-class LoadedCodeSegment : private CodeSegment {
-    std::shared_lock<std::shared_mutex> guard;
-
-   public:
-    LoadedCodeSegment(CodeSegment segment_);
-
-    const CodePoint& operator[](uint64_t pc) const;
 };
 
 class CodeSegment {
@@ -73,6 +63,10 @@ class CodeSegment {
 
     uint64_t segmentID() const { return inner->segment_id; }
 
+    bool operator==(const CodeSegment& other) const {
+        return inner.get() == other.inner.get();
+    }
+
     // Returns a fake hash-sized value to use as a key in the DB
     uint256_t dbHash() const {
         uint256_t res;
@@ -83,7 +77,16 @@ class CodeSegment {
 
     CodePointStub addOperationAt(Operation op, uint64_t pc);
 
-    LoadedCodeSegment load() const { return LoadedCodeSegment(*this); }
+    LoadedCodeSegment load() const;
+};
+
+class LoadedCodeSegment : private CodeSegment {
+    std::shared_lock<std::shared_mutex> guard;
+
+   public:
+    LoadedCodeSegment(CodeSegment segment_);
+
+    const CodePoint& operator[](uint64_t pc) const;
 };
 
 #endif /* code_hpp */

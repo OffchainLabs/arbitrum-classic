@@ -89,8 +89,7 @@ value value_from_json(const nlohmann::json& full_value_json,
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {
                 pc = op_count - internal_offset;
             }
-            values.push_back(
-                value{CodePointStub({code.segmentID(), pc}, code[pc])});
+            values.push_back(value{CodePointStub({code, pc}, code.load()[pc])});
         } else if (value_json.get().contains(BUF_LABEL)) {
             values.emplace_back(
                 Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
@@ -177,11 +176,13 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
         throw std::runtime_error("expected code to be array");
     }
     auto op_count = json_code.size();
-    auto segment = CodeSegment::new_segment();
+    auto segment = CodeSegment::newSegment();
+    uint64_t i = 0;
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
-        segment->addOperation(operation_from_json(*it, op_count, *segment));
+        segment.addOperationAt(operation_from_json(*it, op_count, segment),
+                               i++);
     }
     value static_val = value_from_json(
-        std::move(executable_json.at(STATIC_LABEL)), op_count, *segment);
+        std::move(executable_json.at(STATIC_LABEL)), op_count, segment);
     return {std::move(segment), std::move(static_val)};
 }

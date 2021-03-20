@@ -26,12 +26,12 @@ CodePointStub::CodePointStub(const CodePointRef& pc_, uint256_t hash_)
     : pc(pc_), hash(hash_) {}
 
 std::ostream& operator<<(std::ostream& os, const CodePointRef& cpr) {
-    os << "(" << cpr.segment << ", " << cpr.pc << ")";
+    os << "(" << cpr.segment.segmentID() << ", " << cpr.pc << ")";
     return os;
 }
 
 void CodePointRef::marshal(std::vector<unsigned char>& buf) const {
-    marshal_uint64_t(segment, buf);
+    marshal_uint64_t(segment.segmentID(), buf);
     marshal_uint64_t(pc, buf);
 }
 

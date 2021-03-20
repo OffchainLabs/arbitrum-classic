@@ -23,10 +23,10 @@
 #include <nlohmann/json.hpp>
 
 struct LoadedExecutable {
-    std::shared_ptr<CodeSegment> code;
+    CodeSegment code;
     value static_val;
 
-    LoadedExecutable(std::shared_ptr<CodeSegment> code_, value static_val_)
+    LoadedExecutable(CodeSegment code_, value static_val_)
         : code(std::move(code_)), static_val(std::move(static_val_)) {}
 };
 
