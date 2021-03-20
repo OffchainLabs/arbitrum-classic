@@ -29,15 +29,12 @@ contract TestConstructorBuddy is L1Buddy {
     constructor(
         address _inbox,
         address _l2Deployer,
+        uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPrice,
         bytes memory _deployCode
-    )
-        L1Buddy(_inbox, _l2Deployer)
-        public
-        payable
-    {
-        L1Buddy.initiateBuddyDeploy(_maxGas, _gasPrice, _deployCode);
+    ) public payable L1Buddy(_inbox, _l2Deployer) {
+        L1Buddy.initiateBuddyDeploy(_maxSubmissionCost, _maxGas, _gasPrice, _deployCode);
     }
 
     function handleDeploySuccess() internal override {
@@ -49,17 +46,12 @@ contract TestConstructorBuddy is L1Buddy {
 }
 
 contract TestBuddy is L1Buddy {
-    constructor(
-        address _inbox,
-        address _l2Deployer
-    )
-        L1Buddy(_inbox, _l2Deployer)
-        public
-    {}
+    constructor(address _inbox, address _l2Deployer) public L1Buddy(_inbox, _l2Deployer) {}
 
     function handleDeploySuccess() internal override {
         // this deletes the codehash from state!
         L1Buddy.handleDeploySuccess();
     }
+
     function handleDeployFail() internal override {}
 }

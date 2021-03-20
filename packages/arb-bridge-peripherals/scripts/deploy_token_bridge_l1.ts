@@ -27,11 +27,13 @@ const main = async () => {
     },
   })
 
+  const maxSubmissionCost = 0
   const gasPrice = 0
   const maxGas = 100000000000
   const ethERC20Bridge = await EthERC20Bridge.deploy(
     inboxAddress,
     deployments.buddyDeployer,
+    maxSubmissionCost,
     maxGas,
     gasPrice,
     deployments.standardArbERC777,

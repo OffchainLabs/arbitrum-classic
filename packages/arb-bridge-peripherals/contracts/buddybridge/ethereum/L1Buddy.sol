@@ -39,6 +39,7 @@ abstract contract L1Buddy {
     address public l2Buddy;
     bytes32 public codeHash;
 
+    event DeployBuddyContract(uint256 indexed seqNum, address l2Address);
     modifier onlyIfConnected {
         require(l2Connection == L2Connection.Complete, "Not connected");
         _;
@@ -58,36 +59,38 @@ abstract contract L1Buddy {
     }
 
     function initiateBuddyDeploy(
+        uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes memory contractInitCode
-    ) public payable {
+    ) public payable returns (uint256) {
         require(l2Connection != L2Connection.Complete, "already connected");
         require(
             codeHash == bytes32(0) || codeHash == keccak256(contractInitCode),
             "Only retry if same deploy code"
         );
-        bytes memory data = abi.encodeWithSelector(BuddyDeployer.executeBuddyDeploy.selector, contractInitCode);
+        bytes memory data =
+            abi.encodeWithSelector(BuddyDeployer.executeBuddyDeploy.selector, contractInitCode);
 
-        if(msg.value > 0) {
-            // gas paid in L1
-            inbox.sendL1FundedContractTransaction{value: msg.value}(maxGas, gasPriceBid, address(l2Deployer), data);
-        } else {
-            // gas paid in L2
-            inbox.sendContractTransaction(maxGas, gasPriceBid, address(l2Deployer), 0, data);
-        }
         codeHash = keccak256(contractInitCode);
-        l2Buddy = BuddyUtil.calculateL2Address(
-            address(l2Deployer),
-            address(this),
-            codeHash
-        );
+        l2Buddy = BuddyUtil.calculateL2Address(address(l2Deployer), address(this), codeHash);
         l2Connection = L2Connection.Initiated;
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
+                address(l2Deployer),
+                0,
+                maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                maxGas,
+                gasPriceBid,
+                data
+            );
+        emit DeployBuddyContract(seqNum, l2Buddy);
+        return seqNum;
     }
 
-    function finalizeBuddyDeploy(
-        bool success
-    ) external {
+    function finalizeBuddyDeploy(bool success) external {
         require(l2Connection == L2Connection.Initiated, "Connection not in initiated state");
         // get sender from outbox
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
@@ -97,13 +100,13 @@ abstract contract L1Buddy {
             you don't want to rely on the L2Deployer's correctness.
         */
 
-        if(success) {
+        if (success) {
             handleDeploySuccess();
         } else {
             handleDeployFail();
         }
     }
-    
+
     function handleDeploySuccess() internal virtual {
         l2Connection = L2Connection.Complete;
     }

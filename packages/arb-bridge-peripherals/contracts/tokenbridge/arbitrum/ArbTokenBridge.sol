@@ -30,7 +30,11 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 import "../ethereum/EthERC20Bridge.sol";
 
 interface ITransferReceiver {
-    function onTokenTransfer(address, uint, bytes calldata) external returns (bool);
+    function onTokenTransfer(
+        address,
+        uint256,
+        bytes calldata
+    ) external returns (bool);
 }
 
 contract ArbTokenBridge is CloneFactory {
@@ -45,7 +49,20 @@ contract ArbTokenBridge is CloneFactory {
     ICloneable public immutable templateERC777;
     address public immutable l1Pair;
 
-    event MintAndCallTriggered(bool success, address indexed sender, address indexed dest, uint256 amount);
+    event MintAndCallTriggered(
+        bool success,
+        address indexed sender,
+        address indexed dest,
+        uint256 amount
+    );
+
+    event WithdrawToken(
+        uint256 id,
+        address indexed l1Address,
+        uint256 indexed amount,
+        address indexed destination,
+        uint256 exitNum
+    );
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -84,7 +101,11 @@ contract ArbTokenBridge is CloneFactory {
         _;
     }
 
-    constructor(address _l1Pair, address _templateERC777, address _templateERC20) public {
+    constructor(
+        address _l1Pair,
+        address _templateERC777,
+        address _templateERC20
+    ) public {
         require(_l1Pair != address(0), "L1 pair can't be address 0");
         templateERC20 = ICloneable(_templateERC20);
         templateERC777 = ICloneable(_templateERC777);
@@ -103,7 +124,7 @@ contract ArbTokenBridge is CloneFactory {
 
         // the token's transfer hook does not get triggered here
         // since the bridge already triggers a hook
-        token.bridgeMint(dest, amount, '');
+        token.bridgeMint(dest, amount, "");
         bool success = ITransferReceiver(dest).onTokenTransfer(sender, amount, data);
 
         require(success, "External onTokenTransfer reverted");
@@ -120,7 +141,7 @@ contract ArbTokenBridge is CloneFactory {
             emit MintAndCallTriggered(true, sender, dest, amount);
         } catch {
             // if reverted, then credit sender's account
-            token.bridgeMint(sender, amount, '');
+            token.bridgeMint(sender, amount, "");
             // TODO: should try to submit callHookData for the hook?
             emit MintAndCallTriggered(false, sender, dest, amount);
         }
@@ -136,11 +157,11 @@ contract ArbTokenBridge is CloneFactory {
     ) external onlyEthPair {
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
 
-        if(callHookData.length > 0) {
+        if (callHookData.length > 0) {
             // this does not trigger 777's hook!
             handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
-            token.bridgeMint(dest, amount, '');
+            token.bridgeMint(dest, amount, "");
         }
     }
 
@@ -154,10 +175,10 @@ contract ArbTokenBridge is CloneFactory {
     ) external onlyEthPair {
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
 
-        if(callHookData.length > 0) {
+        if (callHookData.length > 0) {
             handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
-            token.bridgeMint(dest, amount, '');
+            token.bridgeMint(dest, amount, "");
         }
     }
 
@@ -172,10 +193,10 @@ contract ArbTokenBridge is CloneFactory {
         require(tokenAddress != address(0), "Custom Token doesn't exist");
         IArbToken token = IArbToken(tokenAddress);
 
-        if(callHookData.length > 0) {
+        if (callHookData.length > 0) {
             handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
-            token.bridgeMint(dest, amount, '');
+            token.bridgeMint(dest, amount, "");
         }
     }
 
@@ -208,17 +229,19 @@ contract ArbTokenBridge is CloneFactory {
         address destination,
         uint256 amount
     ) external onlyFromL2Token(l1ERC20) {
-        ArbSys(100).sendTxToL1(
-            l1Pair,
-            abi.encodeWithSelector(
-                EthERC20Bridge.withdrawFromL2.selector,
-                exitNum,
-                l1ERC20,
-                destination,
-                amount
-            )
-        );
+        uint256 id =
+            ArbSys(100).sendTxToL1(
+                l1Pair,
+                abi.encodeWithSelector(
+                    EthERC20Bridge.withdrawFromL2.selector,
+                    exitNum,
+                    l1ERC20,
+                    destination,
+                    amount
+                )
+            );
         exitNum++;
+        emit WithdrawToken(id, l1ERC20, amount, destination, exitNum);
     }
 
     // A token can be bridged into different L2 implementations (ie 777 and 20)
