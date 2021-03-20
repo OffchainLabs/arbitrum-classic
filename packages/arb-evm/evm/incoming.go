@@ -16,8 +16,8 @@ type ProcessedTx struct {
 
 func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 	msg := res.IncomingRequest
-	if msg.Kind != message.L2Type {
-		return nil, errors.New("result is not a transaction")
+	if msg.Kind != message.L2Type && msg.Kind != message.RetryableType {
+		return nil, errors.Errorf("result is not a transaction %v", msg.Kind)
 	}
 	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
 	if err != nil {
@@ -41,7 +41,7 @@ func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 	for _, res := range results {
 		kind := res.IncomingRequest.Kind
 		// Ignore other message types
-		if kind != message.L2Type {
+		if kind != message.L2Type && kind != message.RetryableType {
 			continue
 		}
 		processed, err := GetTransaction(res)
