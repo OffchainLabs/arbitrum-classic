@@ -158,7 +158,7 @@ export class Bridge extends L2Bridge {
   public async calculateL2TransactionHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
-  ) {
+  ): Promise<string> {
     if (!l2ChainId)
       l2ChainId = BigNumber.from((await this.l2Provider.getNetwork()).chainId)
 
@@ -166,6 +166,22 @@ export class Bridge extends L2Bridge {
       ethers.utils.concat([
         ethers.utils.zeroPad(l2ChainId.toHexString(), 32),
         ethers.utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
+      ])
+    )
+  }
+
+  public async calculateL2RetryableTransactionHash(
+    inboxSequenceNumber: BigNumber,
+    l2ChainId?: BigNumber
+  ): Promise<string> {
+    const requestID = await this.calculateL2TransactionHash(
+      inboxSequenceNumber,
+      l2ChainId
+    )
+    return ethers.utils.keccak256(
+      ethers.utils.concat([
+        ethers.utils.zeroPad(requestID, 32),
+        ethers.utils.zeroPad(BigNumber.from(0).toHexString(), 32),
       ])
     )
   }
