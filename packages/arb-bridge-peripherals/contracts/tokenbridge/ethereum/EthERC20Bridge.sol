@@ -26,7 +26,6 @@ import "../arbitrum/ArbTokenBridge.sol";
 
 import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "../libraries/SafeERC20Namer.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
 
@@ -193,8 +192,14 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyIfConnected returns (uint256) {
-        string memory name = SafeERC20Namer.tokenName(erc20);
-        string memory symbol = SafeERC20Namer.tokenSymbol(erc20);
+        string memory name = "";
+        string memory symbol = "";
+        try ERC20(erc20).name() returns (string memory _name) {
+            name = _name;
+        } catch {}
+        try ERC20(erc20).symbol() returns (string memory _symbol) {
+            symbol = _symbol;
+        } catch {}
         uint8 decimals = ERC20(erc20).decimals();
 
         bytes memory data =
