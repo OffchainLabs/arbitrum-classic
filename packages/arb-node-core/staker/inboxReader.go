@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	nodehealth "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/healthcheck"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
@@ -19,6 +20,7 @@ type InboxReader struct {
 	caughtUp          bool
 	caughtUpChan      chan bool
 	caughtUpTarget    *big.Int
+	healthChan        chan nodehealth.Log
 
 	// Only in main thread
 	running    bool
@@ -79,6 +81,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: *from}
+
 	reorging := false
 	blocksToFetch := uint64(100)
 	for {
@@ -92,9 +96,12 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: *currentHeight}
+
 		for {
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
 				arbCorePosition := ir.db.MachineMessagesRead()
+				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: *arbCorePosition}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
 					ir.caughtUp = true
 					ir.caughtUpChan <- true
@@ -122,6 +129,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					ir.caughtUpTarget = dbMessageCount
 				}
 			}
+			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: *ir.caughtUpTarget}
 			if len(newMessages) < 40 {
 				blocksToFetch += 20
 			} else if len(newMessages) > 90 {
