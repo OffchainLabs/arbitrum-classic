@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "../arbitrum/ArbTokenBridge.sol";
 
@@ -32,6 +33,8 @@ import "../../buddybridge/ethereum/L1Buddy.sol";
 enum StandardTokenType { ERC20, ERC777 }
 
 contract EthERC20Bridge is L1Buddy {
+    using SafeERC20 for IERC20;
+
     address internal constant USED_ADDRESS = address(0x01);
 
     // exitNum => exitDataHash => LP
@@ -177,9 +180,9 @@ contract EthERC20Bridge is L1Buddy {
         redirectedExits[withdrawData] = USED_ADDRESS;
         // Unsafe external calls must occur below checks and effects
         if (exitAddress != address(0)) {
-            require(IERC20(erc20).transfer(exitAddress, amount));
+            IERC20(erc20).safeTransfer(exitAddress, amount);
         } else {
-            require(IERC20(erc20).transfer(destination, amount));
+            IERC20(erc20).safeTransfer(destination, amount);
         }
     }
 
@@ -230,7 +233,7 @@ contract EthERC20Bridge is L1Buddy {
         StandardTokenType tokenType,
         bytes memory callHookData
     ) private returns (uint256) {
-        require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
+        IERC20(erc20).safeTransferFrom(msg.sender, l2Buddy, amount);
         uint8 decimals = ERC20(erc20).decimals();
         bytes4 selector;
         if (tokenType == StandardTokenType.ERC20) {
@@ -239,15 +242,16 @@ contract EthERC20Bridge is L1Buddy {
             selector = ArbTokenBridge.mintERC777FromL1.selector;
         }
 
-        bytes memory data = abi.encodeWithSelector(
-            selector,
-            erc20,
-            sender,
-            destination,
-            amount,
-            decimals,
-            callHookData
-        );
+        bytes memory data =
+            abi.encodeWithSelector(
+                selector,
+                erc20,
+                sender,
+                destination,
+                amount,
+                decimals,
+                callHookData
+            );
 
         return
             inbox.createRetryableTicket{ value: msg.value }(
@@ -322,7 +326,7 @@ contract EthERC20Bridge is L1Buddy {
         bytes calldata callHookData
     ) external payable returns (uint256) {
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
-        require(IERC20(erc20).transferFrom(msg.sender, l2Buddy, amount));
+        IERC20(erc20).safeTransferFrom(msg.sender, l2Buddy, amount);
         bytes memory data =
             abi.encodeWithSelector(
                 ArbTokenBridge.mintCustomTokenFromL1.selector,
