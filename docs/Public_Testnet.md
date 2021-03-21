@@ -22,7 +22,7 @@ Chain Launched on March 19, 2021
 
 ## Deploying your contracts
 
-Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://kovan3.arbitrum.io/rpc
+Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://kovan4.arbitrum.io/rpc
 
 For a deeper dive into deploying with truffle see [here](Contract_Deployment.md).
 
@@ -33,8 +33,8 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 If you're using metamask, add a custom RPC network to connect to the Arbitrum testnet:
 
 - Network Name: Arbitrum Testnet V3
-- New RPC URL: https://kovan3.arbitrum.io/rpc
-- ChainID (Optional): 79377087078960
+- New RPC URL: https://kovan4.arbitrum.io/rpc
+- ChainID (Optional): 212984383488152
 - Symbol: ETH
 - Block Explorer URL: https://explorer.arbitrum.io/#/
 
