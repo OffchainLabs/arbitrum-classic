@@ -32,9 +32,9 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 If you're using metamask, add a custom RPC network to connect to the Arbitrum testnet:
 
-- Network Name: Arbitrum Testnet V3
+- Network Name: Arbitrum Testnet V4
 - New RPC URL: https://kovan4.arbitrum.io/rpc
-- ChainID (Optional): 212984383488152
+- ChainID: 212984383488152
 - Symbol: ETH
 - Block Explorer URL: https://explorer.arbitrum.io/#/
 
