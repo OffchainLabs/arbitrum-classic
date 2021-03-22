@@ -18,14 +18,17 @@
 
 pragma solidity ^0.6.11;
 
+import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
+import "arb-bridge-eth/contracts/libraries/DebugPrint.sol";
+
 library BytesParserWithDefault {
+    using BytesLib for bytes;
 
     function toUint8(bytes memory input, uint8 defaultValue) internal pure returns (uint8) {
         if(input.length == 0) {
             return defaultValue;
         } else {
-            // TODO: try catch to handle error
-            return abi.decode(input, (uint8));
+            return input.toUint8(0);
         }
     }
 
@@ -33,8 +36,7 @@ library BytesParserWithDefault {
         if(input.length == 0) {
             return defaultValue;
         } else if (input.length == 32) {
-            // TODO: remove padding and parse ascii
-            return string(input);
+            return DebugPrint.bytes32string(input.toBytes32(0));
         } else {
             // TODO: try catch to handle error
             return abi.decode(input, (string));
