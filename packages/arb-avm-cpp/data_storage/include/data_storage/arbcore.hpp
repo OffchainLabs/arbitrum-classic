@@ -25,7 +25,6 @@
 #include <data_storage/messageentry.hpp>
 #include <data_storage/readsnapshottransaction.hpp>
 #include <data_storage/storageresultfwd.hpp>
-#include <data_storage/value/code.hpp>
 #include <data_storage/value/valuecache.hpp>
 #include <utility>
 

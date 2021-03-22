@@ -16,6 +16,7 @@
 
 #include <avm_values/bigint.hpp>
 #include <avm_values/buffer.hpp>
+#include <avm_values/valuetype.hpp>
 
 #include <ethash/keccak.hpp>
 
@@ -373,19 +374,28 @@ std::vector<unsigned char> Buffer::makeNormalizationProof() const {
     return proof_bytes;
 }
 
-std::vector<Buffer> Buffer::serialize(
-    std::vector<unsigned char>& value_vector) const {
-    // first check if it's empty
-    std::vector<Buffer> ret{};
-    value_vector.push_back(depth);
+void Buffer::serialize(std::vector<unsigned char>& buf) const {
+    if (depth > std::numeric_limits<uint8_t>::max()) {
+        throw std::runtime_error("Attempted to serialize too large buffer");
+    }
+    buf.push_back(static_cast<uint8_t>(depth));
     if (auto children = get_children_const()) {
-        marshal_uint256_t(::hash(*children->first), value_vector);
-        marshal_uint256_t(::hash(*children->second), value_vector);
-        ret.push_back(*children->first);
-        ret.push_back(*children->second);
+        buf.push_back(HASH_PRE_IMAGE);
+        marshal_uint256_t(::hash(*children->first), buf);
+        buf.push_back(HASH_PRE_IMAGE);
+        marshal_uint256_t(::hash(*children->second), buf);
     } else {
         auto& bytes = std::get<LeafData>(components);
-        std::copy(bytes.begin(), bytes.end(), std::back_inserter(value_vector));
+        std::copy(bytes.begin(), bytes.end(), std::back_inserter(buf));
+    }
+}
+
+std::vector<Buffer> Buffer::getDependencies() const {
+    std::vector<Buffer> ret;
+    if (auto children = get_children_const()) {
+        ret.resize(2);
+        ret.push_back(*children->first);
+        ret.push_back(*children->second);
     }
     return ret;
 }

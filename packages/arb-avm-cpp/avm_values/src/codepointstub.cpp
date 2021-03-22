@@ -35,6 +35,10 @@ void CodePointRef::marshal(std::vector<unsigned char>& buf) const {
     marshal_uint64_t(pc, buf);
 }
 
+CodePointStub CodePointRef::addOperation(Operation op) {
+    return segment.addOperationAt(op, pc);
+}
+
 void CodePointStub::marshal(std::vector<unsigned char>& buf) const {
     pc.marshal(buf);
     marshal_uint256_t(hash, buf);

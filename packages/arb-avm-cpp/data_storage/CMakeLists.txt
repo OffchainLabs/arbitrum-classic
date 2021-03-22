@@ -32,10 +32,11 @@ set(LIB_HEADERS
   include/data_storage/readwritetransaction.hpp
   include/data_storage/storageresult.hpp
   include/data_storage/storageresultfwd.hpp
-  include/data_storage/value/code.hpp
   include/data_storage/value/machine.hpp
   include/data_storage/value/value.hpp
   include/data_storage/value/valuecache.hpp
+  include/data_storage/value/deserialize.hpp
+  include/data_storage/value/serialize.hpp
 )
 
 set(LIB_PRIVATE_HEADERS
@@ -53,11 +54,11 @@ set(LIB_SOURCES
   src/messageentry.cpp
   src/readtransaction.cpp
   src/readwritetransaction.cpp
-  src/value/code.cpp
   src/value/machine.cpp
   src/value/referencecount.cpp
-  src/value/value.cpp
   src/value/valuecache.cpp
+  src/value/deserialize.cpp
+  src/value/serialize.cpp
 )
 
 add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})

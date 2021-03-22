@@ -177,16 +177,15 @@ struct MachineStateKeys {
 };
 
 struct MachineState {
-    std::shared_ptr<Code> code;
-    mutable std::optional<CodeSegmentSnapshot> loaded_segment;
+    mutable std::shared_ptr<LoadedCodeSegment> loaded_segment;
     value registerVal;
     value static_val;
     Datastack stack;
     Datastack auxstack;
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
-    CodePointRef pc{0, 0};
-    CodePointStub errpc{{0, 0}, getErrCodePoint()};
+    CodePointRef pc;
+    CodePointStub errpc;
     staged_variant staged_message{std::monostate()};
 
     MachineOutput output;
@@ -195,11 +194,9 @@ struct MachineState {
 
     static MachineState loadFromFile(const std::string& executable_filename);
 
-    MachineState();
+    MachineState(CodeSegment segment, value static_val);
 
-    MachineState(std::shared_ptr<Code> code_, value static_val);
-
-    MachineState(std::shared_ptr<Code> code_,
+    MachineState(CodeSegment segment,
                  value register_val_,
                  value static_val,
                  Datastack stack_,

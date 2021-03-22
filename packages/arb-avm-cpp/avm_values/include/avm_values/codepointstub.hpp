@@ -44,6 +44,8 @@ struct CodePointRef {
     }
 
     void marshal(std::vector<unsigned char>& buf) const;
+
+    CodePointStub addOperation(Operation op);
 };
 
 std::ostream& operator<<(std::ostream& os, const CodePointRef& code);

@@ -30,9 +30,10 @@ struct CodePoint;
 class HashPreImage;
 struct CodePointStub;
 struct CodePointRef;
+class CodeSegment;
 
-using value =
-    std::variant<Tuple, uint256_t, CodePointStub, HashPreImage, Buffer>;
+using value = std::
+    variant<Tuple, uint256_t, CodePointStub, HashPreImage, Buffer, CodeSegment>;
 
 struct TuplePlaceholder {
     uint8_t values;
@@ -43,9 +44,10 @@ std::ostream& operator<<(std::ostream& os, const value& val);
 uint256_t hash_value(const value& value);
 
 uint64_t deserialize_uint64_t(const char*& bufptr);
-CodePointRef deserializeCodePointRef(const char*& bufptr);
-CodePointStub deserializeCodePointStub(const char*& bufptr);
 uint256_t deserializeUint256t(const char*& srccode);
+uint64_t deserializeUint64t(std::vector<unsigned char>::const_iterator& bufptr);
+uint256_t deserializeUint256t(
+    std::vector<unsigned char>::const_iterator& srccode);
 value deserialize_value(const char*& srccode);
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);

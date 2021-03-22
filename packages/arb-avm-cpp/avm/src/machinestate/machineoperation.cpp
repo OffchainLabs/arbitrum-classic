@@ -19,6 +19,8 @@
 #include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
+#include <avm_values/codepoint.hpp>
+
 #include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
@@ -962,7 +964,7 @@ void pushgas(MachineState& m) {
 }
 
 void errcodept(MachineState& m) {
-    m.stack.push(m.code->addSegment());
+    m.stack.push(CodeSegment::newSegment());
     ++m.pc;
 }
 
@@ -975,7 +977,7 @@ void pushinsn(MachineState& m) {
     }
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[1] = m.code->addOperation(target->pc, {static_cast<OpCode>(op)});
+    m.stack[1] = target->pc.addOperation({static_cast<OpCode>(op)});
     m.stack.popClear();
     ++m.pc;
 }
@@ -989,8 +991,8 @@ void pushinsnimm(MachineState& m) {
     }
     auto& op_int = assumeInt(m.stack[0]);
     auto op = static_cast<uint8_t>(op_int);
-    m.stack[2] = m.code->addOperation(
-        target->pc, {static_cast<OpCode>(op), std::move(m.stack[1])});
+    m.stack[2] = target->pc.addOperation(
+        {static_cast<OpCode>(op), std::move(m.stack[1])});
     m.stack.popClear();
     m.stack.popClear();
     ++m.pc;

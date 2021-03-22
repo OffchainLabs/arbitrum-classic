@@ -18,6 +18,7 @@
 
 #include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
+#include <avm_values/codepoint.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/vmValueParser.hpp>
 #include <utility>
@@ -118,15 +119,14 @@ void MachineState::addProcessedLog(value log_val) {
     context.logs.push_back(std::move(log_val));
 }
 
-MachineState::MachineState() : arb_gas_remaining(max_arb_gas_remaining) {}
-
-MachineState::MachineState(std::shared_ptr<Code> code_, value static_val_)
-    : code(std::move(code_)),
+MachineState::MachineState(CodeSegment segment, value static_val_)
+    : loaded_segment(std::make_shared<LoadedCodeSegment>(segment.load())),
       static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
-      pc(code->initialCodePointRef()) {}
+      pc({std::move(segment), 0}),
+      errpc({pc, getErrCodePointHash()}) {}
 
-MachineState::MachineState(std::shared_ptr<Code> code_,
+MachineState::MachineState(CodeSegment segment,
                            value register_val_,
                            value static_val_,
                            Datastack stack_,
@@ -137,7 +137,7 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            CodePointStub errpc_,
                            staged_variant staged_message_,
                            MachineOutput output_)
-    : code(std::move(code_)),
+    : loaded_segment(std::make_shared<LoadedCodeSegment>(segment.load())),
       registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),
@@ -152,9 +152,8 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {
     auto executable = loadExecutable(executable_filename);
-    auto code = std::make_shared<Code>(0);
-    code->addSegment(std::move(executable.code));
-    return MachineState{std::move(code), std::move(executable.static_val)};
+    return MachineState{std::move(executable.code),
+                        std::move(executable.static_val)};
 }
 
 uint256_t MachineState::getMachineSize() const {
@@ -170,7 +169,6 @@ uint256_t MachineState::getMachineSize() const {
 
 namespace {
 void marshalState(std::vector<unsigned char>& buf,
-                  const Code& code,
                   uint256_t next_codepoint_hash,
                   HashPreImage stackPreImage,
                   HashPreImage auxStackPreImage,
@@ -184,11 +182,11 @@ void marshalState(std::vector<unsigned char>& buf,
     stackPreImage.marshal(buf);
     auxStackPreImage.marshal(buf);
 
-    ::marshalForProof(registerVal, MarshalLevel::STUB, buf, code);
-    ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
+    ::marshalForProof(registerVal, MarshalLevel::STUB, buf);
+    ::marshalForProof(staticVal, MarshalLevel::STUB, buf);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
-    ::marshalForProof(staged_message_value, MarshalLevel::SINGLE, buf, code);
+    ::marshalForProof(staged_message_value, MarshalLevel::SINGLE, buf);
 }
 }  // namespace
 
@@ -202,7 +200,7 @@ std::vector<unsigned char> MachineState::marshalState() const {
     auto auxStackPreImage = auxstack.getHashPreImage();
     std::vector<unsigned char> buf;
 
-    ::marshalState(buf, *code, ::hash(loadCurrentInstruction()), stackPreImage,
+    ::marshalState(buf, ::hash(loadCurrentInstruction()), stackPreImage,
                    auxStackPreImage, registerVal, static_val, arb_gas_remaining,
                    errpc, *staged_message_tuple);
     return buf;
@@ -425,8 +423,8 @@ OneStepProof MachineState::marshalForProof() const {
 
     OneStepProof proof;
 
-    auto stackProof = stack.marshalForProof(stackPops, *code);
-    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+    auto stackProof = stack.marshalForProof(stackPops);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops);
 
     bool underflowed = stackProof.count < stackPops.size() ||
                        auxStackProof.count < auxStackPops.size();
@@ -440,12 +438,12 @@ OneStepProof MachineState::marshalForProof() const {
                                 stackProof.data.begin(), stackProof.data.end());
     if (current_op.immediate) {
         ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
-                          proof.standard_proof, *code);
+                          proof.standard_proof);
     }
     proof.standard_proof.insert(proof.standard_proof.cend(),
                                 auxStackProof.data.begin(),
                                 auxStackProof.data.end());
-    ::marshalState(proof.standard_proof, *code, currentInstruction.nextHash,
+    ::marshalState(proof.standard_proof, currentInstruction.nextHash,
                    stackProof.bottom, auxStackProof.bottom, registerVal,
                    static_val, arb_gas_remaining, errpc, *staged_message_tuple);
 
@@ -488,10 +486,10 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 }
 
 const CodePoint& MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
-        loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
+    if (loaded_segment->segmentID() != pc.segment.segmentID()) {
+        loaded_segment = std::make_shared<LoadedCodeSegment>(pc.segment.load());
     }
-    return (*loaded_segment->segment)[pc.pc];
+    return (*loaded_segment)[pc.pc];
 }
 
 uint256_t MachineState::nextGasCost() const {
@@ -916,7 +914,8 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";
-    auto& current_code_point = val.code->loadCodePoint(val.pc);
+    // This doesn't use loadCurrentInstruction(), possibly for thread safety
+    auto& current_code_point = val.pc.segment.load()[val.pc.pc];
     os << "operation " << current_code_point.op << "\n";
     os << "codePointHash " << intx::to_string(hash(current_code_point), 16)
        << "\n";
@@ -928,7 +927,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
        << "\n";
     os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
     os << "err handler " << val.errpc.pc << "\n";
-    auto& err_code_point = val.code->loadCodePoint(val.errpc.pc);
+    auto& err_code_point = val.errpc.pc.segment.load()[val.errpc.pc.pc];
     os << "errHandlerHash " << intx::to_string(hash(err_code_point), 16)
        << "\n";
     return os;

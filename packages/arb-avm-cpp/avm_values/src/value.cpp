@@ -32,23 +32,23 @@ uint64_t deserialize_uint64_t(const char*& bufptr) {
     return val;
 }
 
-CodePointRef deserializeCodePointRef(const char*& bufptr) {
-    uint64_t segment = deserialize_uint64_t(bufptr);
-    uint64_t pc = deserialize_uint64_t(bufptr);
-    // return {segment, pc};
-    throw new std::runtime_error("Unimplemented");
-}
-
-CodePointStub deserializeCodePointStub(const char*& bufptr) {
-    auto ref = deserializeCodePointRef(bufptr);
-    auto hash_val = deserializeUint256t(bufptr);
-    return {ref, hash_val};
-}
-
 uint256_t deserializeUint256t(const char*& bufptr) {
     auto ret = intx::be::unsafe::load<uint256_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
     bufptr += 32;
+    return ret;
+}
+
+uint64_t deserializeUint64t(std::vector<unsigned char>::const_iterator& bytes) {
+    auto val = intx::be::unsafe::load<uint64_t>(&*bytes);
+    bytes += sizeof(val);
+    return val;
+}
+
+uint256_t deserializeUint256t(
+    std::vector<unsigned char>::const_iterator& bytes) {
+    auto ret = intx::be::unsafe::load<uint256_t>(&*bytes);
+    bytes += 32;
     return ret;
 }
 
@@ -64,10 +64,6 @@ value deserialize_value(const char*& bufptr) {
         switch (valType) {
             case NUM: {
                 values.push_back(value{deserializeUint256t(bufptr)});
-                break;
-            }
-            case CODEPT: {
-                values.push_back(value{deserializeCodePointStub(bufptr)});
                 break;
             }
             default: {
@@ -151,6 +147,10 @@ struct Marshaller {
         buf.push_back(CODE_POINT_STUB);
         val.marshal(buf);
     }
+
+    void operator()(const CodeSegment& val) const {
+        throw std::runtime_error("Cannot marshal code segment");
+    }
 };
 }  // namespace
 
@@ -218,6 +218,12 @@ void marshalForProof(const Buffer& val,
     marshal_uint256_t(val.hash(), buf);
 }
 
+void marshalForProof(const CodeSegment&,
+                     MarshalLevel,
+                     std::vector<unsigned char>&) {
+    throw new std::runtime_error("Attempted to marshal CodeSegment for proof");
+}
+
 }  // namespace
 
 void marshalForProof(const value& val,
@@ -244,6 +250,8 @@ struct GetSize {
     uint256_t operator()(const uint256_t&) const { return 1; }
 
     uint256_t operator()(const CodePointStub&) const { return 1; }
+
+    uint256_t operator()(const CodeSegment&) const { return 1; }
 };
 
 uint256_t getSize(const value& val) {
@@ -276,6 +284,11 @@ struct ValuePrinter {
     std::ostream* operator()(const CodePointStub& val) const {
         //        std::printf("in CodePoint ostream operator\n");
         os << "CodePointStub(" << val.pc.pc << ")";
+        return &os;
+    }
+
+    std::ostream* operator()(const CodeSegment& val) const {
+        os << "CodeSegment(" << val.segmentID() << ")";
         return &os;
     }
 };

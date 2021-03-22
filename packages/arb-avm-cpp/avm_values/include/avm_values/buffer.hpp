@@ -134,8 +134,8 @@ class Buffer {
 
     [[nodiscard]] std::vector<unsigned char> makeNormalizationProof() const;
 
-    std::vector<Buffer> serialize(
-        std::vector<unsigned char>& value_vector) const;
+    void serialize(std::vector<unsigned char>& bytes) const;
+    std::vector<Buffer> getDependencies() const;
 };
 
 inline uint256_t hash(const Buffer& b) {

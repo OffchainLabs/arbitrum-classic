@@ -28,6 +28,7 @@
 HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
+struct Slot;
 
 class Tuple {
    private:
@@ -45,9 +46,22 @@ class Tuple {
         tpl->deferredHashing = true;
     }
 
+    [[nodiscard]] value* getElementPointer(const uint64_t pos) const {
+        if (pos >= tuple_size()) {
+            throw bad_tuple_index{};
+        }
+        return &tpl->data[pos];
+    }
+
+    void markContentsWillChange() { tpl->deferredHashing = true; }
+
     friend BasicValChecker;
     friend RawTuple;
     friend ValueBeingParsed;
+    friend Tuple deserializeTuple(
+        std::vector<unsigned char>::const_iterator& bytes,
+        std::vector<Slot>& slots,
+        size_t size);
 
    public:
     Tuple() : tpl(nullptr) {}

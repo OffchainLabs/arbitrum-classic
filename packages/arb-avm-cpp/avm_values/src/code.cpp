@@ -21,6 +21,10 @@
 CodeSegmentInner::CodeSegmentInner(uint64_t segment_id_)
     : segment_id(segment_id_) {}
 
+CodeSegmentInner::CodeSegmentInner(uint64_t segment_id_,
+                                   std::vector<CodePoint> code_)
+    : segment_id(segment_id_), code(code_) {}
+
 LoadedCodeSegment::LoadedCodeSegment(CodeSegment segment_)
     : CodeSegment(std::move(segment_)), guard(inner->mutex) {}
 
@@ -28,9 +32,30 @@ const CodePoint& LoadedCodeSegment::operator[](uint64_t pc) const {
     return inner->code.at(pc);
 }
 
+std::vector<CodePoint>::const_iterator LoadedCodeSegment::begin() const {
+    return inner->code.begin();
+}
+
+std::vector<CodePoint>::const_iterator LoadedCodeSegment::end() const {
+    return inner->code.end();
+}
+
+size_t LoadedCodeSegment::size() const {
+    return inner->code.size();
+}
+
 CodeSegment CodeSegment::newSegment() {
     return CodeSegment(
         std::make_shared<CodeSegmentInner>(next_segment_id.fetch_add(1)));
+}
+
+CodeSegment CodeSegment::restoreCodeSegment(uint64_t segment_id,
+                                            std::vector<CodePoint> code) {
+    if (segment_id >= next_segment_id) {
+        throw new std::runtime_error(
+            "Attempted to restore code segment after next segment id");
+    }
+    return CodeSegment(std::make_shared<CodeSegmentInner>(segment_id, code));
 }
 
 CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
@@ -72,4 +97,8 @@ CodePointStub CodeSegment::addOperationAt(Operation op, uint64_t pc) {
 
 LoadedCodeSegment CodeSegment::load() const {
     return LoadedCodeSegment(*this);
+}
+
+uint256_t segmentIdToDbHash(uint64_t segment_id) {
+    return hash('c' << 24 | 'o' << 16 | 'd' << 8 | 'e', segment_id);
 }

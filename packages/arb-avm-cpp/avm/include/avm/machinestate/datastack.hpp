@@ -105,8 +105,8 @@ class Datastack {
         }
     }
 
-    DataStackProof marshalForProof(const std::vector<MarshalLevel>& stackInfo,
-                                   const Code& code) const;
+    DataStackProof marshalForProof(
+        const std::vector<MarshalLevel>& stackInfo) const;
 
     value& peek() {
         if (values.empty()) {

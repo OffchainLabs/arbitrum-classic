@@ -60,7 +60,7 @@ class MachineThread : public Machine {
         : Machine(std::move(machine_state_)),
           reorg_check_data{machine_state.output.fully_processed_inbox,
                            machine_state.staged_message} {}
-    MachineThread(std::shared_ptr<Code> code, value static_val)
+    MachineThread(CodeSegment code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
     bool runMachine(MachineExecutionConfig config);
