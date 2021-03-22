@@ -204,9 +204,8 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 		//The server is returning an unexpected status code
 		fmt.Println(config.failMessage)
 		return errors.New("Failed inbox reader test - exiting")
-	} else {
-		fmt.Println(config.passMessage)
 	}
+	fmt.Println(config.passMessage)
 	return nil
 }
 

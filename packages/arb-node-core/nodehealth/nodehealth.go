@@ -254,7 +254,7 @@ func startHealthCheck(config *configStruct, state *healthState) {
 	healthcheckServer(httpMux, *config)
 }
 
-//NodeHealthCheck Create a node healthcheck that listens on the given channel
+// NodeHealthCheck Create a node healthcheck that listens on the given channel
 func NodeHealthCheck(logMsgChan <-chan Log) {
 	//Create the configuration struct
 	config := configStruct{}
