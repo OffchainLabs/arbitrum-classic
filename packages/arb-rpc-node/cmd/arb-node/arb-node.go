@@ -38,7 +38,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
-	nodehealth "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/healthcheck"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
