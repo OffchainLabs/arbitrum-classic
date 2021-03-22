@@ -17,10 +17,13 @@
 'use strict'
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
-import { L2Bridge } from './l2Bridge'
+import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
+import { ArbSys } from './abi/ArbSys'
 
 const { Zero } = constants
-interface L2ToL1EventResult {
+
+// TODO: can we import these interfaces directly from typechain?
+export interface L2ToL1EventResult {
   caller: string
   destination: string
   uniqueId: BigNumber
@@ -39,6 +42,14 @@ interface BuddyDeployEventResult {
   withdrawalId: BigNumber
   success: boolean
 }
+
+interface WithdrawTokenEventResult {
+  id: BigNumber
+  l1Address: string
+  amount: BigNumber
+  destination: string
+  exitNum: BigNumber
+}
 import { Bridge__factory } from './abi/factories/Bridge__Factory'
 import { Outbox__factory } from './abi/factories/Outbox__Factory'
 
@@ -53,6 +64,7 @@ export class Bridge extends L2Bridge {
     arbSigner: Signer
   ) {
     super(arbERC20BridgeAddress, arbSigner)
+    console.warn('init bridge.ts')
 
     this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner)
   }
@@ -158,7 +170,7 @@ export class Bridge extends L2Bridge {
   public async calculateL2TransactionHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
-  ): Promise<string> {
+  ) {
     if (!l2ChainId)
       l2ChainId = BigNumber.from((await this.l2Provider.getNetwork()).chainId)
 
@@ -166,22 +178,6 @@ export class Bridge extends L2Bridge {
       ethers.utils.concat([
         ethers.utils.zeroPad(l2ChainId.toHexString(), 32),
         ethers.utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
-      ])
-    )
-  }
-
-  public async calculateL2RetryableTransactionHash(
-    inboxSequenceNumber: BigNumber,
-    l2ChainId?: BigNumber
-  ): Promise<string> {
-    const requestID = await this.calculateL2TransactionHash(
-      inboxSequenceNumber,
-      l2ChainId
-    )
-    return ethers.utils.keccak256(
-      ethers.utils.concat([
-        ethers.utils.zeroPad(requestID, 32),
-        ethers.utils.zeroPad(BigNumber.from(0).toHexString(), 32),
       ])
     )
   }
@@ -243,9 +239,31 @@ export class Bridge extends L2Bridge {
 
   public async triggerL2ToL1Transaction(
     batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    indexInBatch: BigNumber,
+    singleAttempt = false
   ) {
     console.log('going to get proof')
+    let res: {
+      proof: string[]
+      path: BigNumber
+      l2Sender: string
+      l1Dest: string
+      l2Block: BigNumber
+      l1Block: BigNumber
+      timestamp: BigNumber
+      amount: BigNumber
+      calldataForL1: string
+    }
+
+    if (singleAttempt) {
+      const _res = await this.tryGetProofOnce(batchNumber, indexInBatch)
+      if (_res === null) {
+        console.warn('Proof not found')
+        return
+      }
+      res = _res
+    }
+    res = await this.tryGetProof(batchNumber, indexInBatch)
     const {
       proof,
       path,
@@ -256,7 +274,7 @@ export class Bridge extends L2Bridge {
       timestamp: proofTimestamp,
       amount,
       calldataForL1,
-    } = await this.tryGetProof(batchNumber, indexInBatch)
+    } = res
 
     console.log('got proof')
 
@@ -355,6 +373,67 @@ export class Bridge extends L2Bridge {
         retryDelay
       )
     }
+  }
+
+  public tryGetProofOnce = async (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
+    retryDelay = 500
+  ): Promise<{
+    proof: Array<string>
+    path: BigNumber
+    l2Sender: string
+    l1Dest: string
+    l2Block: BigNumber
+    l1Block: BigNumber
+    timestamp: BigNumber
+    amount: BigNumber
+    calldataForL1: string
+  } | null> => {
+    const nodeInterfaceAddress = '0x00000000000000000000000000000000000000C8'
+
+    const contractInterface = new ethers.utils.Interface([
+      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
+          external
+          view
+          returns (
+              bytes32[] memory proof,
+              uint256 path,
+              address l2Sender,
+              address l1Dest,
+              uint256 l2Block,
+              uint256 l1Block,
+              uint256 timestamp,
+              uint256 amount,
+              bytes memory calldataForL1
+          )`,
+    ])
+    const nodeInterface = new ethers.Contract(
+      nodeInterfaceAddress,
+      contractInterface
+    ).connect(this.l2Signer.provider!)
+
+    try {
+      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
+        batchNumber,
+        indexInBatch
+      )
+      return res
+    } catch (e) {
+      const expectedError = "batch doesn't exist"
+      if (
+        e &&
+        e.error &&
+        e.error.message &&
+        e.error.message === expectedError
+      ) {
+        console.log('Withdrawal detected, but batch not created yet.')
+      } else {
+        console.log("Withdrawal proof didn't work. Not sure why")
+        console.log(e)
+      }
+    }
+    return null
   }
 
   public tryGetProof = async (
@@ -468,5 +547,52 @@ export class Bridge extends L2Bridge {
       this.l1Bridge.l1Provider
     )
     return outbox.outboxes(batchNumber)
+  }
+
+  public async getTokenWithdrawEventData(destinationAddress: string) {
+    const iface = this.arbTokenBridge.interface
+    const tokenWithdrawEvent = iface.getEvent('WithdrawToken')
+    const tokenWithdrawTopic = iface.getEventTopic(tokenWithdrawEvent)
+
+    const topics = [
+      tokenWithdrawTopic,
+      null,
+      null,
+      ethers.utils.hexZeroPad(destinationAddress, 32),
+    ]
+
+    const logs = await this.l2Provider.getLogs({
+      address: this.arbTokenBridge.address,
+      // @ts-ignore
+      topics,
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as WithdrawTokenEventResult
+    )
+  }
+
+  public async getL2ToL1EventData(destinationAddress: string) {
+    const iface = this.arbSys.interface
+    const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
+    const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
+
+    const topics = [
+      l2ToL1TransactionTopic,
+      ethers.utils.hexZeroPad(destinationAddress, 32),
+    ]
+
+    const logs = await this.l2Provider.getLogs({
+      address: ARB_SYS_ADDRESS,
+      topics,
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+    )
   }
 }

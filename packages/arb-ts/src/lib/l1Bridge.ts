@@ -37,6 +37,7 @@ export interface L1TokenData {
     allowed: boolean
     symbol: string
     decimals: number
+    name: string
   }
   ERC777?: {
     contract: OZERC777__factory
@@ -95,6 +96,7 @@ export class L1Bridge {
       ERC777: undefined,
       CUSTOM: undefined,
     }
+    this.l1Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
     const indboxAddress = (await this.getInbox()).address
 
@@ -112,16 +114,18 @@ export class L1Bridge {
           indboxAddress
         )
         // non-standard
-        let symbol, decimals
+        let symbol, decimals, name
         try {
           symbol = await ethERC20TokenContract.symbol()
           decimals = await ethERC20TokenContract.decimals()
+          name = await ethERC20TokenContract.name()
         } catch (e) {
           console.info(
             `Weird but technically standard ERC20! ah! ${erc20L1Address}`
           )
           symbol = addressToSymbol(erc20L1Address)
           decimals = 18 // 🤷‍♂️
+          name = symbol + '_Token'
         }
 
         const allowed = await allowance.gte(MIN_APPROVAL.div(2))
@@ -131,7 +135,9 @@ export class L1Bridge {
           allowed,
           symbol,
           decimals,
+          name,
         }
+        console.warn('DDDDDD erc token data added')
       } else {
         throw new Error(`No ERC20 at ${erc20L1Address} `)
       }
@@ -193,7 +199,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      ''
     )
   }
   public async depositAsERC777(
@@ -211,7 +218,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      ''
     )
   }
 
@@ -236,7 +244,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      ''
     )
   }
 
