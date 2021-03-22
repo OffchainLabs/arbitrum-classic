@@ -111,7 +111,7 @@ export class L1Bridge {
 
         const allowance = await ethERC20TokenContract.allowance(
           walletAddress,
-          indboxAddress
+          this.ethERC20Bridge.address
         )
         // non-standard
         let symbol, decimals, name
@@ -171,12 +171,14 @@ export class L1Bridge {
 
   public async approveToken(erc20L1Address: string) {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
-    const inboxAddress = (await this.getInbox()).address
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
     }
 
-    return tokenData.ERC20.contract.approve(inboxAddress, MIN_APPROVAL)
+    return tokenData.ERC20.contract.approve(
+      this.ethERC20Bridge.address,
+      MIN_APPROVAL
+    )
   }
 
   public async depositAsERC20(
@@ -199,7 +201,7 @@ export class L1Bridge {
       maxSubmissionCost,
       maxGas,
       gasPriceBid,
-      ''
+      '0x'
     )
   }
   public async depositAsERC777(
