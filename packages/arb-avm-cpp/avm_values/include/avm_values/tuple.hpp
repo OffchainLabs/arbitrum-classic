@@ -58,8 +58,9 @@ class Tuple {
     friend BasicValChecker;
     friend RawTuple;
     friend ValueBeingParsed;
-    friend Tuple deserializeTuple(
+    friend void deserializeTuple(
         std::vector<unsigned char>::const_iterator& bytes,
+        value* output,
         std::vector<Slot>& slots,
         size_t size);
 

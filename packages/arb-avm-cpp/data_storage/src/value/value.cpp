@@ -22,6 +22,8 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/deserialize.hpp>
+#include <data_storage/value/serialize.hpp>
 
 #include <avm_values/tuple.hpp>
 #include <cstdint>
@@ -49,34 +51,35 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
         SaveResults save_ret;
         auto existing_references = 0;
         if (results.status.ok()) {
-            existing_references = results.references_count > 0;
+            existing_references = results.reference_count > 0;
         }
         auto exists = existing_references > 0;
-        if (auto code = std::get_if<CodeSegment>(&next_item) && exists) {
-            const char* buf =
-                reinterpret_cast<const char*>(results.stored_value.data());
-            if (*buf++ != CODE_SEGMENT) {
-                throw new std::runtime_error(
-                    "DB corruption: non-code-segment found in code segment "
-                    "key");
+        if (exists) {
+            if (auto code = std::get_if<CodeSegment>(&next_item)) {
+                const char* buf =
+                    reinterpret_cast<const char*>(results.stored_value.data());
+                if (*buf++ != CODE_SEGMENT) {
+                    throw new std::runtime_error(
+                        "DB corruption: non-code-segment found in code segment "
+                        "key");
+                }
+                auto segment_id = deserialize_uint64_t(buf);
+                if (segment_id != code->segmentID()) {
+                    throw new std::runtime_error(
+                        "DB corruption: code segment ID didn't match key");
+                }
+                auto existing_len = deserialize_uint64_t(buf);
+                exists = existing_len >= code->load().size();
             }
-            auto segment_id = deserialize_uint64_t(buf);
-            if (segment_id != code->segmentID()) {
-                throw new std::runtime_error(
-                    "DB corruption: code segment ID didn't match key");
-            }
-            auto existing_len = deserialize_uint64_t(buf);
-            exists = existing_len >= code->load().size();
         }
         if (exists) {
             save_ret = incrementReference(tx, key);
         } else {
             std::vector<unsigned char> value_vector{};
-            auto new_items_to_save = serializeValue(next_item, value_vector);
-            items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
-                                 new_items_to_save.end());
+            serializeValue(next_item, value_vector);
+            getValueDependencies(next_item, items_to_save);
             save_ret = saveRefCountedData(tx, key, value_vector,
-                                          existing_reference_count + 1);
+                                          existing_references + 1);
         }
         if (!save_ret.status.ok()) {
             return save_ret;

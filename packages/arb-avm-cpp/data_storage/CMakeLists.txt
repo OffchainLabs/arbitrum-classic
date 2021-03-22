@@ -59,6 +59,7 @@ set(LIB_SOURCES
   src/value/valuecache.cpp
   src/value/deserialize.cpp
   src/value/serialize.cpp
+  src/value/value.cpp
 )
 
 add_library(data_storage STATIC ${LIB_HEADERS} ${LIB_PRIVATE_HEADERS} ${LIB_SOURCES})

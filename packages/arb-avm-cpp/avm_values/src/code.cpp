@@ -104,3 +104,7 @@ LoadedCodeSegment CodeSegment::load() const {
 uint256_t segmentIdToDbHash(uint64_t segment_id) {
     return hash('c' << 24 | 'o' << 16 | 'd' << 8 | 'e', segment_id);
 }
+
+uint256_t hash(CodeSegment segment) {
+    return segmentIdToDbHash(segment.segmentID());
+}

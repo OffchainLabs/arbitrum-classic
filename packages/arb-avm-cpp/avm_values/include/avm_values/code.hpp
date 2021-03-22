@@ -18,6 +18,7 @@
 #define code_hpp
 
 #include <avm_values/bigint.hpp>
+#include <avm_values/value.hpp>
 
 #include <atomic>
 #include <cassert>
@@ -52,11 +53,13 @@ struct CodeSegmentInner {
 
 class CodeSegment {
     friend LoadedCodeSegment;
-    friend CodeSegment deserializeCodeSegment(
+    friend void deserializeCodeSegment(
         std::vector<unsigned char>::const_iterator& bytes,
+        value* result,
         std::vector<Slot>& slots);
-    friend CodePointStub deserializeCodePointStub(
+    friend void deserializeCodePointStub(
         std::vector<unsigned char>::const_iterator& bytes,
+        value* result,
         std::vector<Slot>& slots);
 
     static std::atomic<uint64_t> next_segment_id;
@@ -71,8 +74,7 @@ class CodeSegment {
     static CodeSegment restoreCodeSegment(uint64_t segment_id,
                                           std::vector<CodePoint> code);
     static CodeSegment uninitialized() {
-        return CodeSegment(std::make_shared<CodeSegmentInner>(
-            std::numeric_limits<uint64_t>::max()));
+        return CodeSegment(std::shared_ptr<CodeSegmentInner>());
     }
 
    public:
@@ -95,9 +97,7 @@ class CodeSegment {
 
 uint256_t segmentIdToDbHash(uint64_t segment_id);
 
-uint256_t hash(CodeSegment segment) {
-    return segmentIdToDbHash(segment.segmentID());
-}
+uint256_t hash(CodeSegment segment);
 
 class LoadedCodeSegment : public CodeSegment {
     std::shared_lock<std::shared_mutex> guard;

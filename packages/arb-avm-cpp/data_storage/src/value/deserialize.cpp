@@ -20,45 +20,51 @@
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
-uint256_t deserializeNum(std::vector<unsigned char>::const_iterator& bytes,
-                         std::vector<Slot>&) {
-    return deserializeUint256t(bytes);
+void deserializeNum(std::vector<unsigned char>::const_iterator& bytes,
+                    value* result,
+                    std::vector<Slot>&) {
+    *result = deserializeUint256t(bytes);
 }
-CodePointStub deserializeCodePointStub(
-    std::vector<unsigned char>::const_iterator& bytes,
-    std::vector<Slot>& slots) {
+void deserializeCodePointStub(std::vector<unsigned char>::const_iterator& bytes,
+                              value* result,
+                              std::vector<Slot>& slots) {
     auto segment_id = deserializeUint64t(bytes);
     auto pc = deserializeUint64t(bytes);
     auto next_hash = deserializeUint256t(bytes);
     CodeSegment segment = CodeSegment::uninitialized();
-    slots.emplace_back(SlotPointer(segment), segmentIdToDbHash(segment_id));
-    return {{segment, pc}, next_hash};
+    *result = CodePointStub({segment, pc}, next_hash);
+    slots.emplace_back(
+        SlotPointer(&std::get_if<CodePointStub>(result)->pc.segment),
+        segmentIdToDbHash(segment_id));
 }
-Tuple deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
-                       std::vector<Slot>& slots,
-                       size_t size) {
-    Tuple ret = Tuple::createSizedTuple(size);
+void deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
+                      value* result,
+                      std::vector<Slot>& slots,
+                      size_t size) {
+    *result = Tuple::createSizedTuple(size);
+    Tuple& tup = std::get<Tuple>(*result);
     for (uint64_t i = 0; i < size; i++) {
         auto ty = *bytes;
+        auto ptr = tup.getElementPointer(i);
+        tup.markContentsWillChange();
         if (ty == HASH_PRE_IMAGE) {
             bytes++;
             auto hash = deserializeUint256t(bytes);
-            slots.emplace_back(SlotPointer(ret.getElementPointer(i)), hash);
-            ret.markContentsWillChange();
+            slots.emplace_back(SlotPointer(ptr), hash);
         } else {
-            ret.unsafe_set_element(i, deserializeValue(bytes, slots));
+            deserializeValue(bytes, ptr, slots);
         }
     }
-    return ret;
 }
-Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
-                         std::vector<Slot>& slots) {
+void deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
+                       value* result,
+                       std::vector<Slot>& slots) {
     uint8_t depth = *bytes++;
     if (depth == 0) {
         Buffer::LeafData leaf;
         std::copy(bytes, bytes + 32, leaf.begin());
         bytes += 32;
-        return Buffer(leaf);
+        *result = Buffer(leaf);
     } else {
         auto left = std::make_shared<Buffer>();
         auto right = std::make_shared<Buffer>();
@@ -71,15 +77,17 @@ Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
             auto ptr = (i == 0) ? left.get() : right.get();
             slots.emplace_back(SlotPointer(ptr), hash);
         }
-        return Buffer(left, right);
+        *result = Buffer(left, right);
     }
 }
-CodeSegment deserializeCodeSegment(
-    std::vector<unsigned char>::const_iterator& bytes,
-    std::vector<Slot>& slots) {
+void deserializeCodeSegment(std::vector<unsigned char>::const_iterator& bytes,
+                            value* result,
+                            std::vector<Slot>& slots) {
     auto segment_id = deserializeUint64t(bytes);
     auto num_code_points = deserializeUint64t(bytes);
     std::vector<CodePoint> code;
+    // This reserve is vital to ensure CodePoints (and thus immediates) don't
+    // move due to the vector being reallocated to grow
     code.reserve(num_code_points);
     for (uint64_t i = 0; i < num_code_points; i++) {
         bool has_immediate = *bytes++;
@@ -87,31 +95,40 @@ CodeSegment deserializeCodeSegment(
         auto next_hash = deserializeUint256t(bytes);
         std::optional<value> immediate;
         if (has_immediate) {
-            immediate = deserializeValue(bytes, slots);
+            immediate = value();
         }
         code.emplace_back(Operation(op, immediate), next_hash);
+        if (has_immediate) {
+            deserializeValue(bytes, &*code.back().op.immediate, slots);
+        }
     }
-    return CodeSegment::restoreCodeSegment(segment_id, code);
+    *result = CodeSegment::restoreCodeSegment(segment_id, code);
 }
 
-value deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                       std::vector<Slot>& slots) {
+void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                      value* result,
+                      std::vector<Slot>& slots) {
     auto ty = *bytes++;
     switch (ty) {
         case BUFFER: {
-            return deserializeBuffer(bytes, slots);
+            deserializeBuffer(bytes, result, slots);
+            break;
         }
         case NUM: {
-            return deserializeNum(bytes, slots);
+            deserializeNum(bytes, result, slots);
+            break;
         }
         case CODE_POINT_STUB: {
-            return deserializeCodePointStub(bytes, slots);
+            deserializeCodePointStub(bytes, result, slots);
+            break;
         }
         case HASH_PRE_IMAGE: {
             throw std::runtime_error("Attempted to deserialize HASH_PRE_IMAGE");
+            break;
         }
         case CODE_SEGMENT: {
-            return deserializeCodeSegment(bytes, slots);
+            deserializeCodeSegment(bytes, result, slots);
+            break;
         }
         default: {
             auto size = ty - TUPLE;
@@ -119,7 +136,8 @@ value deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
                 throw std::runtime_error(
                     "attempted to deserialize value with invalid typecode");
             }
-            return deserializeTuple(bytes, slots, size);
+            deserializeTuple(bytes, result, slots, size);
+            break;
         }
     }
 }

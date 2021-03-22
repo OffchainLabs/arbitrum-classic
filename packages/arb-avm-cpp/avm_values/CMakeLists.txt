@@ -38,6 +38,7 @@ set(LIB_HEADERS
 set(LIB_SOURCES
   src/bigint.cpp
   src/buffer.cpp
+  src/code.cpp
   src/codepoint.cpp
   src/codepointstub.cpp
   src/exceptions.cpp

@@ -20,7 +20,7 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/value.hpp>
 
-using SlotPointer = std::variant<value*, Buffer*, CodeSegment>;
+using SlotPointer = std::variant<value*, Buffer*, CodeSegment*>;
 
 struct Slot {
     SlotPointer ptr;
@@ -29,7 +29,8 @@ struct Slot {
     Slot(SlotPointer ptr_, uint256_t hash_) : ptr(ptr_), hash(hash_) {}
 };
 
-value deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                       std::vector<Slot>& slots);
+void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                      value* result,
+                      std::vector<Slot>& slots);
 
 #endif
