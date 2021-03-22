@@ -2,7 +2,6 @@ package nodehealth
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"net/http"
 	"sync"
@@ -57,7 +56,6 @@ type aSyncDataStruct struct {
 func Logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 	for {
 		logMessage := <-logMsgChan
-		fmt.Println(logMessage)
 		if logMessage.Config == true {
 			if logMessage.Var == "openethereumHealthcheckRPC" {
 				config.mu.Lock()
@@ -107,7 +105,10 @@ func (config *configStruct) loadConfig() {
 //Perform all upstream checks at a set time interval in an asynchronous manner
 func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *configStruct) {
 	aSyncData.checkOpenethereum = healthcheck.Async(func() error {
+		config.mu.Lock()
 		res, err := http.Get(config.openethereumHealthcheckRPC + "/ready")
+		config.mu.Unlock()
+
 		if err != nil {
 			return err
 		} else {
@@ -120,8 +121,10 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 	}, config.pollingRate)
 
 	aSyncData.checkPrimary = healthcheck.Async(func() error {
+		config.mu.Lock()
 		if config.primaryHealthcheckRPC != "" {
 			res, err := http.Get(config.primaryHealthcheckRPC + "/ready")
+			config.mu.Unlock()
 			if err != nil {
 				return err
 			} else {
@@ -131,6 +134,7 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 				}
 			}
 		}
+		config.mu.Unlock()
 		return nil
 	}, config.pollingRate)
 
