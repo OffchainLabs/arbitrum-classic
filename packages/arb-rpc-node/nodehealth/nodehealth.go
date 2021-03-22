@@ -133,8 +133,9 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 					return errors.New("Primary not ready")
 				}
 			}
+		} else {
+			config.mu.Unlock()
 		}
-		config.mu.Unlock()
 		return nil
 	}, config.pollingRate)
 
@@ -142,7 +143,7 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 		state.mu.Lock()
 		blockDifference := big.NewInt(0).Sub(&state.inboxReader.caughtUpTarget, &state.inboxReader.currentHeight)
 		tolerance := big.NewInt(2)
-		if blockDifference.CmpAbs(tolerance) == 0 {
+		if blockDifference.CmpAbs(tolerance) == 1 {
 			state.mu.Unlock()
 			return errors.New("InboxReader catching up")
 		}
@@ -211,6 +212,8 @@ func startHealthCheck(config *configStruct, state *healthState) {
 	health := healthcheck.NewMetricsHandler(prometheusRegistry, "healthcheck")
 	//Create an HTTP server mux to serve the endpoints
 	httpMux := http.NewServeMux()
+
+	waitConfig(config)
 
 	//Schedule the async calls
 	aSyncUpstream(&aSyncData, state, config)
