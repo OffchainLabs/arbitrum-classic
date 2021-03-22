@@ -49,9 +49,9 @@ contract EthERC20Bridge is L1Buddy {
     event UpdateTokenInfo(
         uint256 indexed seqNum,
         address indexed l1Address,
-        string name,
-        string symbol,
-        uint8 decimals
+        bytes name,
+        bytes symbol,
+        bytes decimals
     );
 
     event DepositERC20(
@@ -185,6 +185,14 @@ contract EthERC20Bridge is L1Buddy {
         }
     }
 
+    function callStatic(
+        address targetContract,
+        bytes4 targetFunction
+    ) internal returns (bytes memory) {
+        (bool success, bytes memory res) = targetContract.staticcall(abi.encodeWithSelector(targetFunction));
+        return res;
+    }
+
     function updateTokenInfo(
         address erc20,
         bool isERC20,
@@ -192,15 +200,9 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable onlyIfConnected returns (uint256) {
-        string memory name = "";
-        string memory symbol = "";
-        try ERC20(erc20).name() returns (string memory _name) {
-            name = _name;
-        } catch {}
-        try ERC20(erc20).symbol() returns (string memory _symbol) {
-            symbol = _symbol;
-        } catch {}
-        uint8 decimals = ERC20(erc20).decimals();
+        bytes memory name = callStatic(erc20, ERC20.name.selector);
+        bytes memory symbol = callStatic(erc20, ERC20.symbol.selector);
+        bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
 
         bytes memory data =
             abi.encodeWithSelector(

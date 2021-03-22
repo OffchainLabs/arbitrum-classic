@@ -28,6 +28,7 @@ import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../ethereum/EthERC20Bridge.sol";
+import "../libraries/BytesParser.sol";
 
 interface ITransferReceiver {
     function onTokenTransfer(
@@ -39,6 +40,7 @@ interface ITransferReceiver {
 
 contract ArbTokenBridge is CloneFactory {
     using Address for address;
+    using BytesParser for bytes;
 
     /// @notice This mapping is from L1 address to L2 address
     mapping(address => address) public customToken;
@@ -202,20 +204,28 @@ contract ArbTokenBridge is CloneFactory {
 
     function updateERC777TokenInfo(
         address l1ERC20,
-        string calldata name,
-        string calldata symbol,
-        uint8 decimals
+        bytes calldata _name,
+        bytes calldata _symbol,
+        bytes calldata _decimals
     ) external onlyEthPair {
+        string memory name = _name.toString("");
+        string memory symbol = _symbol.toString("");
+        uint8 decimals = _decimals.toDecimals(18);
+
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
         token.updateInfo(name, symbol);
     }
 
     function updateERC20TokenInfo(
         address l1ERC20,
-        string calldata name,
-        string calldata symbol,
-        uint8 decimals
+        bytes calldata _name,
+        bytes calldata _symbol,
+        bytes calldata _decimals
     ) external onlyEthPair {
+        string memory name = _name.toString("");
+        string memory symbol = _symbol.toString("");
+        uint8 decimals = _decimals.toDecimals(18);
+
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
         token.updateInfo(name, symbol);
     }
