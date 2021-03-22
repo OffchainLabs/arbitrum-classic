@@ -22,11 +22,18 @@
 #include <avm_values/pool.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
+#include <data_storage/storageresultfwd.hpp>
 
 #include <optional>
 #include <vector>
 
+class ReadTransaction;
+
 class ValueCache {
+    friend DbResult<value> getValue(const ReadTransaction& tx,
+                                    uint256_t value_hash,
+                                    ValueCache& value_cache);
+
    private:
     struct ValueCacheHasher {
         std::size_t operator()(const uint256_t& hash) const noexcept {
@@ -38,6 +45,8 @@ class ValueCache {
     std::vector<std::unordered_map<uint256_t, value, ValueCacheHasher>> caches;
     size_t saving_cache_index{0};
     size_t max_cache_size{0};
+
+    void maybeSave(value val, uint256_t hash);
 
    public:
     ValueCache() = delete;

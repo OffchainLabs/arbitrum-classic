@@ -16,18 +16,21 @@
 
 #include <data_storage/value/valuecache.hpp>
 
-void ValueCache::maybeSave(value val) {
+void ValueCache::maybeSave(value val, uint256_t value_hash) {
     if (caches.empty()) {
         return;
     }
 
-    auto value_hash = hash_value(val);
     caches[saving_cache_index].emplace(value_hash, std::move(val));
 
     if (max_cache_size > 0 &&
         caches[saving_cache_index].size() >= max_cache_size) {
         nextCache();
     }
+}
+
+void ValueCache::maybeSave(value val) {
+    maybeSave(val, hash_value(val));
 }
 
 std::optional<value> ValueCache::loadIfExists(const uint256_t& hash) {
