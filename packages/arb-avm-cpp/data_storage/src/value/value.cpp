@@ -135,10 +135,13 @@ DbResult<value> getValue(const ReadTransaction& tx,
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
     bool first = true;
     SaveResults ret{};
-    std::vector<value> items_to_save{val};
+    ValueCounter items_to_save;
+    items_to_save[val] = 1;
     while (!items_to_save.empty()) {
-        auto next_item = std::move(items_to_save.back());
-        items_to_save.pop_back();
+        auto items_to_save_it = items_to_save.begin();
+        auto next_item = std::move(items_to_save_it->first);
+        auto new_references = items_to_save_it->second;
+        items_to_save.erase(items_to_save_it);
         auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;
         marshal_uint256_t(hash, hash_key);
@@ -150,6 +153,7 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
             existing_references = results.reference_count > 0;
         }
         auto exists = existing_references > 0;
+        uint64_t existing_segment_length = 0;
         if (auto code = std::get_if<CodeSegment>(&next_item)) {
             if (exists) {
                 const char* buf =
@@ -164,8 +168,8 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
                     throw new std::runtime_error(
                         "DB corruption: code segment ID didn't match key");
                 }
-                auto existing_len = deserialize_uint64_t(buf);
-                exists = existing_len >= code->load().size();
+                existing_segment_length = deserialize_uint64_t(buf);
+                exists = existing_segment_length >= code->load().size();
             } else {
                 auto status = maybeUpdateNextSegmentId(tx, code->segmentID());
                 if (!status.ok()) {
@@ -178,11 +182,14 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
         } else {
             std::vector<unsigned char> value_vector{};
             serializeValue(next_item, value_vector);
-            // TODO: handle the case where the code segment already partially
-            // existed
-            getValueDependencies(next_item, items_to_save);
+            if (auto code = std::get_if<CodeSegment>(&next_item)) {
+                getCodeSegmentDependencies(*code, items_to_save,
+                                           existing_segment_length);
+            } else {
+                getValueDependencies(next_item, items_to_save);
+            }
             save_ret = saveRefCountedData(tx, key, value_vector,
-                                          existing_references + 1);
+                                          existing_references + new_references);
         }
         if (!save_ret.status.ok()) {
             return save_ret;
@@ -196,17 +203,19 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
 }
 
 DeleteResults deleteValues(ReadWriteTransaction& tx,
-                           std::vector<value> items_to_delete) {
+                           ValueCounter items_to_delete) {
     bool first = true;
     DeleteResults ret{};
     while (!items_to_delete.empty()) {
-        auto next_item = items_to_delete.back();
-        items_to_delete.pop_back();
+        auto items_to_delete_it = items_to_delete.begin();
+        auto next_item = std::move(items_to_delete_it->first);
+        auto deleted_references = items_to_delete_it->second;
+        items_to_delete.erase(items_to_delete_it);
         auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;
         marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);
-        auto results = deleteRefCountedData(tx, key);
+        auto results = deleteRefCountedData(tx, key, deleted_references);
         if (results.status.ok() && results.reference_count == 0) {
             getValueDependencies(next_item, items_to_delete);
         }
@@ -226,5 +235,7 @@ DeleteResults deleteValue(ReadWriteTransaction& tx,
         return {0, *status};
     }
     auto val = std::get<CountedData<value>>(value_result).data;
-    return deleteValues(tx, std::vector(1, val));
+    ValueCounter counter;
+    counter[val] = 1;
+    return deleteValues(tx, counter);
 }

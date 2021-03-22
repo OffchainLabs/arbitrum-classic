@@ -73,41 +73,48 @@ void serializeValue(const value& val, std::vector<unsigned char>& bytes) {
 
 // Get dependencies, used for both saving and deleting
 
-void getValueDependencies(const uint256_t&, std::vector<value>&) {}
-void getValueDependencies(const CodePointStub& val,
-                          std::vector<value>& dependencies) {
-    dependencies.emplace_back(val.pc.segment);
-}
-void getValueDependencies(const Tuple& val, std::vector<value>& dependencies) {
-    for (uint64_t i = 0; i < val.tuple_size(); i++) {
-        auto inner = val.get_element_unsafe(i);
-        // TODO: inline tuples at a given chance
-        if (auto tup = std::get_if<Tuple>(&inner)) {
-            dependencies.emplace_back(*tup);
-        } else {
-            getValueDependencies(inner, dependencies);
-        }
-    }
-}
-void getValueDependencies(const HashPreImage&, std::vector<value>&) {
-    throw std::runtime_error("Can't serialize hash preimage in db");
-}
-void getValueDependencies(const Buffer& b, std::vector<value>& dependencies) {
-    for (auto child : b.getDependencies()) {
-        dependencies.emplace_back(child);
-    }
-}
-void getValueDependencies(const CodeSegment& val,
-                          std::vector<value>& dependencies) {
+void getCodeSegmentDependencies(const CodeSegment& val,
+                                ValueCounter& dependencies,
+                                uint64_t start) {
     auto code = val.load();
-    for (const CodePoint& point : code) {
+    assert(start <= code.size());
+    for (auto it = code.begin() + start; it != code.end(); it++) {
+        auto& point = *it;
         if (point.op.immediate) {
             getValueDependencies(*point.op.immediate, dependencies);
         }
     }
 }
 
-void getValueDependencies(const value& val, std::vector<value>& dependencies) {
+void getValueDependencies(const uint256_t&, ValueCounter&) {}
+void getValueDependencies(const CodePointStub& val,
+                          ValueCounter& dependencies) {
+    dependencies[val.pc.segment]++;
+}
+void getValueDependencies(const Tuple& val, ValueCounter& dependencies) {
+    for (uint64_t i = 0; i < val.tuple_size(); i++) {
+        auto inner = val.get_element_unsafe(i);
+        // TODO: inline tuples at a given chance
+        if (auto tup = std::get_if<Tuple>(&inner)) {
+            dependencies[*tup]++;
+        } else {
+            getValueDependencies(inner, dependencies);
+        }
+    }
+}
+void getValueDependencies(const HashPreImage&, ValueCounter&) {
+    throw std::runtime_error("Can't serialize hash preimage in db");
+}
+void getValueDependencies(const Buffer& b, ValueCounter& dependencies) {
+    for (auto child : b.getDependencies()) {
+        dependencies[child]++;
+    }
+}
+void getValueDependencies(const CodeSegment& val, ValueCounter& dependencies) {
+    getCodeSegmentDependencies(val, dependencies, 0);
+}
+
+void getValueDependencies(const value& val, ValueCounter& dependencies) {
     std::visit(
         [&](const auto& val) { getValueDependencies(val, dependencies); }, val);
 }

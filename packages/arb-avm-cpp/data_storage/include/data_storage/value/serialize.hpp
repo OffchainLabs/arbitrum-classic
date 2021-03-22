@@ -21,6 +21,17 @@
 
 void serializeValue(const value& val, std::vector<unsigned char>& bytes);
 
-void getValueDependencies(const value& val, std::vector<value>& dependencies);
+struct ValueHasher {
+    size_t operator()(value const& val) const noexcept {
+        return (size_t)hash_value(val);
+    }
+};
+
+using ValueCounter = std::unordered_map<value, uint32_t, ValueHasher>;
+
+void getCodeSegmentDependencies(const CodeSegment& val,
+                                ValueCounter& dependencies,
+                                size_t start);
+void getValueDependencies(const value& val, ValueCounter& dependencies);
 
 #endif
