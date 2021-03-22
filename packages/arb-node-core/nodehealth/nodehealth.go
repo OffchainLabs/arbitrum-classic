@@ -16,6 +16,7 @@ import (
 type configStruct struct {
 	mu                         sync.Mutex
 	pollingRate                time.Duration
+	loopDelayTimer             time.Duration
 	healthcheckRPC             string
 	openethereumHealthcheckRPC string
 	primaryHealthcheckRPC      string
@@ -23,7 +24,7 @@ type configStruct struct {
 	blockDifferenceTolerance   int64
 }
 
-//nodeHealth log structure for passing messages on healthChan
+//Log structure for passing messages on healthChan to logger
 type Log struct {
 	Err    error
 	Sev    string
@@ -105,12 +106,17 @@ func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 
 // Default configuration values for the healthcheck server
 func (config *configStruct) loadConfig() {
+	const defaultSuccessCode = 200
+	const defaultBlockDifferenceTolerance = 2
+	const defaultPollingRate = 10 * time.Second
+	const loopDelayTimer = 1 * time.Second
 	config.healthcheckRPC = "0.0.0.0:8080"
-	config.pollingRate = 10 * time.Second
+	config.pollingRate = defaultPollingRate
+	config.loopDelayTimer = loopDelayTimer
 	config.openethereumHealthcheckRPC = ""
 	config.primaryHealthcheckRPC = ""
-	config.successCode = 200
-	config.blockDifferenceTolerance = 2
+	config.successCode = defaultSuccessCode
+	config.blockDifferenceTolerance = defaultBlockDifferenceTolerance
 }
 
 //Perform all upstream checks at a set time interval in an asynchronous manner
@@ -146,11 +152,10 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 			//Check the response code to determine if the primary is ready
 			if err != nil {
 				return err
-			} else {
-				if res.StatusCode != config.successCode {
-					//The server is returning an unexpected status code
-					return errors.New("Primary not ready")
-				}
+			}
+			if res.StatusCode != config.successCode {
+				//The server is returning an unexpected status code
+				return errors.New("Primary not ready")
 			}
 		} else {
 			//Make sure the config mutex is unlocked before exiting
@@ -164,12 +169,13 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 		//Lock config mutex for read operation
 		state.mu.Lock()
 		//Calculate out the block difference
-		blockDifference := big.NewInt(0).Sub(&state.inboxReader.caughtUpTarget, &state.inboxReader.currentHeight)
+		const subtractionBigInt = 0
+		blockDifference := big.NewInt(subtractionBigInt).Sub(&state.inboxReader.caughtUpTarget, &state.inboxReader.currentHeight)
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
 		//Compare the tolerance using CmpAbs, fail if > then tolerance
-		greaterThan := 1
-		if blockDifference.CmpAbs(tolerance) == greaterThan {
+		const greaterThanReturn = 1
+		if blockDifference.CmpAbs(tolerance) == greaterThanReturn {
 			state.mu.Unlock()
 			return errors.New("InboxReader catching up")
 		}
@@ -221,7 +227,7 @@ func waitConfig(config *configStruct) {
 	config.mu.Lock()
 	for config.openethereumHealthcheckRPC == "" {
 		config.mu.Unlock()
-		time.Sleep(1 * time.Second)
+		time.Sleep(config.loopDelayTimer)
 		config.mu.Lock()
 	}
 	config.mu.Unlock()
@@ -253,7 +259,7 @@ func startHealthCheck(config *configStruct, state *healthState) {
 	healthcheckServer(httpMux, *config)
 }
 
-//Create a node healthcheck that listens on the given channel
+//NodeHealthCheck Create a node healthcheck that listens on the given channel
 //Pass configuration elements on the channel to configure endpoints
 func NodeHealthCheck(logMsgChan <-chan Log) {
 	//Create the configuration struct

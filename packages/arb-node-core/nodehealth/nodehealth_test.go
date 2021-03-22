@@ -45,19 +45,24 @@ func nodeHealthTest() error {
 	go startTestingServerFail()
 	go startTestingServerPass()
 
-	successfulStatus := 200
-	largeBufferSize := 200
-	readinessEndpoint := "/ready"
-	failMessage := "Failed"
-	passMessage := "Passed"
+	//Configuration constants
+	const successfulStatus = 200
+	const largeBufferSize = 200
+	const readinessEndpoint = "/ready"
+	const failMessage = "Failed"
+	const passMessage = "Passed"
+	const startUpSleepTime = 5 * time.Second
+	const timeDelayTests = 11 * time.Second
+	const nodehealthAddress = "http://127.0.0.1:8080"
+	const inboxReaderName = "InboxReader"
 
 	healthChan := make(chan nodehealth.Log, largeBufferSize)
 	go nodehealth.NodeHealthCheck(healthChan)
 
 	//Test startup configuration delay
 	fmt.Println("Startup delay")
-	time.Sleep(5 * time.Second)
-	res, err := http.Get("http://127.0.0.1:8080" + readinessEndpoint)
+	time.Sleep(startUpSleepTime)
+	res, err := http.Get(nodehealthAddress + readinessEndpoint)
 	if err != nil {
 		fmt.Println(passMessage)
 	} else {
@@ -69,10 +74,10 @@ func nodeHealthTest() error {
 	//Primary aSync Test
 	fmt.Println("Test Removing Primary aSync")
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
-	time.Sleep(11 * time.Second)
+	time.Sleep(timeDelayTests)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
+	res, err = http.Get(nodehealthAddress + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -81,18 +86,17 @@ func nodeHealthTest() error {
 		//The server is returning an unexpected status code
 		fmt.Println(failMessage)
 		return nil
-	} else {
-		fmt.Println(passMessage)
 	}
+	fmt.Println(passMessage)
 	fmt.Println("")
 
 	//Test failing OpenEthereum Node
 	fmt.Println("Failing OpenEthereum Node Test")
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
-	time.Sleep(11 * time.Second)
+	time.Sleep(timeDelayTests)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err = http.Get(nodehealthAddress + "/ready")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -111,10 +115,10 @@ func nodeHealthTest() error {
 	fmt.Println("Adding Primary Late Test")
 	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
-	time.Sleep(11 * time.Second)
+	time.Sleep(timeDelayTests)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
+	res, err = http.Get(nodehealthAddress + readinessEndpoint)
 	if err != nil {
 		return err
 	}
@@ -124,10 +128,10 @@ func nodeHealthTest() error {
 		return nil
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
-	time.Sleep(11 * time.Second)
+	time.Sleep(timeDelayTests)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
+	res, err = http.Get(nodehealthAddress + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -144,15 +148,16 @@ func nodeHealthTest() error {
 	//Test InboxReader block status check
 	fmt.Println("Test InboxReader blockStatus")
 	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
-	time.Sleep(11 * time.Second)
-	testBigInt := big.NewInt(20)
-	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: *testBigInt}
-	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: *testBigInt}
-	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: *testBigInt}
-	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: *testBigInt}
+	time.Sleep(timeDelayTests)
+	const largeBigInt = 20
+	testBigInt := big.NewInt(largeBigInt)
+	healthChan <- nodehealth.Log{Comp: inboxReaderName, Var: "currentHeight", ValBigInt: *testBigInt}
+	healthChan <- nodehealth.Log{Comp: inboxReaderName, Var: "caughtUpTarget", ValBigInt: *testBigInt}
+	healthChan <- nodehealth.Log{Comp: inboxReaderName, Var: "arbCorePosition", ValBigInt: *testBigInt}
+	healthChan <- nodehealth.Log{Comp: inboxReaderName, Var: "getNextBlockToRead", ValBigInt: *testBigInt}
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
+	res, err = http.Get(nodehealthAddress + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -163,13 +168,14 @@ func nodeHealthTest() error {
 		return nil
 	}
 
-	blockTest := big.NewInt(10)
-	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: *blockTest}
-	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: *testBigInt}
-	time.Sleep(11 * time.Second)
+	const smallBigInt = 10
+	blockTest := big.NewInt(smallBigInt)
+	healthChan <- nodehealth.Log{Comp: inboxReaderName, Var: "currentHeight", ValBigInt: *blockTest}
+	healthChan <- nodehealth.Log{Comp: inboxReaderName, Var: "caughtUpTarget", ValBigInt: *testBigInt}
+	time.Sleep(timeDelayTests)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
+	res, err = http.Get(nodehealthAddress + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -182,9 +188,4 @@ func nodeHealthTest() error {
 		fmt.Println(passMessage)
 	}
 	return nil
-}
-
-func main() {
-	err := nodeHealthTest()
-	fmt.Println(err)
 }
