@@ -151,7 +151,7 @@ export class L1Bridge {
       if (!tokenData.ERC20.allowed) {
         const allowance = await ethERC20TokenContract.allowance(
           walletAddress,
-          indboxAddress
+          this.ethERC20Bridge.address
         )
         tokenData.ERC20.allowed = allowance.gte(MIN_APPROVAL.div(2))
       }
