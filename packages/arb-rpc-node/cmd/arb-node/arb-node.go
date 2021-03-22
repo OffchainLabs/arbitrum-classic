@@ -38,7 +38,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/healthcheck"
+	nodehealth "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/healthcheck"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
@@ -176,7 +176,7 @@ func main() {
 	}
 
 	var inboxReader *staker.InboxReader
-	inboxReader.healthChan = healthChan
+	inboxReader.HealthChan = healthChan
 	for {
 		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
 		if err == nil {
@@ -202,7 +202,7 @@ func main() {
 		"8548",
 		rpcVars,
 		time.Duration(*maxBatchTime)*time.Second,
-		batcherMode
+		batcherMode,
 	); err != nil {
 		logger.Fatal().Err(err).Msg("Error running LaunchNode")
 	}
