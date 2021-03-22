@@ -28,7 +28,9 @@ contract BuddyDeployer {
 
     function executeBuddyDeploy(bytes memory contractInitCode) external payable {
         // we don't want nasty address clashes
-        require(ArbSys(100).isTopLevelCall(), "Function must be called from L1");
+        require(tx.origin == msg.sender, "Function cant be called by L2 contract");
+        // require(ArbSys(100).isTopLevelCall(), "Function must be called from L1");
+
         address user = msg.sender;
         uint256 salt = uint256(user);
         address addr;
