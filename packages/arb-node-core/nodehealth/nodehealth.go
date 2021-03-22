@@ -57,48 +57,55 @@ type aSyncDataStruct struct {
 	inboxReaderStatus healthcheck.Check
 }
 
+func updateInboxReader(state *healthState, logMessage Log) {
+	//Load the log into the correct struct field inside the state array
+	if logMessage.Var == "getNextBlockToRead" {
+		state.mu.Lock()
+		state.inboxReader.getNextBlockToRead = logMessage.ValBigInt
+		state.mu.Unlock()
+	}
+	if logMessage.Var == "currentHeight" {
+		state.mu.Lock()
+		state.inboxReader.currentHeight = logMessage.ValBigInt
+		state.mu.Unlock()
+	}
+	if logMessage.Var == "arbCorePosition" {
+		state.mu.Lock()
+		state.inboxReader.arbCorePosition = logMessage.ValBigInt
+		state.mu.Unlock()
+	}
+	if logMessage.Var == "caughtUpTarget" {
+		state.mu.Lock()
+		state.inboxReader.caughtUpTarget = logMessage.ValBigInt
+		state.mu.Unlock()
+	}
+}
+
+func updateConfig(config *configStruct, logMessage Log) {
+	//Load the configuration message into the config struct
+	if logMessage.Var == "openethereumHealthcheckRPC" {
+		config.mu.Lock()
+		config.openethereumHealthcheckRPC = logMessage.ValStr
+		config.mu.Unlock()
+	}
+	if logMessage.Var == "primaryHealthcheckRPC" {
+		config.mu.Lock()
+		config.primaryHealthcheckRPC = logMessage.ValStr
+		config.mu.Unlock()
+	}
+}
+
 func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 	for {
 		//Read log structure from channel
 		logMessage := <-logMsgChan
-
 		//Check if a configuration message has been sent
 		if logMessage.Config {
-			//Load the configuration message into the config struct
-			if logMessage.Var == "openethereumHealthcheckRPC" {
-				config.mu.Lock()
-				config.openethereumHealthcheckRPC = logMessage.ValStr
-				config.mu.Unlock()
-			}
-			if logMessage.Var == "primaryHealthcheckRPC" {
-				config.mu.Lock()
-				config.primaryHealthcheckRPC = logMessage.ValStr
-				config.mu.Unlock()
-			}
+			updateConfig(config, logMessage)
 		} else {
 			//Check if the InboxReader is sending logs
 			if logMessage.Comp == "InboxReader" {
-				//Load the log into the correct struct field inside the state array
-				if logMessage.Var == "getNextBlockToRead" {
-					state.mu.Lock()
-					state.inboxReader.getNextBlockToRead = logMessage.ValBigInt
-					state.mu.Unlock()
-				}
-				if logMessage.Var == "currentHeight" {
-					state.mu.Lock()
-					state.inboxReader.currentHeight = logMessage.ValBigInt
-					state.mu.Unlock()
-				}
-				if logMessage.Var == "arbCorePosition" {
-					state.mu.Lock()
-					state.inboxReader.arbCorePosition = logMessage.ValBigInt
-					state.mu.Unlock()
-				}
-				if logMessage.Var == "caughtUpTarget" {
-					state.mu.Lock()
-					state.inboxReader.caughtUpTarget = logMessage.ValBigInt
-					state.mu.Unlock()
-				}
+				updateInboxReader(state, logMessage)
 			}
 		}
 	}
@@ -119,14 +126,12 @@ func (config *configStruct) loadConfig() {
 	config.blockDifferenceTolerance = defaultBlockDifferenceTolerance
 }
 
-//Perform all upstream checks at a set time interval in an asynchronous manner
-func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *configStruct) {
-	//Check the healthcheck endpoint for OpenEthereum
-	aSyncData.checkOpenethereum = healthcheck.Async(func() error {
+func checkEndpoint(config *configStruct, endpoint string) healthcheck.Check {
+	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
 		config.mu.Lock()
 		//Retrieve status code from healthcheck endpoint
-		res, err := http.Get(config.openethereumHealthcheckRPC + "/ready")
+		res, err := http.Get(endpoint + "/ready")
 		//Unlock config mutex
 		config.mu.Unlock()
 		//Check the response code to determine if OpenEthereum is reeady
@@ -139,33 +144,11 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 		}
 		return nil
 	}, config.pollingRate)
+	return check
+}
 
-	//Check the primary endpoint
-	aSyncData.checkPrimary = healthcheck.Async(func() error {
-		//Lock config mutex for read operation
-		config.mu.Lock()
-		if config.primaryHealthcheckRPC != "" {
-			//If the primary is being used, retrieve endpoint response code
-			res, err := http.Get(config.primaryHealthcheckRPC + "/ready")
-			//Unlock the config mutex
-			config.mu.Unlock()
-			//Check the response code to determine if the primary is ready
-			if err != nil {
-				return err
-			}
-			if res.StatusCode != config.successCode {
-				//The server is returning an unexpected status code
-				return errors.New("Primary not ready")
-			}
-		} else {
-			//Make sure the config mutex is unlocked before exiting
-			config.mu.Unlock()
-		}
-		return nil
-	}, config.pollingRate)
-
-	//Check how many blocks the inboxReader is behind
-	aSyncData.inboxReaderStatus = healthcheck.Async(func() error {
+func checkInboxReader(config *configStruct, state *healthState) healthcheck.Check {
+	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
 		state.mu.Lock()
 		//Calculate out the block difference
@@ -183,6 +166,19 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 		state.mu.Unlock()
 		return nil
 	}, config.pollingRate)
+	return check
+}
+
+//Perform all upstream checks at a set time interval in an asynchronous manner
+func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *configStruct) {
+	//Check the healthcheck endpoint for OpenEthereum
+	aSyncData.checkOpenethereum = checkEndpoint(config, config.openethereumHealthcheckRPC)
+
+	//Check the primary endpoint
+	aSyncData.checkPrimary = checkEndpoint(config, config.primaryHealthcheckRPC)
+
+	//Check how many blocks the inboxReader is behind
+	aSyncData.inboxReaderStatus = checkInboxReader(config, state)
 }
 
 //Define which healthchecks to use for the readiness API and expose the readiness API
@@ -205,8 +201,7 @@ func nodeReadinessChecks(health healthcheck.Handler, httpMux *http.ServeMux, aSy
 }
 
 //Define which healthchecks to use for the liveness API and expose the liveness API
-func nodeLivenessChecks(health healthcheck.Handler, httpMux *http.ServeMux,
-	aSyncData *aSyncDataStruct, config configStruct) {
+func nodeLivenessChecks(health healthcheck.Handler, httpMux *http.ServeMux) {
 	//Create an endpoint to serve the liveness check
 	httpMux.HandleFunc("/live", health.LiveEndpoint)
 }
@@ -249,7 +244,7 @@ func startHealthCheck(config *configStruct, state *healthState) {
 	aSyncUpstream(&aSyncData, state, config)
 
 	//Define which healthchecks to use for the liveness API and expose the liveness API
-	nodeLivenessChecks(health, httpMux, &aSyncData, *config)
+	nodeLivenessChecks(health, httpMux)
 
 	//Define which healthchecks to use for the readiness API and expose the readiness API
 	nodeReadinessChecks(health, httpMux, &aSyncData)
@@ -260,7 +255,6 @@ func startHealthCheck(config *configStruct, state *healthState) {
 }
 
 //NodeHealthCheck Create a node healthcheck that listens on the given channel
-//Pass configuration elements on the channel to configure endpoints
 func NodeHealthCheck(logMsgChan <-chan Log) {
 	//Create the configuration struct
 	config := configStruct{}
