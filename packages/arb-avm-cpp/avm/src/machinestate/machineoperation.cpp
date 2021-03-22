@@ -408,6 +408,9 @@ struct ValueTypeVisitor {
     ValueTypes operator()(const Tuple&) const { return TUPLE; }
     ValueTypes operator()(const HashPreImage&) const { return TUPLE; }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
+    ValueTypes operator()(const CodeSegment&) const {
+        throw std::runtime_error("Attempted to get type of code segment value");
+    }
 };
 
 void typeOp(MachineState& m) {

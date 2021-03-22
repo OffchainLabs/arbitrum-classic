@@ -18,7 +18,6 @@
 
 #include <data_storage/aggregator.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/code.hpp>
 
 #include <avm/machine.hpp>
 

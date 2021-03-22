@@ -25,6 +25,8 @@ CodeSegmentInner::CodeSegmentInner(uint64_t segment_id_,
                                    std::vector<CodePoint> code_)
     : segment_id(segment_id_), code(code_) {}
 
+CodeSegmentInner::~CodeSegmentInner() = default;
+
 LoadedCodeSegment::LoadedCodeSegment(CodeSegment segment_)
     : CodeSegment(std::move(segment_)), guard(inner->mutex) {}
 

@@ -46,8 +46,9 @@ MachineStateKeys::MachineStateKeys(const MachineState& machine)
       datastack_hash(machine.stack.hash()),
       auxstack_hash(machine.auxstack.hash()),
       arb_gas_remaining(machine.arb_gas_remaining),
-      pc(machine.pc, machine.loadCurrentInstruction()),
-      err_pc(machine.errpc),
+      pc_hash(hash_value(
+          CodePointStub(machine.pc, machine.loadCurrentInstruction()))),
+      err_pc_hash(hash_value(machine.errpc)),
       staged_message(machine.staged_message),
       status(machine.state),
       output(machine.output) {}
@@ -74,19 +75,13 @@ std::optional<uint256_t> MachineStateKeys::machineHash() const {
 
     std::array<unsigned char, 32 * 8> data{};
     auto oit = data.begin();
-    {
-        auto val = ::hash(pc);
-        oit = to_big_endian(val, oit);
-    }
+    { oit = to_big_endian(pc_hash, oit); }
     { oit = to_big_endian(datastack_hash, oit); }
     { oit = to_big_endian(auxstack_hash, oit); }
     { oit = to_big_endian(register_hash, oit); }
     { oit = to_big_endian(static_hash, oit); }
     { oit = to_big_endian(arb_gas_remaining, oit); }
-    {
-        auto val = ::hash_value(err_pc);
-        oit = to_big_endian(val, oit);
-    }
+    { oit = to_big_endian(err_pc_hash, oit); }
     {
         auto message = getStagedMessageTuple();
         if (!message) {
@@ -120,14 +115,13 @@ void MachineState::addProcessedLog(value log_val) {
 }
 
 MachineState::MachineState(CodeSegment segment, value static_val_)
-    : loaded_segment(std::make_shared<LoadedCodeSegment>(segment.load())),
-      static_val(std::move(static_val_)),
+    : static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
       pc({std::move(segment), 0}),
-      errpc({pc, getErrCodePointHash()}) {}
+      errpc({pc, getErrCodePointHash()}),
+      loaded_segment(std::make_shared<LoadedCodeSegment>(segment.load())) {}
 
-MachineState::MachineState(CodeSegment segment,
-                           value register_val_,
+MachineState::MachineState(value register_val_,
                            value static_val_,
                            Datastack stack_,
                            Datastack auxstack_,
@@ -137,8 +131,7 @@ MachineState::MachineState(CodeSegment segment,
                            CodePointStub errpc_,
                            staged_variant staged_message_,
                            MachineOutput output_)
-    : loaded_segment(std::make_shared<LoadedCodeSegment>(segment.load())),
-      registerVal(std::move(register_val_)),
+    : registerVal(std::move(register_val_)),
       static_val(std::move(static_val_)),
       stack(std::move(stack_)),
       auxstack(std::move(auxstack_)),
@@ -147,7 +140,8 @@ MachineState::MachineState(CodeSegment segment,
       pc(pc_),
       errpc(errpc_),
       staged_message(std::move(staged_message_)),
-      output(std::move(output_)) {}
+      output(std::move(output_)),
+      loaded_segment(std::make_shared<LoadedCodeSegment>(pc.segment.load())) {}
 
 MachineState MachineState::loadFromFile(
     const std::string& executable_filename) {

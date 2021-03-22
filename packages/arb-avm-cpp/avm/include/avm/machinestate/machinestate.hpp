@@ -140,8 +140,8 @@ struct MachineStateKeys {
     uint256_t datastack_hash;
     uint256_t auxstack_hash;
     uint256_t arb_gas_remaining;
-    CodePointStub pc;
-    CodePointStub err_pc;
+    uint256_t pc_hash;
+    uint256_t err_pc_hash;
     staged_variant staged_message;
     Status status;
     MachineOutput output;
@@ -151,8 +151,8 @@ struct MachineStateKeys {
                      uint256_t datastack_hash_,
                      uint256_t auxstack_hash_,
                      uint256_t arb_gas_remaining_,
-                     CodePointStub pc_,
-                     CodePointStub err_pc_,
+                     uint256_t pc_hash_,
+                     uint256_t err_pc_hash_,
                      staged_variant staged_message_,
                      Status status_,
                      MachineOutput output_)
@@ -161,8 +161,8 @@ struct MachineStateKeys {
           datastack_hash(datastack_hash_),
           auxstack_hash(auxstack_hash_),
           arb_gas_remaining(arb_gas_remaining_),
-          pc(pc_),
-          err_pc(err_pc_),
+          pc_hash(pc_hash_),
+          err_pc_hash(err_pc_hash_),
           staged_message(std::move(staged_message_)),
           status(status_),
           output(std::move(output_)) {}
@@ -177,7 +177,6 @@ struct MachineStateKeys {
 };
 
 struct MachineState {
-    mutable std::shared_ptr<LoadedCodeSegment> loaded_segment;
     value registerVal;
     value static_val;
     Datastack stack;
@@ -190,14 +189,15 @@ struct MachineState {
 
     MachineOutput output;
 
+    mutable std::shared_ptr<LoadedCodeSegment> loaded_segment;
+
     AssertionContext context;
 
     static MachineState loadFromFile(const std::string& executable_filename);
 
     MachineState(CodeSegment segment, value static_val);
 
-    MachineState(CodeSegment segment,
-                 value register_val_,
+    MachineState(value register_val_,
                  value static_val,
                  Datastack stack_,
                  Datastack auxstack_,

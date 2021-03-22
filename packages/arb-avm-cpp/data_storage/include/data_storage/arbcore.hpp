@@ -100,7 +100,6 @@ class ArbCore {
     std::shared_ptr<DataStorage> data_storage;
 
     std::unique_ptr<MachineThread> machine;
-    std::shared_ptr<Code> code{};
 
     // Cache a machine ready to sideload view transactions just after recent
     // blocks

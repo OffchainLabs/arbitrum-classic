@@ -16,11 +16,12 @@
 
 #include <data_storage/value/deserialize.hpp>
 
+#include <avm_values/code.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
 uint256_t deserializeNum(std::vector<unsigned char>::const_iterator& bytes,
-                         std::vector<Slot>& slots) {
+                         std::vector<Slot>&) {
     return deserializeUint256t(bytes);
 }
 CodePointStub deserializeCodePointStub(
@@ -30,7 +31,7 @@ CodePointStub deserializeCodePointStub(
     auto pc = deserializeUint64t(bytes);
     auto next_hash = deserializeUint256t(bytes);
     CodeSegment segment = CodeSegment::uninitialized();
-    slots.emplace_back(&segment, segmentIdToDbHash(segment_id));
+    slots.emplace_back(SlotPointer(segment), segmentIdToDbHash(segment_id));
     return {{segment, pc}, next_hash};
 }
 Tuple deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
@@ -42,12 +43,13 @@ Tuple deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
         if (ty == HASH_PRE_IMAGE) {
             bytes++;
             auto hash = deserializeUint256t(bytes);
-            slots.emplace_back(ret.getElementPointer(i), hash);
+            slots.emplace_back(SlotPointer(ret.getElementPointer(i)), hash);
             ret.markContentsWillChange();
         } else {
             ret.unsafe_set_element(i, deserializeValue(bytes, slots));
         }
     }
+    return ret;
 }
 Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
                          std::vector<Slot>& slots) {
@@ -67,7 +69,7 @@ Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
             }
             auto hash = deserializeUint256t(bytes);
             auto ptr = (i == 0) ? left.get() : right.get();
-            slots.emplace_back(ptr, hash);
+            slots.emplace_back(SlotPointer(ptr), hash);
         }
         return Buffer(left, right);
     }
@@ -79,7 +81,7 @@ CodeSegment deserializeCodeSegment(
     auto num_code_points = deserializeUint64t(bytes);
     std::vector<CodePoint> code;
     code.reserve(num_code_points);
-    for (const CodePoint& point : code) {
+    for (uint64_t i = 0; i < num_code_points; i++) {
         bool has_immediate = *bytes++;
         auto op = static_cast<OpCode>(*bytes++);
         auto next_hash = deserializeUint256t(bytes);
@@ -87,7 +89,7 @@ CodeSegment deserializeCodeSegment(
         if (has_immediate) {
             immediate = deserializeValue(bytes, slots);
         }
-        code.emplace_back(op, immediate, next_hash);
+        code.emplace_back(Operation(op, immediate), next_hash);
     }
     return CodeSegment::restoreCodeSegment(segment_id, code);
 }

@@ -46,6 +46,8 @@ struct CodeSegmentInner {
 
     CodeSegmentInner(uint64_t segment_id_);
     CodeSegmentInner(uint64_t segment_id_, std::vector<CodePoint> code_);
+
+    ~CodeSegmentInner();
 };
 
 class CodeSegment {
@@ -69,7 +71,8 @@ class CodeSegment {
     static CodeSegment restoreCodeSegment(uint64_t segment_id,
                                           std::vector<CodePoint> code);
     static CodeSegment uninitialized() {
-        return CodeSegment(std::shared_ptr<CodeSegmentInner>());
+        return CodeSegment(std::make_shared<CodeSegmentInner>(
+            std::numeric_limits<uint64_t>::max()));
     }
 
    public:

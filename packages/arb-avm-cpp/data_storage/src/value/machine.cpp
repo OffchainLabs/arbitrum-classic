@@ -21,7 +21,6 @@
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
-#include <data_storage/value/code.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
@@ -30,20 +29,6 @@
 
 namespace {
 using iterator = std::vector<unsigned char>::const_iterator;
-
-CodePointRef extractCodePointRef(iterator& iter) {
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto segment_val = deserialize_uint64_t(ptr);
-    auto pc_val = deserialize_uint64_t(ptr);
-    iter += sizeof(pc_val) + sizeof(segment_val);
-    return {segment_val, pc_val};
-}
-
-CodePointStub extractCodePointStub(iterator& iter) {
-    auto ref = extractCodePointRef(iter);
-    auto next_hash = extractUint256(iter);
-    return {ref, next_hash};
-}
 
 void serializeStagedVariant(staged_variant message,
                             std::vector<unsigned char>& state_data_vector) {
@@ -91,8 +76,8 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
     marshal_uint256_t(state_data.datastack_hash, state_data_vector);
     marshal_uint256_t(state_data.auxstack_hash, state_data_vector);
     marshal_uint256_t(state_data.arb_gas_remaining, state_data_vector);
-    state_data.pc.marshal(state_data_vector);
-    state_data.err_pc.marshal(state_data_vector);
+    marshal_uint256_t(state_data.pc_hash, state_data_vector);
+    marshal_uint256_t(state_data.err_pc_hash, state_data_vector);
 
     marshal_uint256_t(state_data.output.fully_processed_inbox.count,
                       state_data_vector);
@@ -124,8 +109,8 @@ MachineStateKeys extractMachineStateKeys(
     auto datastack_hash = extractUint256(iter);
     auto auxstack_hash = extractUint256(iter);
     auto arb_gas_remaining = extractUint256(iter);
-    auto pc = extractCodePointStub(iter);
-    auto err_pc = extractCodePointStub(iter);
+    auto pc_hash = extractUint256(iter);
+    auto err_pc_hash = extractUint256(iter);
 
     auto fully_processed_messages = extractUint256(iter);
     auto fully_processed_inbox_accumulator = extractUint256(iter);
@@ -150,8 +135,8 @@ MachineStateKeys extractMachineStateKeys(
         datastack_hash,
         auxstack_hash,
         arb_gas_remaining,
-        pc,
-        err_pc,
+        pc_hash,
+        err_pc_hash,
         std::move(staged_message),
         status,
         {{fully_processed_messages, fully_processed_inbox_accumulator},
@@ -166,20 +151,13 @@ MachineStateKeys extractMachineStateKeys(
 
 void deleteMachineState(ReadWriteTransaction& tx,
                         MachineStateKeys& parsed_state) {
-    std::map<uint64_t, uint64_t> segment_counts;
-    auto delete_static_res =
-        deleteValueImpl(tx, parsed_state.static_hash, segment_counts);
-    auto delete_register_res =
-        deleteValueImpl(tx, parsed_state.register_hash, segment_counts);
+    auto delete_static_res = deleteValueImpl(tx, parsed_state.static_hash);
+    auto delete_register_res = deleteValueImpl(tx, parsed_state.register_hash);
     auto delete_datastack_res =
-        deleteValueImpl(tx, parsed_state.datastack_hash, segment_counts);
-    auto delete_auxstack_res =
-        deleteValueImpl(tx, parsed_state.auxstack_hash, segment_counts);
-
-    ++segment_counts[parsed_state.pc.pc.segment];
-    ++segment_counts[parsed_state.err_pc.pc.segment];
-
-    deleteCode(tx, segment_counts);
+        deleteValueImpl(tx, parsed_state.datastack_hash);
+    auto delete_auxstack_res = deleteValueImpl(tx, parsed_state.auxstack_hash);
+    auto delete_pc_res = deleteValueImpl(tx, parsed_state.pc_hash);
+    auto delete_err_pc_res = deleteValueImpl(tx, parsed_state.err_pc_hash);
 
     if (!delete_static_res.status.ok()) {
         std::cout << "error deleting static in checkpoint" << std::endl;
@@ -195,6 +173,14 @@ void deleteMachineState(ReadWriteTransaction& tx,
 
     if (!delete_auxstack_res.status.ok()) {
         std::cout << "error deleting auxstack in checkpoint" << std::endl;
+    }
+
+    if (!delete_pc_res.status.ok()) {
+        std::cout << "error deleting pc in checkpoint" << std::endl;
+    }
+
+    if (!delete_err_pc_res.status.ok()) {
+        std::cout << "error deleting errpc in checkpoint" << std::endl;
     }
 }
 
@@ -246,39 +232,39 @@ DbResult<MachineStateKeys> getMachineStateKeys(
 
 rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
                                  const Machine& machine) {
-    std::map<uint64_t, uint64_t> segment_counts;
-
     auto& machinestate = machine.machine_state;
-    auto static_val_results =
-        saveValueImpl(tx, machinestate.static_val, segment_counts);
+    auto static_val_results = saveValueImpl(tx, machinestate.static_val);
     if (!static_val_results.status.ok()) {
         return static_val_results.status;
     }
 
-    auto register_val_results =
-        saveValueImpl(tx, machinestate.registerVal, segment_counts);
+    auto register_val_results = saveValueImpl(tx, machinestate.registerVal);
     if (!register_val_results.status.ok()) {
         return register_val_results.status;
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
-    auto datastack_results = saveValueImpl(tx, datastack_tup, segment_counts);
+    auto datastack_results = saveValueImpl(tx, datastack_tup);
     if (!datastack_results.status.ok()) {
         return datastack_results.status;
     }
 
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
-    auto auxstack_results = saveValueImpl(tx, auxstack_tup, segment_counts);
+    auto auxstack_results = saveValueImpl(tx, auxstack_tup);
     if (!auxstack_results.status.ok()) {
         return auxstack_results.status;
     }
 
-    ++segment_counts[machinestate.pc.segment];
-    ++segment_counts[machinestate.errpc.pc.segment];
+    auto pc_results = saveValueImpl(
+        tx,
+        CodePointStub(machinestate.pc, machinestate.loadCurrentInstruction()));
+    if (!pc_results.status.ok()) {
+        return pc_results.status;
+    }
 
-    auto code_status = saveCode(tx, *machinestate.code, segment_counts);
-    if (!code_status.ok()) {
-        return code_status;
+    auto errpc_results = saveValueImpl(tx, machinestate.errpc);
+    if (!errpc_results.status.ok()) {
+        return errpc_results.status;
     }
 
     return rocksdb::Status::OK();

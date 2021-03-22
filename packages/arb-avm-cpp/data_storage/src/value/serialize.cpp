@@ -73,8 +73,7 @@ void serializeValue(const value& val, std::vector<unsigned char>& bytes) {
 
 // Get dependencies, used for both saving and deleting
 
-void getValueDependencies(const uint256_t& val,
-                          std::vector<value>& dependencies) {}
+void getValueDependencies(const uint256_t&, std::vector<value>&) {}
 void getValueDependencies(const CodePointStub& val,
                           std::vector<value>& dependencies) {
     dependencies.emplace_back(val.pc.segment);

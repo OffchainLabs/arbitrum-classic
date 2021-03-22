@@ -17,11 +17,16 @@
 #ifndef deserialize_hpp
 #define deserialize_hpp
 
+#include <avm_values/codepoint.hpp>
 #include <avm_values/value.hpp>
 
+using SlotPointer = std::variant<value*, Buffer*, CodeSegment>;
+
 struct Slot {
-    std::variant<value*, Buffer*, CodeSegment*> ptr;
+    SlotPointer ptr;
     uint256_t hash;
+
+    Slot(SlotPointer ptr_, uint256_t hash_) : ptr(ptr_), hash(hash_) {}
 };
 
 value deserializeValue(std::vector<unsigned char>::const_iterator& bytes,

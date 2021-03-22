@@ -148,7 +148,7 @@ struct Marshaller {
         val.marshal(buf);
     }
 
-    void operator()(const CodeSegment& val) const {
+    void operator()(const CodeSegment&) const {
         throw std::runtime_error("Cannot marshal code segment");
     }
 };

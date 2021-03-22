@@ -46,8 +46,8 @@ constexpr auto sideload_cache_size = 20;
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
-    : data_storage(std::move(data_storage_)),
-      code(std::make_shared<Code>(getNextSegmentID(data_storage))) {
+    : data_storage(std::move(data_storage_)) {
+    throw std::runtime_error("TODO: getNextSegmentID");
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
@@ -175,9 +175,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         return status;
     }
 
-    code->addSegment(executable.code);
     machine = std::make_unique<MachineThread>(
-        MachineState{code, executable.static_val});
+        MachineState{executable.code, executable.static_val});
 
     ReadWriteTransaction tx(data_storage);
     // Need to initialize database from scratch
@@ -530,10 +529,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     const ReadTransaction& transaction,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const {
-    std::set<uint64_t> segment_ids;
-
-    auto static_results = ::getValueImpl(transaction, state_data.static_hash,
-                                         segment_ids, value_cache);
+    auto static_results =
+        ::getValueImpl(transaction, state_data.static_hash, value_cache);
 
     if (std::holds_alternative<rocksdb::Status>(static_results)) {
         std::stringstream ss;
@@ -542,8 +539,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         throw std::runtime_error(ss.str());
     }
 
-    auto register_results = ::getValueImpl(
-        transaction, state_data.register_hash, segment_ids, value_cache);
+    auto register_results =
+        ::getValueImpl(transaction, state_data.register_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine register: "
@@ -551,16 +548,16 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         throw std::runtime_error(ss.str());
     }
 
-    auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
-                                        segment_ids, value_cache);
+    auto stack_results =
+        ::getValueImpl(transaction, state_data.datastack_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
         !std::holds_alternative<Tuple>(
             std::get<CountedData<value>>(stack_results).data)) {
         throw std::runtime_error("failed to load machine stack");
     }
 
-    auto auxstack_results = ::getValueImpl(
-        transaction, state_data.auxstack_hash, segment_ids, value_cache);
+    auto auxstack_results =
+        ::getValueImpl(transaction, state_data.auxstack_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(auxstack_results)) {
         throw std::runtime_error("failed to load machine auxstack");
     }
@@ -570,27 +567,29 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             "failed to load machine auxstack because of format error");
     }
 
-    segment_ids.insert(state_data.pc.pc.segment);
-    segment_ids.insert(state_data.err_pc.pc.segment);
+    auto pc_results =
+        ::getValueImpl(transaction, state_data.pc_hash, value_cache);
+    if (std::holds_alternative<rocksdb::Status>(pc_results)) {
+        throw std::runtime_error("failed to load machine pc");
+    }
+    if (!std::holds_alternative<CodePointStub>(
+            std::get<CountedData<value>>(pc_results).data)) {
+        throw std::runtime_error(
+            "failed to load machine pc because of format error");
+    }
 
-    bool loaded_segment = true;
-    while (loaded_segment) {
-        loaded_segment = false;
-        std::set<uint64_t> next_segment_ids;
-        for (auto it = segment_ids.rbegin(); it != segment_ids.rend(); ++it) {
-            if (code->containsSegment(*it)) {
-                // If the segment is already loaded, no need to restore it
-                continue;
-            }
-            auto segment =
-                getCodeSegment(transaction, *it, next_segment_ids, value_cache);
-            code->restoreExistingSegment(std::move(segment));
-            loaded_segment = true;
-        }
-        segment_ids = std::move(next_segment_ids);
-    };
+    auto err_pc_results =
+        ::getValueImpl(transaction, state_data.err_pc_hash, value_cache);
+    if (std::holds_alternative<rocksdb::Status>(err_pc_results)) {
+        throw std::runtime_error("failed to load machine err pc");
+    }
+    if (!std::holds_alternative<CodePointStub>(
+            std::get<CountedData<value>>(err_pc_results).data)) {
+        throw std::runtime_error(
+            "failed to load machine err pc because of format error");
+    }
+
     auto state = MachineState{
-        code,
         std::move(std::get<CountedData<value>>(register_results).data),
         std::move(std::get<CountedData<value>>(static_results).data),
         Datastack(
@@ -599,8 +598,11 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             std::get<CountedData<value>>(auxstack_results).data)),
         state_data.arb_gas_remaining,
         state_data.status,
-        state_data.pc.pc,
-        state_data.err_pc,
+        std::move(std::get<CodePointStub>(
+                      std::get<CountedData<value>>(pc_results).data))
+            .pc,
+        std::move(std::get<CodePointStub>(
+            std::get<CountedData<value>>(err_pc_results).data)),
         state_data.staged_message,
         state_data.output};
 
