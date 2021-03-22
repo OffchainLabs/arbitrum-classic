@@ -138,6 +138,8 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
         } else {
             std::vector<unsigned char> value_vector{};
             serializeValue(next_item, value_vector);
+            // TODO: handle the case where the code segment already partially
+            // existed
             getValueDependencies(next_item, items_to_save);
             save_ret = saveRefCountedData(tx, key, value_vector,
                                           existing_references + 1);

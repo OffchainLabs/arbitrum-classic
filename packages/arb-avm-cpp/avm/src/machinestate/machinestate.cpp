@@ -117,9 +117,9 @@ void MachineState::addProcessedLog(value log_val) {
 MachineState::MachineState(CodeSegment segment, value static_val_)
     : static_val(std::move(static_val_)),
       arb_gas_remaining(max_arb_gas_remaining),
-      pc({std::move(segment), 0}),
+      pc({segment, segment.load().size() - 1}),
       errpc({pc, getErrCodePointHash()}),
-      loaded_segment(std::make_shared<LoadedCodeSegment>(segment.load())) {}
+      loaded_segment(std::make_shared<LoadedCodeSegment>(pc.segment.load())) {}
 
 MachineState::MachineState(value register_val_,
                            value static_val_,
