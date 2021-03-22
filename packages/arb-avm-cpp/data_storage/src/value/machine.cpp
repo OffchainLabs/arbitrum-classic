@@ -151,13 +151,12 @@ MachineStateKeys extractMachineStateKeys(
 
 void deleteMachineState(ReadWriteTransaction& tx,
                         MachineStateKeys& parsed_state) {
-    auto delete_static_res = deleteValueImpl(tx, parsed_state.static_hash);
-    auto delete_register_res = deleteValueImpl(tx, parsed_state.register_hash);
-    auto delete_datastack_res =
-        deleteValueImpl(tx, parsed_state.datastack_hash);
-    auto delete_auxstack_res = deleteValueImpl(tx, parsed_state.auxstack_hash);
-    auto delete_pc_res = deleteValueImpl(tx, parsed_state.pc_hash);
-    auto delete_err_pc_res = deleteValueImpl(tx, parsed_state.err_pc_hash);
+    auto delete_static_res = deleteValue(tx, parsed_state.static_hash);
+    auto delete_register_res = deleteValue(tx, parsed_state.register_hash);
+    auto delete_datastack_res = deleteValue(tx, parsed_state.datastack_hash);
+    auto delete_auxstack_res = deleteValue(tx, parsed_state.auxstack_hash);
+    auto delete_pc_res = deleteValue(tx, parsed_state.pc_hash);
+    auto delete_err_pc_res = deleteValue(tx, parsed_state.err_pc_hash);
 
     if (!delete_static_res.status.ok()) {
         std::cout << "error deleting static in checkpoint" << std::endl;
@@ -192,8 +191,7 @@ DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
     auto results = getRefCountedData(tx, key);
 
     if (!results.status.ok()) {
-        return DeleteResults{0, results.status,
-                             std::move(results.stored_value)};
+        return DeleteResults{0, results.status};
     }
 
     auto delete_results = deleteRefCountedData(tx, key);
@@ -233,36 +231,36 @@ DbResult<MachineStateKeys> getMachineStateKeys(
 rocksdb::Status saveMachineState(ReadWriteTransaction& tx,
                                  const Machine& machine) {
     auto& machinestate = machine.machine_state;
-    auto static_val_results = saveValueImpl(tx, machinestate.static_val);
+    auto static_val_results = saveValue(tx, machinestate.static_val);
     if (!static_val_results.status.ok()) {
         return static_val_results.status;
     }
 
-    auto register_val_results = saveValueImpl(tx, machinestate.registerVal);
+    auto register_val_results = saveValue(tx, machinestate.registerVal);
     if (!register_val_results.status.ok()) {
         return register_val_results.status;
     }
 
     auto datastack_tup = machinestate.stack.getTupleRepresentation();
-    auto datastack_results = saveValueImpl(tx, datastack_tup);
+    auto datastack_results = saveValue(tx, datastack_tup);
     if (!datastack_results.status.ok()) {
         return datastack_results.status;
     }
 
     auto auxstack_tup = machinestate.auxstack.getTupleRepresentation();
-    auto auxstack_results = saveValueImpl(tx, auxstack_tup);
+    auto auxstack_results = saveValue(tx, auxstack_tup);
     if (!auxstack_results.status.ok()) {
         return auxstack_results.status;
     }
 
-    auto pc_results = saveValueImpl(
+    auto pc_results = saveValue(
         tx,
         CodePointStub(machinestate.pc, machinestate.loadCurrentInstruction()));
     if (!pc_results.status.ok()) {
         return pc_results.status;
     }
 
-    auto errpc_results = saveValueImpl(tx, machinestate.errpc);
+    auto errpc_results = saveValue(tx, machinestate.errpc);
     if (!errpc_results.status.ok()) {
         return errpc_results.status;
     }

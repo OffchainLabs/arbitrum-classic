@@ -57,7 +57,7 @@ void deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
     }
 }
 void deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
-                       value* result,
+                       Buffer* result,
                        std::vector<Slot>& slots) {
     uint8_t depth = *bytes++;
     if (depth == 0) {
@@ -81,7 +81,7 @@ void deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
     }
 }
 void deserializeCodeSegment(std::vector<unsigned char>::const_iterator& bytes,
-                            value* result,
+                            CodeSegment* result,
                             std::vector<Slot>& slots) {
     auto segment_id = deserializeUint64t(bytes);
     auto num_code_points = deserializeUint64t(bytes);
@@ -111,7 +111,8 @@ void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
     auto ty = *bytes++;
     switch (ty) {
         case BUFFER: {
-            deserializeBuffer(bytes, result, slots);
+            *result = Buffer();
+            deserializeBuffer(bytes, std::get_if<Buffer>(result), slots);
             break;
         }
         case NUM: {
@@ -123,11 +124,13 @@ void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
             break;
         }
         case HASH_PRE_IMAGE: {
-            throw std::runtime_error("Attempted to deserialize HASH_PRE_IMAGE");
+            throw std::runtime_error("attempted to deserialize HASH_PRE_IMAGE");
             break;
         }
         case CODE_SEGMENT: {
-            deserializeCodeSegment(bytes, result, slots);
+            *result = CodeSegment::uninitialized();
+            deserializeCodeSegment(bytes, std::get_if<CodeSegment>(result),
+                                   slots);
             break;
         }
         default: {
@@ -140,4 +143,24 @@ void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
             break;
         }
     }
+}
+
+void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                      Buffer* result,
+                      std::vector<Slot>& slots) {
+    if (*bytes++ != BUFFER) {
+        throw std::runtime_error(
+            "attempted to load non-buffer value into buffer");
+    }
+    deserializeBuffer(bytes, result, slots);
+}
+
+void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                      CodeSegment* result,
+                      std::vector<Slot>& slots) {
+    if (*bytes++ != CODE_SEGMENT) {
+        throw std::runtime_error(
+            "attempted to load non-code-segment value into code segment");
+    }
+    deserializeCodeSegment(bytes, result, slots);
 }

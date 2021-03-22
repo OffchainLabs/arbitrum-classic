@@ -33,4 +33,12 @@ void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
                       value* result,
                       std::vector<Slot>& slots);
 
+// Special cases with explicit types for other SlotPointer types
+void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                      Buffer* result,
+                      std::vector<Slot>& slots);
+void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                      CodeSegment* result,
+                      std::vector<Slot>& slots);
+
 #endif

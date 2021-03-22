@@ -530,7 +530,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const {
     auto static_results =
-        ::getValueImpl(transaction, state_data.static_hash, value_cache);
+        ::getValue(transaction, state_data.static_hash, value_cache);
 
     if (std::holds_alternative<rocksdb::Status>(static_results)) {
         std::stringstream ss;
@@ -540,7 +540,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
 
     auto register_results =
-        ::getValueImpl(transaction, state_data.register_hash, value_cache);
+        ::getValue(transaction, state_data.register_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine register: "
@@ -549,7 +549,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
 
     auto stack_results =
-        ::getValueImpl(transaction, state_data.datastack_hash, value_cache);
+        ::getValue(transaction, state_data.datastack_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
         !std::holds_alternative<Tuple>(
             std::get<CountedData<value>>(stack_results).data)) {
@@ -557,7 +557,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
 
     auto auxstack_results =
-        ::getValueImpl(transaction, state_data.auxstack_hash, value_cache);
+        ::getValue(transaction, state_data.auxstack_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(auxstack_results)) {
         throw std::runtime_error("failed to load machine auxstack");
     }
@@ -567,8 +567,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
             "failed to load machine auxstack because of format error");
     }
 
-    auto pc_results =
-        ::getValueImpl(transaction, state_data.pc_hash, value_cache);
+    auto pc_results = ::getValue(transaction, state_data.pc_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(pc_results)) {
         throw std::runtime_error("failed to load machine pc");
     }
@@ -579,7 +578,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     }
 
     auto err_pc_results =
-        ::getValueImpl(transaction, state_data.err_pc_hash, value_cache);
+        ::getValue(transaction, state_data.err_pc_hash, value_cache);
     if (std::holds_alternative<rocksdb::Status>(err_pc_results)) {
         throw std::runtime_error("failed to load machine err pc");
     }

@@ -55,9 +55,13 @@ class CodeSegment {
     friend LoadedCodeSegment;
     friend void deserializeCodeSegment(
         std::vector<unsigned char>::const_iterator& bytes,
-        value* result,
+        CodeSegment* result,
         std::vector<Slot>& slots);
     friend void deserializeCodePointStub(
+        std::vector<unsigned char>::const_iterator& bytes,
+        value* result,
+        std::vector<Slot>& slots);
+    friend void deserializeValue(
         std::vector<unsigned char>::const_iterator& bytes,
         value* result,
         std::vector<Slot>& slots);

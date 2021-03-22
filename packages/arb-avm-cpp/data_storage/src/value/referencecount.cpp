@@ -98,19 +98,16 @@ DeleteResults deleteRefCountedData(ReadWriteTransaction& tx,
     if (results.status.ok()) {
         if (results.reference_count <= deleted_references) {
             auto delete_status = tx.refCountedDelete(hash_key);
-            return DeleteResults{0, delete_status,
-                                 std::move(results.stored_value)};
+            return DeleteResults{0, delete_status};
         } else {
             auto updated_ref_count =
                 results.reference_count - deleted_references;
             auto update_result = saveValueWithRefCount(
                 tx, updated_ref_count, hash_key, results.stored_value);
-            return DeleteResults{updated_ref_count, update_result.status,
-                                 std::move(results.stored_value)};
+            return DeleteResults{updated_ref_count, update_result.status};
         }
     } else {
-        return DeleteResults{0, results.status,
-                             std::move(results.stored_value)};
+        return DeleteResults{0, results.status};
     }
 }
 

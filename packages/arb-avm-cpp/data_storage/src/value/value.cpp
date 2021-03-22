@@ -31,9 +31,43 @@
 #include <vector>
 
 DbResult<value> getValue(const ReadTransaction& tx,
-                         const uint256_t value_hash,
+                         uint256_t value_hash,
                          ValueCache& value_cache) {
-    throw std::runtime_error("TODO: unimplemented");
+    value result;
+    std::vector<Slot> slots(1, {SlotPointer(&result), value_hash});
+    while (!slots.empty()) {
+        auto slot = slots.back();
+        slots.pop_back();
+        if (auto val = value_cache.loadIfExists(slot.hash)) {
+            if (auto val_ptr = std::get_if<value*>(&slot.ptr)) {
+                **val_ptr = *val;
+            } else if (auto buf_ptr = std::get_if<Buffer*>(&slot.ptr)) {
+                **buf_ptr = std::get<Buffer>(*val);
+            } else if (auto code_segment_ptr =
+                           std::get_if<CodeSegment*>(&slot.ptr)) {
+                **code_segment_ptr = std::get<CodeSegment>(*val);
+            } else {
+                throw std::runtime_error("unexpected slot pointer type");
+            }
+        }
+        std::vector<unsigned char> hash_key;
+        marshal_uint256_t(slot.hash, hash_key);
+        auto key = vecToSlice(hash_key);
+        auto results = getRefCountedData(tx, key);
+        if (results.status.ok()) {
+            assert(results.reference_count > 0);
+            auto bytes = results.stored_value.cbegin();
+            std::visit(
+                [&](const auto& ptr) {
+                    deserializeValue(bytes, ptr, slots);
+                    value_cache.maybeSave(*ptr);
+                },
+                slot.ptr);
+        } else {
+            return results.status;
+        }
+    }
+    return CountedData<value>{1, result};
 }
 
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
@@ -92,21 +126,20 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
     return ret;
 }
 
-// TODO should operate on deserialized values
 DeleteResults deleteValues(ReadWriteTransaction& tx,
-                           std::vector<uint256_t> items_to_delete) {
+                           std::vector<value> items_to_delete) {
     bool first = true;
     DeleteResults ret{};
     while (!items_to_delete.empty()) {
         auto next_item = items_to_delete.back();
         items_to_delete.pop_back();
+        auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;
-        marshal_uint256_t(next_item, hash_key);
+        marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);
         auto results = deleteRefCountedData(tx, key);
         if (results.status.ok() && results.reference_count == 0) {
-            auto it = results.stored_value.cbegin();
-            throw std::runtime_error("TODO: deleting unimplemented");
+            getValueDependencies(next_item, items_to_delete);
         }
         if (first) {
             ret = results;
@@ -116,7 +149,13 @@ DeleteResults deleteValues(ReadWriteTransaction& tx,
     return ret;
 }
 
-DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash) {
-    std::vector<uint256_t> items_to_delete{value_hash};
-    return deleteValues(tx, std::move(items_to_delete));
+DeleteResults deleteValue(ReadWriteTransaction& tx,
+                          const uint256_t& value_hash) {
+    ValueCache cache{1, 0};
+    auto value_result = getValue(tx, value_hash, cache);
+    if (auto status = std::get_if<rocksdb::Status>(&value_result)) {
+        return {0, *status};
+    }
+    auto val = std::get<CountedData<value>>(value_result).data;
+    return deleteValues(tx, std::vector(1, val));
 }

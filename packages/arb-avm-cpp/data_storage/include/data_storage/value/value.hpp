@@ -29,18 +29,12 @@ struct DeleteResults;
 struct SaveResults;
 class Transaction;
 
-SaveResults saveValueImpl(ReadWriteTransaction& transaction, const value& val);
-DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
-                              const uint256_t& value_hash);
-DbResult<value> getValueImpl(const ReadTransaction& tx,
-                             uint256_t value_hash,
-                             ValueCache& value_cache);
-
 DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache);
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
-DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
+DeleteResults deleteValue(ReadWriteTransaction& tx,
+                          const uint256_t& value_hash);
 
 struct ValueHash {
     uint256_t hash;
