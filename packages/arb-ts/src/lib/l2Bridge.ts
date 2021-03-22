@@ -95,6 +95,9 @@ export class L2Bridge {
     const destination = destinationAddress || (await this.getWalletAddress())
 
     const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
+    if (!tokenData) {
+      throw new Error("Can't withdraw; token not deployed")
+    }
     const erc20TokenData = tokenData.ERC20
 
     if (!erc20TokenData) {
@@ -113,6 +116,9 @@ export class L2Bridge {
     const destination = destinationAddress || (await this.getWalletAddress())
 
     const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
+    if (!tokenData) {
+      throw new Error("Can't withdraw; token not deployed")
+    }
     const erc777TokenData = tokenData.ERC777
 
     if (!erc777TokenData) {
@@ -136,6 +142,7 @@ export class L2Bridge {
       ERC777: undefined,
       CUSTOM: undefined,
     }
+    this.l2Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
 
     // handle custom L2 token:
@@ -179,7 +186,7 @@ export class L2Bridge {
         }
       } else {
         console.info(
-          `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed`
+          `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
         )
       }
     } else {
@@ -218,7 +225,8 @@ export class L2Bridge {
       tokenData.ERC777.balance = balance
       return tokenData
     }
-    throw new Error(`No L2 token for ${erc20L1Address} found`)
+    console.warn(`No L2 token for ${erc20L1Address} found`)
+    return
   }
 
   public getERC20L2Address(erc20L1Address: string) {
