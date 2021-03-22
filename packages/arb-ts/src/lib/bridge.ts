@@ -181,7 +181,7 @@ export class Bridge extends L2Bridge {
     return ethers.utils.keccak256(
       ethers.utils.concat([
         ethers.utils.zeroPad(requestID, 32),
-        ethers.utils.zeroPad(BigNumber.from(0).toHexString(), 32),
+        ethers.utils.zeroPad(BigNumber.from(1).toHexString(), 32),
       ])
     )
   }

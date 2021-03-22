@@ -11,7 +11,7 @@ const main = async () => {
   // TODO: check buddy deployer address available
   // TODO: check 1820 registry
   const inboxAddress =
-    process.env.INBOX_ADDRESS || '0x97884F2B6A2AF19C38AA0a15716CF2aC931A3c73'
+    process.env.INBOX_ADDRESS || '0xd71d47ad1b63981e9db8e4a78c0b30170da8a601'
 
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')

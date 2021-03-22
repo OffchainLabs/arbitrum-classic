@@ -193,7 +193,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      "0x"
     )
   }
   public async depositAsERC777(
@@ -211,7 +212,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      "0x"
     )
   }
 
@@ -236,7 +238,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      "0x"
     )
   }
 
