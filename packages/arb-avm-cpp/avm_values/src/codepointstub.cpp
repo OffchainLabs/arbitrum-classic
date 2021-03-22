@@ -36,7 +36,7 @@ void CodePointRef::marshal(std::vector<unsigned char>& buf) const {
 }
 
 CodePointStub CodePointRef::addOperation(Operation op) {
-    return segment.addOperationAt(op, pc);
+    return segment.addOperationAt(op, pc + 1);
 }
 
 void CodePointStub::marshal(std::vector<unsigned char>& buf) const {

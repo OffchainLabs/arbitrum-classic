@@ -29,7 +29,6 @@ struct Operation {
     std::optional<value> immediate;
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
-    Operation(OpCode opcode_, value val);
     Operation(OpCode opcode_, std::optional<value> val);
 
     void marshalForProof(std::vector<unsigned char>& buf,

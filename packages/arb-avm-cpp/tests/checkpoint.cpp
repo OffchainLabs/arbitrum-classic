@@ -101,7 +101,8 @@ TEST_CASE("Save value") {
         saveValue(*transaction, num, 1, true);
     }
     SECTION("save codepoint") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
     }
 }
@@ -148,12 +149,14 @@ TEST_CASE("Save and get value") {
         getValue(*transaction, num, 1, true, value_cache);
     }
     SECTION("save codepoint") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
         getValue(*transaction, code_point_stub, 1, true, value_cache);
     }
     SECTION("save err codepoint") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         saveValue(*transaction, code_point_stub, 1, true);
         getValue(*transaction, code_point_stub, 1, true, value_cache);
     }
@@ -173,14 +176,16 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save codepoint tuple") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save codepoint tuple") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
@@ -194,7 +199,8 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash_value(tuple), hashes, value_cache);
     }
     SECTION("save multiple valued tuple") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         value inner_tuple = Tuple();
         uint256_t num = 1;
         value tuple = Tuple(inner_tuple, num, code_point_stub);
@@ -204,7 +210,8 @@ TEST_CASE("Save and get tuple values") {
         getTupleValues(*transaction, hash_value(tuple), hashes, value_cache);
     }
     SECTION("save multiple valued tuple, saveValue()") {
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         auto inner_tuple = Tuple();
         uint256_t num = 1;
         auto tuple = Tuple(inner_tuple, num, code_point_stub);
@@ -229,7 +236,8 @@ TEST_CASE("Save And Get Tuple") {
     }
     SECTION("save codepoint in tuple") {
         ValueCache value_cache{1, 0};
-        CodePointStub code_point_stub({0, 1}, 654546);
+        auto segment = CodeSegment::newSegment();
+        CodePointStub code_point_stub({segment, 1}, 654546);
         auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
@@ -342,7 +350,12 @@ void checkSavedState(const ReadWriteTransaction& transaction,
 
     auto data = res.data;
     REQUIRE(data.status == expected_machine.machine_state.state);
-    REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
+    CodePointStub expected_pc = {
+        expected_machine.machine_state.pc,
+        expected_machine.machine_state.loadCurrentInstruction()};
+    REQUIRE(data.pc_hash == hash_value(expected_pc));
+    REQUIRE(data.err_pc_hash ==
+            hash_value(expected_machine.machine_state.errpc));
     REQUIRE(
         data.datastack_hash ==
         hash(expected_machine.machine_state.stack.getTupleRepresentation()));
@@ -392,54 +405,49 @@ void deleteCheckpoint(ReadWriteTransaction& transaction,
 }
 
 Machine getComplexMachine() {
-    auto code = std::make_shared<Code>();
-    auto stub = code->addSegment();
-    stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
-    stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
-    stub = code->addOperation(stub.pc, Operation(OpCode::SUB));
+    auto segment = CodeSegment::newSegment();
+    auto stub = segment.getInitialStub();
+    stub = stub.pc.addOperation(Operation(OpCode::ADD));
+    stub = stub.pc.addOperation(Operation(OpCode::MUL));
+    stub = stub.pc.addOperation(Operation(OpCode::SUB));
     uint256_t register_val = 100;
     auto static_val = Tuple(register_val, Tuple());
-
-    CodePointStub code_point_stub({0, 1}, 654546);
 
     Datastack data_stack;
     data_stack.push(register_val);
     Datastack aux_stack;
     aux_stack.push(register_val);
-    aux_stack.push(code_point_stub);
+    aux_stack.push(stub);
 
     uint256_t arb_gas_remaining = 534574678365;
 
-    CodePointRef pc{0, 0};
-    CodePointStub err_pc({0, 0}, 968769876);
+    CodePointRef pc{segment, 0};
+    CodePointStub err_pc({segment, 0}, 968769876);
     Status state = Status::Extensive;
 
     auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
 
     staged_variant staged_message;
 
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
+    return Machine(MachineState(register_val, std::move(static_val), data_stack,
+                                aux_stack, arb_gas_remaining, state, pc, err_pc,
                                 std::move(staged_message), output));
 }
 
 Machine getDefaultMachine() {
-    auto code = std::make_shared<Code>();
-    code->addSegment();
+    auto segment = CodeSegment::newSegment();
     auto static_val = Tuple();
     auto register_val = Tuple();
     auto data_stack = Tuple();
     auto aux_stack = Tuple();
     uint256_t arb_gas_remaining = 534574678365;
-    CodePointRef pc(0, 0);
-    CodePointStub err_pc({0, 0}, 968769876);
+    CodePointRef pc(segment, 0);
+    CodePointStub err_pc({segment, 0}, 968769876);
     Status state = Status::Extensive;
     auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
     staged_variant staged_message;
-    return Machine(MachineState(std::move(code), register_val,
-                                std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
+    return Machine(MachineState(register_val, std::move(static_val), data_stack,
+                                aux_stack, arb_gas_remaining, state, pc, err_pc,
                                 staged_message, output));
 }
 

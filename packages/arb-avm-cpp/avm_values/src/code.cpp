@@ -46,11 +46,16 @@ size_t LoadedCodeSegment::size() const {
     return inner->code.size();
 }
 
+CodePointStub LoadedCodeSegment::stubAt(uint64_t pc) const {
+    return {{*this, pc}, inner->code[pc]};
+}
+
 std::atomic<uint64_t> next_segment_id;
 
 CodeSegment CodeSegment::newSegment() {
-    return CodeSegment(
-        std::make_shared<CodeSegmentInner>(next_segment_id.fetch_add(1)));
+    return CodeSegment(std::make_shared<CodeSegmentInner>(
+        next_segment_id.fetch_add(1),
+        std::vector(1, CodePoint(Operation(OpCode::ERROR), 0))));
 }
 
 CodeSegment CodeSegment::restoreCodeSegment(uint64_t segment_id,
@@ -85,7 +90,15 @@ CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
     return ret;
 }
 
+CodePointStub CodeSegment::getInitialStub() {
+    return {{*this, 0}, 0};
+}
+
 CodePointStub CodeSegment::addOperationAt(Operation op, uint64_t pc) {
+    if (pc == 0) {
+        throw std::runtime_error(
+            "Attempted to replace initial error code point");
+    }
     std::unique_lock<std::shared_mutex> guard(inner->mutex, std::try_to_lock);
     if (!guard.owns_lock()) {
         // This code segment is being concurrently accessed (probably currently

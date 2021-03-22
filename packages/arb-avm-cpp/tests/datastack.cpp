@@ -139,7 +139,7 @@ TEST_CASE("Initialize datastack") {
                             1);
     }
     SECTION("push num, tuple") {
-        CodePointStub code_point_stub{{0, 0}, 3452345};
+        CodePointStub code_point_stub{{CodeSegment::newSegment(), 0}, 3452345};
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(code_point_stub);
         data_stack.push(num);
@@ -151,7 +151,7 @@ TEST_CASE("Initialize datastack") {
                             2);
     }
     SECTION("push codepoint, tuple") {
-        CodePointStub code_point_stub{{0, 0}, 3452345};
+        CodePointStub code_point_stub{{CodeSegment::newSegment(), 0}, 3452345};
         uint256_t num = 1;
         auto tuple = Tuple::createTuple(num);
         data_stack.push(code_point_stub);

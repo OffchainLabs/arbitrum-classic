@@ -29,19 +29,18 @@
 #include <catch2/catch.hpp>
 
 void generateTestMachine(std::unique_ptr<Machine>& mach) {
-    auto& code = mach->machine_state.code;
-    auto stub1 = code->addSegment();
-    auto stub2 = code->addSegment();
-    auto stub3 = code->addSegment();
+    auto stub1 = CodeSegment::newSegment().getInitialStub();
+    auto stub2 = CodeSegment::newSegment().getInitialStub();
+    auto stub3 = CodeSegment::newSegment().getInitialStub();
 
     auto add_op1 = [&](Operation op) {
-        stub1 = code->addOperation(stub1.pc, std::move(op));
+        stub1 = stub1.pc.addOperation(std::move(op));
     };
     auto add_op2 = [&](Operation op) {
-        stub2 = code->addOperation(stub2.pc, std::move(op));
+        stub2 = stub2.pc.addOperation(std::move(op));
     };
     auto add_op3 = [&](Operation op) {
-        stub3 = code->addOperation(stub3.pc, std::move(op));
+        stub3 = stub3.pc.addOperation(std::move(op));
     };
 
     add_op2(Operation{OpCode::HALT});
@@ -56,7 +55,7 @@ void generateTestMachine(std::unique_ptr<Machine>& mach) {
     for (int i = 0; i < 4; i++) {
         mach->machine_state.stack.push(uint256_t{1});
     }
-    mach->machine_state.pc = CodePointRef(1, 2);
+    mach->machine_state.pc = CodePointRef(stub1.pc.segment, 2);
 }
 
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
@@ -75,7 +74,7 @@ TEST_CASE("Code works correctly") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
     storage.initialize(
-        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+        LoadedExecutable(CodeSegment::newSegment(), value{Tuple()}));
     ValueCache value_cache{1, 0};
     auto mach = storage.getInitialMachine(value_cache);
     generateTestMachine(mach);
@@ -86,7 +85,7 @@ TEST_CASE("Code serialization") {
     DBDeleter deleter;
     ArbStorage storage(dbpath);
     storage.initialize(
-        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+        LoadedExecutable(CodeSegment::newSegment(), value{Tuple()}));
     ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine(value_cache);

@@ -22,9 +22,6 @@
 
 #include <iostream>
 
-Operation::Operation(OpCode opcode_, value immediate_)
-    : opcode(opcode_), immediate(std::move(immediate_)) {}
-
 Operation::Operation(OpCode opcode_, std::optional<value> immediate_)
     : opcode(opcode_), immediate(std::move(immediate_)) {}
 

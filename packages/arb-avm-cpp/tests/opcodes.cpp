@@ -19,6 +19,8 @@
 #include <avm/machine.hpp>
 #include <avm/machinestate/machineoperation.hpp>
 
+#include <avm_values/codepoint.hpp>
+
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
 
@@ -32,7 +34,7 @@
 using namespace intx;
 
 MachineState runUnaryOp(uint256_t arg1, OpCode op) {
-    MachineState m;
+    MachineState m(CodeSegment::newSegment(), value());
     m.stack.push(arg1);
     m.runOp(op);
     return m;
@@ -48,7 +50,7 @@ void testUnaryOp(uint256_t arg1, uint256_t result, OpCode op) {
 }
 
 MachineState runBinaryOp(uint256_t arg1, uint256_t arg2, OpCode op) {
-    MachineState m;
+    MachineState m(CodeSegment::newSegment(), value());
     m.stack.push(arg2);
     m.stack.push(arg1);
     m.runOp(op);
@@ -71,7 +73,7 @@ MachineState runTertiaryOp(uint256_t arg1,
                            uint256_t arg2,
                            uint256_t arg3,
                            OpCode op) {
-    MachineState m;
+    MachineState m(CodeSegment::newSegment(), value());
     m.stack.push(arg3);
     m.stack.push(arg2);
     m.stack.push(arg1);
@@ -277,12 +279,11 @@ TEST_CASE("OPCODE: GT opcode is correct") {
     testBinaryOp(-3, 9, 1, OpCode::GT);
 
     BENCHMARK_ADVANCED("gt 100x")(Catch::Benchmark::Chronometer meter) {
-        MachineState sample_machine;
+        MachineState sample_machine(CodeSegment::newSegment(), value());
         for (int i = 0; i < 101; i++) {
             sample_machine.stack.push(uint256_t{100});
         }
-        std::vector<MachineState> machines(meter.runs());
-        std::fill(machines.begin(), machines.end(), sample_machine);
+        std::vector<MachineState> machines(meter.runs(), sample_machine);
         meter.measure([&machines](int i) {
             auto& mach = machines[i];
             for (int j = 0; j < 100; j++) {
@@ -341,7 +342,7 @@ TEST_CASE("OPCODE: EQ opcode is correct") {
     SECTION("Not equal") { testBinaryOp(7_u256, 3_u256, 0_u256, OpCode::EQ); }
     SECTION("equal") { testBinaryOp(3_u256, 3_u256, 1_u256, OpCode::EQ); }
     SECTION("matching tuples") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.runOp(OpCode::EQ);
@@ -352,7 +353,7 @@ TEST_CASE("OPCODE: EQ opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
     SECTION("different tuples") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.stack.push(Tuple{uint256_t{1}, uint256_t{3}});
         m.runOp(OpCode::EQ);
@@ -440,7 +441,7 @@ TEST_CASE("OPCODE: HASH opcode is correct") {
 
 TEST_CASE("OPCODE: TYPE opcode is correct") {
     SECTION("type int") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(value{uint256_t(3)});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
@@ -450,8 +451,9 @@ TEST_CASE("OPCODE: TYPE opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
     SECTION("type codepoint stub") {
-        MachineState m;
-        m.stack.push(value{CodePointStub({0, 0}, 0)});
+        auto segment = CodeSegment::newSegment();
+        MachineState m(segment, value());
+        m.stack.push(value{CodePointStub({segment, 0}, 0)});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
         REQUIRE(m.stack.stacksize() == 1);
@@ -460,7 +462,7 @@ TEST_CASE("OPCODE: TYPE opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
     SECTION("type tuple") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::TYPE);
@@ -473,7 +475,7 @@ TEST_CASE("OPCODE: TYPE opcode is correct") {
 
 TEST_CASE("OPCODE: POP opcode is correct") {
     SECTION("pop") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(uint256_t{3});
         REQUIRE(m.stack.stacksize() == 1);
         m.runOp(OpCode::POP);
@@ -483,9 +485,7 @@ TEST_CASE("OPCODE: POP opcode is correct") {
 
 TEST_CASE("OPCODE: SPUSH opcode is correct") {
     SECTION("spush") {
-        auto code = std::make_shared<Code>();
-        code->addSegment();
-        MachineState m{std::move(code), uint256_t{5}};
+        MachineState m(CodeSegment::newSegment(), uint256_t{5});
         m.runOp(OpCode::SPUSH);
         REQUIRE(m.stack.stacksize() == 1);
         value res = m.stack.pop();
@@ -496,7 +496,7 @@ TEST_CASE("OPCODE: SPUSH opcode is correct") {
 
 TEST_CASE("OPCODE: RPUSH opcode is correct") {
     SECTION("rpush") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.registerVal = uint256_t(5);
         m.runOp(OpCode::RPUSH);
         REQUIRE(m.stack.stacksize() == 1);
@@ -508,7 +508,7 @@ TEST_CASE("OPCODE: RPUSH opcode is correct") {
 
 TEST_CASE("OPCODE: RSET opcode is correct") {
     SECTION("rset") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(value{uint256_t(5)});
         m.runOp(OpCode::RSET);
         REQUIRE(m.stack.stacksize() == 0);
@@ -518,8 +518,9 @@ TEST_CASE("OPCODE: RSET opcode is correct") {
 
 TEST_CASE("OPCODE: JUMP opcode is correct") {
     SECTION("jump") {
-        MachineState m;
-        CodePointRef cpr{0, 2};
+        auto segment = CodeSegment::newSegment();
+        MachineState m(segment, value());
+        CodePointRef cpr{segment, 2};
         m.stack.push(value{CodePointStub(cpr, 73665)});
         m.runOp(OpCode::JUMP);
         REQUIRE(m.stack.stacksize() == 0);
@@ -529,9 +530,10 @@ TEST_CASE("OPCODE: JUMP opcode is correct") {
 
 TEST_CASE("OPCODE: CJUMP opcode is correct") {
     SECTION("cjump true") {
-        MachineState m;
-        CodePointRef cpr{0, 2};
-        m.pc = {0, 3};
+        auto segment = CodeSegment::newSegment();
+        MachineState m(segment, value());
+        CodePointRef cpr{segment, 2};
+        m.pc = {segment, 3};
         m.stack.push(uint256_t{1});
         m.stack.push(value{CodePointStub(cpr, 73665)});
         m.runOp(OpCode::CJUMP);
@@ -539,11 +541,12 @@ TEST_CASE("OPCODE: CJUMP opcode is correct") {
         REQUIRE(m.pc == cpr);
     }
     SECTION("cjump false") {
-        MachineState m;
-        CodePointRef initial_pc{0, 3};
+        auto segment = CodeSegment::newSegment();
+        MachineState m(segment, value());
+        CodePointRef initial_pc{segment, 3};
         m.pc = initial_pc;
         m.stack.push(uint256_t{0});
-        m.stack.push(value{CodePointStub({0, 10}, 73665)});
+        m.stack.push(value{CodePointStub({segment, 10}, 73665)});
         m.runOp(OpCode::CJUMP);
         REQUIRE(m.stack.stacksize() == 0);
         REQUIRE(m.pc == initial_pc + 1);
@@ -552,7 +555,7 @@ TEST_CASE("OPCODE: CJUMP opcode is correct") {
 
 TEST_CASE("OPCODE: STACKEMPTY opcode is correct") {
     SECTION("empty") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.runOp(OpCode::STACKEMPTY);
         REQUIRE(m.stack.stacksize() == 1);
         value res = m.stack.pop();
@@ -560,7 +563,7 @@ TEST_CASE("OPCODE: STACKEMPTY opcode is correct") {
         REQUIRE(m.stack.stacksize() == 0);
     }
     SECTION("not empty") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(uint256_t{1});
         m.runOp(OpCode::STACKEMPTY);
         REQUIRE(m.stack.stacksize() == 2);
@@ -572,10 +575,10 @@ TEST_CASE("OPCODE: STACKEMPTY opcode is correct") {
 
 TEST_CASE("OPCODE: PCPUSH opcode is correct") {
     SECTION("pcpush") {
-        auto code = std::make_shared<Code>();
-        auto stub = code->addSegment();
-        code->addOperation(stub.pc, Operation(OpCode::ADD));
-        MachineState m{std::move(code), uint256_t(5)};
+        auto segment = CodeSegment::newSegment();
+        auto stub = segment.getInitialStub();
+        stub.pc.addOperation(Operation(OpCode::ADD));
+        MachineState m{segment, uint256_t(5)};
         auto initial_stub = CodePointStub(m.pc, m.loadCurrentInstruction());
         m.runOp(OpCode::PCPUSH);
         REQUIRE(m.stack.stacksize() == 1);
@@ -588,7 +591,7 @@ TEST_CASE("OPCODE: PCPUSH opcode is correct") {
 
 TEST_CASE("OPCODE: AUXPUSH opcode is correct") {
     SECTION("auxpush") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(value{uint256_t(5)});
         m.runOp(OpCode::AUXPUSH);
         REQUIRE(m.stack.stacksize() == 0);
@@ -600,7 +603,7 @@ TEST_CASE("OPCODE: AUXPUSH opcode is correct") {
 
 TEST_CASE("OPCODE: AUXPOP opcode is correct") {
     SECTION("auxpop") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.auxstack.push(value{uint256_t(5)});
         m.runOp(OpCode::AUXPOP);
         REQUIRE(m.auxstack.stacksize() == 0);
@@ -612,7 +615,7 @@ TEST_CASE("OPCODE: AUXPOP opcode is correct") {
 
 TEST_CASE("OPCODE: AUXSTACKEMPTY opcode is correct") {
     SECTION("empty") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.runOp(OpCode::AUXSTACKEMPTY);
         REQUIRE(m.auxstack.stacksize() == 0);
         REQUIRE(m.stack.stacksize() == 1);
@@ -620,7 +623,7 @@ TEST_CASE("OPCODE: AUXSTACKEMPTY opcode is correct") {
         REQUIRE(res == value{uint256_t(1)});
     }
     SECTION("not empty") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.auxstack.push(value{uint256_t(5)});
         m.runOp(OpCode::AUXSTACKEMPTY);
         REQUIRE(m.auxstack.stacksize() == 1);
@@ -631,11 +634,11 @@ TEST_CASE("OPCODE: AUXSTACKEMPTY opcode is correct") {
 }
 
 MachineState createTestMachineState(OpCode op) {
-    auto code = std::make_shared<Code>();
-    auto stub = code->addSegment();
-    stub = code->addOperation(stub.pc, {OpCode::HALT});
-    code->addOperation(stub.pc, {op});
-    return {std::move(code), Tuple()};
+    auto segment = CodeSegment::newSegment();
+    auto stub = segment.getInitialStub();
+    stub = stub.pc.addOperation({OpCode::HALT});
+    stub.pc.addOperation({op});
+    return {segment, Tuple()};
 }
 
 TEST_CASE("OPCODE: NOP opcode is correct") {
@@ -651,14 +654,14 @@ TEST_CASE("OPCODE: NOP opcode is correct") {
 
 TEST_CASE("OPCODE: ERRPUSH opcode is correct") {
     SECTION("errpush") {
-        auto code = std::make_shared<Code>();
-        auto stub = code->addSegment();
-        stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
-        MachineState m{std::move(code), uint256_t(5)};
+        auto segment = CodeSegment::newSegment();
+        auto stub = segment.getInitialStub();
+        stub.pc.addOperation(Operation(OpCode::ADD));
+        MachineState m{segment, uint256_t(5)};
         m.errpc = stub;
         m.runOp(OpCode::ERRPUSH);
         REQUIRE(m.stack.stacksize() == 1);
-        REQUIRE(m.pc == CodePointRef{0, 0});
+        REQUIRE(m.pc == CodePointRef{segment, 0});
         value res = m.stack.pop();
         REQUIRE(res == value{stub});
         REQUIRE(m.stack.stacksize() == 0);
@@ -669,7 +672,7 @@ TEST_CASE("OPCODE: ERRSET opcode is correct") {
     SECTION("errset") {
         MachineState m = createTestMachineState(OpCode::ERRSET);
         auto start_pc = m.pc;
-        auto new_err_stub = CodePointStub({0, 54}, 968967);
+        auto new_err_stub = CodePointStub({*m.loaded_segment, 54}, 968967);
         m.stack.push(value{new_err_stub});
         m.runOne();
         REQUIRE(m.stack.stacksize() == 0);
@@ -769,7 +772,7 @@ TEST_CASE("OPCODE: SWAP2 opcode is correct") {
 
 TEST_CASE("OPCODE: TGET opcode is correct") {
     SECTION("tget") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(
             Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{1});
@@ -780,7 +783,7 @@ TEST_CASE("OPCODE: TGET opcode is correct") {
     }
 
     SECTION("index out range") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(
             Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{5});
@@ -797,7 +800,7 @@ TEST_CASE("OPCODE: TGET opcode is correct") {
 
 TEST_CASE("OPCODE: TSET opcode is correct") {
     SECTION("2 tup") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(uint256_t{3});
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.stack.push(uint256_t{1});
@@ -808,7 +811,7 @@ TEST_CASE("OPCODE: TSET opcode is correct") {
     }
 
     SECTION("8 tup") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(uint256_t{3});
         m.stack.push(Tuple{uint256_t{9}, uint256_t{9}, uint256_t{9},
                            uint256_t{9}, uint256_t{9}, uint256_t{9},
@@ -825,7 +828,7 @@ TEST_CASE("OPCODE: TSET opcode is correct") {
 
 TEST_CASE("OPCODE: TLEN opcode is correct") {
     SECTION("tlen") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(
             Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.runOp(OpCode::TLEN);
@@ -837,7 +840,7 @@ TEST_CASE("OPCODE: TLEN opcode is correct") {
 
 TEST_CASE("OPCODE: XGET opcode is correct") {
     SECTION("correct") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.auxstack.push(
             Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{1});
@@ -849,7 +852,7 @@ TEST_CASE("OPCODE: XGET opcode is correct") {
     }
 
     SECTION("index out range") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.auxstack.push(
             Tuple{uint256_t{9}, uint256_t{8}, uint256_t{7}, uint256_t{6}});
         m.stack.push(uint256_t{5});
@@ -862,7 +865,7 @@ TEST_CASE("OPCODE: XGET opcode is correct") {
 
 TEST_CASE("OPCODE: XSET opcode is correct") {
     SECTION("2 tup") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.auxstack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.stack.push(uint256_t{3});
         m.stack.push(uint256_t{1});
@@ -876,7 +879,7 @@ TEST_CASE("OPCODE: XSET opcode is correct") {
 
 TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
     SECTION("break") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         auto blockReason = m.runOp(OpCode::BREAKPOINT);
         REQUIRE(m.state == Status::Extensive);
         REQUIRE(std::get_if<BreakpointBlocked>(&blockReason) != nullptr);
@@ -886,7 +889,7 @@ TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
 
 TEST_CASE("OPCODE: LOG opcode is correct") {
     SECTION("log") {
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         m.stack.push(uint256_t{3});
         m.runOp(OpCode::LOG);
         REQUIRE(m.stack.stacksize() == 0);
@@ -897,7 +900,7 @@ TEST_CASE("OPCODE: LOG opcode is correct") {
 TEST_CASE("OPCODE: SEND opcode is correct") {
     SECTION("send") {
         // TODO: fill in send test
-        MachineState m;
+        MachineState m(CodeSegment::newSegment(), value());
         Buffer buf{};
         buf = buf.set(0, 200);
         m.stack.push(std::move(buf));
@@ -910,7 +913,7 @@ TEST_CASE("OPCODE: SEND opcode is correct") {
 }
 
 TEST_CASE("OPCODE: PUSHGAS opcode is correct") {
-    MachineState m;
+    MachineState m(CodeSegment::newSegment(), value());
     m.arb_gas_remaining = 250;
     m.runOp(OpCode::PUSH_GAS);
     value res = m.stack.pop();
@@ -920,7 +923,7 @@ TEST_CASE("OPCODE: PUSHGAS opcode is correct") {
 }
 
 TEST_CASE("OPCODE: SET_GAS opcode is correct") {
-    MachineState m;
+    MachineState m(CodeSegment::newSegment(), value());
     m.stack.push(uint256_t{100});
     m.runOp(OpCode::SET_GAS);
     REQUIRE(m.arb_gas_remaining == 100);
@@ -962,7 +965,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     REQUIRE(secp256k1_ecdsa_recoverable_signature_serialize_compact(
                 ctx, sig_raw.data(), &recovery_id, &sig) == 1);
 
-    MachineState s;
+    MachineState s(CodeSegment::newSegment(), value());
     s.stack.push(intx::be::unsafe::load<uint256_t>(msg.begin()));
     s.stack.push(uint256_t{recovery_id});
     s.stack.push(intx::be::unsafe::load<uint256_t>(sig_raw.begin() + 32));
@@ -976,7 +979,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
     REQUIRE(correct_address == calculated_address);
 
     BENCHMARK_ADVANCED("ecrecover")(Catch::Benchmark::Chronometer meter) {
-        MachineState sample_machine;
+        MachineState sample_machine(CodeSegment::newSegment(), value());
         sample_machine.stack.push(
             intx::be::unsafe::load<uint256_t>(msg.begin()));
         sample_machine.stack.push(uint256_t{recovery_id});
@@ -985,8 +988,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
         sample_machine.stack.push(
             intx::be::unsafe::load<uint256_t>(sig_raw.begin()));
 
-        std::vector<MachineState> machines(meter.runs());
-        std::fill(machines.begin(), machines.end(), sample_machine);
+        std::vector<MachineState> machines(meter.runs(), sample_machine);
         meter.measure([&machines](int i) {
             return machines[i].runOp(OpCode::ECRECOVER);
         });
@@ -996,7 +998,7 @@ TEST_CASE("OPCODE: ecrecover opcode is correct") {
 TEST_CASE("OPCODE: ECADD") {
     alt_bn128_pp::init_public_params();
     for (const auto& test_case : prepareECAddCases()) {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         mach.stack.push(test_case.b.y);
         mach.stack.push(test_case.b.x);
         mach.stack.push(test_case.a.y);
@@ -1011,7 +1013,7 @@ TEST_CASE("OPCODE: ECADD") {
 TEST_CASE("OPCODE: ECMUL") {
     alt_bn128_pp::init_public_params();
     for (const auto& test_case : prepareECMulCases()) {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         mach.stack.push(test_case.k);
         mach.stack.push(test_case.a.y);
         mach.stack.push(test_case.a.x);
@@ -1033,7 +1035,7 @@ TEST_CASE("OPCODE: ECPAIRING") {
                             point.second.x1, point.second.y0, point.second.y1),
                       tup);
         }
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         mach.stack.push(tup);
         mach.runOp(OpCode::ECPAIRING);
         REQUIRE(mach.state == Status::Extensive);
@@ -1060,7 +1062,6 @@ TEST_CASE("OPCODE: HALT opcode is correct") {
 }
 
 TEST_CASE("OPCODE: KECCAKF opcode is correct") {
-    auto code = std::make_shared<Code>();
     SECTION("Inverts correctly") {
         Tuple input_data(intx::from_string<uint256_t>(
                              "94370651106686220754648249265079798778273"
@@ -1088,10 +1089,11 @@ TEST_CASE("OPCODE: KECCAKF opcode is correct") {
     }
 
     SECTION("Hashes correctly") {
-        auto stub = code->addSegment();
-        stub = code->addOperation(stub.pc, Operation(OpCode::KECCAKF));
-        code->addOperation(stub.pc, Operation(OpCode::KECCAKF));
-        MachineState m{std::move(code), Tuple()};
+        auto segment = CodeSegment::newSegment();
+        auto stub = segment.getInitialStub();
+        stub = stub.pc.addOperation(Operation(OpCode::KECCAKF));
+        stub.pc.addOperation(Operation(OpCode::KECCAKF));
+        MachineState m{std::move(segment), Tuple()};
         m.stack.push(
             Tuple(0_u256, 0_u256, 0_u256, 0_u256, 0_u256, 0_u256, 0_u256));
         m.runOne();
@@ -1245,10 +1247,10 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
     }
 
     SECTION("Hashes correctly") {
-        auto code = std::make_shared<Code>();
-        auto stub = code->addSegment();
-        stub = code->addOperation(stub.pc, Operation(OpCode::SHA256F));
-        MachineState m{std::move(code), Tuple()};
+        auto segment = CodeSegment::newSegment();
+        auto stub = segment.getInitialStub();
+        stub = stub.pc.addOperation(Operation(OpCode::SHA256F));
+        MachineState m{std::move(segment), Tuple()};
 
         int i = 0;
         for (const auto& test_case : cases) {
@@ -1269,17 +1271,17 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
 TEST_CASE("OPCODE: Stack underflow") {
     for (uint8_t op = static_cast<uint8_t>(OpCode::ADD);
          op <= static_cast<uint8_t>(OpCode::ECRECOVER); ++op) {
-        auto code = std::make_shared<Code>();
-        auto stub = code->addSegment();
-        code->addOperation(stub.pc, Operation(static_cast<OpCode>(op)));
-        MachineState m{std::move(code), uint256_t{5}};
+        auto segment = CodeSegment::newSegment();
+        auto stub = segment.getInitialStub();
+        stub = stub.pc.addOperation(Operation(static_cast<OpCode>(op)));
+        MachineState m{std::move(segment), uint256_t{5}};
         m.runOne();
     }
 }
 
 TEST_CASE("OPCODE: Newbuffer opcode") {
     SECTION("Creates new buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         mach.runOp(OpCode::NEW_BUFFER);
         REQUIRE(mach.stack[0] == value{Buffer()});
     }
@@ -1287,7 +1289,7 @@ TEST_CASE("OPCODE: Newbuffer opcode") {
 
 TEST_CASE("OPCODE: getbuffer8 opcode") {
     SECTION("Reads from buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         Buffer buf;
         buf = buf.set(123, 7);
         mach.stack.push(buf);
@@ -1299,7 +1301,7 @@ TEST_CASE("OPCODE: getbuffer8 opcode") {
 
 TEST_CASE("OPCODE: getbuffer64 opcode") {
     SECTION("Reads from buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         Buffer buf;
         buf = buf.set(123, 7);
         mach.stack.push(buf);
@@ -1311,7 +1313,7 @@ TEST_CASE("OPCODE: getbuffer64 opcode") {
 
 TEST_CASE("OPCODE: getbuffer256 opcode") {
     SECTION("Reads from buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         Buffer buf;
         buf = buf.set(123, 7);
         mach.stack.push(buf);
@@ -1323,7 +1325,7 @@ TEST_CASE("OPCODE: getbuffer256 opcode") {
 
 TEST_CASE("OPCODE: setbuffer8 opcode") {
     SECTION("Writes to buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         Buffer buf;
         buf = buf.set(123, 7);
         mach.stack.push(Buffer());
@@ -1336,7 +1338,7 @@ TEST_CASE("OPCODE: setbuffer8 opcode") {
 
 TEST_CASE("OPCODE: setbuffer64 opcode") {
     SECTION("Writes to buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         Buffer buf;
         buf = buf.set(123, 9);
         buf = buf.set(123 + 1, 8);
@@ -1351,7 +1353,7 @@ TEST_CASE("OPCODE: setbuffer64 opcode") {
 
 TEST_CASE("OPCODE: setbuffer256 opcode") {
     SECTION("Writes to buffer") {
-        MachineState mach;
+        MachineState mach(CodeSegment::newSegment(), value());
         Buffer buf;
         buf = buf.set(123, 9);
         buf = buf.set(123 + 1, 8);

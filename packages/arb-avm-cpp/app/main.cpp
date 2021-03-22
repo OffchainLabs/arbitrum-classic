@@ -55,13 +55,12 @@ int main(int argc, char* argv[]) {
             (std::istreambuf_iterator<char>(file)),
             std::istreambuf_iterator<char>());
 
-        std::vector<Operation> ops;
-        ops.reserve(raw_ops.size());
+        auto code = CodeSegment::newSegment();
+        size_t i = 1;  // Start just after error code point
         for (auto op : raw_ops) {
-            ops.emplace_back(static_cast<OpCode>(op));
+            code.addOperationAt(Operation(static_cast<OpCode>(op)), i);
+            i++;
         }
-
-        auto code = std::make_shared<CodeSegment>(0, ops);
         auto status =
             storage.initialize(LoadedExecutable{std::move(code), Tuple()});
         if (!status.ok()) {

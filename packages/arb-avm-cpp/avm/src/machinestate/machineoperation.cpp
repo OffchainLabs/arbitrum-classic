@@ -967,7 +967,9 @@ void pushgas(MachineState& m) {
 }
 
 void errcodept(MachineState& m) {
-    m.stack.push(CodeSegment::newSegment());
+    // newSegment creates an error codepoint at the start
+    auto segment = CodeSegment::newSegment();
+    m.stack.push(segment.getInitialStub());
     ++m.pc;
 }
 

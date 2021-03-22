@@ -55,6 +55,11 @@ class Datastack {
     Tuple getTupleRepresentation() const;
 
     void push(value&& newdata) {
+        if (std::holds_alternative<HashPreImage>(newdata) ||
+            std::holds_alternative<CodeSegment>(newdata)) {
+            throw std::runtime_error(
+                "Attempted to push internal value type to stack");
+        }
         values.push_back(std::move(newdata));
         if (values.size() > hashes.size() + lazyCount) {
             addHash();

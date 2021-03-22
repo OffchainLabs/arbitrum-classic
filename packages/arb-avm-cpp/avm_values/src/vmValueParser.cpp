@@ -178,7 +178,7 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
     }
     auto op_count = json_code.size();
     auto segment = CodeSegment::newSegment();
-    uint64_t i = 0;
+    uint64_t i = 1;  // start just after the error code point
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
         segment.addOperationAt(operation_from_json(*it, op_count, segment),
                                i++);

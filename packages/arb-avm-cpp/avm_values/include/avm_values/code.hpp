@@ -83,6 +83,7 @@ class CodeSegment {
     static void restoreNextSegmentId(uint64_t next_segment_id_);
 
    public:
+    // Returns a new segment containing a single error codepoint
     static CodeSegment newSegment();
 
     uint64_t segmentID() const { return inner->segment_id; }
@@ -95,6 +96,7 @@ class CodeSegment {
         return inner.get() != other.inner.get();
     }
 
+    CodePointStub getInitialStub();
     CodePointStub addOperationAt(Operation op, uint64_t pc);
 
     LoadedCodeSegment load() const;
@@ -111,9 +113,13 @@ class LoadedCodeSegment : public CodeSegment {
     LoadedCodeSegment(CodeSegment segment_);
 
     const CodePoint& operator[](uint64_t pc) const;
+
     std::vector<CodePoint>::const_iterator begin() const;
     std::vector<CodePoint>::const_iterator end() const;
+
     size_t size() const;
+
+    CodePointStub stubAt(uint64_t pc) const;
 };
 
 #endif /* code_hpp */
