@@ -68,7 +68,8 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
-	healthChan := make(chan nodehealth.Log, 200)
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go nodehealth.NodeHealthCheck(healthChan)
 
 	ctx := context.Background()
