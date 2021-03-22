@@ -199,7 +199,7 @@ contract EthERC20Bridge is L1Buddy {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
-    ) external payable onlyIfConnected returns (uint256) {
+    ) external payable returns (uint256) {
         bytes memory name = callStatic(erc20, ERC20.name.selector);
         bytes memory symbol = callStatic(erc20, ERC20.symbol.selector);
         bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
