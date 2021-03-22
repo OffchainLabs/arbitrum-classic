@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/heptiolabs/healthcheck"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //Configuration struct
@@ -30,6 +32,7 @@ type Log struct {
 
 	ValStr    string
 	ValBigInt big.Int
+	ValTime   time.Duration
 }
 
 type inboxReaderState struct {
@@ -67,7 +70,7 @@ func Logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 				config.mu.Unlock()
 			}
 		} else {
-			if logMessage.Comp == "caughtUpTarget" {
+			if logMessage.Comp == "InboxReader" {
 				if logMessage.Var == "getNextBlockToRead" {
 					state.mu.Lock()
 					state.inboxReader.getNextBlockToRead = logMessage.ValBigInt
@@ -104,7 +107,7 @@ func (config *configStruct) loadConfig() {
 //Perform all upstream checks at a set time interval in an asynchronous manner
 func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *configStruct) {
 	aSyncData.checkOpenethereum = healthcheck.Async(func() error {
-		res, err := http.Get("http://" + config.openethereumHealthcheckRPC + "/live")
+		res, err := http.Get(config.openethereumHealthcheckRPC + "/ready")
 		if err != nil {
 			return err
 		} else {
@@ -117,13 +120,15 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 	}, config.pollingRate)
 
 	aSyncData.checkPrimary = healthcheck.Async(func() error {
-		res, err := http.Get("http://" + config.primaryHealthcheckRPC + "/live")
-		if err != nil {
-			return err
-		} else {
-			if res.StatusCode != 200 {
-				//The server is returning an unexpected status code
-				return errors.New("Primary not ready")
+		if config.primaryHealthcheckRPC != "" {
+			res, err := http.Get(config.primaryHealthcheckRPC + "/ready")
+			if err != nil {
+				return err
+			} else {
+				if res.StatusCode != 200 {
+					//The server is returning an unexpected status code
+					return errors.New("Primary not ready")
+				}
 			}
 		}
 		return nil
@@ -143,7 +148,7 @@ func aSyncUpstream(aSyncData *aSyncDataStruct, state *healthState, config *confi
 }
 
 //Define which healthchecks to use for the readiness API and expose the readiness API
-func openEthereumReadinessChecks(health healthcheck.Handler, httpMux *http.ServeMux,
+func nodeReadinessChecks(health healthcheck.Handler, httpMux *http.ServeMux,
 	aSyncData *aSyncDataStruct, config configStruct) {
 
 	//Add healthchecks to the readiness check
@@ -164,10 +169,18 @@ func openEthereumReadinessChecks(health healthcheck.Handler, httpMux *http.Serve
 }
 
 //Define which healthchecks to use for the liveness API and expose the liveness API
-func openEthereumLivenessChecks(health healthcheck.Handler, httpMux *http.ServeMux,
+func nodeLivenessChecks(health healthcheck.Handler, httpMux *http.ServeMux,
 	aSyncData *aSyncDataStruct, config configStruct) {
 	//Create an endpoint to serve the liveness check
 	httpMux.HandleFunc("/live", health.LiveEndpoint)
+}
+
+//Expose the prometheus metrics API along with the raw responses from OpenEthereum
+func nodeMetrics(health healthcheck.Handler, httpMux *http.ServeMux,
+	prometheusRegistry *prometheus.Registry, config configStruct) {
+	//Create an endpoint to serve the prometheus endpoint
+	httpMux.Handle("/metrics", promhttp.HandlerFor(
+		prometheusRegistry, promhttp.HandlerOpts{}))
 }
 
 //Create the HTTP server and start a watchdog to monitor its return codes
@@ -177,7 +190,7 @@ func healthcheckServer(httpMux *http.ServeMux, config configStruct) {
 
 func waitConfig(config *configStruct) {
 	config.mu.Lock()
-	for (config.openethereumHealthcheckRPC == "") || (config.primaryHealthcheckRPC == "") {
+	for config.openethereumHealthcheckRPC == "" {
 		config.mu.Unlock()
 		time.Sleep(1 * time.Second)
 		config.mu.Lock()
@@ -190,21 +203,21 @@ func startHealthCheck(config *configStruct, state *healthState) {
 	//Allocate storage for the aSync calls
 	aSyncData := aSyncDataStruct{}
 	//Create the main healthcheck handler
-	health := healthcheck.NewHandler()
+	prometheusRegistry := prometheus.NewRegistry()
+	health := healthcheck.NewMetricsHandler(prometheusRegistry, "healthcheck")
 	//Create an HTTP server mux to serve the endpoints
 	httpMux := http.NewServeMux()
-
-	waitConfig(config)
 
 	//Schedule the async calls
 	aSyncUpstream(&aSyncData, state, config)
 
 	//Define which healthchecks to use for the liveness API and expose the liveness API
-	openEthereumLivenessChecks(health, httpMux, &aSyncData, *config)
+	nodeLivenessChecks(health, httpMux, &aSyncData, *config)
 
 	//Define which healthchecks to use for the readiness API and expose the readiness API
-	openEthereumReadinessChecks(health, httpMux, &aSyncData, *config)
+	nodeReadinessChecks(health, httpMux, &aSyncData, *config)
 
+	nodeMetrics(health, httpMux, prometheusRegistry, *config)
 	//Create the HTTP server and start a watchdog to monitor its return codes
 	healthcheckServer(httpMux, *config)
 }
@@ -213,6 +226,7 @@ func NodeHealthCheck(logMsgChan <-chan Log) {
 	//Create the configuration struct
 	config := configStruct{}
 	state := healthState{}
+
 	//Load the default configuration
 	config.loadConfig()
 
