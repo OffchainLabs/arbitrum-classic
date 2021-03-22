@@ -43,10 +43,12 @@ void deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
                       size_t size) {
     *result = Tuple::createSizedTuple(size);
     Tuple& tup = std::get<Tuple>(*result);
+    if (size > 0) {
+        tup.markContentsWillChange();
+    }
     for (uint64_t i = 0; i < size; i++) {
         auto ty = *bytes;
         auto ptr = tup.getElementPointer(i);
-        tup.markContentsWillChange();
         if (ty == HASH_PRE_IMAGE) {
             bytes++;
             auto hash = deserializeUint256t(bytes);

@@ -271,7 +271,7 @@ TEST_CASE("Save And Get Tuple") {
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
+        getTuple(*transaction, inner_tuple, 0, true, value_cache);
     }
     SECTION("save 2 tuples in tuple") {
         ValueCache value_cache{1, 0};
@@ -282,8 +282,8 @@ TEST_CASE("Save And Get Tuple") {
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple, 1, true, value_cache);
-        getTuple(*transaction, inner_tuple2, 1, true, value_cache);
+        getTuple(*transaction, inner_tuple, 0, true, value_cache);
+        getTuple(*transaction, inner_tuple2, 0, true, value_cache);
     }
     SECTION("save saved tuple in tuple") {
         ValueCache value_cache{1, 0};

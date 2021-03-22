@@ -57,6 +57,15 @@ DbResult<value> getValue(const ReadTransaction& tx,
                          ValueCache& value_cache) {
     value result;
     std::vector<Slot> slots(1, {SlotPointer(&result), value_hash});
+    // This is confusing, but what it means is that for each entry in the list,
+    // once the slots array is at size N, the given slot and all of its
+    // dependencies have been filled. This is needed because we can't populate
+    // the value cache until a value is completely filled. In theory we might be
+    // able to put an unfilled value in the cache, except that code segment
+    // serialization could mean that we reference an unfilled value.
+    std::vector<std::pair<size_t, Slot>> slots_filled_at;
+    bool first = true;
+    uint32_t first_reference_count = 0;
     while (!slots.empty()) {
         auto slot = slots.back();
         slots.pop_back();
@@ -71,25 +80,56 @@ DbResult<value> getValue(const ReadTransaction& tx,
             } else {
                 throw std::runtime_error("unexpected slot pointer type");
             }
+        } else {
+            std::vector<unsigned char> hash_key;
+            marshal_uint256_t(slot.hash, hash_key);
+            auto key = vecToSlice(hash_key);
+            auto results = getRefCountedData(tx, key);
+            if (results.status.ok()) {
+                assert(results.reference_count > 0);
+                if (first) {
+                    first_reference_count = results.reference_count;
+                    first = false;
+                }
+                auto bytes = results.stored_value.cbegin();
+                auto start_slots = slots.size();
+                std::visit(
+                    [&](const auto& ptr) {
+                        deserializeValue(bytes, ptr, slots);
+                    },
+                    slot.ptr);
+                if (slots.size() > start_slots) {
+                    slots_filled_at.emplace_back(start_slots, slot);
+                } else {
+                    // Small optimization: don't bother with slots_filled_at if
+                    // there are no dependencies
+                    std::visit(
+                        [&](const auto& ptr) {
+                            assert(hash_value(*ptr) == slot.hash);
+                            value_cache.maybeSave(*ptr);
+                        },
+                        slot.ptr);
+                }
+            } else {
+                return results.status;
+            }
         }
-        std::vector<unsigned char> hash_key;
-        marshal_uint256_t(slot.hash, hash_key);
-        auto key = vecToSlice(hash_key);
-        auto results = getRefCountedData(tx, key);
-        if (results.status.ok()) {
-            assert(results.reference_count > 0);
-            auto bytes = results.stored_value.cbegin();
+        while (!slots_filled_at.empty() &&
+               slots_filled_at.back().first == slots.size()) {
+            auto filled_slot = slots_filled_at.back().second;
             std::visit(
                 [&](const auto& ptr) {
-                    deserializeValue(bytes, ptr, slots);
+                    assert(hash_value(*ptr) == filled_slot.hash);
                     value_cache.maybeSave(*ptr);
                 },
-                slot.ptr);
-        } else {
-            return results.status;
+                filled_slot.ptr);
+            slots_filled_at.pop_back();
         }
     }
-    return CountedData<value>{1, result};
+    if (hash_value(result) != value_hash) {
+        throw std::runtime_error("Retrieved wrong hash from database");
+    }
+    return CountedData<value>{first_reference_count, result};
 }
 
 SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
