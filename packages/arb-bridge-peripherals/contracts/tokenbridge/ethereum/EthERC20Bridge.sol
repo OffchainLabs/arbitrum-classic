@@ -185,11 +185,12 @@ contract EthERC20Bridge is L1Buddy {
         }
     }
 
-    function callStatic(
-        address targetContract,
-        bytes4 targetFunction
-    ) internal returns (bytes memory) {
-        (bool success, bytes memory res) = targetContract.staticcall(abi.encodeWithSelector(targetFunction));
+    function callStatic(address targetContract, bytes4 targetFunction)
+        internal
+        returns (bytes memory)
+    {
+        (bool success, bytes memory res) =
+            targetContract.staticcall(abi.encodeWithSelector(targetFunction));
         return res;
     }
 
@@ -262,7 +263,7 @@ contract EthERC20Bridge is L1Buddy {
 
         return
             inbox.createRetryableTicket{ value: msg.value }(
-                destination,
+                L1Buddy.l2Buddy,
                 0,
                 maxSubmissionCost,
                 msg.sender,
@@ -345,7 +346,7 @@ contract EthERC20Bridge is L1Buddy {
             );
         uint256 seqNum =
             inbox.createRetryableTicket{ value: msg.value }(
-                destination,
+                L1Buddy.l2Buddy,
                 0,
                 maxSubmissionCost,
                 msg.sender,
