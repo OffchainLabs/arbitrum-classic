@@ -137,7 +137,6 @@ export class L1Bridge {
           decimals,
           name,
         }
-        console.warn('DDDDDD erc token data added')
       } else {
         throw new Error(`No ERC20 at ${erc20L1Address} `)
       }
