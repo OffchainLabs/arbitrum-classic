@@ -46,6 +46,8 @@ size_t LoadedCodeSegment::size() const {
     return inner->code.size();
 }
 
+std::atomic<uint64_t> next_segment_id;
+
 CodeSegment CodeSegment::newSegment() {
     return CodeSegment(
         std::make_shared<CodeSegmentInner>(next_segment_id.fetch_add(1)));

@@ -67,8 +67,6 @@ class CodeSegment {
         std::vector<Slot>& slots);
     friend class ArbCore;
 
-    static std::atomic<uint64_t> next_segment_id;
-
     std::shared_ptr<CodeSegmentInner> inner;
 
     CodeSegment(std::shared_ptr<CodeSegmentInner> inner_) : inner(inner_) {}
