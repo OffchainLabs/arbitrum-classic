@@ -93,7 +93,7 @@ contract EthERC20Bridge is L1Buddy {
         bytes memory deployCode =
             abi.encodePacked(
                 type(ArbTokenBridge).creationCode,
-                abi.encode(address(this), _l2TemplateERC20, _l2TemplateERC777)
+                abi.encode(address(this), _l2TemplateERC777, _l2TemplateERC20)
             );
 
         // TODO: this stores the creation code in state, but we don't actually need that
