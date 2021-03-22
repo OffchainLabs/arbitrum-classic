@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"net/http"
 	"nodehealth"
-	"os"
 	"time"
 
 	"github.com/heptiolabs/healthcheck"
@@ -46,18 +45,24 @@ func nodeHealthTest() error {
 	go startTestingServerFail()
 	go startTestingServerPass()
 
-	healthChan := make(chan nodehealth.Log, 200)
+	successfulStatus := 200
+	largeBufferSize := 200
+	readinessEndpoint := "/ready"
+	failMessage := "Failed"
+	passMessage := "Passed"
+
+	healthChan := make(chan nodehealth.Log, largeBufferSize)
 	go nodehealth.NodeHealthCheck(healthChan)
 
 	//Test startup configuration delay
 	fmt.Println("Startup delay")
 	time.Sleep(5 * time.Second)
-	res, err := http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err := http.Get("http://127.0.0.1:8080" + readinessEndpoint)
 	if err != nil {
-		fmt.Println("Passed")
+		fmt.Println(passMessage)
 	} else {
-		fmt.Println("Failed")
-		os.Exit(1)
+		fmt.Println(failMessage)
+		return nil
 	}
 	fmt.Println("")
 
@@ -67,18 +72,17 @@ func nodeHealthTest() error {
 	time.Sleep(11 * time.Second)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
+	}
+	if res.StatusCode != successfulStatus {
+		//The server is returning an unexpected status code
+		fmt.Println(failMessage)
+		return nil
 	} else {
-		if res.StatusCode != 200 {
-			//The server is returning an unexpected status code
-			fmt.Println("Failed")
-			os.Exit(1)
-		} else {
-			fmt.Println("Passed")
-		}
+		fmt.Println(passMessage)
 	}
 	fmt.Println("")
 
@@ -92,15 +96,15 @@ func nodeHealthTest() error {
 	if err != nil {
 		fmt.Println(err)
 		return err
-	} else {
-		if res.StatusCode == 200 {
-			//The server is returning an unexpected status code
-			fmt.Println("Failed")
-			os.Exit(1)
-		} else {
-			fmt.Println("Passed")
-		}
 	}
+	if res.StatusCode == successfulStatus {
+		//The server is returning an unexpected status code
+		fmt.Println(failMessage)
+		return nil
+	} else {
+		fmt.Println(passMessage)
+	}
+
 	fmt.Println("")
 
 	//Test adding primary after start
@@ -110,32 +114,30 @@ func nodeHealthTest() error {
 	time.Sleep(11 * time.Second)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
 	if err != nil {
 		return err
-	} else {
-		if res.StatusCode != 200 {
-			//The server is returning an unexpected status code
-			fmt.Println("Failed")
-			os.Exit(1)
-		}
+	}
+	if res.StatusCode != successfulStatus {
+		//The server is returning an unexpected status code
+		fmt.Println(failMessage)
+		return nil
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
 	time.Sleep(11 * time.Second)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
+	}
+	if res.StatusCode == successfulStatus {
+		//The server is returning an unexpected status code
+		fmt.Println(failMessage)
+		return nil
 	} else {
-		if res.StatusCode == 200 {
-			//The server is returning an unexpected status code
-			fmt.Println("Failed")
-			os.Exit(1)
-		} else {
-			fmt.Println("Passed")
-		}
+		fmt.Println(passMessage)
 	}
 	fmt.Println("")
 
@@ -150,40 +152,39 @@ func nodeHealthTest() error {
 	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: *testBigInt}
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
-	} else {
-		if res.StatusCode != 200 {
-			//The server is returning an unexpected status code
-			fmt.Println("Failed")
-			os.Exit(1)
-		}
 	}
+	if res.StatusCode != successfulStatus {
+		fmt.Println(failMessage)
+		//The server is returning an unexpected status code
+		return nil
+	}
+
 	blockTest := big.NewInt(10)
 	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: *blockTest}
 	healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: *testBigInt}
 	time.Sleep(11 * time.Second)
 
 	//Test server response
-	res, err = http.Get("http://127.0.0.1:8080" + "/ready")
+	res, err = http.Get("http://127.0.0.1:8080" + readinessEndpoint)
 	if err != nil {
 		fmt.Println(err)
 		return err
-	} else {
-		if res.StatusCode == 200 {
-			//The server is returning an unexpected status code
-			fmt.Println("Failed")
-			os.Exit(1)
-		} else {
-			fmt.Println("Passed")
-		}
 	}
-
+	if res.StatusCode == successfulStatus {
+		//The server is returning an unexpected status code
+		fmt.Println(failMessage)
+		return nil
+	} else {
+		fmt.Println(passMessage)
+	}
 	return nil
 }
 
 func main() {
-	nodeHealthTest()
+	err := nodeHealthTest()
+	fmt.Println(err)
 }
