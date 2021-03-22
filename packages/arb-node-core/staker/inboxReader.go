@@ -81,8 +81,9 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: *from}
-
+	if ir.HealthChan != nil {
+		ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: *from}
+	}
 	reorging := false
 	blocksToFetch := uint64(100)
 	for {
@@ -96,12 +97,17 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: *currentHeight}
+
+		if ir.HealthChan != nil {
+			ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: *currentHeight}
+		}
 
 		for {
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
 				arbCorePosition := ir.db.MachineMessagesRead()
-				ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: *arbCorePosition}
+				if ir.HealthChan != nil {
+					ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: *arbCorePosition}
+				}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
 					ir.caughtUp = true
 					ir.caughtUpChan <- true
@@ -129,7 +135,9 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					ir.caughtUpTarget = dbMessageCount
 				}
 			}
-			ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: *ir.caughtUpTarget}
+			if ir.HealthChan != nil {
+				ir.HealthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: *ir.caughtUpTarget}
+			}
 			if len(newMessages) < 40 {
 				blocksToFetch += 20
 			} else if len(newMessages) > 90 {
