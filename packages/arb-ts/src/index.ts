@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-export { Bridge } from './lib/bridge'
+export { Bridge, L2ToL1EventResult } from './lib/bridge'
 export { L1Bridge, L1TokenData } from './lib/l1Bridge'
 export { L2Bridge, L2TokenData } from './lib/l2Bridge'
 export { ArbConversion } from './lib/conversion'
