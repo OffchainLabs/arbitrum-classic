@@ -65,6 +65,7 @@ class CodeSegment {
         std::vector<unsigned char>::const_iterator& bytes,
         value* result,
         std::vector<Slot>& slots);
+    friend class ArbCore;
 
     static std::atomic<uint64_t> next_segment_id;
 
@@ -80,6 +81,8 @@ class CodeSegment {
     static CodeSegment uninitialized() {
         return CodeSegment(std::shared_ptr<CodeSegmentInner>());
     }
+
+    static void restoreNextSegmentId(uint64_t next_segment_id_);
 
    public:
     static CodeSegment newSegment();

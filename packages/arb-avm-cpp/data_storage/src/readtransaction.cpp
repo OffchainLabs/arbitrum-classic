@@ -268,6 +268,13 @@ ValueResult<std::vector<uint256_t>> ReadTransaction::logGetUint256Vector(
         first_key_slice, count);
 }
 
+ValueResult<uint64_t> ReadTransaction::defaultGetUint64(
+    const rocksdb::Slice key_slice) const {
+    return getUint64UsingFamilyAndKey(
+        transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN],
+        key_slice);
+}
+
 ValueResult<std::vector<std::vector<unsigned char>>>
 ReadTransaction::getVectorVectorUsingFamilyAndKey(
     rocksdb::ColumnFamilyHandle* family,
@@ -359,4 +366,16 @@ ValueResult<uint256_t> ReadTransaction::getUint256UsingFamilyAndKey(
 
     auto data = reinterpret_cast<const char*>(result.data.data());
     return {result.status, deserializeUint256t(data)};
+}
+
+ValueResult<uint64_t> ReadTransaction::getUint64UsingFamilyAndKey(
+    rocksdb::ColumnFamilyHandle* family,
+    const rocksdb::Slice key_slice) const {
+    auto result = getVectorUsingFamilyAndKey(family, key_slice);
+    if (!result.status.ok()) {
+        return {result.status, {}};
+    }
+
+    auto data = reinterpret_cast<const char*>(result.data.data());
+    return {result.status, deserialize_uint64_t(data)};
 }

@@ -47,7 +47,6 @@ constexpr auto sideload_cache_size = 20;
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
     : data_storage(std::move(data_storage_)) {
-    throw std::runtime_error("TODO: getNextSegmentID");
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }

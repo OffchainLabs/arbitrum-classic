@@ -29,6 +29,8 @@ struct DeleteResults;
 struct SaveResults;
 class Transaction;
 
+ValueResult<uint64_t> getDbNextSegmentId(const ReadTransaction& tx);
+
 DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache);

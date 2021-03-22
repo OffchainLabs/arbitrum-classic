@@ -53,11 +53,19 @@ CodeSegment CodeSegment::newSegment() {
 
 CodeSegment CodeSegment::restoreCodeSegment(uint64_t segment_id,
                                             std::vector<CodePoint> code) {
-    if (segment_id >= next_segment_id) {
+    if (segment_id >= next_segment_id.load()) {
         throw new std::runtime_error(
             "Attempted to restore code segment after next segment id");
     }
     return CodeSegment(std::make_shared<CodeSegmentInner>(segment_id, code));
+}
+
+void CodeSegment::restoreNextSegmentId(uint64_t next_segment_id_) {
+    auto old_val = next_segment_id.exchange(next_segment_id_);
+    if (old_val != 0) {
+        throw std::runtime_error(
+            "Attempted to restore next segment ID post-initialization");
+    }
 }
 
 CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {

@@ -95,6 +95,9 @@ class ReadTransaction {
     [[nodiscard]] ValueResult<uint256_t> refCountedGetUint256(
         rocksdb::Slice key_slice) const;
 
+    [[nodiscard]] ValueResult<uint64_t> defaultGetUint64(
+        rocksdb::Slice key_slice) const;
+
    private:
     ValueResult<std::vector<std::vector<unsigned char>>>
     getVectorVectorUsingFamilyAndKey(rocksdb::ColumnFamilyHandle* family,
@@ -108,6 +111,9 @@ class ReadTransaction {
         rocksdb::Slice first_key_slice,
         size_t count) const;
     ValueResult<uint256_t> getUint256UsingFamilyAndKey(
+        rocksdb::ColumnFamilyHandle* family,
+        rocksdb::Slice key_slice) const;
+    ValueResult<uint64_t> getUint64UsingFamilyAndKey(
         rocksdb::ColumnFamilyHandle* family,
         rocksdb::Slice key_slice) const;
 };

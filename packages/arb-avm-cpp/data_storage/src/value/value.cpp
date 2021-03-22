@@ -30,6 +30,28 @@
 #include <data_storage/readtransaction.hpp>
 #include <vector>
 
+constexpr auto next_code_segment_key = "next_code_segment";
+
+ValueResult<uint64_t> getDbNextSegmentId(const ReadTransaction& tx) {
+    auto result = tx.defaultGetUint64(next_code_segment_key);
+    if (result.status.IsNotFound()) {
+        return {rocksdb::Status::OK(), 0};
+    }
+    return result;
+}
+
+rocksdb::Status maybeUpdateNextSegmentId(ReadWriteTransaction& tx,
+                                         uint64_t known_segment_id) {
+    ValueResult<uint64_t> get_result = getDbNextSegmentId(tx);
+    if (!get_result.status.ok() || known_segment_id < get_result.data) {
+        return get_result.status;
+    }
+    std::vector<unsigned char> next_segment_id_bytes;
+    marshal_uint64_t(known_segment_id + 1, next_segment_id_bytes);
+    auto value_slice = vecToSlice(next_segment_id_bytes);
+    return tx.defaultPut(next_code_segment_key, value_slice);
+}
+
 DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
                          ValueCache& value_cache) {
@@ -88,8 +110,8 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
             existing_references = results.reference_count > 0;
         }
         auto exists = existing_references > 0;
-        if (exists) {
-            if (auto code = std::get_if<CodeSegment>(&next_item)) {
+        if (auto code = std::get_if<CodeSegment>(&next_item)) {
+            if (exists) {
                 const char* buf =
                     reinterpret_cast<const char*>(results.stored_value.data());
                 if (*buf++ != CODE_SEGMENT) {
@@ -104,6 +126,11 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
                 }
                 auto existing_len = deserialize_uint64_t(buf);
                 exists = existing_len >= code->load().size();
+            } else {
+                auto status = maybeUpdateNextSegmentId(tx, code->segmentID());
+                if (!status.ok()) {
+                    return {0, status};
+                }
             }
         }
         if (exists) {
