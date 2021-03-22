@@ -40,7 +40,6 @@ interface ITransferReceiver {
 
 contract ArbTokenBridge is CloneFactory {
     using Address for address;
-    using BytesParser for bytes;
 
     /// @notice This mapping is from L1 address to L2 address
     mapping(address => address) public customToken;
@@ -208,9 +207,9 @@ contract ArbTokenBridge is CloneFactory {
         bytes calldata _symbol,
         bytes calldata _decimals
     ) external onlyEthPair {
-        string memory name = _name.toString("");
-        string memory symbol = _symbol.toString("");
-        uint8 decimals = _decimals.toDecimals(18);
+        string memory name = BytesParserWithDefault.toString(_name, "");
+        string memory symbol = BytesParserWithDefault.toString(_symbol, "");
+        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
 
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
         token.updateInfo(name, symbol);
@@ -222,9 +221,9 @@ contract ArbTokenBridge is CloneFactory {
         bytes calldata _symbol,
         bytes calldata _decimals
     ) external onlyEthPair {
-        string memory name = _name.toString("");
-        string memory symbol = _symbol.toString("");
-        uint8 decimals = _decimals.toDecimals(18);
+        string memory name = BytesParserWithDefault.toString(_name, "");
+        string memory symbol = BytesParserWithDefault.toString(_symbol, "");
+        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
 
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
         token.updateInfo(name, symbol);

@@ -18,9 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-library BytesParser {
+library BytesParserWithDefault {
 
-    function toDecimals(bytes memory input, uint8 defaultValue) internal pure returns (uint8) {
+    function toUint8(bytes memory input, uint8 defaultValue) internal pure returns (uint8) {
         if(input.length == 0) {
             return defaultValue;
         } else {
