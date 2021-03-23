@@ -36,13 +36,19 @@ include(CableToolchains)
 
 cable_configure_toolchain(DEFAULT cxx17)
 
+cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
+
+if(CMAKE_CONFIGURATION_TYPES)
+    set(HUNTER_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES})
+else()
+    set(HUNTER_CONFIGURATION_TYPES ${CMAKE_BUILD_TYPE})
+endif()
+
 include("cmake/HunterGate.cmake")
 HunterGate(
     URL "https://github.com/cpp-pm/hunter/archive/v0.23.296.tar.gz"
     SHA1 "232f5022ee1d45955a7e8d3e1720f31bac1bb534"
 )
-
-cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
 
 project (arb-avm-cpp)
 
