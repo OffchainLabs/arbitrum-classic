@@ -18,6 +18,9 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
+import { Bridge__factory } from './abi/factories/Bridge__factory'
+import { Outbox__factory } from './abi/factories/Outbox__factory'
+
 import { ArbSys } from './abi/ArbSys'
 
 const { Zero } = constants
@@ -50,8 +53,6 @@ interface WithdrawTokenEventResult {
   destination: string
   exitNum: BigNumber
 }
-import { Bridge__factory } from './abi/factories/Bridge__Factory'
-import { Outbox__factory } from './abi/factories/Outbox__Factory'
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
