@@ -45,8 +45,6 @@ class Tuple {
         tpl->deferredHashing = true;
     }
 
-    static Tuple uninitialized() { return Tuple(std::make_shared<RawTuple>()); }
-
     friend BasicValChecker;
     friend RawTuple;
     friend class Slot;

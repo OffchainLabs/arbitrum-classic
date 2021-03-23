@@ -146,7 +146,7 @@ Tuple SlotMap::tupleSlot(uint256_t hash) {
     if (it != slots.end()) {
         return std::get<Tuple>(it->second.inner);
     }
-    auto ret = Tuple::uninitialized();
+    auto ret = Tuple::createSizedTuple(1);
     slots.insert_or_assign(hash, Slot(ret));
     return ret;
 }
