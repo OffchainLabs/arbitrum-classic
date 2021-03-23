@@ -52,6 +52,7 @@ interface WithdrawTokenEventResult {
   amount: BigNumber
   destination: string
   exitNum: BigNumber
+  txHash: string
 }
 
 export class Bridge extends L2Bridge {
@@ -586,9 +587,10 @@ export class Bridge extends L2Bridge {
       toBlock: 'latest',
     })
 
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as WithdrawTokenEventResult
-    )
+    return logs.map(log => {
+      const data = { ...iface.parseLog(log).args, txHash: log.transactionHash }
+      return (data as unknown) as WithdrawTokenEventResult
+    })
   }
 
   public async getL2ToL1EventData(destinationAddress: string) {
