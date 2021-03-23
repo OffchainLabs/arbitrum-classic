@@ -16,14 +16,14 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, constants, utils } from 'ethers'
-import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__Factory'
+import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
 import { EthERC20Bridge } from './abi/EthERC20Bridge'
 import { Inbox } from './abi/Inbox'
-import { Inbox__factory } from './abi/factories/Inbox__Factory'
+import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ERC20 } from './abi/ERC20'
 
-import { ERC20__factory } from './abi/factories/ERC20__Factory'
-import { OZERC777__factory } from './abi/factories/OZERC777__Factory'
+import { ERC20__factory } from './abi/factories/ERC20__factory'
+import { OZERC777__factory } from './abi/factories/OZERC777__factory'
 import { addressToSymbol } from './bridge_helpers'
 
 utils.computeAddress
