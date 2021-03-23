@@ -119,11 +119,7 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
         auto key = vecToSlice(hash_key);
         auto results = getRefCountedData(tx, key);
         SaveResults save_ret;
-        auto existing_references = 0;
-        if (results.status.ok()) {
-            existing_references = results.reference_count > 0;
-        }
-        auto exists = existing_references > 0;
+        auto exists = results.status.ok() && results.reference_count > 0;
         uint64_t existing_segment_length = 0;
         if (auto code = std::get_if<CodeSegment>(&next_item)) {
             if (exists) {
@@ -149,7 +145,7 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
             }
         }
         if (exists) {
-            save_ret = incrementReference(tx, key);
+            save_ret = incrementReference(tx, key, new_references);
         } else {
             std::vector<unsigned char> value_vector{};
             serializeValue(next_item, value_vector);
@@ -159,8 +155,8 @@ SaveResults saveValue(ReadWriteTransaction& tx, const value& val) {
             } else {
                 getValueDependencies(next_item, items_to_save);
             }
-            save_ret = saveRefCountedData(tx, key, value_vector,
-                                          existing_references + new_references);
+            save_ret =
+                saveRefCountedData(tx, key, value_vector, new_references, true);
         }
         if (!save_ret.status.ok()) {
             return save_ret;
