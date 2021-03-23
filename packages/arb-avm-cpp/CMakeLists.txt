@@ -38,8 +38,8 @@ cable_configure_toolchain(DEFAULT cxx17)
 
 include("cmake/HunterGate.cmake")
 HunterGate(
-    URL "https://github.com/cpp-pm/hunter/archive/v0.23.260.tar.gz"
-    SHA1 "13775235910a3fa85644568d1c5be8271de72e1c"
+    URL "https://github.com/cpp-pm/hunter/archive/v0.23.296.tar.gz"
+    SHA1 "232f5022ee1d45955a7e8d3e1720f31bac1bb534"
 )
 
 cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
@@ -81,7 +81,6 @@ if(NOT TARGET Boost::system)
     set_property(TARGET Boost::system PROPERTY
         INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 endif()
-find_package(RocksDB REQUIRED)
 include(CodeCoverage)
 include(Formatting)
 
@@ -102,6 +101,12 @@ add_code_coverage_all_targets()
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+hunter_add_package(OpenSSL)
+find_package(OpenSSL REQUIRED)
+
+hunter_add_package(rocksdb)
+find_package(RocksDB CONFIG REQUIRED)
 
 hunter_add_package(ethash)
 find_package(ethash CONFIG REQUIRED)

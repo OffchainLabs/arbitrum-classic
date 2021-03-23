@@ -20,7 +20,6 @@
 #include <avm/machine.hpp>
 #include <avm_values/value.hpp>
 
-#include <rocksdb/slice.h>
 #include <atomic>
 #include <chrono>
 #include <memory>

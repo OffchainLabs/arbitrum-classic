@@ -21,7 +21,6 @@
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
 
-#include <rocksdb/slice.h>
 #include <chrono>
 #include <deque>
 #include <memory>
