@@ -92,6 +92,12 @@ class Buffer {
         uint64_t arr_offset,
         uint64_t arr_length) const;
 
+    // Forces the creation of a buffer with a given depth and two children
+    // (unchecked and dangerous)
+    Buffer(std::shared_ptr<Buffer> left,
+           std::shared_ptr<Buffer> right,
+           uint64_t depth);
+
    public:
     // Creates an "empty" buffer (actually has 32 zero bytes)
     Buffer();

@@ -33,6 +33,7 @@ class ValueCache {
     friend DbResult<value> getValue(const ReadTransaction& tx,
                                     uint256_t value_hash,
                                     ValueCache& value_cache);
+    friend class SlotMap;
 
    private:
     struct ValueCacheHasher {
@@ -50,7 +51,7 @@ class ValueCache {
 
    public:
     ValueCache() = delete;
-    explicit ValueCache(size_t cache_count = 0, size_t max_cache_size = 0)
+    explicit ValueCache(size_t cache_count = 1, size_t max_cache_size = 0)
         : caches{cache_count}, max_cache_size{max_cache_size} {};
     void maybeSave(value val);
     std::optional<value> loadIfExists(const uint256_t& hash);

@@ -55,8 +55,11 @@ rocksdb::Status maybeUpdateNextSegmentId(ReadWriteTransaction& tx,
 DbResult<value> getValue(const ReadTransaction& tx,
                          uint256_t root_hash,
                          ValueCache& value_cache) {
+    if (auto val = value_cache.loadIfExists(root_hash)) {
+        return CountedData<value>{0, *val};
+    }
     value result;
-    SlotMap slots;
+    SlotMap slots(&value_cache);
     bool first = true;
     uint32_t first_reference_count = 0;
     while (!slots.empty() || first) {
@@ -71,14 +74,6 @@ DbResult<value> getValue(const ReadTransaction& tx,
             output = item.second;
         }
         first = false;
-        if (auto val = value_cache.loadIfExists(hash)) {
-            if (auto slot = std::get_if<Slot>(&output)) {
-                slot->fill(*val);
-            } else {
-                *std::get<value*>(output) = *val;
-            }
-            continue;
-        }
         std::vector<unsigned char> hash_key;
         marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);

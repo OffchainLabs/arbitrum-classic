@@ -19,6 +19,7 @@
 
 #include <avm_values/codepoint.hpp>
 #include <avm_values/value.hpp>
+#include <data_storage/value/valuecache.hpp>
 
 class Slot {
     friend SlotMap;
@@ -39,20 +40,15 @@ class Slot {
 
 class SlotMap {
    private:
-    struct HashHasher {
-        std::size_t operator()(const uint256_t& hash) const noexcept {
-            return intx::narrow_cast<std::size_t>(hash);
-        }
-    };
-
-    std::unordered_map<uint256_t, Slot, HashHasher> slots;
+    ValueCache* cache;
+    std::vector<std::pair<uint256_t, Slot>> slots;
 
    public:
-    SlotMap() = default;
+    SlotMap(ValueCache*);
 
-    Tuple tupleSlot(uint256_t hash);
-    std::shared_ptr<Buffer> bufferSlot(uint256_t hash);
-    CodeSegment codeSegmentSlot(uint256_t hash);
+    Tuple getTuple(uint256_t hash);
+    std::shared_ptr<Buffer> getBuffer(uint256_t hash);
+    CodeSegment getCodeSegment(uint256_t hash);
 
     bool empty();
     std::pair<uint256_t, Slot> takeSlot();

@@ -30,7 +30,7 @@ CodePointStub deserializeCodePointStub(
     auto segment_id = deserializeUint64t(bytes);
     auto pc = deserializeUint64t(bytes);
     auto next_hash = deserializeUint256t(bytes);
-    CodeSegment segment = slots.codeSegmentSlot(segmentIdToDbHash(segment_id));
+    CodeSegment segment = slots.getCodeSegment(segmentIdToDbHash(segment_id));
     return CodePointStub({segment, pc}, next_hash);
 }
 Tuple deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
@@ -43,7 +43,7 @@ Tuple deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
         if (ty == HASH_PRE_IMAGE) {
             bytes++;
             auto hash = deserializeUint256t(bytes);
-            inner = slots.tupleSlot(hash);
+            inner = slots.getTuple(hash);
         } else {
             inner = deserializeValue(bytes, slots);
         }
@@ -69,11 +69,9 @@ Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
             }
             auto hash = deserializeUint256t(bytes);
             auto ptr = i ? &right : &left;
-            *ptr = slots.bufferSlot(hash);
+            *ptr = slots.getBuffer(hash);
         }
-        auto ret = Buffer(left, right);
-        ret.depth = depth;
-        return ret;
+        return Buffer(left, right, depth);
     }
 }
 CodeSegment deserializeCodeSegment(
@@ -141,33 +139,39 @@ void Slot::fill(value val) {
                inner);
 }
 
-Tuple SlotMap::tupleSlot(uint256_t hash) {
-    auto it = slots.find(hash);
-    if (it != slots.end()) {
-        return std::get<Tuple>(it->second.inner);
+SlotMap::SlotMap(ValueCache* cache_) : cache(cache_) {
+    if (cache->caches.size() == 0) {
+        throw std::runtime_error("cannot deserialize values with empty cache");
+    }
+}
+
+Tuple SlotMap::getTuple(uint256_t hash) {
+    if (auto val = cache->loadIfExists(hash)) {
+        return std::get<Tuple>(*val);
     }
     auto ret = Tuple::createSizedTuple(1);
-    slots.insert_or_assign(hash, Slot(ret));
+    slots.emplace_back(hash, Slot(ret));
+    cache->maybeSave(ret, hash);
     return ret;
 }
 
-std::shared_ptr<Buffer> SlotMap::bufferSlot(uint256_t hash) {
-    auto it = slots.find(hash);
-    if (it != slots.end()) {
-        return std::get<std::shared_ptr<Buffer>>(it->second.inner);
+std::shared_ptr<Buffer> SlotMap::getBuffer(uint256_t hash) {
+    if (auto val = cache->loadIfExists(hash)) {
+        // TODO: move Buffer pointers a layer up to avoid allocation
+        return std::make_shared<Buffer>(std::get<Buffer>(*val));
     }
     auto ret = std::make_shared<Buffer>();
-    slots.insert_or_assign(hash, Slot(ret));
+    slots.emplace_back(hash, Slot(ret));
     return ret;
 }
 
-CodeSegment SlotMap::codeSegmentSlot(uint256_t hash) {
-    auto it = slots.find(hash);
-    if (it != slots.end()) {
-        return std::get<CodeSegment>(it->second.inner);
+CodeSegment SlotMap::getCodeSegment(uint256_t hash) {
+    if (auto val = cache->loadIfExists(hash)) {
+        return std::get<CodeSegment>(*val);
     }
     auto ret = CodeSegment::uninitialized();
-    slots.insert_or_assign(hash, Slot(ret));
+    slots.emplace_back(hash, Slot(ret));
+    cache->maybeSave(ret, hash);
     return ret;
 }
 
@@ -176,9 +180,7 @@ bool SlotMap::empty() {
 }
 
 std::pair<uint256_t, Slot> SlotMap::takeSlot() {
-    auto it = slots.begin();
-    assert(it != slots.end());
-    std::pair<uint256_t, Slot> item = *it;
-    slots.erase(it);
-    return item;
+    auto ret = std::move(slots.back());
+    slots.pop_back();
+    return ret;
 }

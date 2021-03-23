@@ -57,6 +57,11 @@ Buffer::Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right)
     }
 }
 
+Buffer::Buffer(std::shared_ptr<Buffer> left,
+               std::shared_ptr<Buffer> right,
+               uint64_t depth_)
+    : depth(depth_), components(std::make_pair(left, right)) {}
+
 Buffer::NodeData* Buffer::get_children() {
     return std::get_if<NodeData>(&components);
 }
