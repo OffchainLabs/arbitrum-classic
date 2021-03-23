@@ -22,21 +22,30 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface MockInterface extends ethers.utils.Interface {
   functions: {
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'mocked()': FunctionFragment
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
   }
 
-  encodeFunctionData(functionFragment: 'mocked', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'sendContractTransaction',
-    values: [BigNumberish, BigNumberish, string, BigNumberish, BytesLike]
+    functionFragment: 'createRetryableTicket',
+    values: [
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
   ): string
+  encodeFunctionData(functionFragment: 'mocked', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'mocked', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'sendContractTransaction',
+    functionFragment: 'createRetryableTicket',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'mocked', data: BytesLike): Result
 
   events: {}
 }
@@ -55,122 +64,152 @@ export class Mock extends Contract {
   interface: MockInterface
 
   functions: {
+    createRetryableTicket(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     mocked(overrides?: CallOverrides): Promise<[string]>
 
     'mocked()'(overrides?: CallOverrides): Promise<[string]>
-
-    sendContractTransaction(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
   }
+
+  createRetryableTicket(
+    arg0: string,
+    arg1: BigNumberish,
+    arg2: BigNumberish,
+    arg3: string,
+    arg4: string,
+    arg5: BigNumberish,
+    arg6: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+    arg0: string,
+    arg1: BigNumberish,
+    arg2: BigNumberish,
+    arg3: string,
+    arg4: string,
+    arg5: BigNumberish,
+    arg6: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   mocked(overrides?: CallOverrides): Promise<string>
 
   'mocked()'(overrides?: CallOverrides): Promise<string>
 
-  sendContractTransaction(
-    arg0: BigNumberish,
-    arg1: BigNumberish,
-    arg2: string,
-    arg3: BigNumberish,
-    arg4: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-    arg0: BigNumberish,
-    arg1: BigNumberish,
-    arg2: string,
-    arg3: BigNumberish,
-    arg4: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   callStatic: {
+    createRetryableTicket(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     mocked(overrides?: CallOverrides): Promise<string>
 
     'mocked()'(overrides?: CallOverrides): Promise<string>
-
-    sendContractTransaction(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
   }
 
   filters: {}
 
   estimateGas: {
+    createRetryableTicket(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     mocked(overrides?: CallOverrides): Promise<BigNumber>
 
     'mocked()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    sendContractTransaction(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
   }
 
   populateTransaction: {
+    createRetryableTicket(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      arg0: string,
+      arg1: BigNumberish,
+      arg2: BigNumberish,
+      arg3: string,
+      arg4: string,
+      arg5: BigNumberish,
+      arg6: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     mocked(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'mocked()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    sendContractTransaction(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'sendContractTransaction(uint256,uint256,address,uint256,bytes)'(
-      arg0: BigNumberish,
-      arg1: BigNumberish,
-      arg2: string,
-      arg3: BigNumberish,
-      arg4: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
   }
 }

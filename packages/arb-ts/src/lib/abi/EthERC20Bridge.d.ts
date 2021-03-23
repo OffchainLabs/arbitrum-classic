@@ -195,7 +195,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'DepositCustomToken(address,address,uint256,uint256,address)': EventFragment
     'DepositERC20(address,address,uint256,uint256,address)': EventFragment
     'DepositERC777(address,address,uint256,uint256,address)': EventFragment
-    'UpdateTokenInfo(uint256,address,string,string,uint8)': EventFragment
+    'UpdateTokenInfo(uint256,address,bytes,bytes,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'ActivateCustomToken'): EventFragment
