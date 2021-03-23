@@ -71,7 +71,9 @@ Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
             auto ptr = i ? &right : &left;
             *ptr = slots.bufferSlot(hash);
         }
-        return Buffer(left, right);
+        auto ret = Buffer(left, right);
+        ret.depth = depth;
+        return ret;
     }
 }
 CodeSegment deserializeCodeSegment(

@@ -43,7 +43,13 @@ struct CachedCalculation {
     }
 };
 
+class SlotMap;
+
 class Buffer {
+    friend Buffer deserializeBuffer(
+        std::vector<unsigned char>::const_iterator& bytes,
+        SlotMap& slots);
+
    public:
     static constexpr uint64_t leaf_size = 32;
     static constexpr uint64_t children_size = 2;
