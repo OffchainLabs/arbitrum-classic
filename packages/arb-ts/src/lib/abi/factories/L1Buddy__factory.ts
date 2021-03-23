@@ -34,6 +34,25 @@ const _abi = [
     type: 'constructor',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'seqNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'l2Address',
+        type: 'address',
+      },
+    ],
+    name: 'DeployBuddyContract',
+    type: 'event',
+  },
+  {
     inputs: [],
     name: 'codeHash',
     outputs: [
@@ -76,6 +95,11 @@ const _abi = [
     inputs: [
       {
         internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
         name: 'maxGas',
         type: 'uint256',
       },
@@ -91,7 +115,13 @@ const _abi = [
       },
     ],
     name: 'initiateBuddyDeploy',
-    outputs: [],
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
     stateMutability: 'payable',
     type: 'function',
   },

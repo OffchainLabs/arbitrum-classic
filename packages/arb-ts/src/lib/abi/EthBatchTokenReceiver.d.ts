@@ -27,7 +27,7 @@ interface EthBatchTokenReceiverInterface extends ethers.utils.Interface {
     'distributeBatch(bytes32)': FunctionFragment
     'finalizeBuddyDeploy(bool)': FunctionFragment
     'inbox()': FunctionFragment
-    'initiateBuddyDeploy(uint256,uint256,bytes)': FunctionFragment
+    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)': FunctionFragment
     'l2Buddy()': FunctionFragment
     'l2Connection()': FunctionFragment
     'l2Deployer()': FunctionFragment
@@ -46,7 +46,7 @@ interface EthBatchTokenReceiverInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initiateBuddyDeploy',
-    values: [BigNumberish, BigNumberish, BytesLike]
+    values: [BigNumberish, BigNumberish, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'l2Buddy', values?: undefined): string
   encodeFunctionData(
@@ -91,7 +91,11 @@ interface EthBatchTokenReceiverInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
 
-  events: {}
+  events: {
+    'DeployBuddyContract(uint256,address)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'DeployBuddyContract'): EventFragment
 }
 
 export class EthBatchTokenReceiver extends Contract {
@@ -137,13 +141,15 @@ export class EthBatchTokenReceiver extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<[string]>
 
     initiateBuddyDeploy(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
@@ -212,13 +218,15 @@ export class EthBatchTokenReceiver extends Contract {
   'inbox()'(overrides?: CallOverrides): Promise<string>
 
   initiateBuddyDeploy(
+    maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     contractInitCode: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'initiateBuddyDeploy(uint256,uint256,bytes)'(
+  'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
+    maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
     contractInitCode: BytesLike,
@@ -284,18 +292,20 @@ export class EthBatchTokenReceiver extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<string>
 
     initiateBuddyDeploy(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
-    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     l2Buddy(overrides?: CallOverrides): Promise<string>
 
@@ -330,7 +340,12 @@ export class EthBatchTokenReceiver extends Contract {
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    DeployBuddyContract(
+      seqNum: BigNumberish | null,
+      l2Address: null
+    ): EventFilter
+  }
 
   estimateGas: {
     codeHash(overrides?: CallOverrides): Promise<BigNumber>
@@ -359,13 +374,15 @@ export class EthBatchTokenReceiver extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initiateBuddyDeploy(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
@@ -435,13 +452,15 @@ export class EthBatchTokenReceiver extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     initiateBuddyDeploy(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'initiateBuddyDeploy(uint256,uint256,bytes)'(
+    'initiateBuddyDeploy(uint256,uint256,uint256,bytes)'(
+      maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
       contractInitCode: BytesLike,
