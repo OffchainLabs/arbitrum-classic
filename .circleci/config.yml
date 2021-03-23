@@ -153,7 +153,7 @@ jobs:
   cpp-avm-build:
     docker:
       - image: offchainlabs/cpp-base:0.2.5
-    resource_class: large
+    resource_class: xlarge
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
