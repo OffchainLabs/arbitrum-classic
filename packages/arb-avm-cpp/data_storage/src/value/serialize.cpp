@@ -37,11 +37,13 @@ void serializeValue(const Tuple& val, std::vector<unsigned char>& bytes) {
         // Unless the inner value is another tuple, serialize it inline
         // TODO: inline tuples at a given chance
         if (auto tup = std::get_if<Tuple>(&inner)) {
-            bytes.push_back(HASH_PRE_IMAGE);
-            marshal_uint256_t(hash(*tup), bytes);
-        } else {
-            serializeValue(inner, bytes);
+            if (tup->tuple_size() > 0) {
+                bytes.push_back(HASH_PRE_IMAGE);
+                marshal_uint256_t(hash(*tup), bytes);
+                continue;
+            }
         }
+        serializeValue(inner, bytes);
     }
 }
 void serializeValue(const HashPreImage&, std::vector<unsigned char>&) {

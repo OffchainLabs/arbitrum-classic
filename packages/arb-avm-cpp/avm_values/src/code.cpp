@@ -75,6 +75,22 @@ void CodeSegment::restoreNextSegmentId(uint64_t next_segment_id_) {
     }
 }
 
+constexpr auto uninitialized_segment_id = std::numeric_limits<uint64_t>::max();
+
+CodeSegment CodeSegment::uninitialized() {
+    return CodeSegment(
+        std::make_shared<CodeSegmentInner>(uninitialized_segment_id));
+}
+
+void CodeSegment::fillUninitialized(const CodeSegment& source) {
+    if (inner->segment_id != uninitialized_segment_id) {
+        throw std::runtime_error(
+            "Attempted to fill already initialized code segment");
+    }
+    inner->segment_id = source.inner->segment_id;
+    inner->code = source.inner->code;
+}
+
 CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
     // Require that the mutex is locked when this is called
     assert(!inner->mutex.try_lock());

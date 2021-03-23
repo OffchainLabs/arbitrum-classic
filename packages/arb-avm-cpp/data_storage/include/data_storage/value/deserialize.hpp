@@ -20,25 +20,49 @@
 #include <avm_values/codepoint.hpp>
 #include <avm_values/value.hpp>
 
-using SlotPointer = std::variant<value*, Buffer*, CodeSegment*>;
+class Slot {
+    friend SlotMap;
 
-struct Slot {
-    SlotPointer ptr;
-    uint256_t hash;
+   private:
+    std::variant<Tuple, std::shared_ptr<Buffer>, CodeSegment> inner;
 
-    Slot(SlotPointer ptr_, uint256_t hash_) : ptr(ptr_), hash(hash_) {}
+    Slot(std::variant<Tuple, std::shared_ptr<Buffer>, CodeSegment> inner_)
+        : inner(inner_) {}
+
+    static void fillInner(Tuple inner, value val);
+    static void fillInner(std::shared_ptr<Buffer> inner, value val);
+    static void fillInner(CodeSegment inner, value val);
+
+   public:
+    void fill(value);
 };
 
-void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                      value* result,
-                      std::vector<Slot>& slots);
+class SlotMap {
+   private:
+    struct HashHasher {
+        std::size_t operator()(const uint256_t& hash) const noexcept {
+            return intx::narrow_cast<std::size_t>(hash);
+        }
+    };
 
-// Special cases with explicit types for other SlotPointer types
-void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                      Buffer* result,
-                      std::vector<Slot>& slots);
-void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                      CodeSegment* result,
-                      std::vector<Slot>& slots);
+    std::unordered_map<uint256_t, Slot, HashHasher> slots;
+
+   public:
+    SlotMap() = default;
+
+    Tuple tupleSlot(uint256_t hash);
+    std::shared_ptr<Buffer> bufferSlot(uint256_t hash);
+    CodeSegment codeSegmentSlot(uint256_t hash);
+
+    bool empty();
+    std::pair<uint256_t, Slot> takeSlot();
+};
+
+// Deserialize a value from bytes, returning a list of "slots" that need filled
+// in. Note that while the value will have pointers to the slots, it may not
+// directly contain the slots (i.e. the slot pointer may not point to an offset
+// of the value).
+value deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                       SlotMap& slots);
 
 #endif

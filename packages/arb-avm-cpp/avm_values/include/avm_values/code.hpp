@@ -32,7 +32,7 @@ class LoadedCodeSegment;
 struct CodePoint;
 struct CodePointStub;
 struct Operation;
-struct Slot;
+class SlotMap;
 
 struct CodeSegmentInner {
     uint64_t segment_id;
@@ -53,18 +53,11 @@ struct CodeSegmentInner {
 
 class CodeSegment {
     friend LoadedCodeSegment;
-    friend void deserializeCodeSegment(
+    friend CodeSegment deserializeCodeSegment(
         std::vector<unsigned char>::const_iterator& bytes,
-        CodeSegment* result,
-        std::vector<Slot>& slots);
-    friend void deserializeCodePointStub(
-        std::vector<unsigned char>::const_iterator& bytes,
-        value* result,
-        std::vector<Slot>& slots);
-    friend void deserializeValue(
-        std::vector<unsigned char>::const_iterator& bytes,
-        value* result,
-        std::vector<Slot>& slots);
+        SlotMap& slots);
+    friend class Slot;
+    friend SlotMap;
     friend class ArbCore;
 
     std::shared_ptr<CodeSegmentInner> inner;
@@ -76,11 +69,10 @@ class CodeSegment {
 
     static CodeSegment restoreCodeSegment(uint64_t segment_id,
                                           std::vector<CodePoint> code);
-    static CodeSegment uninitialized() {
-        return CodeSegment(std::shared_ptr<CodeSegmentInner>());
-    }
-
     static void restoreNextSegmentId(uint64_t next_segment_id_);
+
+    static CodeSegment uninitialized();
+    void fillUninitialized(const CodeSegment& source);
 
    public:
     // Returns a new segment containing a single error codepoint

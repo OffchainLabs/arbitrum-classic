@@ -53,54 +53,51 @@ rocksdb::Status maybeUpdateNextSegmentId(ReadWriteTransaction& tx,
 }
 
 DbResult<value> getValue(const ReadTransaction& tx,
-                         uint256_t value_hash,
+                         uint256_t root_hash,
                          ValueCache& value_cache) {
     value result;
-    std::vector<Slot> slots(1, {SlotPointer(&result), value_hash});
+    SlotMap slots;
     bool first = true;
     uint32_t first_reference_count = 0;
-    while (!slots.empty()) {
-        auto slot = slots.back();
-        slots.pop_back();
-        if (auto val = value_cache.loadIfExists(slot.hash)) {
-            if (auto val_ptr = std::get_if<value*>(&slot.ptr)) {
-                **val_ptr = *val;
-            } else if (auto buf_ptr = std::get_if<Buffer*>(&slot.ptr)) {
-                **buf_ptr = std::get<Buffer>(*val);
-            } else if (auto code_segment_ptr =
-                           std::get_if<CodeSegment*>(&slot.ptr)) {
-                **code_segment_ptr = std::get<CodeSegment>(*val);
-            } else {
-                throw std::runtime_error("unexpected slot pointer type");
-            }
+    while (!slots.empty() || first) {
+        uint256_t hash;
+        std::variant<value*, Slot> output;
+        if (first) {
+            hash = root_hash;
+            output = &result;
         } else {
-            std::vector<unsigned char> hash_key;
-            marshal_uint256_t(slot.hash, hash_key);
-            auto key = vecToSlice(hash_key);
-            auto results = getRefCountedData(tx, key);
-            if (results.status.ok()) {
-                assert(results.reference_count > 0);
-                if (first) {
-                    first_reference_count = results.reference_count;
-                    first = false;
-                }
-                auto bytes = results.stored_value.cbegin();
-                std::visit(
-                    [&](const auto& ptr) {
-                        deserializeValue(bytes, ptr, slots);
-                    },
-                    slot.ptr);
-                std::visit(
-                    [&](const auto& ptr) {
-                        value_cache.maybeSave(*ptr, slot.hash);
-                    },
-                    slot.ptr);
+            auto item = slots.takeSlot();
+            hash = item.first;
+            output = item.second;
+        }
+        first = false;
+        if (auto val = value_cache.loadIfExists(hash)) {
+            if (auto slot = std::get_if<Slot>(&output)) {
+                slot->fill(*val);
             } else {
-                return results.status;
+                *std::get<value*>(output) = *val;
             }
+            continue;
+        }
+        std::vector<unsigned char> hash_key;
+        marshal_uint256_t(hash, hash_key);
+        auto key = vecToSlice(hash_key);
+        auto results = getRefCountedData(tx, key);
+        if (!results.status.ok()) {
+            return results.status;
+        }
+        assert(results.reference_count > 0);
+        auto bytes = results.stored_value.cbegin();
+        auto val = deserializeValue(bytes, slots);
+        value_cache.maybeSave(val, hash);
+        if (auto slot = std::get_if<Slot>(&output)) {
+            slot->fill(val);
+        } else {
+            *std::get<value*>(output) = val;
+            first_reference_count = results.reference_count;
         }
     }
-    if (hash_value(result) != value_hash) {
+    if (hash_value(result) != root_hash) {
         throw std::runtime_error("Retrieved wrong hash from database");
     }
     return CountedData<value>{first_reference_count, result};

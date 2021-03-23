@@ -20,53 +20,45 @@
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/tuple.hpp>
 
-void deserializeNum(std::vector<unsigned char>::const_iterator& bytes,
-                    value* result,
-                    std::vector<Slot>&) {
-    *result = deserializeUint256t(bytes);
+uint256_t deserializeNum(std::vector<unsigned char>::const_iterator& bytes,
+                         SlotMap&) {
+    return deserializeUint256t(bytes);
 }
-void deserializeCodePointStub(std::vector<unsigned char>::const_iterator& bytes,
-                              value* result,
-                              std::vector<Slot>& slots) {
+CodePointStub deserializeCodePointStub(
+    std::vector<unsigned char>::const_iterator& bytes,
+    SlotMap& slots) {
     auto segment_id = deserializeUint64t(bytes);
     auto pc = deserializeUint64t(bytes);
     auto next_hash = deserializeUint256t(bytes);
-    CodeSegment segment = CodeSegment::uninitialized();
-    *result = CodePointStub({segment, pc}, next_hash);
-    slots.emplace_back(
-        SlotPointer(&std::get_if<CodePointStub>(result)->pc.segment),
-        segmentIdToDbHash(segment_id));
+    CodeSegment segment = slots.codeSegmentSlot(segmentIdToDbHash(segment_id));
+    return CodePointStub({segment, pc}, next_hash);
 }
-void deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
-                      value* result,
-                      std::vector<Slot>& slots,
-                      size_t size) {
-    *result = Tuple::createSizedTuple(size);
-    Tuple& tup = std::get<Tuple>(*result);
-    if (size > 0) {
-        tup.markContentsWillChange();
-    }
+Tuple deserializeTuple(std::vector<unsigned char>::const_iterator& bytes,
+                       SlotMap& slots,
+                       size_t size) {
+    Tuple tup = Tuple::createSizedTuple(size);
     for (uint64_t i = 0; i < size; i++) {
         auto ty = *bytes;
-        auto ptr = tup.getElementPointer(i);
+        value inner;
         if (ty == HASH_PRE_IMAGE) {
             bytes++;
             auto hash = deserializeUint256t(bytes);
-            slots.emplace_back(SlotPointer(ptr), hash);
+            inner = slots.tupleSlot(hash);
         } else {
-            deserializeValue(bytes, ptr, slots);
+            inner = deserializeValue(bytes, slots);
         }
+        tup.unsafe_set_element(i, std::move(inner));
     }
+    return tup;
 }
-void deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
-                       Buffer* result,
-                       std::vector<Slot>& slots) {
+Buffer deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
+                         SlotMap& slots) {
     uint8_t depth = *bytes++;
     if (depth == 0) {
         Buffer::LeafData leaf;
         std::copy(bytes, bytes + 32, leaf.begin());
         bytes += 32;
-        *result = Buffer(leaf);
+        return Buffer(leaf);
     } else {
         auto left = std::make_shared<Buffer>();
         auto right = std::make_shared<Buffer>();
@@ -76,20 +68,18 @@ void deserializeBuffer(std::vector<unsigned char>::const_iterator& bytes,
                     "TODO: implement inline buffer deserialization");
             }
             auto hash = deserializeUint256t(bytes);
-            auto ptr = (i == 0) ? left.get() : right.get();
-            slots.emplace_back(SlotPointer(ptr), hash);
+            auto ptr = i ? &right : &left;
+            *ptr = slots.bufferSlot(hash);
         }
-        *result = Buffer(left, right);
+        return Buffer(left, right);
     }
 }
-void deserializeCodeSegment(std::vector<unsigned char>::const_iterator& bytes,
-                            CodeSegment* result,
-                            std::vector<Slot>& slots) {
+CodeSegment deserializeCodeSegment(
+    std::vector<unsigned char>::const_iterator& bytes,
+    SlotMap& slots) {
     auto segment_id = deserializeUint64t(bytes);
     auto num_code_points = deserializeUint64t(bytes);
     std::vector<CodePoint> code;
-    // This reserve is vital to ensure CodePoints (and thus immediates) don't
-    // move due to the vector being reallocated to grow
     code.reserve(num_code_points);
     for (uint64_t i = 0; i < num_code_points; i++) {
         bool has_immediate = *bytes++;
@@ -97,43 +87,31 @@ void deserializeCodeSegment(std::vector<unsigned char>::const_iterator& bytes,
         auto next_hash = deserializeUint256t(bytes);
         std::optional<value> immediate;
         if (has_immediate) {
-            immediate = value();
+            immediate = deserializeValue(bytes, slots);
         }
         code.emplace_back(Operation(op, immediate), next_hash);
-        if (has_immediate) {
-            deserializeValue(bytes, &*code.back().op.immediate, slots);
-        }
     }
-    *result = CodeSegment::restoreCodeSegment(segment_id, code);
+    return CodeSegment::restoreCodeSegment(segment_id, code);
 }
 
-void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                      value* result,
-                      std::vector<Slot>& slots) {
+value deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
+                       SlotMap& slots) {
     auto ty = *bytes++;
     switch (ty) {
         case BUFFER: {
-            *result = Buffer();
-            deserializeBuffer(bytes, std::get_if<Buffer>(result), slots);
-            break;
+            return deserializeBuffer(bytes, slots);
         }
         case NUM: {
-            deserializeNum(bytes, result, slots);
-            break;
+            return deserializeNum(bytes, slots);
         }
         case CODE_POINT_STUB: {
-            deserializeCodePointStub(bytes, result, slots);
-            break;
+            return deserializeCodePointStub(bytes, slots);
         }
         case HASH_PRE_IMAGE: {
             throw std::runtime_error("attempted to deserialize HASH_PRE_IMAGE");
-            break;
         }
         case CODE_SEGMENT: {
-            *result = CodeSegment::uninitialized();
-            deserializeCodeSegment(bytes, std::get_if<CodeSegment>(result),
-                                   slots);
-            break;
+            return deserializeCodeSegment(bytes, slots);
         }
         default: {
             auto size = ty - TUPLE;
@@ -141,28 +119,64 @@ void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
                 throw std::runtime_error(
                     "attempted to deserialize value with invalid typecode");
             }
-            deserializeTuple(bytes, result, slots, size);
-            break;
+            return deserializeTuple(bytes, slots, size);
         }
     }
 }
 
-void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                      Buffer* result,
-                      std::vector<Slot>& slots) {
-    if (*bytes++ != BUFFER) {
-        throw std::runtime_error(
-            "attempted to load non-buffer value into buffer");
-    }
-    deserializeBuffer(bytes, result, slots);
+void Slot::fillInner(Tuple inner, value val) {
+    *inner.tpl = *std::get<Tuple>(val).tpl;
+}
+void Slot::fillInner(std::shared_ptr<Buffer> inner, value val) {
+    *inner = std::get<Buffer>(val);
+}
+void Slot::fillInner(CodeSegment inner, value val) {
+    inner.fillUninitialized(std::get<CodeSegment>(val));
 }
 
-void deserializeValue(std::vector<unsigned char>::const_iterator& bytes,
-                      CodeSegment* result,
-                      std::vector<Slot>& slots) {
-    if (*bytes++ != CODE_SEGMENT) {
-        throw std::runtime_error(
-            "attempted to load non-code-segment value into code segment");
+void Slot::fill(value val) {
+    std::visit([&](const auto& x) { Slot::fillInner(x, std::move(val)); },
+               inner);
+}
+
+Tuple SlotMap::tupleSlot(uint256_t hash) {
+    auto it = slots.find(hash);
+    if (it != slots.end()) {
+        return std::get<Tuple>(it->second.inner);
     }
-    deserializeCodeSegment(bytes, result, slots);
+    auto ret = Tuple::uninitialized();
+    slots.insert_or_assign(hash, Slot(ret));
+    return ret;
+}
+
+std::shared_ptr<Buffer> SlotMap::bufferSlot(uint256_t hash) {
+    auto it = slots.find(hash);
+    if (it != slots.end()) {
+        return std::get<std::shared_ptr<Buffer>>(it->second.inner);
+    }
+    auto ret = std::make_shared<Buffer>();
+    slots.insert_or_assign(hash, Slot(ret));
+    return ret;
+}
+
+CodeSegment SlotMap::codeSegmentSlot(uint256_t hash) {
+    auto it = slots.find(hash);
+    if (it != slots.end()) {
+        return std::get<CodeSegment>(it->second.inner);
+    }
+    auto ret = CodeSegment::uninitialized();
+    slots.insert_or_assign(hash, Slot(ret));
+    return ret;
+}
+
+bool SlotMap::empty() {
+    return slots.empty();
+}
+
+std::pair<uint256_t, Slot> SlotMap::takeSlot() {
+    auto it = slots.begin();
+    assert(it != slots.end());
+    std::pair<uint256_t, Slot> item = *it;
+    slots.erase(it);
+    return item;
 }
