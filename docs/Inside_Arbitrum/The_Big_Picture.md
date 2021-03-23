@@ -3,7 +3,6 @@ id: The_Big_Picture
 title: Inside Arbitrum: The Big Picture
 sidebar_label: The Big Picture
 ---
-# Inside Arbitrum: The Big Picture
 
 This document is a deep-dive explanation of Arbitrum’s design and the rationale for it. This isn’t API documentation, nor is it a guided tour of the code--look elsewhere for those. “Inside Arbitrum” is for people who want to understand Arbitrum’s design.
 
