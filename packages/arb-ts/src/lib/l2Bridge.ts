@@ -169,7 +169,6 @@ export class L2Bridge {
       } catch (err) {
         console.warn("Count not get custom token's balance", err)
       }
-      return tokenData
     }
 
     const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
@@ -187,7 +186,6 @@ export class L2Bridge {
           contract: arbERC20TokenContract,
           balance,
         }
-        return tokenData
       } else {
         console.info(
           `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
@@ -200,7 +198,6 @@ export class L2Bridge {
       )
       const balance = await arbERC20TokenContract.balanceOf(walletAddress)
       tokenData.ERC20.balance = balance
-      return tokenData
     }
 
     if (!tokenData.ERC777) {
@@ -214,7 +211,6 @@ export class L2Bridge {
           contract: arbERC77TokenContract,
           balance,
         }
-        return tokenData
       } else {
         console.info(
           `Corresponding ArbERC777 for ${erc20L1Address} not yet deployed`
@@ -227,10 +223,13 @@ export class L2Bridge {
       )
       const balance = await arbERC777TokenContract.balanceOf(walletAddress)
       tokenData.ERC777.balance = balance
-      return tokenData
     }
-    console.warn(`No L2 token for ${erc20L1Address} found`)
-    return
+    if (tokenData.ERC20 || tokenData.ERC777 || tokenData.CUSTOM) {
+      return tokenData
+    } else {
+      console.warn(`No L2 token for ${erc20L1Address} found`)
+      return
+    }
   }
 
   public getERC20L2Address(erc20L1Address: string) {
