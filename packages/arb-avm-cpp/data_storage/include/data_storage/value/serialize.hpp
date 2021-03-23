@@ -31,7 +31,7 @@ using ValueCounter = std::unordered_map<value, uint32_t, ValueHasher>;
 
 void getCodeSegmentDependencies(const CodeSegment& val,
                                 ValueCounter& dependencies,
-                                size_t start);
+                                uint64_t start);
 void getValueDependencies(const value& val, ValueCounter& dependencies);
 
 #endif
