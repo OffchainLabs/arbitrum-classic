@@ -87,6 +87,9 @@ export class L2Bridge {
     })
   }
 
+  public getLatestBlock() {
+    return this.l2Provider.getBlock('latest')
+  }
   public async withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
