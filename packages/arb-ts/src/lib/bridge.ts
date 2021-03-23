@@ -183,6 +183,22 @@ export class Bridge extends L2Bridge {
     )
   }
 
+  public async calculateL2RetryableTransactionHash(
+    inboxSequenceNumber: BigNumber,
+    l2ChainId?: BigNumber
+  ): Promise<string> {
+    const requestID = await this.calculateL2TransactionHash(
+      inboxSequenceNumber,
+      l2ChainId
+    )
+    return ethers.utils.keccak256(
+      ethers.utils.concat([
+        ethers.utils.zeroPad(requestID, 32),
+        ethers.utils.zeroPad(BigNumber.from(1).toHexString(), 32),
+      ])
+    )
+  }
+
   public async getInboxSeqNumFromContractTransaction(
     l2Transaction: ethers.providers.TransactionReceipt
   ): Promise<Array<BigNumber> | undefined> {
