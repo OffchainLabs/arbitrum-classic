@@ -46,7 +46,7 @@ const main = async () => {
   writeFileSync(deployFilePath, contracts)
 
   const l2Provider = new ethers.providers.JsonRpcProvider(
-    'https://devnet-l2.arbitrum.io/rpc'
+    process.env.DEVNET_RPC_URL || 'https://devnet-l2.arbitrum.io/rpc'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
@@ -59,6 +59,7 @@ const main = async () => {
     l2Signer
   )
 
+  await ethERC20Bridge.deployed()
   const deployReceipt = await bridge.getL1Transaction(
     ethERC20Bridge.deployTransaction.hash
   )

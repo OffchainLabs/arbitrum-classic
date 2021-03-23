@@ -164,7 +164,7 @@ export class Bridge extends L2Bridge {
       l1TransactionHash
     )
 
-    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
+    if (!txReceipt) throw new Error("Can't find L1 transaction receipt?")
 
     return txReceipt
   }
