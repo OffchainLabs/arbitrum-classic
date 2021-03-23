@@ -814,6 +814,19 @@ void ArbCore::operator()() {
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
+            if (manual_save_checkpoint) {
+                ReadWriteTransaction tx(data_storage);
+                auto status = saveCheckpoint(tx);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore manual checkpoint saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
+
+                manual_save_checkpoint = false;
+            }
+
             // Start execution of machine if new message available
             ReadTransaction tx(data_storage);
             auto messages_count = messageEntryInsertedCountImpl(tx);
