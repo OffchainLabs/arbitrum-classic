@@ -54,8 +54,7 @@ std::atomic<uint64_t> next_segment_id;
 
 CodeSegment CodeSegment::newSegment() {
     return CodeSegment(std::make_shared<CodeSegmentInner>(
-        next_segment_id.fetch_add(1),
-        std::vector(1, CodePoint(Operation(OpCode::ERROR), 0))));
+        next_segment_id.fetch_add(1), std::vector(1, getErrCodePoint())));
 }
 
 CodeSegment CodeSegment::restoreCodeSegment(uint64_t segment_id,
