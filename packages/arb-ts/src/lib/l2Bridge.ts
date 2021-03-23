@@ -184,6 +184,7 @@ export class L2Bridge {
           contract: arbERC20TokenContract,
           balance,
         }
+        return tokenData
       } else {
         console.info(
           `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
