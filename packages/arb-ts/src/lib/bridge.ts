@@ -20,6 +20,7 @@ import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Outbox__factory } from './abi/factories/Outbox__factory'
+import { TransactionOverrides } from './bridge_helpers'
 
 import { ArbSys } from './abi/ArbSys'
 
@@ -96,12 +97,19 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.l1EthBalance
   }
 
-  public async approveToken(erc20L1Address: string) {
-    return this.l1Bridge.approveToken(erc20L1Address)
+  public async approveToken(
+    erc20L1Address: string,
+    overrides?: TransactionOverrides
+  ) {
+    return this.l1Bridge.approveToken(erc20L1Address, overrides)
   }
 
-  public async depositETH(value: BigNumber, destinationAddress?: string) {
-    return this.l1Bridge.depositETH(value, destinationAddress)
+  public async depositETH(
+    value: BigNumber,
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
+  ) {
+    return this.l1Bridge.depositETH(value, destinationAddress, overrides)
   }
 
   public async depositAsERC20(
@@ -109,7 +117,8 @@ export class Bridge extends L2Bridge {
     amount: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
@@ -119,7 +128,8 @@ export class Bridge extends L2Bridge {
       maxSubmissionPrice,
       maxGas,
       gasPriceBid,
-      destinationAddress
+      destinationAddress,
+      overrides
     )
   }
   public async depositAsERC777(
@@ -127,7 +137,8 @@ export class Bridge extends L2Bridge {
     amount: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
@@ -138,7 +149,8 @@ export class Bridge extends L2Bridge {
       maxSubmissionPrice,
       maxGas,
       gasPriceBid,
-      destinationAddress
+      destinationAddress,
+      overrides
     )
   }
   public getAndUpdateL1TokenData(erc20l1Address: string) {
