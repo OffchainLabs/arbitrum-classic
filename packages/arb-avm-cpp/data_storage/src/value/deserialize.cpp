@@ -140,9 +140,7 @@ void Slot::fill(value val) {
 }
 
 SlotMap::SlotMap(ValueCache* cache_) : cache(cache_) {
-    if (cache->caches.size() == 0) {
-        throw std::runtime_error("cannot deserialize values with empty cache");
-    }
+    assert(cache->caches.size() > 0);
 }
 
 Tuple SlotMap::getTuple(uint256_t hash) {
