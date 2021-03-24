@@ -153,13 +153,16 @@ type existingNodeAction struct {
 
 type nodeAction interface{}
 
-func (v *Validator) generateNodeAction(ctx context.Context, address common.Address, strategy Strategy) (nodeAction, bool, error) {
-	base, baseHash, err := v.validatorUtils.LatestStaked(ctx, address)
-	if err != nil {
-		return nil, false, err
-	}
+type OurStakerInfo struct {
+	LatestStakedNode      *big.Int
+	LatestStakedNodeHash  [32]byte
+	CanProgress           bool
+	latestExecutionCursor core.ExecutionCursor
+	*ethbridge.StakerInfo
+}
 
-	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, base, baseHash)
+func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy Strategy) (nodeAction, bool, error) {
+	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, stakerInfo.LatestStakedNode, stakerInfo.LatestStakedNodeHash)
 	if err != nil {
 		return nil, false, err
 	}
@@ -168,9 +171,17 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
 		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
 	}
-	cursor, err := v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
-	if err != nil {
-		return nil, false, err
+	cursor := stakerInfo.latestExecutionCursor
+	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
+		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
+		if err != nil {
+			return nil, false, err
+		}
+	} else {
+		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	cursorHash, err := cursor.MachineHash()
 	if err != nil {
@@ -181,7 +192,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	}
 
 	// Not necessarily successors
-	successorNodes, err := v.rollup.LookupNodeChildren(ctx, baseHash, startState.ProposedBlock)
+	successorNodes, err := v.rollup.LookupNodeChildren(ctx, stakerInfo.LatestStakedNodeHash, startState.ProposedBlock)
 	if err != nil {
 		return nil, false, err
 	}
@@ -220,7 +231,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTracker(v.lookup, false, gasesUsed)
+	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
@@ -243,6 +254,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 					number: nd.NodeNum,
 					hash:   nd.NodeHash,
 				}
+				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
+				if err != nil {
+					return nil, false, err
+				}
 				continue
 			} else {
 				logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found node with incorrect assertion")
@@ -262,6 +277,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 	if err != nil {
 		return nil, false, err
 	}
+	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget)
+	if err != nil {
+		return nil, false, err
+	}
 
 	if new(big.Int).Sub(execState.TotalGasConsumed, startState.TotalGasConsumed).Cmp(minimumGasToConsume) < 0 && execState.TotalMessagesRead.Cmp(startState.InboxMaxCount) < 0 {
 		// Couldn't execute far enough
@@ -270,8 +289,8 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 
 	inboxAcc := execState.InboxAcc
 	hasSiblingByte := [1]byte{0}
-	lastNum := base
-	lastHash := baseHash
+	lastNum := stakerInfo.LatestStakedNode
+	lastHash := stakerInfo.LatestStakedNodeHash
 	if len(successorNodes) > 0 {
 		lastSuccessor := successorNodes[len(successorNodes)-1]
 		lastNum = lastSuccessor.NodeNum
@@ -290,7 +309,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, address common.Addre
 		prevProposedBlock: startState.ProposedBlock,
 		prevInboxMaxCount: startState.InboxMaxCount,
 	}
-	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("lastNode", int(lastNum.Int64())).Int("parentNode", int(base.Int64())).Msg("Creating node")
+	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("lastNode", int(lastNum.Int64())).Int("parentNode", int(stakerInfo.LatestStakedNode.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
 }
 
