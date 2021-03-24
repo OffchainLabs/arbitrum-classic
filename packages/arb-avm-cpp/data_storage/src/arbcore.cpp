@@ -362,10 +362,19 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                     auto checkpoint = extractMachineStateKeys(
                         checkpoint_vector.begin(), checkpoint_vector.end());
                     if (checkpoint.getTotalMessagesRead() == 0 ||
-                        message_sequence_number >=
-                            checkpoint.getTotalMessagesRead() - 1) {
-                        // Good checkpoint
-                        return checkpoint;
+                        (message_sequence_number >=
+                             checkpoint.getTotalMessagesRead() - 1 &&
+                         isValid(tx, checkpoint.output.fully_processed_inbox,
+                                 checkpoint.staged_message))) {
+                        if (isValid(tx, checkpoint.output.fully_processed_inbox,
+                                    checkpoint.staged_message)) {
+                            // Good checkpoint
+                            return checkpoint;
+                        }
+
+                        std::cerr << "Error: Invalid checkpoint found at gas: "
+                                  << checkpoint.output.arb_gas_used
+                                  << std::endl;
                     }
 
                     // Obsolete checkpoint, need to delete referenced machine
@@ -740,6 +749,11 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
+        }
+
+        if (machine->status() == MachineThread::MACHINE_ABORTED) {
+            // Just reset status so machine can be restarted
+            machine->clearError();
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
