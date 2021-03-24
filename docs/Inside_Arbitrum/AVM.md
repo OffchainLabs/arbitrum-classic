@@ -15,11 +15,12 @@ The starting point for the AVM design is the Ethereum Virtual Machine (EVM). Bec
 
 ## Why AVM differs from EVM
 
-Differences between AVM and EVM are motivated by the needs of Arbitrum's Layer 2 protocol and Arbitrum's use of a multi-round challenge protocol to resolve disputes.
+Differences between AVM and EVM are motivated by the needs of Arbitrum's Layer 2 protocol and Arbitrum's use of a interactive proving to resolve disputes.
 
 ### Execution vs. proving
 
-Arbitrum, unlike EVM and similar architectures, supports both execution (advancing the state of a computation by executing it) and proving (convincing an L1 contract or other trusted party that a claim about execution is correct). EVM-based systems resolve disputes by re-executing the disputed code, whereas Arbitrum relies on a more efficient challenge protocol that leads to an eventual proof.
+Arbitrum, unlike EVM and similar architectures, supports both execution (advancing the state of a computation by executing it, which is always done off-chain in Arbitrum) and proving (convincing an L1 contract or other trusted party that a claim about execution is correct). EVM-based systems resolve disputes by re-executing the disputed code, whereas Arbitrum relies on a more efficient challenge protocol that leads to an eventual proof.
+
 One nice consequence of separating execution from proving -- and never needing to re-execute blocks of code on an L1 chain -- is that we can optimize execution and proving for the different environments they’ll be used in. Execution is optimized for speed in a local, trusted environment, because local execution is the common case. Proving, on the other hand, will be needed less often but must still be efficient enough to be viable even on the busy Ethereum L1 chain. Proof-checking will rarely be needed, but proving must always be possible. The logical separation of execution from proving allows execution speed to be optimized more aggressively in the common case where proving turns out not to be needed.
 
 ### Requirements from ArbOS
@@ -54,7 +55,7 @@ In normal execution (when proving is not required), implementations will typical
 
 Code is added to an AVM in two ways. First, some code is created when the AVM starts running. This code is read in from an AVM executable file (a .mexe file) and preloaded by the AVM emulator.
 
-Second, the AVM has three instructions to create new CodePoints: one that makes a new Error CodePoint, and two that make new CodePoints (one for a CodePoint with an immediate value and one for a CodePoint without) given an opcode, possibly an immediate value, and a next CodePoint. These are used by ArbOS when translating EVM code for execution. (See below for how ArbOS does this.)
+Second, the AVM has three instructions to create new CodePoints: one that makes a new Error CodePoint, and two that make new CodePoints (one for a CodePoint with an immediate value and one for a CodePoint without) given an opcode, possibly an immediate value, and a next CodePoint. These are used by ArbOS when translating EVM code for execution. (For more details on this, see the [ArbOS](ArbOS.md) section.)
 
 ### Getting messages from the Inbox
 

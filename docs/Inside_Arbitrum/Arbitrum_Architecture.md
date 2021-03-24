@@ -13,7 +13,7 @@ We’ll work our way up on the right side to describe how the Arbitrum stack wor
 
 On the bottom right is good old **Ethereum**. Arbitrum builds on Ethereum and inherits its security from Ethereum.
 
-On top of Ethereum is the **EthBridge**, a set of Ethereum contracts that manage an Arbitrum chain. The EthBridge referees the Arbitrum rollup protocol, which ensures that the layers above it operate correctly. (More on the rollup protocol below in the XXX section.) The EthBridge also maintains the chain’s inbox and outbox, allowing people and contracts to send transaction messages to the chain, and to observe and use the outputs of those transactions. Users, L1 Ethereum contracts, and Arbitrum nodes make calls to the EthBridge contracts to interact with the Arbitrum chain. (More on that below in the XXX section.)
+On top of Ethereum is the **EthBridge**, a set of Ethereum contracts that manage an Arbitrum chain. The EthBridge referees the Arbitrum rollup protocol, which ensures that the layers above it operate correctly. (More on the rollup protocol below in the [Rollup Protocol](Rollup_Protocol.md) section.) The EthBridge also maintains the chain’s inbox and outbox, allowing people and contracts to send transaction messages to the chain, and to observe and use the outputs of those transactions. Users, L1 Ethereum contracts, and Arbitrum nodes make calls to the EthBridge contracts to interact with the Arbitrum chain. 
 
 The horizontal layer boundary above the EthBridge is labeled **AVM Architecture**, because what the EthBridge provides to the layer above it is an Arbitrum Virtual Machine, which can execute a computer program that reads inputs and produces outputs. This is the most important interface in Arbitrum, because it divides Layer 1 from Layer 2--it divides the Layer 1 components that provide the inbox/execution/outbox abstraction from the Layer 2 components that use that abstraction.
 
@@ -30,6 +30,6 @@ That’s the right hand side of the diagram, which provides the Arbitrum chain f
 On the lower left are standard **Ethereum nodes**, which are used to interact with the Ethereum chain.
 Just above that are **Arbitrum nodes**. As the name suggests, these are used to interact with Arbitrum. They support the same API as Ethereum nodes, so they work well with existing Ethereum tools -- you can point your Ethereum-compatible wallet or tools at an Arbitrum node and they’ll be able to talk to each other. Just like on Ethereum, anyone can run an Arbitrum node, but many people will choose instead to rely on a node run by someone else.
 
-Some Arbitrum nodes service user requests, and others choose to serve only as validators, which work to ensure the correctness of the Arbitrum chain. (See section XXX below for details on validators.)
+Some Arbitrum nodes service user requests, and others choose to serve only as validators, which work to ensure the correctness of the Arbitrum chain. (See the [Validators](Validators.md) section for details.)
 
 Last, but certainly not least, we see **users** on the upper left. Users use wallets, dapp front ends, and other tools to interact with Arbitrum. Because Arbitrum nodes support the same API as Ethereum, users don’t need entirely new tooling and developers don’t need to rewrite their dapps.
