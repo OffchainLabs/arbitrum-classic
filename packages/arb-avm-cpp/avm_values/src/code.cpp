@@ -106,7 +106,7 @@ CodeSegment CodeSegment::cloneWithSize(uint64_t size) const {
 }
 
 CodePointStub CodeSegment::getInitialStub() {
-    return {{*this, 0}, 0};
+    return {{*this, 0}, getErrCodePointHash()};
 }
 
 CodePointStub CodeSegment::addOperationAt(Operation op, uint64_t pc) {
