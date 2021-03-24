@@ -57,9 +57,9 @@ User transactions pay fees, to cover the cost of operating the chain. These fees
 Fees are charged for four resources that a transaction can use:
 
 * *L2 tx*: a base fee for each L2 transaction, to cover the cost of servicing a transaction
-* *L1 calldata*: a fee per byte of L1 calldata directly attributable to the transaction
+* *L1 calldata*: a fee per units of L1 calldata directly attributable to the transaction (each non-zero byte of calldata is 16 units, and each zero byte of calldata is 4 units)
 * *computation*: a fee per unit of ArbGas used by the transaction
-* *storage*: a fee per unit of EVM storage, based on the net increase in EVM storage due to the transaction
+* *storage*: a fee per location of EVM storage, based on the net increase in EVM storage due to the transaction
 
 Each of these four resources has a price, which may vary over time. The resource prices, which are denominated in ETH (more precisely, in wei), are set as follows.
 
@@ -68,7 +68,7 @@ Each of these four resources has a price, which may vary over time. The resource
 The prices of the first two resources, L2 tx and L1 calldata, depend on the L1 gas price. ArbOS can’t directly see the L1 gas price, so it estimates the L1 gas prices, as a weighted average of recent gas prices actually paid by aggregators on a specific list of addresses. ArbOS also keeps a running average of (1 / batchSize) for recent transaction batches. 
 
 * The base price of an L2 tx is CP/B, where C is the L1 cost required for an aggregator to submit an empty batch, P is the estimated L1 gas price, and (1/B) is the average (1/batchSize). 
-* The base price of a byte of L1 calldata is then 16P, where P is the estimated L1 gas price.
+* The base price of a unit of L1 calldata is just the estimated L1 gas price.
 
 These base prices ensure that the amount collected is equal to the aggregator’s cost of submitting the transaction in a batch, assuming a typical batch size.
 
@@ -84,7 +84,7 @@ If these conditions are not all met, the transaction is treated as not submitted
 
 ### Price for storage
 
-Transactions are charged based on the net increase they cause in the total amount of L2 EVM contract storage that exists. Decreases in contract storage do not receive a credit. Each storage cell costs 2000 times the estimated L1 gas price. This means that storage costs about 10% as much as it does on the L1 chain.
+Transactions are charged based on the net increase they cause in the total amount of L2 EVM contract storage that exists. Decreases in contract storage do not receive a credit. Each storage location costs 2000 times the estimated L1 gas price. This means that storage costs about 10% as much as it does on the L1 chain.
 
 ### Price for ArbGas
 
@@ -96,11 +96,11 @@ The price will rise above the minimum if the chain is starting to get congested.
 
 The automatic adjustment mechanism depends on an “ArbGas pool” that is tracked by ArbOS. The ArbGas pool has a maximum capacity that is equal to 60 seconds of full-speed computation at the chain’s speed limit. ArbGas used by transactions is subtracted from the gas pool, and at the beginning of each new Ethereum block, ArbGas is added to the pool corresponding to full-speed execution for the number of timestamp seconds since the last block (subject to the maximum pool capacity).
 
-After adding the new gas to the pool, if the new gas pool size is G, the current ArbGas price is multiplied by (G + 210S) / (240S) where S is the ArbGas speed limit of the chain. This quantity will be 9/8 when G = 60S (the maximum gas pool size) and it will be 7/8 when G = 0.
+After adding the new gas to the pool, if the new gas pool size is G, the current ArbGas price is multiplied by (1350S - G) / (1200S) where S is the ArbGas speed limit of the chain. This quantity will be 7/8 when G = 60S (the maximum gas pool size) and it will be 9/8 when G = 0.
 
 #### The congestion limit
 
-The gas pool is also used to limit the amount of gas available to transactions at a particular timestamp. In particular, if a transaction could require more gas than is available in the gas pool, that transaction is rejected without being executed, returning a transaction receipt indicating that the transaction was dropped due to congestion. This prevents the chain from building up a backlog that is very long--if transactions are being submitted consistently faster than they can be validated, eventually the gas pool will become empty and transactions will be dropped. Meanwhile the transaction price will be escalating, so that the price mechanism can bring supply and demand back into alignment.
+The gas pool is also used to limit the amount of gas available to transactions at a particular timestamp. In particular, if a transaction could require more gas than is available in the gas pool, that transaction is rejected without being executed, returning a transaction receipt indicating that the transaction was dropped due to congestion. This prevents the chain from building up a backlog that is very long--if transactions are being submitted consistently faster than they can be validated, eventually the gas pool will become empty and transactions will be dropped. Meanwhile the transaction price will be escalating, so that the price mechanism will be able to bring supply and demand back into alignment.
 
 #### ArbGas accounting and the second-price auction
 

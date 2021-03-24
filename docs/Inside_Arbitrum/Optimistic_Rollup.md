@@ -17,3 +17,5 @@ Arbitrum is optimistic, which means that Arbitrum advances the state of its chai
 
 Because a party who tries to cheat will lose a deposit, attempts to cheat should be very rare, and the normal case will be a single party posting a correct rollup block, and nobody challenging it. 
 
+For more on how Arbitrum does optimistic rollup, see the [Interactive Proving](Interactive_Proving.md) section.
+

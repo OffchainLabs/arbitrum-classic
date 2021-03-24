@@ -11,6 +11,6 @@ The *Inbox* contract manages the chain’s inbox. Inbox keeps track of the (hash
 
 The Inbox contract makes sure that certain information in incoming messages is accurate: that the sender is correctly recorded, and that the Ethereum block number and timestamp are correctly recorded in the message.
 
-Unsurprisingly, there is also an *Outbox* contract, which manages outputs of the chain. When a rollup block is confirmed, the outputs produced in that rollup block are put into the outbox. How outputs end up being reflected on Ethereum will be detailed below in the Bridging section.
+Unsurprisingly, there is also an *Outbox* contract, which manages outputs of the chain. When a rollup block is confirmed, the outputs produced in that rollup block are put into the outbox. How outputs end up being reflected on Ethereum is detailed in the [Bridging](Bridging.md) section.
 
 The Rollup contract and its friends are responsible for managing the rollup protocol. They track the state of the Arbitrum chain: the rollup blocks that have been proposed, accepted, and/or rejected, and who has staked on which rollup nodes. The Challenge contract and its friends are responsible for tracking and resolving any disputes between validators about which rollup blocks are correct. The functionality of Rollup, Challenge, and their friends will be detailed below in the Rollup Protocol section.
