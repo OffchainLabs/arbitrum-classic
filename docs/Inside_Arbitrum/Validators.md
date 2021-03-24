@@ -5,7 +5,7 @@ sidebar_label: Validators
 ---
 Some Arbitrum nodes will choose to act as *validators*. This means that they watch the progress of the rollup protocol and participate in that protocol to advance the state of the chain securely.
 
-Not all nodes will choose to do this. Because the rollup protocol doesn’t decide what the chain will do but merely confirms the correct behavior that is fully determined by the inbox messages, a node can ignore the rollup protocol and simply compute for itself the correct behavior. For more on what such nodes might do, see the Full Nodes section below.
+Not all nodes will choose to do this. Because the rollup protocol doesn’t decide what the chain will do but merely confirms the correct behavior that is fully determined by the inbox messages, a node can ignore the rollup protocol and simply compute for itself the correct behavior. For more on what such nodes might do, see the [Full Nodes](Full_Nodes.md) section.
 
 Being a validator is permissionless--anyone can do it. Offchain Labs provides open source validator software, including a pre-built Docker image. 
 

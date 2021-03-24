@@ -1,7 +1,7 @@
 ---
-id: Dispute_Resolution
-title: Inside Arbitrum: Dispute Resolution
-sidebar_label: Dispute Resolution
+id: Interactive_Proving
+title: Inside Arbitrum: Interactive Proving
+sidebar_label: Interactive Proving
 ---
 Among optimistic rollups, the most important design decision is how to resolve disputes. Suppose Alice claims that the chain will produce a certain result, and Bob disagrees. How will the protocol decide which version to accept?
 
