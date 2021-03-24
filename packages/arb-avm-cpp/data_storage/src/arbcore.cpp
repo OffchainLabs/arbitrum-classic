@@ -34,6 +34,10 @@
 #include <sstream>
 #include <vector>
 
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
+
 namespace {
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
@@ -127,7 +131,7 @@ bool ArbCore::startThread() {
     abortThread();
 
     core_thread =
-        std::make_unique<std::thread>((std::reference_wrapper<ArbCore>(*this)));
+        std::make_unique<std::thread>(std::reference_wrapper<ArbCore>(*this));
 
     return true;
 }
@@ -634,6 +638,9 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
 // This thread will update `delivering_messages` if and only if
 // `delivering_messages` is set to MESSAGES_READY
 void ArbCore::operator()() {
+#ifdef __linux__
+    prctl(PR_SET_NAME, "ArbCore", 0, 0, 0);
+#endif
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
@@ -1145,6 +1152,8 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     return {status, std::move(execution_cursor)};
 }
 
+constexpr uint256_t checkpoint_load_gas_cost = 100'000'000;
+
 rocksdb::Status ArbCore::advanceExecutionCursor(
     ExecutionCursor& execution_cursor,
     uint256_t max_gas,
@@ -1161,10 +1170,13 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         auto machine_state_keys =
             std::get<MachineStateKeys>(closest_checkpoint);
         bool already_newer = false;
-        if (execution_cursor.getOutput().arb_gas_used >
+        if (execution_cursor.getOutput().arb_gas_used +
+                checkpoint_load_gas_cost >
             machine_state_keys.output.arb_gas_used) {
-            // Execution cursor used more gas than checkpoint so use it if inbox
-            // hash valid
+            // The existing execution cursor is far enough ahead that running it
+            // up to the target gas will be cheaper than loading the checkpoint
+            // from disk and running it. We just need to check that the
+            // execution cursor is still valid (a reorg hasn't occurred).
             auto result =
                 executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
             if (result.status.ok() && result.data.first) {
