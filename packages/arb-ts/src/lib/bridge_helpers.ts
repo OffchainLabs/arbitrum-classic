@@ -1,11 +1,11 @@
 import { BigNumberish, ContractReceipt, ethers } from 'ethers'
-import { ArbTokenBridge__factory } from "./abi/factories/ArbTokenBridge__factory"
-import { EthERC20Bridge__factory } from "./abi/factories/EthERC20Bridge__factory"
-import { Outbox__factory } from "./abi/factories/Outbox__factory"
-import { Bridge__factory } from "./abi/factories/Bridge__factory"
-import { Inbox__factory } from "./abi/factories/Inbox__factory"
-import { ArbSys__factory } from "./abi/factories/ArbSys__factory"
-import { providers, utils } from "ethers"
+import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
+import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
+import { Outbox__factory } from './abi/factories/Outbox__factory'
+import { Bridge__factory } from './abi/factories/Bridge__factory'
+import { Inbox__factory } from './abi/factories/Inbox__factory'
+import { ArbSys__factory } from './abi/factories/ArbSys__factory'
+import { providers, utils } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
 
 export const addressToSymbol = (erc20L1Address: string) => {
@@ -60,8 +60,9 @@ export interface BuddyDeployEventResult {
 
 export type ChainIdOrProvider = BigNumber | providers.Provider
 
-export class BridgeHelper {
+const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
 
+export class BridgeHelper {
   static getTokenWithdrawEventData = async (
     destinationAddress: string,
     l2BridgeAddr: string,
@@ -136,18 +137,20 @@ export class BridgeHelper {
     return l2Provider.waitForTransaction(l2RetriableHash)
   }
 
-  static getL2Transaction = async (l2TransactionHash: string, l2Provider: providers.Provider) => {
-    const txReceipt = await l2Provider.getTransactionReceipt(
-      l2TransactionHash
-    )
+  static getL2Transaction = async (
+    l2TransactionHash: string,
+    l2Provider: providers.Provider
+  ) => {
+    const txReceipt = await l2Provider.getTransactionReceipt(l2TransactionHash)
     if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
     return txReceipt
   }
 
-  static getL1Transaction = async (l1TransactionHash: string, l1Provider: providers.Provider) => {
-    const txReceipt = await l1Provider.getTransactionReceipt(
-      l1TransactionHash
-    )
+  static getL1Transaction = async (
+    l1TransactionHash: string,
+    l1Provider: providers.Provider
+  ) => {
+    const txReceipt = await l1Provider.getTransactionReceipt(l1TransactionHash)
     if (!txReceipt) throw new Error("Can't find L1 transaction receipt?")
     return txReceipt
   }
@@ -173,7 +176,7 @@ export class BridgeHelper {
   ): Promise<Array<DepositTokenEventResult>> => {
     const factory = new EthERC20Bridge__factory()
     // TODO: does this work?
-    const contract = factory.attach(l2BridgeAddress || "l2BridgeAddr")
+    const contract = factory.attach(l2BridgeAddress || 'l2BridgeAddr')
     const iface = contract.interface
     const event =
       tokenType === 'ERC20'
@@ -192,7 +195,10 @@ export class BridgeHelper {
     arbSysAddress?: string
   ): Promise<Array<L2ToL1EventResult>> => {
     // TODO: can we use dummies to get interface?
-    const contract = ArbSys__factory.connect(arbSysAddress || "arbSysAddress", l2Provider)
+    const contract = ArbSys__factory.connect(
+      arbSysAddress || 'arbSysAddress',
+      l2Provider
+    )
     const iface = contract.interface
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
@@ -208,8 +214,8 @@ export class BridgeHelper {
     l2Transaction: providers.TransactionReceipt,
     inboxAddress?: string
   ) => {
-    const factory = new Inbox__factory();
-    const contract = factory.attach(inboxAddress || "inboxAddress")
+    const factory = new Inbox__factory()
+    const contract = factory.attach(inboxAddress || 'inboxAddress')
     const iface = contract.interface
     const messageDelivered = iface.getEvent('InboxMessageDelivered')
     const messageDeliveredFromOrigin = iface.getEvent(
@@ -249,8 +255,6 @@ export class BridgeHelper {
     amount: BigNumber
     calldataForL1: string
   }> => {
-    const nodeInterfaceAddress = '0x00000000000000000000000000000000000000C8'
-
     const contractInterface = new utils.Interface([
       `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
           external
@@ -268,7 +272,7 @@ export class BridgeHelper {
           )`,
     ])
     const nodeInterface = new Contract(
-      nodeInterfaceAddress,
+      NODE_INTERFACE_ADDRESS,
       contractInterface
     ).connect(l2Provider)
 
@@ -377,9 +381,7 @@ export class BridgeHelper {
     const iface = new ethers.utils.Interface([
       'function outboxes(uint256) public view returns (address)',
     ])
-    const outbox = new ethers.Contract(outboxAddress, iface).connect(
-      l1Provider
-    )
+    const outbox = new ethers.Contract(outboxAddress, iface).connect(l1Provider)
     return outbox.outboxes(batchNumber)
   }
 
@@ -431,7 +433,7 @@ export class BridgeHelper {
     calldataForL1: string,
     l1Signer: Signer
   ): Promise<ContractReceipt> => {
-    if(!l1Signer.provider) throw new Error("No L1 provider in L1 signer")
+    if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
 
     await BridgeHelper.waitUntilOutboxEntryCreated(
       batchNumber,
@@ -439,10 +441,7 @@ export class BridgeHelper {
       l1Signer.provider
     )
 
-    const outbox = Outbox__factory.connect(
-      activeOutboxAddress,
-      l1Signer
-    )
+    const outbox = Outbox__factory.connect(activeOutboxAddress, l1Signer)
 
     try {
       // TODO: wait until assertion is confirmed before execute
@@ -469,7 +468,7 @@ export class BridgeHelper {
       console.log('failed to execute tx in layer 1')
       console.log(e)
       // TODO: should we just try again after delay instead of throwing?
-      throw e;
+      throw e
     }
   }
 
@@ -494,10 +493,15 @@ export class BridgeHelper {
       calldataForL1: string
     }
 
-    if(!l1Signer.provider) throw new Error("Signer must be connected to L2 provider")
+    if (!l1Signer.provider)
+      throw new Error('Signer must be connected to L2 provider')
 
     if (singleAttempt) {
-      const _res = await BridgeHelper.tryGetProofOnce(batchNumber, indexInBatch, l2Provider)
+      const _res = await BridgeHelper.tryGetProofOnce(
+        batchNumber,
+        indexInBatch,
+        l2Provider
+      )
       if (_res === null) {
         console.warn('Proof not found')
         return
@@ -556,7 +560,10 @@ export class BridgeHelper {
     l2Provider: providers.Provider,
     arbSysAddress?: string
   ) => {
-    const contract = ArbSys__factory.connect(arbSysAddress || "arbSysAddress", l2Provider)
+    const contract = ArbSys__factory.connect(
+      arbSysAddress || 'arbSysAddress',
+      l2Provider
+    )
     const iface = contract.interface
     const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
     const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
