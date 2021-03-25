@@ -46,6 +46,19 @@ contract EthERC20Bridge {
     address private l2TemplateERC777;
     address private l2TemplateERC20;
 
+    address owner;
+
+    function updateOwner(address newOwner) external {
+        require(msg.sender == owner, "Only owner");
+        owner = newOwner;
+    }
+
+    function updateTemplates(address erc20, address erc777) external {
+        require(msg.sender == owner, "Only owner");
+        l2TemplateERC777 = erc777;
+        l2TemplateERC20 = erc20;
+    }
+
     address public l2Address;
     IInbox public inbox;
 
@@ -87,14 +100,16 @@ contract EthERC20Bridge {
         address _l2Address
     ) external payable {
         require(address(l2TemplateERC20) == address(0), "already initialized");
+        require(owner == address(0), "owner already set");
+        owner = msg.sender;
         l2TemplateERC777 = _l2TemplateERC777;
         l2TemplateERC20 = _l2TemplateERC20;
 
-        bytes memory deployCode =
-            abi.encodePacked(
-                type(ArbTokenBridge).creationCode,
-                abi.encode(address(this), _l2TemplateERC777, _l2TemplateERC20)
-            );
+        // bytes memory deployCode =
+        //     abi.encodePacked(
+        //         type(ArbTokenBridge).creationCode,
+        //         abi.encode(address(this), _l2TemplateERC777, _l2TemplateERC20)
+        //     );
         l2Address = _l2Address;
         inbox = IInbox(_inbox);
         // TODO: this stores the creation code in state, but we don't actually need that
