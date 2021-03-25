@@ -1264,8 +1264,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     size_t reorg_attempts = 0;
     while (handle_reorg) {
         handle_reorg = false;
-        if (reorg_attempts >= 5) {
-            if (reorg_attempts % 5 == 0) {
+        if (reorg_attempts > 0) {
+            if (reorg_attempts % 4 == 0) {
                 std::cerr
                     << "Execution cursor has attempted to handle "
                     << reorg_attempts
@@ -1273,8 +1273,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                     << std::endl;
             }
             assert(false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            if (reorg_attempts >= 20) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            if (reorg_attempts >= 16) {
                 return rocksdb::Status::Busy();
             }
         }
