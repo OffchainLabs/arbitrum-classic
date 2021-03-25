@@ -9,7 +9,7 @@ First, *if you’re an Arbitrum user or developer, you don’t need to understan
 
 You’re welcome to study, observe, and even participate in the rollup protocol, but you don’t need to, and most people won’t. So if you’re a typical train passenger who just wants to read or talk to your neighbor, you can skip right to the [next section](Validators.md) of this document. If not, read on!
 
-The second thing to understand about the rollup protocol is *that the protocol doesn’t decide the results of transactions, it only confirms the results*. The results are uniquely determined by the sequence of messages in the chain’s inbox. So once your transaction message is in the chain’s inbox, its result is knowable--and Arbitrum nodes will report your transaction to be done. The role of the rollup protocol is to confirm transaction results that, as far as Arbitrum users are concerned, already exist. (This is why Arbitrum users can ignore the rollup protocol.)
+The second thing to understand about the rollup protocol is *that the protocol doesn’t decide the results of transactions, it only confirms the results*. The results are uniquely determined by the sequence of messages in the chain’s inbox. So once your transaction message is in the chain’s inbox, its result is knowable--and Arbitrum nodes will report your transaction to be done. The role of the rollup protocol is to confirm transaction results that, as far as Arbitrum users are concerned, have already occurred. (This is why Arbitrum users can effectively ignore the rollup protocol.)
 
 You might wonder why we need the rollup protocol. If everyone knows the results of transactions already, why bother confirming them? The protocol exists for two reasons. First, somebody might lie about a result, and we need a definitive, trustless way to tell who is lying. Second, Ethereum doesn’t know the results. The whole point of a Layer 2 scaling system is to run transactions without Ethereum needing to do all of the work--and indeed Arbitrum can go fast enough that Ethereum couldn’t hope to monitor every Arbitrum transaction. But once a result is confirmed, Ethereum knows about it and can rely on it.
 
@@ -27,10 +27,10 @@ Validators can propose rollup blocks. New rollup blocks will be *unresolved* at 
 
 Each rollup block contains:
 
-- rollup block number
-- predecessor block number: rollup block number of the last block before this one that is (claimed to be) correct
-- how much computation the chain has done in its history (measured in ArbGas)
-- how many inbox messages have been consumed in the chain’s history
+- the rollup block number
+- the predecessor block number: rollup block number of the last block before this one that is (claimed to be) correct
+- the amount of computation the chain has done in its history (measured in ArbGas)
+- the number of inbox messages have been consumed in the chain’s history
 - a hash of the outputs produced over the chain’s history
 - a hash of the chain state.
 
@@ -44,7 +44,7 @@ A block is also implicitly claiming that its older siblings (older blocks with t
 
 The block is assigned a deadline, which says how long other validators have to respond to it. If you’re a validator, and you agree that a rollup block is correct, you don’t need to do anything. If you disagree with a rollup block, you can post another block with a different result, and you’ll probably end up in a challenge against the first block’s staker. (More on challenges below.)
 
-n the normal case, the rollup chain will look like this:
+In the normal case, the rollup chain will look like this:
 
 ![img](https://lh3.googleusercontent.com/vv118kJMXj76PG6J-Jv4BC9KTpe72mdfD1uWoqhKXvKKfPWHW6wMMCvJ9KKQx_VXIw34XfzT4yfyNVtQVstYRczLk6kLKvBv8Pbl-0MjSzGxz1Z_8T5Y_6UcDMWpy7_D9PxQYKdT)
 
@@ -138,7 +138,7 @@ We’ll describe the dissection part of the protocol twice. First, we’ll give 
 
 Alice is defending the claim that starting with the state in the predecessor block, the state of the Virtual Machine can advance to the state specified in block A. Essentially she is claiming that the Virtual Machine can execute N instructions, and that that execution will consume M inbox messages and transform the hash of outputs from H’ to H.
 
-Alice’s first move requires her to dissect her make claims about intermediate states between the beginning (0 instructions executed) and the end (N instructions executed). So we require Alice to divide her claim in half, and post the state at the half-way point, after N/2 instructions have been executed.
+Alice’s first move requires her to dissect her claims about intermediate states between the beginning (0 instructions executed) and the end (N instructions executed). So we require Alice to divide her claim in half, and post the state at the half-way point, after N/2 instructions have been executed.
 
 Now Alice has effectively bisected her N-step assertion into two (N/2)-step assertions. Bob has to point to one of those two half-size assertions and claim it is wrong.
 
