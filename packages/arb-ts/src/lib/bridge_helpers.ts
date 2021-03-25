@@ -59,6 +59,7 @@ export interface BuddyDeployEventResult {
 }
 
 export interface OutboxProofData {
+  batchNumber: BigNumber,
   proof: string[]
   path: BigNumber
   l2Sender: string
@@ -220,6 +221,14 @@ export class BridgeHelper {
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
     )
+  }
+
+  static getCoreBridgeFromInbox = (
+    inboxAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const contract = Inbox__factory.connect(inboxAddress, l1Provider)
+    return contract.bridge();
   }
 
   static getInboxSeqNumFromContractTransaction = async (
@@ -454,7 +463,6 @@ export class BridgeHelper {
 
   static tryOutboxExecute = async (
     outboxProofData: OutboxProofData,
-    batchNumber: BigNumber,
     l1CoreBridgeAddress: string,
     l1Signer: Signer
   ): Promise<ContractReceipt> => {
@@ -466,7 +474,7 @@ export class BridgeHelper {
     )
 
     await BridgeHelper.waitUntilOutboxEntryCreated(
-      batchNumber,
+      outboxProofData.batchNumber,
       activeOutboxAddress,
       l1Signer.provider
     )
@@ -478,7 +486,7 @@ export class BridgeHelper {
       // We can predict and print number of missing blocks
       // if not challenged
       const outboxExecute = await outbox.executeTransaction(
-        batchNumber,
+        outboxProofData.batchNumber,
         outboxProofData.proof,
         outboxProofData.path,
         outboxProofData.l2Sender,
@@ -515,7 +523,17 @@ export class BridgeHelper {
       throw new Error('Signer must be connected to L2 provider')
 
     console.log('going to get proof')
-    let res: OutboxProofData
+    let res: {
+      proof: Array<string>;
+      path: BigNumber;
+      l2Sender: string;
+      l1Dest: string;
+      l2Block: BigNumber;
+      l1Block: BigNumber;
+      timestamp: BigNumber;
+      amount: BigNumber;
+      calldataForL1: string;
+  };
 
     if (singleAttempt) {
       const _res = await BridgeHelper.tryGetProofOnce(
@@ -535,12 +553,16 @@ export class BridgeHelper {
       )
     }
 
+    const proofData: OutboxProofData = {
+      ...res,
+      batchNumber
+    }
+
     console.log('got proof')
 
 
     const outboxExecuteTransactionReceipt = await BridgeHelper.tryOutboxExecute(
-      res,
-      batchNumber,
+      proofData,
       l1CoreBridgeAddress,
       l1Signer
     )
