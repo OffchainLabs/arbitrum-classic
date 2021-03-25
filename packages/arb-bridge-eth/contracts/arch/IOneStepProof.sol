@@ -33,7 +33,7 @@ interface IOneStepProof {
         returns (
             uint64 gas,
             uint256 totalMessagesRead,
-            bytes32[4] memory fields
+            bytes32[7] memory fields
         );
 
     function executeStepDebug(

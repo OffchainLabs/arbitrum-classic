@@ -227,6 +227,10 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
+    bytes32 kludge1;
+    bytes32 kludge2;
+    uint256 kludge3;
+
     // machineFields
     //  initialInbox
     //  initialMessageAcc
@@ -251,7 +255,7 @@ contract Challenge is Cloneable, IChallenge {
     ) public onlyOnTurn {
         bytes32 rootHash;
         {
-            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[7] memory proofFields) =
                 executors[prover].executeStep(
                     bridge,
                     _initialMessagesRead,
@@ -259,6 +263,9 @@ contract Challenge is Cloneable, IChallenge {
                     _executionProof,
                     _bufferProof
                 );
+            kludge1 = proofFields[4];
+            kludge2 = proofFields[5];
+            kludge3 = uint256(proofFields[6]);
 
             require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
 
@@ -298,12 +305,17 @@ contract Challenge is Cloneable, IChallenge {
                 ),
                 _oldEndHash
             );
+
         }
 
         verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
 
-        emit OneStepProofCompleted();
-        _currentWin();
+        if (kludge1 == 0) {
+            emit OneStepProofCompleted();
+            _currentWin();
+        } else {
+            updateNewRoot(kludge1, kludge2, kludge3);
+        }
     }
 
     function timeout() external override {
@@ -337,6 +349,13 @@ contract Challenge is Cloneable, IChallenge {
         } else {
             require(false, "NO_TURN");
         }
+    }
+
+    function updateNewRoot(bytes32 startHash, bytes32 endHash, uint256 length) private {
+        bytes32[] memory hashes = new bytes32[](2);
+        hashes[0] = startHash;
+        hashes[1] = endHash;
+        updateBisectionRoot(hashes, 0, length);
     }
 
     function updateBisectionRoot(
@@ -420,7 +439,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
-        bytes32[4] memory proofFields
+        bytes32[7] memory proofFields
     ) private pure returns (bytes32) {
         return
             ChallengeLib.assertionHash(
@@ -442,7 +461,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256[3] memory _initialState,
         uint64 gasUsed,
         uint256 totalMessagesRead,
-        bytes32[4] memory proofFields
+        bytes32[7] memory proofFields
     ) private pure returns (bytes32) {
         // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore

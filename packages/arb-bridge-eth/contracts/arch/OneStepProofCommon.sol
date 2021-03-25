@@ -160,7 +160,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         returns (
             uint64 gas,
             uint256 totalMessagesRead,
-            bytes32[4] memory fields
+            bytes32[7] memory fields
         )
     {
         AssertionContext memory context =
@@ -199,7 +199,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         returns (
             uint64 gas,
             uint256 totalMessagesRead,
-            bytes32[4] memory fields
+            bytes32[7] memory fields
         )
     {
         return (
@@ -209,7 +209,10 @@ abstract contract OneStepProofCommon is IOneStepProof {
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
                 context.sendAcc,
-                context.logAcc
+                context.logAcc,
+                context.startState,
+                context.endState,
+                bytes32(context.nextLength)
             ]
         );
     }
@@ -246,6 +249,9 @@ abstract contract OneStepProofCommon is IOneStepProof {
         uint256 offset;
         // merkle proofs for buffer
         bytes bufProof;
+        bytes32 startState;
+        bytes32 endState;
+        uint256 nextLength;
         bool errorOccurred;
     }
 
