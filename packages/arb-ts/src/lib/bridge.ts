@@ -275,10 +275,11 @@ export class Bridge extends L2Bridge {
     tokenType: 'ERC20' | 'ERC777' = 'ERC20'
   ): Promise<Array<DepositTokenEventResult>> {
     const iface = this.l1Bridge.ethERC20Bridge.interface
-    const event =
-      tokenType === 'ERC20'
-        ? iface.getEvent('DepositERC20')
-        : iface.getEvent('DepositERC777')
+    const event = iface.getEvent('DepositERC20')
+    // const event =
+    //   tokenType === 'ERC20'
+    //     ? iface.getEvent('DepositERC20')
+    //     : iface.getEvent('DepositERC777')
     const eventTopic = iface.getEventTopic(event)
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
