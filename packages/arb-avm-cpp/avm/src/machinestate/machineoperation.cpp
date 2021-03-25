@@ -868,6 +868,8 @@ void log(MachineState& m) {
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
     m.context.debug_prints.push_back(m.stack.pop());
+    std::cerr << "Debug print @ gas " << m.output.arb_gas_used << ": "
+              << m.context.debug_prints.back() << std::endl;
     ++m.pc;
 }
 

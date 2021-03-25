@@ -169,6 +169,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
+    code->restoreExistingSegment(executable.code);
+
     auto status = reorgToMessageOrBefore(0, true, cache);
     if (status.ok()) {
         return status;
@@ -179,7 +181,6 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         return status;
     }
 
-    code->addSegment(executable.code);
     machine = std::make_unique<MachineThread>(
         MachineState{code, executable.static_val});
 
