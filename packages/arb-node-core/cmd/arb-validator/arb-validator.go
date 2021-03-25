@@ -222,6 +222,6 @@ func main() {
 	}
 	reader.Start(ctx)
 
-	logger.Info().Msg("Initialized validator")
+	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
 	<-stakerManager.RunInBackground(ctx)
 }
