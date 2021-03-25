@@ -8,7 +8,6 @@ import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 
 contract StandardArbERC777 is OZERC777, Cloneable, IArbToken {
-    using DecimalConverter for uint256;
     ArbTokenBridge public bridge;
     address public l1Address;
     uint8 public l1Decimals;
@@ -27,31 +26,38 @@ contract StandardArbERC777 is OZERC777, Cloneable, IArbToken {
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
 
-        require(_decimals <= 18, "Decimals must be less than or equal to 18");
-        l1Decimals = _decimals;
+        // require(_decimals <= 18, "Decimals must be less than or equal to 18");
         OZERC777.initialize(DecimalConverter.decimalsToGranularity(_decimals));
+        l1Decimals = _decimals;
     }
 
     function updateInfo(string memory newName, string memory newSymbol, uint8 newDecimals) public override onlyBridge {
         _name = newName;
         _symbol = newSymbol;
-        require(l1Decimals == newDecimals, "777 granularity can't change");
-        // l1Decimals = newDecimals;
-        // _granularity = DecimalConverter.decimalsToGranularity(newDecimals);
+        require(
+            OZERC777._granularity == DecimalConverter.decimalsToGranularity(newDecimals),
+            "777 granularity can't change"
+        );
     }
 
     function bridgeMint(address account, uint256 amount, bytes memory data) external override onlyBridge {
-        _mint(account, amount.from20to777(l1Decimals), data, "");
+        _mint(account, amount, data, "");
     }
 
     function withdraw(address destination, uint256 amount) external override {
         _burn(msg.sender, amount, "", "");
-        bridge.withdraw(l1Address, destination, amount.from777to20(l1Decimals));
+        bridge.withdraw(l1Address, destination, amount);
     }
 
     function migrate(address target, uint256 amount) external {
         _burn(msg.sender, amount, "", "");
         // migrating from 777 to 20, so no data
-        bridge.migrate(l1Address, target, msg.sender, amount, '');
+        bridge.migrate(
+            l1Address,
+            target,
+            msg.sender,
+            DecimalConverter.from777to20(amount, l1Decimals),
+            ''
+        );
     }
 }
