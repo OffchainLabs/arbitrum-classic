@@ -196,7 +196,7 @@ contract EthERC20Bridge is L1Buddy {
 
     function updateTokenInfo(
         address erc20,
-        bool isERC20,
+        StandardTokenType tokenType,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid
@@ -207,10 +207,9 @@ contract EthERC20Bridge is L1Buddy {
 
         bytes memory data =
             abi.encodeWithSelector(
-                isERC20
-                    ? ArbTokenBridge.updateERC777TokenInfo.selector
-                    : ArbTokenBridge.updateERC20TokenInfo.selector,
+                ArbTokenBridge.updateTokenInfo.selector,
                 erc20,
+                tokenType,
                 name,
                 symbol,
                 decimals

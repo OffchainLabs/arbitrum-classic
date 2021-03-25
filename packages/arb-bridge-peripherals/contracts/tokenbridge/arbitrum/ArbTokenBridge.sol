@@ -91,6 +91,7 @@ contract ArbTokenBridge is CloneFactory {
     event TokenDataUpdated(
         address l1Address,
         address l2Addess,
+        StandardTokenType tokenType.
         string name,
         string symbol,
         uint8 decimals
@@ -250,44 +251,26 @@ contract ArbTokenBridge is CloneFactory {
         );
     }
 
-    function updateERC777TokenInfo(
+    function updateTokenInfo(
         address l1ERC20,
+        StandardTokenType tokenType,
         bytes calldata _name,
         bytes calldata _symbol,
         bytes calldata _decimals
     ) external onlyEthPair noCustomToken(l1ERC20) {
+        // no custom token as we assume custom implementation has correct info
+        require(tokenType != StandardTokenType.Custom, "Cant update info of custom token");
         string memory name = BytesParserWithDefault.toString(_name, "");
         string memory symbol = BytesParserWithDefault.toString(_symbol, "");
         uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
 
-        IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
+        IArbToken token = ensureTokenExists(l1ERC20, decimals, tokenType);
         token.updateInfo(name, symbol, decimals);
 
         emit TokenDataUpdated(
             l1ERC20,
             address(token),
-            name,
-            symbol,
-            decimals
-        );
-    }
-
-    function updateERC20TokenInfo(
-        address l1ERC20,
-        bytes calldata _name,
-        bytes calldata _symbol,
-        bytes calldata _decimals
-    ) external onlyEthPair noCustomToken(l1ERC20) {
-        string memory name = BytesParserWithDefault.toString(_name, "");
-        string memory symbol = BytesParserWithDefault.toString(_symbol, "");
-        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
-
-        IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        token.updateInfo(name, symbol, decimals);
-
-        emit TokenDataUpdated(
-            l1ERC20,
-            address(token),
+            tokenType,
             name,
             symbol,
             decimals
