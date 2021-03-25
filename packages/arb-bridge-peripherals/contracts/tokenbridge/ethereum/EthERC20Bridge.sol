@@ -62,18 +62,11 @@ contract EthERC20Bridge is L1Buddy {
         address tokenAddress
     );
 
-    event DepositERC777(
+    event DepositToken(
         address indexed destination,
         address sender,
         uint256 indexed seqNum,
-        uint256 amount,
-        address tokenAddress
-    );
-
-    event DepositCustomToken(
-        address indexed destination,
-        address sender,
-        uint256 indexed seqNum,
+        StandardTokenType tokenType,
         uint256 value,
         address tokenAddress
     );
@@ -229,53 +222,53 @@ contract EthERC20Bridge is L1Buddy {
         return seqNum;
     }
 
+    // hacky struct to avoid stack size limit
+    struct RetryableTxParams {
+        uint256 maxSubmissionCost;
+        uint256 maxGas;
+        uint256 gasPriceBid;
+    }
+
     function depositToken(
         address erc20,
         address sender,
         address destination,
         uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
+        RetryableTxParams memory retryableParams,
         StandardTokenType tokenType,
         bytes memory callHookData
     ) private returns (uint256) {
         IERC20(erc20).safeTransferFrom(msg.sender, l2Buddy, amount);
-        bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
+        uint256 seqNum = 0;
+        {
+            bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
+            bytes memory data =
+                abi.encodeWithSelector(
+                    ArbTokenBridge.mintFromL1.selector,
+                    erc20,
+                    sender,
+                    tokenType,
+                    destination,
+                    amount,
+                    decimals,
+                    callHookData
+                );
 
-        bytes4 selector;
-        if (tokenType == StandardTokenType.ERC20) {
-            selector = ArbTokenBridge.mintERC20FromL1.selector;
-        } else if (tokenType == StandardTokenType.ERC777) {
-            selector = ArbTokenBridge.mintERC777FromL1.selector;
-        } else if (tokenType == StandardTokenType.Custom) {
-            selector = ArbTokenBridge.mintERC777FromL1.selector;
-        } else {
-            revert("Token type not recognized");
+            seqNum =
+                inbox.createRetryableTicket{ value: msg.value }(
+                    L1Buddy.l2Buddy,
+                    0,
+                    retryableParams.maxSubmissionCost,
+                    msg.sender,
+                    msg.sender,
+                    retryableParams.maxGas,
+                    retryableParams.gasPriceBid,
+                    data
+                );
         }
 
-        bytes memory data =
-            abi.encodeWithSelector(
-                selector,
-                erc20,
-                sender,
-                destination,
-                amount,
-                decimals,
-                callHookData
-            );
-
-        return
-            inbox.createRetryableTicket{ value: msg.value }(
-                L1Buddy.l2Buddy,
-                0,
-                maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                maxGas,
-                gasPriceBid,
-                data
-            );
+        emit DepositToken(destination, sender, seqNum, tokenType, amount, erc20);
+        return seqNum;
     }
 
     function depositAsERC777(
@@ -287,20 +280,19 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable returns (uint256) {
-        uint256 seqNum =
-            depositToken(
-                erc20,
-                msg.sender,
-                destination,
-                amount,
+        return depositToken(
+            erc20,
+            msg.sender,
+            destination,
+            amount,
+            RetryableTxParams(
                 maxSubmissionCost,
                 maxGas,
-                gasPriceBid,
-                StandardTokenType.ERC777,
-                callHookData
-            );
-        emit DepositERC777(destination, msg.sender, seqNum, amount, erc20);
-        return seqNum;
+                gasPriceBid
+            ),
+            StandardTokenType.ERC777,
+            callHookData
+        );
     }
 
     function depositAsERC20(
@@ -312,20 +304,19 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable returns (uint256) {
-        uint256 seqNum =
-            depositToken(
-                erc20,
-                msg.sender,
-                destination,
-                amount,
+        return depositToken(
+            erc20,
+            msg.sender,
+            destination,
+            amount,
+            RetryableTxParams(
                 maxSubmissionCost,
                 maxGas,
-                gasPriceBid,
-                StandardTokenType.ERC20,
-                callHookData
-            );
-        emit DepositERC20(destination, msg.sender, seqNum, amount, erc20);
-        return seqNum;
+                gasPriceBid
+            ),
+            StandardTokenType.ERC20,
+            callHookData
+        );
     }
 
     function depositAsCustomToken(
@@ -339,21 +330,19 @@ contract EthERC20Bridge is L1Buddy {
     ) external payable returns (uint256) {
         // TODO: should this not be checked in the L2?
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
-
-        uint256 seqNum = depositToken(
+        return depositToken(
             erc20,
             msg.sender,
             destination,
             amount,
-            maxSubmissionCost,
-            maxGas,
-            gasPriceBid,
+            RetryableTxParams(
+                maxSubmissionCost,
+                maxGas,
+                gasPriceBid
+            ),
             StandardTokenType.Custom,
             callHookData
         );
-
-        emit DepositCustomToken(destination, msg.sender, seqNum, amount, erc20);
-        return seqNum;
     }
 
     function calculateL2ERC777Address(address erc20) external view returns (address) {
