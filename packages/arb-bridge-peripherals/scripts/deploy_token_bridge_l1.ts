@@ -11,7 +11,7 @@ const main = async () => {
   // TODO: check buddy deployer address available
   // TODO: check 1820 registry
   const inboxAddress =
-    process.env.INBOX_ADDRESS || '0x0d0c1aDf6523D422ec7192506A7F6790253399fB'
+    process.env.INBOX_ADDRESS || '0x3A769C3577203b7A8EEFfcDfCe28a9Da6BB2FAa4'
 
   if (inboxAddress === '' || inboxAddress === undefined)
     throw new Error('Please set inbox address! INBOX_ADDRESS')
@@ -23,27 +23,18 @@ const main = async () => {
   const maxSubmissionCost = 0
   const gasPrice = 0
   const maxGas = 100000000000
-  const ethERC20Bridge = await EthERC20Bridge.deploy(
-    inboxAddress,
-    deployments.buddyDeployer,
-    maxSubmissionCost,
-    maxGas,
-    gasPrice,
-    deployments.standardArbERC777,
-    deployments.standardArbERC20
-  )
-  const arbTokenBridge = await ethERC20Bridge.l2Buddy()
-  console.log('EthERC20Bridge deployed to:', ethERC20Bridge.address)
-  console.log('L2 ArbBridge deployed to:', arbTokenBridge)
-
-  const contracts = JSON.stringify({
-    ...deployments,
-    ethERC20Bridge: ethERC20Bridge.address,
-    arbTokenBridge: arbTokenBridge,
-  })
-  const deployFilePath = './deployment.json'
-  console.log(`Writing to JSON at ${deployFilePath}`)
-  writeFileSync(deployFilePath, contracts)
+  // address _inbox,
+  //       address _l2Deployer,
+  //       uint256 _maxSubmissionCost,
+  //       uint256 _maxGas,
+  //       uint256 _gasPrice,
+  //       address _l2TemplateERC777,
+  //       address _l2TemplateERC20,
+  //       address _l2Address
+  const ethERC20Bridge = await EthERC20Bridge.deploy()
+  
+  // const arbTokenBridge = await ethERC20Bridge.l2Buddy()
+  console.log('EthERC20Bridge logic deployed to:', ethERC20Bridge.address)
 
   const l2Provider = new ethers.providers.JsonRpcProvider(
     'https://devnet-l2.arbitrum.io/rpc'
@@ -52,53 +43,116 @@ const main = async () => {
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
   const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
 
-  const bridge = new Bridge(
+  const ArbTokenBridge = (await ethers.getContractFactory('ArbTokenBridge')).connect(l2Signer)
+  const arbTokenBridge = await ArbTokenBridge.deploy();
+  console.log('L2 ArbBridge logic deployed to:', arbTokenBridge.address)
+
+  const L1TransparentUpgradeableProxy = await ethers.getContractFactory(
+    'TransparentUpgradeableProxy'
+  )
+  const L2TransparentUpgradeableProxy = (await ethers.getContractFactory(
+    'TransparentUpgradeableProxy'
+  )).connect(l2Signer)
+
+  const L1ProxyAdmin = await ethers.getContractFactory('ProxyAdmin')
+  const L2ProxyAdmin = (await ethers.getContractFactory('ProxyAdmin')).connect(l2Signer)
+
+  const l1ProxyAdmin = await L1ProxyAdmin.deploy()
+  console.log("L1 proxy admin at", l1ProxyAdmin)
+  const ethERC20BridgeProxy = await L1TransparentUpgradeableProxy.deploy(
     ethERC20Bridge.address,
-    arbTokenBridge,
-    accounts[0],
-    l2Signer
+    l1ProxyAdmin.address,
+    '0x'
   )
+  console.log("L1 proxy bridge at", ethERC20BridgeProxy.address)
 
-  const deployReceipt = await bridge.getL1Transaction(
-    ethERC20Bridge.deployTransaction.hash
+  const l2ProxyAdmin = await L2ProxyAdmin.deploy()
+  console.log("L2 proxy admin at", l2ProxyAdmin)
+  const arbTokenBridgeProxy = await L2TransparentUpgradeableProxy.deploy(
+    arbTokenBridge.address,
+    l2ProxyAdmin.address,
+    '0x'
   )
+  console.log("L1 proxy bridge at", arbTokenBridgeProxy.address)
 
-  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(
-    deployReceipt
+  console.log("Now initializing proxies")
+  const initL2Bridge = await arbTokenBridgeProxy.functions.initialize(
+    ethERC20BridgeProxy.address,
+    deployments.standardArbERC777,
+    deployments.standardArbERC20,
   )
-
-  if (!seqNums) throw new Error("Transaction didn't trigger inbox")
-  if (seqNums.length !== 1)
-    throw new Error('Transaction triggered inbox more than once')
-
-  const inboxSequenceNumber = seqNums[0]
-
-  const l2DeployTxHash = await bridge.calculateL2RetryableTransactionHash(
-    inboxSequenceNumber
+  const initL1Bridge = await ethERC20BridgeProxy.functions.initialize(
+    inboxAddress,
+    deployments.buddyDeployer,
+    maxSubmissionCost,
+    maxGas,
+    gasPrice,
+    deployments.standardArbERC777,
+    deployments.standardArbERC20,
+    arbTokenBridgeProxy.address
   )
-  const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
+  // wait for inits
+  await initL1Bridge.wait()
+  await initL2Bridge.wait()
+  console.log("Proxies have been initted")
+  
+  const contracts = JSON.stringify({
+    ...deployments,
+    ethERC20Bridge: ethERC20BridgeProxy.address,
+    arbTokenBridge: arbTokenBridgeProxy.address,
+  })
+  const deployFilePath = './deployment.json'
+  console.log(`Writing to JSON at ${deployFilePath}`)
+  writeFileSync(deployFilePath, contracts)
+  console.log('Wrote to deployments.json')
 
-  const buddyDeployEvents = await bridge.getBuddyDeployInL2Transaction(
-    l2TransactionReceipt
-  )
+  // const bridge = new Bridge(
+  //   ethERC20BridgeProxy.address,
+  //   arbTokenBridgeProxy.address,
+  //   accounts[0],
+  //   l2Signer
+  // )
 
-  if (buddyDeployEvents.length !== 1)
-    throw new Error('Buddy deploy event was not triggered one time!')
-  const withdrawalId = buddyDeployEvents[0].withdrawalId
+  // const deployReceipt = await bridge.getL1Transaction(
+  //   ethERC20Bridge.deployTransaction.hash
+  // )
 
-  const logs = await bridge.getWithdrawalsInL2Transaction(l2TransactionReceipt)
-  const filteredLogs = logs.filter(log => log.uniqueId.eq(withdrawalId))
+  // const seqNums = await bridge.getInboxSeqNumFromContractTransaction(
+  //   deployReceipt
+  // )
 
-  if (filteredLogs.length !== 1)
-    throw new Error('Should have exactly one matching unique id')
-  const { batchNumber, indexInBatch } = filteredLogs[0]
+  // if (!seqNums) throw new Error("Transaction didn't trigger inbox")
+  // if (seqNums.length !== 1)
+  //   throw new Error('Transaction triggered inbox more than once')
 
-  const l1TxReceipt = await bridge.triggerL2ToL1Transaction(
-    batchNumber,
-    indexInBatch
-  )
-  console.log('Transaction executed in L1')
-  console.log(l1TxReceipt)
+  // const inboxSequenceNumber = seqNums[0]
+
+  // const l2DeployTxHash = await bridge.calculateL2RetryableTransactionHash(
+  //   inboxSequenceNumber
+  // )
+  // const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
+
+  // const buddyDeployEvents = await bridge.getBuddyDeployInL2Transaction(
+  //   l2TransactionReceipt
+  // )
+
+  // if (buddyDeployEvents.length !== 1)
+  //   throw new Error('Buddy deploy event was not triggered one time!')
+  // const withdrawalId = buddyDeployEvents[0].withdrawalId
+
+  // const logs = await bridge.getWithdrawalsInL2Transaction(l2TransactionReceipt)
+  // const filteredLogs = logs.filter(log => log.uniqueId.eq(withdrawalId))
+
+  // if (filteredLogs.length !== 1)
+  //   throw new Error('Should have exactly one matching unique id')
+  // const { batchNumber, indexInBatch } = filteredLogs[0]
+
+  // const l1TxReceipt = await bridge.triggerL2ToL1Transaction(
+  //   batchNumber,
+  //   indexInBatch
+  // )
+  // console.log('Transaction executed in L1')
+  // console.log(l1TxReceipt)
 }
 
 main()

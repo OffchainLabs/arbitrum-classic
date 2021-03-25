@@ -50,6 +50,19 @@ contract ArbTokenBridge is CloneFactory {
     ICloneable public templateERC777;
     address public l1Pair;
 
+    address owner;
+
+    function updateOwner(address newOwner) external {
+        require(msg.sender == owner, "Only owner");
+        owner = newOwner;
+    }
+
+    function updateTemplates(address erc20, address erc777) external {
+        require(msg.sender == owner, "Only owner");
+        templateERC20 = ICloneable(erc20);
+        templateERC777 = ICloneable(erc777);
+    }
+
     event MintAndCallTriggered(
         bool success,
         address indexed sender,
@@ -152,6 +165,8 @@ contract ArbTokenBridge is CloneFactory {
     ) public {
         require(address(templateERC20) == address(0), "aleady init");
         require(_l1Pair != address(0), "L1 pair can't be address 0");
+        require(owner == address(0), "owner is already set");
+        owner = msg.sender;
         templateERC20 = ICloneable(_templateERC20);
         templateERC777 = ICloneable(_templateERC777);
 
