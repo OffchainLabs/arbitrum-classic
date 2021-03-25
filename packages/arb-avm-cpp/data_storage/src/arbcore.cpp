@@ -363,9 +363,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                         checkpoint_vector.begin(), checkpoint_vector.end());
                     if (checkpoint.getTotalMessagesRead() == 0 ||
                         (message_sequence_number >=
-                             checkpoint.getTotalMessagesRead() - 1 &&
-                         isValid(tx, checkpoint.output.fully_processed_inbox,
-                                 checkpoint.staged_message))) {
+                         checkpoint.getTotalMessagesRead() - 1)) {
                         if (isValid(tx, checkpoint.output.fully_processed_inbox,
                                     checkpoint.staged_message)) {
                             // Good checkpoint
