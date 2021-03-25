@@ -74,6 +74,7 @@ contract ArbTokenBridge is CloneFactory {
     event TokenMinted(
         address l1Address,
         address indexed l2Address,
+        StandardTokenType tokenType,
         address indexed sender,
         address indexed dest,
         uint256 amount,
@@ -91,7 +92,7 @@ contract ArbTokenBridge is CloneFactory {
     event TokenDataUpdated(
         address l1Address,
         address l2Addess,
-        StandardTokenType tokenType.
+        StandardTokenType tokenType,
         string name,
         string symbol,
         uint8 decimals
@@ -135,6 +136,12 @@ contract ArbTokenBridge is CloneFactory {
     }
     modifier noCustomToken(address l1ERC20) {
         require(customToken[l1ERC20] == address(0), "No_CUSTOM_TOKEN");
+        _;
+    }
+    modifier ifCustomSelectedRequireCustom(address l1ERC20, StandardTokenType tokenType) {
+        if(tokenType == StandardTokenType.Custom) {
+            require(customToken[l1ERC20] != address(0), "No_CUSTOM_TOKEN");
+        }
         _;
     }
 
@@ -184,70 +191,33 @@ contract ArbTokenBridge is CloneFactory {
         }
     }
 
-    function mintERC777FromL1(
+    function mintFromL1(
         address l1ERC20,
         address sender,
+        StandardTokenType tokenType,
         address dest,
         uint256 amount,
         bytes calldata _decimals,
         bytes calldata callHookData
-    ) external onlyEthPair noCustomToken(l1ERC20) {
-        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
-        IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
-
-        if (callHookData.length > 0) {
-            // this does not trigger 777's hook!
-            handleCallHookData(token, amount, sender, dest, callHookData);
-        } else {
-            token.bridgeMint(dest, amount, "");
-        }
-        emit TokenMinted(
-            l1ERC20, address(token), sender, dest, amount, callHookData.length > 0
+    )
+        external
+        onlyEthPair
+        ifCustomSelectedRequireCustom(l1ERC20, tokenType)
+    {
+        IArbToken token = ensureTokenExists(
+            l1ERC20,
+            BytesParserWithDefault.toUint8(_decimals, 18),
+            tokenType
         );
-    }
-
-    function mintERC20FromL1(
-        address l1ERC20,
-        address sender,
-        address dest,
-        uint256 amount,
-        bytes calldata _decimals,
-        bytes calldata callHookData
-    ) external onlyEthPair noCustomToken(l1ERC20) {
-        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
-        IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
 
         if (callHookData.length > 0) {
             handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
             token.bridgeMint(dest, amount, "");
         }
-        emit TokenMinted(
-            l1ERC20, address(token), sender, dest, amount, callHookData.length > 0
-        );
-    }
 
-    function mintCustomTokenFromL1(
-        address l1ERC20,
-        address sender,
-        address dest,
-        uint256 amount,
-        bytes calldata decimals,
-        bytes calldata callHookData
-    ) external onlyEthPair {
-        // TODO: what happens to already created erc20 holders?
-        address tokenAddress = customToken[l1ERC20];
-        require(tokenAddress != address(0), "Custom Token doesn't exist");
-        IArbToken token = IArbToken(tokenAddress);
-        // decimals not used here
-        // uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
-        if (callHookData.length > 0) {
-            handleCallHookData(token, amount, sender, dest, callHookData);
-        } else {
-            token.bridgeMint(dest, amount, "");
-        }
         emit TokenMinted(
-            l1ERC20, address(token), sender, dest, amount, callHookData.length > 0
+            l1ERC20, address(token), tokenType, sender, dest, amount, callHookData.length > 0
         );
     }
 
@@ -310,9 +280,23 @@ contract ArbTokenBridge is CloneFactory {
         address account,
         uint256 amount,
         bytes memory data
-    ) external onlyFromStandardL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) {
+    ) external onlyFromStandardL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) noCustomToken(l1ERC20) {
         IArbToken(target).bridgeMint(account, amount, data);
         emit TokenMigrated(msg.sender, target, account, amount, data);
+    }
+
+    function calculateBridgeTokenAddress(address l1ERC20, StandardTokenType tokenType) public view returns (address) {
+        if(tokenType == StandardTokenType.ERC20) {
+            return calculateBridgedERC20Address(l1ERC20);
+        } else if(tokenType == StandardTokenType.ERC777) {
+            return calculateBridgedERC777Address(l1ERC20);
+        } else if(tokenType == StandardTokenType.Custom) {
+            address l2Addr = customToken[l1ERC20];
+            require(l2Addr != address(0), "No custom address set");
+            return l2Addr;
+        } else {
+            revert("Token type not recognized");
+        }
     }
 
     function calculateBridgedERC777Address(address l1ERC20) public view returns (address) {
