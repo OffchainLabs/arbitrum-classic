@@ -21,6 +21,12 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { Contract, ContractFactory } from 'ethers'
 import { deploy1820Registry } from '../scripts/utils'
 
+const TOKEN_TYPE_ENUM = {
+  ERC20: 0,
+  ERC777: 1,
+  Custom: 2
+}
+
 describe('Bridge peripherals layer 2', () => {
   let accounts: SignerWithAddress[]
   let TestBridge: ContractFactory
@@ -71,7 +77,7 @@ describe('Bridge peripherals layer 2', () => {
     const sender = '0x0000000000000000000000000000000000000002'
     const dest = sender;
     const amount = '1'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
     const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
       l1ERC20
@@ -80,9 +86,10 @@ describe('Bridge peripherals layer 2', () => {
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    const tx = await testBridge.mintERC20FromL1(
+    const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       decimals,
@@ -107,7 +114,7 @@ describe('Bridge peripherals layer 2', () => {
     const l1ERC20 = '0x0000000000000000000000000000000000000305'
     const sender = '0x0000000000000000000000000000000000000003'
     const amount = '1'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
     const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
       l1ERC20
@@ -122,9 +129,10 @@ describe('Bridge peripherals layer 2', () => {
     const num = 5;
     const callHookData = ethers.utils.defaultAbiCoder.encode(["uint256"], [num])
 
-    const tx = await testBridge.mintERC20FromL1(
+    const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       decimals,
@@ -170,7 +178,7 @@ describe('Bridge peripherals layer 2', () => {
     const l1ERC20 = '0x0000000000000000000000000000000000000325'
     const sender = '0x0000000000000000000000000000000000000005'
     const amount = '1'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
     const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
       l1ERC20
@@ -185,9 +193,10 @@ describe('Bridge peripherals layer 2', () => {
     const num = 7;
     const callHookData = ethers.utils.defaultAbiCoder.encode(["uint256"], [num])
 
-    const tx = await testBridge.mintERC20FromL1(
+    const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       decimals,
@@ -233,7 +242,7 @@ describe('Bridge peripherals layer 2', () => {
     const l1ERC20 = '0x0000000000000000000000000000000000000326'
     const sender = '0x0000000000000000000000000000000000000005'
     const amount = '1'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
     const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
       l1ERC20
@@ -244,9 +253,10 @@ describe('Bridge peripherals layer 2', () => {
 
     const dest = accounts[1].address;
 
-    const tx = await testBridge.mintERC20FromL1(
+    const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       decimals,
@@ -277,8 +287,9 @@ describe('Bridge peripherals layer 2', () => {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
     const sender = '0x0000000000000000000000000000000000000002'
     const dest = sender;
-    const amount = '10'
-    const decimals = '18'
+    const amount = 10
+    const decimalVal = 18
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], [decimalVal])
 
     const l2ERC777Address = await testBridge.calculateBridgedERC777Address(
       l1ERC20
@@ -287,9 +298,10 @@ describe('Bridge peripherals layer 2', () => {
     const preTokenCode = await ethers.provider.getCode(l2ERC777Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    const tx = await testBridge.mintERC777FromL1(
+    const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC777,
       dest,
       amount,
       decimals,
@@ -315,19 +327,21 @@ describe('Bridge peripherals layer 2', () => {
     const sender = accounts[0].address
     const dest = sender
     const amount = '1'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
-    const tx20 = await testBridge.mintERC20FromL1(
+    const tx20 = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       decimals,
       '0x'
     )
-    const tx777 = await testBridge.mintERC777FromL1(
+    const tx777 = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC777,
       dest,
       amount,
       decimals,
@@ -369,11 +383,12 @@ describe('Bridge peripherals layer 2', () => {
     const sender = accounts[0].address
     const dest = sender
     const amount = '1'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
-    const tx20 = await testBridge.mintERC20FromL1(
+    const tx20 = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       decimals,
@@ -402,15 +417,16 @@ describe('Bridge peripherals layer 2', () => {
     const sender = accounts[0].address
     const dest = sender
     const amount = '10'
-    const decimals = '18'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
     const l2ERC777Address = await testBridge.calculateBridgedERC777Address(
       l1ERC20
     )
 
-    const tx = await testBridge.mintERC777FromL1(
+    const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
+      TOKEN_TYPE_ENUM.ERC777,
       dest,
       amount,
       decimals,
