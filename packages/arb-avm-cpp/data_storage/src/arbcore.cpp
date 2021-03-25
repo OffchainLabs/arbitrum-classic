@@ -34,6 +34,10 @@
 #include <sstream>
 #include <vector>
 
+#ifdef __linux__
+#include <sys/prctl.h>
+#endif
+
 namespace {
 constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
@@ -127,7 +131,7 @@ bool ArbCore::startThread() {
     abortThread();
 
     core_thread =
-        std::make_unique<std::thread>((std::reference_wrapper<ArbCore>(*this)));
+        std::make_unique<std::thread>(std::reference_wrapper<ArbCore>(*this));
 
     return true;
 }
@@ -362,10 +366,17 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                     auto checkpoint = extractMachineStateKeys(
                         checkpoint_vector.begin(), checkpoint_vector.end());
                     if (checkpoint.getTotalMessagesRead() == 0 ||
-                        message_sequence_number >=
-                            checkpoint.getTotalMessagesRead() - 1) {
-                        // Good checkpoint
-                        return checkpoint;
+                        (message_sequence_number >=
+                         checkpoint.getTotalMessagesRead() - 1)) {
+                        if (isValid(tx, checkpoint.output.fully_processed_inbox,
+                                    checkpoint.staged_message)) {
+                            // Good checkpoint
+                            return checkpoint;
+                        }
+
+                        std::cerr << "Error: Invalid checkpoint found at gas: "
+                                  << checkpoint.output.arb_gas_used
+                                  << std::endl;
                     }
 
                     // Obsolete checkpoint, need to delete referenced machine
@@ -604,11 +615,6 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.staged_message,
         state_data.output};
 
-    assert(state.hash() == state_data.machineHash());
-    if (state.hash() != state_data.machineHash()) {
-        throw std::runtime_error("deserialized with incorrect hash");
-    }
-
     return std::make_unique<T>(state);
 }
 
@@ -627,6 +633,9 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
 // This thread will update `delivering_messages` if and only if
 // `delivering_messages` is set to MESSAGES_READY
 void ArbCore::operator()() {
+#ifdef __linux__
+    prctl(PR_SET_NAME, "ArbCore", 0, 0, 0);
+#endif
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
@@ -687,22 +696,25 @@ void ArbCore::operator()() {
 
             // Cache pre-sideload machines
             if (last_assertion.sideloadBlockNumber) {
-                auto block = *last_assertion.sideloadBlockNumber;
-                std::unique_lock<std::shared_mutex> lock(sideload_cache_mutex);
-                sideload_cache[block] = std::make_unique<Machine>(*machine);
-                // Remove any sideload_cache entries that are either more
-                // than sideload_cache_size blocks old, or in the future
-                // (meaning they've been reorg'd out).
-                auto it = sideload_cache.begin();
-                while (it != sideload_cache.end()) {
-                    // Note: we check if block > sideload_cache_size here
-                    // to prevent an underflow in the following check.
-                    if ((block > sideload_cache_size &&
-                         it->first < block - sideload_cache_size) ||
-                        it->first > block) {
-                        it = sideload_cache.erase(it);
-                    } else {
-                        it++;
+                {
+                    auto block = *last_assertion.sideloadBlockNumber;
+                    std::unique_lock<std::shared_mutex> lock(
+                        sideload_cache_mutex);
+                    sideload_cache[block] = std::make_unique<Machine>(*machine);
+                    // Remove any sideload_cache entries that are either more
+                    // than sideload_cache_size blocks old, or in the future
+                    // (meaning they've been reorg'd out).
+                    auto it = sideload_cache.begin();
+                    while (it != sideload_cache.end()) {
+                        // Note: we check if block > sideload_cache_size here
+                        // to prevent an underflow in the following check.
+                        if ((block > sideload_cache_size &&
+                             it->first < block - sideload_cache_size) ||
+                            it->first > block) {
+                            it = sideload_cache.erase(it);
+                        } else {
+                            it++;
+                        }
                     }
                 }
 
@@ -737,6 +749,11 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
+        }
+
+        if (machine->status() == MachineThread::MACHINE_ABORTED) {
+            // Just reset status so machine can be restarted
+            machine->clearError();
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
@@ -1130,6 +1147,8 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     return {status, std::move(execution_cursor)};
 }
 
+constexpr uint256_t checkpoint_load_gas_cost = 100'000'000;
+
 rocksdb::Status ArbCore::advanceExecutionCursor(
     ExecutionCursor& execution_cursor,
     uint256_t max_gas,
@@ -1146,10 +1165,13 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         auto machine_state_keys =
             std::get<MachineStateKeys>(closest_checkpoint);
         bool already_newer = false;
-        if (execution_cursor.getOutput().arb_gas_used >
+        if (execution_cursor.getOutput().arb_gas_used +
+                checkpoint_load_gas_cost >
             machine_state_keys.output.arb_gas_used) {
-            // Execution cursor used more gas than checkpoint so use it if inbox
-            // hash valid
+            // The existing execution cursor is far enough ahead that running it
+            // up to the target gas will be cheaper than loading the checkpoint
+            // from disk and running it. We just need to check that the
+            // execution cursor is still valid (a reorg hasn't occurred).
             auto result =
                 executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
             if (result.status.ok() && result.data.first) {

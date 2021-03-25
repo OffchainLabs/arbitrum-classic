@@ -110,5 +110,7 @@ void MachineThread::clearError() {
 
 void MachineThread::operator()() {
     last_assertion = run();
-    machine_status = MACHINE_SUCCESS;
+    if (machine_status == MACHINE_RUNNING) {
+        machine_status = MACHINE_SUCCESS;
+    }
 }

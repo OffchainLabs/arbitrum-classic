@@ -75,13 +75,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			} else {
 				backoff = time.Second
 			}
-			if tx != nil {
-				// We did something, there's probably something else to do
-				<-time.After(time.Second)
-			} else {
-				// Nothing to do for now
-				<-time.After(time.Minute)
-			}
+			<-time.After(time.Minute)
 		}
 	}()
 	return done
@@ -89,9 +83,22 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 
 func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	s.builder.ClearTransactions()
-	info, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
+	rawInfo, err := s.rollup.StakerInfo(ctx, s.wallet.Address())
 	if err != nil {
 		return nil, err
+	}
+	latestStakedNode, latestStakedNodeHash, err := s.validatorUtils.LatestStaked(ctx, s.wallet.Address())
+	if err != nil {
+		return nil, err
+	}
+	if rawInfo != nil {
+		rawInfo.LatestStakedNode = latestStakedNode
+	}
+	info := OurStakerInfo{
+		CanProgress:          true,
+		LatestStakedNode:     latestStakedNode,
+		LatestStakedNodeHash: latestStakedNodeHash,
+		StakerInfo:           rawInfo,
 	}
 
 	effectiveStrategy := s.strategy
@@ -110,7 +117,7 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	// or we're on the stake latest strategy but don't have a stake
 	// (attempt to reduce the current required stake).
 	shouldResolveNodes := effectiveStrategy >= MakeNodesStrategy
-	if !shouldResolveNodes && effectiveStrategy >= StakeLatestStrategy && info == nil {
+	if !shouldResolveNodes && effectiveStrategy >= StakeLatestStrategy && rawInfo == nil {
 		shouldResolveNodes, err = s.isRequiredStakeElevated(ctx)
 		if err != nil {
 			return nil, err
@@ -125,32 +132,35 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		if err != nil || tx != nil {
 			return tx, err
 		}
-		if err := s.resolveNextNode(ctx, info); err != nil {
+		if err := s.resolveNextNode(ctx, rawInfo); err != nil {
 			return nil, err
 		}
 	}
 
 	// Don't attempt to create a new stake if we're resolving a node,
 	// as that might affect the current required stake.
-	creatingNewStake := info == nil && s.builder.TransactionCount() == 0
+	creatingNewStake := rawInfo == nil && s.builder.TransactionCount() == 0
 	if creatingNewStake {
 		if err := s.newStake(ctx); err != nil {
 			return nil, err
 		}
 	}
 
-	if info != nil {
-		if err = s.handleConflict(ctx, info); err != nil {
+	if rawInfo != nil {
+		if err = s.handleConflict(ctx, rawInfo); err != nil {
 			return nil, err
 		}
 	}
-	if info != nil || creatingNewStake {
-		if err := s.advanceStake(ctx, effectiveStrategy); err != nil {
-			return nil, err
+	if rawInfo != nil || creatingNewStake {
+		// Advance stake up to 20 times in one transaction
+		for i := 0; info.CanProgress && i < 20; i++ {
+			if err := s.advanceStake(ctx, &info, effectiveStrategy); err != nil {
+				return nil, err
+			}
 		}
 	}
-	if info != nil && s.builder.TransactionCount() == 0 {
-		if err := s.createConflict(ctx, info); err != nil {
+	if rawInfo != nil && s.builder.TransactionCount() == 0 {
+		if err := s.createConflict(ctx, rawInfo); err != nil {
 			return nil, err
 		}
 	}
@@ -213,23 +223,29 @@ func (s *Staker) newStake(ctx context.Context) error {
 	return s.rollup.NewStake(ctx, stakeAmount)
 }
 
-func (s *Staker) advanceStake(ctx context.Context, effectiveStrategy Strategy) error {
+func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy Strategy) error {
 	active := effectiveStrategy > WatchtowerStrategy
-	action, _, err := s.generateNodeAction(ctx, s.wallet.Address(), effectiveStrategy)
+	action, _, err := s.generateNodeAction(ctx, info, effectiveStrategy)
 	if err != nil {
 		return err
 	}
 	// TODO raise an alert if wrongNodesExist (esp for watchtower strategy)
 	if action == nil || !active {
+		info.CanProgress = false
 		return nil
 	}
 
 	switch action := action.(type) {
 	case createNodeAction:
 		// Already logged with more details in generateNodeAction
+		info.CanProgress = false
+		info.LatestStakedNode = nil
+		info.LatestStakedNodeHash = action.hash
 		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
 	case existingNodeAction:
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
+		info.LatestStakedNode = action.number
+		info.LatestStakedNodeHash = action.hash
 		return s.rollup.StakeOnExistingNode(ctx, action.number, action.hash)
 	default:
 		panic("invalid action type")
