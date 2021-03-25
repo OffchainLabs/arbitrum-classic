@@ -24,12 +24,30 @@
 
 #include <optional>
 
+struct Location {
+    uint64_t line{};
+    uint64_t column{};
+    uint64_t absolute{};
+    uint64_t file_id{};
+
+    bool operator==(const Location& other) const {
+        return line == other.line && column == other.column &&
+               absolute == other.absolute && file_id == other.file_id;
+    }
+
+    bool operator!=(const Location& other) const { return !(*this == other); }
+};
+
 struct Operation {
     OpCode opcode;
     std::optional<value> immediate;
+    Location location{};
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
+    Operation(OpCode opcode_, Location location_)
+        : opcode(opcode_), location(location_) {}
     Operation(OpCode opcode_, value val);
+    Operation(OpCode opcode_, value val, Location location_);
 
     void marshalForProof(std::vector<unsigned char>& buf,
                          MarshalLevel marshal_level,

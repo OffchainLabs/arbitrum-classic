@@ -188,6 +188,7 @@ struct MachineState {
     CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
     staged_variant staged_message{std::monostate()};
+    Location location;
 
     MachineOutput output;
 

@@ -113,10 +113,21 @@ Operation operation_from_json(const nlohmann::json& op_json,
     }
     auto opcode = opcode_json.get<OpCode>();
     auto& imm = op_json.at(IMMEDIATE_LABEL);
-    if (imm.is_null()) {
-        return {opcode};
+    Location location;
+    auto debug = op_json.at("debug_info");
+    if (!debug.is_null()) {
+        debug = debug.at("location");
+        if (!debug.is_null()) {
+            location.line = debug.at("line").get<uint64_t>();
+            location.column = debug.at("column").get<uint64_t>();
+            location.absolute = debug.at("absolute").get<uint64_t>();
+            location.file_id = debug.at("file_id").get<uint64_t>();
+        }
     }
-    return {opcode, value_from_json(imm, op_count, code)};
+    if (imm.is_null()) {
+        return {opcode, location};
+    }
+    return {opcode, value_from_json(imm, op_count, code), location};
 }
 }  // namespace
 

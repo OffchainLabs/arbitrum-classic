@@ -25,6 +25,9 @@
 Operation::Operation(OpCode opcode_, value immediate_)
     : opcode(opcode_), immediate(std::move(immediate_)) {}
 
+Operation::Operation(OpCode opcode_, value immediate_, Location location_)
+    : opcode(opcode_), immediate(std::move(immediate_)), location(location_) {}
+
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 MarshalLevel marshal_level,
                                 const Code& code) const {
