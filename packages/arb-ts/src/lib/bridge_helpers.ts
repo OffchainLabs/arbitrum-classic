@@ -58,6 +58,18 @@ export interface BuddyDeployEventResult {
   success: boolean
 }
 
+export interface OutboxProofData {
+  proof: string[]
+  path: BigNumber
+  l2Sender: string
+  l1Dest: string
+  l2Block: BigNumber
+  l1Block: BigNumber
+  timestamp: BigNumber
+  amount: BigNumber
+  calldataForL1: string
+}
+
 export type ChainIdOrProvider = BigNumber | providers.Provider
 
 const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
@@ -419,21 +431,39 @@ export class BridgeHelper {
     }
   }
 
+  static getActiveOutbox = async (
+    l1CoreBridgeAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const bridge = await Bridge__factory.connect(
+      l1CoreBridgeAddress,
+      l1Provider
+    )
+
+    const activeOutboxAddress = await bridge.allowedOutboxList(0)
+    try {
+      // index 1 should not exist
+      await bridge.allowedOutboxList(1)
+      console.error('There is more than 1 outbox registered with the bridge?!')
+    } catch (e) {
+      // this should fail!
+      console.log('All is good')
+    }
+    return activeOutboxAddress;
+  }
+
   static tryOutboxExecute = async (
-    activeOutboxAddress: string,
+    outboxProofData: OutboxProofData,
     batchNumber: BigNumber,
-    proof: Array<string>,
-    path: BigNumber,
-    l2Sender: string,
-    l1Dest: string,
-    l2Block: BigNumber,
-    l1Block: BigNumber,
-    timestamp: BigNumber,
-    amount: BigNumber,
-    calldataForL1: string,
+    l1CoreBridgeAddress: string,
     l1Signer: Signer
   ): Promise<ContractReceipt> => {
     if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
+
+    const activeOutboxAddress = await BridgeHelper.getActiveOutbox(
+      l1CoreBridgeAddress,
+      l1Signer.provider
+    )
 
     await BridgeHelper.waitUntilOutboxEntryCreated(
       batchNumber,
@@ -449,15 +479,15 @@ export class BridgeHelper {
       // if not challenged
       const outboxExecute = await outbox.executeTransaction(
         batchNumber,
-        proof,
-        path,
-        l2Sender,
-        l1Dest,
-        l2Block,
-        l1Block,
-        timestamp,
-        amount,
-        calldataForL1
+        outboxProofData.proof,
+        outboxProofData.path,
+        outboxProofData.l2Sender,
+        outboxProofData.l1Dest,
+        outboxProofData.l2Block,
+        outboxProofData.l1Block,
+        outboxProofData.timestamp,
+        outboxProofData.amount,
+        outboxProofData.calldataForL1
       )
       console.log(`Transaction hash: ${outboxExecute.hash}`)
       console.log('Waiting for receipt')
@@ -472,6 +502,7 @@ export class BridgeHelper {
     }
   }
 
+
   static triggerL2ToL1Transaction = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -480,21 +511,11 @@ export class BridgeHelper {
     l1Signer: Signer,
     singleAttempt = false
   ) => {
-    console.log('going to get proof')
-    let res: {
-      proof: string[]
-      path: BigNumber
-      l2Sender: string
-      l1Dest: string
-      l2Block: BigNumber
-      l1Block: BigNumber
-      timestamp: BigNumber
-      amount: BigNumber
-      calldataForL1: string
-    }
-
     if (!l1Signer.provider)
       throw new Error('Signer must be connected to L2 provider')
+
+    console.log('going to get proof')
+    let res: OutboxProofData
 
     if (singleAttempt) {
       const _res = await BridgeHelper.tryGetProofOnce(
@@ -503,53 +524,24 @@ export class BridgeHelper {
         l2Provider
       )
       if (_res === null) {
-        console.warn('Proof not found')
-        return
+        throw new Error("Proof not found")
       }
       res = _res
+    } else {
+      res = await BridgeHelper.tryGetProof(
+        batchNumber,
+        indexInBatch,
+        l2Provider
+      )
     }
-    res = await BridgeHelper.tryGetProof(batchNumber, indexInBatch, l2Provider)
-    const {
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      timestamp: proofTimestamp,
-      amount,
-      calldataForL1,
-    } = res
 
     console.log('got proof')
 
-    const bridge = await Bridge__factory.connect(
-      l1CoreBridgeAddress,
-      l1Signer.provider
-    )
-
-    const activeOutbox = await bridge.allowedOutboxList(0)
-    try {
-      // index 1 should not exist
-      await bridge.allowedOutboxList(1)
-      console.error('There is more than 1 outbox registered with the bridge?!')
-    } catch (e) {
-      // this should fail!
-      console.log('All is good')
-    }
 
     const outboxExecuteTransactionReceipt = await BridgeHelper.tryOutboxExecute(
-      activeOutbox,
+      res,
       batchNumber,
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      proofTimestamp,
-      amount,
-      calldataForL1,
+      l1CoreBridgeAddress,
       l1Signer
     )
     return outboxExecuteTransactionReceipt

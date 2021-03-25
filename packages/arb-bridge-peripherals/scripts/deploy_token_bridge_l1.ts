@@ -4,12 +4,11 @@ import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
 
 import { Bridge } from 'arb-ts/src'
+import { BridgeHelper } from 'arb-ts/src/lib/bridge_helpers'
 import { writeFileSync } from 'fs'
 
 const main = async () => {
   const accounts = await ethers.getSigners()
-  // TODO: check buddy deployer address available
-  // TODO: check 1820 registry
   const inboxAddress =
     process.env.INBOX_ADDRESS || '0x0d0c1aDf6523D422ec7192506A7F6790253399fB'
 
@@ -19,6 +18,12 @@ const main = async () => {
   console.log('deployer', accounts[0].address)
 
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
+
+  if(
+    deployments.buddyDeployer === ""
+    || deployments.standardArbERC20 === ""
+    || deployments.standardArbERC777 === ""
+  ) throw new Error("Deployments.json doesn't include the necessary addresses")
 
   const maxSubmissionCost = 0
   const gasPrice = 0
@@ -62,7 +67,7 @@ const main = async () => {
     l2Signer
   )
 
-  const deployReceipt = await bridge.getL1Transaction(
+  const deployReceipt = await ethers.provider.getTransactionReceipt(
     ethERC20Bridge.deployTransaction.hash
   )
 
@@ -75,6 +80,8 @@ const main = async () => {
     throw new Error('Transaction triggered inbox more than once')
 
   const inboxSequenceNumber = seqNums[0]
+
+  // start L2 actions
 
   const l2DeployTxHash = await bridge.calculateL2RetryableTransactionHash(
     inboxSequenceNumber
@@ -95,6 +102,15 @@ const main = async () => {
   if (filteredLogs.length !== 1)
     throw new Error('Should have exactly one matching unique id')
   const { batchNumber, indexInBatch } = filteredLogs[0]
+  
+  const proofData = await BridgeHelper.tryGetProof(batchNumber, indexInBatch, l2Provider)
+  console.log("got proof")
+  // got all L2 info
+
+  // trigger in L1
+  const coreBridge = await (await bridge.l1Bridge.getInbox()).bridge()
+  // BridgeHelper.triggerL2ToL1Transaction(batchNumber, indexInBatch, coreBridge, )
+  BridgeHelper.tryOutboxExecute(proofData, batchNumber, coreBridge, accounts[0])
 
   const l1TxReceipt = await bridge.triggerL2ToL1Transaction(
     batchNumber,
