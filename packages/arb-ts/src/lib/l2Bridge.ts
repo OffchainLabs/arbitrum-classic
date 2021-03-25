@@ -27,8 +27,8 @@ import { IArbToken } from './abi/IArbToken'
 import { IArbToken__factory } from './abi/factories/IArbToken__factory'
 import { ArbRetryableTx__factory } from './abi/factories/ArbRetryableTx__factory'
 import { ArbRetryableTx } from './abi/ArbRetryableTx'
-
 import { StandardArbERC777 } from './abi/StandardArbERC777'
+import { TransactionOverrides } from './bridge_helpers'
 
 export const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
@@ -80,10 +80,15 @@ export class L2Bridge {
     this.l2EthBalance = BigNumber.from(0)
   }
 
-  public async withdrawETH(value: BigNumber, destinationAddress?: string) {
+  public async withdrawETH(
+    value: BigNumber,
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
+  ) {
     const address = destinationAddress || (await this.getWalletAddress())
     return this.arbSys.withdrawEth(address, {
       value,
+      ...overrides,
     })
   }
 
@@ -93,7 +98,8 @@ export class L2Bridge {
   public async withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides: TransactionOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
 
@@ -108,13 +114,14 @@ export class L2Bridge {
         `Can't withdraw; ArbERC20 for ${erc20l1Address} doesn't exist`
       )
     }
-    return erc20TokenData.contract.withdraw(destination, amount)
+    return erc20TokenData.contract.withdraw(destination, amount, overrides)
   }
 
   public async withdrawERC777(
     erc20l1Address: string,
     amount: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides: TransactionOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
 
@@ -129,7 +136,7 @@ export class L2Bridge {
         `Can't withdraw; ArbERC777 for ${erc20l1Address} doesn't exist`
       )
     }
-    return erc777TokenData.contract.withdraw(destination, amount)
+    return erc777TokenData.contract.withdraw(destination, amount, overrides)
   }
 
   public async updateAllL2Tokens() {

@@ -25,6 +25,7 @@ import { ERC20 } from './abi/ERC20'
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { OZERC777__factory } from './abi/factories/OZERC777__factory'
 import { addressToSymbol } from './bridge_helpers'
+import { TransactionOverrides } from './bridge_helpers'
 
 utils.computeAddress
 const MIN_APPROVAL = constants.MaxUint256
@@ -161,23 +162,31 @@ export class L1Bridge {
     return tokenData
   }
 
-  public async depositETH(value: BigNumber, destinationAddress?: string) {
+  public async depositETH(
+    value: BigNumber,
+    destinationAddress?: string,
+    overrides: TransactionOverrides = {}
+  ) {
     const address = destinationAddress || (await this.getWalletAddress())
     const inbox = await this.getInbox()
     return inbox.depositEth(address, {
       value,
+      ...overrides,
     })
   }
 
-  public async approveToken(erc20L1Address: string) {
+  public async approveToken(
+    erc20L1Address: string,
+    overrides: TransactionOverrides = {}
+  ) {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
     }
-
     return tokenData.ERC20.contract.approve(
       this.ethERC20Bridge.address,
-      MIN_APPROVAL
+      MIN_APPROVAL,
+      overrides
     )
   }
 
@@ -187,7 +196,8 @@ export class L1Bridge {
     maxSubmissionCost: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides: TransactionOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
@@ -201,7 +211,8 @@ export class L1Bridge {
       maxSubmissionCost,
       maxGas,
       gasPriceBid,
-      '0x'
+      '0x',
+      overrides
     )
   }
   public async depositAsERC777(
@@ -210,7 +221,8 @@ export class L1Bridge {
     maxSubmissionCost: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides: TransactionOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
     return this.ethERC20Bridge.depositAsERC777(
@@ -220,7 +232,8 @@ export class L1Bridge {
       maxSubmissionCost,
       maxGas,
       gasPriceBid,
-      ''
+      '0x',
+      overrides
     )
   }
 

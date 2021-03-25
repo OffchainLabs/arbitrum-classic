@@ -20,6 +20,7 @@ import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Outbox__factory } from './abi/factories/Outbox__factory'
+import { TransactionOverrides } from './bridge_helpers'
 
 import { ArbSys } from './abi/ArbSys'
 
@@ -37,6 +38,14 @@ export interface L2ToL1EventResult {
   timestamp: string
   callvalue: BigNumber
   data: string
+}
+
+export interface DepositTokenEventResult {
+  destination: string
+  sender: string
+  seqNum: BigNumber
+  amount: BigNumber
+  tokenAddress: string
 }
 
 interface BuddyDeployEventResult {
@@ -66,7 +75,6 @@ export class Bridge extends L2Bridge {
     arbSigner: Signer
   ) {
     super(arbERC20BridgeAddress, arbSigner)
-    console.warn('init bridge.ts')
 
     this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner)
   }
@@ -96,12 +104,23 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.l1EthBalance
   }
 
-  public async approveToken(erc20L1Address: string) {
-    return this.l1Bridge.approveToken(erc20L1Address)
+  get ethERC20Bridge() {
+    return this.l1Bridge.ethERC20Bridge
   }
 
-  public async depositETH(value: BigNumber, destinationAddress?: string) {
-    return this.l1Bridge.depositETH(value, destinationAddress)
+  public async approveToken(
+    erc20L1Address: string,
+    overrides?: TransactionOverrides
+  ) {
+    return this.l1Bridge.approveToken(erc20L1Address, overrides)
+  }
+
+  public async depositETH(
+    value: BigNumber,
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
+  ) {
+    return this.l1Bridge.depositETH(value, destinationAddress, overrides)
   }
 
   public async depositAsERC20(
@@ -109,7 +128,8 @@ export class Bridge extends L2Bridge {
     amount: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
@@ -119,7 +139,8 @@ export class Bridge extends L2Bridge {
       maxSubmissionPrice,
       maxGas,
       gasPriceBid,
-      destinationAddress
+      destinationAddress,
+      overrides
     )
   }
   public async depositAsERC777(
@@ -127,7 +148,8 @@ export class Bridge extends L2Bridge {
     amount: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides?: TransactionOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
@@ -138,7 +160,8 @@ export class Bridge extends L2Bridge {
       maxSubmissionPrice,
       maxGas,
       gasPriceBid,
-      destinationAddress
+      destinationAddress,
+      overrides
     )
   }
   public getAndUpdateL1TokenData(erc20l1Address: string) {
@@ -238,6 +261,22 @@ export class Bridge extends L2Bridge {
     const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as BuddyDeployEventResult
+    )
+  }
+
+  public async getDepositTokenEventData(
+    l1Transaction: ethers.providers.TransactionReceipt,
+    tokenType: 'ERC20' | 'ERC777' = 'ERC20'
+  ): Promise<Array<DepositTokenEventResult>> {
+    const iface = this.l1Bridge.ethERC20Bridge.interface
+    const event =
+      tokenType === 'ERC20'
+        ? iface.getEvent('DepositERC20')
+        : iface.getEvent('DepositERC777')
+    const eventTopic = iface.getEventTopic(event)
+    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult
     )
   }
 
@@ -565,6 +604,13 @@ export class Bridge extends L2Bridge {
       this.l1Bridge.l1Provider
     )
     return outbox.outboxes(batchNumber)
+  }
+
+  public async waitForRetriableReceipt(seqNum: BigNumber) {
+    const l2RetriableHash = await this.calculateL2RetryableTransactionHash(
+      seqNum
+    )
+    return this.l2Provider.waitForTransaction(l2RetriableHash)
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {
