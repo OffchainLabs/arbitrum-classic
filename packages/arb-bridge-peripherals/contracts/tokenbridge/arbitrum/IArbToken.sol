@@ -30,5 +30,5 @@ interface IArbToken {
     function withdraw(address destination, uint256 amount) external;
 
     /// @dev This function is optional. If it's not enabled, this data won't be updatable based on its paired L1 contract
-    function updateInfo(string calldata newName, string calldata newSymbol) external;
+    function updateInfo(string calldata newName, string calldata newSymbol, uint8 newDecimals) external;
 }
