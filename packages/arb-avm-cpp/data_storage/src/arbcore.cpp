@@ -74,7 +74,7 @@ ValueResult<MessageEntry> ArbCore::getMessageEntry(
         return {messages_inserted.status, {}};
     }
 
-    if (message_sequence_number > messages_inserted.data) {
+    if (message_sequence_number >= messages_inserted.data) {
         // Don't allow stale entries to be used
         return {rocksdb::Status::NotFound(), {}};
     }
