@@ -278,17 +278,25 @@ rocksdb::Status ArbCore::triggerSaveCheckpoint() {
 }
 
 rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
+    auto& state = machine->machine_state;
+    if (!isValid(tx, state.output.fully_processed_inbox,
+                 state.staged_message)) {
+        std::cerr << "Attempted to save invalid checkpoint at gas "
+                  << state.output.arb_gas_used << std::endl;
+        assert(false);
+        return rocksdb::Status::OK();
+    }
+
     auto status = saveMachineState(tx, *machine);
     if (!status.ok()) {
         return status;
     }
 
     std::vector<unsigned char> key;
-    marshal_uint256_t(machine->machine_state.output.arb_gas_used, key);
+    marshal_uint256_t(state.output.arb_gas_used, key);
     auto key_slice = vecToSlice(key);
     std::vector<unsigned char> value_vec;
-    serializeMachineStateKeys(MachineStateKeys{machine->machine_state},
-                              value_vec);
+    serializeMachineStateKeys(MachineStateKeys{state}, value_vec);
     auto put_status = tx.checkpointPut(key_slice, vecToSlice(value_vec));
     if (!put_status.ok()) {
         std::cerr << "ArbCore unable to save checkpoint : "
@@ -335,6 +343,13 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
     std::variant<MachineStateKeys, rocksdb::Status> setup =
         rocksdb::Status::OK();
 
+    if (use_latest) {
+        std::cerr << "Reloading latest checkpoint" << std::endl;
+    } else {
+        std::cerr << "Reorganizing to message " << message_sequence_number
+                  << std::endl;
+    }
+
     {
         ReadWriteTransaction tx(data_storage);
 
@@ -352,46 +367,38 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 
         // Delete each checkpoint until at or below message_sequence_number
         setup = [&]() -> std::variant<MachineStateKeys, rocksdb::Status> {
-            if (use_latest) {
+            while (it->Valid()) {
                 std::vector<unsigned char> checkpoint_vector(
                     it->value().data(),
                     it->value().data() + it->value().size());
-                return extractMachineStateKeys(checkpoint_vector.begin(),
-                                               checkpoint_vector.end());
-            } else {
-                while (it->Valid()) {
-                    std::vector<unsigned char> checkpoint_vector(
-                        it->value().data(),
-                        it->value().data() + it->value().size());
-                    auto checkpoint = extractMachineStateKeys(
-                        checkpoint_vector.begin(), checkpoint_vector.end());
-                    if (checkpoint.getTotalMessagesRead() == 0 ||
-                        (message_sequence_number >=
-                         checkpoint.getTotalMessagesRead() - 1)) {
-                        if (isValid(tx, checkpoint.output.fully_processed_inbox,
-                                    checkpoint.staged_message)) {
-                            // Good checkpoint
-                            return checkpoint;
-                        }
-
-                        std::cerr << "Error: Invalid checkpoint found at gas: "
-                                  << checkpoint.output.arb_gas_used
-                                  << std::endl;
+                auto checkpoint = extractMachineStateKeys(
+                    checkpoint_vector.begin(), checkpoint_vector.end());
+                if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
+                    (message_sequence_number >=
+                     checkpoint.getTotalMessagesRead() - 1)) {
+                    if (isValid(tx, checkpoint.output.fully_processed_inbox,
+                                checkpoint.staged_message)) {
+                        // Good checkpoint
+                        return checkpoint;
                     }
 
-                    // Obsolete checkpoint, need to delete referenced machine
-                    deleteMachineState(tx, checkpoint);
-
-                    // Delete checkpoint to make sure it isn't used later
-                    tx.checkpointDelete(it->key());
-
-                    it->Prev();
-                    if (!it->status().ok()) {
-                        return it->status();
-                    }
+                    std::cerr << "Error: Invalid checkpoint found at gas: "
+                              << checkpoint.output.arb_gas_used << std::endl;
+                    assert(false);
                 }
-                return it->status();
+
+                // Obsolete checkpoint, need to delete referenced machine
+                deleteMachineState(tx, checkpoint);
+
+                // Delete checkpoint to make sure it isn't used later
+                tx.checkpointDelete(it->key());
+
+                it->Prev();
+                if (!it->status().ok()) {
+                    return it->status();
+                }
             }
+            return it->status();
         }();
 
         it = nullptr;
@@ -642,6 +649,24 @@ void ArbCore::operator()() {
     uint256_t max_message_batch_size = 10;
 
     while (!arbcore_abort) {
+        bool isMachineValid;
+        {
+            ReadTransaction tx(data_storage);
+            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
+                                     machine->getReorgData().max_staged);
+        }
+        if (!isMachineValid) {
+            std::cerr
+                << "Core thread operating on invalid machine. Rolling back."
+                << std::endl;
+            assert(false);
+            auto status = reorgToMessageOrBefore(0, true, cache);
+            if (!status.ok()) {
+                std::cerr
+                    << "Error in core thread calling reorgToMessageOrBefore: "
+                    << status.ToString() << std::endl;
+            }
+        }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
             auto add_status = addMessages(
@@ -1236,8 +1261,24 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     uint256_t message_group_size,
     ValueCache& cache) {
     auto handle_reorg = true;
+    size_t reorg_attempts = 0;
     while (handle_reorg) {
         handle_reorg = false;
+        if (reorg_attempts >= 5) {
+            if (reorg_attempts % 5 == 0) {
+                std::cerr
+                    << "Execution cursor has attempted to handle "
+                    << reorg_attempts
+                    << " reorgs. Checkpoints may be inconsistent with messages."
+                    << std::endl;
+            }
+            assert(false);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (reorg_attempts >= 20) {
+                return rocksdb::Status::Busy();
+            }
+        }
+        reorg_attempts++;
 
         while (true) {
             // Run machine until specified gas is reached
