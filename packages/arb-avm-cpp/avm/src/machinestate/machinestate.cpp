@@ -529,10 +529,10 @@ BlockReason MachineState::runOne() {
         std::lock_guard<std::mutex> guard(location_file_mutex);
         location_file << "Machine " << static_cast<void*>(this) << " @ "
                       << getTotalMessagesRead() << " messages, "
-                      << output.arb_gas_used << " gas. Location: file "
-                      << location.file_id << " line " << location.line
-                      << " column " << location.column << " absolute "
-                      << location.absolute << std::endl;
+                      << output.log_count << " logs, " << output.arb_gas_used
+                      << " gas. Location: file " << location.file_id << " line "
+                      << location.line << " column " << location.column
+                      << " absolute " << location.absolute << std::endl;
     }
 
     static const auto error_gas_cost =
