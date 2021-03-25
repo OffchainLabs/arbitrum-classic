@@ -75,13 +75,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			} else {
 				backoff = time.Second
 			}
-			if tx != nil {
-				// We did something, there's probably something else to do
-				<-time.After(time.Second)
-			} else {
-				// Nothing to do for now
-				<-time.After(time.Minute)
-			}
+			<-time.After(time.Minute)
 		}
 	}()
 	return done
