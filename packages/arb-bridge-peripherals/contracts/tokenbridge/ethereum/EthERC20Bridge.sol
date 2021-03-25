@@ -238,6 +238,7 @@ contract EthERC20Bridge is L1Buddy {
         StandardTokenType tokenType,
         bytes memory callHookData
     ) private returns (uint256) {
+        require(tokenType == StandardTokenType.ERC777, "777 implementation disabled");
         IERC20(erc20).safeTransferFrom(msg.sender, l2Buddy, amount);
         uint256 seqNum = 0;
         {

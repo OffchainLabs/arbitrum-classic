@@ -281,6 +281,8 @@ contract ArbTokenBridge is CloneFactory {
         uint256 amount,
         bytes memory data
     ) external onlyFromStandardL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) noCustomToken(l1ERC20) {
+        require(false, "Method disabled");
+        // TODO: ensureTokenExists(l1ERC20, decimals, tokenType);
         IArbToken(target).bridgeMint(account, amount, data);
         emit TokenMigrated(msg.sender, target, account, amount, data);
     }
