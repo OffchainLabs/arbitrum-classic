@@ -43,13 +43,10 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
         _decimals = decimals_;
     }
 
-    function updateInfo(string memory newName, string memory newSymbol) public override onlyBridge {
-        if (bytes(newName).length != 0) {
-            _name = newName;
-        }
-        if (bytes(newSymbol).length != 0) {
-            _symbol = newSymbol;
-        }
+    function updateInfo(string memory newName, string memory newSymbol, uint8 newDecimals) public override onlyBridge {
+        _name = newName;
+        _symbol = newSymbol;
+        _decimals = newDecimals;
     }
 
     function bridgeMint(address account, uint256 amount, bytes memory data) external override onlyBridge {

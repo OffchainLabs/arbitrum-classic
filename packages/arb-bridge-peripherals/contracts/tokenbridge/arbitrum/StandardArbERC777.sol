@@ -29,16 +29,14 @@ contract StandardArbERC777 is OZERC777, Cloneable, IArbToken {
 
         require(_decimals <= 18, "Decimals must be less than or equal to 18");
         l1Decimals = _decimals;
-        _granularity = 10**uint256(18 - _decimals);
+        _granularity = DecimalConverter.decimalsToGranularity(_decimals);
     }
 
-    function updateInfo(string memory newName, string memory newSymbol) public override onlyBridge {
-        if (bytes(newName).length != 0) {
-            _name = newName;
-        }
-        if (bytes(newSymbol).length != 0) {
-            _symbol = newSymbol;
-        }
+    function updateInfo(string memory newName, string memory newSymbol, uint8 newDecimals) public override onlyBridge {
+        _name = newName;
+        _symbol = newSymbol;
+        l1Decimals = newDecimals;
+        _granularity = DecimalConverter.decimalsToGranularity(newDecimals);
     }
 
     function bridgeMint(address account, uint256 amount, bytes memory data) external override onlyBridge {

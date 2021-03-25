@@ -29,7 +29,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
 
-enum StandardTokenType { ERC20, ERC777 }
+enum StandardTokenType { ERC20, ERC777, Custom }
 
 contract EthERC20Bridge is L1Buddy {
     using SafeERC20 for IERC20;
@@ -242,12 +242,17 @@ contract EthERC20Bridge is L1Buddy {
         bytes memory callHookData
     ) private returns (uint256) {
         IERC20(erc20).safeTransferFrom(msg.sender, l2Buddy, amount);
-        uint8 decimals = ERC20(erc20).decimals();
+        bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
+
         bytes4 selector;
         if (tokenType == StandardTokenType.ERC20) {
             selector = ArbTokenBridge.mintERC20FromL1.selector;
         } else if (tokenType == StandardTokenType.ERC777) {
             selector = ArbTokenBridge.mintERC777FromL1.selector;
+        } else if (tokenType == StandardTokenType.Custom) {
+            selector = ArbTokenBridge.mintERC777FromL1.selector;
+        } else {
+            revert("Token type not recognized");
         }
 
         bytes memory data =
@@ -333,28 +338,21 @@ contract EthERC20Bridge is L1Buddy {
         uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable returns (uint256) {
+        // TODO: should this not be checked in the L2?
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
-        IERC20(erc20).safeTransferFrom(msg.sender, l2Buddy, amount);
-        bytes memory data =
-            abi.encodeWithSelector(
-                ArbTokenBridge.mintCustomTokenFromL1.selector,
-                erc20,
-                msg.sender,
-                destination,
-                amount,
-                callHookData
-            );
-        uint256 seqNum =
-            inbox.createRetryableTicket{ value: msg.value }(
-                L1Buddy.l2Buddy,
-                0,
-                maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                maxGas,
-                gasPriceBid,
-                data
-            );
+
+        uint256 seqNum = depositToken(
+            erc20,
+            msg.sender,
+            destination,
+            amount,
+            maxSubmissionCost,
+            maxGas,
+            gasPriceBid,
+            StandardTokenType.Custom,
+            callHookData
+        );
+
         emit DepositCustomToken(destination, msg.sender, seqNum, amount, erc20);
         return seqNum;
     }

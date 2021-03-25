@@ -65,6 +65,37 @@ contract ArbTokenBridge is CloneFactory {
         uint256 exitNum
     );
 
+    event TokenCreated(
+        address indexed l1Address,
+        address indexed l2Address,
+        StandardTokenType indexed tokenType
+    );
+
+    event TokenMinted(
+        address l1Address,
+        address indexed l2Address,
+        address indexed sender,
+        address indexed dest,
+        uint256 amount,
+        bool usedCallHook
+    );
+
+    event TokenMigrated(
+        address indexed from,
+        address indexed to,
+        address indexed account,
+        uint256 amount,
+        bytes data
+    );
+
+    event TokenDataUpdated(
+        address l1Address,
+        address l2Addess,
+        string name,
+        string symbol,
+        uint8 decimals
+    );
+
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
         require(tx.origin == l1Pair, "ONLY_ETH_PAIR");
@@ -99,6 +130,10 @@ contract ArbTokenBridge is CloneFactory {
                 to == customToken[l1ERC20],
             "NOT_TO_TOKEN"
         );
+        _;
+    }
+    modifier noCustomToken(address l1ERC20) {
+        require(customToken[l1ERC20] == address(0), "No_CUSTOM_TOKEN");
         _;
     }
 
@@ -153,9 +188,10 @@ contract ArbTokenBridge is CloneFactory {
         address sender,
         address dest,
         uint256 amount,
-        uint8 decimals,
+        bytes calldata _decimals,
         bytes calldata callHookData
-    ) external onlyEthPair {
+    ) external onlyEthPair noCustomToken(l1ERC20) {
+        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
 
         if (callHookData.length > 0) {
@@ -164,6 +200,9 @@ contract ArbTokenBridge is CloneFactory {
         } else {
             token.bridgeMint(dest, amount, "");
         }
+        emit TokenMinted(
+            l1ERC20, address(token), sender, dest, amount, callHookData.length > 0
+        );
     }
 
     function mintERC20FromL1(
@@ -171,9 +210,10 @@ contract ArbTokenBridge is CloneFactory {
         address sender,
         address dest,
         uint256 amount,
-        uint8 decimals,
+        bytes calldata _decimals,
         bytes calldata callHookData
-    ) external onlyEthPair {
+    ) external onlyEthPair noCustomToken(l1ERC20) {
+        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
 
         if (callHookData.length > 0) {
@@ -181,6 +221,9 @@ contract ArbTokenBridge is CloneFactory {
         } else {
             token.bridgeMint(dest, amount, "");
         }
+        emit TokenMinted(
+            l1ERC20, address(token), sender, dest, amount, callHookData.length > 0
+        );
     }
 
     function mintCustomTokenFromL1(
@@ -188,17 +231,23 @@ contract ArbTokenBridge is CloneFactory {
         address sender,
         address dest,
         uint256 amount,
+        bytes calldata decimals,
         bytes calldata callHookData
     ) external onlyEthPair {
+        // TODO: what happens to already created erc20 holders?
         address tokenAddress = customToken[l1ERC20];
         require(tokenAddress != address(0), "Custom Token doesn't exist");
         IArbToken token = IArbToken(tokenAddress);
-
+        // decimals not used here
+        // uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
         if (callHookData.length > 0) {
             handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
             token.bridgeMint(dest, amount, "");
         }
+        emit TokenMinted(
+            l1ERC20, address(token), sender, dest, amount, callHookData.length > 0
+        );
     }
 
     function updateERC777TokenInfo(
@@ -206,13 +255,21 @@ contract ArbTokenBridge is CloneFactory {
         bytes calldata _name,
         bytes calldata _symbol,
         bytes calldata _decimals
-    ) external onlyEthPair {
+    ) external onlyEthPair noCustomToken(l1ERC20) {
         string memory name = BytesParserWithDefault.toString(_name, "");
         string memory symbol = BytesParserWithDefault.toString(_symbol, "");
         uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
 
         IArbToken token = ensureERC777TokenExists(l1ERC20, decimals);
-        token.updateInfo(name, symbol);
+        token.updateInfo(name, symbol, decimals);
+
+        emit TokenDataUpdated(
+            l1ERC20,
+            address(token),
+            name,
+            symbol,
+            decimals
+        );
     }
 
     function updateERC20TokenInfo(
@@ -220,17 +277,26 @@ contract ArbTokenBridge is CloneFactory {
         bytes calldata _name,
         bytes calldata _symbol,
         bytes calldata _decimals
-    ) external onlyEthPair {
+    ) external onlyEthPair noCustomToken(l1ERC20) {
         string memory name = BytesParserWithDefault.toString(_name, "");
         string memory symbol = BytesParserWithDefault.toString(_symbol, "");
         uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
 
         IArbToken token = ensureERC20TokenExists(l1ERC20, decimals);
-        token.updateInfo(name, symbol);
+        token.updateInfo(name, symbol, decimals);
+
+        emit TokenDataUpdated(
+            l1ERC20,
+            address(token),
+            name,
+            symbol,
+            decimals
+        );
     }
 
     function customTokenRegistered(address l1Address, address l2Address) external onlyEthPair {
         customToken[l1Address] = l2Address;
+        emit TokenCreated(l1Address, l2Address, StandardTokenType.Custom);
     }
 
     function withdraw(
@@ -263,6 +329,7 @@ contract ArbTokenBridge is CloneFactory {
         bytes memory data
     ) external onlyFromStandardL2Token(l1ERC20) onlyToL2Token(l1ERC20, target) {
         IArbToken(target).bridgeMint(account, amount, data);
+        emit TokenMigrated(msg.sender, target, account, amount, data);
     }
 
     function calculateBridgedERC777Address(address l1ERC20) public view returns (address) {
@@ -295,6 +362,7 @@ contract ArbTokenBridge is CloneFactory {
                 );
             assert(createdContract == l2Contract);
             IArbToken(l2Contract).initialize(address(this), l1ERC20, decimals);
+            emit TokenCreated(l1ERC20, createdContract, tokenType);
         }
         return IArbToken(l2Contract);
     }

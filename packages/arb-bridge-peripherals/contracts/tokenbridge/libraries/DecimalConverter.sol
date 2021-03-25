@@ -13,4 +13,8 @@ library DecimalConverter {
         require(decimals <= 18, "DEC");
         return amount * (10**uint256(18 - decimals));
     }
+    
+    function decimalsToGranularity(uint8 decimals) internal pure returns (uint256) {
+        return 10**uint256(18 - decimals);
+    }
 }
