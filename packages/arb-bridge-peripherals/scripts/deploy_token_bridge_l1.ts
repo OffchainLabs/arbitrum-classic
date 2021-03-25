@@ -32,6 +32,9 @@ const main = async () => {
     deployments.standardArbERC777,
     deployments.standardArbERC20
   )
+
+  await ethERC20Bridge.deployed()
+
   const arbTokenBridge = await ethERC20Bridge.l2Buddy()
   console.log('EthERC20Bridge deployed to:', ethERC20Bridge.address)
   console.log('L2 ArbBridge deployed to:', arbTokenBridge)
@@ -46,9 +49,9 @@ const main = async () => {
   writeFileSync(deployFilePath, contracts)
 
   const l2Provider = new ethers.providers.JsonRpcProvider(
-    'https://devnet-l2.arbitrum.io/rpc'
+    process.env.L2_RPC_URL || 'https://kovan4.arbitrum.io/rpc'
   )
-  const l2PrivKey = process.env['DEVNET_PRIVKEY']
+  const l2PrivKey = process.env['L2_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
   const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
 
