@@ -366,10 +366,17 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                     auto checkpoint = extractMachineStateKeys(
                         checkpoint_vector.begin(), checkpoint_vector.end());
                     if (checkpoint.getTotalMessagesRead() == 0 ||
-                        message_sequence_number >=
-                            checkpoint.getTotalMessagesRead() - 1) {
-                        // Good checkpoint
-                        return checkpoint;
+                        (message_sequence_number >=
+                         checkpoint.getTotalMessagesRead() - 1)) {
+                        if (isValid(tx, checkpoint.output.fully_processed_inbox,
+                                    checkpoint.staged_message)) {
+                            // Good checkpoint
+                            return checkpoint;
+                        }
+
+                        std::cerr << "Error: Invalid checkpoint found at gas: "
+                                  << checkpoint.output.arb_gas_used
+                                  << std::endl;
                     }
 
                     // Obsolete checkpoint, need to delete referenced machine
@@ -694,22 +701,25 @@ void ArbCore::operator()() {
 
             // Cache pre-sideload machines
             if (last_assertion.sideloadBlockNumber) {
-                auto block = *last_assertion.sideloadBlockNumber;
-                std::unique_lock<std::shared_mutex> lock(sideload_cache_mutex);
-                sideload_cache[block] = std::make_unique<Machine>(*machine);
-                // Remove any sideload_cache entries that are either more
-                // than sideload_cache_size blocks old, or in the future
-                // (meaning they've been reorg'd out).
-                auto it = sideload_cache.begin();
-                while (it != sideload_cache.end()) {
-                    // Note: we check if block > sideload_cache_size here
-                    // to prevent an underflow in the following check.
-                    if ((block > sideload_cache_size &&
-                         it->first < block - sideload_cache_size) ||
-                        it->first > block) {
-                        it = sideload_cache.erase(it);
-                    } else {
-                        it++;
+                {
+                    auto block = *last_assertion.sideloadBlockNumber;
+                    std::unique_lock<std::shared_mutex> lock(
+                        sideload_cache_mutex);
+                    sideload_cache[block] = std::make_unique<Machine>(*machine);
+                    // Remove any sideload_cache entries that are either more
+                    // than sideload_cache_size blocks old, or in the future
+                    // (meaning they've been reorg'd out).
+                    auto it = sideload_cache.begin();
+                    while (it != sideload_cache.end()) {
+                        // Note: we check if block > sideload_cache_size here
+                        // to prevent an underflow in the following check.
+                        if ((block > sideload_cache_size &&
+                             it->first < block - sideload_cache_size) ||
+                            it->first > block) {
+                            it = sideload_cache.erase(it);
+                        } else {
+                            it++;
+                        }
                     }
                 }
 
@@ -744,6 +754,11 @@ void ArbCore::operator()() {
                           << core_error_string << "\n";
                 break;
             }
+        }
+
+        if (machine->status() == MachineThread::MACHINE_ABORTED) {
+            // Just reset status so machine can be restarted
+            machine->clearError();
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
