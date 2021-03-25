@@ -615,11 +615,6 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.staged_message,
         state_data.output};
 
-    assert(state.hash() == state_data.machineHash());
-    if (state.hash() != state_data.machineHash()) {
-        throw std::runtime_error("deserialized with incorrect hash");
-    }
-
     return std::make_unique<T>(state);
 }
 
