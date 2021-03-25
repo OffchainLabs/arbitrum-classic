@@ -109,13 +109,14 @@ const main = async () => {
 
   // trigger in L1
   const coreBridge = await (await bridge.l1Bridge.getInbox()).bridge()
-  // BridgeHelper.triggerL2ToL1Transaction(batchNumber, indexInBatch, coreBridge, )
-  BridgeHelper.tryOutboxExecute(proofData, batchNumber, coreBridge, accounts[0])
 
-  const l1TxReceipt = await bridge.triggerL2ToL1Transaction(
+  const l1TxReceipt = await BridgeHelper.tryOutboxExecute(
+    proofData,
     batchNumber,
-    indexInBatch
+    coreBridge,
+    accounts[0]
   )
+  
   console.log('Transaction executed in L1')
   console.log(l1TxReceipt)
 }
