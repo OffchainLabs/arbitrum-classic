@@ -232,7 +232,7 @@ export class L1Bridge {
       maxSubmissionCost,
       maxGas,
       gasPriceBid,
-      '',
+      '0x',
       overrides
     )
   }

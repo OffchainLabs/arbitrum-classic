@@ -40,6 +40,14 @@ export interface L2ToL1EventResult {
   data: string
 }
 
+export interface DepositTokenEventResult {
+  destination: string
+  sender: string
+  seqNum: BigNumber
+  amount: BigNumber
+  tokenAddress: string
+}
+
 interface BuddyDeployEventResult {
   _sender: string
   _contract: string
@@ -67,7 +75,6 @@ export class Bridge extends L2Bridge {
     arbSigner: Signer
   ) {
     super(arbERC20BridgeAddress, arbSigner)
-    console.warn('init bridge.ts')
 
     this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner)
   }
@@ -95,6 +102,10 @@ export class Bridge extends L2Bridge {
 
   get l1EthBalance() {
     return this.l1Bridge.l1EthBalance
+  }
+
+  get ethERC20Bridge() {
+    return this.l1Bridge.ethERC20Bridge
   }
 
   public async approveToken(
@@ -250,6 +261,22 @@ export class Bridge extends L2Bridge {
     const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as BuddyDeployEventResult
+    )
+  }
+
+  public async getDepositTokenEventData(
+    l1Transaction: ethers.providers.TransactionReceipt,
+    tokenType: 'ERC20' | 'ERC777' = 'ERC20'
+  ): Promise<Array<DepositTokenEventResult>> {
+    const iface = this.l1Bridge.ethERC20Bridge.interface
+    const event =
+      tokenType === 'ERC20'
+        ? iface.getEvent('DepositERC20')
+        : iface.getEvent('DepositERC777')
+    const eventTopic = iface.getEventTopic(event)
+    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult
     )
   }
 
@@ -577,6 +604,13 @@ export class Bridge extends L2Bridge {
       this.l1Bridge.l1Provider
     )
     return outbox.outboxes(batchNumber)
+  }
+
+  public async waitForRetriableReceipt(seqNum: BigNumber) {
+    const l2RetriableHash = await this.calculateL2RetryableTransactionHash(
+      seqNum
+    )
+    return this.l2Provider.waitForTransaction(l2RetriableHash)
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {
