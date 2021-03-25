@@ -237,6 +237,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 	}
 	// TODO raise an alert if wrongNodesExist (esp for watchtower strategy)
 	if action == nil || !active {
+		info.CanProgress = false
 		return nil
 	}
 
