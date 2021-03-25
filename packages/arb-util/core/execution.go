@@ -104,7 +104,7 @@ func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int) (ExecutionCursor
 		return nil, err
 	}
 
-	return e.cursors[index], nil
+	return e.cursors[index].Clone(), nil
 }
 
 func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState, *big.Int, error) {
