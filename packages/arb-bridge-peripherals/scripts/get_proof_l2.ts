@@ -1,15 +1,10 @@
 import { BigNumber } from '@ethersproject/bignumber'
-import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
-import deployments from '../deployment.json'
-
-import { Bridge } from 'arb-ts/src'
 import { BridgeHelper } from 'arb-ts/src/lib/bridge_helpers'
-import { writeFileSync } from 'fs'
 
 const main = async () => {
-  if(process.env.L2_TX_HASH && process.env.INBOX_SEQ_NUM)
-    throw new Error("Either supply the L1 inbox seq num or l2 tx hash")
+  if (process.env.L2_TX_HASH && process.env.INBOX_SEQ_NUM)
+    throw new Error('Either supply the L1 inbox seq num or l2 tx hash')
   const l2TxHash =
     process.env.L2_TX_HASH ||
     (await BridgeHelper.calculateL2RetryableTransactionHash(

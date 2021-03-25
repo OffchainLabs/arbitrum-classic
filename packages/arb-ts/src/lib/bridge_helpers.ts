@@ -59,7 +59,7 @@ export interface BuddyDeployEventResult {
 }
 
 export interface OutboxProofData {
-  batchNumber: BigNumber,
+  batchNumber: BigNumber
   proof: string[]
   path: BigNumber
   l2Sender: string
@@ -228,7 +228,7 @@ export class BridgeHelper {
     l1Provider: providers.Provider
   ) => {
     const contract = Inbox__factory.connect(inboxAddress, l1Provider)
-    return contract.bridge();
+    return contract.bridge()
   }
 
   static getInboxSeqNumFromContractTransaction = async (
@@ -458,7 +458,7 @@ export class BridgeHelper {
       // this should fail!
       console.log('All is good')
     }
-    return activeOutboxAddress;
+    return activeOutboxAddress
   }
 
   static tryOutboxExecute = async (
@@ -510,7 +510,6 @@ export class BridgeHelper {
     }
   }
 
-
   static triggerL2ToL1Transaction = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -524,16 +523,16 @@ export class BridgeHelper {
 
     console.log('going to get proof')
     let res: {
-      proof: Array<string>;
-      path: BigNumber;
-      l2Sender: string;
-      l1Dest: string;
-      l2Block: BigNumber;
-      l1Block: BigNumber;
-      timestamp: BigNumber;
-      amount: BigNumber;
-      calldataForL1: string;
-  };
+      proof: Array<string>
+      path: BigNumber
+      l2Sender: string
+      l1Dest: string
+      l2Block: BigNumber
+      l1Block: BigNumber
+      timestamp: BigNumber
+      amount: BigNumber
+      calldataForL1: string
+    }
 
     if (singleAttempt) {
       const _res = await BridgeHelper.tryGetProofOnce(
@@ -542,7 +541,7 @@ export class BridgeHelper {
         l2Provider
       )
       if (_res === null) {
-        throw new Error("Proof not found")
+        throw new Error('Proof not found')
       }
       res = _res
     } else {
@@ -555,11 +554,10 @@ export class BridgeHelper {
 
     const proofData: OutboxProofData = {
       ...res,
-      batchNumber
+      batchNumber,
     }
 
     console.log('got proof')
-
 
     const outboxExecuteTransactionReceipt = await BridgeHelper.tryOutboxExecute(
       proofData,

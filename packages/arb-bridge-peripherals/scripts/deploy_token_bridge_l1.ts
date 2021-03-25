@@ -1,9 +1,5 @@
-import { BigNumber } from '@ethersproject/bignumber'
-import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
-
-import { Bridge } from 'arb-ts/src'
 import { BridgeHelper } from 'arb-ts/src/lib/bridge_helpers'
 import { writeFileSync } from 'fs'
 import { spawnSync } from 'child_process'
@@ -94,7 +90,10 @@ const main = async () => {
   console.log(proofData)
 
   // trigger in L1
-  const coreBridge = await BridgeHelper.getCoreBridgeFromInbox(inboxAddress, ethers.provider)
+  const coreBridge = await BridgeHelper.getCoreBridgeFromInbox(
+    inboxAddress,
+    ethers.provider
+  )
 
   const l1TxReceipt = await BridgeHelper.tryOutboxExecute(
     proofData,

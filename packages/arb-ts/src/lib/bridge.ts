@@ -18,11 +18,7 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import { Bridge__factory } from './abi/factories/Bridge__factory'
-import { Outbox__factory } from './abi/factories/Outbox__factory'
 import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
-
-import { ArbSys } from './abi/ArbSys'
 
 const { Zero } = constants
 
@@ -238,17 +234,19 @@ export class Bridge extends L2Bridge {
     calldataForL1: string
   ) {
     return BridgeHelper.tryOutboxExecute(
+      {
+        batchNumber,
+        proof,
+        path,
+        l2Sender,
+        l1Dest,
+        l2Block,
+        l1Block,
+        timestamp,
+        amount,
+        calldataForL1,
+      },
       activeOutboxAddress,
-      batchNumber,
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      timestamp,
-      amount,
-      calldataForL1,
       this.l1Bridge.l1Signer
     )
   }
