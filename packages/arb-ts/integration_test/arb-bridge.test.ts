@@ -1,5 +1,7 @@
 import { providers, utils, Wallet, BigNumber, constants } from 'ethers'
-import { Bridge, DepositTokenEventResult } from '../src/lib/bridge'
+import { Bridge } from '../src/lib/bridge'
+import { DepositTokenEventResult } from '../src/lib/bridge_helpers'
+
 import { expect } from 'chai'
 import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
