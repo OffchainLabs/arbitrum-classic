@@ -44,6 +44,7 @@ export interface DepositTokenEventResult {
   destination: string
   sender: string
   seqNum: BigNumber
+  tokenType: 0 | 1 | 2
   amount: BigNumber
   tokenAddress: string
 }
@@ -275,7 +276,7 @@ export class Bridge extends L2Bridge {
     tokenType: 'ERC20' | 'ERC777' = 'ERC20'
   ): Promise<Array<DepositTokenEventResult>> {
     const iface = this.l1Bridge.ethERC20Bridge.interface
-    const event = iface.getEvent('DepositERC20')
+    const event = iface.getEvent('DepositToken')
     // const event =
     //   tokenType === 'ERC20'
     //     ? iface.getEvent('DepositERC20')

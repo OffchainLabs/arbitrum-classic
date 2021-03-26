@@ -194,13 +194,11 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
 
   events: {
     'ActivateCustomToken(uint256,address,address)': EventFragment
-    'DepositERC20(address,address,uint256,uint256,address)': EventFragment
     'DepositToken(address,address,uint256,uint8,uint256,address)': EventFragment
     'UpdateTokenInfo(uint256,address,bytes,bytes,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'ActivateCustomToken'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'DepositERC20'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'DepositToken'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'UpdateTokenInfo'): EventFragment
 }
@@ -931,19 +929,11 @@ export class EthERC20Bridge extends Contract {
       l2Address: null
     ): EventFilter
 
-    DepositERC20(
-      destination: string | null,
-      sender: null,
-      seqNum: BigNumberish | null,
-      amount: null,
-      tokenAddress: null
-    ): EventFilter
-
     DepositToken(
       destination: string | null,
       sender: null,
       seqNum: BigNumberish | null,
-      tokenType: null,
+      tokenType: BigNumberish | null,
       value: null,
       tokenAddress: null
     ): EventFilter
