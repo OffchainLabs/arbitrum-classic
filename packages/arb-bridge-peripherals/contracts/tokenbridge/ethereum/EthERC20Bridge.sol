@@ -59,6 +59,11 @@ contract EthERC20Bridge {
         l2TemplateERC20 = erc20;
     }
 
+    function updateL2Address(address newL2Address) external {
+        require(msg.sender == owner, "Only owner");
+        l2Address = newL2Address;
+    }
+
     address public l2Address;
     IInbox public inbox;
 

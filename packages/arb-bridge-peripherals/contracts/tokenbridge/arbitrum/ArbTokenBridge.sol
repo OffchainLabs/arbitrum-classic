@@ -63,6 +63,11 @@ contract ArbTokenBridge is CloneFactory {
         templateERC777 = ICloneable(erc777);
     }
 
+    function updateL1Pair(address newL1Pair) external {
+        require(msg.sender == owner, "Only owner");
+        l1Pair = newL1Pair;
+    }
+
     event MintAndCallTriggered(
         bool success,
         address indexed sender,
