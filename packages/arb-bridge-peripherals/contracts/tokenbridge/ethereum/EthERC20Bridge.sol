@@ -266,7 +266,7 @@ contract EthERC20Bridge {
         StandardTokenType tokenType,
         bytes memory callHookData
     ) private returns (uint256) {
-        require(tokenType == StandardTokenType.ERC777, "777 implementation disabled");
+        require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
         IERC20(erc20).safeTransferFrom(msg.sender, l2Address, amount);
         uint256 seqNum = 0;
         {
