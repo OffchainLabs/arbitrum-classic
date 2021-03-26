@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./StandardArbERC20.sol";
 import "./StandardArbERC777.sol";
-import "arb-bridge-eth/contracts/libraries/CloneFactory.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 import "./IArbToken.sol";
 import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
@@ -38,7 +38,7 @@ interface ITransferReceiver {
     ) external returns (bool);
 }
 
-contract ArbTokenBridge is CloneFactory {
+contract ArbTokenBridge {
     using Address for address;
 
     /// @notice This mapping is from L1 address to L2 address
@@ -46,8 +46,8 @@ contract ArbTokenBridge is CloneFactory {
 
     uint256 exitNum;
 
-    ICloneable public templateERC20;
-    ICloneable public templateERC777;
+    address public templateERC20;
+    address public templateERC777;
     address public l1Pair;
 
     address owner;
@@ -59,8 +59,8 @@ contract ArbTokenBridge is CloneFactory {
 
     function updateTemplates(address erc20, address erc777) external {
         require(msg.sender == owner, "Only owner");
-        templateERC20 = ICloneable(erc20);
-        templateERC777 = ICloneable(erc777);
+        templateERC20 = erc20;
+        templateERC777 = erc777;
     }
 
     function updateL1Pair(address newL1Pair) external {
@@ -173,8 +173,8 @@ contract ArbTokenBridge is CloneFactory {
         require(_l1Pair != address(0), "L1 pair can't be address 0");
         require(owner == address(0), "owner is already set");
         owner = msg.sender;
-        templateERC20 = ICloneable(_templateERC20);
-        templateERC777 = ICloneable(_templateERC777);
+        templateERC20 = _templateERC20;
+        templateERC777 = _templateERC777;
 
         l1Pair = _l1Pair;
     }
@@ -327,11 +327,11 @@ contract ArbTokenBridge is CloneFactory {
     }
 
     function calculateBridgedERC777Address(address l1ERC20) public view returns (address) {
-        return calculateCreate2CloneAddress(templateERC777, bytes32(uint256(l1ERC20)));
+        return Clones.predictDeterministicAddress(address(templateERC777), bytes32(uint256(l1ERC20)), address(this));
     }
 
     function calculateBridgedERC20Address(address l1ERC20) public view returns (address) {
-        return calculateCreate2CloneAddress(templateERC20, bytes32(uint256(l1ERC20)));
+        return Clones.predictDeterministicAddress(address(templateERC20), bytes32(uint256(l1ERC20)), address(this));
     }
 
     function ensureTokenExists(
@@ -349,12 +349,11 @@ contract ArbTokenBridge is CloneFactory {
                 : calculateBridgedERC777Address(l1ERC20);
 
         if (!l2Contract.isContract()) {
-            address createdContract =
-                create2Clone(
+            address createdContract = Clones.cloneDeterministic(
                     tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777,
                     bytes32(uint256(l1ERC20))
                 );
-            assert(createdContract == l2Contract);
+            require(createdContract == l2Contract, "Incorrect deploy address");
             IArbToken(l2Contract).initialize(address(this), l1ERC20, decimals);
             emit TokenCreated(l1ERC20, createdContract, tokenType);
         }
