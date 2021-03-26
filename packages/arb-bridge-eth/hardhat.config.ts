@@ -114,6 +114,7 @@ const config = {
         : [],
     },
     arbkovan4: {
+      gasPrice: 0,
       url: 'https://kovan4.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]

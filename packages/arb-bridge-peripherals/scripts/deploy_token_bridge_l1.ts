@@ -76,7 +76,7 @@ const main = async () => {
   )
   await arbTokenBridgeProxy.deployed()
 
-  console.log('L1 proxy bridge at', arbTokenBridgeProxy.address)
+  console.log('L2 proxy bridge at', arbTokenBridgeProxy.address)
 
   console.log('Now initializing proxies')
 
@@ -96,7 +96,6 @@ const main = async () => {
     accounts[0]
   )
 
-  console.log("inbox before init", await ethERC20BridgeConnectedAsProxy.inbox())
   const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
     inboxAddress,
     deployments.buddyDeployer,
