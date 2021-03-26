@@ -1680,20 +1680,30 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             if (!existing_message_entry.status.ok()) {
                 return existing_message_entry.status;
             }
-            auto current_inbox_acc = hash_inbox(
-                previous_inbox_acc, new_messages[new_messages_index]);
+            auto& message = new_messages[new_messages_index];
+            auto current_inbox_acc = hash_inbox(previous_inbox_acc, message);
             if (existing_message_entry.data.inbox_acc != current_inbox_acc) {
                 // Entry doesn't match because of reorg
                 break;
             }
 
-            if (existing_message_entry.data.last_message_in_block &&
-                !(last_block_complete &&
-                  new_messages_index == new_messages_count - 1)) {
-                // existing message was marked as last message in block but
-                // new message is not marked as last message, so they should be
-                // considered different
-                break;
+            if (existing_message_entry.data.last_message_in_block) {
+                bool new_message_is_last;
+                if (new_messages_index == new_messages_count - 1) {
+                    new_message_is_last = last_block_complete;
+                } else {
+                    // Check if the block number changes in the next message
+                    new_message_is_last =
+                        extractInboxMessageBlockNumber(message) !=
+                        extractInboxMessageBlockNumber(
+                            new_messages[new_messages_index + 1]);
+                }
+                if (!new_message_is_last) {
+                    // existing message was marked as last message in block but
+                    // new message is not marked as last message, so they should
+                    // be considered different
+                    break;
+                }
             }
 
             new_messages_index++;
