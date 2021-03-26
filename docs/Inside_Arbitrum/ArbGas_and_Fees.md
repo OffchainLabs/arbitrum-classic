@@ -19,15 +19,15 @@ Second, accurate estimation of validation time is important to maximize the thro
 
 Every rollup block includes an amount of ArbGas used by the computation so far, which implies an amount used since the predecessor rollup block. Like everything else in the rollup block, this value is only a claim made by the staker who created the block, and the block will be defeatable in a challenge if the claim is wrong.
 
-Although the ArbGas value in a rollup block might not be correct, it can be used reliably as a limit on how much computation is required to validate the block. This is true because a validator who is checking the block can cut off their computation after that much ArbGas has been consumed, because if that much ArbGas has been consumed without reaching the end of the rollup block, then the rollup block must be wrong and the checker can safely challenge it. For this reason, the rollup protocol can safely use the ArbGas claim in a rollup block, minus the amount in the predecessor block, as an upper bound on the time required to validate the rollup block’s correctness.
+Although the ArbGas value in a rollup block might not be correct, it can be used reliably as a limit on how much computation is required to validate the block. This is true because a validator who is checking the block can cut off their computation after that much ArbGas has been consumed; if that much ArbGas has been consumed without reaching the end of the rollup block, then the rollup block must be wrong and the checker can safely challenge it. For this reason, the rollup protocol can safely use the ArbGas claim in a rollup block, minus the amount in the predecessor block, as an upper bound on the time required to validate the rollup block’s correctness.
 
 A rollup block can safely be challenged even if the ArbGas usage is the only aspect of the block that is false. When a claim is bisected, the claims will include (claimed) ArbGas usages, which must sum to the ArbGas usage of the parent claim. It follows that if the parent's ArbGas claim is false, at least one of the sub-claims must make a false ArbGas claim. So a challenger who knows that the parent's ArbGas claim is false will always be able to find a claim that has a false ArbGas claim.
 
-Eventually the dispute will get down to a single AVM instruction, with a claim about that instruction's ArbGas usage. One-step proof verification checks that this claim is correct. So a false ArbGas claim can be pursued all the way down to a single instruction with a false ArbGas claim that will be detected by the one-step proof verification in the EthBridge.
+Eventually the dispute will get down to a single AVM instruction, with a claim about that instruction's ArbGas usage. One-step proof verification checks that this claim is correct. So a false ArbGas claim in an assertion can be pursued all the way down to a single instruction with a false ArbGas claim that will be detected by the one-step proof verification in the EthBridge.
 
 ## ArbGas accounting in the AVM
 
-The AVM architecture also does ArbGas accounting internally, using a machine register called ArbGasRemaining, which is a 256-bit unsigned integer that behaves as follows.
+The AVM architecture also does ArbGas accounting internally, using a machine register called ArbGasRemaining, which is a 256-bit unsigned integer that behaves as follows:
 
 * The register is initially set to MaxUint256.
 * Immediately before any instruction executes, that instruction's ArbGas cost is subtracted from the register. If this would make the register's value less than zero, an error is generated and the register's value is set to MaxUint256. (The error causes a control transfer as specified in the AVM specification.)
@@ -59,9 +59,9 @@ Fees are charged for four resources that a transaction can use:
 * *L2 tx*: a base fee for each L2 transaction, to cover the cost of servicing a transaction
 * *L1 calldata*: a fee per units of L1 calldata directly attributable to the transaction (each non-zero byte of calldata is 16 units, and each zero byte of calldata is 4 units)
 * *computation*: a fee per unit of ArbGas used by the transaction
-* *storage*: a fee per location of EVM storage, based on the net increase in EVM storage due to the transaction
+* *storage*: a fee per location of AVM storage, based on the net increase in EVM storage due to the transaction
 
-Each of these four resources has a price, which may vary over time. The resource prices, which are denominated in ETH (more precisely, in wei), are set as follows.
+Each of these four resources has a price, which may vary over time. The resource prices, which are denominated in ETH (more precisely, in wei), are set as follows:
 
 ### Prices for L2 tx and L1 calldata
 
@@ -84,7 +84,7 @@ If these conditions are not all met, the transaction is treated as not submitted
 
 ### Price for storage
 
-Transactions are charged based on the net increase they cause in the total amount of L2 EVM contract storage that exists. Decreases in contract storage do not receive a credit. Each storage location costs 2000 times the estimated L1 gas price. This means that storage costs about 10% as much as it does on the L1 chain.
+Transactions are charged based on the net increase they cause in the total amount of AVM contract storage that exists. Decreases in contract storage do not receive a credit. Each storage location costs 2000 times the estimated L1 gas price. This means that storage costs about 10% as much as it does on the L1 chain.
 
 ### Price for ArbGas
 
