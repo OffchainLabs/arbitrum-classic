@@ -72,7 +72,8 @@ contract ArbTokenBridge is CloneFactory {
         bool success,
         address indexed sender,
         address indexed dest,
-        uint256 amount
+        uint256 amount,
+        bytes callHookData
     );
 
     event WithdrawToken(
@@ -109,8 +110,8 @@ contract ArbTokenBridge is CloneFactory {
 
     event TokenDataUpdated(
         address l1Address,
-        address l2Addess,
-        StandardTokenType tokenType,
+        address indexed l2Addess,
+        StandardTokenType indexed tokenType,
         string name,
         string symbol,
         uint8 decimals
@@ -202,14 +203,16 @@ contract ArbTokenBridge is CloneFactory {
         address dest,
         bytes memory callHookData
     ) internal {
+        bool success;
         try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
-            emit MintAndCallTriggered(true, sender, dest, amount);
+            success = true;
         } catch {
             // if reverted, then credit sender's account
             token.bridgeMint(sender, amount, "");
             // TODO: should try to submit callHookData for the hook?
-            emit MintAndCallTriggered(false, sender, dest, amount);
+            success = false;
         }
+        emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
     }
 
     function mintFromL1(
