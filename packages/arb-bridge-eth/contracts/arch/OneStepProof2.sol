@@ -552,6 +552,51 @@ contract OneStepProof2 is OneStepProofCommon {
         pushVal(context.stack, Value.newBuffer(res));
     }
 
+    function decodeWasmData(bytes memory data) internal pure returns (
+        Machine.Data memory finalMachine,
+        uint256 len
+    ) {
+
+    }
+
+    bytes32 constant wasmProgram = 0;
+    bytes32 constant wasmProgramLink = 0;
+    uint256 constant wasmProgramLinkSize = 0;
+    bytes32 constant emptyHash = 0;
+
+    function executeWasmTest(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isBuffer()) {
+            handleOpcodeError(context);
+            return;
+        }
+        (Machine.Data memory finalMachine, uint256 len) = decodeWasmData(context.bufProof);
+        Value.Data[] memory init = new Value.Data[](2);
+        init[0] = val1;
+        init[1] = Value.newEmptyTuple();
+        Machine.Data memory initialMachine = Machine.Data(
+            wasmProgram,
+            Value.newTuple(init), //    machine.dataStack,
+            Value.newEmptyTuple(), //    machine.auxStack,
+            Value.newHashedValue(wasmProgramLink, wasmProgramLinkSize), //    machine.registerVal,
+            Value.newEmptyTuple(), //    machine.staticVal,
+            100000000000, //    machine.arbGasRemaining,
+            emptyHash, //    machine.errHandlerHash,
+            Value.newEmptyTuple(), //    machine.pendingMessage,
+            Machine.MACHINE_EXTENSIVE //    machine.status
+        );
+        // Construct initial machine
+        // Final machine is given
+        // Hmm, return value must come from the final machine
+        require(finalMachine.status == Machine.MACHINE_HALT, "Wasm program must halt");
+        require(finalMachine.dataStack.isTuple());
+        require(finalMachine.dataStack.valLength() > 1);
+        pushVal(context.stack, finalMachine.dataStack.tupleVal[0]);
+        context.startState = Machine.hash(initialMachine);
+        context.endState = Machine.hash(finalMachine);
+        context.nextLength = len;
+    }
+
     function opInfo(uint256 opCode)
         internal
         pure
@@ -575,6 +620,8 @@ contract OneStepProof2 is OneStepProofCommon {
             return (3, 0, 100, executeSetBuffer64);
         } else if (opCode == OP_SETBUFFER256) {
             return (3, 0, 100, executeSetBuffer256);
+        } else if (opCode == OP_WASMTEST) {
+            return (2, 0, 100, executeWasmTest);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {
