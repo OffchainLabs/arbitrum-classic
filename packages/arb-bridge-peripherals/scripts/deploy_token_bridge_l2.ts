@@ -7,13 +7,42 @@ const main = async () => {
   const accounts = await ethers.getSigners()
   const StandardArbERC20 = await ethers.getContractFactory('StandardArbERC20')
   const StandardArbERC777 = await ethers.getContractFactory('StandardArbERC777')
-  const standardArbERC20 = await StandardArbERC20.deploy()
-  const standardArbERC777 = await StandardArbERC777.deploy()
+
+  const standardArbERC20Logic = await StandardArbERC20.deploy()
+  await standardArbERC20Logic.deployed()
+  console.log(`erc20 logic at ${standardArbERC20Logic.address}`)
+
+  const standardArbERC777Logic = await StandardArbERC777.deploy()
+  await standardArbERC777Logic.deployed()
+  console.log(`erc777 logic at ${standardArbERC777Logic.address}`)
+
+  const ProxyAdmin = await ethers.getContractFactory('ProxyAdmin')
+  const proxyAdmin = await ProxyAdmin.deploy()
+  await proxyAdmin.deployed()
+  console.log("Admin proxy deployed to", proxyAdmin.address)
+
+  const TransparentUpgradeableProxy = await ethers.getContractFactory(
+    'TransparentUpgradeableProxy'
+  )
+  
+  const standardArbERC20Proxy = await TransparentUpgradeableProxy.deploy(
+    standardArbERC20Logic.address,
+    proxyAdmin.address,
+    '0x'
+  )
+  await standardArbERC20Proxy.deployed()
+
+  const standardArbERC777Proxy = await TransparentUpgradeableProxy.deploy(
+    standardArbERC777Logic.address,
+    proxyAdmin.address,
+    '0x'
+  )
+  await standardArbERC777Proxy.deployed()
 
   const contracts = JSON.stringify({
     ...deployments,
-    standardArbERC20: standardArbERC20.address,
-    standardArbERC777: standardArbERC777.address,
+    standardArbERC20: standardArbERC20Proxy.address,
+    standardArbERC777: standardArbERC777Proxy.address,
     l2ChainId: ethers.BigNumber.from(
       ethers.provider.network.chainId
     ).toHexString(),
