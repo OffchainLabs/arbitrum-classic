@@ -1993,6 +1993,12 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
         }
     }
 
+    if (logs_cursors[cursor_index].status == DataCursor::READY &&
+        logs_cursors[cursor_index].data.empty() &&
+        logs_cursors[cursor_index].deleted_data.empty()) {
+        logs_cursors[cursor_index].status = DataCursor::REQUESTED;
+    }
+
     return tx.commit();
 }
 
