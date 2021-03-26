@@ -44,7 +44,10 @@ describe('Bridge peripherals layer 2', () => {
     )
     const standardArbERC20 = await StandardArbERC20.deploy()
     const standardArbERC777 = await StandardArbERC777.deploy()
-    testBridge = await TestBridge.deploy(accounts[0].address, standardArbERC777.address, standardArbERC20.address)
+    testBridge = await TestBridge.deploy()
+    await testBridge.initialize(
+      accounts[0].address, standardArbERC777.address, standardArbERC20.address
+    )
 
     await deploy1820Registry(accounts[0])
   })
