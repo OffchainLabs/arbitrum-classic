@@ -77,19 +77,11 @@ contract EthERC20Bridge {
         bytes decimals
     );
 
-    event DepositERC20(
-        address indexed destination,
-        address sender,
-        uint256 indexed seqNum,
-        uint256 amount,
-        address tokenAddress
-    );
-
     event DepositToken(
         address indexed destination,
         address sender,
         uint256 indexed seqNum,
-        StandardTokenType tokenType,
+        StandardTokenType indexed tokenType,
         uint256 value,
         address tokenAddress
     );
