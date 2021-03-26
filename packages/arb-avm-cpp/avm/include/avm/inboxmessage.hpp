@@ -69,5 +69,9 @@ InboxMessage extractInboxMessage(
 InboxMessage extractInboxMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end);
+// An efficient version of extractInboxMessage that ignores everything except
+// the block number
+uint256_t extractInboxMessageBlockNumber(
+    const std::vector<unsigned char>& stored_state);
 
 #endif /* data_storage_inboxmessage_hpp */
