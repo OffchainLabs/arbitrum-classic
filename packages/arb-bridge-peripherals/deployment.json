@@ -1,8 +1,8 @@
 {
-  "l2ChainId": "",
-  "buddyDeployer": "",
-  "standardArbERC20": "",
-  "standardArbERC777": "",
-  "ethERC20Bridge": "",
-  "arbTokenBridge": ""
+  "l2ChainId": "0xc1b54a854098",
+  "buddyDeployer": "0x30C92BD1566c321BB2CC1F21b9654591a16685ca",
+  "standardArbERC20": "0xA827982512BA9156e6de11b5b70aF8eCcC3b70B7",
+  "standardArbERC777": "0x40fbeC626f7EDFF3B09EaF23298B42F77a36FF62",
+  "ethERC20Bridge": "0x6a2841c765290613273e0d192022536962C5515F",
+  "arbTokenBridge": "0x955081960Eb726EcA492d2d70800A72E2C2FDd57"
 }
