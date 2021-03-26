@@ -3,9 +3,9 @@ id: AVM
 title: Inside Arbitrum: The AVM Architecture
 sidebar_label: AVM Architecture
 ---
-The Arbitrum Virtual Machine (AVM) is the interface between the Layer 1 and Layer 2 parts of Arbitrum. Layer 1 *provides* the AVM interface and ensures correct execution of the virtual machine. Layer 2 *runs on* the AVM virtual machine and provides the functionality to deploy and run contracts, track balances, and all of the things a smart contract enabled blockchain needs to do.
+The Arbitrum Virtual Machine (AVM) is the interface between the Layer 1 and Layer 2 parts of Arbitrum. Layer 1 *provides* the AVM interface and ensures correct execution of the virtual machine. Layer 2 *runs on* the AVM virtual machine and provides the functionality to deploy and run contracts, track balances, and all of the things a smart-contract-enabled blockchain needs to do.
 
-**Every Arbitrum chain has a single AVM** which does all of the computation and maintains all of the storage for everything that happens on the chain. Unlike some other systems which have a separate “VM” for each contract, Arbitrum uses a single virtual machine for the whole chain. The management of multiple contracts on an Arbitrum chain is done by software that runs on top of the AVM. 
+**Every Arbitrum chain has a single AVM** which does all of the computation and maintains all of the storage for everything that happens on the chain. Unlike some other systems which have a separate “VM” for each contract, Arbitrum uses a single virtual machine for the whole chain, much like Ethereum. The management of multiple contracts on an Arbitrum chain is done by software that runs on top of the AVM. 
 
 At its core, a chain’s VM executes in this simple model, consuming messages from its inbox, changing its state, and producing outputs.
 
@@ -33,7 +33,7 @@ The use of a Layer 2 trusted operating system does require some support in the a
 
 ### Supporting Merkleization
 
-Any Layer 2 protocol that relies on assertions and dispute resolution (which includes at least all rollup protocols) must define a rule for Merkle-hashing the full state of the virtual machine. That rule must be part of the architecture specification because it is relied upon in resolving disputes.It must also be reasonably efficient for validators to maintain the Merkle hash and/or recompute it when needed. This affects how the architecture structures its memory, for example. Any storage structure that is large and mutable will be relatively expensive to Merkleize, and a specific algorithm for Merkleizing it would need to be part of the architecture specification.
+Any Layer 2 protocol that relies on assertions and dispute resolution (which includes at least all rollup protocols) must define a rule for Merkle-hashing the full state of the virtual machine so that claims about parts of the state can be efficienly made to the base layer. That rule must be part of the architecture specification because it is relied upon in resolving disputes. It must also be reasonably efficient for validators to maintain the Merkle hash and/or recompute it when needed. This affects how the architecture structures its memory, for example. Any storage structure that is large and mutable will be relatively expensive to Merkleize, and a specific algorithm for Merkleizing it would need to be part of the architecture specification.
 
 The AVM architecture responds to this challenge by having only bounded-size, immutable memory objects ("Tuples"), which can include other Tuples by reference. Tuples cannot be modified in-place but there is an instruction to copy a Tuple with a modification. This allows the construction of tree structures which can behave like a large flat memory. Applications can use functionalities such as large flat arrays, key-value stores, and so on, by accessing libraries that use Tuples internally.
 
