@@ -1,8 +1,6 @@
-import { BigNumber } from '@ethersproject/bignumber'
-import { concat, id, keccak256, zeroPad } from 'ethers/lib/utils'
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
-import { providers } from 'ethers'
+import { providers, Signer } from 'ethers'
 import {
   Bridge,
   ArbTokenBridge__factory,
@@ -11,8 +9,8 @@ import {
 import { writeFileSync } from 'fs'
 
 const main = async () => {
-  // TODO: check buddy deployer address available
-  // TODO: check 1820 registry
+  const accounts = await ethers.getSigners()
+
   const inboxAddress =
     process.env.INBOX_ADDRESS || '0xD71d47AD1b63981E9dB8e4A78C0b30170da8a601'
 
@@ -28,7 +26,8 @@ const main = async () => {
 
   console.log('EthERC20Bridge logic deployed to:', ethERC20Bridge.address)
   const l2Provider = new providers.JsonRpcProvider(
-    'https://kovan4.arbitrum.io/rpc' //    // 'https://devnet-l2.arbitrum.io/rpc'
+    'https://kovan4.arbitrum.io/rpc'
+    // 'https://devnet-l2.arbitrum.io/rpc'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
@@ -37,14 +36,10 @@ const main = async () => {
   const ArbTokenBridge = (
     await ethers.getContractFactory('ArbTokenBridge')
   ).connect(l2Signer)
-  const getNonce = async () => {
-    return {
-      nonce: (await l2Signer.getTransactionCount()) + 1,
-      gasLimit: 10000000,
-    }
-  }
+
   const arbTokenBridge = await ArbTokenBridge.deploy()
   console.log('L2 ArbBridge logic deployed to:', arbTokenBridge.address)
+  await arbTokenBridge.deployed()
 
   const L1TransparentUpgradeableProxy = await ethers.getContractFactory(
     'TransparentUpgradeableProxy'
@@ -66,16 +61,21 @@ const main = async () => {
     l1ProxyAdmin.address,
     '0x'
   )
+  await ethERC20BridgeProxy.deployed()
+
   console.log('L1 proxy bridge at', ethERC20BridgeProxy.address)
 
-  const l2ProxyAdmin = await L2ProxyAdmin.deploy(await getNonce())
+  const l2ProxyAdmin = await L2ProxyAdmin.deploy()
+  await l2ProxyAdmin.deployed()
+
   console.log('L2 proxy admin at', l2ProxyAdmin.address)
   const arbTokenBridgeProxy = await L2TransparentUpgradeableProxy.deploy(
     arbTokenBridge.address,
     l2ProxyAdmin.address,
     '0x',
-    await getNonce()
   )
+  await arbTokenBridgeProxy.deployed()
+
   console.log('L1 proxy bridge at', arbTokenBridgeProxy.address)
 
   console.log('Now initializing proxies')
@@ -89,14 +89,14 @@ const main = async () => {
     ethERC20BridgeProxy.address,
     deployments.standardArbERC777,
     deployments.standardArbERC20,
-    await getNonce()
   )
 
   const ethERC20BridgeConnectedAsProxy = EthERC20Bridge__factory.connect(
     ethERC20BridgeProxy.address,
-    l2Signer
+    accounts[0]
   )
 
+  console.log("inbox before init", await ethERC20BridgeConnectedAsProxy.inbox())
   const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
     inboxAddress,
     deployments.buddyDeployer,
@@ -107,9 +107,12 @@ const main = async () => {
     deployments.standardArbERC20,
     arbTokenBridgeProxy.address
   )
+  console.log("init L1 hash", initL1Bridge.hash)
+  console.log("init L2 hash", initL2Bridge.hash)
   // wait for inits
   await initL1Bridge.wait()
   await initL2Bridge.wait()
+  // console.log("inbox after init", await ethERC20BridgeConnectedAsProxy.inbox())
   console.log('Proxies have been initted')
 
   const contracts = JSON.stringify({
