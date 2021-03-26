@@ -152,7 +152,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {
-    'MintAndCallTriggered(bool,address,address,uint256)': EventFragment
+    'MintAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TokenCreated(address,address,uint8)': EventFragment
     'TokenDataUpdated(address,address,uint8,string,string,uint8)': EventFragment
     'TokenMigrated(address,address,address,uint256,bytes)': EventFragment
@@ -781,7 +781,8 @@ export class ArbTokenBridge extends Contract {
       success: null,
       sender: string | null,
       dest: string | null,
-      amount: null
+      amount: null,
+      callHookData: null
     ): EventFilter
 
     TokenCreated(
@@ -792,8 +793,8 @@ export class ArbTokenBridge extends Contract {
 
     TokenDataUpdated(
       l1Address: null,
-      l2Addess: null,
-      tokenType: null,
+      l2Addess: string | null,
+      tokenType: BigNumberish | null,
       name: null,
       symbol: null,
       decimals: null
