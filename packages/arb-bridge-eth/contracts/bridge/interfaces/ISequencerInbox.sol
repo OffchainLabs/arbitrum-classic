@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2021, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,4 @@
 
 pragma solidity ^0.6.11;
 
-import "../bridge/interfaces/IBridge.sol";
-import "../bridge/interfaces/ISequencerInbox.sol";
-
-interface IChallengeFactory {
-    function createChallenge(
-        address _resultReceiver,
-        bytes32 _executionHash,
-        uint256[2] calldata _maxMessageCount,
-        address _asserter,
-        address _challenger,
-        uint256 _asserterTimeLeft,
-        uint256 _challengerTimeLeft,
-        IBridge _bridge,
-        ISequencerInbox _sequencer
-    ) external returns (address);
-}
+interface ISequencerInbox {}

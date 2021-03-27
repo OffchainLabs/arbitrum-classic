@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 import "../arch/IOneStepProof.sol";
 
 interface IChallenge {
@@ -31,7 +32,8 @@ interface IChallenge {
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        IBridge _bridge,
+        ISequencerInbox _sequencer
     ) external;
 
     function currentResponderTimeLeft() external view returns (uint256);

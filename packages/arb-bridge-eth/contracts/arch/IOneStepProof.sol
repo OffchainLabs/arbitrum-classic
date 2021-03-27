@@ -19,10 +19,11 @@
 pragma solidity ^0.6.11;
 
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 interface IOneStepProof {
     function executeStep(
-        IBridge bridge,
+        address[2] calldata inboxes,
         uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
@@ -37,7 +38,7 @@ interface IOneStepProof {
         );
 
     function executeStepDebug(
-        IBridge bridge,
+        address[2] calldata inboxes,
         uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,

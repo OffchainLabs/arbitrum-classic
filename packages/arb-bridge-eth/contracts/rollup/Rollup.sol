@@ -49,8 +49,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     uint256 public baseStake;
     address public stakeToken;
 
-    // Bridge is an IInbox and IOutbox
     IBridge public bridge;
+    ISequencerInbox public sequencer;
     IOutbox public outbox;
     RollupEventBridge public rollupEventBridge;
     IChallengeFactory public challengeFactory;
@@ -644,7 +644,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 stakers[1],
                 commonEndTime.sub(proposedTimes[0]),
                 commonEndTime.sub(proposedTimes[1]),
-                bridge
+                bridge,
+                sequencer
             );
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);

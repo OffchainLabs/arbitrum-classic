@@ -67,6 +67,7 @@ contract Challenge is Cloneable, IChallenge {
 
     IOneStepProof[] public executors;
     IBridge public bridge;
+    ISequencerInbox public sequencer;
 
     IRollup internal resultReceiver;
 
@@ -109,7 +110,8 @@ contract Challenge is Cloneable, IChallenge {
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        IBridge _bridge,
+        ISequencerInbox _sequencer
     ) external override {
         require(turn == Turn.NoChallenge, CHAL_INIT_STATE);
 
@@ -130,6 +132,7 @@ contract Challenge is Cloneable, IChallenge {
 
         lastMoveBlock = block.number;
         bridge = _bridge;
+        sequencer = _sequencer;
 
         emit InitiatedChallenge();
     }
@@ -249,7 +252,7 @@ contract Challenge is Cloneable, IChallenge {
         {
             (uint64 gasUsed, uint256[2] memory totalMessagesRead, bytes32[4] memory proofFields) =
                 executors[prover].executeStep(
-                    bridge,
+                    [address(bridge), address(sequencer)],
                     _initialMessagesRead,
                     [_initialSendAcc, _initialLogAcc],
                     _executionProof,

@@ -25,14 +25,14 @@ contract OneStepProofTester {
 
     function executeStepTest(
         address executor,
-        IBridge bridge,
+        address[2] calldata inboxes,
         uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external {
         (uint64 gas, uint256[2] memory totalMessagesRead, bytes32[4] memory fields) =
-            IOneStepProof(executor).executeStep(bridge, initialMessagesRead, accs, proof, bproof);
+            IOneStepProof(executor).executeStep(inboxes, initialMessagesRead, accs, proof, bproof);
         emit OneStepProofResult(gas, totalMessagesRead, fields);
     }
 }
