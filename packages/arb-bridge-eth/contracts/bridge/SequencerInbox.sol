@@ -18,8 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-import './Messages.sol';
-import '../libraries/MerkleLib.sol'; 
+import "./Messages.sol";
+import "../libraries/MerkleLib.sol";
 
 contract SequencerInbox {
     uint8 internal constant L2_MSG = 3;
@@ -31,8 +31,11 @@ contract SequencerInbox {
     uint256 maxDelayBlocks;
     uint256 maxDelaySeconds;
 
-
-    function verifyGroups(uint256[] memory l1BlockNumbers, uint256[] memory timestamps, uint256[] calldata groupSizes) private view returns (uint256) {
+    function verifyGroups(
+        uint256[] memory l1BlockNumbers,
+        uint256[] memory timestamps,
+        uint256[] calldata groupSizes
+    ) private view returns (uint256) {
         uint256 count = l1BlockNumbers.length;
         require(timestamps.length == count, "LENGTH_MISMATCH");
         require(groupSizes.length == count, "LENGTH_MISMATCH");
@@ -59,30 +62,31 @@ contract SequencerInbox {
     }
 
     function addSequencerL2Batch(
-        bytes calldata transactions, 
+        bytes calldata transactions,
         uint256[] calldata lengths,
         uint256[] calldata groupSizes,
-        uint256[] calldata l1BlockNumbers, 
+        uint256[] calldata l1BlockNumbers,
         uint256[] calldata timestamps
     ) external returns (uint256 batchCount) {
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
         require(groupSizes.length < 50, "TOO_MANY_GROUPS");
-        require(verifyGroups(l1BlockNumbers, timestamps, groupSizes) == lengths.length, "BAD_GROUP_SIZES");
+        require(
+            verifyGroups(l1BlockNumbers, timestamps, groupSizes) == lengths.length,
+            "BAD_GROUP_SIZES"
+        );
         uint256 offset = 0;
         bytes32[] memory hashes = new bytes32[](lengths.length);
         // Use return value to store variable temporarily to fix stack size issue
         batchCount = totalMessages;
         for (uint256 i = 0; i < lengths.length; i++) {
-            bytes32 transactionHash = keccak256(bytes(transactions[offset:offset+lengths[i]]));
+            bytes32 transactionHash = keccak256(bytes(transactions[offset:offset + lengths[i]]));
             hashes[i] = keccak256(abi.encodePacked(batchCount + i, transactionHash));
             offset += lengths[i];
         }
-        bytes32 batchHash = keccak256(abi.encode(
-            MerkleLib.generateRoot(hashes),
-            groupSizes,
-            l1BlockNumbers,
-            timestamps
-        ));
+        bytes32 batchHash =
+            keccak256(
+                abi.encode(MerkleLib.generateRoot(hashes), groupSizes, l1BlockNumbers, timestamps)
+            );
         batchCount = inboxAccs.length;
         bytes32 prevAcc = 0;
         if (batchCount > 0) {
