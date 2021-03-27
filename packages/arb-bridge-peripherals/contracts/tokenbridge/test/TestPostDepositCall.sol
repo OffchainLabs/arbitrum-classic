@@ -19,12 +19,14 @@
 pragma solidity ^0.6.11;
 
 import "../arbitrum/ArbTokenBridge.sol";
+import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+
 // import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 // contract TestPostDepositCall {
 //     EthERC20Bridge tokenBridge;
 //     IInbox inbox;
-    
+
 //     constructor(address _tokenBridge, address erc20Template, address erc777Template, address _inbox) {
 //         tokenBridge = EthErc20Bridge(_tokenBridge, erc20Template, erc777Template);
 //         inbox = IInbox(_inbox);
@@ -46,7 +48,7 @@ import "../arbitrum/ArbTokenBridge.sol";
 
 contract L2Called is ITransferReceiver {
     event Called(uint256 num);
-    
+
     constructor() public {}
 
     // This function can be anything
@@ -54,13 +56,17 @@ contract L2Called is ITransferReceiver {
         emit Called(num);
     }
 
-    function onTokenTransfer(address user, uint amount, bytes calldata data) external override returns (bool) {
+    function onTokenTransfer(
+        address user,
+        uint256 amount,
+        bytes calldata data
+    ) external override returns (bool) {
         uint256 num = abi.decode(data, (uint256));
 
-        if(num == 5) {
+        if (num == 5) {
             postDepositHook(num);
             return true;
-        } else if(num == 7) {
+        } else if (num == 7) {
             revert();
         } else {
             return false;
