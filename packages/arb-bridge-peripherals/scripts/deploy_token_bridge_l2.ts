@@ -21,32 +21,26 @@ const main = async () => {
   // await proxyAdmin.deployed()
   // console.log("Admin proxy deployed to", proxyAdmin.address)
 
-  // const TransparentUpgradeableProxy = await ethers.getContractFactory(
-  //   'TransparentUpgradeableProxy'
-  // )
-  
-  // const standardArbERC20Proxy = await TransparentUpgradeableProxy.deploy(
-  //   standardArbERC20Logic.address,
-  //   proxyAdmin.address,
-  //   '0x'
-  // )
-  // await standardArbERC20Proxy.deployed()
-  // console.log(`erc20 proxy at ${standardArbERC20Proxy.address}`)
+  const UpgradeableBeacon = await ethers.getContractFactory('UpgradeableBeacon')
 
-  // const standardArbERC777Proxy = await TransparentUpgradeableProxy.deploy(
-  //   standardArbERC777Logic.address,
-  //   proxyAdmin.address,
-  //   '0x'
-  // )
-  // await standardArbERC777Proxy.deployed()
-  // console.log(`erc777 proxy at ${standardArbERC777Proxy.address}`)
+  const standardArbERC20Proxy = await UpgradeableBeacon.deploy(
+    standardArbERC20Logic.address
+  )
+  await standardArbERC20Proxy.deployed()
+  console.log(`erc20 proxy at ${standardArbERC20Proxy.address}`)
+
+  const standardArbERC777Proxy = await UpgradeableBeacon.deploy(
+    standardArbERC777Logic.address
+  )
+  await standardArbERC777Proxy.deployed()
+  console.log(`erc777 proxy at ${standardArbERC777Proxy.address}`)
 
   const contracts = JSON.stringify({
     ...deployments,
-    standardArbERC20: standardArbERC20Logic.address,
-    standardArbERC777: standardArbERC777Logic.address,
-    // standardArbERC20: standardArbERC20Proxy.address,
-    // standardArbERC777: standardArbERC777Proxy.address,
+    // standardArbERC20: standardArbERC20Logic.address,
+    // standardArbERC777: standardArbERC777Logic.address,
+    standardArbERC20: standardArbERC20Proxy.address,
+    standardArbERC777: standardArbERC777Proxy.address,
     l2ChainId: ethers.BigNumber.from(
       ethers.provider.network.chainId
     ).toHexString(),
