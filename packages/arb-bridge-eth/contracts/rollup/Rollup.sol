@@ -128,7 +128,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     0, // send acc
                     0, // log acc
                     block.number, // block proposed
-                    1 // Initialization message already in inbox
+                    [uint256(1), uint256(0)] // Initialization message already in inbox
                 )
             );
         return
@@ -431,11 +431,15 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[5][2] calldata assertionIntFields,
         uint256 beforeProposedBlock,
-        uint256 beforeInboxMaxCount
+        uint256[2] calldata beforeInboxMaxCount
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
+        uint256[2] memory inboxMaxCount;
+        {
+            inboxMaxCount[0] = bridge.messageCount();
+            inboxMaxCount[1] = sequencer.messageCount();
+        }
 
-        uint256 inboxMaxCount = bridge.messageCount();
         bytes32 afterInboxAcc = 0;
         INode node;
         bytes32 executionHash;
@@ -465,7 +469,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             // Minimum size requirements: each assertion must satisfy either
             require(
                 // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
+                (assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount[0] &&
+                    assertion.afterState.sequencerCount >=
+                    assertion.beforeState.inboxMaxCount[1]) ||
                     // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
                     gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
                     assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
@@ -493,7 +499,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             );
 
             // Ensure that the assertion doesn't read past the end of the current inbox
-            require(assertion.afterState.inboxCount <= inboxMaxCount, "INBOX_PAST_END");
+            require(assertion.afterState.inboxCount <= inboxMaxCount[0], "INBOX_PAST_END");
+            require(assertion.afterState.sequencerCount <= inboxMaxCount[1], "INBOX_PAST_END");
             if (assertion.afterState.inboxCount > 0) {
                 afterInboxAcc = bridge.inboxAccs(assertion.afterState.inboxCount - 1);
             }

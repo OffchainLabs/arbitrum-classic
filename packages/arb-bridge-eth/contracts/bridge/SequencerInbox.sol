@@ -21,10 +21,12 @@ pragma solidity ^0.6.11;
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 
-contract SequencerInbox {
+import "./interfaces/ISequencerInbox.sol";
+
+contract SequencerInbox is ISequencerInbox {
     uint8 internal constant L2_MSG = 3;
     bytes32[] public inboxAccs;
-    uint256 totalMessages;
+    uint256 public override messageCount;
     address public sequencer;
     uint256 maxBlock;
     uint256 maxTimestamp;
@@ -77,7 +79,7 @@ contract SequencerInbox {
         uint256 offset = 0;
         bytes32[] memory hashes = new bytes32[](lengths.length);
         // Use return value to store variable temporarily to fix stack size issue
-        batchCount = totalMessages;
+        batchCount = messageCount;
         for (uint256 i = 0; i < lengths.length; i++) {
             bytes32 transactionHash = keccak256(bytes(transactions[offset:offset + lengths[i]]));
             hashes[i] = keccak256(abi.encodePacked(batchCount + i, transactionHash));
@@ -95,11 +97,7 @@ contract SequencerInbox {
         inboxAccs.push(Messages.addMessageToInbox(prevAcc, batchHash));
         maxBlock = l1BlockNumbers[l1BlockNumbers.length - 1];
         maxTimestamp = timestamps[timestamps.length - 1];
-        totalMessages += lengths.length;
+        messageCount += lengths.length;
         return batchCount;
-    }
-
-    function messageCount() external view returns (uint256) {
-        return inboxAccs.length;
     }
 }

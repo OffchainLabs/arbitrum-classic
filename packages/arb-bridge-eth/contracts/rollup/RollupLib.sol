@@ -37,13 +37,13 @@ library RollupLib {
         uint256 gasUsed;
         bytes32 machineHash;
         uint256 inboxCount;
-        uint256 sequenceInboxCount;
+        uint256 sequencerCount;
         uint256 sendCount;
         uint256 logCount;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint256 proposedBlock;
-        uint256 inboxMaxCount;
+        uint256[2] inboxMaxCount;
     }
 
     function stateHash(ExecutionState memory execState) internal pure returns (bytes32) {
@@ -53,13 +53,14 @@ library RollupLib {
                     execState.gasUsed,
                     execState.machineHash,
                     execState.inboxCount,
-                    execState.sequenceInboxCount,
+                    execState.sequencerCount,
                     execState.sendCount,
                     execState.logCount,
                     execState.sendAcc,
                     execState.logAcc,
                     execState.proposedBlock,
-                    execState.inboxMaxCount
+                    execState.inboxMaxCount[0],
+                    execState.inboxMaxCount[1]
                 )
             );
     }
@@ -73,7 +74,7 @@ library RollupLib {
         bytes32[3] memory bytes32Fields,
         uint256[5] memory intFields,
         uint256 proposedBlock,
-        uint256 inboxMaxCount
+        uint256[2] memory inboxMaxCount
     ) internal pure returns (ExecutionState memory) {
         return
             ExecutionState(
@@ -94,8 +95,8 @@ library RollupLib {
         bytes32[3][2] memory bytes32Fields,
         uint256[5][2] memory intFields,
         uint256 beforeProposedBlock,
-        uint256 beforeInboxMaxCount,
-        uint256 inboxMaxCount
+        uint256[2] memory beforeInboxMaxCount,
+        uint256[2] memory inboxMaxCount
     ) internal view returns (Assertion memory) {
         return
             Assertion(
@@ -118,7 +119,7 @@ library RollupLib {
             ChallengeLib.assertionHash(
                 state.gasUsed,
                 ChallengeLib.assertionRestHash(
-                    [state.inboxCount, state.sequenceInboxCount],
+                    [state.inboxCount, state.sequencerCount],
                     state.machineHash,
                     state.sendAcc,
                     state.sendCount,
@@ -147,7 +148,7 @@ library RollupLib {
             challengeRootHash(
                 assertionExecHash,
                 blockProposed,
-                [assertion.afterState.inboxCount, assertion.afterState.sequenceInboxCount]
+                [assertion.afterState.inboxCount, assertion.afterState.sequencerCount]
             );
     }
 

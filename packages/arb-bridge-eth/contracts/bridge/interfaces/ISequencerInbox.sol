@@ -18,4 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-interface ISequencerInbox {}
+interface ISequencerInbox {
+    function messageCount() external view returns (uint256);
+}
