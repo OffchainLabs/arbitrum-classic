@@ -152,7 +152,7 @@ describe('Ether', () => {
 
     const { indexInBatch, batchNumber } = withdrawEventData
     await wait()
-    const proof = await bridge.tryGetProof(indexInBatch, batchNumber)
+    const proof = await bridge.tryGetProof(batchNumber, indexInBatch)
     expect(proof).to.exist
   })
 
@@ -267,7 +267,7 @@ describe('ERC20', () => {
     expect(withdrawEventData).to.exist
     const { indexInBatch, batchNumber } = withdrawEventData
     await wait()
-    const proof = await bridge.tryGetProof(indexInBatch, batchNumber)
+    const proof = await bridge.tryGetProof(batchNumber, indexInBatch)
     expect(proof).to.exist
   })
 
