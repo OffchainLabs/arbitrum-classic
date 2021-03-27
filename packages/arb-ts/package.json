@@ -46,11 +46,13 @@
     "@typescript-eslint/parser": "^3.4.0",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
+    "chalk": "^4.1.0",
     "ethereum-waffle": "^2.3.0",
     "install-peers-cli": "^2.2.0",
     "mocha": "^7.2.0",
     "nyc": "^15.1.0",
-    "typescript": "^4.0.2"
+    "typescript": "^4.0.2",
+    "yargs": "^16.2.0"
   },
   "files": [
     "dist/**/*"
