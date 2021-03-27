@@ -38,7 +38,7 @@ interface ITransferReceiver {
     ) external returns (bool);
 }
 
-contract ArbTokenBridge {
+contract ArbTokenBridge is ProxySetter {
     using Address for address;
 
     /// @notice This mapping is from L1 address to L2 address
@@ -47,6 +47,7 @@ contract ArbTokenBridge {
     uint256 exitNum;
 
     bytes32 private cloneableProxyHash;
+    address private deployBeacon;
 
     address public templateERC20;
     address public templateERC777;
@@ -326,6 +327,10 @@ contract ArbTokenBridge {
             );
     }
 
+    function getBeacon() external view override returns (address) {
+        return deployBeacon;
+    }
+
     function ensureTokenExists(
         address l1ERC20,
         uint8 decimals,
@@ -342,8 +347,10 @@ contract ArbTokenBridge {
 
         if (!l2Contract.isContract()) {
             address beacon = tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777;
+            deployBeacon = beacon;
             bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
-            ClonableBeaconProxy createdContract = new ClonableBeaconProxy{ salt: salt }(beacon);
+            ClonableBeaconProxy createdContract = new ClonableBeaconProxy{ salt: salt }();
+            deployBeacon = address(0);
             IArbToken(address(createdContract)).initialize(address(this), l1ERC20, decimals);
             require(address(createdContract) == l2Contract, "Incorrect deploy address");
             emit TokenCreated(l1ERC20, address(createdContract), tokenType);
