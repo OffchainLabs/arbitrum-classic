@@ -56,6 +56,8 @@ const main = async () => {
 
   const l1ProxyAdmin = await L1ProxyAdmin.deploy()
   console.log('L1 proxy admin at', l1ProxyAdmin.address)
+  await l1ProxyAdmin.deployed()
+
   const ethERC20BridgeProxy = await L1TransparentUpgradeableProxy.deploy(
     ethERC20Bridge.address,
     l1ProxyAdmin.address,

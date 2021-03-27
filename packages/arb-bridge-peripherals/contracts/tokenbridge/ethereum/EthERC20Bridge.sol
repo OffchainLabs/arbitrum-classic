@@ -18,7 +18,8 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
+import "../libraries/ClonableBeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
@@ -45,24 +46,7 @@ contract EthERC20Bridge {
 
     address private l2TemplateERC777;
     address private l2TemplateERC20;
-
-    address owner;
-
-    function updateOwner(address newOwner) external {
-        require(msg.sender == owner, "Only owner");
-        owner = newOwner;
-    }
-
-    function updateTemplates(address erc20, address erc777) external {
-        require(msg.sender == owner, "Only owner");
-        l2TemplateERC777 = erc777;
-        l2TemplateERC20 = erc20;
-    }
-
-    function updateL2Address(address newL2Address) external {
-        require(msg.sender == owner, "Only owner");
-        l2Address = newL2Address;
-    }
+    bytes32 private cloneableProxyHash;
 
     address public l2Address;
     IInbox public inbox;
@@ -97,8 +81,6 @@ contract EthERC20Bridge {
         address _l2Address
     ) external payable {
         require(address(l2TemplateERC20) == address(0), "already initialized");
-        require(owner == address(0), "owner already set");
-        owner = msg.sender;
         l2TemplateERC777 = _l2TemplateERC777;
         l2TemplateERC20 = _l2TemplateERC20;
 
@@ -109,6 +91,7 @@ contract EthERC20Bridge {
         //     );
         l2Address = _l2Address;
         inbox = IInbox(_inbox);
+        cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
         // TODO: this stores the creation code in state, but we don't actually need that
         // L1Buddy.initiateBuddyDeploy(_maxSubmissionCost, _maxGas, _gasPrice, deployCode);
     }
@@ -357,12 +340,12 @@ contract EthERC20Bridge {
     }
 
     function calculateL2ERC777Address(address erc20) external view returns (address) {
-        bytes32 salt = bytes32(uint256(erc20));
-        return Clones.predictDeterministicAddress(l2TemplateERC777, salt, l2Address);
+        bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC777));
+        return Create2.computeAddress(salt, cloneableProxyHash, l2Address);
     }
 
     function calculateL2ERC20Address(address erc20) external view returns (address) {
-        bytes32 salt = bytes32(uint256(erc20));
-        return Clones.predictDeterministicAddress(l2TemplateERC20, salt, l2Address);
+        bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC20));
+        return Create2.computeAddress(salt, cloneableProxyHash, l2Address);
     }
 }
