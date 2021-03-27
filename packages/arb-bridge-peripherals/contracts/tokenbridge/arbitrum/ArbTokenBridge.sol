@@ -18,17 +18,17 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/utils/Address.sol";
 import "./StandardArbERC20.sol";
 import "./StandardArbERC777.sol";
-import "@openzeppelin/contracts/proxy/Clones.sol";
+import "../libraries/ClonableBeaconProxy.sol";
+import "../ethereum/EthERC20Bridge.sol";
+
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
+import "../libraries/BytesParser.sol";
 
 import "./IArbToken.sol";
-import "arb-bridge-eth/contracts/libraries/ICloneable.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
-
-import "../ethereum/EthERC20Bridge.sol";
-import "../libraries/BytesParser.sol";
 
 interface ITransferReceiver {
     function onTokenTransfer(
@@ -38,7 +38,7 @@ interface ITransferReceiver {
     ) external returns (bool);
 }
 
-contract ArbTokenBridge {
+contract ArbTokenBridge is ProxySetter {
     using Address for address;
 
     /// @notice This mapping is from L1 address to L2 address
@@ -46,27 +46,12 @@ contract ArbTokenBridge {
 
     uint256 exitNum;
 
+    bytes32 private cloneableProxyHash;
+    address private deployBeacon;
+
     address public templateERC20;
     address public templateERC777;
     address public l1Pair;
-
-    address owner;
-
-    function updateOwner(address newOwner) external {
-        require(msg.sender == owner, "Only owner");
-        owner = newOwner;
-    }
-
-    function updateTemplates(address erc20, address erc777) external {
-        require(msg.sender == owner, "Only owner");
-        templateERC20 = erc20;
-        templateERC777 = erc777;
-    }
-
-    function updateL1Pair(address newL1Pair) external {
-        require(msg.sender == owner, "Only owner");
-        l1Pair = newL1Pair;
-    }
 
     event MintAndCallTriggered(
         bool success,
@@ -168,15 +153,15 @@ contract ArbTokenBridge {
         address _l1Pair,
         address _templateERC777,
         address _templateERC20
-    ) public {
-        require(address(templateERC20) == address(0), "aleady init");
+    ) external {
+        require(address(l1Pair) == address(0), "already init");
         require(_l1Pair != address(0), "L1 pair can't be address 0");
-        require(owner == address(0), "owner is already set");
-        owner = msg.sender;
         templateERC20 = _templateERC20;
         templateERC777 = _templateERC777;
 
         l1Pair = _l1Pair;
+
+        cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
     }
 
     function mintAndCall(
@@ -185,7 +170,7 @@ contract ArbTokenBridge {
         address sender,
         address dest,
         bytes memory data
-    ) public {
+    ) external {
         require(msg.sender == address(this), "Mint can only be called by self");
 
         // the token's transfer hook does not get triggered here
@@ -327,11 +312,23 @@ contract ArbTokenBridge {
     }
 
     function calculateBridgedERC777Address(address l1ERC20) public view returns (address) {
-        return Clones.predictDeterministicAddress(address(templateERC777), bytes32(uint256(l1ERC20)), address(this));
+        return
+            Create2.computeAddress(
+                keccak256(abi.encodePacked(l1ERC20, templateERC777)),
+                cloneableProxyHash
+            );
     }
 
     function calculateBridgedERC20Address(address l1ERC20) public view returns (address) {
-        return Clones.predictDeterministicAddress(address(templateERC20), bytes32(uint256(l1ERC20)), address(this));
+        return
+            Create2.computeAddress(
+                keccak256(abi.encodePacked(l1ERC20, templateERC20)),
+                cloneableProxyHash
+            );
+    }
+
+    function getBeacon() external view override returns (address) {
+        return deployBeacon;
     }
 
     function ensureTokenExists(
@@ -349,13 +346,14 @@ contract ArbTokenBridge {
                 : calculateBridgedERC777Address(l1ERC20);
 
         if (!l2Contract.isContract()) {
-            address createdContract = Clones.cloneDeterministic(
-                    tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777,
-                    bytes32(uint256(l1ERC20))
-                );
-            require(createdContract == l2Contract, "Incorrect deploy address");
-            IArbToken(l2Contract).initialize(address(this), l1ERC20, decimals);
-            emit TokenCreated(l1ERC20, createdContract, tokenType);
+            address beacon = tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777;
+            deployBeacon = beacon;
+            bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
+            ClonableBeaconProxy createdContract = new ClonableBeaconProxy{ salt: salt }();
+            deployBeacon = address(0);
+            IArbToken(address(createdContract)).initialize(address(this), l1ERC20, decimals);
+            require(address(createdContract) == l2Contract, "Incorrect deploy address");
+            emit TokenCreated(l1ERC20, address(createdContract), tokenType);
         }
         return IArbToken(l2Contract);
     }
