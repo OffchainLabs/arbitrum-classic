@@ -122,6 +122,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     0, // total gas used
                     _machineHash,
                     0, // inbox count
+                    0, // sequencer count
                     0, // send count
                     0, // log count
                     0, // send acc
@@ -428,7 +429,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
         bytes32[3][2] calldata assertionBytes32Fields,
-        uint256[4][2] calldata assertionIntFields,
+        uint256[5][2] calldata assertionIntFields,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount
     ) external whenNotPaused {
@@ -587,7 +588,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         uint256[2] calldata nodeNums,
         bytes32[2] calldata executionHashes,
         uint256[2] calldata proposedTimes,
-        uint256[2] calldata maxMessageCounts
+        uint256[2][2] calldata maxMessageCounts
     ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");

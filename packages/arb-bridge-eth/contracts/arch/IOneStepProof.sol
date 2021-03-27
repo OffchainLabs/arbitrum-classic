@@ -23,7 +23,7 @@ import "../bridge/interfaces/IBridge.sol";
 interface IOneStepProof {
     function executeStep(
         IBridge bridge,
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -32,13 +32,13 @@ interface IOneStepProof {
         view
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256[2] memory totalMessagesRead,
             bytes32[4] memory fields
         );
 
     function executeStepDebug(
         IBridge bridge,
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof

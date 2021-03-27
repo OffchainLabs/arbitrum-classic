@@ -149,7 +149,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     // accs is [sendAcc, logAcc]
     function executeStep(
         IBridge bridge,
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -159,7 +159,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         override
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256[2] memory totalMessagesRead,
             bytes32[4] memory fields
         )
     {
@@ -173,7 +173,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     function executeStepDebug(
         IBridge bridge,
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -198,13 +198,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
         pure
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256[2] memory totalMessagesRead,
             bytes32[4] memory fields
         )
     {
         return (
             context.gas,
-            context.totalMessagesRead,
+            [context.totalMessagesRead, context.totalSequencerRead],
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
@@ -235,6 +235,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         Machine.Data startMachine;
         Machine.Data afterMachine;
         uint256 totalMessagesRead;
+        uint256 totalSequencerRead;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -275,7 +276,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function initializeExecutionContext(
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesRead,
         bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
@@ -305,7 +306,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
         context.bridge = bridge;
         context.startMachine = mach;
         context.afterMachine = mach.clone();
-        context.totalMessagesRead = initialMessagesRead;
+        context.totalMessagesRead = initialMessagesRead[0];
+        context.totalSequencerRead = initialMessagesRead[1];
         context.sendAcc = accs[0];
         context.logAcc = accs[1];
         context.gas = 0;

@@ -70,7 +70,7 @@ contract Challenge is Cloneable, IChallenge {
 
     IRollup internal resultReceiver;
 
-    uint256 maxMessageCount;
+    uint256[2] maxMessageCount;
 
     address public override asserter;
     address public override challenger;
@@ -104,7 +104,7 @@ contract Challenge is Cloneable, IChallenge {
         IOneStepProof[] calldata _executors,
         address _resultReceiver,
         bytes32 _executionHash,
-        uint256 _maxMessageCount,
+        uint256[2] calldata _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
@@ -227,10 +227,6 @@ contract Challenge is Cloneable, IChallenge {
         _currentWin();
     }
 
-    // machineFields
-    //  initialInbox
-    //  initialMessageAcc
-    //  initialLogAcc
     // initialState
     //  _initialGasUsed
     //  _initialSendCount
@@ -241,7 +237,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
-        uint256 _initialMessagesRead,
+        uint256[2] memory _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
@@ -251,7 +247,7 @@ contract Challenge is Cloneable, IChallenge {
     ) public onlyOnTurn {
         bytes32 rootHash;
         {
-            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
+            (uint64 gasUsed, uint256[2] memory totalMessagesRead, bytes32[4] memory proofFields) =
                 executors[prover].executeStep(
                     bridge,
                     _initialMessagesRead,
@@ -260,7 +256,8 @@ contract Challenge is Cloneable, IChallenge {
                     _bufferProof
                 );
 
-            require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
+            require(totalMessagesRead[0] <= maxMessageCount[0], "TOO_MANY_MESSAGES");
+            require(totalMessagesRead[1] <= maxMessageCount[1], "TOO_MANY_SEQ_MESSAGES");
 
             require(
                 // if false, this segment must be proven with proveContinuedExecution
@@ -416,7 +413,7 @@ contract Challenge is Cloneable, IChallenge {
     //  afterMessagesHash
     //  afterLogsHash
     function oneStepProofExecutionBefore(
-        uint256 _initialMessagesRead,
+        uint256[2] memory _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
@@ -441,7 +438,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
         uint64 gasUsed,
-        uint256 totalMessagesRead,
+        uint256[2] memory totalMessagesRead,
         bytes32[4] memory proofFields
     ) private pure returns (bytes32) {
         // The one step proof already guarantees us that firstMessage and lastMessage
