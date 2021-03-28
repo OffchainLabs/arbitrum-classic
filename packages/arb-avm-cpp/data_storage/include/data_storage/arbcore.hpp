@@ -75,10 +75,6 @@ class ArbCore {
     // Core thread input
     std::atomic<bool> arbcore_abort{false};
 
-    // Core thread input
-    std::atomic<bool> manual_save_checkpoint{false};
-    rocksdb::Status save_checkpoint_status;
-
     std::shared_ptr<DataStorage> data_storage;
 
     std::unique_ptr<MachineThread> machine;
@@ -194,7 +190,7 @@ class ArbCore {
                          const std::optional<uint256_t>& reorg_height);
     message_status_enum messagesStatus();
     std::string messagesClearError();
-    void checkpointsMinMessageIndex(uint256_t message_index);
+    void checkpointsSetMinMessageIndex(uint256_t message_index);
 
    public:
     // Logs Cursor interaction
@@ -356,8 +352,8 @@ class ArbCore {
     ValueResult<uint256_t> logsCursorGetCurrentTotalCount(
         const ReadTransaction& tx,
         size_t cursor_index) const;
-    rocksdb::Status deleteOldCheckpoints(
-        uint256_t delete_checkpoints_before_message);
+    rocksdb::Status deleteOldCheckpoint(
+        uint256_t delete_checkpoints_before_message_index);
 };
 
 std::optional<rocksdb::Status> deleteLogsStartingAt(ReadWriteTransaction& tx,

@@ -103,7 +103,7 @@ TEST_CASE("ArbCore tests") {
         REQUIRE(storage.initialize(arb_os_path).ok());
         auto arbCore = storage.getArbCore();
         REQUIRE(arbCore->startThread());
-        arbCore->checkpointsMinMessageIndex(500);
+        arbCore->checkpointsSetMinMessageIndex(0);
 
         auto test_file =
             std::string{arb_os_test_cases_path} + "/" + filename + ".aoslog";
@@ -205,6 +205,12 @@ TEST_CASE("ArbCore tests") {
             *cursor.data, 100, false, value_cache);
         REQUIRE(advanceStatus.ok());
         REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
+
+        auto tx = storage.makeReadTransaction();
+        REQUIRE(!arbCore->isCheckpointsEmpty(*tx));
+        if (sends.size() > 0) {
+            REQUIRE(!arbCore->maxCheckpointGas() == 0);
+        }
 
         //        auto before_sideload = arbCore->getMachineForSideload(
         //            inbox_messages.back().block_number, value_cache);

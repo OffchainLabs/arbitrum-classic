@@ -37,7 +37,6 @@ add_executable(
 		arbcore.cpp
 		buffer.cpp
 		checkpoint.cpp
-		checkpointedmachine.cpp
 		code.cpp
 		datastack.cpp
 		ecops.cpp

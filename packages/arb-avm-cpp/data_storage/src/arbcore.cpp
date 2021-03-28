@@ -70,7 +70,6 @@ ValueResult<MessageEntry> ArbCore::getMessageEntry(
     std::vector<unsigned char> previous_key;
     marshal_uint256_t(message_sequence_number, previous_key);
 
-    // Do not need to use snapshot because old messages not deleted during reorg
     auto messages_inserted = messageEntryInsertedCountImpl(tx);
     if (!messages_inserted.status.ok()) {
         return {messages_inserted.status, {}};
@@ -253,24 +252,10 @@ template std::unique_ptr<MachineThread> ArbCore::getMachine(
     uint256_t machineHash,
     ValueCache& value_cache);
 
-void ArbCore::checkpointsMinMessageIndex(uint256_t message_index) {
+void ArbCore::checkpointsSetMinMessageIndex(uint256_t message_index) {
     const std::lock_guard<std::mutex> lock(cleanup_mutex);
     checkpoints_min_message_index_input = message_index;
     update_cleanup = true;
-}
-
-// triggerSaveCheckpoint is meant for unit tests and should not be called from
-// multiple threads at the same time.
-rocksdb::Status ArbCore::triggerSaveCheckpoint() {
-    manual_save_checkpoint = true;
-    std::cerr << "Triggering checkpoint save" << std::endl;
-    while (manual_save_checkpoint) {
-        // Wait until snapshot has been saved
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    std::cerr << "Manual checkpoint saved" << std::endl;
-
-    return save_checkpoint_status;
 }
 
 rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
@@ -562,15 +547,6 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     return getMachineUsingStateKeysUnsafe<T>(tx, state_data, value_cache);
 }
 
-template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeys(
-    const ReadSnapshotTransaction& tx,
-    const MachineStateKeys& state_data,
-    ValueCache& value_cache) const;
-template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
-    const ReadSnapshotTransaction& tx,
-    const MachineStateKeys& state_data,
-    ValueCache& value_cache) const;
-
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeysUnsafe(
     const ReadTransaction& tx,
@@ -652,15 +628,6 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeysUnsafe(
 
     return std::make_unique<T>(state);
 }
-
-template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeysUnsafe(
-    const ReadTransaction& tx,
-    const MachineStateKeys& state_data,
-    ValueCache& value_cache) const;
-template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeysUnsafe(
-    const ReadTransaction& tx,
-    const MachineStateKeys& state_data,
-    ValueCache& value_cache) const;
 
 // operator() runs the main thread for ArbCore.  It is responsible for adding
 // messages to the queue, starting machine thread when needed and collecting
@@ -783,11 +750,10 @@ void ArbCore::operator()() {
                         possible_new_save_checkpoint_after_gas;
                 }
 
-                // Save checkpoint for sideload after configured gas has ben
+                // Save checkpoint for sideload after configured gas has been
                 // used
                 if (machine->machine_state.output.arb_gas_used >
-                        save_checkpoint_after_gas ||
-                    manual_save_checkpoint) {
+                    save_checkpoint_after_gas) {
                     status = saveCheckpoint(tx);
                     if (!status.ok()) {
                         core_error_string = status.ToString();
@@ -802,8 +768,6 @@ void ArbCore::operator()() {
                     save_checkpoint_after_gas =
                         machine->machine_state.output.arb_gas_used +
                         checkpoint_min_gas_interval;
-
-                    manual_save_checkpoint = false;
                 }
 
                 // Machine was stopped to save sideload, update execConfig
@@ -833,27 +797,6 @@ void ArbCore::operator()() {
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
-            if (manual_save_checkpoint) {
-                ReadWriteTransaction tx(data_storage);
-                auto status = saveCheckpoint(tx);
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    std::cerr << "ArbCore manual checkpoint saving failed: "
-                              << core_error_string << "\n";
-                    break;
-                }
-
-                status = tx.commit();
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    machine_error = true;
-                    std::cerr << "ArbCore database update failed: "
-                              << core_error_string << "\n";
-                    break;
-                }
-                manual_save_checkpoint = false;
-            }
-
             // Start execution of machine if new message available
             ReadTransaction tx(data_storage);
             auto messages_count = messageEntryInsertedCountImpl(tx);
@@ -936,16 +879,6 @@ void ArbCore::operator()() {
                     std::cerr << "ArbCore error: " << core_error_string << "\n";
                     break;
                 }
-
-                auto status =
-                    deleteOldCheckpoints(checkpoints_min_message_index);
-                if (!status.ok()) {
-                    core_error_string = "error deleting old checkpoints";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << ": "
-                              << status.ToString() << "\n";
-                    break;
-                }
             } else {
                 // Machine all caught up, no messages to process
                 machine_idle = true;
@@ -963,6 +896,22 @@ void ArbCore::operator()() {
             const std::lock_guard<std::mutex> lock(cleanup_mutex);
             checkpoints_min_message_index = checkpoints_min_message_index_input;
             update_cleanup = false;
+        }
+
+        if (!machineIdle() && checkpoints_min_message_index > 0) {
+            auto status = deleteOldCheckpoint(checkpoints_min_message_index);
+            if (!status.ok()) {
+                if (!status.IsNotFound()) {
+                    core_error_string = "error deleting old checkpoints";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ": "
+                              << status.ToString() << "\n";
+                    break;
+                }
+
+                // No more checkpoints to delete
+                checkpoints_min_message_index = 0;
+            }
         }
 
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
@@ -1181,7 +1130,7 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 }
 
 ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
-    ReadSnapshotTransaction tx(data_storage);
+    ReadTransaction tx(data_storage);
 
     auto result = getMessageEntry(tx, index);
     if (!result.status.ok()) {
@@ -2357,7 +2306,8 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
             takeExecutionCursorMachineImpl(tx, *execution_cursor, cache)};
 }
 
-rocksdb::Status ArbCore::deleteOldCheckpoints(
+// Only delete one checkpoint at a time
+rocksdb::Status ArbCore::deleteOldCheckpoint(
     uint256_t delete_checkpoints_before_message_index) {
     ReadWriteTransaction tx(data_storage);
     auto delete_checkpoints_before_message_count =
@@ -2371,76 +2321,53 @@ rocksdb::Status ArbCore::deleteOldCheckpoints(
     }
 
     it->SeekToFirst();
-    if (!it->status().ok()) {
-        std::cerr << "unable to delete old checkpoints, SeekToFirst error: "
-                  << it->status().ToString() << std::endl;
-        return it->status();
-    }
     if (!it->Valid()) {
+        if (!it->status().ok()) {
+            std::cerr << "unable to delete old checkpoints, SeekToFirst error: "
+                      << it->status().ToString() << std::endl;
+            return it->status();
+        }
+
         std::cerr << "unable to delete old checkpoints, invalid SeekToFirst."
                   << std::endl;
-        return rocksdb::Status::NotFound();
+        return rocksdb::Status::Corruption();
     }
 
     // Always leave checkpoint zero
     it->Next();
-    if (!it->status().ok()) {
-        if (it->status().IsNotFound()) {
-            // Nothing to cleanup
-            return rocksdb::Status::OK();
+    if (!it->Valid()) {
+        if (!it->status().ok() && !it->status().IsNotFound()) {
+            std::cerr
+                << "unable to delete old checkpoints, error calling Next: "
+                << it->status().ToString() << std::endl;
+            return it->status();
         }
-        std::cerr << "unable to delete old checkpoints, Prev error: "
-                  << it->status().ToString() << std::endl;
-        return it->status();
+
+        return rocksdb::Status::NotFound();
     }
 
-    rocksdb::Slice start = nullptr;
-    auto end = it->key();
-    while (it->Valid()) {
-        std::vector<unsigned char> checkpoint_vector(
-            it->value().data(), it->value().data() + it->value().size());
-        auto checkpoint = extractMachineStateKeys(checkpoint_vector.begin(),
-                                                  checkpoint_vector.end());
+    std::vector<unsigned char> checkpoint_vector(
+        it->value().data(), it->value().data() + it->value().size());
+    auto checkpoint = extractMachineStateKeys(checkpoint_vector.begin(),
+                                              checkpoint_vector.end());
 
-        if (checkpoint.getTotalMessagesRead() >=
-            delete_checkpoints_before_message_count) {
-            // No more messages to delete
-            break;
-        }
-
-        // Obsolete checkpoint, need to delete referenced machine
-        deleteMachineState(tx, checkpoint);
-
-        // Found checkpoints to delete
-        start = it->key();
-        it->Next();
-    }
-    if (!it->status().ok()) {
-        if (it->status().IsNotFound()) {
-            // Nothing to cleanup
-            return rocksdb::Status::OK();
-        }
-        std::cerr << "unable to delete old checkpoints, iterator error: "
-                  << it->status().ToString() << std::endl;
-        return it->status();
+    if (checkpoint.getTotalMessagesRead() >=
+        delete_checkpoints_before_message_count) {
+        // No more checkpoints to delete
+        return rocksdb::Status::NotFound();
     }
 
-    if (start != nullptr) {
-        auto status = tx.checkpointDeleteRange(start, end);
-        if (!status.ok()) {
-            std::cerr << "unable to delete old checkpoints, "
-                      << "error calling checkpointDeleteRange: "
-                      << status.ToString() << std::endl;
-            return status;
-        }
+    // Obsolete checkpoint, need to delete referenced machine
+    deleteMachineState(tx, checkpoint);
 
-        status = tx.commit();
-        if (!status.ok()) {
-            std::cerr << "unable to delete old checkpoints, "
-                      << "error calling commit: " << status.ToString()
-                      << std::endl;
-            return status;
-        }
+    // Delete checkpoint to make sure it isn't used later
+    tx.checkpointDelete(it->key());
+
+    auto status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "unable to delete old checkpoints, "
+                  << "error calling commit: " << status.ToString() << std::endl;
+        return status;
     }
 
     return rocksdb::Status::OK();
