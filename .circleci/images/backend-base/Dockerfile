@@ -1,4 +1,4 @@
-FROM debian:buster-slim
+FROM debian:sid-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     apt-get install -y curl git librocksdb-dev libgmp-dev sudo netcat-openbsd gcc g++ && \
