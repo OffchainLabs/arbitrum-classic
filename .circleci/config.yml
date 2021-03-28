@@ -53,7 +53,7 @@ workflows:
 jobs:
   go-deps:
     docker:
-      - image: offchainlabs/backend-base:0.2.8
+      - image: offchainlabs/backend-base:0.3.0
     steps:
       - checkout
       - restore_cache: *restore_go_cache
@@ -152,7 +152,7 @@ jobs:
 
   cpp-avm-build:
     docker:
-      - image: offchainlabs/cpp-base:0.2.5
+      - image: offchainlabs/cpp-base:0.3.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -175,7 +175,7 @@ jobs:
             - ./debug/*
   cpp-avm:
     docker:
-      - image: offchainlabs/cpp-base:0.2.5
+      - image: offchainlabs/cpp-base:0.3.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -203,7 +203,7 @@ jobs:
           path: *test-path
   backend:
     docker:
-      - image: offchainlabs/backend-base:0.2.8
+      - image: offchainlabs/backend-base:0.3.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
@@ -250,7 +250,7 @@ jobs:
 
   arb-bridge-peripherals:
     docker:
-      - image: offchainlabs/integration-base:0.1.1
+      - image: offchainlabs/integration-base:0.3.0
     environment: # environment variables for the build itself
       TEST_RESULTS: *test-path # path to where test results will be saved
     steps:
