@@ -70,6 +70,7 @@ ValueResult<MessageEntry> ArbCore::getMessageEntry(
     std::vector<unsigned char> previous_key;
     marshal_uint256_t(message_sequence_number, previous_key);
 
+    // Do not need to use snapshot because old messages not deleted during reorg
     auto messages_inserted = messageEntryInsertedCountImpl(tx);
     if (!messages_inserted.status.ok()) {
         return {messages_inserted.status, {}};
@@ -234,9 +235,9 @@ bool ArbCore::initialized() const {
 }
 
 template <class T>
-std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
-                                           uint256_t machineHash,
-                                           ValueCache& value_cache) {
+std::unique_ptr<T> ArbCore::getMachine(uint256_t machineHash,
+                                       ValueCache& value_cache) {
+    ReadSnapshotTransaction tx(data_storage);
     auto results = getMachineStateKeys(tx, machineHash);
     if (std::holds_alternative<rocksdb::Status>(results)) {
         throw std::runtime_error("failed to load machine state");
@@ -246,25 +247,11 @@ std::unique_ptr<T> ArbCore::getMachineImpl(ReadTransaction& tx,
         tx, std::get<CountedData<MachineStateKeys>>(results).data, value_cache);
 }
 
-template std::unique_ptr<Machine> ArbCore::getMachineImpl(
-    ReadTransaction& tx,
+template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t machineHash,
+                                                      ValueCache& value_cache);
+template std::unique_ptr<MachineThread> ArbCore::getMachine(
     uint256_t machineHash,
     ValueCache& value_cache);
-template std::unique_ptr<MachineThread> ArbCore::getMachineImpl(
-    ReadTransaction& tx,
-    uint256_t machineHash,
-    ValueCache& value_cache);
-
-template <class T>
-std::unique_ptr<T> ArbCore::getMachine(uint256_t machineHash,
-                                       ValueCache& value_cache) {
-    ReadSnapshotTransaction tx(data_storage);
-    return getMachineImpl<T>(tx, machineHash, value_cache);
-}
-
-template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
-template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
-                                                            ValueCache&);
 
 void ArbCore::checkpointsMinMessageIndex(uint256_t message_index) {
     const std::lock_guard<std::mutex> lock(cleanup_mutex);
@@ -367,6 +354,8 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         // Find first checkpoint to delete
         it->SeekToLast();
         if (!it->status().ok()) {
+            std::cerr << "Error: SeekToLast failed during reorg: "
+                      << it->status().ToString() << std::endl;
             return it->status();
         }
 
@@ -404,6 +393,8 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 
                 it->Prev();
                 if (!it->status().ok()) {
+                    std::cerr << "Error: problem with iterator during reorg: "
+                              << it->status().ToString() << std::endl;
                     return it->status();
                 }
             }
@@ -417,6 +408,8 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
 
         auto status = tx.commit();
         if (!status.ok()) {
+            std::cerr << "Error: unable to commit during reorg: "
+                      << status.ToString() << std::endl;
             return status;
         }
     }
@@ -474,7 +467,16 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         machine->abortMachine();
     }
 
-    machine = getMachineUsingStateKeys<MachineThread>(tx, checkpoint, cache);
+    // Safe to call because only core thread modifies database
+    machine =
+        getMachineUsingStateKeysUnsafe<MachineThread>(tx, checkpoint, cache);
+
+    status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "Error: problem committing during reorg: "
+                  << status.ToString() << std::endl;
+        return status;
+    }
 
     // Update last machine
     {
@@ -482,7 +484,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
         last_machine = std::make_unique<Machine>(*machine);
     }
 
-    return tx.commit();
+    return rocksdb::Status::OK();
 }
 
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
@@ -520,7 +522,7 @@ uint256_t ArbCore::maxCheckpointGas() {
 // if `after_gas` is false. If `after_gas` is true, checkpoint after specified
 // gas is returned.
 std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
-    ReadTransaction& tx,
+    ReadSnapshotTransaction& tx,
     const uint256_t& total_gas,
     bool after_gas) {
     auto it = tx.checkpointGetIterator();
@@ -554,13 +556,30 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
 
 template <class T>
 std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
-    const ReadTransaction& transaction,
+    const ReadSnapshotTransaction& tx,
+    const MachineStateKeys& state_data,
+    ValueCache& value_cache) const {
+    return getMachineUsingStateKeysUnsafe<T>(tx, state_data, value_cache);
+}
+
+template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeys(
+    const ReadSnapshotTransaction& tx,
+    const MachineStateKeys& state_data,
+    ValueCache& value_cache) const;
+template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
+    const ReadSnapshotTransaction& tx,
+    const MachineStateKeys& state_data,
+    ValueCache& value_cache) const;
+
+template <class T>
+std::unique_ptr<T> ArbCore::getMachineUsingStateKeysUnsafe(
+    const ReadTransaction& tx,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const {
     std::set<uint64_t> segment_ids;
 
-    auto static_results = ::getValueImpl(transaction, state_data.static_hash,
-                                         segment_ids, value_cache);
+    auto static_results =
+        ::getValueImpl(tx, state_data.static_hash, segment_ids, value_cache);
 
     if (std::holds_alternative<rocksdb::Status>(static_results)) {
         std::stringstream ss;
@@ -569,8 +588,8 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         throw std::runtime_error(ss.str());
     }
 
-    auto register_results = ::getValueImpl(
-        transaction, state_data.register_hash, segment_ids, value_cache);
+    auto register_results =
+        ::getValueImpl(tx, state_data.register_hash, segment_ids, value_cache);
     if (std::holds_alternative<rocksdb::Status>(register_results)) {
         std::stringstream ss;
         ss << "failed loaded core machine register: "
@@ -578,16 +597,16 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         throw std::runtime_error(ss.str());
     }
 
-    auto stack_results = ::getValueImpl(transaction, state_data.datastack_hash,
-                                        segment_ids, value_cache);
+    auto stack_results =
+        ::getValueImpl(tx, state_data.datastack_hash, segment_ids, value_cache);
     if (std::holds_alternative<rocksdb::Status>(stack_results) ||
         !std::holds_alternative<Tuple>(
             std::get<CountedData<value>>(stack_results).data)) {
         throw std::runtime_error("failed to load machine stack");
     }
 
-    auto auxstack_results = ::getValueImpl(
-        transaction, state_data.auxstack_hash, segment_ids, value_cache);
+    auto auxstack_results =
+        ::getValueImpl(tx, state_data.auxstack_hash, segment_ids, value_cache);
     if (std::holds_alternative<rocksdb::Status>(auxstack_results)) {
         throw std::runtime_error("failed to load machine auxstack");
     }
@@ -610,7 +629,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
                 continue;
             }
             auto segment =
-                getCodeSegment(transaction, *it, next_segment_ids, value_cache);
+                getCodeSegment(tx, *it, next_segment_ids, value_cache);
             code->restoreExistingSegment(std::move(segment));
             loaded_segment = true;
         }
@@ -634,12 +653,12 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
     return std::make_unique<T>(state);
 }
 
-template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeys(
-    const ReadTransaction& transaction,
+template std::unique_ptr<Machine> ArbCore::getMachineUsingStateKeysUnsafe(
+    const ReadTransaction& tx,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const;
-template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
-    const ReadTransaction& transaction,
+template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeysUnsafe(
+    const ReadTransaction& tx,
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const;
 
@@ -824,6 +843,14 @@ void ArbCore::operator()() {
                     break;
                 }
 
+                status = tx.commit();
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    machine_error = true;
+                    std::cerr << "ArbCore database update failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
                 manual_save_checkpoint = false;
             }
 
@@ -991,13 +1018,14 @@ ValueResult<std::vector<value>> ArbCore::getLogs(uint256_t index,
                                                  ValueCache& valueCache) {
     ReadSnapshotTransaction tx(data_storage);
 
-    return getLogsNoLock(tx, index, count, valueCache);
+    return getLogsImpl(tx, index, count, valueCache);
 }
 
-ValueResult<std::vector<value>> ArbCore::getLogsNoLock(ReadTransaction& tx,
-                                                       uint256_t index,
-                                                       uint256_t count,
-                                                       ValueCache& valueCache) {
+ValueResult<std::vector<value>> ArbCore::getLogsImpl(
+    ReadSnapshotTransaction& tx,
+    uint256_t index,
+    uint256_t count,
+    ValueCache& valueCache) {
     if (count == 0) {
         return {rocksdb::Status::OK(), {}};
     }
@@ -1251,8 +1279,7 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
             // up to the target gas will be cheaper than loading the checkpoint
             // from disk and running it. We just need to check that the
             // execution cursor is still valid (a reorg hasn't occurred).
-            auto result =
-                executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
+            auto result = executionCursorGetMessages(tx, execution_cursor, 0);
             if (result.status.ok() && result.data.first) {
                 // Execution cursor machine still valid, so use it
                 already_newer = true;
@@ -1278,7 +1305,7 @@ MachineStateKeys& resolveExecutionVariant(MachineStateKeys& mach) {
 }
 
 std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
-    const ReadTransaction& tx,
+    const ReadSnapshotTransaction& tx,
     ExecutionCursor& execution_cursor,
     ValueCache& cache) const {
     if (std::holds_alternative<MachineStateKeys>(execution_cursor.machine)) {
@@ -1291,7 +1318,7 @@ std::unique_ptr<Machine>& ArbCore::resolveExecutionCursorMachine(
 }
 
 std::unique_ptr<Machine> ArbCore::takeExecutionCursorMachineImpl(
-    const ReadTransaction& tx,
+    const ReadSnapshotTransaction& tx,
     ExecutionCursor& execution_cursor,
     ValueCache& cache) const {
     auto mach =
@@ -1429,12 +1456,11 @@ rocksdb::Status ArbCore::resolveStagedMessage(const ReadTransaction& tx,
 }
 
 std::variant<rocksdb::Status, MachineStateKeys>
-ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
+ArbCore::getClosestExecutionMachine(ReadSnapshotTransaction& tx,
                                     const uint256_t& total_gas_used,
                                     bool is_for_sideload) {
     auto target_gas_used = total_gas_used;
     while (true) {
-        const std::lock_guard<std::mutex> lock(core_reorg_mutex);
         auto checkpoint_result =
             getCheckpointUsingGas(tx, target_gas_used, false);
 
@@ -1460,16 +1486,6 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
 
         return checkpoint_result;
     }
-}
-
-ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-ArbCore::executionCursorGetMessages(ReadTransaction& tx,
-                                    const ExecutionCursor& execution_cursor,
-                                    const uint256_t& orig_message_group_size) {
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-
-    return executionCursorGetMessagesNoLock(tx, execution_cursor,
-                                            orig_message_group_size);
 }
 
 bool ArbCore::isValid(ReadTransaction& tx,
@@ -1509,10 +1525,9 @@ bool ArbCore::isValid(ReadTransaction& tx,
 }
 
 ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-ArbCore::executionCursorGetMessagesNoLock(
-    ReadTransaction& tx,
-    const ExecutionCursor& execution_cursor,
-    const uint256_t& orig_message_group_size) {
+ArbCore::executionCursorGetMessages(ReadSnapshotTransaction& tx,
+                                    const ExecutionCursor& execution_cursor,
+                                    const uint256_t& orig_message_group_size) {
     auto message_group_size = orig_message_group_size;
     std::vector<InboxMessage> messages;
 
@@ -1767,8 +1782,6 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
 
     if (current_sequence_number < existing_message_count) {
         // Reorg occurred
-        const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-
         bool isMachineValid;
         {
             ReadWriteTransaction tx(data_storage);
@@ -1776,15 +1789,15 @@ std::optional<rocksdb::Status> ArbCore::addMessages(
             // Truncate MessageEntries to last valid message
             updateMessageEntryInsertedCount(tx, current_sequence_number);
 
+            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
+                                     machine->getReorgData().max_staged);
+
             auto status = tx.commit();
             if (!status.ok()) {
                 std::cerr << "error committing first part of addMessages: "
                           << status.ToString() << std::endl;
                 return status;
             }
-
-            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
-                                     machine->getReorgData().max_staged);
         }
 
         if (!isMachineValid) {
@@ -1990,7 +2003,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
         throw std::runtime_error("Invalid logsCursor index");
     }
 
-    ReadWriteTransaction tx(data_storage);
+    ReadSnapshotTransaction tx(data_storage);
 
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
@@ -2011,7 +2024,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
 
     if (log_count < logs_cursors[cursor_index].pending_total_count) {
         // Need to save logs that will be deleted
-        auto logs = getLogsNoLock(
+        auto logs = getLogsImpl(
             tx, log_count,
             logs_cursors[cursor_index].pending_total_count - log_count, cache);
         if (!logs.status.ok()) {
@@ -2030,10 +2043,20 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
         logs_cursors[cursor_index].pending_total_count = log_count;
 
         if (current_count_result.data > log_count) {
+            // The logs_cursors[cursor_index].reorg_mutex is already acquired,
+            // so safe to update logs cursor count here
+            ReadWriteTransaction rwtx(data_storage);
             auto status =
-                logsCursorSaveCurrentTotalCount(tx, cursor_index, log_count);
+                logsCursorSaveCurrentTotalCount(rwtx, cursor_index, log_count);
             if (!status.ok()) {
                 std::cerr << "unable to save current total count during reorg"
+                          << std::endl;
+                return status;
+            }
+
+            status = rwtx.commit();
+            if (!status.ok()) {
+                std::cerr << "unable to commit current total count during reorg"
                           << std::endl;
                 return status;
             }
@@ -2062,7 +2085,7 @@ rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
         logs_cursors[cursor_index].status = DataCursor::REQUESTED;
     }
 
-    return tx.commit();
+    return rocksdb::Status::OK();
 }
 
 bool ArbCore::logsCursorRequest(size_t cursor_index, uint256_t count) {
@@ -2385,7 +2408,7 @@ rocksdb::Status ArbCore::deleteOldCheckpoints(
             break;
         }
 
-        // Old checkpoint, need to delete referenced machine
+        // Obsolete checkpoint, need to delete referenced machine
         deleteMachineState(tx, checkpoint);
 
         // Found checkpoints to delete

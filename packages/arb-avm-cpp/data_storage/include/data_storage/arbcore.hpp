@@ -79,13 +79,6 @@ class ArbCore {
     std::atomic<bool> manual_save_checkpoint{false};
     rocksdb::Status save_checkpoint_status;
 
-    // Core thread holds mutex only during reorg.
-    // Routines accessing database for log entries will need to acquire mutex
-    // because obsolete log entries have `Value` references removed causing
-    // reference counts to be decremented and possibly deleted.
-    // No mutex required to access Sends or Messages because obsolete entries
-    // are not deleted.
-    std::mutex core_reorg_mutex;
     std::shared_ptr<DataStorage> data_storage;
 
     std::unique_ptr<MachineThread> machine;
@@ -151,7 +144,7 @@ class ArbCore {
         ReadTransaction& tx,
         const uint256_t& arb_gas_used) const;
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
-        ReadTransaction& tx,
+        ReadSnapshotTransaction& tx,
         const uint256_t& total_gas,
         bool after_gas);
     rocksdb::Status reorgToMessageOrBefore(
@@ -160,7 +153,13 @@ class ArbCore {
         ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
-        const ReadTransaction& transaction,
+        const ReadSnapshotTransaction& tx,
+        const MachineStateKeys& state_data,
+        ValueCache& value_cache) const;
+
+    template <class T>
+    std::unique_ptr<T> getMachineUsingStateKeysUnsafe(
+        const ReadTransaction& tx,
         const MachineStateKeys& state_data,
         ValueCache& value_cache) const;
 
@@ -171,10 +170,6 @@ class ArbCore {
                                   ValueCache& value_cache);
 
    private:
-    template <class T>
-    std::unique_ptr<T> getMachineImpl(ReadTransaction& tx,
-                                      uint256_t machineHash,
-                                      ValueCache& value_cache);
     rocksdb::Status saveCheckpoint(ReadWriteTransaction& tx);
 
    public:
@@ -243,11 +238,11 @@ class ArbCore {
         ValueCache& cache);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
-        const ReadTransaction& tx,
+        const ReadSnapshotTransaction& tx,
         ExecutionCursor& execution_cursor,
         ValueCache& cache) const;
     std::unique_ptr<Machine> takeExecutionCursorMachineImpl(
-        const ReadTransaction& tx,
+        const ReadSnapshotTransaction& tx,
         ExecutionCursor& execution_cursor,
         ValueCache& cache) const;
 
@@ -311,26 +306,22 @@ class ArbCore {
         const uint256_t& prev_inbox_acc,
         const std::optional<uint256_t>& reorg_message_count,
         ValueCache& cache);
-    ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
-                                                  uint256_t index,
-                                                  uint256_t count,
-                                                  ValueCache& valueCache);
+    ValueResult<std::vector<value>> getLogsImpl(ReadSnapshotTransaction& tx,
+                                                uint256_t index,
+                                                uint256_t count,
+                                                ValueCache& valueCache);
 
     bool isValid(ReadTransaction& tx,
                  const InboxState& fully_processed_inbox,
                  const staged_variant& staged_message);
 
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-    executionCursorGetMessages(ReadTransaction& tx,
+    executionCursorGetMessages(ReadSnapshotTransaction& tx,
                                const ExecutionCursor& execution_cursor,
                                const uint256_t& orig_message_group_size);
-    ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-    executionCursorGetMessagesNoLock(ReadTransaction& tx,
-                                     const ExecutionCursor& execution_cursor,
-                                     const uint256_t& orig_message_group_size);
 
     std::variant<rocksdb::Status, MachineStateKeys> getClosestExecutionMachine(
-        ReadTransaction& tx,
+        ReadSnapshotTransaction& tx,
         const uint256_t& total_gas_used,
         bool is_for_sideload = false);
 
