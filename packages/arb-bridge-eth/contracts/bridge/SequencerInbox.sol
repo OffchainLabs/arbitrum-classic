@@ -28,76 +28,46 @@ contract SequencerInbox is ISequencerInbox {
     bytes32[] public inboxAccs;
     uint256 public override messageCount;
     address public sequencer;
-    uint256 maxBlock;
-    uint256 maxTimestamp;
-    uint256 maxDelayBlocks;
-    uint256 maxDelaySeconds;
-
-    function verifyGroups(
-        uint256[] memory l1BlockNumbers,
-        uint256[] memory timestamps,
-        uint256[] calldata groupSizes
-    ) private view returns (uint256) {
-        uint256 count = l1BlockNumbers.length;
-        require(timestamps.length == count, "LENGTH_MISMATCH");
-        require(groupSizes.length == count, "LENGTH_MISMATCH");
-        require(groupSizes.length > 0, "MUST_HAVE_GROUP");
-        uint256 prevBlock = maxBlock;
-        uint256 prevTimestamp = maxTimestamp;
-        uint256 total = 0;
-        for (uint256 i = 0; i < count; i++) {
-            uint256 groupSize = groupSizes[i];
-            require(groupSize > 0, "NEED_NONZERO_GROUP");
-            uint256 l1BlockNumber = l1BlockNumbers[i];
-            uint256 timestamp = timestamps[i];
-            require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
-            require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
-            require(l1BlockNumber >= prevBlock, "BLOCK_WENT_BACK");
-            require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
-            require(timestamp <= block.timestamp, "TIME_TOO_NEW");
-            require(timestamp >= prevTimestamp, "TIME_WENT_BACK");
-            prevBlock = l1BlockNumber;
-            prevTimestamp = timestamp;
-            total += groupSize;
-        }
-        return total;
-    }
+    uint256 public maxDelayBlocks;
+    uint256 public maxDelaySeconds;
 
     function addSequencerL2Batch(
         bytes calldata transactions,
         uint256[] calldata lengths,
-        uint256[] calldata groupSizes,
-        uint256[] calldata l1BlockNumbers,
-        uint256[] calldata timestamps
-    ) external returns (uint256 batchCount) {
+        uint256 l1BlockNumber,
+        uint256 timestamp
+    ) external returns (uint256) {
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
-        require(groupSizes.length < 50, "TOO_MANY_GROUPS");
-        require(
-            verifyGroups(l1BlockNumbers, timestamps, groupSizes) == lengths.length,
-            "BAD_GROUP_SIZES"
-        );
+        require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
+        require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
+        require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
+        require(timestamp <= block.timestamp, "TIME_TOO_NEW");
         uint256 offset = 0;
         bytes32[] memory hashes = new bytes32[](lengths.length);
         // Use return value to store variable temporarily to fix stack size issue
-        batchCount = messageCount;
+        uint256 count = messageCount;
         for (uint256 i = 0; i < lengths.length; i++) {
-            bytes32 transactionHash = keccak256(bytes(transactions[offset:offset + lengths[i]]));
-            hashes[i] = keccak256(abi.encodePacked(batchCount + i, transactionHash));
-            offset += lengths[i];
-        }
-        bytes32 batchHash =
-            keccak256(
-                abi.encode(MerkleLib.generateRoot(hashes), groupSizes, l1BlockNumbers, timestamps)
+            bytes32 messageDataHash = keccak256(bytes(transactions[offset:offset + lengths[i]]));
+            hashes[i] = Messages.messageHash(
+                L2_MSG,
+                msg.sender,
+                l1BlockNumber,
+                timestamp, // solhint-disable-line not-rely-on-time
+                count,
+                tx.gasprice,
+                messageDataHash
             );
-        batchCount = inboxAccs.length;
-        bytes32 prevAcc = 0;
-        if (batchCount > 0) {
-            prevAcc = inboxAccs[batchCount - 1];
+            offset += lengths[i];
+            count++;
         }
+        uint256 batchNum = inboxAccs.length;
+        bytes32 prevAcc = 0;
+        if (batchNum > 0) {
+            prevAcc = inboxAccs[batchNum - 1];
+        }
+        bytes32 batchHash = MerkleLib.generateRoot(hashes);
         inboxAccs.push(Messages.addMessageToInbox(prevAcc, batchHash));
-        maxBlock = l1BlockNumbers[l1BlockNumbers.length - 1];
-        maxTimestamp = timestamps[timestamps.length - 1];
-        messageCount += lengths.length;
-        return batchCount;
+        messageCount = count;
+        return batchNum;
     }
 }
