@@ -31,12 +31,36 @@ contract SequencerInbox is ISequencerInbox {
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
+    function addSequencerL2BatchFromOrigin(
+        bytes calldata transactions,
+        uint256[] calldata lengths,
+        uint256 l1BlockNumber,
+        uint256 timestamp
+    ) external {
+        // solhint-disable-next-line avoid-tx-origin
+        require(msg.sender == tx.origin, "origin only");
+        uint256 startNum = messageCount;
+        addSequencerL2BatchImpl(transactions, lengths, l1BlockNumber, timestamp);
+        emit SequencerBatchDeliveredFromOrigin(startNum);
+    }
+
     function addSequencerL2Batch(
         bytes calldata transactions,
         uint256[] calldata lengths,
         uint256 l1BlockNumber,
         uint256 timestamp
-    ) external returns (uint256) {
+    ) external {
+        uint256 startNum = messageCount;
+        addSequencerL2BatchImpl(transactions, lengths, l1BlockNumber, timestamp);
+        emit SequencerBatchDelivered(startNum, transactions, lengths, l1BlockNumber, timestamp);
+    }
+
+    function addSequencerL2BatchImpl(
+        bytes calldata transactions,
+        uint256[] calldata lengths,
+        uint256 l1BlockNumber,
+        uint256 timestamp
+    ) private {
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
         require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
         require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
@@ -67,6 +91,5 @@ contract SequencerInbox is ISequencerInbox {
         }
         inboxAccs.push(prevAcc);
         messageCount = count;
-        return count;
     }
 }

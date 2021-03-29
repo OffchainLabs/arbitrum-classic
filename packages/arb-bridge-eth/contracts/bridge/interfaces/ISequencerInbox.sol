@@ -19,6 +19,16 @@
 pragma solidity ^0.6.11;
 
 interface ISequencerInbox {
+    event SequencerBatchDelivered(
+        uint256 indexed firstMessageNum,
+        bytes transactions,
+        uint256[] lengths,
+        uint256 l1BlockNumber,
+        uint256 timestamp
+    );
+
+    event SequencerBatchDeliveredFromOrigin(uint256 indexed firstMessageNum);
+
     function messageCount() external view returns (uint256);
 
     function maxDelayBlocks() external view returns (uint256);
