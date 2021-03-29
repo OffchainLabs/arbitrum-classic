@@ -18,10 +18,9 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
+import { TransactionOverrides, BridgeHelper, UpdateTokenEventResult } from './bridge_helpers'
 
 const { Zero } = constants
-
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -289,6 +288,15 @@ export class Bridge extends L2Bridge {
 
   public async waitForRetriableReceipt(seqNum: BigNumber) {
     return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
+  }
+
+  public getUpdateTokenInfoEventResult = (
+    l1Transaction: ethers.providers.TransactionReceipt
+  ): Promise<Array<UpdateTokenEventResult>> => {
+    return BridgeHelper.getUpdateTokenInfoEventResult(
+      l1Transaction,
+      this.arbTokenBridge.address
+    )
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {

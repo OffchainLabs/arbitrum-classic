@@ -52,6 +52,13 @@ export interface DepositTokenEventResult {
   tokenAddress: string
 }
 
+export interface UpdateTokenEventResult {
+  seqNum: BigNumber
+  l1Address: string
+  name: string
+  symbol: string
+  decimals: number
+}
 export interface BuddyDeployEventResult {
   _sender: string
   _contract: string
@@ -198,6 +205,38 @@ export class BridgeHelper {
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult
+    )
+  }
+
+  static getUpdateTokenInfoEventResult = async (
+    l1Transaction: providers.TransactionReceipt,
+    l2BridgeAddress?: string
+  ): Promise<Array<UpdateTokenEventResult>> => {
+    const factory = new EthERC20Bridge__factory()
+    const contract = factory.attach(l2BridgeAddress || 'l2BridgeAddr')
+    const iface = contract.interface
+    const event = iface.getEvent('UpdateTokenInfo')
+    const eventTopic = iface.getEventTopic(event)
+    // TODO: filter out if token type doesn't match
+    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as UpdateTokenEventResult
+    )
+  }
+
+  static getUpdateTokenInfoEventResultL2 = async (
+    l2Transaction: providers.TransactionReceipt,
+    l2BridgeAddress?: string
+  ): Promise<Array<any>> => {
+    const factory = new ArbTokenBridge__factory()
+    const contract = factory.attach(l2BridgeAddress || '0x0Bf4eB4CFfA03541603Cb142Ea3120b529200C69')
+    const iface = contract.interface
+    const event = iface.getEvent('TokenDataUpdated')
+    const eventTopic = iface.getEventTopic(event)
+    // TODO: filter out if token type doesn't match
+    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as any
     )
   }
 

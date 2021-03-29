@@ -9,7 +9,7 @@ export default {
     erc20BridgeAddress: '0x5F530aBc9e173107C07c6A0b4Dc1Ebb3d7F79a5f',
     arbTokenBridgeAddress: '0x0Bf4eB4CFfA03541603Cb142Ea3120b529200C69',
     l1gasPrice: utils.parseUnits('4', 'gwei'),
-    existantTestERC20: '0x39cA0c02a8c8e6b45cbb71E3a08dd8fB5204A12C',
+    existantTestERC20: '',
     defaultWait: 10000,
   },
   devnet: {
