@@ -648,7 +648,7 @@ contract OneStepProof is OneStepProofCommon {
             message = readNextInboxMessage(context);
             blockNum = message.tupleVal[1].intVal;
             if (context.sequencerAssertedEmpty) {
-                require(blockNum + context.sequencer.maxDelayBlocks() > context.assertionBlock);
+                require(blockNum + context.sequencer.maxDelayBlocks() <= context.assertionBlock);
             } else {
                 uint256 nextSequencerBlocknum = peekNextSequencerBlocknum(context);
                 require(blockNum <= nextSequencerBlocknum);
