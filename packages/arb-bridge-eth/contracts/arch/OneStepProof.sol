@@ -471,6 +471,28 @@ contract OneStepProof is OneStepProofCommon {
         view
         returns (Value.Data memory message, uint256 l1BlockNumber)
     {
+        require(context.totalMessagesRead < context.maxMessagesPeek);
+        bytes32 messageHash;
+        (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);
+
+        bytes32 prevAcc = 0;
+        if (context.totalMessagesRead > 0) {
+            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
+        }
+        require(
+            Messages.addMessageToInbox(prevAcc, messageHash) ==
+                context.bridge.inboxAccs(context.totalMessagesRead),
+            "WRONG_MESSAGE"
+        );
+
+        return (message, l1BlockNumber);
+    }
+
+    function peekNextSequencerMessage(AssertionContext memory context)
+        private
+        view
+        returns (Value.Data memory message, uint256 l1BlockNumber)
+    {
         require(context.totalSequencerRead < context.maxSequencerPeek);
         bytes32 messageHash;
         (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);
@@ -489,28 +511,6 @@ contract OneStepProof is OneStepProofCommon {
         uint256 accIndex;
         (context.offset, accIndex) = Marshaling.deserializeInt(proof, context.offset);
         require(acc == context.sequencer.inboxAccs(accIndex), "WRONG_MESSAGE");
-        return (message, l1BlockNumber);
-    }
-
-    function peekNextSequencerMessage(AssertionContext memory context)
-        private
-        view
-        returns (Value.Data memory message, uint256 l1BlockNumber)
-    {
-        require(context.totalMessagesRead < context.maxMessagesPeek);
-        bytes32 messageHash;
-        (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);
-
-        bytes32 prevAcc = 0;
-        if (context.totalMessagesRead > 0) {
-            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
-        }
-        require(
-            Messages.addMessageToInbox(prevAcc, messageHash) ==
-                context.bridge.inboxAccs(context.totalMessagesRead),
-            "WRONG_MESSAGE"
-        );
-
         return (message, l1BlockNumber);
     }
 
