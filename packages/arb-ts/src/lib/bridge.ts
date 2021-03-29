@@ -23,11 +23,6 @@ import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
 const { Zero } = constants
 
 
-
-
-
-
-
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
   walletAddressCache?: string
@@ -82,9 +77,15 @@ export class Bridge extends L2Bridge {
   public async depositETH(
     value: BigNumber,
     destinationAddress?: string,
+    maxGas: BigNumber = BigNumber.from(5000),
     overrides?: TransactionOverrides
   ) {
-    return this.l1Bridge.depositETH(value, destinationAddress, overrides)
+    return this.l1Bridge.depositETH(
+      value,
+      destinationAddress,
+      maxGas,
+      overrides
+    )
   }
 
   public async depositAsERC20(

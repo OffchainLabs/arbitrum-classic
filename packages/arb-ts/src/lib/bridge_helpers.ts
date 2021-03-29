@@ -47,6 +47,7 @@ export interface DepositTokenEventResult {
   destination: string
   sender: string
   seqNum: BigNumber
+  tokenType: 0 | 1 | 2
   amount: BigNumber
   tokenAddress: string
 }
@@ -191,11 +192,9 @@ export class BridgeHelper {
     // TODO: does this work?
     const contract = factory.attach(l2BridgeAddress || 'l2BridgeAddr')
     const iface = contract.interface
-    const event =
-      tokenType === 'ERC20'
-        ? iface.getEvent('DepositERC20')
-        : iface.getEvent('DepositERC777')
+    const event = iface.getEvent('DepositToken')
     const eventTopic = iface.getEventTopic(event)
+    // TODO: filter out if token type doesn't match
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult

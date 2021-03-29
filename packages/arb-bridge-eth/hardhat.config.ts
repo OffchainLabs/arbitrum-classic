@@ -15,7 +15,7 @@ const verifyTask = require('./scripts/verifyTask') // eslint-disable-line @types
 const setupVerifyTask = verifyTask.default
 setupVerifyTask()
 
-if(!process.env['DEVNET_PRIVKEY']) console.warn("No devnet privkey set")
+if (!process.env['DEVNET_PRIVKEY']) console.warn('No devnet privkey set')
 
 task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   const accounts = await bre.ethers.getSigners()
@@ -106,6 +106,19 @@ const config = {
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
+    },
+    kovan: {
+      url: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbkovan4: {
+      gasPrice: 0,
+      url: 'https://kovan4.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
     },
     devnet: {
       url: 'https://devnet.arbitrum.io/rpc',

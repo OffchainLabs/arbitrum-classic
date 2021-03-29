@@ -28,3 +28,5 @@ export { ArbConversion } from './lib/conversion'
 export { Inbox__factory } from './lib/abi/factories/Inbox__factory'
 
 export { RollupCreator__factory } from './lib/abi/factories/RollupCreator__factory'
+export { ArbTokenBridge__factory } from './lib/abi/factories/ArbTokenBridge__factory'
+export { EthERC20Bridge__factory } from './lib/abi/factories/EthERC20Bridge__factory'

@@ -38,7 +38,7 @@ contract OZERC777 is IERC777, IERC20 {
 
     string internal _name;
     string internal _symbol;
-    uint256 internal _granularity = 1;
+    uint256 internal _granularity;
 
     // We inline the result of the following hashes because Solidity doesn't resolve them at compile time.
     // See https://github.com/ethereum/solidity/issues/4024.
@@ -67,12 +67,15 @@ contract OZERC777 is IERC777, IERC20 {
     /**
      * @dev `defaultOperators` may be an empty array.
      */
-    function initialize() internal {
+    function initialize(uint256 granularity) internal {
         _defaultOperators[msg.sender] = true;
 
         // register interfaces
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC777Token"), address(this));
         _ERC1820_REGISTRY.setInterfaceImplementer(address(this), keccak256("ERC20Token"), address(this));
+        // set granularity
+        require(granularity >= 1, "Granularity must be 1 or greater");
+        _granularity = granularity;
     }
 
     /**
@@ -159,6 +162,7 @@ contract OZERC777 is IERC777, IERC20 {
      * Also emits a {IERC20-Transfer} event for ERC20 compatibility.
      */
     function burn(uint256 amount, bytes memory data) public virtual override  {
+        require(amount % granularity() == 0, "ERC777: BAD-GRAN");
         _burn(msg.sender, amount, data, "");
     }
 
@@ -312,6 +316,7 @@ contract OZERC777 is IERC777, IERC20 {
         virtual
     {
         require(account != address(0), "ERC777: mint to the zero address");
+        require(amount % granularity() == 0, "ERC777: BAD-GRAN");
 
         address operator = msg.sender;
 
@@ -401,6 +406,7 @@ contract OZERC777 is IERC777, IERC20 {
     )
         private
     {
+        require(amount % granularity() == 0, "ERC777: BAD-GRAN");
         _beforeTokenTransfer(operator, from, to, amount);
 
         _balances[from] = _balances[from].sub(amount, "ERC777: transfer amount exceeds balance");

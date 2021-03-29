@@ -135,29 +135,20 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				Str("to", to.String()).
 				Int("count", len(newMessages)).
 				Msg("Looking up messages")
-			if len(newMessages) == 0 {
-				if reorging {
-					from, err = ir.getPrevBlockForReorg(from)
-					if err != nil {
-						return err
-					}
-				} else {
-					from = to
-				}
-			} else {
+			if len(newMessages) != 0 {
 				success, err := ir.addMessages(newMessages)
 				if err != nil {
 					return err
 				}
 				reorging = !success
-				if !success {
-					from, err = ir.getPrevBlockForReorg(from)
-					if err != nil {
-						return err
-					}
-				} else {
-					from = to
+			}
+			if reorging {
+				from, err = ir.getPrevBlockForReorg(from)
+				if err != nil {
+					return err
 				}
+			} else {
+				from = from.Add(to, big.NewInt(1))
 			}
 		}
 		<-time.After(time.Second * 1)

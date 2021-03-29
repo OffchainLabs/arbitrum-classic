@@ -9,7 +9,7 @@ export const deploy1820Registry = async (signer: SignerWithAddress) => {
     console.log('Deploying registry')
     const balance = await ethers.provider.getBalance(signer.address)
     const requiredBalance = ethers.utils.parseEther('0.08')
-    if(balance.gte(requiredBalance)) {
+    if (balance.gte(requiredBalance)) {
       await signer.sendTransaction({
         to: '0xa990077c3205cbDf861e17Fa532eeB069cE9fF96',
         value: requiredBalance,
@@ -19,7 +19,9 @@ export const deploy1820Registry = async (signer: SignerWithAddress) => {
       )
       console.log('Deployed registry')
     } else {
-      throw new Error("Current account can't prefund 1820 registry")
+      throw new Error(
+        `Current account ${await signer.getAddress()} can't prefund 1820 registry`
+      )
     }
   } else {
     console.log('Skipping 1820 registry deployment')

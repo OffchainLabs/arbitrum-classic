@@ -75,6 +75,11 @@ const _abi = [
         name: 'newSymbol',
         type: 'string',
       },
+      {
+        internalType: 'uint8',
+        name: 'newDecimals',
+        type: 'uint8',
+      },
     ],
     name: 'updateInfo',
     outputs: [],

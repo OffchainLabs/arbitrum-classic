@@ -6,10 +6,11 @@ export default {
     preFundedSignerPK:
       process.env['DEVNET_PRIVKEY'] ||
       '0x8803565d1ab75cf6a04656e2a638c65a2984f810ce2f5f8270601aca4e25e067',
-    erc20BridgeAddress: '0x6d48782028e460a17Bc0ceD652e7cB3649d28881',
-    arbTokenBridgeAddress: '0x49d2cFD8235fD6515799d179E03B571E2a37A7cf',
+    erc20BridgeAddress: '0x5F530aBc9e173107C07c6A0b4Dc1Ebb3d7F79a5f',
+    arbTokenBridgeAddress: '0x0Bf4eB4CFfA03541603Cb142Ea3120b529200C69',
     l1gasPrice: utils.parseUnits('4', 'gwei'),
-    existantTestERC20: '0x9709549E22EB664E5B54E2f7d2ef5221dA25141b',
+    existantTestERC20: '',
+    // existantTestERC20: '0xB422417c4b7D981C32e99b4250f6d20Cb09EC118',
   },
   devnet: {
     ethRPC: 'https://devnet.arbitrum.io/rpc',

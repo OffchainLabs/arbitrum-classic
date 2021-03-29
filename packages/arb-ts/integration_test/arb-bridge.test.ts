@@ -197,7 +197,7 @@ describe('ERC20', () => {
   // })
 })
 
-describe('ERC777', () => {
+describe.skip('ERC777', () => {
   it('initial ERC777 deposit works', async () => {
     const despositRes = await bridge.depositAsERC777(
       erc20Address,
