@@ -112,8 +112,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _assertionBlock,
         uint256[2] calldata _maxMessagePeeks,
         bool[2] calldata _inboxesAssertedEmpty,
-        address _asserter,
-        address _challenger,
+        address payable[2] calldata _stakers,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
         IBridge _bridge,
@@ -131,8 +130,8 @@ contract Challenge is Cloneable, IChallenge {
         inboxAssertedEmpty = _inboxesAssertedEmpty[0];
         sequencerAssertedEmpty = _inboxesAssertedEmpty[1];
 
-        asserter = _asserter;
-        challenger = _challenger;
+        asserter = _stakers[0];
+        challenger = _stakers[1];
         asserterTimeLeft = _asserterTimeLeft;
         challengerTimeLeft = _challengerTimeLeft;
 
