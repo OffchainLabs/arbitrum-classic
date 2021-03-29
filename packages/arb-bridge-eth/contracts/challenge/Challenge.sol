@@ -71,8 +71,6 @@ contract Challenge is Cloneable, IChallenge {
 
     IRollup internal resultReceiver;
 
-    uint256[2] maxMessageCount;
-
     address public override asserter;
     address public override challenger;
 
@@ -118,8 +116,6 @@ contract Challenge is Cloneable, IChallenge {
         executors = _executors;
 
         resultReceiver = IRollup(_resultReceiver);
-
-        maxMessageCount = _maxMessageCount;
 
         asserter = _asserter;
         challenger = _challenger;
@@ -258,9 +254,6 @@ contract Challenge is Cloneable, IChallenge {
                     _executionProof,
                     _bufferProof
                 );
-
-            require(totalMessagesRead[0] <= maxMessageCount[0], "TOO_MANY_MESSAGES");
-            require(totalMessagesRead[1] <= maxMessageCount[1], "TOO_MANY_SEQ_MESSAGES");
 
             require(
                 // if false, this segment must be proven with proveContinuedExecution

@@ -231,6 +231,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
         stack.length++;
     }
 
+    enum InboxAssertionType { ASSERT_EMPTY, ASSERT_PEEK, ASSERT_READ }
+
     struct AssertionContext {
         IBridge bridge;
         ISequencerInbox sequencer;
@@ -238,6 +240,11 @@ abstract contract OneStepProofCommon is IOneStepProof {
         Machine.Data afterMachine;
         uint256 totalMessagesRead;
         uint256 totalSequencerRead;
+        uint256 assertionBlock;
+        uint256 maxMessagesPeek;
+        uint256 maxSequencerPeek;
+        bool inboxAssertedEmpty;
+        bool sequencerAssertedEmpty;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;

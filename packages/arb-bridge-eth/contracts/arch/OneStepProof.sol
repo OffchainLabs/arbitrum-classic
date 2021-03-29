@@ -413,44 +413,18 @@ contract OneStepProof is OneStepProofCommon {
         context.logAcc = keccak256(abi.encodePacked(context.logAcc, popVal(context.stack).hash()));
     }
 
-    // System operations
-
-    function incrementInbox(AssertionContext memory context)
-        private
-        view
-        returns (Value.Data memory message)
-    {
-        bytes memory proof = context.proof;
-
-        bytes32 messageHash;
-        Value.Data[] memory tupData = new Value.Data[](8);
-
-        {
-            // Get message out of proof
-            uint8 kind = uint8(proof[context.offset]);
-            context.offset++;
-            uint256 l1BlockNumber;
-            uint256 l1Timestamp;
-            uint256 inboxSeqNum;
-            uint256 gasPriceL1;
-            address sender = proof.toAddress(context.offset);
-            context.offset += 20;
-            (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
-            (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
-            (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
-            (context.offset, gasPriceL1) = Marshaling.deserializeInt(proof, context.offset);
-            uint256 messageDataLength;
-            (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
-            bytes32 messageBufHash =
-                Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
-
-            uint256 offset = context.offset;
-            bytes32 messageDataHash;
-            assembly {
-                messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
-            }
-
-            messageHash = Messages.messageHash(
+    function readFromInbox(
+        AssertionContext memory context,
+        uint8 kind,
+        address sender,
+        uint256 l1BlockNumber,
+        uint256 l1Timestamp,
+        uint256 inboxSeqNum,
+        uint256 gasPriceL1,
+        bytes32 messageDataHash
+    ) private {
+        bytes32 messageHash =
+            Messages.messageHash(
                 kind,
                 sender,
                 l1BlockNumber,
@@ -459,17 +433,6 @@ contract OneStepProof is OneStepProofCommon {
                 gasPriceL1,
                 messageDataHash
             );
-
-            tupData[0] = Value.newInt(uint256(kind));
-            tupData[1] = Value.newInt(l1BlockNumber);
-            tupData[2] = Value.newInt(l1Timestamp);
-            tupData[3] = Value.newInt(uint256(sender));
-            tupData[4] = Value.newInt(inboxSeqNum);
-            tupData[5] = Value.newInt(gasPriceL1);
-            tupData[6] = Value.newInt(messageDataLength);
-            tupData[7] = Value.newHashedValue(messageBufHash, 1);
-        }
-
         bytes32 prevAcc = 0;
         if (context.totalMessagesRead > 0) {
             prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
@@ -480,32 +443,141 @@ contract OneStepProof is OneStepProofCommon {
                 context.bridge.inboxAccs(context.totalMessagesRead),
             "WRONG_MESSAGE"
         );
+    }
 
+    function peekNextInboxMessage(AssertionContext memory context)
+        returns (Value.Data memory message, uint256)
+    {
+        require(context.totalMessagesRead < context.maxMessagesPeek);
+        uint8 kind = uint8(proof[context.offset]);
+        context.offset++;
+        uint256 l1BlockNumber;
+        uint256 l1Timestamp;
+        uint256 inboxSeqNum;
+        uint256 gasPriceL1;
+        address sender = proof.toAddress(context.offset);
+        context.offset += 20;
+        (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
+        (context.offset, gasPriceL1) = Marshaling.deserializeInt(proof, context.offset);
+        uint256 messageDataLength;
+        (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
+        bytes32 messageBufHash =
+            Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
+
+        uint256 offset = context.offset;
+        bytes32 messageDataHash;
+        assembly {
+            messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
+        }
+        bytes32 messageHash =
+            Messages.messageHash(
+                kind,
+                sender,
+                l1BlockNumber,
+                l1Timestamp,
+                inboxSeqNum,
+                gasPriceL1,
+                messageDataHash
+            );
+        bytes32 prevAcc = 0;
+        if (context.totalMessagesRead > 0) {
+            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
+        }
+        require(
+            Messages.addMessageToInbox(prevAcc, messageHash) ==
+                context.bridge.inboxAccs(context.totalMessagesRead),
+            "WRONG_MESSAGE"
+        );
+
+        Value.Data[] memory tupData = new Value.Data[](8);
+        tupData[0] = Value.newInt(uint256(kind));
+        tupData[1] = Value.newInt(l1BlockNumber);
+        tupData[2] = Value.newInt(l1Timestamp);
+        tupData[3] = Value.newInt(uint256(sender));
+        tupData[4] = Value.newInt(inboxSeqNum);
+        tupData[5] = Value.newInt(gasPriceL1);
+        tupData[6] = Value.newInt(messageDataLength);
+        tupData[7] = Value.newHashedValue(messageBufHash, 1);
+        return (tupData, l1BlockNumber);
+    }
+
+    function peekNextSequencerBlocknum(AssertionContext memory context) private returns (uint256) {}
+
+    function peekNextInboxBlocknum(AssertionContext memory context) private returns (uint256) {
+        (, uint256 blockNum) = peekNextInboxMessage(context);
+        return blockNum;
+    }
+
+    function readNextSequencerMessage(AssertionContext memory context)
+        returns (Value.Data memory, uint256)
+    {}
+
+    function readNextInboxMessage(AssertionContext memory context)
+        returns (Value.Data memory, uint256)
+    {
+        (Value.Data memory message, uint256 blockNum) = peekNextInboxMessage(context);
         context.totalMessagesRead++;
-
-        return Value.newTuple(tupData);
+        return (message, blockNum);
     }
 
     function executeInboxPeekInsn(AssertionContext memory context) internal view {
         Value.Data memory val = popVal(context.stack);
-        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
-            context.afterMachine.pendingMessage = incrementInbox(context);
+        if (!val.isInt()) {
+            handleOpcodeError(context);
+            return;
         }
-        // The pending message must be a tuple of size at least 2
-        pushVal(
-            context.stack,
-            Value.newBoolean(context.afterMachine.pendingMessage.tupleVal[1].hash() == val.hash())
-        );
+        bool shouldReturnTrue = uint8(proof[context.offset]) == 1;
+        context.offset++;
+        if (shouldReturnTrue) {
+            bool checkSequencer = uint8(proof[context.offset]) == 1;
+            context.offset++;
+            uint256 nextBlocknum;
+            if (checkSequencer) {
+                nextBlocknum = peekNextSequencerBlocknum(context);
+            } else {
+                nextBlocknum = peekNextInboxBlocknum(context);
+            }
+            require(nextBlocknum <= val.intVal);
+        } else {
+            if (!context.sequencerAssertedEmpty) {
+                uint256 nextSequencerBlocknum = peekNextSequencerBlocknum(context);
+                require(nextSequencerBlocknum > val.intVal);
+            } else {
+                require(context.assertionBlock + sequencerDelayBlock > val.intVal);
+            }
+            if (!context.inboxAssertedEmpty) {
+                uint256 nextInboxBlocknum = peekNextInboxBlocknum(context);
+                require(nextInboxBlocknum > val.intVal);
+            } else {
+                require(context.assertionBlock > val.intVal);
+            }
+        }
+        pushVal(context.stack, Value.newBoolean(shouldReturnTrue));
     }
 
     function executeInboxInsn(AssertionContext memory context) internal view {
-        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
-            // The pending message field is already full
-            pushVal(context.stack, context.afterMachine.pendingMessage);
-            context.afterMachine.pendingMessage = Value.newEmptyTuple();
+        bool readSequencer = uint8(proof[context.offset]) == 1;
+        context.offset++;
+        Value.Data message;
+        uint256 blockNum;
+        if (readSequencer) {
+            (message, blockNum) = readNextSequencerMessage(context);
+            if (!context.inboxAssertedEmpty) {
+                uint256 nextInboxBlocknum = peekNextInboxBlocknum(context);
+                require(blockNum < nextInboxBlocknum);
+            }
         } else {
-            pushVal(context.stack, incrementInbox(context));
+            (message, blockNum) = readNextInboxMessage(context);
+            if (context.sequencerAssertedEmpty) {
+                require(blockNum + sequencerDelayBlock > context.assertionBlock);
+            } else {
+                uint256 nextSequencerBlocknum = peekNextSequencerBlocknum(context);
+                require(blockNum <= nextSequencerBlocknum);
+            }
         }
+        pushVal(context.stack, message);
     }
 
     function executeSetGasInsn(AssertionContext memory context) internal pure {
