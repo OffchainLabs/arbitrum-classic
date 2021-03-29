@@ -9,8 +9,8 @@ export default {
     erc20BridgeAddress: '0x5F530aBc9e173107C07c6A0b4Dc1Ebb3d7F79a5f',
     arbTokenBridgeAddress: '0x0Bf4eB4CFfA03541603Cb142Ea3120b529200C69',
     l1gasPrice: utils.parseUnits('4', 'gwei'),
-    existantTestERC20: '',
-    // existantTestERC20: '0xB422417c4b7D981C32e99b4250f6d20Cb09EC118',
+    existantTestERC20: '0x39cA0c02a8c8e6b45cbb71E3a08dd8fB5204A12C',
+    defaultWait: 10000,
   },
   devnet: {
     ethRPC: 'https://devnet.arbitrum.io/rpc',
@@ -20,5 +20,6 @@ export default {
     erc20BridgeAddress: '0x9DDede4e09DCF6B2C04C62b16B8abEaCD4B3C7aE',
     arbTokenBridgeAddress: '0xefaA73f05e5441b57C9dB7498e8bA5dd77Cfd8a2',
     l1gasPrice: 0,
+    defaultWait: 0,
   },
 }

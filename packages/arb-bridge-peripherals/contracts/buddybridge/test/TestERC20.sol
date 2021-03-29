@@ -21,7 +21,7 @@ pragma solidity ^0.6.11;
 import "../../tokenbridge/arbitrum/open-zeppelin/OZERC20.sol";
 
 contract TestERC20 is OZERC20 {
-    constructor() public {
+    function mint() external {
         _mint(msg.sender, 50000000);
     }
 }
