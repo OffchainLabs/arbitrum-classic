@@ -49,6 +49,8 @@ std::ostream& operator<<(std::ostream& os, const G2Point& val);
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input);
 G1Point toG1ArbPoint(G1<alt_bn128_pp> P);
+// Probably unsafe as EIP-196 doesn't define an encoding for this.
+// In particular, the zero point is encoded as non-zero bytes.
 G2Point toG2ArbPoint(G2<alt_bn128_pp> P);
 
 std::variant<libff::G1<libff::alt_bn128_pp>, std::string> g1PfromBytes(
