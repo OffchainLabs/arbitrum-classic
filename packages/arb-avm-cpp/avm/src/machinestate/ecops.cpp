@@ -32,23 +32,26 @@ void initEcOps() {
 }
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input) {
+    uint8_t tmp[32];
     size_t countp;
-    mpz_export(output, &countp, 1, 1, 1, 0, input);
+    mpz_export(tmp, &countp, 1, 1, 1, 0, input);
 
-    if (countp < 32) {
-        uint8_t difference = 32 - countp;
-
-        for (int i = 0; i < 32 - difference; i++) {
-            output[32 - difference - i] = output[32 - difference - i - 1];
-        }
-
-        for (int i = 0; i < difference; i++) {
-            output[i] = 0;
-        }
+    size_t padding = 32 - countp;
+    for (size_t i = 0; i < padding; i++) {
+        output[i] = 0;
+    }
+    for (size_t i = 0; i < countp; i++) {
+        output[i + padding] = tmp[i];
     }
 }
 
 G1Point toG1ArbPoint(G1<alt_bn128_pp> P) {
+    if (P.is_zero()) {
+        // This is a special case defined in EIP-196.
+        // libff would encode this as {0, 1}
+        return {0, 0};
+    }
+
     P.to_affine_coordinates();
 
     alt_bn128_Fq X = P.X;

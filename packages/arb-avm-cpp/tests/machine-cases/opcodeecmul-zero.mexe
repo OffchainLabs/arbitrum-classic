@@ -1,0 +1,7 @@
+{"version":2,"static_val":{"Tuple":[]},"extensions":[],"code":[
+  {"opcode":59,"immediate":{"Int":"0"}},
+  {"opcode":59,"immediate":{"Int":"0cd6fe76361c7e6b6048ded57cc924304c95fe6fdd85379e8dbd8a5f1346f540"}},
+  {"opcode":59,"immediate":{"Int":"2e28d3d2176050078131bae335c78407d67c9efa56b1557520ee25c708493f8f"}},
+  {"opcode":130,"immediate":null},
+  {"opcode":144,"immediate":null}
+]}
