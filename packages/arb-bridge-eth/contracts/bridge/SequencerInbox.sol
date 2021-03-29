@@ -42,32 +42,31 @@ contract SequencerInbox is ISequencerInbox {
         require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
         require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
         require(timestamp <= block.timestamp, "TIME_TOO_NEW");
+
+        bytes32 prevAcc = 0;
+        if (inboxAccs.length > 0) {
+            prevAcc = inboxAccs[inboxAccs.length - 1];
+        }
         uint256 offset = 0;
-        bytes32[] memory hashes = new bytes32[](lengths.length);
-        // Use return value to store variable temporarily to fix stack size issue
         uint256 count = messageCount;
         for (uint256 i = 0; i < lengths.length; i++) {
             bytes32 messageDataHash = keccak256(bytes(transactions[offset:offset + lengths[i]]));
-            hashes[i] = Messages.messageHash(
-                L2_MSG,
-                msg.sender,
-                l1BlockNumber,
-                timestamp, // solhint-disable-line not-rely-on-time
-                count,
-                tx.gasprice,
-                messageDataHash
-            );
+            bytes32 messageHash =
+                Messages.messageHash(
+                    L2_MSG,
+                    msg.sender,
+                    l1BlockNumber,
+                    timestamp, // solhint-disable-line not-rely-on-time
+                    count,
+                    tx.gasprice,
+                    messageDataHash
+                );
+            prevAcc = Messages.addMessageToInbox(prevAcc, messageHash);
             offset += lengths[i];
             count++;
         }
-        uint256 batchNum = inboxAccs.length;
-        bytes32 prevAcc = 0;
-        if (batchNum > 0) {
-            prevAcc = inboxAccs[batchNum - 1];
-        }
-        bytes32 batchHash = MerkleLib.generateRoot(hashes);
-        inboxAccs.push(Messages.addMessageToInbox(prevAcc, batchHash));
+        inboxAccs.push(prevAcc);
         messageCount = count;
-        return batchNum;
+        return count;
     }
 }
