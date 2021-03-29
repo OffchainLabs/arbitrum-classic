@@ -1179,10 +1179,11 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     uint256_t max_gas,
     bool go_over_gas,
     ValueCache& cache) {
+    auto gas_target = execution_cursor.getOutput().arb_gas_used + max_gas;
     {
         ReadSnapshotTransaction tx(data_storage);
 
-        auto closest_checkpoint = getClosestExecutionMachine(tx, max_gas);
+        auto closest_checkpoint = getClosestExecutionMachine(tx, gas_target);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
             return std::get<rocksdb::Status>(closest_checkpoint);
         }
@@ -1211,9 +1212,8 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
         }
     }
 
-    return advanceExecutionCursorImpl(
-        execution_cursor, execution_cursor.getOutput().arb_gas_used + max_gas,
-        go_over_gas, 10, cache);
+    return advanceExecutionCursorImpl(execution_cursor, gas_target, go_over_gas,
+                                      10, cache);
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
