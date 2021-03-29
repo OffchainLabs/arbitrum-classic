@@ -25,7 +25,7 @@ import "./interfaces/ISequencerInbox.sol";
 
 contract SequencerInbox is ISequencerInbox {
     uint8 internal constant L2_MSG = 3;
-    bytes32[] public inboxAccs;
+    bytes32[] public override inboxAccs;
     uint256 public override messageCount;
     address public sequencer;
     uint256 public override maxDelayBlocks;

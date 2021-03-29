@@ -471,6 +471,32 @@ contract OneStepProof is OneStepProofCommon {
         view
         returns (Value.Data memory message, uint256 l1BlockNumber)
     {
+        require(context.totalSequencerRead < context.maxSequencerPeek);
+        bytes32 messageHash;
+        (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);
+        require(message.tupleVal[4].intVal == context.totalSequencerRead);
+
+        bytes memory proof = context.proof;
+        bytes32 acc = 0;
+        (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
+        acc = Messages.addMessageToInbox(acc, messageHash);
+        uint256 proofCount;
+        (context.offset, proofCount) = Marshaling.deserializeInt(proof, context.offset);
+        for (uint256 i = 0; i < proofCount; i++) {
+            (context.offset, messageHash) = Marshaling.deserializeBytes32(proof, context.offset);
+            acc = Messages.addMessageToInbox(acc, messageHash);
+        }
+        uint256 accIndex;
+        (context.offset, accIndex) = Marshaling.deserializeInt(proof, context.offset);
+        require(acc == context.sequencer.inboxAccs(accIndex), "WRONG_MESSAGE");
+        return (message, l1BlockNumber);
+    }
+
+    function peekNextSequencerMessage(AssertionContext memory context)
+        private
+        view
+        returns (Value.Data memory message, uint256 l1BlockNumber)
+    {
         require(context.totalMessagesRead < context.maxMessagesPeek);
         bytes32 messageHash;
         (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);

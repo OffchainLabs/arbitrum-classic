@@ -24,4 +24,6 @@ interface ISequencerInbox {
     function maxDelayBlocks() external view returns (uint256);
 
     function maxDelaySeconds() external view returns (uint256);
+
+    function inboxAccs(uint256 index) external view returns (bytes32);
 }
