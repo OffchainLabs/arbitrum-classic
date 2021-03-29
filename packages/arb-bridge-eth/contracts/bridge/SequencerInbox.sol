@@ -28,8 +28,8 @@ contract SequencerInbox is ISequencerInbox {
     bytes32[] public inboxAccs;
     uint256 public override messageCount;
     address public sequencer;
-    uint256 public maxDelayBlocks;
-    uint256 public maxDelaySeconds;
+    uint256 public override maxDelayBlocks;
+    uint256 public override maxDelaySeconds;
 
     function addSequencerL2Batch(
         bytes calldata transactions,

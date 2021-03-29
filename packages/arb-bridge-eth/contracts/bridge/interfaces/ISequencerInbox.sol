@@ -20,4 +20,8 @@ pragma solidity ^0.6.11;
 
 interface ISequencerInbox {
     function messageCount() external view returns (uint256);
+
+    function maxDelayBlocks() external view returns (uint256);
+
+    function maxDelaySeconds() external view returns (uint256);
 }

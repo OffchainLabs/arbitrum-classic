@@ -446,9 +446,12 @@ contract OneStepProof is OneStepProofCommon {
     }
 
     function peekNextInboxMessage(AssertionContext memory context)
+        private
+        view
         returns (Value.Data memory message, uint256)
     {
         require(context.totalMessagesRead < context.maxMessagesPeek);
+        bytes memory proof = context.proof;
         uint8 kind = uint8(proof[context.offset]);
         context.offset++;
         uint256 l1BlockNumber;
@@ -500,21 +503,29 @@ contract OneStepProof is OneStepProofCommon {
         tupData[5] = Value.newInt(gasPriceL1);
         tupData[6] = Value.newInt(messageDataLength);
         tupData[7] = Value.newHashedValue(messageBufHash, 1);
-        return (tupData, l1BlockNumber);
+        return (Value.newTuple(tupData), l1BlockNumber);
     }
 
-    function peekNextSequencerBlocknum(AssertionContext memory context) private returns (uint256) {}
+    function peekNextSequencerBlocknum(AssertionContext memory context)
+        private
+        view
+        returns (uint256)
+    {}
 
-    function peekNextInboxBlocknum(AssertionContext memory context) private returns (uint256) {
+    function peekNextInboxBlocknum(AssertionContext memory context) private view returns (uint256) {
         (, uint256 blockNum) = peekNextInboxMessage(context);
         return blockNum;
     }
 
     function readNextSequencerMessage(AssertionContext memory context)
+        private
+        view
         returns (Value.Data memory, uint256)
     {}
 
     function readNextInboxMessage(AssertionContext memory context)
+        private
+        view
         returns (Value.Data memory, uint256)
     {
         (Value.Data memory message, uint256 blockNum) = peekNextInboxMessage(context);
@@ -528,10 +539,10 @@ contract OneStepProof is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        bool shouldReturnTrue = uint8(proof[context.offset]) == 1;
+        bool shouldReturnTrue = uint8(context.proof[context.offset]) == 1;
         context.offset++;
         if (shouldReturnTrue) {
-            bool checkSequencer = uint8(proof[context.offset]) == 1;
+            bool checkSequencer = uint8(context.proof[context.offset]) == 1;
             context.offset++;
             uint256 nextBlocknum;
             if (checkSequencer) {
@@ -545,7 +556,7 @@ contract OneStepProof is OneStepProofCommon {
                 uint256 nextSequencerBlocknum = peekNextSequencerBlocknum(context);
                 require(nextSequencerBlocknum > val.intVal);
             } else {
-                require(context.assertionBlock + sequencerDelayBlock > val.intVal);
+                require(context.assertionBlock + context.sequencer.maxDelayBlocks() > val.intVal);
             }
             if (!context.inboxAssertedEmpty) {
                 uint256 nextInboxBlocknum = peekNextInboxBlocknum(context);
@@ -558,9 +569,9 @@ contract OneStepProof is OneStepProofCommon {
     }
 
     function executeInboxInsn(AssertionContext memory context) internal view {
-        bool readSequencer = uint8(proof[context.offset]) == 1;
+        bool readSequencer = uint8(context.proof[context.offset]) == 1;
         context.offset++;
-        Value.Data message;
+        Value.Data memory message;
         uint256 blockNum;
         if (readSequencer) {
             (message, blockNum) = readNextSequencerMessage(context);
@@ -571,7 +582,7 @@ contract OneStepProof is OneStepProofCommon {
         } else {
             (message, blockNum) = readNextInboxMessage(context);
             if (context.sequencerAssertedEmpty) {
-                require(blockNum + sequencerDelayBlock > context.assertionBlock);
+                require(blockNum + context.sequencer.maxDelayBlocks() > context.assertionBlock);
             } else {
                 uint256 nextSequencerBlocknum = peekNextSequencerBlocknum(context);
                 require(blockNum <= nextSequencerBlocknum);

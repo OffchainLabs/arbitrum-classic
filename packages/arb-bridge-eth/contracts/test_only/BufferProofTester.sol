@@ -56,7 +56,8 @@ contract BufferProofTester is OneStepProof2 {
     }
 
     function executeStepTest(
-        uint256[2] calldata initialMessagesRead,
+        uint256[5] calldata uint256Data,
+        bool[2] calldata inboxesAssertedEmpty,
         bytes32 initialSendAcc,
         bytes32 initialLogAcc,
         bytes calldata proof,
@@ -66,7 +67,8 @@ contract BufferProofTester is OneStepProof2 {
         (uint64 gas, uint256[2] memory totalMessagesRead, bytes32[4] memory fields) =
             OneStepProof2(address(this)).executeStep(
                 inboxes,
-                initialMessagesRead,
+                uint256Data,
+                inboxesAssertedEmpty,
                 [initialSendAcc, initialLogAcc],
                 proof,
                 bproof

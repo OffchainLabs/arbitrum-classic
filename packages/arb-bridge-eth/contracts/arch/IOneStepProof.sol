@@ -22,9 +22,16 @@ import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 
 interface IOneStepProof {
+    // uint256Data
+    //   initialInboxRead
+    //   initialSequencerRead
+    //   assertionBlock
+    //   maxMessagesPeek
+    //   maxSequencerPeek
     function executeStep(
         address[2] calldata inboxes,
-        uint256[2] calldata initialMessagesRead,
+        uint256[5] calldata uint256Data,
+        bool[2] calldata inboxesAssertedEmpty,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -39,7 +46,8 @@ interface IOneStepProof {
 
     function executeStepDebug(
         address[2] calldata inboxes,
-        uint256[2] calldata initialMessagesRead,
+        uint256[5] calldata uint256Data,
+        bool[2] calldata inboxesAssertedEmpty,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof

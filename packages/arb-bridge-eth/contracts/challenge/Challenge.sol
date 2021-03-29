@@ -71,6 +71,12 @@ contract Challenge is Cloneable, IChallenge {
 
     IRollup internal resultReceiver;
 
+    uint256 assertionBlock;
+    uint256 maxMessagesPeek;
+    uint256 maxSequencerPeek;
+    bool inboxAssertedEmpty;
+    bool sequencerAssertedEmpty;
+
     address public override asserter;
     address public override challenger;
 
@@ -249,7 +255,14 @@ contract Challenge is Cloneable, IChallenge {
             (uint64 gasUsed, uint256[2] memory totalMessagesRead, bytes32[4] memory proofFields) =
                 executors[prover].executeStep(
                     [address(bridge), address(sequencer)],
-                    _initialMessagesRead,
+                    [
+                        _initialMessagesRead[0],
+                        _initialMessagesRead[1],
+                        assertionBlock,
+                        maxMessagesPeek,
+                        maxSequencerPeek
+                    ],
+                    [inboxAssertedEmpty, sequencerAssertedEmpty],
                     [_initialSendAcc, _initialLogAcc],
                     _executionProof,
                     _bufferProof

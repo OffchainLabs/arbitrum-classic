@@ -150,7 +150,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
     // accs is [sendAcc, logAcc]
     function executeStep(
         address[2] calldata inboxes,
-        uint256[2] calldata initialMessagesRead,
+        uint256[5] calldata uint256Data,
+        bool[2] calldata inboxesAssertedEmpty,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -165,7 +166,14 @@ abstract contract OneStepProofCommon is IOneStepProof {
         )
     {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, inboxes);
+            initializeExecutionContext(
+                uint256Data,
+                inboxesAssertedEmpty,
+                accs,
+                proof,
+                bproof,
+                inboxes
+            );
 
         executeOp(context);
 
@@ -174,13 +182,21 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     function executeStepDebug(
         address[2] calldata inboxes,
-        uint256[2] calldata initialMessagesRead,
+        uint256[5] calldata uint256Data,
+        bool[2] calldata inboxesAssertedEmpty,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, inboxes);
+            initializeExecutionContext(
+                uint256Data,
+                inboxesAssertedEmpty,
+                accs,
+                proof,
+                bproof,
+                inboxes
+            );
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);
@@ -285,7 +301,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function initializeExecutionContext(
-        uint256[2] calldata initialMessagesRead,
+        uint256[5] calldata uint256Data,
+        bool[2] calldata inboxesAssertedEmpty,
         bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
@@ -316,8 +333,11 @@ abstract contract OneStepProofCommon is IOneStepProof {
         context.sequencer = ISequencerInbox(inboxes[1]);
         context.startMachine = mach;
         context.afterMachine = mach.clone();
-        context.totalMessagesRead = initialMessagesRead[0];
-        context.totalSequencerRead = initialMessagesRead[1];
+        context.totalMessagesRead = uint256Data[0];
+        context.totalSequencerRead = uint256Data[1];
+        context.assertionBlock = uint256Data[2];
+        context.maxMessagesPeek = uint256Data[3];
+        context.maxSequencerPeek = uint256Data[4];
         context.sendAcc = accs[0];
         context.logAcc = accs[1];
         context.gas = 0;
