@@ -30,7 +30,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
 
-import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 enum StandardTokenType { ERC20, ERC777, Custom }
 
@@ -50,6 +50,12 @@ contract EthERC20Bridge {
 
     address public l2Address;
     IInbox public inbox;
+
+    modifier onlyL2Address {
+        IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
+        require(l2Address == outbox.l2ToL1Sender(), "Not from l2 buddy");
+        _;
+    }
 
     event ActivateCustomToken(uint256 indexed seqNum, address indexed l1Address, address l2Address);
 
@@ -169,7 +175,7 @@ contract EthERC20Bridge {
         address erc20,
         address destination,
         uint256 amount
-    ) external {
+    ) external onlyL2Address {
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
         address exitAddress = redirectedExits[withdrawData];
         redirectedExits[withdrawData] = USED_ADDRESS;
