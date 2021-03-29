@@ -556,7 +556,9 @@ contract OneStepProof2 is OneStepProofCommon {
         Machine.Data memory finalMachine,
         uint256 len
     ) {
-
+        uint256 offset = 0;
+        (offset, finalMachine) = Machine.deserializeMachine(data, offset);
+        (offset, len) = Marshaling.deserializeInt(data, offset);
     }
 
     bytes32 constant wasmProgram = 0;
@@ -564,9 +566,21 @@ contract OneStepProof2 is OneStepProofCommon {
     uint256 constant wasmProgramLinkSize = 0;
     bytes32 constant emptyHash = 0;
 
+    function mkPair(Value.Data memory a, Value.Data memory b) internal pure returns (Value.Data memory) {
+        Value.Data[] memory init = new Value.Data[](2);
+        init[0] = a;
+        init[1] = b;
+        return Value.newTuple(init);
+    }
+
     function executeWasmTest(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
         if (!val1.isBuffer()) {
+            handleOpcodeError(context);
+            return;
+        }
+        if (!val2.isInt()) {
             handleOpcodeError(context);
             return;
         }
@@ -576,9 +590,10 @@ contract OneStepProof2 is OneStepProofCommon {
         init[1] = Value.newEmptyTuple();
         Machine.Data memory initialMachine = Machine.Data(
             wasmProgram,
-            Value.newTuple(init), //    machine.dataStack,
+            mkPair(Value.newHashedValue(wasmProgramLink, wasmProgramLinkSize),
+              mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
             Value.newEmptyTuple(), //    machine.auxStack,
-            Value.newHashedValue(wasmProgramLink, wasmProgramLinkSize), //    machine.registerVal,
+            Value.newEmptyTuple(), //    machine.registerVal,
             Value.newEmptyTuple(), //    machine.staticVal,
             100000000000, //    machine.arbGasRemaining,
             emptyHash, //    machine.errHandlerHash,
@@ -587,11 +602,15 @@ contract OneStepProof2 is OneStepProofCommon {
         );
         // Construct initial machine
         // Final machine is given
-        // Hmm, return value must come from the final machine
+        // Return value must come from the final machine
         require(finalMachine.status == Machine.MACHINE_HALT, "Wasm program must halt");
         require(finalMachine.dataStack.isTuple());
-        require(finalMachine.dataStack.valLength() > 1);
+        require(finalMachine.dataStack.valLength() == 2);
         pushVal(context.stack, finalMachine.dataStack.tupleVal[0]);
+        Value.Data memory next = finalMachine.dataStack.tupleVal[1];
+        require(next.isTuple());
+        require(next.valLength() == 2);
+        pushVal(context.stack, next.tupleVal[0]);
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         context.nextLength = len;

@@ -151,6 +151,22 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
     return assembleValueFromDeserialized(std::move(values));
 }
 
+Operation simple_operation_from_json(const nlohmann::json& op_json) {
+    auto opcode_json = op_json.at(OPCODE_LABEL);
+    if (opcode_json.contains(OPCODE_SUB_LABEL)) {
+        opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
+    }
+    if (!opcode_json.is_number_integer()) {
+        std::cerr << "Invalid opcode " << opcode_json << "\n";
+    }
+    auto opcode = opcode_json.get<OpCode>();
+    auto& imm = op_json.at(IMMEDIATE_LABEL);
+    if (imm.is_null()) {
+        return {opcode};
+    }
+    return {opcode, simple_value_from_json(imm)};
+}
+
 std::vector<uint8_t> send_from_json(const nlohmann::json& val) {
     if (!val.is_array()) {
         throw std::runtime_error("send must be an array");
