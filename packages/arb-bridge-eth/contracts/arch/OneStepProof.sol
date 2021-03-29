@@ -413,24 +413,44 @@ contract OneStepProof is OneStepProofCommon {
         context.logAcc = keccak256(abi.encodePacked(context.logAcc, popVal(context.stack).hash()));
     }
 
-    function extractMessage(AssertionContext memory context)
+    function extractMessageCommon(AssertionContext memory context)
         private
         pure
-        returns (Value.Data memory message, bytes32 messageHash)
+        returns (
+            uint8 kind,
+            uint256 l1BlockNumber,
+            uint256 l1Timestamp,
+            uint256 inboxSeqNum,
+            uint256 gasPriceL1,
+            address sender
+        )
     {
         bytes memory proof = context.proof;
-        uint8 kind = uint8(proof[context.offset]);
+        kind = uint8(proof[context.offset]);
         context.offset++;
-        uint256 l1BlockNumber;
-        uint256 l1Timestamp;
-        uint256 inboxSeqNum;
-        uint256 gasPriceL1;
-        address sender = proof.toAddress(context.offset);
+        sender = proof.toAddress(context.offset);
         context.offset += 20;
         (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
         (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
         (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
         (context.offset, gasPriceL1) = Marshaling.deserializeInt(proof, context.offset);
+    }
+
+    function extractMessage(AssertionContext memory context)
+        private
+        pure
+        returns (Value.Data memory message, bytes32 messageHash)
+    {
+        (
+            uint8 kind,
+            uint256 l1BlockNumber,
+            uint256 l1Timestamp,
+            uint256 inboxSeqNum,
+            uint256 gasPriceL1,
+            address sender
+        ) = extractMessageCommon(context);
+
+        bytes memory proof = context.proof;
         uint256 messageDataLength;
         (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
         bytes32 messageBufHash =
@@ -441,6 +461,7 @@ contract OneStepProof is OneStepProofCommon {
         assembly {
             messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
         }
+
         messageHash = Messages.messageHash(
             kind,
             sender,
@@ -461,6 +482,39 @@ contract OneStepProof is OneStepProofCommon {
         tupData[6] = Value.newInt(messageDataLength);
         tupData[7] = Value.newHashedValue(messageBufHash, 1);
         return (Value.newTuple(tupData), messageHash);
+    }
+
+    function extractMessageBlockNumber(AssertionContext memory context)
+        private
+        pure
+        returns (
+            uint256 l1BlockNumber,
+            uint256 inboxSeqNum,
+            bytes32 messageHash
+        )
+    {
+        uint8 kind;
+        uint256 l1Timestamp;
+        uint256 gasPriceL1;
+        address sender;
+        (kind, l1BlockNumber, l1Timestamp, inboxSeqNum, gasPriceL1, sender) = extractMessageCommon(
+            context
+        );
+        bytes32 messageDataHash;
+        (context.offset, messageDataHash) = Marshaling.deserializeBytes32(
+            context.proof,
+            context.offset
+        );
+        messageHash = Messages.messageHash(
+            kind,
+            sender,
+            l1BlockNumber,
+            l1Timestamp,
+            inboxSeqNum,
+            gasPriceL1,
+            messageDataHash
+        );
+        return (l1BlockNumber, inboxSeqNum, messageHash);
     }
 
     function extractMessageProof(AssertionContext memory context, bytes32 messageHash)
@@ -515,25 +569,39 @@ contract OneStepProof is OneStepProofCommon {
         returns (uint256)
     {}
 
+    function verifyReadInboxMessage(
+        AssertionContext memory context,
+        bytes32 messageHash,
+        uint256 sequenceNum
+    ) private view {
+        require(context.totalMessagesRead < context.maxMessagesPeek);
+        (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
+        require(sequenceNum == context.totalMessagesRead);
+        require(acc == context.bridge.inboxAccs(accIndex), "WRONG_MESSAGE");
+    }
+
     function peekNextInboxBlocknum(AssertionContext memory context) private view returns (uint256) {
-        (, uint256 blockNum) = peekNextInboxMessage(context);
+        (uint256 blockNum, uint256 sequenceNum, bytes32 messageHash) =
+            extractMessageBlockNumber(context);
+        verifyReadInboxMessage(context, messageHash, sequenceNum);
         return blockNum;
     }
 
     function readNextSequencerMessage(AssertionContext memory context)
         private
         view
-        returns (Value.Data memory, uint256)
+        returns (Value.Data memory)
     {}
 
     function readNextInboxMessage(AssertionContext memory context)
         private
         view
-        returns (Value.Data memory, uint256)
+        returns (Value.Data memory)
     {
-        (Value.Data memory message, uint256 blockNum) = peekNextInboxMessage(context);
+        (Value.Data memory message, bytes32 messageHash) = extractMessage(context);
+        verifyReadInboxMessage(context, messageHash, message.tupleVal[4].intVal);
         context.totalMessagesRead++;
-        return (message, blockNum);
+        return message;
     }
 
     function executeInboxPeekInsn(AssertionContext memory context) internal view {
@@ -577,13 +645,15 @@ contract OneStepProof is OneStepProofCommon {
         Value.Data memory message;
         uint256 blockNum;
         if (readSequencer) {
-            (message, blockNum) = readNextSequencerMessage(context);
+            message = readNextSequencerMessage(context);
+            blockNum = message.tupleVal[1].intVal;
             if (!context.inboxAssertedEmpty) {
                 uint256 nextInboxBlocknum = peekNextInboxBlocknum(context);
                 require(blockNum < nextInboxBlocknum);
             }
         } else {
-            (message, blockNum) = readNextInboxMessage(context);
+            message = readNextInboxMessage(context);
+            blockNum = message.tupleVal[1].intVal;
             if (context.sequencerAssertedEmpty) {
                 require(blockNum + context.sequencer.maxDelayBlocks() > context.assertionBlock);
             } else {
