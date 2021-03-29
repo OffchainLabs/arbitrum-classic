@@ -463,18 +463,12 @@ contract OneStepProof is OneStepProofCommon {
         return (Value.newTuple(tupData), messageHash);
     }
 
-    function extractMessageWithProof(AssertionContext memory context)
+    function extractMessageProof(AssertionContext memory context, bytes32 messageHash)
         private
         pure
-        returns (
-            Value.Data memory message,
-            bytes32 acc,
-            uint256 accIndex
-        )
+        returns (bytes32 acc, uint256 accIndex)
     {
         bytes memory proof = context.proof;
-        bytes32 messageHash;
-        (message, messageHash) = extractMessage(context);
         (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
         acc = Messages.addMessageToInbox(acc, messageHash);
         uint256 proofCount;
@@ -484,8 +478,7 @@ contract OneStepProof is OneStepProofCommon {
             acc = Messages.addMessageToInbox(acc, messageHash);
         }
         (context.offset, accIndex) = Marshaling.deserializeInt(proof, context.offset);
-
-        return (message, acc, accIndex);
+        return (acc, accIndex);
     }
 
     function peekNextInboxMessage(AssertionContext memory context)
@@ -494,12 +487,11 @@ contract OneStepProof is OneStepProofCommon {
         returns (Value.Data memory message, uint256 l1BlockNumber)
     {
         require(context.totalMessagesRead < context.maxMessagesPeek);
-        bytes32 acc;
-        uint256 accIndex;
-        (message, acc, accIndex) = extractMessageWithProof(context);
+        bytes32 messageHash;
+        (message, messageHash) = extractMessage(context);
+        (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
         require(message.tupleVal[4].intVal == context.totalMessagesRead);
         require(acc == context.bridge.inboxAccs(accIndex), "WRONG_MESSAGE");
-
         return (message, message.tupleVal[1].intVal);
     }
 
@@ -509,9 +501,9 @@ contract OneStepProof is OneStepProofCommon {
         returns (Value.Data memory message, uint256 l1BlockNumber)
     {
         require(context.totalSequencerRead < context.maxSequencerPeek);
-        bytes32 acc;
-        uint256 accIndex;
-        (message, acc, accIndex) = extractMessageWithProof(context);
+        bytes32 messageHash;
+        (message, messageHash) = extractMessage(context);
+        (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
         require(message.tupleVal[4].intVal == context.totalSequencerRead);
         require(acc == context.sequencer.inboxAccs(accIndex), "WRONG_MESSAGE");
         return (message, message.tupleVal[1].intVal);
