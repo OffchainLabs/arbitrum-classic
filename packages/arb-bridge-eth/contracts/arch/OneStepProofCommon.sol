@@ -165,15 +165,9 @@ abstract contract OneStepProofCommon is IOneStepProof {
             bytes32[4] memory fields
         )
     {
-        AssertionContext memory context =
-            initializeExecutionContext(
-                uint256Data,
-                inboxesAssertedEmpty,
-                accs,
-                proof,
-                bproof,
-                inboxes
-            );
+        ContextInitializationData memory init =
+            ContextInitializationData(uint256Data, inboxesAssertedEmpty, accs, inboxes);
+        AssertionContext memory context = initializeExecutionContext(init, proof, bproof);
 
         executeOp(context);
 
@@ -188,15 +182,9 @@ abstract contract OneStepProofCommon is IOneStepProof {
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
-        AssertionContext memory context =
-            initializeExecutionContext(
-                uint256Data,
-                inboxesAssertedEmpty,
-                accs,
-                proof,
-                bproof,
-                inboxes
-            );
+        ContextInitializationData memory init =
+            ContextInitializationData(uint256Data, inboxesAssertedEmpty, accs, inboxes);
+        AssertionContext memory context = initializeExecutionContext(init, proof, bproof);
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);
@@ -300,13 +288,17 @@ abstract contract OneStepProofCommon is IOneStepProof {
         handleError(context);
     }
 
+    struct ContextInitializationData {
+        uint256[5] uint256Data;
+        bool[2] inboxesAssertedEmpty;
+        bytes32[2] accs;
+        address[2] inboxes;
+    }
+
     function initializeExecutionContext(
-        uint256[5] calldata uint256Data,
-        bool[2] calldata inboxesAssertedEmpty,
-        bytes32[2] calldata accs,
-        bytes memory proof,
-        bytes memory bproof,
-        address[2] calldata inboxes
+        ContextInitializationData memory init,
+        bytes calldata proof,
+        bytes calldata bproof
     ) internal pure returns (AssertionContext memory) {
         uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
@@ -329,17 +321,19 @@ abstract contract OneStepProofCommon is IOneStepProof {
         offset += 1;
 
         AssertionContext memory context;
-        context.bridge = IBridge(inboxes[0]);
-        context.sequencer = ISequencerInbox(inboxes[1]);
+        context.bridge = IBridge(init.inboxes[0]);
+        context.sequencer = ISequencerInbox(init.inboxes[1]);
         context.startMachine = mach;
         context.afterMachine = mach.clone();
-        context.totalMessagesRead = uint256Data[0];
-        context.totalSequencerRead = uint256Data[1];
-        context.assertionBlock = uint256Data[2];
-        context.maxMessagesPeek = uint256Data[3];
-        context.maxSequencerPeek = uint256Data[4];
-        context.sendAcc = accs[0];
-        context.logAcc = accs[1];
+        context.totalMessagesRead = init.uint256Data[0];
+        context.totalSequencerRead = init.uint256Data[1];
+        context.assertionBlock = init.uint256Data[2];
+        context.maxMessagesPeek = init.uint256Data[3];
+        context.maxSequencerPeek = init.uint256Data[4];
+        context.inboxAssertedEmpty = init.inboxesAssertedEmpty[0];
+        context.sequencerAssertedEmpty = init.inboxesAssertedEmpty[1];
+        context.sendAcc = init.accs[0];
+        context.logAcc = init.accs[1];
         context.gas = 0;
         context.stack = ValueStack(stackCount, stackVals);
         context.auxstack = ValueStack(auxstackCount, auxstackVals);

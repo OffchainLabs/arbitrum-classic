@@ -243,8 +243,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
         uint256[2] memory _initialMessagesRead,
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
+        bytes32[2] memory _initialAccs,
         uint256[3] memory _initialState,
         bytes memory _executionProof,
         bytes memory _bufferProof,
@@ -263,7 +262,7 @@ contract Challenge is Cloneable, IChallenge {
                         maxSequencerPeek
                     ],
                     [inboxAssertedEmpty, sequencerAssertedEmpty],
-                    [_initialSendAcc, _initialLogAcc],
+                    _initialAccs,
                     _executionProof,
                     _bufferProof
                 );
@@ -282,8 +281,7 @@ contract Challenge is Cloneable, IChallenge {
             require(
                 _oldEndHash !=
                     oneStepProofExecutionAfter(
-                        _initialSendAcc,
-                        _initialLogAcc,
+                        _initialAccs,
                         _initialState,
                         gasUsed,
                         totalMessagesRead,
@@ -297,8 +295,7 @@ contract Challenge is Cloneable, IChallenge {
                 _challengedSegmentLength,
                 oneStepProofExecutionBefore(
                     _initialMessagesRead,
-                    _initialSendAcc,
-                    _initialLogAcc,
+                    _initialAccs,
                     _initialState,
                     proofFields
                 ),
@@ -423,8 +420,7 @@ contract Challenge is Cloneable, IChallenge {
     //  afterLogsHash
     function oneStepProofExecutionBefore(
         uint256[2] memory _initialMessagesRead,
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
+        bytes32[2] memory _initialAccs,
         uint256[3] memory _initialState,
         bytes32[4] memory proofFields
     ) private pure returns (bytes32) {
@@ -434,17 +430,16 @@ contract Challenge is Cloneable, IChallenge {
                 ChallengeLib.assertionRestHash(
                     _initialMessagesRead,
                     proofFields[0],
-                    _initialSendAcc,
+                    _initialAccs[0],
                     _initialState[1],
-                    _initialLogAcc,
+                    _initialAccs[1],
                     _initialState[2]
                 )
             );
     }
 
     function oneStepProofExecutionAfter(
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
+        bytes32[2] memory _initialAccs,
         uint256[3] memory _initialState,
         uint64 gasUsed,
         uint256[2] memory totalMessagesRead,
@@ -461,9 +456,9 @@ contract Challenge is Cloneable, IChallenge {
                     totalMessagesRead,
                     proofFields[1],
                     proofFields[2],
-                    _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1)),
+                    _initialState[1].add((_initialAccs[0] == proofFields[2] ? 0 : 1)),
                     proofFields[3],
-                    _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1))
+                    _initialState[2].add((_initialAccs[1] == proofFields[3] ? 0 : 1))
                 )
             );
     }

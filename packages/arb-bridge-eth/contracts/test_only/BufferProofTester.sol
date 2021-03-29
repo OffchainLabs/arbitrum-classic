@@ -58,8 +58,7 @@ contract BufferProofTester is OneStepProof2 {
     function executeStepTest(
         uint256[5] calldata uint256Data,
         bool[2] calldata inboxesAssertedEmpty,
-        bytes32 initialSendAcc,
-        bytes32 initialLogAcc,
+        bytes32[2] calldata initialAccs,
         bytes calldata proof,
         bytes calldata bproof
     ) external {
@@ -69,7 +68,7 @@ contract BufferProofTester is OneStepProof2 {
                 inboxes,
                 uint256Data,
                 inboxesAssertedEmpty,
-                [initialSendAcc, initialLogAcc],
+                initialAccs,
                 proof,
                 bproof
             );
