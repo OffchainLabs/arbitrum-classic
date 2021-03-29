@@ -442,104 +442,113 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         }
 
         bytes32 afterInboxAcc = 0;
-        INode node;
         bytes32 executionHash;
-        INode prevNode = getNode(latestStakedNode(msg.sender));
+        INode node;
         {
-            uint256 nodeNum = latestNodeCreated() + 1;
-            RollupLib.Assertion memory assertion =
-                RollupLib.decodeAssertion(
-                    assertionBytes32Fields,
-                    assertionIntFields,
-                    beforeProposedBlock,
-                    beforeInboxMaxCount,
-                    inboxMaxCount
-                );
-            executionHash = RollupLib.executionHash(assertion);
-            // Make sure the previous state is correct against the node being built on
-            require(
-                RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
-                "PREV_STATE_HASH"
-            );
-
-            uint256 deadlineBlock;
+            INode prevNode = getNode(latestStakedNode(msg.sender));
             {
-                uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
-                // Verify that assertion meets the minimum Delta time requirement
-                require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
-
-                uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
-                // Minimum size requirements: each assertion must satisfy either
+                uint256 nodeNum = latestNodeCreated() + 1;
+                RollupLib.Assertion memory assertion =
+                    RollupLib.decodeAssertion(
+                        assertionBytes32Fields,
+                        assertionIntFields,
+                        beforeProposedBlock,
+                        beforeInboxMaxCount,
+                        inboxMaxCount
+                    );
+                executionHash = RollupLib.executionHash(assertion);
+                // Make sure the previous state is correct against the node being built on
                 require(
-                    // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                    (assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount[0] &&
-                        assertion.afterState.sequencerCount >=
-                        assertion.beforeState.inboxMaxCount[1]) ||
-                        // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                        gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
-                        assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
-                        MAX_SEND_COUNT,
-                    "TOO_SMALL"
+                    RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
+                    "PREV_STATE_HASH"
                 );
 
-                // Don't allow an assertion to use above a maximum amount of gas
-                require(
-                    gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
-                    "TOO_LARGE"
-                );
+                uint256 deadlineBlock;
+                {
+                    uint256 timeSinceLastNode =
+                        block.number.sub(assertion.beforeState.proposedBlock);
+                    // Verify that assertion meets the minimum Delta time requirement
+                    require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
 
-                // Set deadline rounding up to the nearest block
-                uint256 checkTime =
-                    gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
-                deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock())
-                    .add(checkTime);
-            }
+                    uint256 gasUsed =
+                        assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
+                    // Minimum size requirements: each assertion must satisfy either
+                    require(
+                        // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+                        (assertion.afterState.inboxCount >=
+                            assertion.beforeState.inboxMaxCount[0] &&
+                            assertion.afterState.sequencerCount >=
+                            assertion.beforeState.inboxMaxCount[1]) ||
+                            // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                            gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                            assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
+                            MAX_SEND_COUNT,
+                        "TOO_SMALL"
+                    );
 
-            rollupEventBridge.nodeCreated(
-                nodeNum,
-                latestStakedNode(msg.sender),
-                deadlineBlock,
-                msg.sender
-            );
+                    // Don't allow an assertion to use above a maximum amount of gas
+                    require(
+                        gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
+                        "TOO_LARGE"
+                    );
 
-            // Ensure that the assertion doesn't read past the end of the current inbox
-            require(assertion.afterState.inboxCount <= inboxMaxCount[0], "INBOX_PAST_END");
-            require(assertion.afterState.sequencerCount <= inboxMaxCount[1], "INBOX_PAST_END");
-            if (assertion.afterState.inboxCount > 0) {
-                afterInboxAcc = bridge.inboxAccs(assertion.afterState.inboxCount - 1);
-            }
+                    // Set deadline rounding up to the nearest block
+                    uint256 checkTime =
+                        gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
+                    deadlineBlock = max(
+                        block.number.add(confirmPeriodBlocks),
+                        prevNode.deadlineBlock()
+                    )
+                        .add(checkTime);
+                }
 
-            node = INode(
-                nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(
-                        assertion,
-                        executionHash,
-                        block.number,
-                        inboxAssertionTypes
-                    ),
-                    RollupLib.confirmHash(assertion),
+                rollupEventBridge.nodeCreated(
+                    nodeNum,
                     latestStakedNode(msg.sender),
-                    deadlineBlock
-                )
-            );
+                    deadlineBlock,
+                    msg.sender
+                );
+
+                // Ensure that the assertion doesn't read past the end of the current inbox
+                require(assertion.afterState.inboxCount <= inboxMaxCount[0], "INBOX_PAST_END");
+                require(assertion.afterState.sequencerCount <= inboxMaxCount[1], "INBOX_PAST_END");
+                if (assertion.afterState.inboxCount > 0) {
+                    afterInboxAcc = bridge.inboxAccs(assertion.afterState.inboxCount - 1);
+                }
+
+                node = INode(
+                    nodeFactory.createNode(
+                        RollupLib.stateHash(assertion.afterState),
+                        RollupLib.challengeRoot(
+                            assertion,
+                            executionHash,
+                            block.number,
+                            inboxAssertionTypes
+                        ),
+                        RollupLib.confirmHash(assertion),
+                        latestStakedNode(msg.sender),
+                        deadlineBlock
+                    )
+                );
+            }
+
+            {
+                bytes32 lastHash;
+                uint256 latestSibling = prevNode.latestChildNumber();
+                bool hasSibling = latestSibling > 0;
+                if (hasSibling) {
+                    lastHash = getNodeHash(prevNode.latestChildNumber());
+                } else {
+                    lastHash = getNodeHash(node.prev());
+                }
+                bytes32 nodeHash =
+                    RollupLib.nodeHash(hasSibling, lastHash, executionHash, afterInboxAcc);
+                require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
+                nodeCreated(node, nodeHash);
+                prevNode.childCreated(latestNodeCreated());
+            }
         }
 
-        {
-            bytes32 lastHash;
-            uint256 latestSibling = prevNode.latestChildNumber();
-            bool hasSibling = latestSibling > 0;
-            if (hasSibling) {
-                lastHash = getNodeHash(prevNode.latestChildNumber());
-            } else {
-                lastHash = getNodeHash(node.prev());
-            }
-            bytes32 nodeHash =
-                RollupLib.nodeHash(hasSibling, lastHash, executionHash, afterInboxAcc);
-            require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
-            nodeCreated(node, nodeHash);
-            prevNode.childCreated(latestNodeCreated());
-        }
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit NodeCreated(
