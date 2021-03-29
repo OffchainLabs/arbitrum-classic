@@ -462,29 +462,32 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 "PREV_STATE_HASH"
             );
 
-            uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
-            // Verify that assertion meets the minimum Delta time requirement
-            require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
-
-            uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
-            // Minimum size requirements: each assertion must satisfy either
-            require(
-                // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                (assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount[0] &&
-                    assertion.afterState.sequencerCount >=
-                    assertion.beforeState.inboxMaxCount[1]) ||
-                    // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                    gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
-                    assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
-                    MAX_SEND_COUNT,
-                "TOO_SMALL"
-            );
-
-            // Don't allow an assertion to use above a maximum amount of gas
-            require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
-
             uint256 deadlineBlock;
             {
+                uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
+                // Verify that assertion meets the minimum Delta time requirement
+                require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
+
+                uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
+                // Minimum size requirements: each assertion must satisfy either
+                require(
+                    // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+                    (assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount[0] &&
+                        assertion.afterState.sequencerCount >=
+                        assertion.beforeState.inboxMaxCount[1]) ||
+                        // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                        gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                        assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
+                        MAX_SEND_COUNT,
+                    "TOO_SMALL"
+                );
+
+                // Don't allow an assertion to use above a maximum amount of gas
+                require(
+                    gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
+                    "TOO_LARGE"
+                );
+
                 // Set deadline rounding up to the nearest block
                 uint256 checkTime =
                     gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
