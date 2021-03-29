@@ -511,6 +511,55 @@ Compression can make the “header information” in a transaction much smaller.
 
 An aggregator that submits transactions on behalf of users will have costs due to the L1 transactions it uses to submit those transactions to the Inbox contract. Arbitrum includes a facility to collect fees from users, to reimburse the aggregator for its costs. This is detailed in the [ArbGas and Fees](#arbgas-and-fees) section.
 
+## Sequencer Mode
+
+Sequencer mode is an optional feature of Arbitrum chains, which can be turned on or off for each chain. On mainnet launch, the flagship chain will use a sequencer that is operated by Offchain Labs.
+
+The sequencer is a specially designated full node, which is given limited power to control the ordering of transactions. This allows the sequencer to guarantee the results of user transactions immediately, without needing to wait for anything to happen on Ethereum.  So no need to wait five minutes or so for block confirmations--and no need to even wait 15 seconds for Ethereum to make a block.
+
+Clients interact with the sequencer in exactly the same way they would interact with any full node, for example by giving their wallet software a network URL that happens to point to the sequencer.
+
+### Instant finality
+
+Without a sequencer, a node can predict what the results of a client transaction will be, but the node can't be sure, because it can't know or control how the transactions it submits will be ordered in the inbox, relative to transactions submitted by other nodes. 
+
+The sequencer is given more control over ordering, so it has the power to assign its clients' transactions a position in the inbox queue, thereby ensuring that it can determine the results of client transactions immediately.  The sequencer's power to reorder has limits (see below for details) but it does have more power than anyone else to influence transaction ordering.
+
+### Inboxes, fast and slow
+
+When we add a sequencer, we take the chain's inbox and split it into two inboxes.
+
+* The regular inbox works as it always has. Anyone can put a message into the regular inbox at any time. Messages will be tagged with the Ethereum block number and timestamp when they were inserted into the regular inbox.
+* The sequencer inbox is "owned" by the sequencer. Only the sequencer can put messages into it. When inserting a message, the sequencer can "backdate" that message by assigning it a block number that is in the past--but no more than *delta_blocks* blocks in the past. (*delta_blocks* will typically correspond to roughly ten minutes of wall-clock time.). Similarly, the sequencer can assign the message a timestamp that is in the past, but only by up to a limit *delta_seconds*.  Additionally, when using the sequencer inbox, the sequencer must assign block numbers and timestamps in non-decreasing fashion.
+
+Now when ArbOS goes to get the next message, it will receive the message at the head of one inbox or the other, whichever has the lowest block number. This ensures that messages are consumed in non-decreasing block number order, which keeps everything sane.  (ArbOS also adjusts message timestamps upward, if this is necessary to make timestamps non-decreasing.)
+
+### If the sequencer is well-behaved...
+
+A well-behaved sequencer will accept transactions from all requesters and treat them fairly, giving each one a promised transaction result as quickly as it can. 
+
+It will also minimize the delay it imposes on non-sequencer transactions by minimizing how far it backdates transactions, consistent with the goal of providing strong promises of transaction results.  Specifically, if the sequencer believes that 20 confirmation blocks are needed to have finality on Ethereum, then it will backdate transactions by 20 blocks. This is enough to ensure that the sequencer knows exactly which transactions will precede its current transaction, because those preceding transactions have finality.  There is no need for a benign sequencer to backdate more than that, so it won't.
+
+This does mean that transactions that go through the regular inbox will take longer to get finality. Their time to finality will roughly double: if finality requires C confirmation blocks, then a regular-inbox tranasaction at block B be processed after sequencer transactions that are inserted at time B+C-1 (but labeled with block B-1), and those sequencer transactions won't have finality until time B+2C-1.
+
+This is the basic tradeoff of having a sequencer: if you use the sequencer, finality is C blocks faster; but if you don't use the sequencer, finality is C blocks slower. This is usually a good tradeoff, because most transactions will use the sequencer; and because the practical difference between instant and 5-minute finality is bigger than the difference between 5-minute and 10-minute finality.
+
+So a sequencer is generally a win, if the sequencer is well behaved.
+
+### If the sequencer is malicious...
+
+A malicious sequencer, on the other hand, could cause some pain. If it refuses to handle your transactions, you're forced to go through the regular inbox, with longer delay. And a malicious sequencer has great power to front-run everyone's transactions, so it could profit greatly at users' expense.  
+
+At mainnet launch, Offchain Labs will run a sequencer which will be well-behaved.  This will be useful but it's not decentralized. Over time, we'll switch to decentralized, fair sequencing, as described below.
+
+Because the sequencer will be run by a trusted party at first, and will be decentralized later, we haven't built in a mechanism to directly punish a misbehaving sequencer.  We're asking users to trust the centralized sequencer at first, until we switch to decentralized fair sequencing later.
+
+### Decentralized fair sequencing
+
+Viewed from 30,000 feet, decentralized fair sequencing isn't too complicated. Instead of being a single centralized server, the sequencer is a committee of servers, and as long as a quorum of more than two-thirds of the committee is honest, the sequencer will establish a fair ordering over transactions. 
+
+How to achieve this is more complicated. Research by a team at Cornell Tech, including Offchain Labs CEO and Co-founder Steven Goldfeder, developed the first-ever decentralized fair sequencing algorithm. With some improvements that are under development, these concepts will form the basis for our longer-term solution, of a fair decentralized sequencer.
+
 ## Bridging
 
 We have already covered how users interact with L2 contracts--they submit transactions by putting messages into the chain’s inbox, or having a full node aggregator do so on their behalf. Let’s talk about how contract interact between L1 and L2--how an L1 contract calls an L2 contract, and vice versa.
