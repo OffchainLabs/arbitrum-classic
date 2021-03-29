@@ -535,40 +535,6 @@ contract OneStepProof is OneStepProofCommon {
         return (acc, accIndex);
     }
 
-    function peekNextInboxMessage(AssertionContext memory context)
-        private
-        view
-        returns (Value.Data memory message, uint256 l1BlockNumber)
-    {
-        require(context.totalMessagesRead < context.maxMessagesPeek);
-        bytes32 messageHash;
-        (message, messageHash) = extractMessage(context);
-        (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
-        require(message.tupleVal[4].intVal == context.totalMessagesRead);
-        require(acc == context.bridge.inboxAccs(accIndex), "WRONG_MESSAGE");
-        return (message, message.tupleVal[1].intVal);
-    }
-
-    function peekNextSequencerMessage(AssertionContext memory context)
-        private
-        view
-        returns (Value.Data memory message, uint256 l1BlockNumber)
-    {
-        require(context.totalSequencerRead < context.maxSequencerPeek);
-        bytes32 messageHash;
-        (message, messageHash) = extractMessage(context);
-        (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
-        require(message.tupleVal[4].intVal == context.totalSequencerRead);
-        require(acc == context.sequencer.inboxAccs(accIndex), "WRONG_MESSAGE");
-        return (message, message.tupleVal[1].intVal);
-    }
-
-    function peekNextSequencerBlocknum(AssertionContext memory context)
-        private
-        view
-        returns (uint256)
-    {}
-
     function verifyReadInboxMessage(
         AssertionContext memory context,
         bytes32 messageHash,
@@ -578,6 +544,28 @@ contract OneStepProof is OneStepProofCommon {
         (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
         require(sequenceNum == context.totalMessagesRead);
         require(acc == context.bridge.inboxAccs(accIndex), "WRONG_MESSAGE");
+    }
+
+    function verifyReadSequencerMessage(
+        AssertionContext memory context,
+        bytes32 messageHash,
+        uint256 sequenceNum
+    ) private view {
+        require(context.totalSequencerRead < context.maxSequencerPeek);
+        (bytes32 acc, uint256 accIndex) = extractMessageProof(context, messageHash);
+        require(sequenceNum == context.totalSequencerRead);
+        require(acc == context.sequencer.inboxAccs(accIndex), "WRONG_MESSAGE");
+    }
+
+    function peekNextSequencerBlocknum(AssertionContext memory context)
+        private
+        view
+        returns (uint256)
+    {
+        (uint256 blockNum, uint256 sequenceNum, bytes32 messageHash) =
+            extractMessageBlockNumber(context);
+        verifyReadSequencerMessage(context, messageHash, sequenceNum);
+        return blockNum;
     }
 
     function peekNextInboxBlocknum(AssertionContext memory context) private view returns (uint256) {
@@ -591,7 +579,12 @@ contract OneStepProof is OneStepProofCommon {
         private
         view
         returns (Value.Data memory)
-    {}
+    {
+        (Value.Data memory message, bytes32 messageHash) = extractMessage(context);
+        verifyReadSequencerMessage(context, messageHash, message.tupleVal[4].intVal);
+        context.totalSequencerRead++;
+        return message;
+    }
 
     function readNextInboxMessage(AssertionContext memory context)
         private
