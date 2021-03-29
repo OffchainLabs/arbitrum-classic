@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "../challenge/ChallengeLib.sol";
 import "./INode.sol";
+import "./IRollup.sol";
 
 library RollupLib {
     struct Config {
@@ -142,24 +143,45 @@ library RollupLib {
     function challengeRoot(
         Assertion memory assertion,
         bytes32 assertionExecHash,
-        uint256 blockProposed
+        uint256 blockProposed,
+        IRollup.InboxAssertionType[2] memory inboxAssertionTypes
     ) internal pure returns (bytes32) {
+        uint256 maxInboxPeek = assertion.afterState.inboxCount;
+        if (inboxAssertionTypes[0] == IRollup.InboxAssertionType.PEEK) {
+            maxInboxPeek++;
+        }
+        uint256 maxSequencerPeek = assertion.afterState.sequencerCount;
+        if (inboxAssertionTypes[1] == IRollup.InboxAssertionType.PEEK) {
+            maxSequencerPeek++;
+        }
         return
             challengeRootHash(
                 assertionExecHash,
                 blockProposed,
-                [assertion.afterState.inboxCount, assertion.afterState.sequencerCount]
+                [maxInboxPeek, maxSequencerPeek],
+                [
+                    inboxAssertionTypes[0] == IRollup.InboxAssertionType.EMPTY,
+                    inboxAssertionTypes[1] == IRollup.InboxAssertionType.EMPTY
+                ]
             );
     }
 
     function challengeRootHash(
         bytes32 execution,
         uint256 proposedTime,
-        uint256[2] memory maxMessageCount
+        uint256[2] memory maxMessagePeeks,
+        bool[2] memory inboxesAssertedEmpty
     ) internal pure returns (bytes32) {
         return
             keccak256(
-                abi.encodePacked(execution, proposedTime, maxMessageCount[0], maxMessageCount[1])
+                abi.encodePacked(
+                    execution,
+                    proposedTime,
+                    maxMessagePeeks[0],
+                    maxMessagePeeks[1],
+                    inboxesAssertedEmpty[0],
+                    inboxesAssertedEmpty[1]
+                )
             );
     }
 

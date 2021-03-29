@@ -19,6 +19,8 @@
 pragma solidity ^0.6.11;
 
 interface IRollup {
+    enum InboxAssertionType { READ, PEEK, EMPTY }
+
     event RollupCreated(bytes32 machineHash);
 
     event NodeCreated(
@@ -29,7 +31,8 @@ interface IRollup {
         uint256[2] inboxMaxCount,
         bytes32 afterInboxAcc,
         bytes32[3][2] assertionBytes32Fields,
-        uint256[5][2] assertionIntFields
+        uint256[5][2] assertionIntFields,
+        InboxAssertionType[2] inboxAssertionTypes
     );
 
     event NodeConfirmed(

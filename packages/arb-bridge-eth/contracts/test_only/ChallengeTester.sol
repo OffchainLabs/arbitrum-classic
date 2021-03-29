@@ -40,7 +40,9 @@ contract ChallengeTester {
 
     function startChallenge(
         bytes32 executionHash,
-        uint256[2] memory maxMessageCount,
+        uint256 _assertionBlock,
+        uint256[2] calldata _maxMessagePeeks,
+        bool[2] calldata _inboxesAssertedEmpty,
         address payable asserter,
         address payable challenger,
         uint256 asserterTimeLeft,
@@ -51,7 +53,9 @@ contract ChallengeTester {
         challenge = challengeFactory.createChallenge(
             address(this),
             executionHash,
-            maxMessageCount,
+            _assertionBlock,
+            _maxMessagePeeks,
+            _inboxesAssertedEmpty,
             asserter,
             challenger,
             asserterTimeLeft,

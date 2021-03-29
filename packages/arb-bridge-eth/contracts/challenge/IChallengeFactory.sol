@@ -25,7 +25,9 @@ interface IChallengeFactory {
     function createChallenge(
         address _resultReceiver,
         bytes32 _executionHash,
-        uint256[2] calldata _maxMessageCount,
+        uint256 _assertionBlock,
+        uint256[2] calldata _maxMessagePeeks,
+        bool[2] calldata _inboxesAssertedEmpty,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,

@@ -431,7 +431,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[5][2] calldata assertionIntFields,
         uint256 beforeProposedBlock,
-        uint256[2] calldata beforeInboxMaxCount
+        uint256[2] calldata beforeInboxMaxCount,
+        InboxAssertionType[2] calldata inboxAssertionTypes
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
         uint256[2] memory inboxMaxCount;
@@ -508,7 +509,12 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             node = INode(
                 nodeFactory.createNode(
                     RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, executionHash, block.number),
+                    RollupLib.challengeRoot(
+                        assertion,
+                        executionHash,
+                        block.number,
+                        inboxAssertionTypes
+                    ),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
                     deadlineBlock
@@ -541,7 +547,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             inboxMaxCount,
             afterInboxAcc,
             assertionBytes32Fields,
-            assertionIntFields
+            assertionIntFields,
+            inboxAssertionTypes
         );
     }
 
@@ -588,49 +595,55 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param executionHashes Challenge related data for the two nodes
      * @param proposedTimes Times that the two nodes were proposed
-     * @param maxMessageCounts Total number of messages consumed by the two nodes
+     * @param maxMessagePeeks The number of messages in each inbox needed to determine the validity of each assertion
+     * @param inboxesAssertedEmpty Whether each assertion asserted that each inbox was empty when it was proposed
      */
     function createChallenge(
         address payable[2] calldata stakers,
         uint256[2] calldata nodeNums,
         bytes32[2] calldata executionHashes,
         uint256[2] calldata proposedTimes,
-        uint256[2][2] calldata maxMessageCounts
+        uint256[2][2] calldata maxMessagePeeks,
+        bool[2][2] calldata inboxesAssertedEmpty
     ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
         require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
 
         INode node1 = getNode(nodeNums[0]);
-        INode node2 = getNode(nodeNums[1]);
+        {
+            INode node2 = getNode(nodeNums[1]);
 
-        require(node1.prev() == node2.prev(), "DIFF_PREV");
+            require(node1.prev() == node2.prev(), "DIFF_PREV");
 
-        requireUnchallengedStaker(stakers[0]);
-        requireUnchallengedStaker(stakers[1]);
+            requireUnchallengedStaker(stakers[0]);
+            requireUnchallengedStaker(stakers[1]);
 
-        require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
-        require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
+            require(node1.stakers(stakers[0]), "STAKER1_NOT_STAKED");
+            require(node2.stakers(stakers[1]), "STAKER2_NOT_STAKED");
 
-        require(
-            node1.challengeHash() ==
-                RollupLib.challengeRootHash(
-                    executionHashes[0],
-                    proposedTimes[0],
-                    maxMessageCounts[0]
-                ),
-            "CHAL_HASH1"
-        );
+            require(
+                node1.challengeHash() ==
+                    RollupLib.challengeRootHash(
+                        executionHashes[0],
+                        proposedTimes[0],
+                        maxMessagePeeks[0],
+                        inboxesAssertedEmpty[0]
+                    ),
+                "CHAL_HASH1"
+            );
 
-        require(
-            node2.challengeHash() ==
-                RollupLib.challengeRootHash(
-                    executionHashes[1],
-                    proposedTimes[1],
-                    maxMessageCounts[1]
-                ),
-            "CHAL_HASH2"
-        );
+            require(
+                node2.challengeHash() ==
+                    RollupLib.challengeRootHash(
+                        executionHashes[1],
+                        proposedTimes[1],
+                        maxMessagePeeks[1],
+                        inboxesAssertedEmpty[1]
+                    ),
+                "CHAL_HASH2"
+            );
+        }
 
         uint256 commonEndTime =
             node1.deadlineBlock().sub(proposedTimes[0]).add(extraChallengeTimeBlocks).add(
@@ -646,7 +659,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             challengeFactory.createChallenge(
                 address(this),
                 executionHashes[0],
-                maxMessageCounts[0],
+                proposedTimes[0],
+                maxMessagePeeks[0],
+                inboxesAssertedEmpty[0],
                 stakers[0],
                 stakers[1],
                 commonEndTime.sub(proposedTimes[0]),

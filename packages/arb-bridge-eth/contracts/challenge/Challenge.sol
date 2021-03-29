@@ -109,7 +109,9 @@ contract Challenge is Cloneable, IChallenge {
         IOneStepProof[] calldata _executors,
         address _resultReceiver,
         bytes32 _executionHash,
-        uint256[2] calldata _maxMessageCount,
+        uint256 _assertionBlock,
+        uint256[2] calldata _maxMessagePeeks,
+        bool[2] calldata _inboxesAssertedEmpty,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
@@ -122,6 +124,12 @@ contract Challenge is Cloneable, IChallenge {
         executors = _executors;
 
         resultReceiver = IRollup(_resultReceiver);
+
+        assertionBlock = _assertionBlock;
+        maxMessagesPeek = _maxMessagePeeks[0];
+        maxSequencerPeek = _maxMessagePeeks[1];
+        inboxAssertedEmpty = _inboxesAssertedEmpty[0];
+        sequencerAssertedEmpty = _inboxesAssertedEmpty[1];
 
         asserter = _asserter;
         challenger = _challenger;
