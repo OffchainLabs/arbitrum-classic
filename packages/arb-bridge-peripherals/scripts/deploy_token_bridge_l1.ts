@@ -1,5 +1,6 @@
 import { ethers } from 'hardhat'
 import deployments from '../deployment.json'
+import { BridgeHelper } from 'arb-ts/src/lib/bridge_helpers'
 import { providers, Signer } from 'ethers'
 import {
   Bridge,
@@ -7,6 +8,7 @@ import {
   EthERC20Bridge__factory,
 } from 'arb-ts/src'
 import { writeFileSync } from 'fs'
+import { spawnSync } from 'child_process'
 
 const main = async () => {
   const accounts = await ethers.getSigners()
@@ -18,6 +20,13 @@ const main = async () => {
     throw new Error('Please set inbox address! INBOX_ADDRESS')
 
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
+
+  if (
+    deployments.buddyDeployer === '' ||
+    deployments.standardArbERC20 === '' ||
+    deployments.standardArbERC777 === ''
+  )
+    throw new Error("Deployments.json doesn't include the necessary addresses")
 
   const maxSubmissionCost = 0
   const gasPrice = 0
