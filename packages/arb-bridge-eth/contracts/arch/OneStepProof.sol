@@ -413,18 +413,15 @@ contract OneStepProof is OneStepProofCommon {
         context.logAcc = keccak256(abi.encodePacked(context.logAcc, popVal(context.stack).hash()));
     }
 
-    function extractMessageFromProof(AssertionContext memory context)
+    function extractMessage(AssertionContext memory context)
         private
         pure
-        returns (
-            Value.Data memory message,
-            bytes32 messageHash,
-            uint256 l1BlockNumber
-        )
+        returns (Value.Data memory message, bytes32 messageHash)
     {
         bytes memory proof = context.proof;
         uint8 kind = uint8(proof[context.offset]);
         context.offset++;
+        uint256 l1BlockNumber;
         uint256 l1Timestamp;
         uint256 inboxSeqNum;
         uint256 gasPriceL1;
@@ -463,43 +460,21 @@ contract OneStepProof is OneStepProofCommon {
         tupData[5] = Value.newInt(gasPriceL1);
         tupData[6] = Value.newInt(messageDataLength);
         tupData[7] = Value.newHashedValue(messageBufHash, 1);
-        return (Value.newTuple(tupData), messageHash, l1BlockNumber);
+        return (Value.newTuple(tupData), messageHash);
     }
 
-    function peekNextInboxMessage(AssertionContext memory context)
+    function extractMessageWithProof(AssertionContext memory context)
         private
-        view
-        returns (Value.Data memory message, uint256 l1BlockNumber)
+        pure
+        returns (
+            Value.Data memory message,
+            bytes32 acc,
+            uint256 accIndex
+        )
     {
-        require(context.totalMessagesRead < context.maxMessagesPeek);
-        bytes32 messageHash;
-        (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);
-
-        bytes32 prevAcc = 0;
-        if (context.totalMessagesRead > 0) {
-            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
-        }
-        require(
-            Messages.addMessageToInbox(prevAcc, messageHash) ==
-                context.bridge.inboxAccs(context.totalMessagesRead),
-            "WRONG_MESSAGE"
-        );
-
-        return (message, l1BlockNumber);
-    }
-
-    function peekNextSequencerMessage(AssertionContext memory context)
-        private
-        view
-        returns (Value.Data memory message, uint256 l1BlockNumber)
-    {
-        require(context.totalSequencerRead < context.maxSequencerPeek);
-        bytes32 messageHash;
-        (message, messageHash, l1BlockNumber) = extractMessageFromProof(context);
-        require(message.tupleVal[4].intVal == context.totalSequencerRead);
-
         bytes memory proof = context.proof;
-        bytes32 acc = 0;
+        bytes32 messageHash;
+        (message, messageHash) = extractMessage(context);
         (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
         acc = Messages.addMessageToInbox(acc, messageHash);
         uint256 proofCount;
@@ -508,10 +483,38 @@ contract OneStepProof is OneStepProofCommon {
             (context.offset, messageHash) = Marshaling.deserializeBytes32(proof, context.offset);
             acc = Messages.addMessageToInbox(acc, messageHash);
         }
-        uint256 accIndex;
         (context.offset, accIndex) = Marshaling.deserializeInt(proof, context.offset);
+
+        return (message, acc, accIndex);
+    }
+
+    function peekNextInboxMessage(AssertionContext memory context)
+        private
+        view
+        returns (Value.Data memory message, uint256 l1BlockNumber)
+    {
+        require(context.totalMessagesRead < context.maxMessagesPeek);
+        bytes32 acc;
+        uint256 accIndex;
+        (message, acc, accIndex) = extractMessageWithProof(context);
+        require(message.tupleVal[4].intVal == context.totalMessagesRead);
+        require(acc == context.bridge.inboxAccs(accIndex), "WRONG_MESSAGE");
+
+        return (message, message.tupleVal[1].intVal);
+    }
+
+    function peekNextSequencerMessage(AssertionContext memory context)
+        private
+        view
+        returns (Value.Data memory message, uint256 l1BlockNumber)
+    {
+        require(context.totalSequencerRead < context.maxSequencerPeek);
+        bytes32 acc;
+        uint256 accIndex;
+        (message, acc, accIndex) = extractMessageWithProof(context);
+        require(message.tupleVal[4].intVal == context.totalSequencerRead);
         require(acc == context.sequencer.inboxAccs(accIndex), "WRONG_MESSAGE");
-        return (message, l1BlockNumber);
+        return (message, message.tupleVal[1].intVal);
     }
 
     function peekNextSequencerBlocknum(AssertionContext memory context)
