@@ -241,13 +241,10 @@ func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
 	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
 	}
-	var err error
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
 		logger.Fatal().Stack().Err(err).Msg("transaction aggregator failed")
-		return
 	}
-
 	for {
 		logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
 		txHash, err := inbox.SendL2MessageFromOrigin(
