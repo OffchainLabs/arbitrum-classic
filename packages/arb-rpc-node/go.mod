@@ -11,10 +11,10 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mattn/go-runewidth v0.0.6 // indirect
 	github.com/miguelmota/go-ethereum-hdwallet v0.0.0-20200123000308-a60dcd172b4c
-	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-evm v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.7.3
-	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
+	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.8.0
+	github.com/offchainlabs/arbitrum/packages/arb-evm v0.8.0
+	github.com/offchainlabs/arbitrum/packages/arb-node-core v0.8.0
+	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.21.0
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
