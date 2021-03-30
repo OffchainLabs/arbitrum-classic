@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/allegro/bigcache v1.2.1 // indirect
-	github.com/ethereum/go-ethereum v1.10.0
+	github.com/ethereum/go-ethereum v1.10.1
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0

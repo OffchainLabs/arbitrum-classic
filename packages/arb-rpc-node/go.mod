@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-rpc-node
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.10.0
+	github.com/ethereum/go-ethereum v1.10.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/kr/pretty v0.2.0 // indirect
