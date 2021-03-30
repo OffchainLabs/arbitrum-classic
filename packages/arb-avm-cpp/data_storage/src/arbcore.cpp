@@ -906,7 +906,6 @@ void ArbCore::operator()() {
                     machine_error = true;
                     std::cerr << "ArbCore error: " << core_error_string << ": "
                               << status.ToString() << "\n";
-                    break;
                 }
 
                 // No more checkpoints to delete
