@@ -552,13 +552,45 @@ contract OneStepProof2 is OneStepProofCommon {
         pushVal(context.stack, Value.newBuffer(res));
     }
 
-    function decodeWasmData(bytes memory data) internal pure returns (
+    function decodeWasmData(bytes memory proof) internal pure returns (
         Machine.Data memory finalMachine,
+        Value.Data[] memory stackVals,
+        Value.Data[] memory auxstackVals,
         uint256 len
     ) {
-        uint256 offset = 0;
-        (offset, finalMachine) = Machine.deserializeMachine(data, offset);
-        (offset, len) = Marshaling.deserializeInt(data, offset);
+        // uint8 opCode = uint8(proof[0]);
+        uint8 stackCount = uint8(proof[1]);
+        uint8 auxstackCount = uint8(proof[2]);
+        uint256 offset = 3;
+
+        // Leave some extra space for values pushed on the stack in the proofs
+        stackVals = new Value.Data[](stackCount + 4);
+        auxstackVals = new Value.Data[](auxstackCount + 4);
+        for (uint256 i = 0; i < stackCount; i++) {
+            (offset, stackVals[i]) = Marshaling.deserialize(proof, offset);
+        }
+        for (uint256 i = 0; i < auxstackCount; i++) {
+            (offset, auxstackVals[i]) = Marshaling.deserialize(proof, offset);
+        }
+        Machine.Data memory mach;
+        (offset, mach) = Machine.deserializeMachine(proof, offset);
+
+        uint8 immediate = uint8(proof[offset]);
+        offset += 1;
+
+        finalMachine = mach;
+
+        (offset, len) = Marshaling.deserializeInt(proof, offset);
+
+        // Add the stack and auxstack values to the start machine
+        uint256 i = 0;
+        for (i = 0; i < stackCount - immediate; i++) {
+            mach.addDataStackValue(stackVals[i]);
+        }
+        for (i = 0; i < auxstackCount; i++) {
+            mach.addAuxStackValue(auxstackVals[i]);
+        }
+
     }
 
     bytes32 constant wasmProgram = 0;
@@ -574,8 +606,8 @@ contract OneStepProof2 is OneStepProofCommon {
     }
 
     function executeWasmTest(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
         if (!val1.isBuffer()) {
             handleOpcodeError(context);
             return;
@@ -584,7 +616,10 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        (Machine.Data memory finalMachine, uint256 len) = decodeWasmData(context.bufProof);
+        (Machine.Data memory finalMachine,
+         Value.Data[] memory stackVals,
+         Value.Data[] memory auxstackVals, 
+         uint256 len) = decodeWasmData(context.bufProof);
         Value.Data[] memory init = new Value.Data[](2);
         init[0] = val1;
         init[1] = Value.newEmptyTuple();
@@ -605,12 +640,9 @@ contract OneStepProof2 is OneStepProofCommon {
         // Return value must come from the final machine
         require(finalMachine.status == Machine.MACHINE_HALT, "Wasm program must halt");
         require(finalMachine.dataStack.isTuple());
-        require(finalMachine.dataStack.valLength() == 2);
-        pushVal(context.stack, finalMachine.dataStack.tupleVal[0]);
-        Value.Data memory next = finalMachine.dataStack.tupleVal[1];
-        require(next.isTuple());
-        require(next.valLength() == 2);
-        pushVal(context.stack, next.tupleVal[0]);
+        require(stackVals.length >= 2);
+        pushVal(context.stack, stackVals[1]);
+        pushVal(context.stack, stackVals[0]);
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         context.nextLength = len;

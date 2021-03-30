@@ -389,6 +389,51 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     }
 }
 
+void MachineState::marshalWasmProof(OneStepProof &proof) const {
+    auto staged_message_tuple = getStagedMessageTuple();
+    if (!staged_message_tuple) {
+        throw std::runtime_error(
+            "Can't marshal machine with incomplete staged_message");
+    }
+    auto currentInstruction = loadCurrentInstruction();
+    auto& current_op = currentInstruction.op;
+    auto opcode = current_op.opcode;
+
+    std::vector<MarshalLevel> stackPops = { MarshalLevel::SINGLE, MarshalLevel::SINGLE };
+
+    std::vector<MarshalLevel> auxStackPops;
+
+    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
+    if (current_op.immediate && !stackPops.empty()) {
+        immediateMarshalLevel = stackPops[0];
+        stackPops.erase(stackPops.cbegin());
+    }
+
+    auto stackProof = stack.marshalForProof(stackPops, *code);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+
+    proof.buffer_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.buffer_proof.push_back(stackProof.count +
+                                   current_op.immediate.has_value());
+    proof.buffer_proof.push_back(auxStackProof.count);
+
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                stackProof.data.begin(), stackProof.data.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
+                          proof.buffer_proof, *code);
+    }
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                auxStackProof.data.begin(),
+                                auxStackProof.data.end());
+    ::marshalState(proof.buffer_proof, *code, currentInstruction.nextHash,
+                   stackProof.bottom, auxStackProof.bottom, registerVal,
+                   static_val, arb_gas_remaining, errpc, *staged_message_tuple);
+
+    proof.buffer_proof.push_back(current_op.immediate ? 1 : 0);
+
+}
+
 OneStepProof MachineState::marshalForProof() const {
     auto staged_message_tuple = getStagedMessageTuple();
     if (!staged_message_tuple) {
@@ -880,6 +925,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
             break;
         case OpCode::SET_BUFFER256:
             machineoperation::setbuffer256(*this);
+            break;
+        case OpCode::WASM_TEST:
+            machineoperation::wasm_test(*this);
             break;
         /*****************/
         /*  Precompiles  */

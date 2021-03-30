@@ -1013,6 +1013,17 @@ BlockReason sideload(MachineState& m) {
     return NotBlocked{};
 }
 
+void wasm_test(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto len = assumeInt(m.stack[0]);
+    Buffer& md = assumeBuffer(m.stack[1]);
+    md = md.set(0, 222);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(md);
+    m.stack.push(len);
+}
+
 void newbuffer(MachineState& m) {
     m.stack.prepForMod(0);
     m.stack.push(Buffer{});

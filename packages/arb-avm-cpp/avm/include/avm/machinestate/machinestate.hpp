@@ -234,6 +234,8 @@ struct MachineState {
     void addProcessedSend(std::vector<uint8_t> data);
     void addProcessedLog(value log_val);
 
+    void marshalWasmProof(OneStepProof& proof) const;
+
    private:
     void marshalBufferProof(OneStepProof& proof) const;
 };
