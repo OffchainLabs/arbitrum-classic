@@ -55,8 +55,8 @@ DataStorage::DataStorage(const std::string& db_path) {
 
     // Various settings to constrain memory growth
     options.max_open_files = 512;
-    options.write_buffer_size = 1024 * 1024 * 16;
-    options.db_write_buffer_size = 1024 * 1024 * 128;
+    options.write_buffer_size = 1024 * 1024 * 8;
+    options.db_write_buffer_size = 1024 * 1024 * 64;
 
     // Increase the number of threads to open files to offset slow disk access
     options.max_file_opening_threads = 50;
@@ -80,7 +80,7 @@ DataStorage::DataStorage(const std::string& db_path) {
 
     // Settings for refcounted data table using bloom filters and no iterators
     hashkey_cf_options = cf_options;
-    hashkey_cf_options.write_buffer_size = 1024 * 1024 * 64;
+    hashkey_cf_options.write_buffer_size = 1024 * 1024 * 32;
     hashkey_cf_options.OptimizeForPointLookup(16);
     hashkey_cf_options.level_compaction_dynamic_level_bytes = true;
     hashkey_cf_options.table_factory = std::unique_ptr<rocksdb::TableFactory>(
