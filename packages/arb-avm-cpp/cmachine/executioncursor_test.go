@@ -65,12 +65,6 @@ func TestExecutionCursor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cursor.InboxAcc().Equals(common.Hash{}) {
-		t.Error("inbox acc is zero after execution")
-	}
-	if cursor.SendAcc().Equals(common.Hash{}) {
-		t.Error("send acc is zero after execution")
-	}
 	if cursor.LogAcc().Equals(common.Hash{}) {
 		t.Error("log acc is zero after execution")
 	}
