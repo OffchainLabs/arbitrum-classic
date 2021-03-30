@@ -158,7 +158,7 @@ contract EthERC20Bridge {
         address msgSender = outbox.l2ToL1Sender();
 
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msgSender, erc20, amount));
-        require(redirectedExits[withdrawData] == address(0), "ALREADY_EXITED");
+        require(redirectedExits[withdrawData] == USED_ADDRESS, "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
 
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
