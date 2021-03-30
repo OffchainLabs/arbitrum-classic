@@ -35,10 +35,6 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::BlockBasedTableOptions bloom_table_options;
     options.create_if_missing = true;
     options.create_missing_column_families = true;
-    options.max_file_opening_threads = 200;
-
-    // Decrease the WAL log size to 50MB so that DB is flushed regularly
-    options.max_total_wal_size = 52428800;
 
     // As recommended for new applications by
     // https://github.com/facebook/rocksdb/wiki/Setup-Options-and-Basic-Tuning
@@ -120,14 +116,6 @@ DataStorage::DataStorage(const std::string& db_path) {
 rocksdb::Status DataStorage::flushNextColumn() {
     next_column_to_flush = (next_column_to_flush + 1) % column_handles.size();
     return txn_db->Flush(flush_options, column_handles[next_column_to_flush]);
-}
-
-rocksdb::Status DataStorage::flush() {
-    auto flush_options = rocksdb::FlushOptions();
-    flush_options.wait = true;
-    return txn_db->Flush(flush_options, default_column.get());
-    return txn_db->Flush(flush_options, blocks_column.get());
-    return txn_db->Flush(flush_options, node_column.get());
 }
 
 rocksdb::Status DataStorage::closeDb() {

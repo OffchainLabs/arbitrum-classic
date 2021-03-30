@@ -64,7 +64,6 @@ class DataStorage {
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
     }
-    rocksdb::Status flush();
 };
 
 class Transaction {
