@@ -73,6 +73,7 @@ Download the Arbitrum Monorepo from source:
 ```bash
 git clone -b v0.8.0 https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
+git submodule update --init --recursive
 yarn
 yarn build
 ```
