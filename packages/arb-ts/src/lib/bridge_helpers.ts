@@ -210,10 +210,10 @@ export class BridgeHelper {
 
   static getUpdateTokenInfoEventResult = async (
     l1Transaction: providers.TransactionReceipt,
-    l2BridgeAddress?: string
+    l2BridgeAddress: string
   ): Promise<Array<UpdateTokenEventResult>> => {
     const factory = new EthERC20Bridge__factory()
-    const contract = factory.attach(l2BridgeAddress || 'l2BridgeAddr')
+    const contract = factory.attach(l2BridgeAddress)
     const iface = contract.interface
     const event = iface.getEvent('UpdateTokenInfo')
     const eventTopic = iface.getEventTopic(event)
