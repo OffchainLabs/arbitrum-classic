@@ -33,3 +33,7 @@ contract TesterERC20Token {
         symbol = _symbol;
     }
 }
+
+contract TesterERC20TokenNoMetadata {
+    constructor() public {}
+}

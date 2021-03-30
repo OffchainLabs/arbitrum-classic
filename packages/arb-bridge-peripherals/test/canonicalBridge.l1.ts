@@ -248,6 +248,54 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
+  it('should updateTokenInfo even with token that has no metadata', async function () {
+    const Token = await ethers.getContractFactory('TesterERC20TokenNoMetadata')
+    const token = await Token.deploy()
+
+    const tokenType = 0;
+    const tx = await testBridge.updateTokenInfo(
+      token.address,
+      tokenType,
+      maxSubmissionCost,
+      maxGas,
+      gasPrice
+    )
+    const receipt = await tx.wait();
+
+    // event UpdateTokenInfo
+    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
+    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
+    
+    assert.equal(events.length, 1, "Expected only one event to be emitted")
+
+    const event = events[0]
+
+    const {
+      // seqNum,
+      // l1Address,
+      name: eventName,
+      symbol: eventSymbol,
+      decimals: eventDecimals
+    } = event.args
+
+    assert.equal(
+      eventName,
+      '0x',
+      'Incorrect encoded name'
+    )
+    assert.equal(
+      eventSymbol,
+      '0x',
+      'Incorrect encoded symbol'
+    )
+    
+    assert.equal(
+      eventDecimals,
+      '0x',
+      'Incorrect encoded symbol'
+    )
+  })
+
   it.skip('should deposit custom token', async function () {})
   it.skip('should registerCustomL2Token', async function () {})
   it.skip('should notifyCustomToken', async function () {})
