@@ -18,52 +18,10 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import { Bridge__factory } from './abi/factories/Bridge__factory'
-import { Outbox__factory } from './abi/factories/Outbox__factory'
-import { TransactionOverrides } from './bridge_helpers'
-
-import { ArbSys } from './abi/ArbSys'
+import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
 
 const { Zero } = constants
 
-// TODO: can we import these interfaces directly from typechain?
-export interface L2ToL1EventResult {
-  caller: string
-  destination: string
-  uniqueId: BigNumber
-  batchNumber: BigNumber
-  indexInBatch: BigNumber
-  arbBlockNum: BigNumber
-  ethBlockNum: BigNumber
-  timestamp: string
-  callvalue: BigNumber
-  data: string
-}
-
-export interface DepositTokenEventResult {
-  destination: string
-  sender: string
-  seqNum: BigNumber
-  tokenType: 0 | 1 | 2
-  amount: BigNumber
-  tokenAddress: string
-}
-
-interface BuddyDeployEventResult {
-  _sender: string
-  _contract: string
-  withdrawalId: BigNumber
-  success: boolean
-}
-
-interface WithdrawTokenEventResult {
-  id: BigNumber
-  l1Address: string
-  amount: BigNumber
-  destination: string
-  exitNum: BigNumber
-  txHash: string
-}
 
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
@@ -179,126 +137,69 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.getAndUpdateL1EthBalance()
   }
 
-  public async getL2Transaction(l2TransactionHash: string) {
-    const txReceipt = await this.l2Provider.getTransactionReceipt(
-      l2TransactionHash
+  public getL2Transaction(l2TransactionHash: string) {
+    return BridgeHelper.getL2Transaction(
+      l2TransactionHash,
+      this.l2Provider
     )
-
-    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
-
-    return txReceipt
   }
 
-  public async getL1Transaction(l1TransactionHash: string) {
-    const txReceipt = await this.l1Bridge.l1Provider.getTransactionReceipt(
-      l1TransactionHash
-    )
-
-    if (!txReceipt) throw new Error("Can't find L2 transaction receipt?")
-
-    return txReceipt
+  public getL1Transaction(l1TransactionHash: string) {
+    return BridgeHelper.getL1Transaction(l1TransactionHash, this.l1Bridge.l1Provider)
   }
 
-  public async calculateL2TransactionHash(
+  public calculateL2TransactionHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
   ) {
-    if (!l2ChainId)
-      l2ChainId = BigNumber.from((await this.l2Provider.getNetwork()).chainId)
-
-    return ethers.utils.keccak256(
-      ethers.utils.concat([
-        ethers.utils.zeroPad(l2ChainId.toHexString(), 32),
-        ethers.utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
-      ])
+    return BridgeHelper.calculateL2RetryableTransactionHash(
+      inboxSequenceNumber,
+      l2ChainId || this.l2Provider
     )
   }
 
-  public async calculateL2RetryableTransactionHash(
+  public calculateL2RetryableTransactionHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
   ): Promise<string> {
-    const requestID = await this.calculateL2TransactionHash(
+    return BridgeHelper.calculateL2RetryableTransactionHash(
       inboxSequenceNumber,
-      l2ChainId
-    )
-    return ethers.utils.keccak256(
-      ethers.utils.concat([
-        ethers.utils.zeroPad(requestID, 32),
-        ethers.utils.zeroPad(BigNumber.from(1).toHexString(), 32),
-      ])
+      l2ChainId || this.l2Provider,
     )
   }
 
   public async getInboxSeqNumFromContractTransaction(
     l2Transaction: ethers.providers.TransactionReceipt
   ): Promise<Array<BigNumber> | undefined> {
-    const Inbox = await this.l1Bridge.getInbox()
-    const iface = Inbox.interface
-    const messageDelivered = iface.getEvent('InboxMessageDelivered')
-    const messageDeliveredFromOrigin = iface.getEvent(
-      'InboxMessageDeliveredFromOrigin'
+    return BridgeHelper.getInboxSeqNumFromContractTransaction(
+      l2Transaction,
+      // TODO: we don't need to actually make this query if random address fetches interface
+      (await this.l1Bridge.getInbox()).address
     )
-
-    const eventTopics = {
-      InboxMessageDelivered: iface.getEventTopic(messageDelivered),
-      InboxMessageDeliveredFromOrigin: iface.getEventTopic(
-        messageDeliveredFromOrigin
-      ),
-    }
-
-    const logs = l2Transaction.logs.filter(
-      log =>
-        log.topics[0] === eventTopics.InboxMessageDelivered ||
-        log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
-    )
-
-    if (logs.length === 0) return undefined
-    return logs.map(log => BigNumber.from(log.topics[1]))
   }
 
   public getBuddyDeployInL2Transaction(
     l2Transaction: ethers.providers.TransactionReceipt
   ) {
-    const iface = new ethers.utils.Interface([
-      `event Deployed(address indexed _sender, address indexed _contract, uint256 indexed withdrawalId, bool _success)`,
-    ])
-    const DeployedEvent = iface.getEvent('Deployed')
-    const eventTopic = iface.getEventTopic(DeployedEvent)
-    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as BuddyDeployEventResult
+    return BridgeHelper.getBuddyDeployInL2Transaction(l2Transaction)
+  }
+
+  public getWithdrawalsInL2Transaction(
+    l2Transaction: ethers.providers.TransactionReceipt
+  ) {
+    return BridgeHelper.getWithdrawalsInL2Transaction(
+      l2Transaction, this.l2Provider, ARB_SYS_ADDRESS
     )
   }
 
-  public async getDepositTokenEventData(
+  public getDepositTokenEventData(
     l1Transaction: ethers.providers.TransactionReceipt,
     tokenType: 'ERC20' | 'ERC777' = 'ERC20'
-  ): Promise<Array<DepositTokenEventResult>> {
-    const iface = this.l1Bridge.ethERC20Bridge.interface
-    const event = iface.getEvent('DepositToken')
-    // const event =
-    //   tokenType === 'ERC20'
-    //     ? iface.getEvent('DepositERC20')
-    //     : iface.getEvent('DepositERC777')
-    const eventTopic = iface.getEventTopic(event)
-    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult
-    )
-  }
-
-  public async getWithdrawalsInL2Transaction(
-    l2Transaction: ethers.providers.TransactionReceipt
-  ): Promise<Array<L2ToL1EventResult>> {
-    const iface = this.arbSys.interface
-    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
-    const eventTopic = iface.getEventTopic(l2ToL1Event)
-
-    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
-
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+  ) {
+    return BridgeHelper.getDepositTokenEventData(
+      l1Transaction,
+      tokenType,
+      this.arbTokenBridge.address
     )
   }
 
@@ -307,76 +208,20 @@ export class Bridge extends L2Bridge {
     indexInBatch: BigNumber,
     singleAttempt = false
   ) {
-    console.log('going to get proof')
-    let res: {
-      proof: string[]
-      path: BigNumber
-      l2Sender: string
-      l1Dest: string
-      l2Block: BigNumber
-      l1Block: BigNumber
-      timestamp: BigNumber
-      amount: BigNumber
-      calldataForL1: string
-    }
-
-    if (singleAttempt) {
-      const _res = await this.tryGetProofOnce(batchNumber, indexInBatch)
-      if (_res === null) {
-        console.warn('Proof not found')
-        return
-      }
-      res = _res
-    }
-    res = await this.tryGetProof(batchNumber, indexInBatch)
-    const {
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      timestamp: proofTimestamp,
-      amount,
-      calldataForL1,
-    } = res
-
-    console.log('got proof')
-
     const inbox = await this.l1Bridge.getInbox()
     const bridgeAddress = await inbox.bridge()
-    const bridge = await Bridge__factory.connect(
-      bridgeAddress,
-      this.l1Bridge.l1Provider
-    )
 
-    const activeOutbox = await bridge.allowedOutboxList(0)
-    try {
-      // index 1 should not exist
-      await bridge.allowedOutboxList(1)
-      console.error('There is more than 1 outbox registered with the bridge?!')
-    } catch (e) {
-      // this should fail!
-      console.log('All is good')
-    }
-
-    const outboxExecuteTransactionReceipt = await this.tryOutboxExecute(
-      activeOutbox,
+    return BridgeHelper.triggerL2ToL1Transaction(
       batchNumber,
-      proof,
-      path,
-      l2Sender,
-      l1Dest,
-      l2Block,
-      l1Block,
-      proofTimestamp,
-      amount,
-      calldataForL1
+      indexInBatch,
+      bridgeAddress,
+      this.l2Provider,
+      this.l1Bridge.l1Signer,
+      singleAttempt
     )
-    return outboxExecuteTransactionReceipt
   }
 
-  public tryOutboxExecute = async (
+  public tryOutboxExecute (
     activeOutboxAddress: string,
     batchNumber: BigNumber,
     proof: Array<string>,
@@ -387,44 +232,10 @@ export class Bridge extends L2Bridge {
     l1Block: BigNumber,
     timestamp: BigNumber,
     amount: BigNumber,
-    calldataForL1: string,
-    retryDelay = 500
-  ): Promise<ContractReceipt> => {
-    const outbox = Outbox__factory.connect(
-      activeOutboxAddress,
-      this.l1Bridge.l1Signer
-    )
-    await this.waitUntilOutboxEntryCreated(batchNumber, activeOutboxAddress)
-    try {
-      // TODO: wait until assertion is confirmed before execute
-      // We can predict and print number of missing blocks
-      // if not challenged
-      const outboxExecute = await outbox.executeTransaction(
-        batchNumber,
-        proof,
-        path,
-        l2Sender,
-        l1Dest,
-        l2Block,
-        l1Block,
-        timestamp,
-        amount,
-        calldataForL1
-      )
-      console.log(`Transaction hash: ${outboxExecute.hash}`)
-      console.log('Waiting for receipt')
-      const receipt = await outboxExecute.wait()
-      console.log('Receipt emitted')
-      return receipt
-    } catch (e) {
-      console.log('failed to execute tx')
-      console.log(e)
-      console.log('Waiting for delay before retrying')
-      // TODO: should exponential backoff?
-      await this.wait(retryDelay)
-      console.log('Retrying now')
-      return this.tryOutboxExecute(
-        activeOutboxAddress,
+    calldataForL1: string
+  ) {
+    return BridgeHelper.tryOutboxExecute(
+      {
         batchNumber,
         proof,
         path,
@@ -435,237 +246,60 @@ export class Bridge extends L2Bridge {
         timestamp,
         amount,
         calldataForL1,
-        retryDelay
-      )
-    }
+      },
+      activeOutboxAddress,
+      this.l1Bridge.l1Signer
+    )
   }
 
-  public tryGetProofOnce = async (
+  public tryGetProofOnce (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber
+  ) {
+    return BridgeHelper.tryGetProofOnce(
+      batchNumber,
+      indexInBatch,
+      this.l2Provider
+    )
+  }
+
+  public tryGetProof (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     retryDelay = 500
-  ): Promise<{
-    proof: Array<string>
-    path: BigNumber
-    l2Sender: string
-    l1Dest: string
-    l2Block: BigNumber
-    l1Block: BigNumber
-    timestamp: BigNumber
-    amount: BigNumber
-    calldataForL1: string
-  } | null> => {
-    const nodeInterfaceAddress = '0x00000000000000000000000000000000000000C8'
-
-    const contractInterface = new ethers.utils.Interface([
-      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
-          external
-          view
-          returns (
-              bytes32[] memory proof,
-              uint256 path,
-              address l2Sender,
-              address l1Dest,
-              uint256 l2Block,
-              uint256 l1Block,
-              uint256 timestamp,
-              uint256 amount,
-              bytes memory calldataForL1
-          )`,
-    ])
-    const nodeInterface = new ethers.Contract(
-      nodeInterfaceAddress,
-      contractInterface
-    ).connect(this.l2Signer.provider!)
-
-    try {
-      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
-        batchNumber,
-        indexInBatch
-      )
-      return res
-    } catch (e) {
-      const expectedError = "batch doesn't exist"
-      if (
-        e &&
-        e.error &&
-        e.error.message &&
-        e.error.message === expectedError
-      ) {
-        console.log('Withdrawal detected, but batch not created yet.')
-      } else {
-        console.log("Withdrawal proof didn't work. Not sure why")
-        console.log(e)
-      }
-    }
-    return null
+  ) {
+    return BridgeHelper.tryGetProof(
+      batchNumber,
+      indexInBatch,
+      this.l2Provider,
+      retryDelay
+    )
   }
 
-  public tryGetProof = async (
+  public waitUntilOutboxEntryCreated (
     batchNumber: BigNumber,
-    indexInBatch: BigNumber,
-    retryDelay = 500
-  ): Promise<{
-    proof: Array<string>
-    path: BigNumber
-    l2Sender: string
-    l1Dest: string
-    l2Block: BigNumber
-    l1Block: BigNumber
-    timestamp: BigNumber
-    amount: BigNumber
-    calldataForL1: string
-  }> => {
-    const nodeInterfaceAddress = '0x00000000000000000000000000000000000000C8'
-
-    const contractInterface = new ethers.utils.Interface([
-      `function lookupMessageBatchProof(uint256 batchNum, uint64 index)
-          external
-          view
-          returns (
-              bytes32[] memory proof,
-              uint256 path,
-              address l2Sender,
-              address l1Dest,
-              uint256 l2Block,
-              uint256 l1Block,
-              uint256 timestamp,
-              uint256 amount,
-              bytes memory calldataForL1
-          )`,
-    ])
-    const nodeInterface = new ethers.Contract(
-      nodeInterfaceAddress,
-      contractInterface
-    ).connect(this.l2Signer.provider!)
-
-    try {
-      const res = await nodeInterface.callStatic.lookupMessageBatchProof(
-        batchNumber,
-        indexInBatch
-      )
-      return res
-    } catch (e) {
-      const expectedError = "batch doesn't exist"
-      if (
-        e &&
-        e.error &&
-        e.error.message &&
-        e.error.message === expectedError
-      ) {
-        console.log(
-          'Withdrawal detected, but batch not created yet. Going to wait a bit.'
-        )
-      } else {
-        console.log("Withdrawal proof didn't work. Not sure why")
-        console.log(e)
-        console.log('Going to try again after waiting')
-      }
-      await this.wait(retryDelay)
-      console.log('New attempt starting')
-      // TODO: should exponential backoff?
-      return this.tryGetProof(batchNumber, indexInBatch, retryDelay)
-    }
-  }
-
-  private wait = (ms: number) => new Promise(res => setTimeout(res, ms))
-
-  public waitUntilOutboxEntryCreated = async (
-    batchNumber: BigNumber,
-    activeOutboxAddress: string,
-    retryDelay = 500
-  ): Promise<string> => {
-    try {
-      // if outbox entry not created yet, this reads from array out of bounds
-      const expectedEntry = await this.getOutboxEntry(
-        batchNumber,
-        activeOutboxAddress
-      )
-      console.log('Found entry index!')
-      return expectedEntry
-    } catch (e) {
-      console.log("can't find entry, lets wait a bit?")
-      if (e.message === 'invalid opcode: opcode 0xfe not defined') {
-        console.log('Array out of bounds, wait until the entry is posted')
-      } else {
-        console.log(e)
-        console.log(e.message)
-      }
-      await this.wait(retryDelay)
-      console.log('Starting new attempt')
-      return this.waitUntilOutboxEntryCreated(
-        batchNumber,
-        activeOutboxAddress,
-        retryDelay
-      )
-    }
-  }
-
-  private getOutboxEntry = async (
-    batchNumber: BigNumber,
-    outboxAddress: string
-  ): Promise<string> => {
-    const iface = new ethers.utils.Interface([
-      'function outboxes(uint256) public view returns (address)',
-    ])
-    const outbox = new ethers.Contract(outboxAddress, iface).connect(
+    activeOutboxAddress: string
+  ) {
+    return BridgeHelper.waitUntilOutboxEntryCreated(
+      batchNumber,
+      activeOutboxAddress,
       this.l1Bridge.l1Provider
     )
-    return outbox.outboxes(batchNumber)
   }
 
   public async waitForRetriableReceipt(seqNum: BigNumber) {
-    const l2RetriableHash = await this.calculateL2RetryableTransactionHash(
-      seqNum
-    )
-    return this.l2Provider.waitForTransaction(l2RetriableHash)
+    return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {
-    const iface = this.arbTokenBridge.interface
-    const tokenWithdrawEvent = iface.getEvent('WithdrawToken')
-    const tokenWithdrawTopic = iface.getEventTopic(tokenWithdrawEvent)
-
-    const topics = [
-      tokenWithdrawTopic,
-      null,
-      null,
-      ethers.utils.hexZeroPad(destinationAddress, 32),
-    ]
-
-    const logs = await this.l2Provider.getLogs({
-      address: this.arbTokenBridge.address,
-      // @ts-ignore
-      topics,
-      fromBlock: 0,
-      toBlock: 'latest',
-    })
-
-    return logs.map(log => {
-      const data = { ...iface.parseLog(log).args, txHash: log.transactionHash }
-      return (data as unknown) as WithdrawTokenEventResult
-    })
+    return BridgeHelper.getTokenWithdrawEventData(destinationAddress, this.arbTokenBridge.address, this.l2Provider)
   }
 
   public async getL2ToL1EventData(destinationAddress: string) {
-    const iface = this.arbSys.interface
-    const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
-    const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
-
-    const topics = [
-      l2ToL1TransactionTopic,
-      ethers.utils.hexZeroPad(destinationAddress, 32),
-    ]
-
-    const logs = await this.l2Provider.getLogs({
-      address: ARB_SYS_ADDRESS,
-      topics,
-      fromBlock: 0,
-      toBlock: 'latest',
-    })
-
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+    return BridgeHelper.getL2ToL1EventData(
+      destinationAddress,
+      this.l2Provider,
+      ARB_SYS_ADDRESS
     )
   }
 }

@@ -30,7 +30,7 @@ DataStorage::DataStorage(const std::string& db_path) {
     rocksdb::Options options = rocksdb::Options();
     rocksdb::ColumnFamilyOptions cf_options;
     rocksdb::ColumnFamilyOptions small_cf_options;
-    rocksdb::ColumnFamilyOptions refcounted_cf_options;
+    rocksdb::ColumnFamilyOptions hashkey_cf_options;
     rocksdb::BlockBasedTableOptions table_options;
     rocksdb::BlockBasedTableOptions bloom_table_options;
     options.create_if_missing = true;
@@ -46,51 +46,60 @@ DataStorage::DataStorage(const std::string& db_path) {
     table_options.block_size = 16 * 1024;
     table_options.cache_index_and_filter_blocks = true;
     table_options.pin_l0_filter_and_index_blocks_in_cache = true;
-    // table_options.format_version = 5;
+    table_options.format_version = 4;
     options.table_factory.reset(
         rocksdb::NewBlockBasedTableFactory(table_options));
+
+    // No need to keep old log files
+    options.keep_log_file_num = 1;
+
+    // Various settings to constrain memory growth
+    options.max_open_files = 512;
+    options.write_buffer_size = 1024 * 1024 * 8;
+    options.db_write_buffer_size = 1024 * 1024 * 64;
 
     // Increase the number of threads to open files to offset slow disk access
     options.max_file_opening_threads = 50;
 
-    // Decrease the WAL log size to 50MB so that DB is flushed regularly
-    options.max_total_wal_size = 52428800;
+    // Decrease the WAL log size to improve start time
+    options.max_total_wal_size = 1024 * 1024 * 50;
 
     // No need to wait for manual flush to finish
     flush_options.wait = false;
 
     // Settings for small tables
     small_cf_options = cf_options;
+    small_cf_options.num_levels = 2;
+    small_cf_options.write_buffer_size = 1024 * 1024;
     small_cf_options.OptimizeForSmallDb();
 
     bloom_table_options = table_options;
     // bloom_table_options.filter_policy.reset(
-    //   rocksdb::NewBloomFilterPolicy(10, false));
+    //     rocksdb::NewBloomFilterPolicy(10, false));
     // bloom_table_options.optimize_filters_for_memory = true;
 
     // Settings for refcounted data table using bloom filters and no iterators
-    refcounted_cf_options = cf_options;
-    refcounted_cf_options.OptimizeForPointLookup(16);
-    refcounted_cf_options.level_compaction_dynamic_level_bytes = true;
-    refcounted_cf_options.table_factory =
-        std::unique_ptr<rocksdb::TableFactory>(
-            rocksdb::NewBlockBasedTableFactory(bloom_table_options));
+    hashkey_cf_options = cf_options;
+    hashkey_cf_options.write_buffer_size = 1024 * 1024 * 32;
+    hashkey_cf_options.OptimizeForPointLookup(16);
+    hashkey_cf_options.level_compaction_dynamic_level_bytes = true;
+    hashkey_cf_options.table_factory = std::unique_ptr<rocksdb::TableFactory>(
+        rocksdb::NewBlockBasedTableFactory(bloom_table_options));
 
     txn_db_path = db_path;
 
     std::vector<rocksdb::ColumnFamilyDescriptor> column_descriptors{
         FAMILY_COLUMN_COUNT};
     column_descriptors[DEFAULT_COLUMN] = {rocksdb::kDefaultColumnFamilyName,
-                                          cf_options};
+                                          small_cf_options};
     column_descriptors[STATE_COLUMN] = {"states", small_cf_options};
-    column_descriptors[CHECKPOINT_COLUMN] = {"checkpoints", cf_options};
+    column_descriptors[CHECKPOINT_COLUMN] = {"checkpoints", small_cf_options};
     column_descriptors[MESSAGEENTRY_COLUMN] = {"messageentries", cf_options};
     column_descriptors[LOG_COLUMN] = {"logs", cf_options};
     column_descriptors[SEND_COLUMN] = {"sends", cf_options};
-    column_descriptors[SIDELOAD_COLUMN] = {"sideloads", cf_options};
+    column_descriptors[SIDELOAD_COLUMN] = {"sideloads", small_cf_options};
     column_descriptors[AGGREGATOR_COLUMN] = {"aggregator", cf_options};
-    column_descriptors[REFCOUNTED_COLUMN] = {"refcounted",
-                                             refcounted_cf_options};
+    column_descriptors[REFCOUNTED_COLUMN] = {"refcounted", hashkey_cf_options};
 
     rocksdb::TransactionDB* db = nullptr;
     auto status =
