@@ -1,6 +1,9 @@
 import { providers, utils, Wallet, BigNumber, constants } from 'ethers'
 import { Bridge } from '../src/lib/bridge'
-import { DepositTokenEventResult, BridgeHelper } from '../src/lib/bridge_helpers'
+import {
+  DepositTokenEventResult,
+  BridgeHelper,
+} from '../src/lib/bridge_helpers'
 
 import { expect } from 'chai'
 import config from './config'
@@ -303,7 +306,9 @@ describe('ERC20', () => {
     let l2Name = await l2Contract.name()
     let l2Decimals = await l2Contract.decimals()
     prettyLog(`L1 — Symbol: ${l1Symbol} Name: ${l1Name} ${l1Decimals}`)
-    prettyLog(`Before update — L2 info: Symbol: ${l2Symbol} Name: ${l2Name} ${l2Decimals}`)
+    prettyLog(
+      `Before update — L2 info: Symbol: ${l2Symbol} Name: ${l2Name} ${l2Decimals}`
+    )
     if (l1Symbol === l2Symbol) {
       prettyLog(`Token "${l1Symbol}" info already updated, so be it`)
     } else {
@@ -318,7 +323,7 @@ describe('ERC20', () => {
       )
       const rec = await res.wait()
       expect(rec.status).to.equal(1)
-      
+
       const eventData = (await bridge.getUpdateTokenInfoEventResult(rec))[0]
 
       expect(eventData).to.exist
@@ -326,14 +331,18 @@ describe('ERC20', () => {
       const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
         seqNum
       )
-      
+
       const retriableReceipt = await arbProvider.waitForTransaction(
         l2RetriableHash
       )
       expect(retriableReceipt.status).to.equal(1)
-      const l2eventData = (await BridgeHelper.getUpdateTokenInfoEventResultL2(retriableReceipt))[0]
+      const l2eventData = (
+        await BridgeHelper.getUpdateTokenInfoEventResultL2(
+          retriableReceipt,
+          bridge.arbTokenBridge.address
+        )
+      )[0]
       expect(l2eventData).to.exist
-        
 
       l2Symbol = await l2Contract.symbol()
       l2Name = await l2Contract.name()

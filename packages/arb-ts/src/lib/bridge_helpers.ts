@@ -226,18 +226,16 @@ export class BridgeHelper {
 
   static getUpdateTokenInfoEventResultL2 = async (
     l2Transaction: providers.TransactionReceipt,
-    l2BridgeAddress?: string
+    l2BridgeAddress: string
   ): Promise<Array<any>> => {
     const factory = new ArbTokenBridge__factory()
-    const contract = factory.attach(l2BridgeAddress || '0x0Bf4eB4CFfA03541603Cb142Ea3120b529200C69')
+    const contract = factory.attach(l2BridgeAddress)
     const iface = contract.interface
     const event = iface.getEvent('TokenDataUpdated')
     const eventTopic = iface.getEventTopic(event)
     // TODO: filter out if token type doesn't match
     const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as any
-    )
+    return logs.map(log => (iface.parseLog(log).args as unknown) as any)
   }
 
   static getWithdrawalsInL2Transaction = async (

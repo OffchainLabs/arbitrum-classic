@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-export {
-  Bridge,
-} from './lib/bridge'
+export { Bridge } from './lib/bridge'
 export {
   L2ToL1EventResult,
   DepositTokenEventResult,

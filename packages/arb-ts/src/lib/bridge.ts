@@ -18,7 +18,11 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import { TransactionOverrides, BridgeHelper, UpdateTokenEventResult } from './bridge_helpers'
+import {
+  TransactionOverrides,
+  BridgeHelper,
+  UpdateTokenEventResult,
+} from './bridge_helpers'
 
 const { Zero } = constants
 
@@ -137,14 +141,14 @@ export class Bridge extends L2Bridge {
   }
 
   public getL2Transaction(l2TransactionHash: string) {
-    return BridgeHelper.getL2Transaction(
-      l2TransactionHash,
-      this.l2Provider
-    )
+    return BridgeHelper.getL2Transaction(l2TransactionHash, this.l2Provider)
   }
 
   public getL1Transaction(l1TransactionHash: string) {
-    return BridgeHelper.getL1Transaction(l1TransactionHash, this.l1Bridge.l1Provider)
+    return BridgeHelper.getL1Transaction(
+      l1TransactionHash,
+      this.l1Bridge.l1Provider
+    )
   }
 
   public calculateL2TransactionHash(
@@ -163,7 +167,7 @@ export class Bridge extends L2Bridge {
   ): Promise<string> {
     return BridgeHelper.calculateL2RetryableTransactionHash(
       inboxSequenceNumber,
-      l2ChainId || this.l2Provider,
+      l2ChainId || this.l2Provider
     )
   }
 
@@ -187,7 +191,9 @@ export class Bridge extends L2Bridge {
     l2Transaction: ethers.providers.TransactionReceipt
   ) {
     return BridgeHelper.getWithdrawalsInL2Transaction(
-      l2Transaction, this.l2Provider, ARB_SYS_ADDRESS
+      l2Transaction,
+      this.l2Provider,
+      ARB_SYS_ADDRESS
     )
   }
 
@@ -220,7 +226,7 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public tryOutboxExecute (
+  public tryOutboxExecute(
     activeOutboxAddress: string,
     batchNumber: BigNumber,
     proof: Array<string>,
@@ -251,10 +257,7 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public tryGetProofOnce (
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
-  ) {
+  public tryGetProofOnce(batchNumber: BigNumber, indexInBatch: BigNumber) {
     return BridgeHelper.tryGetProofOnce(
       batchNumber,
       indexInBatch,
@@ -262,7 +265,7 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public tryGetProof (
+  public tryGetProof(
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     retryDelay = 500
@@ -275,7 +278,7 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public waitUntilOutboxEntryCreated (
+  public waitUntilOutboxEntryCreated(
     batchNumber: BigNumber,
     activeOutboxAddress: string
   ) {
@@ -300,7 +303,11 @@ export class Bridge extends L2Bridge {
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {
-    return BridgeHelper.getTokenWithdrawEventData(destinationAddress, this.arbTokenBridge.address, this.l2Provider)
+    return BridgeHelper.getTokenWithdrawEventData(
+      destinationAddress,
+      this.arbTokenBridge.address,
+      this.l2Provider
+    )
   }
 
   public async getL2ToL1EventData(destinationAddress: string) {
