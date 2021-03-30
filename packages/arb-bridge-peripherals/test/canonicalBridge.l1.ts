@@ -25,8 +25,8 @@ describe('Bridge peripherals layer 1', () => {
   let TestBridge: ContractFactory
   let testBridge: Contract
 
-  let inbox
-  let l2Deployer
+  let inbox: string;
+  let l2Deployer: string;
   const maxSubmissionCost = 0
   const maxGas = 1000000000
   const gasPrice = 0
@@ -39,8 +39,10 @@ describe('Bridge peripherals layer 1', () => {
 
     TestBridge = await ethers.getContractFactory('EthERC20Bridge')
     testBridge = await TestBridge.deploy()
-
-    inbox = accounts[0].address
+    
+    const Inbox = await ethers.getContractFactory('InboxMock')
+    inbox = (await Inbox.deploy()).address
+    // inbox = accounts[0].address
     l2Deployer = accounts[0].address
 
     await testBridge.initialize(
@@ -67,8 +69,183 @@ describe('Bridge peripherals layer 1', () => {
     assert.equal(true, false, 'Not implemented')
   })
 
-  it.skip('should updateTokenInfo', async function () {
-    assert.equal(true, false, 'Not implemented')
+  it('should updateTokenInfo 18 decimals', async function () {
+    // deploy erc20 with 18 decimals
+    const Token = await ethers.getContractFactory('StandardArbERC20')
+    const token = await Token.deploy()
+
+    const newDecimals = 18
+    const newName = "Test Token"
+    const newSymbol = "TT"
+
+    await token.initialize(
+      accounts[0].address,
+      accounts[0].address,
+      newDecimals
+    )
+
+    await token.updateInfo(newName, newSymbol, newDecimals)
+
+    const tokenType = 0;
+    const tx = await testBridge.updateTokenInfo(
+      token.address,
+      tokenType,
+      maxSubmissionCost,
+      maxGas,
+      gasPrice
+    )
+    const receipt = await tx.wait();
+
+    // event UpdateTokenInfo
+    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
+    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
+    
+    assert.equal(events.length, 1, "Expected only one event to be emitted")
+
+    const event = events[0]
+
+    const {
+      // seqNum,
+      // l1Address,
+      name: eventName,
+      symbol: eventSymbol,
+      decimals: eventDecimals
+    } = event.args
+
+    assert.equal(
+      eventName,
+      '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e00000000000000000000000000000000000000000000',
+      'Incorrect encoded name'
+    )
+    assert.equal(
+      eventSymbol,
+      '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000025454000000000000000000000000000000000000000000000000000000000000',
+      'Incorrect encoded symbol'
+    )
+    
+    assert.equal(
+      eventDecimals,
+      '0x0000000000000000000000000000000000000000000000000000000000000012',
+      'Incorrect encoded symbol'
+    )
+  })
+
+  it('should updateTokenInfo 6 decimals as uint8', async function () {
+    // deploy erc20 with 18 decimals
+    const Token = await ethers.getContractFactory('StandardArbERC20')
+    const token = await Token.deploy()
+
+    const newDecimals = 6
+    const newName = "Test Token"
+    const newSymbol = "TT"
+
+    await token.initialize(
+      accounts[0].address,
+      accounts[0].address,
+      newDecimals
+    )
+
+    await token.updateInfo(newName, newSymbol, newDecimals)
+
+    const tokenType = 0;
+    const tx = await testBridge.updateTokenInfo(
+      token.address,
+      tokenType,
+      maxSubmissionCost,
+      maxGas,
+      gasPrice
+    )
+    const receipt = await tx.wait();
+
+    // event UpdateTokenInfo
+    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
+    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
+    
+    assert.equal(events.length, 1, "Expected only one event to be emitted")
+
+    const event = events[0]
+
+    const {
+      // seqNum,
+      // l1Address,
+      name: eventName,
+      symbol: eventSymbol,
+      decimals: eventDecimals
+    } = event.args
+
+    assert.equal(
+      eventName,
+      '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e00000000000000000000000000000000000000000000',
+      'Incorrect encoded name'
+    )
+    assert.equal(
+      eventSymbol,
+      '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000025454000000000000000000000000000000000000000000000000000000000000',
+      'Incorrect encoded symbol'
+    )
+    
+    assert.equal(
+      eventDecimals,
+      '0x0000000000000000000000000000000000000000000000000000000000000006',
+      'Incorrect encoded symbol'
+    )
+  })
+
+  it('should updateTokenInfo 6 decimals set as uint 256 and name as bytes32', async function () {
+    const Token = await ethers.getContractFactory('TesterERC20Token')
+    // this adds padding at the end, not the start!
+    const name = ethers.utils.formatBytes32String("0x617262697472756d")
+    const symbol = ethers.utils.formatBytes32String("0x617262")
+    const decimal = 6
+    
+    const token = await Token.deploy(
+      decimal,
+      name,
+      symbol
+    )
+
+    const tokenType = 0;
+    const tx = await testBridge.updateTokenInfo(
+      token.address,
+      tokenType,
+      maxSubmissionCost,
+      maxGas,
+      gasPrice
+    )
+    const receipt = await tx.wait();
+
+    // event UpdateTokenInfo
+    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
+    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
+    
+    assert.equal(events.length, 1, "Expected only one event to be emitted")
+
+    const event = events[0]
+
+    const {
+      // seqNum,
+      // l1Address,
+      name: eventName,
+      symbol: eventSymbol,
+      decimals: eventDecimals
+    } = event.args
+
+    assert.equal(
+      eventName,
+      '0x3078363137323632363937343732373536640000000000000000000000000000',
+      'Incorrect encoded name'
+    )
+    assert.equal(
+      eventSymbol,
+      '0x3078363137323632000000000000000000000000000000000000000000000000',
+      'Incorrect encoded symbol'
+    )
+    
+    assert.equal(
+      eventDecimals,
+      '0x0000000000000000000000000000000000000000000000000000000000000006',
+      'Incorrect encoded symbol'
+    )
   })
 
   it.skip('should deposit custom token', async function () {})
