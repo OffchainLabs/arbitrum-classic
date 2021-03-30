@@ -26,7 +26,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var logger = log.With().Caller().Str("component", "rpc").Logger()
+var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
 type RPCFlags struct {
 	certFile *string
@@ -50,7 +50,7 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 }
 
 func LaunchWS(server *rpc.Server, port string, flags RPCFlags) error {
-	return launchServer(server.WebsocketHandler([]string{"0.0.0.0"}), port, flags)
+	return launchServer(server.WebsocketHandler([]string{"*"}), port, flags)
 }
 
 func launchServer(handler http.Handler, port string, flags RPCFlags) error {

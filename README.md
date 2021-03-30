@@ -8,7 +8,7 @@ Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalabl
 
 Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p), follow the [developer guide](https://developer.offchainlabs.com), and read the [white paper](https://offchainlabs.com/arbitrum.pdf)!
 
-Arbitrum technologies are patent pending. This repository is offered under the Apache 2.0 license. See LICENSE for details.
+This repository is offered under the Apache 2.0 license. See LICENSE for details.
 
 ## Current Status
 

@@ -7,7 +7,7 @@ import (
 	"runtime"
 )
 
-var logger = log.With().Caller().Str("component", "arbos").Logger()
+var logger = log.With().Caller().Stack().Str("component", "arbos").Logger()
 
 var ARB_SYS_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000064")
 var ARB_INFO_ADDRESS = ethcommon.HexToAddress("0x0000000000000000000000000000000000000065")

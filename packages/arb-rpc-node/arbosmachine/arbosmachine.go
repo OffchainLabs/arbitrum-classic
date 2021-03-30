@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Str("component", "arbosmachine").Logger()
+var logger = log.With().Stack().Str("component", "arbosmachine").Logger()
 
 type Machine struct {
 	machine.Machine

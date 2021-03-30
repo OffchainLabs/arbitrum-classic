@@ -17,13 +17,16 @@
 'use strict'
 
 import { ArbSysFactory } from './abi/ArbSysFactory'
-import { ArbSys } from './abi/ArbSys'
+
+import { ArbAddressTable } from './abi/ArbAddressTable'
+import { ArbAddressTableFactory } from './abi/ArbAddressTableFactory'
 
 import { TransactionOverrides } from './abi'
 
 import * as ethers from 'ethers'
 import { JsonRpcProvider } from 'ethers/providers'
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
+const ARB_ADDRESS_TABLE_ADDRESS = '0x0000000000000000000000000000000000000066'
 
 export async function withdrawEth(
   l2signer: ethers.Signer,
@@ -43,7 +46,7 @@ interface AddressIndexMemo {
 
 export const getAddressIndex = (() => {
   const addressToIndexMemo: AddressIndexMemo = {}
-  let arbSys: ArbSys | undefined
+  let arbAddressTable: ArbAddressTable | undefined
 
   return async (
     address: string,
@@ -52,13 +55,18 @@ export const getAddressIndex = (() => {
     if (addressToIndexMemo[address]) {
       return addressToIndexMemo[address]
     }
-    arbSys = arbSys || ArbSysFactory.connect(ARB_SYS_ADDRESS, signerOrProvider)
-
-    try {
-      const index = await (await arbSys.addressTable_lookup(address)).toNumber()
+    arbAddressTable =
+      arbAddressTable ||
+      ArbAddressTableFactory.connect(
+        ARB_ADDRESS_TABLE_ADDRESS,
+        signerOrProvider
+      )
+    const isRegistered = await arbAddressTable.addressExists(address)
+    if (isRegistered) {
+      const index = (await arbAddressTable.lookup(address)).toNumber()
+      addressToIndexMemo[address] = index
       return index
-    } catch (err) {
-      console.info('Error: Address not registered:', address, err)
+    } else {
       return -1
     }
   }

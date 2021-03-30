@@ -55,10 +55,10 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 				}
 
 				if err.Error() == parityErr2 {
-					logger.Warn().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
+					logger.Warn().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
 					continue
 				}
-				logger.Error().Stack().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
+				logger.Error().Err(err).Hex("tx", txHash.Bytes()).Msg("Issue getting receipt")
 				return nil, errors.WithStack(err)
 			}
 			return receipt, nil
