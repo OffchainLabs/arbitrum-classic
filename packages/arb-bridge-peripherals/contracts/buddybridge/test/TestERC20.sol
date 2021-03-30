@@ -21,7 +21,12 @@ pragma solidity ^0.6.11;
 import "../../tokenbridge/arbitrum/open-zeppelin/OZERC20.sol";
 
 contract TestERC20 is OZERC20 {
-    constructor() public {
+    constructor() public{
+        _name="IntArbTestToken";
+        _symbol="IARB";
+        _decimals=uint8(18);
+    } 
+    function mint() external {
         _mint(msg.sender, 50000000);
     }
 }

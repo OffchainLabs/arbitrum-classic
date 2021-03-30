@@ -27,6 +27,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'calculateBridgedERC777Address(address)': FunctionFragment
     'customToken(address)': FunctionFragment
     'customTokenRegistered(address,address)': FunctionFragment
+    'getBeacon()': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
     'l1Pair()': FunctionFragment
     'migrate(address,address,address,uint256,bytes)': FunctionFragment
@@ -34,9 +35,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'mintFromL1(address,address,uint8,address,uint256,bytes,bytes)': FunctionFragment
     'templateERC20()': FunctionFragment
     'templateERC777()': FunctionFragment
-    'updateL1Pair(address)': FunctionFragment
-    'updateOwner(address)': FunctionFragment
-    'updateTemplates(address,address)': FunctionFragment
     'updateTokenInfo(address,uint8,bytes,bytes,bytes)': FunctionFragment
     'withdraw(address,address,uint256)': FunctionFragment
   }
@@ -58,6 +56,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'customTokenRegistered',
     values: [string, string]
   ): string
+  encodeFunctionData(functionFragment: 'getBeacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
     values: [string, string, string]
@@ -91,12 +90,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'templateERC777',
     values?: undefined
   ): string
-  encodeFunctionData(functionFragment: 'updateL1Pair', values: [string]): string
-  encodeFunctionData(functionFragment: 'updateOwner', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'updateTemplates',
-    values: [string, string]
-  ): string
   encodeFunctionData(
     functionFragment: 'updateTokenInfo',
     values: [string, BigNumberish, BytesLike, BytesLike, BytesLike]
@@ -123,6 +116,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'customTokenRegistered',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'getBeacon', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Pair', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
@@ -134,15 +128,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'templateERC777',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'updateL1Pair',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'updateOwner', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'updateTemplates',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -233,6 +218,10 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    getBeacon(overrides?: CallOverrides): Promise<[string]>
+
+    'getBeacon()'(overrides?: CallOverrides): Promise<[string]>
+
     initialize(
       _l1Pair: string,
       _templateERC777: string,
@@ -316,38 +305,6 @@ export class ArbTokenBridge extends Contract {
     templateERC777(overrides?: CallOverrides): Promise<[string]>
 
     'templateERC777()'(overrides?: CallOverrides): Promise<[string]>
-
-    updateL1Pair(
-      newL1Pair: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateL1Pair(address)'(
-      newL1Pair: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateOwner(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
 
     updateTokenInfo(
       l1ERC20: string,
@@ -433,6 +390,10 @@ export class ArbTokenBridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  getBeacon(overrides?: CallOverrides): Promise<string>
+
+  'getBeacon()'(overrides?: CallOverrides): Promise<string>
+
   initialize(
     _l1Pair: string,
     _templateERC777: string,
@@ -516,38 +477,6 @@ export class ArbTokenBridge extends Contract {
   templateERC777(overrides?: CallOverrides): Promise<string>
 
   'templateERC777()'(overrides?: CallOverrides): Promise<string>
-
-  updateL1Pair(
-    newL1Pair: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateL1Pair(address)'(
-    newL1Pair: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  updateOwner(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateOwner(address)'(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  updateTemplates(
-    erc20: string,
-    erc777: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateTemplates(address,address)'(
-    erc20: string,
-    erc777: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
 
   updateTokenInfo(
     l1ERC20: string,
@@ -633,6 +562,10 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    getBeacon(overrides?: CallOverrides): Promise<string>
+
+    'getBeacon()'(overrides?: CallOverrides): Promise<string>
+
     initialize(
       _l1Pair: string,
       _templateERC777: string,
@@ -716,32 +649,6 @@ export class ArbTokenBridge extends Contract {
     templateERC777(overrides?: CallOverrides): Promise<string>
 
     'templateERC777()'(overrides?: CallOverrides): Promise<string>
-
-    updateL1Pair(newL1Pair: string, overrides?: CallOverrides): Promise<void>
-
-    'updateL1Pair(address)'(
-      newL1Pair: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    updateOwner(newOwner: string, overrides?: CallOverrides): Promise<void>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     updateTokenInfo(
       l1ERC20: string,
@@ -879,6 +786,10 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    getBeacon(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getBeacon()'(overrides?: CallOverrides): Promise<BigNumber>
+
     initialize(
       _l1Pair: string,
       _templateERC777: string,
@@ -962,32 +873,6 @@ export class ArbTokenBridge extends Contract {
     templateERC777(overrides?: CallOverrides): Promise<BigNumber>
 
     'templateERC777()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    updateL1Pair(newL1Pair: string, overrides?: Overrides): Promise<BigNumber>
-
-    'updateL1Pair(address)'(
-      newL1Pair: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    updateOwner(newOwner: string, overrides?: Overrides): Promise<BigNumber>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
 
     updateTokenInfo(
       l1ERC20: string,
@@ -1077,6 +962,10 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    getBeacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'getBeacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     initialize(
       _l1Pair: string,
       _templateERC777: string,
@@ -1160,38 +1049,6 @@ export class ArbTokenBridge extends Contract {
     templateERC777(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'templateERC777()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    updateL1Pair(
-      newL1Pair: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateL1Pair(address)'(
-      newL1Pair: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateOwner(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
 
     updateTokenInfo(
       l1ERC20: string,
