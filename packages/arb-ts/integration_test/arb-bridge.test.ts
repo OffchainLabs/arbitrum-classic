@@ -96,7 +96,7 @@ const bridge = new Bridge(
   l2TestWallet
 )
 
-describe('setup', () => {
+describe('before', () => {
   it("'prefunded wallet' is indeed prefunded", async () => {
     const balance = await preFundedWallet.getBalance()
     const hasBalance = balance.gt(utils.parseEther(depositAmount))
@@ -303,7 +303,7 @@ describe('ERC20', () => {
     let l2Name = await l2Contract.name()
     let l2Decimals = await l2Contract.decimals()
     prettyLog(`L1 — Symbol: ${l1Symbol} Name: ${l1Name} ${l1Decimals}`)
-    prettyLog(`Before update: L2— Symbol: ${l2Symbol} Name: ${l2Name} ${l2Decimals}`)
+    prettyLog(`Before update — L2 info: Symbol: ${l2Symbol} Name: ${l2Name} ${l2Decimals}`)
     if (l1Symbol === l2Symbol) {
       prettyLog(`Token "${l1Symbol}" info already updated, so be it`)
     } else {
@@ -318,27 +318,22 @@ describe('ERC20', () => {
       )
       const rec = await res.wait()
       expect(rec.status).to.equal(1)
-      console.warn('$$$$$ L1 tx hash', rec.transactionHash);
       
       const eventData = (await bridge.getUpdateTokenInfoEventResult(rec))[0]
-      console.warn('$$$$$ Event data decimals', eventData.decimals)
 
       expect(eventData).to.exist
       const { seqNum } = eventData
       const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
         seqNum
       )
-      console.warn('$$$$$ retriable hash', l2RetriableHash);
       
       const retriableReceipt = await arbProvider.waitForTransaction(
         l2RetriableHash
       )
-      console.warn("$$$$$ retriable receipt", retriableReceipt);
-      const l2eventData = await BridgeHelper.getUpdateTokenInfoEventResultL2(retriableReceipt)
-      console.warn('$$$$$ L2 event data:', l2eventData);
-      
-    
       expect(retriableReceipt.status).to.equal(1)
+      const l2eventData = (await BridgeHelper.getUpdateTokenInfoEventResultL2(retriableReceipt))[0]
+      expect(l2eventData).to.exist
+        
 
       l2Symbol = await l2Contract.symbol()
       l2Name = await l2Contract.name()
