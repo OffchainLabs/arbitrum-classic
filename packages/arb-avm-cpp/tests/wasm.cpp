@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <data_storage/arbstorage.hpp>
+
 /*
 const int LEVEL = 5;
 
@@ -120,7 +122,12 @@ TEST_CASE("Wasm") {
         MachineState state(code, 0);
         */
 
+        auto storage = ArbStorage("/home/sami/tmpstorage");
         auto state = makeWasmMachine(123, Buffer());
+        storage.initialize(state);
+
+
+        /*
 
         std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
 
@@ -132,6 +139,7 @@ TEST_CASE("Wasm") {
         state.marshalWasmProof(proof);
         std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
+        */
     }
 
 }

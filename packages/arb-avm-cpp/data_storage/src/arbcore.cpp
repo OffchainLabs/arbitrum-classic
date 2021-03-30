@@ -223,6 +223,64 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     return rocksdb::Status::OK();
 }
 
+rocksdb::Status ArbCore::initializeFromState(MachineState state) {
+    // Use latest existing checkpoint
+    ValueCache cache{1, 0};
+
+    auto status = reorgToMessageOrBefore(0, true, cache);
+    if (status.ok()) {
+        return status;
+    }
+    if (!status.IsNotFound()) {
+        std::cerr << "Error with initial reorg: " << status.ToString()
+                  << std::endl;
+        return status;
+    }
+
+    code = state.code; // ->addSegment(executable.code);
+    machine = std::make_unique<MachineThread>(
+        MachineState{code, 0});
+
+    ReadWriteTransaction tx(data_storage);
+    // Need to initialize database from scratch
+
+    auto s = saveCheckpoint(tx);
+    if (!s.ok()) {
+        std::cerr << "failed to save initial checkpoint into db: "
+                  << s.ToString() << std::endl;
+        return s;
+    }
+
+    status = updateLogInsertedCount(tx, 0);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to initialize log inserted count");
+    }
+    status = updateSendInsertedCount(tx, 0);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to initialize log inserted count");
+    }
+    status = updateMessageEntryInsertedCount(tx, 0);
+    if (!status.ok()) {
+        throw std::runtime_error("failed to initialize log inserted count");
+    }
+
+    for (size_t i = 0; i < logs_cursors.size(); i++) {
+        status = logsCursorSaveCurrentTotalCount(tx, i, 0);
+        if (!status.ok()) {
+            throw std::runtime_error("failed to initialize logscursor counts");
+        }
+    }
+
+    s = tx.commit();
+    if (!s.ok()) {
+        std::cerr << "failed to commit initial state into db: " << s.ToString()
+                  << std::endl;
+        return s;
+    }
+
+    return rocksdb::Status::OK();
+}
+
 bool ArbCore::initialized() const {
     ReadTransaction tx(data_storage);
     std::vector<unsigned char> key;
