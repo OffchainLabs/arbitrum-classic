@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 interface ISequencerInbox {
     event SequencerBatchDelivered(
         uint256 indexed firstMessageNum,
+        bytes32 indexed beforeAcc,
         bytes transactions,
         uint256[] lengths,
         uint256 l1BlockNumber,
@@ -28,9 +29,16 @@ interface ISequencerInbox {
         uint256 totalDelayedMessagesRead
     );
 
-    event SequencerBatchDeliveredFromOrigin(uint256 indexed firstMessageNum);
+    event SequencerBatchDeliveredFromOrigin(
+        uint256 indexed firstMessageNum,
+        bytes32 indexed beforeAcc
+    );
 
-    event DelayedInboxForced(uint256 indexed firstMessageNum, uint256 totalDelayedMessagesRead);
+    event DelayedInboxForced(
+        uint256 indexed firstMessageNum,
+        bytes32 indexed beforeAcc,
+        uint256 totalDelayedMessagesRead
+    );
 
     function messageCount() external view returns (uint256);
 
