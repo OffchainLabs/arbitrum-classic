@@ -25,37 +25,68 @@ import "C"
 import (
 	"bytes"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"unsafe"
 )
 
-func intToData(val *big.Int) unsafe.Pointer {
-	var lowerBoundBlockBuf bytes.Buffer
-
-	// Potential error can be ignored, bytes.Buffer is safe
-	_ = value.NewIntValue(val).Marshal(&lowerBoundBlockBuf)
-	return C.CBytes(lowerBoundBlockBuf.Bytes())
+func unsafeDataPointer(data []byte) unsafe.Pointer {
+	return unsafe.Pointer(&data[0])
 }
 
-func dataToInt(ptr unsafe.Pointer) *big.Int {
+func receiveBigInt(ptr unsafe.Pointer) *big.Int {
+	data := receive32Bytes(ptr)
+	return new(big.Int).SetBytes(data[:])
+}
+
+func receive32Bytes(ptr unsafe.Pointer) common.Hash {
+	defer C.free(ptr)
 	dataBuff := C.GoBytes(ptr, 32)
-	buf := bytes.NewBuffer(dataBuff)
-
+	rd := bytes.NewBuffer(dataBuff)
+	var data common.Hash
 	// Potential error can be ignored, bytes.Buffer is safe
-	intVal, _ := value.NewIntValueFromReader(buf)
-	return intVal.BigInt()
+	_, _ = rd.Read(data[:])
+	return data
 }
 
-func hashToData(val common.Hash) unsafe.Pointer {
-	var lowerBoundBlockBuf bytes.Buffer
-
-	// Potential error can be ignored, bytes.Buffer is safe
-	_ = value.NewIntValue(new(big.Int).SetBytes(val[:])).Marshal(&lowerBoundBlockBuf)
-	return C.CBytes(lowerBoundBlockBuf.Bytes())
-}
-
-func toByteSlice(slice C.ByteSlice) []byte {
+func receiveByteSlice(slice C.ByteSlice) []byte {
 	defer C.free(unsafe.Pointer(slice.data))
 	return C.GoBytes(unsafe.Pointer(slice.data), slice.length)
+}
+
+func receiveByteSliceArray(sliceArray C.ByteSliceArray) [][]byte {
+	defer C.free(unsafe.Pointer(sliceArray.slices))
+	dataSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(sliceArray.slices))[:sliceArray.count:sliceArray.count]
+	slices := make([][]byte, sliceArray.count)
+	for i := range dataSlices {
+		slices[i] = receiveByteSlice(dataSlices[i])
+	}
+	return slices
+}
+
+func toByteSliceView(data []byte) C.ByteSlice {
+	return C.struct_ByteSliceStruct{data: C.CBytes(data), length: C.int(len(data))}
+}
+
+func toByteSliceArrayView(slices []C.ByteSlice) C.ByteSliceArray {
+	if len(slices) == 0 {
+		return C.struct_ByteSliceArrayStruct{slices: nil, count: 0}
+	}
+	return C.struct_ByteSliceArrayStruct{slices: unsafe.Pointer(&slices[0]), count: C.int(len(slices))}
+}
+
+func encodeByteSliceList(goSlices [][]byte) []C.ByteSlice {
+	byteSlices := make([]C.ByteSlice, 0, len(goSlices))
+	for _, data := range goSlices {
+		byteSlices = append(byteSlices, toByteSliceView(data))
+	}
+	return byteSlices
+}
+
+func encodeInboxMessages(inboxMessages []inbox.InboxMessage) [][]byte {
+	data := make([][]byte, 0, len(inboxMessages))
+	for _, msg := range inboxMessages {
+		data = append(data, msg.ToBytes())
+	}
+	return data
 }

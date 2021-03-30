@@ -17,7 +17,7 @@
 package cmachine
 
 import (
-	"log"
+	"math/big"
 	"os"
 	"testing"
 )
@@ -26,37 +26,47 @@ func TestMachineCreation(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
-	}
-
-	valueCache, err := NewValueCache()
-	if err != nil {
 		t.Fatal(err)
 	}
+
+	defer func() {
+		if err := os.RemoveAll(dePath); err != nil {
+			t.Fatal(err)
+		}
+	}()
 
 	mach1, err := New(codeFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	checkpointStorage, err := NewCheckpoint("dbPath")
+	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := checkpointStorage.Initialize(codeFile); err != nil {
+	if err := arbStorage.Initialize(codeFile); err != nil {
 		t.Fatal(err)
 	}
-	defer checkpointStorage.CloseCheckpointStorage()
-	mach2, err := checkpointStorage.GetInitialMachine(valueCache)
+	defer arbStorage.CloseArbStorage()
+	core := arbStorage.GetArbCore()
+	cursor, err := core.GetExecutionCursor(big.NewInt(0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mach2, err := core.TakeMachine(cursor)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if mach1.Hash() != mach2.Hash() {
-		t.Error("Machine hashes not equal")
+	hash1, err := mach1.Hash()
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	if err := os.RemoveAll(dePath); err != nil {
-		log.Fatal(err)
+	hash2, err := mach2.Hash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hash1 != hash2 {
+		t.Fatal(err)
 	}
 }

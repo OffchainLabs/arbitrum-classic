@@ -14,11 +14,10 @@ flags:
   integration: {}
 
 ignore:
-  - 'packages/arb-tx-aggregator/arbostestcontracts'
-  - 'packages/arb-validator-core/ethbridgecontracts'
-  - 'packages/arb-validator-core/ethbridgetestcontracts'
-  - 'packages/arb-validator-core/arboscontracts'
+  - 'packages/arb-rpc-node/arbostestcontracts'
+  - 'packages/arb-node-core/ethbridgecontracts'
+  - 'packages/arb-node-core/ethbridgetestcontracts'
+  - 'packages/arb-evm/arboscontracts'
   - 'packages/arb-avm-cpp/external/keccak'
-  - 'tests/fibgo/fibabi.go'
   - 'packages/arb-provider-ethers/src/lib/abi'
-  - '**/*.pb.go'
+  - 'packages/arb-ts/src/lib/abi'

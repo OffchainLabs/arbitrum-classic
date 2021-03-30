@@ -25,7 +25,7 @@
 #include <ostream>
 
 uint64_t deserialize_uint64_t(const char*& bufptr) {
-    uint64_t val = intx::be::unsafe::load<uint64_t>(
+    auto val = intx::be::unsafe::load<uint64_t>(
         reinterpret_cast<const unsigned char*>(bufptr));
     bufptr += sizeof(val);
     return val;
@@ -72,7 +72,7 @@ value deserialize_value(const char*& bufptr) {
                 if (valType >= TUPLE && valType <= TUPLE + 8) {
                     uint8_t tuple_size = valType - TUPLE;
                     values_to_read += tuple_size;
-                    values.push_back(TuplePlaceholder{tuple_size});
+                    values.emplace_back(TuplePlaceholder{tuple_size});
                 } else {
                     std::printf("in deserialize_value, unhandled type = %X\n",
                                 valType);
@@ -92,51 +92,73 @@ value assembleValueFromDeserialized(std::vector<DeserializedValue> values) {
     for (size_t i = 0; i < total_values_size; ++i) {
         size_t val_pos = total_values_size - 1 - i;
         auto& val = values[val_pos];
-        if (!nonstd::holds_alternative<TuplePlaceholder>(val)) {
+        if (!std::holds_alternative<TuplePlaceholder>(val)) {
             continue;
         }
-        auto holder = val.get<TuplePlaceholder>();
-        Tuple tup(holder.values);
+        auto holder = std::get<TuplePlaceholder>(val);
+        Tuple tup = Tuple::createSizedTuple(holder.values);
         for (uint8_t j = 0; j < holder.values; ++j) {
-            tup.set_element(j, std::move(values[val_pos + 1 + j].get<value>()));
+            tup.set_element(
+                j, std::move(std::get<value>(values[val_pos + 1 + j])));
         }
         values.erase(values.begin() + val_pos + 1,
                      values.begin() + val_pos + 1 + holder.values);
         values[val_pos] = std::move(tup);
     }
-    return values.back().get<value>();
+    return std::get<value>(values.back());
 }
 
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf) {
     uint64_t big_endian_val = boost::endian::native_to_big(val);
-    const unsigned char* data =
-        reinterpret_cast<const unsigned char*>(&big_endian_val);
+    const auto data = reinterpret_cast<const unsigned char*>(&big_endian_val);
     buf.insert(buf.end(), data, data + sizeof(big_endian_val));
 }
 
+namespace {
+struct Marshaller {
+    std::vector<value>& values;
+    std::vector<unsigned char>& buf;
+
+    void operator()(const HashPreImage& val) const {
+        buf.push_back(HASH_PRE_IMAGE);
+        val.marshal(buf);
+    }
+
+    void operator()(const Tuple& tup) const {
+        auto size = tup.tuple_size();
+        buf.push_back(TUPLE + size);
+        // queue elements in reverse order for serialization
+        for (uint64_t i = 0; i < size; i++) {
+            values.push_back(tup.get_element(size - 1 - i));
+        }
+    }
+
+    void operator()(const Buffer& val) const {
+        buf.push_back(BUFFER);
+        auto data = val.toFlatVector();
+        marshal_uint64_t(static_cast<uint64_t>(data.size()), buf);
+        buf.insert(buf.end(), data.begin(), data.end());
+    }
+
+    void operator()(const uint256_t& val) const {
+        buf.push_back(NUM);
+        marshal_uint256_t(val, buf);
+    }
+
+    void operator()(const CodePointStub& val) const {
+        buf.push_back(CODE_POINT_STUB);
+        val.marshal(buf);
+    }
+};
+}  // namespace
+
 void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
     std::vector<value> values{full_val};
+    Marshaller marshaller{values, buf};
     while (!values.empty()) {
         const auto val = std::move(values.back());
         values.pop_back();
-        if (nonstd::holds_alternative<Tuple>(val)) {
-            const auto& tup = val.get<Tuple>();
-            auto size = tup.tuple_size();
-            buf.push_back(TUPLE + size);
-            // queue elements in reverse order for serialization
-            for (uint64_t i = 0; i < size; i++) {
-                values.push_back(tup.get_element(size - 1 - i));
-            }
-        } else if (nonstd::holds_alternative<uint256_t>(val)) {
-            buf.push_back(NUM);
-            marshal_uint256_t(nonstd::get<uint256_t>(val), buf);
-        } else if (nonstd::holds_alternative<CodePointStub>(val)) {
-            buf.push_back(CODE_POINT_STUB);
-            nonstd::get<CodePointStub>(val).marshal(buf);
-        } else if (nonstd::holds_alternative<HashPreImage>(val)) {
-            buf.push_back(HASH_PRE_IMAGE);
-            nonstd::get<HashPreImage>(val).marshal(buf);
-        }
+        std::visit(marshaller, val);
     }
 }
 
@@ -190,13 +212,22 @@ void marshalForProof(const uint256_t& val,
     buf.push_back(NUM);
     marshal_uint256_t(val, buf);
 }
+
+void marshalForProof(const Buffer& val,
+                     MarshalLevel,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(BUFFER);
+    marshal_uint256_t(val.hash(), buf);
+}
+
 }  // namespace
 
 void marshalForProof(const value& val,
                      MarshalLevel marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    return nonstd::visit(
+    return std::visit(
         [&](const auto& v) {
             return marshalForProof(v, marshal_level, buf, code);
         },
@@ -204,7 +235,7 @@ void marshalForProof(const value& val,
 }
 
 uint256_t hash_value(const value& value) {
-    return nonstd::visit([](const auto& val) { return hash(val); }, value);
+    return std::visit([](const auto& val) { return hash(val); }, value);
 }
 
 struct GetSize {
@@ -214,17 +245,24 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
+    uint256_t operator()(const Buffer&) const { return 1; }
+
     uint256_t operator()(const uint256_t&) const { return 1; }
 
     uint256_t operator()(const CodePointStub&) const { return 1; }
 };
 
 uint256_t getSize(const value& val) {
-    return nonstd::visit(GetSize{}, val);
+    return std::visit(GetSize{}, val);
 }
 
 struct ValuePrinter {
     std::ostream& os;
+
+    std::ostream* operator()(const Buffer& b) const {
+        os << "Buffer(" << hash(b) << ")";
+        return &os;
+    }
 
     std::ostream* operator()(const Tuple& val) const {
         os << val;
@@ -249,5 +287,5 @@ struct ValuePrinter {
 };
 
 std::ostream& operator<<(std::ostream& os, const value& val) {
-    return *nonstd::visit(ValuePrinter{os}, val);
+    return *std::visit(ValuePrinter{os}, val);
 }

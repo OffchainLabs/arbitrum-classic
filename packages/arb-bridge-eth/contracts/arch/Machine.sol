@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./Marshaling.sol";
 
@@ -25,6 +25,7 @@ import "../libraries/DebugPrint.sol";
 library Machine {
     using Hashing for Value.Data;
 
+    // Make sure these don't conflict with Challenge.MACHINE_UNREACHABLE (currently 100)
     uint256 internal constant MACHINE_EXTENSIVE = 0;
     uint256 internal constant MACHINE_ERRORSTOP = 1;
     uint256 internal constant MACHINE_HALT = 2;
@@ -78,10 +79,6 @@ library Machine {
             );
     }
 
-    function setExtensive(Data memory machine) internal pure {
-        machine.status = MACHINE_EXTENSIVE;
-    }
-
     function setErrorStop(Data memory machine) internal pure {
         machine.status = MACHINE_ERRORSTOP;
     }
@@ -100,32 +97,6 @@ library Machine {
 
     function addDataStackInt(Data memory machine, uint256 val) internal pure {
         machine.dataStack = addStackVal(machine.dataStack, Value.newInt(val));
-    }
-
-    function machineHash(
-        bytes32 instructionStackHash,
-        Value.Data memory dataStack,
-        Value.Data memory auxStack,
-        Value.Data memory registerVal,
-        Value.Data memory staticVal,
-        uint256 arbGasRemaining,
-        bytes32 errHandlerHash,
-        Value.Data memory pendingMessage
-    ) internal pure returns (bytes32) {
-        return
-            hash(
-                Data(
-                    instructionStackHash,
-                    dataStack,
-                    auxStack,
-                    registerVal,
-                    staticVal,
-                    arbGasRemaining,
-                    errHandlerHash,
-                    pendingMessage,
-                    MACHINE_EXTENSIVE
-                )
-            );
     }
 
     function hash(Data memory machine) internal pure returns (bytes32) {

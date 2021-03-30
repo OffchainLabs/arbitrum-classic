@@ -2,14 +2,15 @@ package test
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"errors"
-	"fmt"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/rpc"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator/utils"
-	"log"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+	golog "log"
 	"math/big"
 	"math/rand"
 	"net"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
+	gethlog "github.com/ethereum/go-ethereum/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -32,10 +34,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-validator/rollupmanager"
 )
 
+var logger zerolog.Logger
+
 var db = "./testman"
 var contract = arbos.Path()
 
-func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (common.Address, error) {
+func setupRollup(ctx context.Context, authClient *ethbridge.EthArbAuthClient) (common.Address, error) {
 	config := valprotocol.ChainParams{
 		StakeRequirement:        big.NewInt(10),
 		StakeToken:              common.Address{},
@@ -44,14 +48,12 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 		ArbGasSpeedLimitPerTick: 200000,
 	}
 
-	factoryAddr, err := ethbridge.DeployRollupFactory(auth, client)
+	factoryAddr, err := ethbridge.DeployRollupFactory(ctx, authClient)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	arbClient := ethbridge.NewEthAuthClient(client, auth)
-
-	factory, err := arbClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
+	factory, err := authClient.NewArbFactory(common.NewAddressFromEth(factoryAddr))
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -73,37 +75,26 @@ func setupRollup(ctx context.Context, client ethutils.EthClient, auth *bind.Tran
 /********************************************/
 /*    Validators                            */
 /********************************************/
-func setupValidators(
-	rollupAddress common.Address,
-	client ethutils.EthClient,
-	pks []*ecdsa.PrivateKey,
-) error {
-	if len(pks) < 1 {
-		panic("must have at least 1 pks")
+func setupValidators(ctx context.Context, rollupAddress common.Address, authClients []*ethbridge.EthArbAuthClient) error {
+	if len(authClients) < 1 {
+		panic("must have at least 1 authClient")
 	}
 	seed := time.Now().UnixNano()
 	// seed := int64(1559616168133477000)
 	rand.Seed(seed)
 
-	clients := make([]arbbridge.ArbAuthClient, 0, len(pks))
-	for _, pk := range pks {
-		clients = append(clients, ethbridge.NewEthAuthClient(client, bind.NewKeyedTransactor(pk)))
-	}
-
-	ctx := context.Background()
-
-	managers := make([]*rollupmanager.Manager, 0, len(clients))
-	for _, client := range clients {
-		rollupActor, err := client.NewRollup(rollupAddress)
+	managers := make([]*rollupmanager.Manager, 0, len(authClients))
+	for _, authClient := range authClients {
+		rollupActor, err := authClient.NewRollup(rollupAddress)
 		if err != nil {
 			return err
 		}
 
-		dbName := db + "/" + client.Address().String()
+		dbName := db + "/" + authClient.Address().String()
 		manager, err := rollupmanager.CreateManager(
 			ctx,
 			rollupAddress,
-			arbbridge.NewStressTestClient(client, time.Second*15),
+			arbbridge.NewStressTestClient(authClient, time.Second*15),
 			contract,
 			dbName,
 		)
@@ -111,14 +102,14 @@ func setupValidators(
 			return err
 		}
 
-		manager.AddListener(ctx, &chainlistener.AnnouncerListener{Prefix: "validator " + client.Address().String() + ": "})
+		manager.AddListener(ctx, chainlistener.NewAnnouncerListener(authClient.Address().String()))
 
 		validatorListener := chainlistener.NewValidatorChainListener(
-			context.Background(),
+			ctx,
 			rollupAddress,
 			rollupActor,
 		)
-		err = validatorListener.AddStaker(client)
+		err = validatorListener.AddStaker(authClient)
 		if err != nil {
 			return err
 		}
@@ -145,7 +136,7 @@ func launchAggregator(client ethutils.EthClient, auth *bind.TransactOpts, rollup
 			time.Second,
 			rpc.StatelessBatcherMode{Auth: auth},
 		); err != nil {
-			log.Fatal(err)
+			logger.Fatal().Stack().Err(err).Msg("LaunchAggregator failed")
 		}
 	}()
 
@@ -194,7 +185,7 @@ func waitForReceipt(
 	for {
 		select {
 		case <-ticker.C:
-			return nil, fmt.Errorf("timed out waiting for receipt for tx %v", tx.Hash().Hex())
+			return nil, errors.Errorf("timed out waiting for receipt for tx %v", tx.Hash().Hex())
 		default:
 		}
 		receipt, err := client.TransactionReceipt(
@@ -205,7 +196,7 @@ func waitForReceipt(
 			if err.Error() == "not found" {
 				continue
 			}
-			log.Println("GetMessageResult error:", err)
+			logger.Error().Stack().Err(err).Msg("Failure getting TransactionReceipt")
 			return nil, err
 		}
 		return receipt, nil
@@ -213,6 +204,8 @@ func waitForReceipt(
 }
 
 func TestFib(t *testing.T) {
+	// TODO
+	return
 	if err := os.RemoveAll(db); err != nil {
 		t.Fatal(err)
 	}
@@ -222,11 +215,50 @@ func TestFib(t *testing.T) {
 		}
 	}()
 
-	clnt, pks := test.SimulatedBackend()
-	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
+	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
+
+	// Enable line numbers in logging
+	golog.SetFlags(golog.LstdFlags | golog.Lshortfile)
+
+	// Print stack trace when `.Error().Stack().Err(err).` is added to zerolog call
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+
+	// Print line number that log was created on
+	logger = log.With().Caller().Str("component", "connection-test").Logger()
+
+	ctx := context.Background()
+	l1Backend, pks := test.SimulatedBackend()
+	l1Client := &ethutils.SimulatedEthClient{SimulatedBackend: l1Backend}
+
+	// pks[0]:     setupRollup     (L1)
+	// pks[1,2]:   setupValidators (L1)
+
+	// pks[3]:     launchAggregator            (not tied to client)
+	// pks[4]:     DeployFibonacci and session (L2, not tied to client)
+
+	auths := make([]*bind.TransactOpts, 0)
+	authClients := make([]*ethbridge.EthArbAuthClient, 0)
+	// 0-3 are on L1
+	for _, pk := range pks[0:3] {
+		auth := bind.NewKeyedTransactor(pk)
+		auths = append(auths, auth)
+
+		authClient, err := ethbridge.NewEthAuthClient(ctx, l1Client, auth)
+		if err != nil {
+			t.Fatal(err)
+		}
+		authClients = append(authClients, authClient)
+	}
+	// 3 just uses auth, authClient created inside launchAggregator
+	auths = append(auths, bind.NewKeyedTransactor(pks[3]))
+
+	// 4 is on L2, doesn't use ethbridge
+	auths = append(auths, bind.NewKeyedTransactor(pks[4]))
+
 	go func() {
 		t := time.NewTicker(time.Second * 2)
 		for range t.C {
+			logger.Info().Msg("Commit")
 			l1Client.Commit()
 		}
 	}()
@@ -239,41 +271,50 @@ func TestFib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rollupAddress, err := setupRollup(context.Background(), l1Client, bind.NewKeyedTransactor(pks[2]))
+	rollupAddress, err := setupRollup(ctx, authClients[0])
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Log("Created rollup chain", rollupAddress)
 
-	if err := setupValidators(rollupAddress, l1Client, pks[3:5]); err != nil {
+	if err := setupValidators(ctx, rollupAddress, authClients[1:3]); err != nil {
 		t.Fatalf("Validator setup error %v", err)
 	}
 
+	logger.Info().Msg("Validators setup, launching aggregator")
+
 	if err := launchAggregator(
 		l1Client,
-		bind.NewKeyedTransactor(pks[1]),
+		auths[3],
 		rollupAddress,
 	); err != nil {
 		t.Fatal(err)
 	}
-	pk := pks[0]
 
-	client, err := ethclient.Dial("http://localhost:9546")
+	logger.Info().Msg("Launched aggregator, connecting to RPC")
+
+	l2Client, err := ethclient.Dial("http://localhost:9546")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	t.Log("Connected to aggregator")
 
-	auth := bind.NewKeyedTransactor(pk)
-	_, tx, _, err := arbostestcontracts.DeployFibonacci(auth, client)
+	logger.Info().Hex("account4", auths[4].From.Bytes()).Msg("Account being used to deploy fibonacci")
+
+	// Do not wrap with MakeContract because auth is wrapped in session below
+	auths[4].Nonce = big.NewInt(0)
+	_, tx, _, err := arbostestcontracts.DeployFibonacci(auths[4], l2Client)
 	if err != nil {
 		t.Fatal("DeployFibonacci failed", err)
 	}
+	auths[4].Nonce = auths[4].Nonce.Add(auths[4].Nonce, big.NewInt(1))
+
+	logger.Info().Hex("tx", tx.Hash().Bytes()).Msg("Fibonacci deployed")
 
 	receipt, err := waitForReceipt(
-		client,
+		l2Client,
 		tx,
 		time.Second*20,
 	)
@@ -284,21 +325,23 @@ func TestFib(t *testing.T) {
 		t.Fatal("tx deploying fib failed")
 	}
 
+	logger.Info().Hex("address", receipt.ContractAddress.Bytes()).Msg("Contract address found")
+
 	t.Log("Fib contract is at", receipt.ContractAddress.Hex())
 
-	fib, err := arbostestcontracts.NewFibonacci(receipt.ContractAddress, client)
+	fib, err := arbostestcontracts.NewFibonacci(receipt.ContractAddress, l2Client)
 	if err != nil {
 		t.Fatal("connect fib failed", err)
 	}
 
-	//Wrap the Token contract instance into a session
+	// Wrap the Token contract instance into a session
 	session := &arbostestcontracts.FibonacciSession{
 		Contract: fib,
 		CallOpts: bind.CallOpts{
-			From:    auth.From,
+			From:    auths[4].From,
 			Pending: true,
 		},
-		TransactOpts: *auth,
+		TransactOpts: *auths[4],
 	}
 
 	fibsize := 15
@@ -309,7 +352,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("GenerateFib error", err)
 	}
 	receipt, err = waitForReceipt(
-		client,
+		l2Client,
 		tx,
 		time.Second*20,
 	)
@@ -345,7 +388,7 @@ Loop:
 		filter := &bind.FilterOpts{
 			Start:   start,
 			End:     nil,
-			Context: context.Background(),
+			Context: ctx,
 		}
 
 		it, err := session.Contract.FilterTestEvent(filter)

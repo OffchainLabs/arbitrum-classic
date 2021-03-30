@@ -16,117 +16,52 @@
 
 /* eslint-env node, mocha */
 
-import { ethers } from '@nomiclabs/buidler'
-import * as chai from 'chai'
-import chaiAsPromised from 'chai-as-promised'
-import { MessageTester } from '../build/types/MessageTester'
-import { ArbValue, Message } from 'arb-provider-ethers'
+// import { ethers } from 'hardhat'
+// import { assert, expect } from 'chai'
+// import { MessageTester } from '../build/types/MessageTester'
+// import {  Message } from 'arb-provider-ethers'
 
-chai.use(chaiAsPromised)
+// let messageTester: MessageTester
 
-const { assert, expect } = chai
+// const token = '0xc7711f36b2C13E00821fFD9EC54B04A60AEfbd1b'
+// const dest = '0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5'
+// const sender = '0x7073c616a8A3F277Ea4511fCe9EBB2656a1b87B8'
+// const value = ethers.BigNumber.from(563356543)
 
-let messageTester: MessageTester
+// describe('Messages', async () => {
+//   before(async () => {
+//     const MessageTester = await ethers.getContractFactory('MessageTester')
+//     messageTester = (await MessageTester.deploy()) as MessageTester
+//     await messageTester.deployed()
+//   })
 
-const token = '0xc7711f36b2C13E00821fFD9EC54B04A60AEfbd1b'
-const dest = '0xFeCd3992654bFC565c3aFc6C4d7b14dCe603EbF5'
-const sender = '0x7073c616a8A3F277Ea4511fCe9EBB2656a1b87B8'
-const value = ethers.utils.bigNumberify(563356543)
+//   it('can hash incoming messages as values', async () => {
+//     const msg = new Message.EthMessage(dest, value)
+//     const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
 
-describe('Messages', async () => {
-  before(async () => {
-    const MessageTester = await ethers.getContractFactory('MessageTester')
-    messageTester = (await MessageTester.deploy()) as MessageTester
-    await messageTester.deployed()
-  })
+//     const calcMsgHash = await messageTester.messageValueHash(
+//       inMsg.msg.kind,
+//       inMsg.blockNumber,
+//       inMsg.timestamp,
+//       inMsg.sender,
+//       inMsg.inboxSeqNum,
+//       inMsg.msg.asData()
+//     )
+//     expect(calcMsgHash).to.equal(inMsg.asValue().hash())
+//   })
 
-  it('can hash incoming messages as values', async () => {
-    const msg = new Message.EthMessage(dest, value)
-    const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
+//   it('can hash incoming messages as commitments', async () => {
+//     const msg = new Message.EthMessage(dest, value)
+//     const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
 
-    const calcMsgHash = await messageTester.messageValueHash(
-      inMsg.msg.kind,
-      inMsg.blockNumber,
-      inMsg.timestamp,
-      inMsg.sender,
-      inMsg.inboxSeqNum,
-      inMsg.msg.asData()
-    )
-    expect(calcMsgHash).to.equal(inMsg.asValue().hash())
-  })
-
-  it('can hash incoming messages as commitments', async () => {
-    const msg = new Message.EthMessage(dest, value)
-    const inMsg = new Message.IncomingMessage(msg, 1000, 5345346, sender, 65465)
-
-    const calcMsgHash = await messageTester.messageHash(
-      inMsg.msg.kind,
-      inMsg.sender,
-      inMsg.blockNumber,
-      inMsg.timestamp,
-      inMsg.inboxSeqNum,
-      ethers.utils.keccak256(inMsg.msg.asData())
-    )
-    expect(calcMsgHash).to.equal(inMsg.commitmentHash())
-  })
-
-  it('can unmarshal outgoing messages', async () => {
-    const msg = new Message.EthMessage(dest, value)
-    const outMsg = new Message.OutgoingMessage(msg, sender)
-
-    const msgData = ArbValue.marshal(outMsg.asValue())
-    const {
-      0: valid,
-      1: offset,
-      2: kind,
-      3: calculatedSender,
-      4: data,
-    } = await messageTester.unmarshalOutgoingMessage(msgData, 0)
-
-    assert.isTrue(valid, 'did not deserialize outgoing message correctly')
-    expect(offset).to.equal(msgData.length)
-    assert.equal(kind, msg.kind, 'Incorrect message type')
-    assert.equal(calculatedSender, sender, 'Incorrect sender')
-    expect(data, 'incorrect data').to.equal(ethers.utils.hexlify(msg.asData()))
-  })
-
-  it('can parse eth messages', async () => {
-    const msg = new Message.EthMessage(dest, value)
-    const {
-      valid: valid2,
-      dest: dest2,
-      value: value2,
-    } = await messageTester.parseEthMessage(msg.asData())
-    assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(dest2, dest, 'Incorrect dest')
-    expect(value2, 'Incorrect value').to.equal(value)
-  })
-
-  it('can parse erc20 messages', async () => {
-    const msg = new Message.ERC20Message(token, dest, value)
-    const {
-      valid: valid2,
-      token: token2,
-      dest: dest2,
-      value: value2,
-    } = await messageTester.parseERC20Message(msg.asData())
-    assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(token2, token, 'Incorrect token')
-    assert.equal(dest2, dest, 'Incorrect dest')
-    expect(value2, 'Incorrect value').to.equal(value)
-  })
-
-  it('can parse erc721 messages', async () => {
-    const msg = new Message.ERC721Message(token, dest, value)
-    const {
-      valid: valid2,
-      token: token2,
-      dest: dest2,
-      id: id2,
-    } = await messageTester.parseERC721Message(msg.asData())
-    assert.isTrue(valid2, 'did not parse eth message correctly')
-    assert.equal(token2, token, 'Incorrect token')
-    assert.equal(dest2, dest, 'Incorrect dest')
-    expect(id2, 'Incorrect id').to.equal(value)
-  })
-})
+//     const calcMsgHash = await messageTester.messageHash(
+//       inMsg.msg.kind,
+//       inMsg.sender,
+//       inMsg.blockNumber,
+//       inMsg.timestamp,
+//       inMsg.inboxSeqNum,
+//       ethers.utils.keccak256(inMsg.msg.asData())
+//     )
+//     expect(calcMsgHash).to.equal(inMsg.commitmentHash())
+//   })
+// })

@@ -34,12 +34,18 @@ class ValueCache {
         }
     };
 
-    std::unordered_map<uint256_t, value, ValueCacheHasher> cache;
+    // Treat as a ring buffer with first element currently being populated
+    std::vector<std::unordered_map<uint256_t, value, ValueCacheHasher>> caches;
+    size_t saving_cache_index{0};
+    size_t max_cache_size{0};
 
    public:
-    void clear();
+    ValueCache() = delete;
+    explicit ValueCache(size_t cache_count = 0, size_t max_cache_size = 0)
+        : caches{cache_count}, max_cache_size{max_cache_size} {};
     void maybeSave(value val);
-    nonstd::optional<value> loadIfExists(const uint256_t& hash);
+    std::optional<value> loadIfExists(const uint256_t& hash);
+    void nextCache();
 };
 
 #endif /* valuecache_hpp */

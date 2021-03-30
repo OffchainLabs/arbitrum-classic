@@ -21,8 +21,8 @@ repos:
     rev: master
     hooks:
       - id: go-fmt
-  - repo: https://github.com/prettier/prettier
-    rev: '2.0.5' # Use the sha or tag you want to point at
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: 'v2.2.1' # Use the sha or tag you want to point at
     hooks:
       - id: prettier
   - repo: https://github.com/pre-commit/mirrors-eslint
@@ -55,6 +55,6 @@ repos:
           - 'prettier-plugin-solidity@^1.0.0-alpha.54'
       - id: go-vet
         name: Go Vet
-        entry: ./scripts/run-go-packages 'go vet ./...'
+        entry: ./scripts/run-go-packages "go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts' | xargs go vet"
         language: script
         files: \.go$

@@ -25,12 +25,18 @@
 class Transaction;
 struct SaveResults;
 
+struct DataStackProof {
+    HashPreImage bottom;
+    std::vector<unsigned char> data;
+    uint8_t count;
+};
+
 class Datastack {
     // lazyCount defines how many unhashed items are allowed on the stack
     // This serves to bound the total time it can take to hash the machine
     // while removing the need to hash the stack while churn is occuring
     // near the top
-    static constexpr int lazyCount = 10000;
+    static constexpr int lazyCount = 100000;
 
     void addHash() const;
     void calculateAllHashes() const;
@@ -80,7 +86,7 @@ class Datastack {
         return val;
     }
 
-    void prepForMod(int count) {
+    void prepForMod(size_t count) {
         if (static_cast<size_t>(count) > values.size()) {
             throw stack_too_small();
         }
@@ -99,9 +105,8 @@ class Datastack {
         }
     }
 
-    std::pair<HashPreImage, std::vector<unsigned char>> marshalForProof(
-        const std::vector<MarshalLevel>& stackInfo,
-        const Code& code) const;
+    DataStackProof marshalForProof(const std::vector<MarshalLevel>& stackInfo,
+                                   const Code& code) const;
 
     value& peek() {
         if (values.empty()) {

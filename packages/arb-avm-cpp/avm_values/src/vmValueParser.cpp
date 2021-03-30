@@ -18,18 +18,21 @@
 
 #include <nlohmann/json.hpp>
 
+#include <boost/algorithm/hex.hpp>
+
 #include <fstream>
 #include <iostream>
 
-const std::string INT_VAL_LABEL = "Int";
-const std::string TUP_VAL_LABEL = "Tuple";
-const std::string CP_VAL_LABEL = "CodePoint";
-const std::string CP_INTERNAL_LABEL = "Internal";
-const std::string OPCODE_LABEL = "opcode";
-const std::string OPCODE_SUB_LABEL = "AVMOpcode";
-const std::string IMMEDIATE_LABEL = "immediate";
-const std::string CODE_LABEL = "code";
-const std::string STATIC_LABEL = "static_val";
+constexpr auto INT_VAL_LABEL = "Int";
+constexpr auto TUP_VAL_LABEL = "Tuple";
+constexpr auto CP_VAL_LABEL = "CodePoint";
+constexpr auto BUF_LABEL = "Buffer";
+constexpr auto CP_INTERNAL_LABEL = "Internal";
+constexpr auto OPCODE_LABEL = "opcode";
+constexpr auto OPCODE_SUB_LABEL = "AVMOpcode";
+constexpr auto IMMEDIATE_LABEL = "immediate";
+constexpr auto CODE_LABEL = "code";
+constexpr auto STATIC_LABEL = "static_val";
 
 namespace {
 
@@ -38,14 +41,25 @@ uint256_t int_value_from_json(const nlohmann::json& value_json) {
         "0x" + value_json[INT_VAL_LABEL].get<std::string>());
 }
 
-value value_from_json(nlohmann::json full_value_json,
+Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
+    if (!buffer_json.is_string()) {
+        throw std::runtime_error("buffer must be hex");
+    }
+    auto hexstr = buffer_json.get<std::string>();
+    std::vector<uint8_t> bytes;
+    bytes.resize(hexstr.size() / 2);
+    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    return Buffer::fromData(bytes);
+}
+
+value value_from_json(const nlohmann::json& full_value_json,
                       size_t op_count,
                       const CodeSegment& code) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
     while (!json_values.empty()) {
-        auto value_json = std::move(json_values.back());
+        auto value_json = json_values.back();
         json_values.pop_back();
 
         if (value_json.get().contains(INT_VAL_LABEL)) {
@@ -56,15 +70,20 @@ value value_from_json(nlohmann::json full_value_json,
                 throw std::runtime_error(
                     "tuple must contain array of size less than 9");
             }
-            values.push_back(
+            values.emplace_back(
                 TuplePlaceholder{static_cast<uint8_t>(json_tup.size())});
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
-                json_values.push_back(*it);
+                json_values.emplace_back(*it);
             }
         } else if (value_json.get().contains(CP_VAL_LABEL)) {
             auto& cp_json = value_json.get()[CP_VAL_LABEL];
-            auto internal_offset =
-                cp_json.at(CP_INTERNAL_LABEL).get<uint64_t>();
+            auto internal_json = cp_json.at(CP_INTERNAL_LABEL);
+            if (!internal_json.is_number_unsigned()) {
+                throw std::runtime_error(
+                    "codepoint internal label must be unsigned integer that "
+                    "fits within a uint64_t");
+            }
+            auto internal_offset = internal_json.get<uint64_t>();
             uint64_t pc = 0;
             // Special handle python compiler's marker for error code point
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {
@@ -72,6 +91,9 @@ value value_from_json(nlohmann::json full_value_json,
             }
             values.push_back(
                 value{CodePointStub({code.segmentID(), pc}, code[pc])});
+        } else if (value_json.get().contains(BUF_LABEL)) {
+            values.emplace_back(
+                Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
         } else {
             throw std::runtime_error("invalid value type");
         }
@@ -94,7 +116,7 @@ Operation operation_from_json(const nlohmann::json& op_json,
     if (imm.is_null()) {
         return {opcode};
     }
-    return {opcode, value_from_json(std::move(imm), op_count, code)};
+    return {opcode, value_from_json(imm, op_count, code)};
 }
 }  // namespace
 
@@ -114,16 +136,33 @@ value simple_value_from_json(const nlohmann::json& full_value_json) {
                 throw std::runtime_error(
                     "tuple must contain array of size less than 9");
             }
-            values.push_back(
+            values.emplace_back(
                 TuplePlaceholder{static_cast<uint8_t>(json_tup.size())});
             for (auto it = json_tup.rbegin(); it != json_tup.rend(); ++it) {
-                json_values.push_back(*it);
+                json_values.emplace_back(*it);
             }
+        } else if (value_json.get().contains(BUF_LABEL)) {
+            values.emplace_back(
+                Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});
         } else {
             throw std::runtime_error("invalid value type");
         }
     }
     return assembleValueFromDeserialized(std::move(values));
+}
+
+std::vector<uint8_t> send_from_json(const nlohmann::json& val) {
+    if (!val.is_array()) {
+        throw std::runtime_error("send must be an array");
+    }
+    std::vector<uint8_t> data;
+    for (const auto& item : val) {
+        if (!item.is_number_integer()) {
+            std::cerr << "Invalid send byte " << item << "\n";
+        }
+        data.push_back(item.get<uint8_t>());
+    }
+    return data;
 }
 
 LoadedExecutable loadExecutable(const std::string& executable_filename) {

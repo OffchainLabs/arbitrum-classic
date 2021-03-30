@@ -8,12 +8,12 @@ docker network inspect arb-network >/dev/null 2>&1 || \
 docker run -d -it --rm -p 7545:7545 -p 7546:7546 \
        --network=arb-network --name arb-bridge-eth-geth arb-bridge-eth-geth \
        --networkid=44010 \
-       --rpc --rpcaddr 0.0.0.0 --rpcport 7545 --rpccorsdomain="*" --rpcvhosts=* \
-       --rpcapi 'personal,db,eth,net,web3,txpool,miner' \
-       --ws --wsaddr 0.0.0.0 --wsport 7546 --wsorigins '*' \
-       --wsapi personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
+       --http --http.addr 0.0.0.0 --http.port 7545 --http.corsdomain="*" --http.vhosts="*" \
+       --http.api 'personal,db,eth,net,web3,txpool,miner' \
+       --ws --ws.addr 0.0.0.0 --ws.port 7546 --ws.origins '*' \
+       --ws.api personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
        --gcmode=archive
 while ! nc -z localhost 7545; do sleep 2; done;
 echo "Finished waiting for geth on localhost:7545..."
-yarn buidler deploy --network parity --export bridge_eth_addresses.json && [ -f bridge_eth_addresses.json ]
+yarn hardhat deploy --network local_development --export bridge_eth_addresses.json && [ -f bridge_eth_addresses.json ]
 docker attach arb-bridge-eth-geth

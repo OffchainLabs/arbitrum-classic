@@ -19,9 +19,8 @@
 
 #include <avm_values/bigint.hpp>
 
-#include <nonstd/variant.hpp>
-
 #include <unordered_map>
+#include <variant>
 
 enum BlockType { Not, Halt, Error, Breakpoint, Inbox, Sideload };
 
@@ -47,14 +46,15 @@ struct InboxBlocked {
 
 struct SideloadBlocked {
     static constexpr BlockType type = Sideload;
+    uint256_t block_number;
 };
 
-using BlockReason = nonstd::variant<NotBlocked,
-                                    HaltBlocked,
-                                    ErrorBlocked,
-                                    BreakpointBlocked,
-                                    InboxBlocked,
-                                    SideloadBlocked>;
+using BlockReason = std::variant<NotBlocked,
+                                 HaltBlocked,
+                                 ErrorBlocked,
+                                 BreakpointBlocked,
+                                 InboxBlocked,
+                                 SideloadBlocked>;
 
 std::ostream& operator<<(std::ostream& os, const NotBlocked& val);
 std::ostream& operator<<(std::ostream& os, const HaltBlocked& val);

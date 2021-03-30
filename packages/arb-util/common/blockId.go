@@ -18,6 +18,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/rs/zerolog"
 )
 
 type BlockId struct {
@@ -25,24 +26,15 @@ type BlockId struct {
 	HeaderHash Hash
 }
 
+func (id *BlockId) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("height", id.Height.String()).
+		Hex("header", id.HeaderHash.Bytes())
+}
+
 func (id *BlockId) Clone() *BlockId {
 	return &BlockId{
 		Height:     id.Height.Clone(),
 		HeaderHash: id.HeaderHash,
-	}
-}
-
-func (id *BlockId) MarshalToBuf() *BlockIdBuf {
-	return &BlockIdBuf{
-		Height:     id.Height.Marshal(),
-		HeaderHash: id.HeaderHash.MarshalToBuf(),
-	}
-}
-
-func (idb *BlockIdBuf) Unmarshal() *BlockId {
-	return &BlockId{
-		Height:     idb.Height.Unmarshal(),
-		HeaderHash: idb.HeaderHash.Unmarshal(),
 	}
 }
 

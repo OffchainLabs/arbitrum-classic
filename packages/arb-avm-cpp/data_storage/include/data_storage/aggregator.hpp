@@ -18,53 +18,40 @@
 #define aggregator_hpp
 
 #include <avm_values/bigint.hpp>
+#include <data_storage/datastorage.hpp>
+#include <data_storage/readsnapshottransaction.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 
-#include <nonstd/optional.hpp>
+#include <optional>
 
 class DataStorage;
-
-struct BlockData {
-    uint64_t start_log;
-    uint64_t log_count;
-
-    uint64_t start_message;
-    uint64_t message_count;
-
-    std::vector<char> data;
-};
 
 class AggregatorStore {
     std::shared_ptr<DataStorage> data_storage;
 
    public:
-    AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
-        : data_storage(std::move(data_storage_)) {}
+    explicit AggregatorStore(std::shared_ptr<DataStorage> data_storage_);
 
-    uint64_t logCount() const;
-    void saveLog(const std::vector<char>& log);
-    std::vector<char> getLog(uint64_t index) const;
+    [[nodiscard]] uint64_t blockCount() const;
+    void saveBlock(uint64_t height,
+                   const uint256_t& block_hash,
+                   const std::vector<uint256_t>& requests,
+                   const uint64_t* log_indexes,
+                   const std::vector<char>& data);
+    [[nodiscard]] std::vector<char> getBlock(uint64_t height) const;
 
-    uint64_t messageCount() const;
-    void saveMessage(const std::vector<char>& log);
-    std::vector<char> getMessage(uint64_t index) const;
-
-    std::pair<uint64_t, std::vector<char>> latestBlock() const;
-    void saveBlock(uint64_t height, const std::vector<char>& data);
-    std::vector<char> getBlock(uint64_t height) const;
-
-    nonstd::optional<uint64_t> getPossibleRequestInfo(
+    [[nodiscard]] std::optional<uint64_t> getPossibleRequestInfo(
         const uint256_t& request_id) const;
-    void saveRequest(const uint256_t& request_id, uint64_t log_index);
-
-    nonstd::optional<uint64_t> getPossibleBlock(
+    [[nodiscard]] std::optional<uint64_t> getPossibleBlock(
         const uint256_t& block_hash) const;
-    void saveBlockHash(const uint256_t& block_hash, uint64_t block_height);
 
-    void reorg(uint64_t block_height,
-               uint64_t message_count,
-               uint64_t log_count);
+    void reorg(uint64_t block_height);
+    [[nodiscard]] ValueResult<uint256_t> logsProcessedCount() const;
+    void updateLogsProcessedCount(const uint256_t& count);
+    void saveMessageBatch(const uint256_t& batchNum, const uint64_t& logIndex);
+    std::optional<uint64_t> getMessageBatch(const uint256_t& batchNum);
 };
 
 #endif /* aggregator_hpp */

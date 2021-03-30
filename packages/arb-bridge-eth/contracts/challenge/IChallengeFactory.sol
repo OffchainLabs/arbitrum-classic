@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
+
+import "../bridge/interfaces/IBridge.sol";
 
 interface IChallengeFactory {
     function createChallenge(
-        address payable _asserter,
-        address payable _challenger,
-        uint256 _challengePeriodTicks,
-        bytes32 _challengeHash,
-        uint256 challengeType
+        address _resultReceiver,
+        bytes32 _executionHash,
+        uint256 _maxMessageCount,
+        address _asserter,
+        address _challenger,
+        uint256 _asserterTimeLeft,
+        uint256 _challengerTimeLeft,
+        IBridge _bridge
     ) external returns (address);
-
-    function generateCloneAddress(
-        address asserter,
-        address challenger,
-        uint256 challengeType
-    ) external view returns (address);
 }

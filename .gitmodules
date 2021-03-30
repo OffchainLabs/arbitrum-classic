@@ -10,15 +10,12 @@
 [submodule "packages/arb-avm-cpp/external/json"]
     path = packages/arb-avm-cpp/external/json
     url = https://github.com/nlohmann/json
-[submodule "packages/arb-avm-cpp/external/variant-lite"]
-    path = packages/arb-avm-cpp/external/variant-lite
-    url = https://github.com/martinmoene/variant-lite
-[submodule "packages/arb-avm-cpp/external/optional-lite"]
-	path = packages/arb-avm-cpp/external/optional-lite
-	url = https://github.com/martinmoene/optional-lite
 [submodule "packages/arb-avm-cpp/cmake/cable"]
 	path = packages/arb-avm-cpp/cmake/cable
 	url = https://github.com/ethereum/cable
 [submodule "packages/arb-avm-cpp/external/PicoSHA2"]
 	path = packages/arb-avm-cpp/external/PicoSHA2
 	url = https://github.com/okdshin/PicoSHA2
+[submodule "packages/arb-os"]
+	path = packages/arb-os
+	url = https://github.com/OffchainLabs/arb-os

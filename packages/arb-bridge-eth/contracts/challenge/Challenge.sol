@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,67 +16,301 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
-import "../rollup/IStaking.sol";
-import "../libraries/RollupTime.sol";
 import "../libraries/Cloneable.sol";
+import "../libraries/SafeMath.sol";
 
-contract Challenge is Cloneable {
-    enum State { NoChallenge, AsserterTurn, ChallengerTurn }
+import "./IChallenge.sol";
+import "../rollup/IRollup.sol";
+import "../arch/IOneStepProof.sol";
 
-    event InitiatedChallenge(uint256 deadlineTicks);
+import "./ChallengeLib.sol";
+import "../libraries/MerkleLib.sol";
 
+contract Challenge is Cloneable, IChallenge {
+    using SafeMath for uint256;
+
+    enum Turn { NoChallenge, Asserter, Challenger }
+
+    event InitiatedChallenge();
+    event Bisected(
+        bytes32 indexed challengeRoot,
+        uint256 challengedSegmentStart,
+        uint256 challengedSegmentLength,
+        bytes32[] chainHashes
+    );
     event AsserterTimedOut();
     event ChallengerTimedOut();
+    event OneStepProofCompleted();
+    event ContinuedExecutionProven();
 
-    // Can online initialize once
+    // Can only initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
-    // Can only continue challenge in response to bisection
-
-    string private constant CON_STATE = "CON_STATE";
-    // deadline expired
-    string private constant CON_DEADLINE = "CON_DEADLINE";
-    // Only original challenger can continue challenge
-    string private constant CON_SENDER = "CON_SENDER";
-
     // Can only bisect assertion in response to a challenge
     string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
     string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
+    // Incorrect previous state
+    string private constant BIS_PREV = "BIS_PREV";
+    // Invalid assertion selected
+    string private constant CON_PROOF = "CON_PROOF";
+    // Can't timeout before deadline
+    string private constant TIMEOUT_DEADLINE = "TIMEOUT_DEADLINE";
 
-    address internal rollupAddress;
-    address payable internal asserter;
-    address payable internal challenger;
+    uint256 private constant INBOX_CONSISTENCY_BISECTION_DEGREE = 400;
+    uint256 private constant INBOX_DELTA_BISECTION_DEGREE = 250;
+    uint256 private constant EXECUTION_BISECTION_DEGREE = 400;
+    bytes32 private constant UNREACHABLE_ASSERTION = bytes32(uint256(0));
 
-    uint256 internal deadlineTicks;
+    IOneStepProof[] public executors;
+    IBridge public bridge;
 
-    // The current deadline at which the challenge timeouts and a winner is
-    // declared. This deadline resets at each step in the challenge
-    uint256 private challengePeriodTicks;
+    IRollup internal resultReceiver;
 
-    State private state;
+    uint256 maxMessageCount;
 
-    modifier asserterAction {
-        require(State.AsserterTurn == state, BIS_STATE);
-        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, BIS_DEADLINE);
-        require(msg.sender == asserter, BIS_SENDER);
+    address public override asserter;
+    address public override challenger;
+
+    uint256 public override lastMoveBlock;
+    uint256 public asserterTimeLeft;
+    uint256 public challengerTimeLeft;
+
+    Turn public turn;
+
+    // This is the root of a merkle tree with nodes like (prev, next, steps)
+    bytes32 public challengeState;
+
+    modifier onlyOnTurn {
+        require(msg.sender == currentResponder(), BIS_SENDER);
+        require(block.number.sub(lastMoveBlock) <= currentResponderTimeLeft(), BIS_DEADLINE);
+
         _;
+
+        if (turn == Turn.Challenger) {
+            challengerTimeLeft = challengerTimeLeft.sub(block.number.sub(lastMoveBlock));
+            turn = Turn.Asserter;
+        } else {
+            asserterTimeLeft = asserterTimeLeft.sub(block.number.sub(lastMoveBlock));
+            turn = Turn.Challenger;
+        }
+        lastMoveBlock = block.number;
     }
 
-    modifier challengerAction {
-        require(State.ChallengerTurn == state, CON_STATE);
-        require(RollupTime.blocksToTicks(block.number) <= deadlineTicks, CON_DEADLINE);
-        require(msg.sender == challenger, CON_SENDER);
-        _;
+    function initializeChallenge(
+        IOneStepProof[] calldata _executors,
+        address _resultReceiver,
+        bytes32 _executionHash,
+        uint256 _maxMessageCount,
+        address _asserter,
+        address _challenger,
+        uint256 _asserterTimeLeft,
+        uint256 _challengerTimeLeft,
+        IBridge _bridge
+    ) external override {
+        require(turn == Turn.NoChallenge, CHAL_INIT_STATE);
+
+        executors = _executors;
+
+        resultReceiver = IRollup(_resultReceiver);
+
+        maxMessageCount = _maxMessageCount;
+
+        asserter = _asserter;
+        challenger = _challenger;
+        asserterTimeLeft = _asserterTimeLeft;
+        challengerTimeLeft = _challengerTimeLeft;
+
+        turn = Turn.Challenger;
+
+        challengeState = _executionHash;
+
+        lastMoveBlock = block.number;
+        bridge = _bridge;
+
+        emit InitiatedChallenge();
     }
 
-    function timeoutChallenge() public {
-        require(RollupTime.blocksToTicks(block.number) > deadlineTicks, "Deadline hasn't expired");
+    /**
+     * @notice Initiate the next round in the bisection by objecting to execution correctness with a bisection
+     * of an execution segment with the same length but a different endpoint. This is either the initial move
+     * or follows another execution objection
+     *
+     * @param _merkleNodes List of hashes of stubs in the merkle root of segments left by the previous round
+     * @param _merkleRoute Bitmap marking whether the path went left or right at each height
+     * @param _challengedSegmentStart Offset of the challenged segment into the original challenged segment
+     * @param _challengedSegmentLength Number of messages in the challenged segment
+     * @param _oldEndHash Hash of the end of the challenged segment. This must be different than the new end since the challenger is disagreeing
+     * @param _gasUsedBefore Amount of gas used at the beginning of the challenged segment
+     * @param _assertionRest Hash of the rest of the assertion at the beginning of the challenged segment
+     * @param _chainHashes Array of intermediate hashes of the challenged segment
+     */
+    function bisectExecution(
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength,
+        bytes32 _oldEndHash,
+        uint256 _gasUsedBefore,
+        bytes32 _assertionRest,
+        bytes32[] calldata _chainHashes
+    ) external onlyOnTurn {
+        if (_chainHashes[_chainHashes.length - 1] != UNREACHABLE_ASSERTION) {
+            require(_challengedSegmentLength > 1, "TOO_SHORT");
+        }
+        require(
+            _chainHashes.length ==
+                bisectionDegree(_challengedSegmentLength, EXECUTION_BISECTION_DEGREE) + 1,
+            "CUT_COUNT"
+        );
+        require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
 
-        if (state == State.AsserterTurn) {
+        require(
+            _chainHashes[0] == ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest),
+            "segment pre-fields"
+        );
+        require(_chainHashes[0] != UNREACHABLE_ASSERTION, "UNREACHABLE_START");
+
+        require(
+            _gasUsedBefore < _challengedSegmentStart.add(_challengedSegmentLength),
+            "invalid segment length"
+        );
+
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(
+                _challengedSegmentStart,
+                _challengedSegmentLength,
+                _chainHashes[0],
+                _oldEndHash
+            );
+        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
+
+        updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
+
+        emit Bisected(
+            challengeState,
+            _challengedSegmentStart,
+            _challengedSegmentLength,
+            _chainHashes
+        );
+    }
+
+    function proveContinuedExecution(
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength,
+        bytes32 _oldEndHash,
+        uint256 _gasUsedBefore,
+        bytes32 _assertionRest
+    ) external onlyOnTurn {
+        bytes32 beforeChainHash = ChallengeLib.assertionHash(_gasUsedBefore, _assertionRest);
+
+        bytes32 bisectionHash =
+            ChallengeLib.bisectionChunkHash(
+                _challengedSegmentStart,
+                _challengedSegmentLength,
+                beforeChainHash,
+                _oldEndHash
+            );
+        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
+
+        require(
+            _gasUsedBefore >= _challengedSegmentStart.add(_challengedSegmentLength),
+            "NOT_CONT"
+        );
+        require(beforeChainHash != _oldEndHash, "WRONG_END");
+        emit ContinuedExecutionProven();
+        _currentWin();
+    }
+
+    // machineFields
+    //  initialInbox
+    //  initialMessageAcc
+    //  initialLogAcc
+    // initialState
+    //  _initialGasUsed
+    //  _initialSendCount
+    //  _initialLogCount
+    function oneStepProveExecution(
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength,
+        bytes32 _oldEndHash,
+        uint256 _initialMessagesRead,
+        bytes32 _initialSendAcc,
+        bytes32 _initialLogAcc,
+        uint256[3] memory _initialState,
+        bytes memory _executionProof,
+        bytes memory _bufferProof,
+        uint8 prover
+    ) public onlyOnTurn {
+        bytes32 rootHash;
+        {
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
+                executors[prover].executeStep(
+                    bridge,
+                    _initialMessagesRead,
+                    [_initialSendAcc, _initialLogAcc],
+                    _executionProof,
+                    _bufferProof
+                );
+
+            require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
+
+            require(
+                // if false, this segment must be proven with proveContinuedExecution
+                _initialState[0] < _challengedSegmentStart.add(_challengedSegmentLength),
+                "OSP_CONT"
+            );
+            require(
+                _initialState[0].add(gasUsed) >=
+                    _challengedSegmentStart.add(_challengedSegmentLength),
+                "OSP_SHORT"
+            );
+
+            require(
+                _oldEndHash !=
+                    oneStepProofExecutionAfter(
+                        _initialSendAcc,
+                        _initialLogAcc,
+                        _initialState,
+                        gasUsed,
+                        totalMessagesRead,
+                        proofFields
+                    ),
+                "WRONG_END"
+            );
+
+            rootHash = ChallengeLib.bisectionChunkHash(
+                _challengedSegmentStart,
+                _challengedSegmentLength,
+                oneStepProofExecutionBefore(
+                    _initialMessagesRead,
+                    _initialSendAcc,
+                    _initialLogAcc,
+                    _initialState,
+                    proofFields
+                ),
+                _oldEndHash
+            );
+        }
+
+        verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
+
+        emit OneStepProofCompleted();
+        _currentWin();
+    }
+
+    function timeout() external override {
+        uint256 timeSinceLastMove = block.number.sub(lastMoveBlock);
+        require(timeSinceLastMove > currentResponderTimeLeft(), TIMEOUT_DEADLINE);
+
+        if (turn == Turn.Asserter) {
             emit AsserterTimedOut();
             _challengerWin();
         } else {
@@ -85,45 +319,146 @@ contract Challenge is Cloneable {
         }
     }
 
-    function initializeChallenge(
-        address _rollupAddress,
-        address payable _asserter,
-        address payable _challenger,
-        uint256 _challengePeriodTicks
-    ) internal {
-        require(state == State.NoChallenge, CHAL_INIT_STATE);
-
-        rollupAddress = _rollupAddress;
-        asserter = _asserter;
-        challenger = _challenger;
-        challengePeriodTicks = _challengePeriodTicks;
-        state = State.AsserterTurn;
-        updateDeadline();
-
-        emit InitiatedChallenge(deadlineTicks);
+    function currentResponder() public view returns (address) {
+        if (turn == Turn.Asserter) {
+            return asserter;
+        } else if (turn == Turn.Challenger) {
+            return challenger;
+        } else {
+            require(false, "NO_TURN");
+        }
     }
 
-    function updateDeadline() internal {
-        deadlineTicks = RollupTime.blocksToTicks(block.number) + challengePeriodTicks;
+    function currentResponderTimeLeft() public view override returns (uint256) {
+        if (turn == Turn.Asserter) {
+            return asserterTimeLeft;
+        } else if (turn == Turn.Challenger) {
+            return challengerTimeLeft;
+        } else {
+            require(false, "NO_TURN");
+        }
     }
 
-    function asserterResponded() internal {
-        state = State.ChallengerTurn;
-        updateDeadline();
+    function updateBisectionRoot(
+        bytes32[] memory _chainHashes,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength
+    ) private returns (bytes32) {
+        uint256 bisectionCount = _chainHashes.length - 1;
+        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        uint256 chunkSize = ChallengeLib.firstSegmentSize(_challengedSegmentLength, bisectionCount);
+        uint256 segmentStart = _challengedSegmentStart;
+        hashes[0] = ChallengeLib.bisectionChunkHash(
+            segmentStart,
+            chunkSize,
+            _chainHashes[0],
+            _chainHashes[1]
+        );
+        segmentStart = segmentStart.add(chunkSize);
+        chunkSize = ChallengeLib.otherSegmentSize(_challengedSegmentLength, bisectionCount);
+        for (uint256 i = 1; i < bisectionCount; i++) {
+            hashes[i] = ChallengeLib.bisectionChunkHash(
+                segmentStart,
+                chunkSize,
+                _chainHashes[i],
+                _chainHashes[i + 1]
+            );
+            segmentStart = segmentStart.add(chunkSize);
+        }
+        challengeState = MerkleLib.generateRoot(hashes);
     }
 
-    function challengerResponded() internal {
-        state = State.AsserterTurn;
-        updateDeadline();
+    function _currentWin() private {
+        if (turn == Turn.Asserter) {
+            _asserterWin();
+        } else {
+            _challengerWin();
+        }
     }
 
-    function _asserterWin() internal {
-        IStaking(rollupAddress).resolveChallenge(asserter, challenger);
+    function _asserterWin() private {
+        resultReceiver.completeChallenge(asserter, challenger);
         safeSelfDestruct(msg.sender);
     }
 
-    function _challengerWin() internal {
-        IStaking(rollupAddress).resolveChallenge(challenger, asserter);
+    function _challengerWin() private {
+        resultReceiver.completeChallenge(challenger, asserter);
         safeSelfDestruct(msg.sender);
+    }
+
+    function verifySegmentProof(
+        bytes32 item,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute
+    ) private view {
+        require(
+            challengeState == MerkleLib.calculateRoot(_merkleNodes, _merkleRoute, item),
+            BIS_PREV
+        );
+    }
+
+    function bisectionDegree(uint256 _chainLength, uint256 targetDegree)
+        private
+        pure
+        returns (uint256)
+    {
+        if (_chainLength < targetDegree) {
+            return _chainLength;
+        } else {
+            return targetDegree;
+        }
+    }
+
+    // proofFields
+    //  initialMachineHash
+    //  afterMachineHash
+    //  afterInboxAcc
+    //  afterMessagesHash
+    //  afterLogsHash
+    function oneStepProofExecutionBefore(
+        uint256 _initialMessagesRead,
+        bytes32 _initialSendAcc,
+        bytes32 _initialLogAcc,
+        uint256[3] memory _initialState,
+        bytes32[4] memory proofFields
+    ) private pure returns (bytes32) {
+        return
+            ChallengeLib.assertionHash(
+                _initialState[0],
+                ChallengeLib.assertionRestHash(
+                    _initialMessagesRead,
+                    proofFields[0],
+                    _initialSendAcc,
+                    _initialState[1],
+                    _initialLogAcc,
+                    _initialState[2]
+                )
+            );
+    }
+
+    function oneStepProofExecutionAfter(
+        bytes32 _initialSendAcc,
+        bytes32 _initialLogAcc,
+        uint256[3] memory _initialState,
+        uint64 gasUsed,
+        uint256 totalMessagesRead,
+        bytes32[4] memory proofFields
+    ) private pure returns (bytes32) {
+        // The one step proof already guarantees us that firstMessage and lastMessage
+        // are either one or 0 messages apart and the same is true for logs. Therefore
+        // we can infer the message count and log count based on whether the fields
+        // are equal or not
+        return
+            ChallengeLib.assertionHash(
+                _initialState[0].add(gasUsed),
+                ChallengeLib.assertionRestHash(
+                    totalMessagesRead,
+                    proofFields[1],
+                    proofFields[2],
+                    _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1)),
+                    proofFields[3],
+                    _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1))
+                )
+            );
     }
 }

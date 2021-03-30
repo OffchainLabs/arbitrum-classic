@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "../arch/Value.sol";
 import "../arch/Marshaling.sol";
@@ -34,26 +34,6 @@ contract ValueTester {
     {
         (uint256 offset, Value.Data memory value) = Marshaling.deserialize(data, startOffset);
         return (offset, value.hash());
-    }
-
-    function bytesToBytestackHash(
-        bytes memory data,
-        uint256 startOffset,
-        uint256 dataLength
-    ) public pure returns (bytes32) {
-        return Marshaling.bytesToBytestack(data, startOffset, dataLength).hash();
-    }
-
-    function bytestackToBytes(bytes memory data, uint256 offset)
-        public
-        pure
-        returns (
-            bool,
-            uint256,
-            bytes memory
-        )
-    {
-        return Marshaling.bytestackToBytes(data, offset);
     }
 
     function hashTuplePreImage(bytes32 innerHash, uint256 valueSize) public pure returns (bytes32) {

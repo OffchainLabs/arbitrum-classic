@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-#include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -29,8 +28,8 @@
 
 #include <catch2/catch.hpp>
 
-Machine generateTestMachine() {
-    auto code = std::make_shared<Code>();
+void generateTestMachine(std::unique_ptr<Machine>& mach) {
+    auto& code = mach->machine_state.code;
     auto stub1 = code->addSegment();
     auto stub2 = code->addSegment();
     auto stub3 = code->addSegment();
@@ -54,67 +53,99 @@ Machine generateTestMachine() {
     add_op1(Operation{OpCode::JUMP, stub3});
     add_op1(Operation{OpCode::ADD});
 
-    Machine mach{std::move(code), Tuple()};
     for (int i = 0; i < 4; i++) {
-        mach.machine_state.stack.push(uint256_t{1});
+        mach->machine_state.stack.push(uint256_t{1});
     }
-    return mach;
+    mach->machine_state.pc = CodePointRef(1, 2);
 }
 
-void checkRun(Machine& mach, uint64_t step_count_target = 6) {
-    auto assertion = mach.run(10000, {}, std::chrono::seconds{0});
-    REQUIRE(assertion.stepCount == step_count_target);
+void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
+    MachineExecutionConfig execConfig;
+    execConfig.max_gas = gas_count_target;
+    execConfig.next_block_height = 7;
+    mach.machine_state.context = AssertionContext(execConfig);
+    auto assertion = mach.run();
+    REQUIRE(assertion.gasCount <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(val == value{uint256_t{4}});
     REQUIRE(mach.machine_state.stack.stacksize() == 0);
 }
 
 TEST_CASE("Code works correctly") {
-    auto mach = generateTestMachine();
-    checkRun(mach);
+    DBDeleter deleter;
+    ArbStorage storage(dbpath);
+    storage.initialize(
+        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+    ValueCache value_cache{1, 0};
+    auto mach = storage.getInitialMachine(value_cache);
+    generateTestMachine(mach);
+    checkRun(*mach);
 }
 
 TEST_CASE("Code serialization") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto mach = generateTestMachine();
-    auto tx = storage.makeTransaction();
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    storage.initialize(
+        LoadedExecutable(std::make_shared<CodeSegment>(0), value{Tuple()}));
+    ValueCache value_cache{1, 0};
+
+    auto mach = storage.getInitialMachine(value_cache);
+    generateTestMachine(mach);
+    auto tx = storage.makeReadWriteTransaction();
 
     SECTION("Save and load") {
-        saveMachine(*tx, mach);
+        auto save_ret = saveMachine(*tx, *mach);
+        REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach.hash(), value_cache);
-        checkRun(mach2);
+        auto mach_hash = mach->hash();
+        REQUIRE(mach_hash);
+        auto mach2 = storage.getMachine(*mach_hash, value_cache);
+        checkRun(*mach2);
     }
 
     SECTION("Save different and load") {
-        auto mach2 = mach;
-        mach2.run(2, {}, std::chrono::seconds{0});
-        saveMachine(*tx, mach);
-        saveMachine(*tx, mach2);
+        auto mach2 = *mach;
+        MachineExecutionConfig execConfig;
+        execConfig.max_gas = 7;
+        execConfig.next_block_height = 8;
+        mach2.machine_state.context = AssertionContext(execConfig);
+        mach2.run();
+        auto save_ret = saveMachine(*tx, *mach);
+        REQUIRE(save_ret.status.ok());
+        save_ret = saveMachine(*tx, mach2);
+        REQUIRE(save_ret.status.ok());
+
+        auto mach_hash = mach->hash();
+        REQUIRE(mach_hash.has_value());
+
+        auto mach_hash2 = mach2.hash();
+        REQUIRE(mach_hash2.has_value());
 
         SECTION("Delete first") {
-            deleteMachine(*tx, mach.hash());
+            auto del_ret = deleteMachine(*tx, *mach_hash);
+            REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach2.hash(), value_cache);
-            checkRun(mach3, 4);
+            auto mach3 = storage.getMachine(*mach_hash2, value_cache);
+            checkRun(*mach3);
         }
 
         SECTION("Delete second") {
-            deleteMachine(*tx, mach2.hash());
+            auto del_ret = deleteMachine(*tx, *mach_hash2);
+            REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(mach.hash(), value_cache);
-            checkRun(mach3);
+            auto mach3 = storage.getMachine(*mach_hash, value_cache);
+            checkRun(*mach3);
         }
     }
 
     SECTION("Save twice, delete and load") {
-        saveMachine(*tx, mach);
-        saveMachine(*tx, mach);
-        deleteMachine(*tx, mach.hash());
+        saveMachine(*tx, *mach);
+        saveMachine(*tx, *mach);
+        auto mach_hash = mach->hash();
+        REQUIRE(mach_hash);
+        deleteMachine(*tx, *mach_hash);
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(mach.hash(), value_cache);
-        checkRun(mach2);
+        auto mach2 = storage.getMachine(*mach_hash, value_cache);
+        checkRun(*mach2);
     }
 }

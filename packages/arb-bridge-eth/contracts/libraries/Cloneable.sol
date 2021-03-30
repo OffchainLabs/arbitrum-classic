@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./ICloneable.sol";
 
@@ -29,7 +29,7 @@ contract Cloneable is ICloneable {
         isMasterCopy = true;
     }
 
-    function isMaster() external view returns (bool) {
+    function isMaster() external view override returns (bool) {
         return isMasterCopy;
     }
 

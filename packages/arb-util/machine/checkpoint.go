@@ -19,22 +19,14 @@ package machine
 import (
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-type CheckpointStorage interface {
-	DeleteCheckpoint(machineHash common.Hash) bool
+type ArbStorage interface {
 	Initialize(contractPath string) error
 	Initialized() bool
-	CloseCheckpointStorage() bool
-	GetInitialMachine(valueCache ValueCache) (Machine, error)
-	GetMachine(machineHash common.Hash, valueCache ValueCache) (Machine, error)
-	SaveValue(val value.Value) bool
-	GetValue(hashValue common.Hash, valueCache ValueCache) (value.Value, error)
-	DeleteValue(hashValue common.Hash) bool
-	SaveData(key []byte, serializedValue []byte) bool
-	GetData(key []byte) ([]byte, error)
-	DeleteData(key []byte) bool
+	CloseArbStorage() bool
+
+	GetNodeStore() NodeStore
 }
 
 type ValueNotFoundError struct {

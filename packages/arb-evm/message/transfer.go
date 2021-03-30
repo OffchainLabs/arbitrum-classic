@@ -56,78 +56,18 @@ func (e Eth) Type() inbox.Type {
 	return EthType
 }
 
-type ERC20 struct {
-	Token common.Address
-	Dest  common.Address
-	Value *big.Int
+type EthDepositTx struct {
+	L2Message
 }
 
-func NewERC20FromData(data []byte) ERC20 {
-	token, data := extractAddress(data)
-	destAddress, data := extractAddress(data)
-	// Last value returned is not an error type
-	payment, _ := extractUInt256(data)
-	return ERC20{
-		Token: token,
-		Dest:  destAddress,
-		Value: payment,
-	}
+func NewEthDepositTxFromData(data []byte) EthDepositTx {
+	return EthDepositTx{L2Message: L2Message{Data: data}}
 }
 
-func NewRandomERC20() ERC20 {
-	return ERC20{
-		Token: common.RandAddress(),
-		Dest:  common.RandAddress(),
-		Value: common.RandBigInt(),
-	}
+func (e EthDepositTx) AsData() []byte {
+	return e.L2Message.Data
 }
 
-func (e ERC20) AsData() []byte {
-	data := make([]byte, 0)
-	data = append(data, addressData(e.Token)...)
-	data = append(data, addressData(e.Dest)...)
-	data = append(data, math.U256Bytes(e.Value)...)
-	return data
-}
-
-func (e ERC20) Type() inbox.Type {
-	return ERC20Type
-}
-
-type ERC721 struct {
-	Token common.Address
-	Dest  common.Address
-	ID    *big.Int
-}
-
-func NewERC721FromData(data []byte) ERC721 {
-	token, data := extractAddress(data)
-	destAddress, data := extractAddress(data)
-	// Last value returned is not an error type
-	id, _ := extractUInt256(data)
-	return ERC721{
-		Token: token,
-		Dest:  destAddress,
-		ID:    id,
-	}
-}
-
-func NewRandomERC721() ERC721 {
-	return ERC721{
-		Token: common.RandAddress(),
-		Dest:  common.RandAddress(),
-		ID:    common.RandBigInt(),
-	}
-}
-
-func (e ERC721) AsData() []byte {
-	data := make([]byte, 0)
-	data = append(data, addressData(e.Token)...)
-	data = append(data, addressData(e.Dest)...)
-	data = append(data, math.U256Bytes(e.ID)...)
-	return data
-}
-
-func (e ERC721) Type() inbox.Type {
-	return ERC721Type
+func (e EthDepositTx) Type() inbox.Type {
+	return EthDepositTxType
 }

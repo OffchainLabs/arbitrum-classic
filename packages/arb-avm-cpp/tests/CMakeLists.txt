@@ -13,14 +13,15 @@
 # limitations under the License.
 
 cmake_minimum_required (VERSION 3.5)
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 project (avm_tests)
 
 set(TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/test_cases.json)
 set(TEST_CONTRACT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/contract.mexe)
-set(ARB_OS_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../arbos.mexe)
-set(ARB_OS_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/arbos-cases)
+set(ARB_OS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../arb-os)
+set(ARB_OS_PATH ${ARB_OS_DIR}/arb_os/arbos.mexe)
+set(ARB_OS_TEST_CASES_PATH ${ARB_OS_DIR}/replayTests)
 set(MACHINE_TEST_CASES_PATH ${CMAKE_CURRENT_SOURCE_DIR}/machine-cases)
 
 configure_file (
@@ -28,10 +29,30 @@ configure_file (
     "${CMAKE_CURRENT_SOURCE_DIR}/config.hpp"
 )
 
-add_executable(avm_tests aggregator.cpp arbos.cpp code.cpp main.cpp opcodes.cpp value.cpp checkpoint.cpp datastack.cpp machine.cpp keyvaluestore.cpp blockstore.cpp ecops.cpp ecops.hpp)
+add_executable(
+		avm_tests
+
+		aggregator.cpp
+		arbos.cpp
+		arbcore.cpp
+		buffer.cpp
+		checkpoint.cpp
+		checkpointedmachine.cpp
+		code.cpp
+		datastack.cpp
+		ecops.cpp
+		ecops.hpp
+        machine.cpp
+		main.cpp
+        messagestore.cpp
+		opcodes.cpp
+		value.cpp
+        valuecache.cpp)
 
 target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_tests PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
+
+set_source_files_properties( buffer.cpp PROPERTIES COMPILE_FLAGS "-Wconversion -Wparentheses" )
 
 target_link_libraries(
 	avm_tests

@@ -23,11 +23,10 @@
 extern "C" {
 #endif
 
-struct ByteSliceStruct {
+typedef struct ByteSliceStruct {
     void* data;
     int length;
-};
-typedef struct ByteSliceStruct ByteSlice;
+} ByteSlice;
 
 typedef struct {
     ByteSlice slice;
@@ -39,29 +38,60 @@ typedef struct {
     int count;
 } HashList;
 
-typedef struct {
-    ByteSlice* slices;
+typedef struct ByteSliceArrayStruct {
+    void* slices;
     int count;
 } ByteSliceArray;
 
-struct Uint64ResultStruct {
+typedef struct ByteSliceArrayResultStruct {
+    ByteSliceArray array;
+    int found;
+} ByteSliceArrayResult;
+
+typedef struct IndexedByteSliceArrayResultStruct {
+    void* first_index;
+    ByteSliceArray array;
+    int found;
+} IndexedByteSliceArrayResult;
+
+typedef struct IndexedDoubleByteSliceArrayResultStruct {
+    void* first_index;
+    ByteSliceArray first_array;
+    ByteSliceArray second_array;
+    int found;
+} IndexedDoubleByteSliceArrayResult;
+
+typedef struct Uint64ResultStruct {
     uint64_t value;
     int found;
-};
+} Uint64Result;
 
-typedef struct Uint64ResultStruct Uint64Result;
-
-struct HashResultStruct {
+typedef struct HashResultStruct {
     void* value;
     int found;
-};
+} Uint256Result;
 
-typedef struct HashResultStruct HashResult;
+typedef struct {
+    uint64_t inbox_messages_consumed;
+    ByteSlice sends;
+    int sendCount;
+    void* sendAcc;
+    ByteSlice logs;
+    int logCount;
+    void* logAcc;
+    ByteSlice debugPrints;
+    int debugPrintCount;
+    uint64_t numSteps;
+    uint64_t numGas;
+} RawAssertion;
 
-typedef void CMachine;
-typedef void CCheckpointStorage;
-typedef void CBlockStore;
 typedef void CAggregatorStore;
+typedef void CArbCore;
+typedef void CArbStorage;
+typedef void CCheckpointedMachine;
+typedef void CExecutionCursor;
+typedef void CMachine;
+typedef void CMachineExecutionConfig;
 typedef void CValueCache;
 
 #ifdef __cplusplus

@@ -15,7 +15,7 @@
 
 cmake_minimum_required (VERSION 3.5)
 
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 project (avm_values LANGUAGES CXX)
 
@@ -26,6 +26,7 @@ set(LIB_HEADERS
   include/avm_values/value.hpp
   include/avm_values/valuetype.hpp
   include/avm_values/bigint.hpp
+  include/avm_values/buffer.hpp
   include/avm_values/code.hpp
   include/avm_values/codepoint.hpp
   include/avm_values/codepointstub.hpp
@@ -36,6 +37,7 @@ set(LIB_HEADERS
 
 set(LIB_SOURCES
   src/bigint.cpp
+  src/buffer.cpp
   src/code.cpp
   src/codepoint.cpp
   src/codepointstub.cpp
@@ -59,6 +61,10 @@ set_target_properties(
 target_compile_options(avm_values PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(avm_values PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
+set_source_files_properties( src/buffer.cpp PROPERTIES COMPILE_FLAGS "-Wconversion -Wparentheses" )
+
+
+
 target_include_directories(avm_values PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -69,7 +75,7 @@ target_include_directories(avm_values PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/../external
 )
 
-target_link_libraries(avm_values PUBLIC nonstd::variant-lite nonstd::optional-lite Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx PRIVATE Boost::boost)
+target_link_libraries(avm_values PUBLIC Threads::Threads nlohmann_json::nlohmann_json ethash::keccak intx::intx PRIVATE Boost::boost)
 
 target_code_coverage(avm_values AUTO ALL)
 

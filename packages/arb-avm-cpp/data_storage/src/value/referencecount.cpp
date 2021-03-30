@@ -16,6 +16,7 @@
 
 #include "referencecount.hpp"
 
+#include <data_storage/readwritetransaction.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <rocksdb/utilities/transaction_db.h>
@@ -25,7 +26,7 @@
 #include <iostream>
 
 namespace {
-SaveResults saveValueWithRefCount(rocksdb::Transaction& transaction,
+SaveResults saveValueWithRefCount(ReadWriteTransaction& tx,
                                   uint32_t updated_ref_count,
                                   const rocksdb::Slice& hash_key,
                                   const std::vector<unsigned char>& value) {
@@ -34,7 +35,7 @@ SaveResults saveValueWithRefCount(rocksdb::Transaction& transaction,
     updated_entry.insert(updated_entry.end(), value.begin(), value.end());
 
     std::string value_str(updated_entry.begin(), updated_entry.end());
-    auto status = transaction.Put(hash_key, value_str);
+    auto status = tx.refCountedPut(hash_key, value_str);
 
     if (status.ok()) {
         return SaveResults{updated_ref_count, status};
@@ -44,27 +45,27 @@ SaveResults saveValueWithRefCount(rocksdb::Transaction& transaction,
 }
 }  // namespace
 
-SaveResults incrementReference(rocksdb::Transaction& transaction,
+SaveResults incrementReference(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,
                                uint32_t new_references) {
-    auto results = getRefCountedData(transaction, hash_key);
+    auto results = getRefCountedData(tx, hash_key);
 
     if (results.status.ok()) {
         auto updated_count = results.reference_count + new_references;
-        return saveValueWithRefCount(transaction, updated_count, hash_key,
+        return saveValueWithRefCount(tx, updated_count, hash_key,
                                      results.stored_value);
     } else {
         return SaveResults{0, results.status};
     }
 }
 
-SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
+SaveResults saveRefCountedData(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,
                                const std::vector<unsigned char>& value,
                                uint32_t new_references,
                                bool allow_replacement) {
-    auto results = getRefCountedData(transaction, hash_key);
-    int ref_count;
+    auto results = getRefCountedData(tx, hash_key);
+    uint32_t ref_count;
 
     if (results.status.ok()) {
         if (!allow_replacement && results.stored_value != value) {
@@ -86,24 +87,24 @@ SaveResults saveRefCountedData(rocksdb::Transaction& transaction,
     } else {
         ref_count = new_references;
     }
-    return saveValueWithRefCount(transaction, ref_count, hash_key, value);
+    return saveValueWithRefCount(tx, ref_count, hash_key, value);
 }
 
-DeleteResults deleteRefCountedData(rocksdb::Transaction& transaction,
+DeleteResults deleteRefCountedData(ReadWriteTransaction& tx,
                                    const rocksdb::Slice& hash_key,
                                    uint32_t deleted_references) {
-    auto results = getRefCountedData(transaction, hash_key);
+    auto results = getRefCountedData(tx, hash_key);
 
     if (results.status.ok()) {
         if (results.reference_count <= deleted_references) {
-            auto delete_status = transaction.Delete(hash_key);
+            auto delete_status = tx.refCountedDelete(hash_key);
             return DeleteResults{0, delete_status,
                                  std::move(results.stored_value)};
         } else {
             auto updated_ref_count =
                 results.reference_count - deleted_references;
             auto update_result = saveValueWithRefCount(
-                transaction, updated_ref_count, hash_key, results.stored_value);
+                tx, updated_ref_count, hash_key, results.stored_value);
             return DeleteResults{updated_ref_count, update_result.status,
                                  std::move(results.stored_value)};
         }
@@ -113,15 +114,13 @@ DeleteResults deleteRefCountedData(rocksdb::Transaction& transaction,
     }
 }
 
-GetResults getRefCountedData(rocksdb::Transaction& transaction,
+GetResults getRefCountedData(const ReadTransaction& tx,
                              const rocksdb::Slice& hash_key) {
-    auto read_options = rocksdb::ReadOptions();
     std::string return_value;
-    auto get_status =
-        transaction.GetForUpdate(read_options, hash_key, &return_value);
+    auto get_status = tx.refCountedGet(hash_key, &return_value);
 
     if (!get_status.ok()) {
-        auto unsuccessful = rocksdb::Status().NotFound();
+        auto unsuccessful = rocksdb::Status::NotFound();
         return GetResults{0, unsuccessful, std::vector<unsigned char>()};
     }
     if (return_value.empty()) {

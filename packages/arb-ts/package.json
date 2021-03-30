@@ -1,0 +1,60 @@
+{
+  "name": "arb-ts",
+  "version": "0.0.7",
+  "description": "Typescript library client-side interactions with Arbitrum",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum.git",
+    "directory": "packages/arb-ts"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum/issues"
+  },
+  "homepage": "https://offchainlabs.com",
+  "scripts": {
+    "prepublishOnly": "yarn build && yarn format",
+    "preversion": "yarn lint",
+    "prepare": "install-peers",
+    "build": "./scripts/builder",
+    "watch": "tsc --watch",
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
+    "lint": "eslint .",
+    "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
+    "update:abi": "./scripts/update-abi && yarn format",
+    "test:integration": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 300000"
+  },
+  "dependencies": {
+    "@ethersproject/address": "^5.0.8",
+    "@ethersproject/bignumber": "^5.0.12",
+    "@ethersproject/bytes": "^5.0.8",
+    "@types/promise-poller": "^1.7.0",
+    "ethers": "^5.0.24"
+  },
+  "peerDependencies": {
+    "ethers": "~5.0.24"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^7.0.2",
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
+    "chai": "^4.2.0",
+    "chai-bignumber": "^3.0.0",
+    "chalk": "^4.1.0",
+    "ethereum-waffle": "^2.3.0",
+    "install-peers-cli": "^2.2.0",
+    "mocha": "^7.2.0",
+    "nyc": "^15.1.0",
+    "typescript": "^4.0.2",
+    "yargs": "^16.2.0"
+  },
+  "files": [
+    "dist/**/*"
+  ]
+}

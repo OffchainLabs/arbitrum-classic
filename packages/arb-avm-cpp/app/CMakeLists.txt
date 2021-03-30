@@ -14,10 +14,13 @@
 
 cmake_minimum_required (VERSION 3.5)
 
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 project (avm_runner LANGUAGES CXX)
 add_executable(avm_runner main.cpp)
 target_link_libraries(avm_runner PRIVATE avm data_storage Boost::filesystem)
-
 target_code_coverage(avm_runner AUTO ALL EXCLUDE external/* tests/*)
+
+add_executable(arbcore_runner arbcorerunner.cpp)
+target_link_libraries(arbcore_runner PRIVATE avm data_storage Boost::filesystem)
+target_code_coverage(arbcore_runner AUTO ALL EXCLUDE external/* tests/*)

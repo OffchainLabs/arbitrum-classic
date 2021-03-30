@@ -6,16 +6,14 @@ set -e
 packages=(
     arb-util
     arb-avm-cpp
-    arb-validator-core
-    arb-validator
+    arb-node-core
+    arb-rpc-node
     arb-evm
-    arb-checkpointer
-    arb-tx-aggregator
 )
 
 cd packages
 for i in "${packages[@]}"; do
-    cd $i
-    $1
+    cd "$i"
+    eval "$1"
     cd ..
 done

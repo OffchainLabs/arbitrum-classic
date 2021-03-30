@@ -18,30 +18,14 @@ package value
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 type Opcode uint8
-
-type Operation interface {
-	GetOp() Opcode
-	TypeCode() uint8
-	Marshal(wr io.Writer) error
-}
-
-type BasicOperation struct {
-	Op Opcode
-}
-
-type ImmediateOperation struct {
-	Op  Opcode
-	Val Value
-}
 
 func NewOpcodeFromReader(rd io.Reader) (Opcode, error) {
 	var ret Opcode
@@ -55,9 +39,44 @@ func (o Opcode) Marshal(wr io.Writer) error {
 	return binary.Write(wr, binary.LittleEndian, &o)
 }
 
+type Operation interface {
+	GetOp() Opcode
+	TypeCode() uint8
+	Equals(other Operation) bool
+}
+
+type BasicOperation struct {
+	Op Opcode
+}
+
 func NewBasicOperationFromReader(rd io.Reader) (BasicOperation, error) {
 	op, err := NewOpcodeFromReader(rd)
 	return BasicOperation{op}, err
+}
+
+func (op BasicOperation) TypeCode() uint8 {
+	return 0
+}
+
+func (op BasicOperation) GetOp() Opcode {
+	return op.Op
+}
+
+func (op BasicOperation) Equals(other Operation) bool {
+	o, ok := other.(BasicOperation)
+	if !ok {
+		return false
+	}
+	return op.Op == o.Op
+}
+
+func (op BasicOperation) String() string {
+	return fmt.Sprintf("0x%x", op.GetOp())
+}
+
+type ImmediateOperation struct {
+	Op  Opcode
+	Val Value
 }
 
 func NewImmediateOperationFromReader(rd io.Reader) (ImmediateOperation, error) {
@@ -69,31 +88,8 @@ func NewImmediateOperationFromReader(rd io.Reader) (ImmediateOperation, error) {
 	return ImmediateOperation{op, val}, err
 }
 
-func (op BasicOperation) Marshal(wr io.Writer) error {
-	return op.Op.Marshal(wr)
-}
-
-func (op ImmediateOperation) Marshal(wr io.Writer) error {
-	if err := op.Op.Marshal(wr); err != nil {
-		return err
-	}
-	return MarshalValue(op.Val, wr)
-}
-
-func (op BasicOperation) TypeCode() uint8 {
-	return 0
-}
-
 func (op ImmediateOperation) TypeCode() uint8 {
 	return 1
-}
-
-func (op BasicOperation) GetOp() Opcode {
-	return op.Op
-}
-
-func (op BasicOperation) String() string {
-	return fmt.Sprintf("0x%x", op.GetOp())
 }
 
 func (op ImmediateOperation) String() string {
@@ -102,6 +98,14 @@ func (op ImmediateOperation) String() string {
 
 func (op ImmediateOperation) GetOp() Opcode {
 	return op.Op
+}
+
+func (op ImmediateOperation) Equals(other Operation) bool {
+	o, ok := other.(ImmediateOperation)
+	if !ok {
+		return false
+	}
+	return op.Op == o.Op && Eq(op.Val, o.Val)
 }
 
 func NewOperationFromReader(rd io.Reader) (Operation, error) {
@@ -117,14 +121,6 @@ func NewOperationFromReader(rd io.Reader) (Operation, error) {
 	} else {
 		return nil, errors.New("immediate count must be 0 or 1")
 	}
-}
-
-func MarshalOperation(op Operation, wr io.Writer) error {
-	typ := op.TypeCode()
-	if err := binary.Write(wr, binary.BigEndian, &typ); err != nil {
-		return err
-	}
-	return op.Marshal(wr)
 }
 
 type CodePointValue struct {
@@ -147,44 +143,16 @@ func (cv CodePointValue) TypeCode() uint8 {
 	return TypeCodeCodePoint
 }
 
-func (cv CodePointValue) Clone() Value {
-	return CodePointValue{cv.Op, cv.NextHash}
-}
-
 func (cv CodePointValue) Equal(val Value) bool {
-	return cv.Hash() == val.Hash()
+	o, ok := val.(CodePointValue)
+	if !ok {
+		return false
+	}
+	return cv.NextHash == o.NextHash && cv.Op.Equals(o.Op)
 }
 
 func (cv CodePointValue) Size() int64 {
 	return 1
-}
-
-func (cv CodePointValue) Hash() common.Hash {
-	switch op := cv.Op.(type) {
-	case ImmediateOperation:
-		return hashing.SoliditySHA3(
-			hashing.Uint8(TypeCodeCodePoint),
-			hashing.Uint8(byte(op.Op)),
-			hashing.Bytes32(op.Val.Hash()),
-			hashing.Bytes32(cv.NextHash),
-		)
-	case BasicOperation:
-		return hashing.SoliditySHA3(
-			hashing.Uint8(TypeCodeCodePoint),
-			hashing.Uint8(byte(op.Op)),
-			hashing.Bytes32(cv.NextHash),
-		)
-	default:
-		panic(fmt.Sprintf("Bad operation type: %T", op))
-	}
-}
-
-func (cv CodePointValue) Marshal(w io.Writer) error {
-	if err := MarshalOperation(cv.Op, w); err != nil {
-		return err
-	}
-	_, err := w.Write(cv.NextHash[:])
-	return err
 }
 
 func (cv CodePointValue) String() string {

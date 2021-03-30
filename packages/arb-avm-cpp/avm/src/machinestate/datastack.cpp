@@ -17,6 +17,7 @@
 #include <avm/machinestate/datastack.hpp>
 
 #include <iostream>
+#include <utility>
 
 uint256_t Datastack::hash() const {
     auto h_value = getHashPreImage();
@@ -37,24 +38,35 @@ HashPreImage Datastack::getHashPreImage() const {
     }
 }
 
-std::pair<HashPreImage, std::vector<unsigned char>> Datastack::marshalForProof(
+DataStackProof Datastack::marshalForProof(
     const std::vector<MarshalLevel>& stackInfo,
     const Code& code) const {
     calculateAllHashes();
     Datastack c = *this;
     std::vector<unsigned char> buf;
-    std::vector<value> values;
-    for (size_t i = 0; i < stackInfo.size(); ++i) {
-        values.push_back(c.pop());
+    std::vector<value> val;
+
+    // If the stack is underflowing, just send what's left
+    uint8_t items_to_pop = stackInfo.size();
+    bool underflow = false;
+    if (c.stacksize() < items_to_pop) {
+        items_to_pop = c.stacksize();
+        underflow = true;
+    }
+
+    for (size_t i = 0; i < items_to_pop; ++i) {
+        val.push_back(c.pop());
     }
 
     // Marshal the values from deepest to most shallow in the stack
-    for (size_t i = 0; i < stackInfo.size(); ++i) {
-        auto index = stackInfo.size() - 1 - i;
-        ::marshalForProof(values[index], stackInfo[index], buf, code);
+    for (size_t i = 0; i < val.size(); ++i) {
+        auto index = val.size() - 1 - i;
+        // Only marshal a stub if we are underflowing
+        auto level = underflow ? MarshalLevel::STUB : stackInfo[index];
+        ::marshalForProof(val[index], level, buf, code);
     }
 
-    return std::make_pair(c.getHashPreImage(), std::move(buf));
+    return {c.getHashPreImage(), std::move(buf), items_to_pop};
 }
 
 std::ostream& operator<<(std::ostream& os, const Datastack& val) {
@@ -71,23 +83,28 @@ std::ostream& operator<<(std::ostream& os, const Datastack& val) {
 
 Tuple Datastack::getTupleRepresentation() const {
     Tuple rep;
-    for (size_t i = 0; i < values.size(); i++) {
-        rep = Tuple(values[values.size() - 1 - i], rep);
+    for (const auto& val : values) {
+        rep = Tuple(val, rep);
     }
     return rep;
 }
 
 Datastack::Datastack(Tuple tuple_rep) : Datastack() {
-    Tuple ret = tuple_rep;
+    Tuple ret = std::move(tuple_rep);
+    std::vector<value> vals;
     while (ret.tuple_size() == 2) {
-        push(ret.get_element(0));
-        ret = nonstd::get<Tuple>(ret.get_element(1));
+        vals.push_back(ret.get_element(0));
+        ret = std::get<Tuple>(ret.get_element(1));
+    }
+
+    for (size_t i = 0; i < vals.size(); i++) {
+        push(std::move(vals[vals.size() - 1 - i]));
     }
 }
 
 void Datastack::addHash() const {
     HashPreImage prev = [&]() {
-        if (hashes.size() > 0) {
+        if (!hashes.empty()) {
             return hashes.back();
         } else {
             return Tuple().getHashPreImage();

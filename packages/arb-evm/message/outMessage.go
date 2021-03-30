@@ -17,73 +17,46 @@
 package message
 
 import (
-	"errors"
-	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
+	"math/big"
 )
 
-type OutMessage struct {
-	Kind   inbox.Type
-	Sender common.Address
-	Data   []byte
+const sendMessageRootKind = 0
+
+type OutMessage interface {
 }
 
-func NewOutMessage(msg Message, sender common.Address) OutMessage {
-	return OutMessage{
-		Kind:   msg.Type(),
-		Sender: sender,
-		Data:   msg.AsData(),
+type SendMessageRoot struct {
+	BatchNumber *big.Int
+	NumInBatch  *big.Int
+	OutputRoot  common.Hash
+}
+
+func NewOutMessageFromBytes(val []byte) (OutMessage, error) {
+	if len(val) < 1 {
+		return nil, errors.New("unexpectedly short send")
+	}
+	kind := val[0]
+	switch kind {
+	case sendMessageRootKind:
+		return newSendMessageRootFromBytes(val[1:])
+	default:
+		return nil, errors.Errorf("unsupported message kind %v", kind)
 	}
 }
 
-func NewOutMessageFromValue(val value.Value) (OutMessage, error) {
-	failRet := OutMessage{}
-	tup, ok := val.(*value.TupleValue)
-	if !ok {
-		return failRet, errors.New("val must be a tuple")
+func newSendMessageRootFromBytes(val []byte) (*SendMessageRoot, error) {
+	if len(val) != 96 {
+		return nil, errors.New("unexpected send message root data length")
 	}
-	if tup.Len() != 3 {
-		return failRet, fmt.Errorf("expected tuple of length 3, but recieved %v", tup)
-	}
-
-	// Tuple size already verified above, so error can be ignored
-	kind, _ := tup.GetByInt64(0)
-	sender, _ := tup.GetByInt64(1)
-	messageData, _ := tup.GetByInt64(2)
-
-	kindInt, ok := kind.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("outgoing message kind must be an int")
-	}
-	senderInt, ok := sender.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("sender must be an int")
-	}
-	data, err := inbox.ByteStackToHex(messageData)
-	if err != nil {
-		return failRet, err
-	}
-
-	return OutMessage{
-		Kind:   inbox.Type(kindInt.BigInt().Uint64()),
-		Sender: inbox.NewAddressFromInt(senderInt),
-		Data:   data,
+	batchNum := new(big.Int).SetBytes(val[:32])
+	numInBatch := new(big.Int).SetBytes(val[32:64])
+	var outputRoot common.Hash
+	copy(outputRoot[:], val[64:96])
+	return &SendMessageRoot{
+		BatchNumber: batchNum,
+		NumInBatch:  numInBatch,
+		OutputRoot:  outputRoot,
 	}, nil
-}
-
-func NewRandomOutMessage(msg Message) OutMessage {
-	return NewOutMessage(msg, common.RandAddress())
-}
-
-func (im OutMessage) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(int64(im.Kind)),
-		inbox.NewIntFromAddress(im.Sender),
-		inbox.BytesToByteStack(im.Data),
-	})
-	return tup
 }

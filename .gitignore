@@ -20,6 +20,8 @@ arbitrum_flat.sol
 vconan
 gasReporterOutput.json
 rollups
+/packages/arb-node-core/arb-validator
+/packages/arb-rpc-node/arb-node
 
 # Logs
 logs

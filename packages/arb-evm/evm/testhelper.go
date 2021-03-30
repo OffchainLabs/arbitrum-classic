@@ -18,26 +18,8 @@ package evm
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"math/rand"
 	"testing"
 )
-
-func NewRandomEVMAssertion(results []Result, messages []value.Value) *protocol.ExecutionAssertion {
-	logs := make([]value.Value, 0, len(results))
-	for _, result := range results {
-		logs = append(logs, result.AsValue())
-	}
-	return protocol.NewExecutionAssertionFromValues(
-		common.RandHash(),
-		common.RandHash(),
-		rand.Uint64(),
-		rand.Uint64(),
-		messages,
-		logs,
-	)
-}
 
 func LogMatchTest(
 	t *testing.T,

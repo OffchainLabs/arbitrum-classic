@@ -19,11 +19,9 @@ package message
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
-	errors2 "github.com/pkg/errors"
-	"log"
+	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
@@ -65,7 +63,6 @@ const (
 	CallType                L2SubType = 2
 	TransactionBatchType    L2SubType = 3
 	SignedTransactionType   L2SubType = 4
-	BuddyRequestType        L2SubType = 5
 	HeartbeatType           L2SubType = 6
 	CompressedECDSA         L2SubType = 7
 )
@@ -234,7 +231,8 @@ func (t Transaction) AsDataSafe() []byte {
 
 func (t Transaction) MessageID(sender common.Address, chain common.Address) common.Hash {
 	l2 := NewSafeL2Message(t)
-	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(marshaledBytesHash(l2.AsData())))
+	dataHash := hashing.SoliditySHA3(l2.AsData())
+	inner := hashing.SoliditySHA3(hashing.Uint256(ChainAddressToID(chain)), hashing.Bytes32(dataHash))
 	return hashing.SoliditySHA3(addressData(sender), hashing.Bytes32(inner))
 }
 
@@ -536,11 +534,11 @@ func (t CompressedECDSATransaction) AsEthTx(chainId *big.Int) (*types.Transactio
 	}
 	rlpTxData, err := rlp.EncodeToBytes(txData)
 	if err != nil {
-		return nil, errors2.Wrap(err, "error encoding transaction")
+		return nil, errors.Wrap(err, "error encoding transaction")
 	}
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(rlpTxData, tx); err != nil {
-		return nil, errors2.Wrap(err, "error decoding transaction")
+		return nil, errors.Wrap(err, "error decoding transaction")
 	}
 	return tx, nil
 }
@@ -572,7 +570,7 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 		}
 		if big.NewInt(int64(r.Len())).Cmp(msgLength) < 0 {
 			// Not enough data remaining
-			log.Println("Received batch containing invalid data at end")
+			logger.Warn().Msg("Received batch containing invalid data at end")
 			break
 		}
 		txData := make([]byte, msgLength.Uint64())
@@ -630,4 +628,19 @@ func (t TransactionBatch) AsDataSafe() []byte {
 		ret = append(ret, tx...)
 	}
 	return ret
+}
+
+type HeartbeatMessage struct {
+}
+
+func (t HeartbeatMessage) L2Type() L2SubType {
+	return HeartbeatType
+}
+
+func (t HeartbeatMessage) AsData() ([]byte, error) {
+	return t.AsDataSafe(), nil
+}
+
+func (t HeartbeatMessage) AsDataSafe() []byte {
+	return nil
 }

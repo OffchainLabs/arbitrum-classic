@@ -17,8 +17,7 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 
@@ -27,11 +26,9 @@
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
 
-#include <fstream>
-
 TEST_CASE("ARBOS test vectors") {
     DBDeleter deleter;
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     std::vector<std::string> files = {
         "evm_direct_deploy_add", "evm_direct_deploy_and_call_add",
@@ -46,48 +43,64 @@ TEST_CASE("ARBOS test vectors") {
             nlohmann::json j;
             i >> j;
 
-            std::vector<Tuple> messages;
+            std::vector<InboxMessage> messages;
             for (auto& json_message : j.at("inbox")) {
-                messages.push_back(
-                    simple_value_from_json(std::move(json_message))
-                        .get<Tuple>());
+                messages.push_back(InboxMessage::fromTuple(
+                    std::get<Tuple>(simple_value_from_json(json_message))));
             }
 
             auto logs_json = j.at("logs");
             std::vector<value> logs;
             for (auto& log_json : logs_json) {
-                logs.push_back(simple_value_from_json(std::move(log_json)));
+                logs.push_back(simple_value_from_json(log_json));
             }
 
-            CheckpointStorage storage(dbpath);
-            storage.initialize(arb_os_path);
+            auto sends_json = j.at("sends");
+            std::vector<std::vector<uint8_t>> sends;
+            for (auto& send_json : sends_json) {
+                sends.push_back(send_from_json(send_json));
+            }
+            auto total_gas_target = j.at("total_gas").get<uint64_t>();
+
+            ArbStorage storage(dbpath);
+            REQUIRE(storage.initialize(arb_os_path).ok());
             auto mach = storage.getInitialMachine(value_cache);
-            mach.machine_state.stack.push(uint256_t{0});
-            auto assertion =
-                mach.run(1000000000, messages, std::chrono::seconds{0});
+            MachineExecutionConfig config;
+            config.inbox_messages = messages;
+            mach->machine_state.context = AssertionContext(config);
+            auto assertion = mach->run();
             INFO("Machine ran for " << assertion.stepCount << " steps");
             REQUIRE(assertion.logs.size() == logs.size());
-            auto log = logs[0].get<Tuple>();
-            for (size_t i = 0; i < assertion.logs.size(); ++i) {
-                REQUIRE(assertion.logs[i] == logs[i]);
+            for (size_t k = 0; k < assertion.logs.size(); ++k) {
+                REQUIRE(assertion.logs[k] == logs[k]);
             }
+            REQUIRE(assertion.sends.size() == sends.size());
+            for (size_t k = 0; k < assertion.sends.size(); ++k) {
+                REQUIRE(assertion.sends[k] == sends[k]);
+            }
+            REQUIRE(assertion.gasCount == total_gas_target);
             {
-                auto tx = storage.makeTransaction();
-                saveMachine(*tx, mach);
+                auto tx = storage.makeReadWriteTransaction();
+                saveMachine(*tx, *mach);
                 tx->commit();
             }
-            auto mach_hash = mach.hash();
-            auto mach2 = storage.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach2.hash());
-            storage.closeCheckpointStorage();
+            auto mach_hash = mach->hash();
+            REQUIRE(mach_hash);
+            auto mach2 = storage.getMachine(*mach_hash, value_cache);
+            auto mach2_hash = mach2->hash();
+            REQUIRE(mach2_hash);
+            REQUIRE(*mach_hash == *mach2_hash);
+            storage.closeArbStorage();
 
-            CheckpointStorage storage2(dbpath);
-            auto mach3 = storage2.getMachine(mach_hash, value_cache);
-            REQUIRE(mach_hash == mach3.hash());
+            ArbStorage storage2(dbpath);
+            auto mach3 = storage2.getMachine(*mach_hash, value_cache);
+            auto mach3_hash = mach3->hash();
+            REQUIRE(mach3_hash);
+            REQUIRE(*mach_hash == *mach3_hash);
 
             {
-                auto tx = storage2.makeTransaction();
-                deleteMachine(*tx, mach_hash);
+                auto tx = storage2.makeReadWriteTransaction();
+                deleteMachine(*tx, *mach_hash);
                 tx->commit();
             }
         }

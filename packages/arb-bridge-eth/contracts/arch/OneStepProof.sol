@@ -16,301 +16,26 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 import "./IOneStepProof.sol";
-import "./Value.sol";
-import "./Machine.sol";
-import "../inbox/Messages.sol";
-import "../libraries/Precompiles.sol";
+import "./OneStepProofCommon.sol";
+
+import "../bridge/Messages.sol";
+
+import "../libraries/BytesLib.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
 
-contract OneStepProof is IOneStepProof {
+contract OneStepProof is OneStepProofCommon {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
     using Value for Value.Data;
+    using BytesLib for bytes;
 
-    uint256 private constant SEND_SIZE_LIMIT = 10000;
-
-    uint256 private constant MAX_UINT256 = ((1 << 128) + 1) * ((1 << 128) - 1);
     uint256 private constant MAX_PAIRING_COUNT = 30;
-
-    string private constant BAD_IMM_TYP = "BAD_IMM_TYP";
-    string private constant NO_IMM = "NO_IMM";
-    string private constant STACK_MISSING = "STACK_MISSING";
-    string private constant AUX_MISSING = "AUX_MISSING";
-    string private constant STACK_MANY = "STACK_MANY";
-    string private constant AUX_MANY = "AUX_MANY";
-    string private constant INBOX_VAL = "INBOX_VAL";
-
-    function executeStep(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes calldata proof
-    ) external view returns (uint64 gas, bytes32[5] memory fields) {
-        AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            proof
-        );
-
-        executeOp(context);
-
-        return returnContext(context);
-    }
-
-    function executeStepWithMessage(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes calldata proof,
-        uint8 _kind,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        address _sender,
-        uint256 _inboxSeqNum,
-        bytes calldata _msgData
-    ) external view returns (uint64 gas, bytes32[5] memory fields) {
-        AssertionContext memory context = initializeExecutionContext(
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            proof
-        );
-
-        context.inboxMessageHash = Messages.messageHash(
-            _kind,
-            _sender,
-            _blockNumber,
-            _timestamp,
-            _inboxSeqNum,
-            keccak256(_msgData)
-        );
-
-        context.inboxMessage = Messages.messageValue(
-            _kind,
-            _blockNumber,
-            _timestamp,
-            _sender,
-            _inboxSeqNum,
-            _msgData
-        );
-        executeOp(context);
-        return returnContext(context);
-    }
-
-    // fields
-    // startMachineHash,
-    // endMachineHash,
-    // afterInboxHash,
-    // afterMessagesHash,
-    // afterLogsHash
-
-    function returnContext(AssertionContext memory context)
-        private
-        pure
-        returns (uint64 gas, bytes32[5] memory fields)
-    {
-        return (
-            context.gas,
-            [
-                Machine.hash(context.startMachine),
-                Machine.hash(context.afterMachine),
-                context.inboxAcc,
-                context.messageAcc,
-                context.logAcc
-            ]
-        );
-    }
-
-    struct ValueStack {
-        uint256 length;
-        Value.Data[] values;
-    }
-
-    function popVal(ValueStack memory stack) private pure returns (Value.Data memory) {
-        Value.Data memory val = stack.values[stack.length - 1];
-        stack.length--;
-        return val;
-    }
-
-    function pushVal(ValueStack memory stack, Value.Data memory val) private pure {
-        stack.values[stack.length] = val;
-        stack.length++;
-    }
-
-    struct AssertionContext {
-        Machine.Data startMachine;
-        Machine.Data afterMachine;
-        bytes32 inboxAcc;
-        bytes32 messageAcc;
-        bytes32 logAcc;
-        uint64 gas;
-        Value.Data inboxMessage;
-        bytes32 inboxMessageHash;
-        ValueStack stack;
-        ValueStack auxstack;
-        bool hadImmediate;
-        uint8 opcode;
-        bytes proof;
-        uint256 offset;
-    }
-
-    function handleError(AssertionContext memory context) private pure {
-        if (context.afterMachine.errHandlerHash == CODE_POINT_ERROR) {
-            context.afterMachine.setErrorStop();
-        } else {
-            context.afterMachine.instructionStackHash = context.afterMachine.errHandlerHash;
-        }
-    }
-
-    function deductGas(AssertionContext memory context, uint64 amount) private pure returns (bool) {
-        context.gas += amount;
-        if (context.afterMachine.arbGasRemaining < amount) {
-            context.afterMachine.arbGasRemaining = MAX_UINT256;
-            handleError(context);
-            return true;
-        } else {
-            context.afterMachine.arbGasRemaining -= amount;
-            return false;
-        }
-    }
-
-    function handleOpcodeError(AssertionContext memory context) private pure {
-        handleError(context);
-        // Also clear the stack and auxstack
-        context.stack.length = 0;
-        context.auxstack.length = 0;
-    }
-
-    function initializeExecutionContext(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes memory proof
-    ) internal pure returns (AssertionContext memory) {
-        uint8 stackCount = uint8(proof[0]);
-        uint8 auxstackCount = uint8(proof[1]);
-        uint256 offset = 2;
-
-        // Leave some extra space for values pushed on the stack in the proofs
-        Value.Data[] memory stackVals = new Value.Data[](stackCount + 4);
-        Value.Data[] memory auxstackVals = new Value.Data[](auxstackCount + 4);
-        for (uint256 i = 0; i < stackCount; i++) {
-            (offset, stackVals[i]) = Marshaling.deserialize(proof, offset);
-        }
-        for (uint256 i = 0; i < auxstackCount; i++) {
-            (offset, auxstackVals[i]) = Marshaling.deserialize(proof, offset);
-        }
-        Machine.Data memory mach;
-        (offset, mach) = Machine.deserializeMachine(proof, offset);
-
-        uint8 immediate = uint8(proof[offset]);
-        uint8 opCode = uint8(proof[offset + 1]);
-        offset += 2;
-        AssertionContext memory context = AssertionContext(
-            mach,
-            mach.clone(),
-            inboxAcc,
-            messagesAcc,
-            logsAcc,
-            0,
-            Value.newEmptyTuple(),
-            0,
-            ValueStack(stackCount, stackVals),
-            ValueStack(auxstackCount, auxstackVals),
-            immediate == 1,
-            opCode,
-            proof,
-            offset
-        );
-
-        require(immediate == 0 || immediate == 1, BAD_IMM_TYP);
-        Value.Data memory cp;
-        if (immediate == 0) {
-            cp = Value.newCodePoint(uint8(opCode), context.startMachine.instructionStackHash);
-        } else {
-            // If we have an immediate, there must be at least one stack value
-            require(stackVals.length > 0, NO_IMM);
-            cp = Value.newCodePoint(
-                uint8(opCode),
-                context.startMachine.instructionStackHash,
-                stackVals[stackCount - 1]
-            );
-        }
-        context.startMachine.instructionStackHash = cp.hash();
-
-        // Add the stack and auxstack values to the start machine
-        uint256 i = 0;
-        for (i = 0; i < stackCount - immediate; i++) {
-            context.startMachine.addDataStackValue(stackVals[i]);
-        }
-        for (i = 0; i < auxstackCount; i++) {
-            context.startMachine.addAuxStackValue(auxstackVals[i]);
-        }
-
-        return context;
-    }
-
-    function executeOp(AssertionContext memory context) internal view {
-        (
-            uint256 dataPopCount,
-            uint256 auxPopCount,
-            uint64 gasCost,
-            function(AssertionContext memory) internal view impl
-        ) = opInfo(context.opcode);
-
-        // Update end machine gas remaining before running opcode
-        if (deductGas(context, gasCost)) {
-            return;
-        }
-
-        if (context.stack.length < dataPopCount) {
-            // If we have insufficient values, reject the proof unless the stack has been fully exhausted
-            require(
-                context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash(),
-                STACK_MISSING
-            );
-            // If the stack is empty, the instruction underflowed so we have hit an error
-            handleError(context);
-            return;
-        }
-
-        if (context.auxstack.length < auxPopCount) {
-            // If we have insufficient values, reject the proof unless the auxstack has been fully exhausted
-            require(
-                context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash(),
-                AUX_MISSING
-            );
-            // If the auxstack is empty, the instruction underflowed so we have hit an error
-            handleError(context);
-            return;
-        }
-
-        // Require the prover to submit the minimal number of stack items
-        require(
-            ((dataPopCount > 0 || !context.hadImmediate) && context.stack.length == dataPopCount) ||
-                (context.hadImmediate && dataPopCount == 0 && context.stack.length == 1),
-            STACK_MANY
-        );
-        require(context.auxstack.length == auxPopCount, AUX_MANY);
-
-        impl(context);
-
-        // Add the stack and auxstack values to the start machine
-        uint256 i = 0;
-
-        for (i = 0; i < context.stack.length; i++) {
-            context.afterMachine.addDataStackValue(context.stack.values[i]);
-        }
-
-        for (i = 0; i < context.auxstack.length; i++) {
-            context.afterMachine.addAuxStackValue(context.auxstack.values[i]);
-        }
-    }
+    uint64 internal constant EC_PAIRING_BASE_GAS_COST = 1000;
+    uint64 internal constant EC_PAIRING_POINT_GAS_COST = 500000;
 
     /* solhint-disable no-inline-assembly */
 
@@ -472,15 +197,15 @@ contract OneStepProof is IOneStepProof {
     function executeIszeroInsn(AssertionContext memory context) internal pure {
         Value.Data memory val1 = popVal(context.stack);
         if (!val1.isInt()) {
-            pushVal(context.stack, Value.newInt(0));
-        } else {
-            uint256 a = val1.intVal;
-            uint256 c;
-            assembly {
-                c := iszero(a)
-            }
-            pushVal(context.stack, Value.newInt(c));
+            handleOpcodeError(context);
+            return;
         }
+        uint256 a = val1.intVal;
+        uint256 c;
+        assembly {
+            c := iszero(a)
+        }
+        pushVal(context.stack, Value.newInt(c));
     }
 
     function executeNotInsn(AssertionContext memory context) internal pure {
@@ -498,66 +223,6 @@ contract OneStepProof is IOneStepProof {
     }
 
     /* solhint-enable no-inline-assembly */
-
-    // Hash
-
-    function executeHashInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val = popVal(context.stack);
-        pushVal(context.stack, Value.newInt(uint256(val.hash())));
-    }
-
-    function executeTypeInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val = popVal(context.stack);
-        pushVal(context.stack, val.typeCodeVal());
-    }
-
-    function executeKeccakFInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val = popVal(context.stack);
-        if (!val.isTuple() || val.tupleVal.length != 7) {
-            handleOpcodeError(context);
-            return;
-        }
-
-        Value.Data[] memory values = val.tupleVal;
-        for (uint256 i = 0; i < 7; i++) {
-            if (!values[i].isInt()) {
-                handleOpcodeError(context);
-                return;
-            }
-        }
-        uint256[25] memory data;
-        for (uint256 i = 0; i < 25; i++) {
-            data[5 * (i % 5) + i / 5] = uint256(uint64(values[i / 4].intVal >> ((i % 4) * 64)));
-        }
-
-        data = Precompiles.keccakF(data);
-
-        Value.Data[] memory outValues = new Value.Data[](7);
-        for (uint256 i = 0; i < 7; i++) {
-            outValues[i] = Value.newInt(0);
-        }
-
-        for (uint256 i = 0; i < 25; i++) {
-            outValues[i / 4].intVal |= data[5 * (i % 5) + i / 5] << ((i % 4) * 64);
-        }
-
-        pushVal(context.stack, Value.newTuple(outValues));
-    }
-
-    function executeSha256FInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        Value.Data memory val2 = popVal(context.stack);
-        Value.Data memory val3 = popVal(context.stack);
-        if (!val1.isInt() || !val2.isInt() || !val3.isInt()) {
-            handleOpcodeError(context);
-            return;
-        }
-        uint256 a = val1.intVal;
-        uint256 b = val2.intVal;
-        uint256 c = val3.intVal;
-
-        pushVal(context.stack, Value.newInt(Precompiles.sha256Block([b, c], a)));
-    }
 
     // Stack ops
 
@@ -599,8 +264,9 @@ contract OneStepProof is IOneStepProof {
     }
 
     function executeStackemptyInsn(AssertionContext memory context) internal pure {
-        bool empty = context.stack.length == 0 &&
-            context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash();
+        bool empty =
+            context.stack.length == 0 &&
+                context.afterMachine.dataStack.hash() == Value.newEmptyTuple().hash();
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
@@ -617,11 +283,13 @@ contract OneStepProof is IOneStepProof {
     }
 
     function executeAuxstackemptyInsn(AssertionContext memory context) internal pure {
-        bool empty = context.auxstack.length == 0 &&
-            context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash();
+        bool empty =
+            context.auxstack.length == 0 &&
+                context.afterMachine.auxStack.hash() == Value.newEmptyTuple().hash();
         pushVal(context.stack, Value.newBoolean(empty));
     }
 
+    /* solhint-disable-next-line no-empty-blocks */
     function executeNopInsn(AssertionContext memory) internal pure {}
 
     function executeErrpushInsn(AssertionContext memory context) internal pure {
@@ -747,26 +415,78 @@ contract OneStepProof is IOneStepProof {
 
     // System operations
 
-    function executeSendInsn(AssertionContext memory context) internal pure {
-        Value.Data memory val1 = popVal(context.stack);
-        if (val1.size > SEND_SIZE_LIMIT || !val1.isValidTypeForSend()) {
-            handleOpcodeError(context);
-            return;
-        }
-        context.messageAcc = keccak256(abi.encodePacked(context.messageAcc, val1.hash()));
-    }
-
     function incrementInbox(AssertionContext memory context)
         private
-        pure
-        returns (Value.Data memory)
+        view
+        returns (Value.Data memory message)
     {
-        require(context.inboxMessageHash != 0, INBOX_VAL);
-        context.inboxAcc = Messages.addMessageToInbox(context.inboxAcc, context.inboxMessageHash);
-        return context.inboxMessage;
+        bytes memory proof = context.proof;
+
+        bytes32 messageHash;
+        Value.Data[] memory tupData = new Value.Data[](8);
+
+        {
+            // Get message out of proof
+            uint8 kind = uint8(proof[context.offset]);
+            context.offset++;
+            uint256 l1BlockNumber;
+            uint256 l1Timestamp;
+            uint256 inboxSeqNum;
+            uint256 gasPriceL1;
+            address sender = proof.toAddress(context.offset);
+            context.offset += 20;
+            (context.offset, l1BlockNumber) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, l1Timestamp) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, inboxSeqNum) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, gasPriceL1) = Marshaling.deserializeInt(proof, context.offset);
+            uint256 messageDataLength;
+            (context.offset, messageDataLength) = Marshaling.deserializeInt(proof, context.offset);
+            bytes32 messageBufHash =
+                Hashing.bytesToBufferHash(proof, context.offset, messageDataLength);
+
+            uint256 offset = context.offset;
+            bytes32 messageDataHash;
+            assembly {
+                messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
+            }
+
+            messageHash = Messages.messageHash(
+                kind,
+                sender,
+                l1BlockNumber,
+                l1Timestamp,
+                inboxSeqNum,
+                gasPriceL1,
+                messageDataHash
+            );
+
+            tupData[0] = Value.newInt(uint256(kind));
+            tupData[1] = Value.newInt(l1BlockNumber);
+            tupData[2] = Value.newInt(l1Timestamp);
+            tupData[3] = Value.newInt(uint256(sender));
+            tupData[4] = Value.newInt(inboxSeqNum);
+            tupData[5] = Value.newInt(gasPriceL1);
+            tupData[6] = Value.newInt(messageDataLength);
+            tupData[7] = Value.newHashedValue(messageBufHash, 1);
+        }
+
+        bytes32 prevAcc = 0;
+        if (context.totalMessagesRead > 0) {
+            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
+        }
+
+        require(
+            Messages.addMessageToInbox(prevAcc, messageHash) ==
+                context.bridge.inboxAccs(context.totalMessagesRead),
+            "WRONG_MESSAGE"
+        );
+
+        context.totalMessagesRead++;
+
+        return Value.newTuple(tupData);
     }
 
-    function executeInboxPeekInsn(AssertionContext memory context) internal pure {
+    function executeInboxPeekInsn(AssertionContext memory context) internal view {
         Value.Data memory val = popVal(context.stack);
         if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             context.afterMachine.pendingMessage = incrementInbox(context);
@@ -778,7 +498,7 @@ contract OneStepProof is IOneStepProof {
         );
     }
 
-    function executeInboxInsn(AssertionContext memory context) internal pure {
+    function executeInboxInsn(AssertionContext memory context) internal view {
         if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
             // The pending message field is already full
             pushVal(context.stack, context.afterMachine.pendingMessage);
@@ -827,6 +547,11 @@ contract OneStepProof is IOneStepProof {
     }
 
     function executeSideloadInsn(AssertionContext memory context) internal pure {
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
         Value.Data[] memory values = new Value.Data[](0);
         pushVal(context.stack, Value.newTuple(values));
     }
@@ -851,6 +576,8 @@ contract OneStepProof is IOneStepProof {
         address ret = ecrecover(message, v, r, s);
         pushVal(context.stack, Value.newInt(uint256(ret)));
     }
+
+    /* solhint-disable no-inline-assembly */
 
     function executeECAddInsn(AssertionContext memory context) internal view {
         Value.Data memory val1 = popVal(context.stack);
@@ -905,11 +632,12 @@ contract OneStepProof is IOneStepProof {
         Value.Data memory val = popVal(context.stack);
 
         Value.Data[MAX_PAIRING_COUNT] memory items;
+        bool postGasError = false;
         uint256 count;
         for (count = 0; count < MAX_PAIRING_COUNT; count++) {
             if (!val.isTuple()) {
-                handleOpcodeError(context);
-                return;
+                postGasError = true;
+                break;
             }
             Value.Data[] memory stackTupleVals = val.tupleVal;
             if (stackTupleVals.length == 0) {
@@ -917,18 +645,22 @@ contract OneStepProof is IOneStepProof {
                 break;
             }
             if (stackTupleVals.length != 2) {
-                handleOpcodeError(context);
-                return;
+                postGasError = true;
+                break;
             }
             items[count] = stackTupleVals[0];
             val = stackTupleVals[1];
         }
 
         if (deductGas(context, uint64(EC_PAIRING_POINT_GAS_COST * count))) {
+            // When we run out of gas, we only charge for an error + gas_set
+            // That means we need to deduct the previously charged base cost here
+            context.gas -= EC_PAIRING_BASE_GAS_COST;
+            handleError(context);
             return;
         }
 
-        if (!val.isTuple() || val.tupleVal.length != 0) {
+        if (postGasError || !val.isTuple() || val.tupleVal.length != 0) {
             // Must end on empty tuple
             handleOpcodeError(context);
             return;
@@ -979,6 +711,8 @@ contract OneStepProof is IOneStepProof {
         pushVal(context.stack, Value.newBoolean(out[0] != 0));
     }
 
+    /* solhint-enable no-inline-assembly */
+
     function executeErrorInsn(AssertionContext memory context) internal pure {
         handleOpcodeError(context);
     }
@@ -987,105 +721,14 @@ contract OneStepProof is IOneStepProof {
         context.afterMachine.setHalt();
     }
 
-    // Stop and arithmetic ops
-    uint8 private constant OP_ADD = 0x01;
-    uint8 private constant OP_MUL = 0x02;
-    uint8 private constant OP_SUB = 0x03;
-    uint8 private constant OP_DIV = 0x04;
-    uint8 private constant OP_SDIV = 0x05;
-    uint8 private constant OP_MOD = 0x06;
-    uint8 private constant OP_SMOD = 0x07;
-    uint8 private constant OP_ADDMOD = 0x08;
-    uint8 private constant OP_MULMOD = 0x09;
-    uint8 private constant OP_EXP = 0x0a;
-    uint8 private constant OP_SIGNEXTEND = 0x0b;
-
-    // Comparison & bitwise logic
-    uint8 private constant OP_LT = 0x10;
-    uint8 private constant OP_GT = 0x11;
-    uint8 private constant OP_SLT = 0x12;
-    uint8 private constant OP_SGT = 0x13;
-    uint8 private constant OP_EQ = 0x14;
-    uint8 private constant OP_ISZERO = 0x15;
-    uint8 private constant OP_AND = 0x16;
-    uint8 private constant OP_OR = 0x17;
-    uint8 private constant OP_XOR = 0x18;
-    uint8 private constant OP_NOT = 0x19;
-    uint8 private constant OP_BYTE = 0x1a;
-    uint8 private constant OP_SHL = 0x1b;
-    uint8 private constant OP_SHR = 0x1c;
-    uint8 private constant OP_SAR = 0x1d;
-
-    // SHA3
-    uint8 private constant OP_HASH = 0x20;
-    uint8 private constant OP_TYPE = 0x21;
-    uint8 private constant OP_ETHHASH2 = 0x22;
-    uint8 private constant OP_KECCAK_F = 0x23;
-    uint8 private constant OP_SHA256_F = 0x24;
-
-    // Stack, Memory, Storage and Flow Operations
-    uint8 private constant OP_POP = 0x30;
-    uint8 private constant OP_SPUSH = 0x31;
-    uint8 private constant OP_RPUSH = 0x32;
-    uint8 private constant OP_RSET = 0x33;
-    uint8 private constant OP_JUMP = 0x34;
-    uint8 private constant OP_CJUMP = 0x35;
-    uint8 private constant OP_STACKEMPTY = 0x36;
-    uint8 private constant OP_PCPUSH = 0x37;
-    uint8 private constant OP_AUXPUSH = 0x38;
-    uint8 private constant OP_AUXPOP = 0x39;
-    uint8 private constant OP_AUXSTACKEMPTY = 0x3a;
-    uint8 private constant OP_NOP = 0x3b;
-    uint8 private constant OP_ERRPUSH = 0x3c;
-    uint8 private constant OP_ERRSET = 0x3d;
-
-    // Duplication and Exchange operations
-    uint8 private constant OP_DUP0 = 0x40;
-    uint8 private constant OP_DUP1 = 0x41;
-    uint8 private constant OP_DUP2 = 0x42;
-    uint8 private constant OP_SWAP1 = 0x43;
-    uint8 private constant OP_SWAP2 = 0x44;
-
-    // Tuple opertations
-    uint8 private constant OP_TGET = 0x50;
-    uint8 private constant OP_TSET = 0x51;
-    uint8 private constant OP_TLEN = 0x52;
-    uint8 private constant OP_XGET = 0x53;
-    uint8 private constant OP_XSET = 0x54;
-
-    // Logging opertations
-    uint8 private constant OP_BREAKPOINT = 0x60;
-    uint8 private constant OP_LOG = 0x61;
-
-    // System operations
-    uint8 private constant OP_SEND = 0x70;
-    uint8 private constant OP_INBOX_PEEK = 0x71;
-    uint8 private constant OP_INBOX = 0x72;
-    uint8 private constant OP_ERROR = 0x73;
-    uint8 private constant OP_STOP = 0x74;
-    uint8 private constant OP_SETGAS = 0x75;
-    uint8 private constant OP_PUSHGAS = 0x76;
-    uint8 private constant OP_ERR_CODE_POINT = 0x77;
-    uint8 private constant OP_PUSH_INSN = 0x78;
-    uint8 private constant OP_PUSH_INSN_IMM = 0x79;
-    // uint8 private constant OP_OPEN_INSN = 0x7a;
-    uint8 private constant OP_SIDELOAD = 0x7b;
-
-    uint8 private constant OP_ECRECOVER = 0x80;
-    uint8 private constant OP_ECADD = 0x81;
-    uint8 private constant OP_ECMUL = 0x82;
-    uint8 private constant OP_ECPAIRING = 0x83;
-
-    uint64 private constant EC_PAIRING_POINT_GAS_COST = 500000;
-
-    uint8 private constant CODE_POINT_TYPECODE = 1;
-    bytes32 private constant CODE_POINT_ERROR = keccak256(
-        abi.encodePacked(CODE_POINT_TYPECODE, uint8(0), bytes32(0))
-    );
+    function executeNewBuffer(AssertionContext memory context) internal pure {
+        pushVal(context.stack, Value.newBuffer(keccak256(abi.encodePacked(bytes32(0)))));
+    }
 
     function opInfo(uint256 opCode)
-        private
+        internal
         pure
+        override
         returns (
             uint256, // stack pops
             uint256, // auxstack pops
@@ -1123,16 +766,6 @@ contract OneStepProof is IOneStepProof {
             return (1, 0, 1, executeNotInsn);
         } else if (opCode == OP_BYTE || opCode == OP_SHL || opCode == OP_SHR || opCode == OP_SAR) {
             return (2, 0, 4, binaryMathOp);
-        } else if (opCode == OP_HASH) {
-            return (1, 0, 7, executeHashInsn);
-        } else if (opCode == OP_TYPE) {
-            return (1, 0, 3, executeTypeInsn);
-        } else if (opCode == OP_ETHHASH2) {
-            return (2, 0, 8, binaryMathOp);
-        } else if (opCode == OP_KECCAK_F) {
-            return (1, 0, 600, executeKeccakFInsn);
-        } else if (opCode == OP_SHA256_F) {
-            return (3, 0, 250, executeSha256FInsn);
         } else if (opCode == OP_POP) {
             return (1, 0, 1, executePopInsn);
         } else if (opCode == OP_SPUSH) {
@@ -1185,18 +818,16 @@ contract OneStepProof is IOneStepProof {
             return (0, 0, 100, executeNopInsn);
         } else if (opCode == OP_LOG) {
             return (1, 0, 100, executeLogInsn);
-        } else if (opCode == OP_SEND) {
-            return (1, 0, 100, executeSendInsn);
         } else if (opCode == OP_INBOX_PEEK) {
             return (1, 0, 40, executeInboxPeekInsn);
         } else if (opCode == OP_INBOX) {
             return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {
-            return (0, 0, 5, executeErrorInsn);
+            return (0, 0, ERROR_GAS_COST, executeErrorInsn);
         } else if (opCode == OP_STOP) {
             return (0, 0, 10, executeStopInsn);
         } else if (opCode == OP_SETGAS) {
-            return (1, 0, 0, executeSetGasInsn);
+            return (1, 0, 1, executeSetGasInsn);
         } else if (opCode == OP_PUSHGAS) {
             return (0, 0, 1, executePushGasInsn);
         } else if (opCode == OP_ERR_CODE_POINT) {
@@ -1206,7 +837,7 @@ contract OneStepProof is IOneStepProof {
         } else if (opCode == OP_PUSH_INSN_IMM) {
             return (3, 0, 25, executePushInsnImmInsn);
         } else if (opCode == OP_SIDELOAD) {
-            return (0, 0, 10, executeSideloadInsn);
+            return (1, 0, 10, executeSideloadInsn);
         } else if (opCode == OP_ECRECOVER) {
             return (4, 0, 20000, executeECRecoverInsn);
         } else if (opCode == OP_ECADD) {
@@ -1214,9 +845,17 @@ contract OneStepProof is IOneStepProof {
         } else if (opCode == OP_ECMUL) {
             return (3, 0, 82000, executeECMulInsn);
         } else if (opCode == OP_ECPAIRING) {
-            return (1, 0, 1000, executeECPairingInsn);
+            return (1, 0, EC_PAIRING_BASE_GAS_COST, executeECPairingInsn);
+        } else if (opCode == OP_DEBUGPRINT) {
+            return (1, 0, 1, executePopInsn);
+        } else if (opCode == OP_NEWBUFFER) {
+            return (0, 0, 1, executeNewBuffer);
+        } else if (opCode >= OP_HASH && opCode <= OP_SHA256_F) {
+            revert("use another contract to handle hashing opcodes");
+        } else if ((opCode >= OP_GETBUFFER8 && opCode <= OP_SETBUFFER256) || opCode == OP_SEND) {
+            revert("use another contract to handle buffer opcodes");
         } else {
-            return (0, 0, 0, executeErrorInsn);
+            return (0, 0, ERROR_GAS_COST, executeErrorInsn);
         }
     }
 }

@@ -17,10 +17,13 @@
 #ifndef machine_hpp
 #define machine_hpp
 
+#include <avm/inboxmessage.hpp>
 #include <avm/machinestate/machinestate.hpp>
 #include <avm_values/value.hpp>
 
+#include <rocksdb/slice.h>
 #include <chrono>
+#include <deque>
 #include <memory>
 #include <vector>
 
@@ -28,54 +31,54 @@ struct Assertion {
     uint64_t stepCount;
     uint64_t gasCount;
     uint64_t inbox_messages_consumed;
-    std::vector<value> outMessages;
+    std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;
     std::vector<value> debugPrints;
+    std::optional<uint256_t> sideloadBlockNumber;
+};
+
+class MachineExecutionConfig {
+   public:
+    uint256_t max_gas;
+    bool go_over_gas;
+    std::vector<InboxMessage> inbox_messages;
+    std::optional<uint256_t> next_block_height;
+    std::deque<InboxMessage> sideloads;
+    bool stop_on_sideload;
+
+    MachineExecutionConfig();
+
+    void setInboxMessagesFromBytes(
+        const std::vector<std::vector<unsigned char>>&);
+    void setSideloadsFromBytes(const std::vector<std::vector<unsigned char>>&);
 };
 
 class Machine {
     friend std::ostream& operator<<(std::ostream&, const Machine&);
 
-    Assertion executeMachine(uint64_t stepCount,
-                             std::chrono::seconds wallLimit,
-                             std::vector<Tuple> inbox_messages,
-                             Tuple sideload,
-                             bool blockingSideload_,
-                             nonstd::optional<value> fake_inbox_peek_value_);
+    Assertion runImpl();
 
    public:
     MachineState machine_state;
 
     Machine() = default;
-    Machine(MachineState machine_state_)
+    explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
     Machine(std::shared_ptr<Code> code, value static_val)
         : machine_state(std::move(code), std::move(static_val)) {}
 
     static Machine loadFromFile(const std::string& executable_filename) {
-        return {MachineState::loadFromFile(executable_filename)};
+        return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    Assertion runSideloaded(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            Tuple sideload);
+    Assertion run();
 
-    Assertion run(uint64_t stepCount,
-                  std::vector<Tuple> inbox_messages,
-                  std::chrono::seconds wallLimit);
-
-    Assertion runCallServer(uint64_t stepCount,
-                            std::vector<Tuple> inbox_messages,
-                            std::chrono::seconds wallLimit,
-                            value fake_inbox_peek_value);
-
-    Status currentStatus() { return machine_state.state; }
-    uint256_t hash() const { return machine_state.hash(); }
+    Status currentStatus() const { return machine_state.state; }
+    std::optional<uint256_t> hash() const { return machine_state.hash(); }
     BlockReason isBlocked(bool newMessages) const {
         return machine_state.isBlocked(newMessages);
     }
-    std::vector<unsigned char> marshalForProof() {
+    OneStepProof marshalForProof() const {
         return machine_state.marshalForProof();
     }
 

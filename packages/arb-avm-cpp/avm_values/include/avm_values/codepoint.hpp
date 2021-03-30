@@ -17,15 +17,16 @@
 #ifndef codepoint_hpp
 #define codepoint_hpp
 
+#include <avm_values/buffer.hpp>
 #include <avm_values/opcodes.hpp>
 #include <avm_values/tuple.hpp>
 #include <avm_values/value.hpp>
 
-#include <nonstd/optional.hpp>
+#include <optional>
 
 struct Operation {
     OpCode opcode;
-    nonstd::optional<value> immediate;
+    std::optional<value> immediate;
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);

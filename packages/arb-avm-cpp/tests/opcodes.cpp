@@ -41,7 +41,7 @@ MachineState runUnaryOp(uint256_t arg1, OpCode op) {
 void testUnaryOp(uint256_t arg1, uint256_t result, OpCode op) {
     MachineState m = runUnaryOp(arg1, op);
     value res = m.stack.pop();
-    auto num = nonstd::get_if<uint256_t>(&res);
+    auto num = std::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
     REQUIRE(m.stack.stacksize() == 0);
@@ -61,7 +61,7 @@ void testBinaryOp(uint256_t arg1,
                   OpCode op) {
     MachineState m = runBinaryOp(arg1, arg2, op);
     value res = m.stack.pop();
-    auto actual = nonstd::get_if<uint256_t>(&res);
+    auto actual = std::get_if<uint256_t>(&res);
     REQUIRE(actual);
     REQUIRE(*actual == expected);
     REQUIRE(m.stack.stacksize() == 0);
@@ -86,7 +86,7 @@ void testTertiaryOp(uint256_t arg1,
                     OpCode op) {
     MachineState m = runTertiaryOp(arg1, arg2, arg3, op);
     value res = m.stack.pop();
-    auto num = nonstd::get_if<uint256_t>(&res);
+    auto num = std::get_if<uint256_t>(&res);
     REQUIRE(num);
     REQUIRE(*num == result);
     REQUIRE(m.stack.stacksize() == 0);
@@ -146,7 +146,7 @@ TEST_CASE("OPCODE: DIV opcode is correct") {
     SECTION("unsigned division is correct") {
         MachineState m = runBinaryOp(-6_u256, 2_u256, OpCode::DIV);
         value res = m.stack.pop();
-        auto num = nonstd::get_if<uint256_t>(&res);
+        auto num = std::get_if<uint256_t>(&res);
         REQUIRE(num);
         REQUIRE(*num != 3);
         REQUIRE(m.stack.stacksize() == 0);
@@ -285,7 +285,7 @@ TEST_CASE("OPCODE: GT opcode is correct") {
         std::fill(machines.begin(), machines.end(), sample_machine);
         meter.measure([&machines](int i) {
             auto& mach = machines[i];
-            for (int i = 0; i < 100; i++) {
+            for (int j = 0; j < 100; j++) {
                 mach.runOp(OpCode::GT);
             }
             return mach;
@@ -346,7 +346,7 @@ TEST_CASE("OPCODE: EQ opcode is correct") {
         m.stack.push(Tuple{uint256_t{1}, uint256_t{2}});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
-        auto actual = nonstd::get_if<uint256_t>(&res);
+        auto actual = std::get_if<uint256_t>(&res);
         REQUIRE(actual);
         REQUIRE(*actual == 1);
         REQUIRE(m.stack.stacksize() == 0);
@@ -357,7 +357,7 @@ TEST_CASE("OPCODE: EQ opcode is correct") {
         m.stack.push(Tuple{uint256_t{1}, uint256_t{3}});
         m.runOp(OpCode::EQ);
         value res = m.stack.pop();
-        auto actual = nonstd::get_if<uint256_t>(&res);
+        auto actual = std::get_if<uint256_t>(&res);
         REQUIRE(actual);
         REQUIRE(*actual == 0);
         REQUIRE(m.stack.stacksize() == 0);
@@ -879,7 +879,7 @@ TEST_CASE("OPCODE: BREAKPOINT opcode is correct") {
         MachineState m;
         auto blockReason = m.runOp(OpCode::BREAKPOINT);
         REQUIRE(m.state == Status::Extensive);
-        REQUIRE(nonstd::get_if<BreakpointBlocked>(&blockReason));
+        REQUIRE(std::get_if<BreakpointBlocked>(&blockReason) != nullptr);
         REQUIRE(m.stack.stacksize() == 0);
     }
 }
@@ -898,8 +898,10 @@ TEST_CASE("OPCODE: SEND opcode is correct") {
     SECTION("send") {
         // TODO: fill in send test
         MachineState m;
-        m.stack.push(
-            Tuple{uint256_t{1}, uint256_t{2345}, uint256_t{1}, uint256_t{4}});
+        Buffer buf{};
+        buf = buf.set(0, 200);
+        m.stack.push(std::move(buf));
+        m.stack.push(uint256_t{1});
 
         m.runOp(OpCode::SEND);
         REQUIRE(m.stack.stacksize() == 0);
@@ -927,7 +929,7 @@ TEST_CASE("OPCODE: SET_GAS opcode is correct") {
 }
 
 uint256_t& assumeInt(value& val) {
-    auto aNum = nonstd::get_if<uint256_t>(&val);
+    auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -1095,14 +1097,14 @@ TEST_CASE("OPCODE: KECCAKF opcode is correct") {
         m.runOne();
         auto ret = m.stack.pop();
         {
-            REQUIRE(nonstd::holds_alternative<Tuple>(ret));
-            auto ret_tup = nonstd::get<Tuple>(ret);
+            REQUIRE(std::holds_alternative<Tuple>(ret));
+            auto ret_tup = std::get<Tuple>(ret);
             REQUIRE(ret_tup.tuple_size() == 7);
             std::array<uint256_t, 7> parts;
             for (size_t i = 0; i < 7; ++i) {
                 auto val = ret_tup.get_element(i);
-                REQUIRE(nonstd::holds_alternative<uint256_t>(val));
-                parts[i] = nonstd::get<uint256_t>(val);
+                REQUIRE(std::holds_alternative<uint256_t>(val));
+                parts[i] = std::get<uint256_t>(val);
             }
 
             uint256_t correct0 = hexToInt(
@@ -1140,14 +1142,14 @@ TEST_CASE("OPCODE: KECCAKF opcode is correct") {
         m.runOne();
         ret = m.stack.pop();
         {
-            REQUIRE(nonstd::holds_alternative<Tuple>(ret));
-            auto ret_tup = nonstd::get<Tuple>(ret);
+            REQUIRE(std::holds_alternative<Tuple>(ret));
+            auto ret_tup = std::get<Tuple>(ret);
             REQUIRE(ret_tup.tuple_size() == 7);
             std::array<uint256_t, 7> parts;
             for (size_t i = 0; i < 7; ++i) {
                 auto val = ret_tup.get_element(i);
-                REQUIRE(nonstd::holds_alternative<uint256_t>(val));
-                parts[i] = nonstd::get<uint256_t>(val);
+                REQUIRE(std::holds_alternative<uint256_t>(val));
+                parts[i] = std::get<uint256_t>(val);
             }
             uint256_t correct0 = hexToInt(
                 "8a20d9b25569d094093d8d1270d76b6c6a332cd07057b56d2d5c954df96ecb"
@@ -1256,8 +1258,8 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
                 m.stack.push(initial_hash_state);
                 m.runOne();
                 auto ret = m.stack.pop();
-                REQUIRE(nonstd::holds_alternative<uint256_t>(ret));
-                REQUIRE(ret.get<uint256_t>() == test_case.output_digest);
+                REQUIRE(std::holds_alternative<uint256_t>(ret));
+                REQUIRE(std::get<uint256_t>(ret) == test_case.output_digest);
             }
             ++i;
         }
@@ -1272,5 +1274,103 @@ TEST_CASE("OPCODE: Stack underflow") {
         code->addOperation(stub.pc, Operation(static_cast<OpCode>(op)));
         MachineState m{std::move(code), uint256_t{5}};
         m.runOne();
+    }
+}
+
+TEST_CASE("OPCODE: Newbuffer opcode") {
+    SECTION("Creates new buffer") {
+        MachineState mach;
+        mach.runOp(OpCode::NEW_BUFFER);
+        REQUIRE(mach.stack[0] == value{Buffer()});
+    }
+}
+
+TEST_CASE("OPCODE: getbuffer8 opcode") {
+    SECTION("Reads from buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(buf);
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::GET_BUFFER8);
+        REQUIRE(mach.stack[0] == value{uint256_t{7}});
+    }
+}
+
+TEST_CASE("OPCODE: getbuffer64 opcode") {
+    SECTION("Reads from buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(buf);
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::GET_BUFFER64);
+        REQUIRE(mach.stack[0] == value{uint256_t{7L << 56L}});
+    }
+}
+
+TEST_CASE("OPCODE: getbuffer256 opcode") {
+    SECTION("Reads from buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(buf);
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::GET_BUFFER256);
+        REQUIRE(mach.stack[0] == value{uint256_t{7L} << 248});
+    }
+}
+
+TEST_CASE("OPCODE: setbuffer8 opcode") {
+    SECTION("Writes to buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 7);
+        mach.stack.push(Buffer());
+        mach.stack.push(uint256_t{7});
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::SET_BUFFER8);
+        REQUIRE(mach.stack[0] == value{buf});
+    }
+}
+
+TEST_CASE("OPCODE: setbuffer64 opcode") {
+    SECTION("Writes to buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 9);
+        buf = buf.set(123 + 1, 8);
+        buf = buf.set(123 + 7, 7);
+        mach.stack.push(Buffer());
+        mach.stack.push(uint256_t{0x0908000000000007L});
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::SET_BUFFER64);
+        REQUIRE(mach.stack[0] == value{buf});
+    }
+}
+
+TEST_CASE("OPCODE: setbuffer256 opcode") {
+    SECTION("Writes to buffer") {
+        MachineState mach;
+        Buffer buf;
+        buf = buf.set(123, 9);
+        buf = buf.set(123 + 1, 8);
+        buf = buf.set(123 + 7, 7);
+        buf = buf.set(123 + 8, 9);
+        buf = buf.set(123 + 1 + 8, 8);
+        buf = buf.set(123 + 7 + 8, 7);
+        buf = buf.set(123 + 16, 9);
+        buf = buf.set(123 + 1 + 16, 8);
+        buf = buf.set(123 + 7 + 16, 7);
+        buf = buf.set(123 + 24, 9);
+        buf = buf.set(123 + 1 + 24, 8);
+        buf = buf.set(123 + 7 + 24, 7);
+        mach.stack.push(Buffer());
+        mach.stack.push(
+            hexToInt("090800000000000709080000000000070908000000000007090800000"
+                     "0000007"));
+        mach.stack.push(uint256_t{123});
+        mach.runOp(OpCode::SET_BUFFER256);
+        REQUIRE(mach.stack[0] == value{buf});
     }
 }

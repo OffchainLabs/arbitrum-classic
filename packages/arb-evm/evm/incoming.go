@@ -1,12 +1,10 @@
 package evm
 
 import (
-	"errors"
 	"github.com/ethereum/go-ethereum/core/types"
-	"log"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/pkg/errors"
 )
 
 type ProcessedTx struct {
@@ -18,18 +16,8 @@ type ProcessedTx struct {
 
 func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 	msg := res.IncomingRequest
-	// Special handling for buddy deploy
-	if msg.Kind == message.L2BuddyDeploy {
-		buddyDeployMessage := message.NewBuddyDeploymentFromData(msg.Data)
-		return &ProcessedTx{
-			Result: res,
-			Tx:     buddyDeployMessage.AsEthTx(),
-			Kind:   msg.Kind,
-		}, nil
-	}
-
-	if msg.Kind != message.L2Type {
-		return nil, errors.New("result is not a transaction")
+	if msg.Kind != message.L2Type && msg.Kind != message.RetryableType {
+		return nil, errors.Errorf("result is not a transaction %v", msg.Kind)
 	}
 	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
 	if err != nil {
@@ -53,12 +41,16 @@ func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 	for _, res := range results {
 		kind := res.IncomingRequest.Kind
 		// Ignore other message types
-		if kind != message.L2Type && kind != message.L2BuddyDeploy {
+		if kind != message.L2Type && kind != message.RetryableType {
 			continue
 		}
 		processed, err := GetTransaction(res)
 		if err != nil {
-			log.Println("Couldn't return transaction for request", res.IncomingRequest.MessageID)
+			logger.Info().
+				Stack().
+				Err(err).
+				Hex("request", res.IncomingRequest.MessageID.Bytes()).
+				Msg("Couldn't return transaction for request")
 			continue
 		}
 		filteredResults = append(filteredResults, processed)

@@ -19,17 +19,17 @@
 #include "value/utils.hpp"
 
 #include <data_storage/datastorage.hpp>
+#include <data_storage/readwritetransaction.hpp>
 #include <data_storage/storageresult.hpp>
 
 #include <rocksdb/status.h>
-#include <rocksdb/utilities/transaction_db.h>
 
 #include <boost/endian/conversion.hpp>
 
 #include <sstream>
 
-constexpr auto log_key = std::array<char, 1>{-50};
-constexpr auto message_key = std::array<char, 1>{-51};
+constexpr auto logs_processed_key = std::array<char, 1>{-51};
+
 constexpr auto block_key = std::array<char, 1>{-52};
 
 constexpr auto request_key_prefix = std::array<char, 1>{-54};
@@ -38,10 +38,13 @@ constexpr auto request_key_size = request_key_prefix.size() + 32;
 constexpr auto block_hash_key_prefix = std::array<char, 1>{-55};
 constexpr auto block_hash_key_size = block_hash_key_prefix.size() + 32;
 
+constexpr auto message_batch_key_prefix = std::array<char, 1>{-56};
+constexpr auto message_batch_key_size = message_batch_key_prefix.size() + 32;
+
 namespace {
 
-void commitTx(rocksdb::Transaction& tx) {
-    auto s = tx.Commit();
+void commitTx(ReadWriteTransaction& tx) {
+    auto s = tx.commit();
     if (!s.ok()) {
         throw std::runtime_error("failed to commit tx");
     }
@@ -54,25 +57,25 @@ auto addUint64ToKey(uint64_t height, Iterator it) {
     return std::copy(big_height_ptr, big_height_ptr + sizeof(big_height), it);
 }
 
-template <typename Iterator>
-uint64_t extractUint64(Iterator& it) {
-    uint64_t big_height;
-    auto big_height_ptr = reinterpret_cast<char*>(&big_height);
-    std::copy(it, it + sizeof(big_height), big_height_ptr);
-    it += sizeof(uint64_t);
-    return boost::endian::big_to_native(big_height);
-}
-
 std::array<char, request_key_size> requestKey(const uint256_t& request_id) {
-    std::array<char, request_key_size> key;
+    std::array<char, request_key_size> key{};
     auto it = std::copy(request_key_prefix.begin(), request_key_prefix.end(),
                         key.begin());
     to_big_endian(request_id, it);
     return key;
 }
 
+std::array<char, message_batch_key_size> messageBatchKey(
+    const uint256_t& batch_number) {
+    std::array<char, message_batch_key_size> key{};
+    auto it = std::copy(message_batch_key_prefix.begin(),
+                        message_batch_key_prefix.end(), key.begin());
+    to_big_endian(batch_number, it);
+    return key;
+}
+
 std::array<char, sizeof(uint64_t)> uint64Value(uint64_t height) {
-    std::array<char, sizeof(uint64_t)> key;
+    std::array<char, sizeof(uint64_t)> key{};
     addUint64ToKey(height, key.begin());
     return key;
 }
@@ -82,7 +85,7 @@ std::array<char, sizeof(uint64_t)> requestValue(uint64_t log_index) {
 }
 
 std::array<char, request_key_size> blockHashKey(const uint256_t& block_hash) {
-    std::array<char, block_hash_key_size> key;
+    std::array<char, block_hash_key_size> key{};
     auto it = std::copy(block_hash_key_prefix.begin(),
                         block_hash_key_prefix.end(), key.begin());
     to_big_endian(block_hash, it);
@@ -92,231 +95,181 @@ std::array<char, request_key_size> blockHashKey(const uint256_t& block_hash) {
 std::array<char, sizeof(uint64_t)> blockHashValue(uint64_t block_height) {
     return uint64Value(block_height);
 }
+
+void saveBlockCount(ReadWriteTransaction& tx, uint64_t max) {
+    auto value = uint64Value(max);
+    auto s = tx.aggregatorPut(vecToSlice(block_key), vecToSlice(value));
+    if (!s.ok()) {
+        throw std::runtime_error("failed to save count");
+    }
+}
+
+uint64_t blockCountImpl(const ReadTransaction& tx) {
+    std::string value;
+    auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
+    if (!s.ok()) {
+        throw std::runtime_error("no block count saved");
+    }
+    auto it = value.begin();
+    return extractUint64(it);
+}
+
+void updateLogsProcessedCountImpl(ReadWriteTransaction& tx,
+                                  const uint256_t& count) {
+    std::vector<unsigned char> value;
+    marshal_uint256_t(count, value);
+    auto s =
+        tx.aggregatorPut(vecToSlice(logs_processed_key), vecToSlice(value));
+    if (!s.ok()) {
+        throw std::runtime_error("filed to save processed count");
+    }
+}
 }  // namespace
 
-template <size_t N, const std::array<char, N>& key>
-struct EntrySaver {
-    std::array<char, N + sizeof(uint64_t)> entryKey(uint64_t index) {
-        std::array<char, N + sizeof(uint64_t)> full_key;
-        auto it = std::copy(key.begin(), key.end(), full_key.begin());
-        addUint64ToKey(index, it);
-        return full_key;
-    }
-
-    void saveIndex(rocksdb::Transaction& tx, uint64_t count) {
-        auto value = uint64Value(count);
-        auto s = tx.Put(vecToSlice(key), vecToSlice(value));
-        if (!s.ok()) {
-            throw std::runtime_error("failed to save count");
-        }
-    }
-
-    std::string loadEntry(rocksdb::Transaction& tx, uint64_t index) {
-        auto full_key = this->entryKey(index);
-        std::string value;
-        auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(full_key),
-                                 &value);
-        if (!s.ok()) {
-            throw std::runtime_error("failed load value");
-        }
-        return value;
-    }
-
-    template <typename T>
-    void saveEntry(rocksdb::Transaction& tx, const T& output, uint64_t height) {
-        auto full_key = this->entryKey(height);
-        auto s = tx.Put(vecToSlice(full_key), vecToSlice(output));
-        if (!s.ok()) {
-            throw std::runtime_error("failed to save");
-        }
-    }
-};
-
-template <size_t N, const std::array<char, N>& key>
-struct FlatSaver : private EntrySaver<N, key> {
-    uint64_t count(rocksdb::Transaction& tx) {
-        std::string value;
-        auto s =
-            tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key), &value);
-        if (s.IsNotFound()) {
-            return 0;
-        } else if (!s.ok()) {
-            throw std::runtime_error("failed to load count");
-        }
-        auto it = value.begin();
-        return extractUint64(it);
-    }
-
-    void saveCount(rocksdb::Transaction& tx, uint64_t count) {
-        this->saveIndex(tx, count);
-    }
-
-    template <typename T>
-    void saveNext(rocksdb::Transaction& tx, const T& output) {
-        uint64_t current_count = count(tx);
-        this->saveEntry(tx, output, current_count);
-        saveCount(tx, current_count + 1);
-    }
-
-    std::string load(rocksdb::Transaction& tx, uint64_t index) {
-        uint64_t current_count = count(tx);
-        if (index >= current_count) {
-            std::stringstream ss;
-            ss << "invalid index " << index << "/" << current_count;
-            throw std::runtime_error(ss.str());
-        }
-        return this->loadEntry(tx, index);
-    }
-};
-
-template <size_t N, const std::array<char, N>& key>
-struct HeightSaver : public EntrySaver<N, key> {
-    uint64_t max(rocksdb::Transaction& tx) {
-        std::string value;
-        auto s =
-            tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key), &value);
-        if (!s.ok()) {
-            throw std::runtime_error("no max saved");
-        }
-        auto it = value.begin();
-        return extractUint64(it);
-    }
-
-    void saveMax(rocksdb::Transaction& tx, uint64_t max) {
-        this->saveIndex(tx, max);
-    }
-
-    template <typename T>
-    void save(rocksdb::Transaction& tx, const T& output, uint64_t height) {
-        this->saveEntry(tx, output, height);
-        saveMax(tx, height);
-    }
-
-    std::string load(rocksdb::Transaction& tx, uint64_t index) {
-        uint64_t current_max = max(tx);
-        if (index > current_max) {
-            std::stringstream ss;
-            ss << "invalid index " << index << "/" << current_max;
-            throw std::runtime_error(ss.str());
-        }
-        return this->loadEntry(tx, index);
-    }
-};
-
-using LogSaver = FlatSaver<log_key.size(), log_key>;
-using MessageSaver = FlatSaver<message_key.size(), message_key>;
-using BlockSaver = HeightSaver<block_key.size(), block_key>;
-
-uint64_t AggregatorStore::logCount() const {
-    auto tx = data_storage->beginTransaction();
-    return LogSaver{}.count(*tx);
-}
-
-void AggregatorStore::saveLog(const std::vector<char>& log) {
-    auto tx = data_storage->beginTransaction();
-    LogSaver{}.saveNext(*tx, log);
-    commitTx(*tx);
-}
-
-std::vector<char> AggregatorStore::getLog(uint64_t index) const {
-    auto tx = data_storage->beginTransaction();
-    auto value = LogSaver{}.load(*tx, index);
-    return {value.begin(), value.end()};
-}
-
-uint64_t AggregatorStore::messageCount() const {
-    auto tx = data_storage->beginTransaction();
-    return MessageSaver{}.count(*tx);
-}
-
-void AggregatorStore::saveMessage(const std::vector<char>& output) {
-    auto tx = data_storage->beginTransaction();
-    MessageSaver{}.saveNext(*tx, output);
-    commitTx(*tx);
-}
-
-std::vector<char> AggregatorStore::getMessage(uint64_t index) const {
-    auto tx = data_storage->beginTransaction();
-    auto value = MessageSaver{}.load(*tx, index);
-    return {value.begin(), value.end()};
-}
-
-void AggregatorStore::saveRequest(const uint256_t& request_id,
-                                  uint64_t log_index) {
-    auto key = requestKey(request_id);
-    auto value = requestValue(log_index);
-    auto s = data_storage->txn_db->Put(rocksdb::WriteOptions{}, vecToSlice(key),
-                                       vecToSlice(value));
-    if (!s.ok()) {
-        throw std::runtime_error("failed to save request");
-    }
+std::array<char, block_key.size() + sizeof(uint64_t)> blockEntryKey(
+    uint64_t index) {
+    std::array<char, block_key.size() + sizeof(uint64_t)> full_key{};
+    auto it = std::copy(block_key.begin(), block_key.end(), full_key.begin());
+    addUint64ToKey(index, it);
+    return full_key;
 }
 
 namespace {
 template <typename Key>
-nonstd::optional<uint64_t> returnIndex(rocksdb::Transaction& tx,
-                                       const Key& key) {
+std::optional<uint64_t> returnIndex(const ReadTransaction& tx, const Key& key) {
     std::string request_value;
-    auto s = tx.GetForUpdate(rocksdb::ReadOptions{}, vecToSlice(key),
-                             &request_value);
+    auto s = tx.aggregatorGet(vecToSlice(key), &request_value);
+    if (s.IsNotFound()) {
+        return std::nullopt;
+    }
     if (!s.ok()) {
-        return nonstd::nullopt;
+        throw std::runtime_error("failed to load index");
     }
     auto it = request_value.begin();
     return extractUint64(it);
 }
 }  // namespace
 
-nonstd::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
-    const uint256_t& request_id) const {
-    auto tx = data_storage->beginTransaction();
-    return returnIndex(*tx, requestKey(request_id));
-}
-
-void AggregatorStore::saveBlockHash(const uint256_t& block_hash,
-                                    uint64_t block_height) {
-    auto key = blockHashKey(block_hash);
-    auto value = blockHashValue(block_height);
-    auto s = data_storage->txn_db->Put(rocksdb::WriteOptions{}, vecToSlice(key),
-                                       vecToSlice(value));
-    if (!s.ok()) {
-        throw std::runtime_error("failed to save block hash");
+AggregatorStore::AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
+    : data_storage(std::move(data_storage_)) {
+    ReadWriteTransaction tx(data_storage);
+    std::string value;
+    auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
+    if (s.IsNotFound()) {
+        saveBlockCount(tx, 0);
+        updateLogsProcessedCountImpl(tx, 0);
     }
+    commitTx(tx);
 }
 
-nonstd::optional<uint64_t> AggregatorStore::getPossibleBlock(
+std::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
+    const uint256_t& request_id) const {
+    ReadTransaction tx(data_storage);
+    return returnIndex(tx, requestKey(request_id));
+}
+
+std::optional<uint64_t> AggregatorStore::getPossibleBlock(
     const uint256_t& block_hash) const {
-    auto tx = data_storage->beginTransaction();
-    return returnIndex(*tx, blockHashKey(block_hash));
+    ReadTransaction tx(data_storage);
+    return returnIndex(tx, blockHashKey(block_hash));
 }
 
-std::pair<uint64_t, std::vector<char>> AggregatorStore::latestBlock() const {
-    auto tx = data_storage->beginTransaction();
-    uint64_t latest_block = BlockSaver{}.max(*tx);
-    auto block_value = BlockSaver{}.load(*tx, latest_block);
-    return {latest_block, {block_value.begin(), block_value.end()}};
+uint64_t AggregatorStore::blockCount() const {
+    ReadTransaction tx(data_storage);
+    return blockCountImpl(tx);
+}
+
+void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
+                                       const uint64_t& logIndex) {
+    ReadWriteTransaction tx(data_storage);
+    auto full_key = messageBatchKey(batchNum);
+    auto index_value = uint64Value(logIndex);
+
+    auto status =
+        tx.aggregatorPut(vecToSlice(full_key), vecToSlice(index_value));
+    if (!status.ok()) {
+        throw std::runtime_error("failed to save");
+    }
+
+    commitTx(tx);
+}
+
+std::optional<uint64_t> AggregatorStore::getMessageBatch(
+    const uint256_t& batchNum) {
+    ReadTransaction tx(data_storage);
+    return returnIndex(tx, messageBatchKey(batchNum));
 }
 
 void AggregatorStore::saveBlock(uint64_t height,
+                                const uint256_t& block_hash,
+                                const std::vector<uint256_t>& requests,
+                                const uint64_t* log_indexes,
                                 const std::vector<char>& data) {
-    auto tx = data_storage->beginTransaction();
-    ;
-    BlockSaver{}.save(*tx, data, height);
-    commitTx(*tx);
+    ReadWriteTransaction tx(data_storage);
+    auto block_hash_key = blockHashKey(block_hash);
+    auto block_value = blockHashValue(height);
+    auto s =
+        tx.aggregatorPut(vecToSlice(block_hash_key), vecToSlice(block_value));
+    if (!s.ok()) {
+        throw std::runtime_error("failed to save block hash");
+    }
+
+    for (size_t i = 0; i < requests.size(); i++) {
+        auto request_key = requestKey(requests[i]);
+        auto request_value = requestValue(log_indexes[i]);
+        s = tx.aggregatorPut(vecToSlice(request_key),
+                             vecToSlice(request_value));
+        if (!s.ok()) {
+            throw std::runtime_error("failed to save request");
+        }
+    }
+
+    uint64_t current_count = blockCountImpl(tx);
+    if (height > current_count) {
+        std::stringstream ss;
+        ss << "tried to save block with unexpected height: got" << height
+           << " but expected " << current_count;
+        throw std::runtime_error(ss.str());
+    }
+    auto full_key = blockEntryKey(height);
+    s = tx.aggregatorPut(vecToSlice(full_key), vecToSlice(data));
+    if (!s.ok()) {
+        throw std::runtime_error("failed to save");
+    }
+    saveBlockCount(tx, height + 1);
+    commitTx(tx);
 }
 
 std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
-    auto tx = data_storage->beginTransaction();
-    auto block_value = BlockSaver{}.load(*tx, height);
-    return {block_value.begin(), block_value.end()};
+    ReadSnapshotTransaction tx(data_storage);
+    uint64_t current_count = blockCountImpl(tx);
+    if (height >= current_count) {
+        std::stringstream ss;
+        ss << "invalid index " << height << " with count " << current_count;
+        throw std::runtime_error(ss.str());
+    }
+    auto full_key = blockEntryKey(height);
+    std::string value;
+    auto s = tx.aggregatorGet(vecToSlice(full_key), &value);
+    if (!s.ok()) {
+        throw std::runtime_error("failed load value");
+    }
+    return {value.begin(), value.end()};
 }
 
-void AggregatorStore::reorg(uint64_t block_height,
-                            uint64_t message_count,
-                            uint64_t log_count) {
-    auto tx = data_storage->beginTransaction();
-    MessageSaver{}.saveCount(*tx, message_count);
-    LogSaver{}.saveCount(*tx, log_count);
-    BlockSaver{}.saveMax(*tx, block_height);
-    commitTx(*tx);
+void AggregatorStore::reorg(uint64_t block_height) {
+    ReadWriteTransaction tx(data_storage);
+    saveBlockCount(tx, block_height);
+    commitTx(tx);
+}
+
+ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
+    ReadTransaction tx(data_storage);
+    return tx.aggregatorGetUint256(vecToSlice(logs_processed_key));
+}
+
+void AggregatorStore::updateLogsProcessedCount(const uint256_t& count) {
+    ReadWriteTransaction tx(data_storage);
+    updateLogsProcessedCountImpl(tx, count);
+    commitTx(tx);
 }

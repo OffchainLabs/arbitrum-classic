@@ -16,26 +16,31 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
+
+import "../bridge/interfaces/IBridge.sol";
 
 interface IOneStepProof {
     function executeStep(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
-        bytes calldata proof
-    ) external view returns (uint64 gas, bytes32[5] memory fields);
-
-    function executeStepWithMessage(
-        bytes32 inboxAcc,
-        bytes32 messagesAcc,
-        bytes32 logsAcc,
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
         bytes calldata proof,
-        uint8 _kind,
-        uint256 _blockNumber,
-        uint256 _timestamp,
-        address _sender,
-        uint256 _inboxSeqNum,
-        bytes calldata _msgData
-    ) external view returns (uint64 gas, bytes32[5] memory fields);
+        bytes calldata bproof
+    )
+        external
+        view
+        returns (
+            uint64 gas,
+            uint256 totalMessagesRead,
+            bytes32[4] memory fields
+        );
+
+    function executeStepDebug(
+        IBridge bridge,
+        uint256 initialMessagesRead,
+        bytes32[2] calldata accs,
+        bytes calldata proof,
+        bytes calldata bproof
+    ) external view returns (string memory startMachine, string memory afterMachine);
 }

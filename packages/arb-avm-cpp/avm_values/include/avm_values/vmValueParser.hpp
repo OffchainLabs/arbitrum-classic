@@ -31,6 +31,7 @@ struct LoadedExecutable {
 };
 
 value simple_value_from_json(const nlohmann::json& value_json);
+std::vector<uint8_t> send_from_json(const nlohmann::json& val);
 
 LoadedExecutable loadExecutable(const std::string& executable_filename);
 

@@ -22,8 +22,7 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 #include <libff/algebra/curves/public_params.hpp>
 
-#include <nonstd/variant.hpp>
-
+#include <variant>
 #include <vector>
 
 using namespace libff;
@@ -50,23 +49,25 @@ std::ostream& operator<<(std::ostream& os, const G2Point& val);
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input);
 G1Point toG1ArbPoint(G1<alt_bn128_pp> P);
+// Probably unsafe as EIP-196 doesn't define an encoding for this.
+// In particular, the zero point is encoded as non-zero bytes.
 G2Point toG2ArbPoint(G2<alt_bn128_pp> P);
 
-nonstd::variant<libff::G1<libff::alt_bn128_pp>, std::string> g1PfromBytes(
+std::variant<libff::G1<libff::alt_bn128_pp>, std::string> g1PfromBytes(
     const G1Point& point);
-nonstd::variant<libff::G2<libff::alt_bn128_pp>, std::string> g2PfromBytes(
+std::variant<libff::G2<libff::alt_bn128_pp>, std::string> g2PfromBytes(
     const G2Point& point);
 
-nonstd::variant<alt_bn128_GT, std::string> ecpairing_internal(
+std::variant<alt_bn128_GT, std::string> ecpairing_internal(
     const std::vector<std::pair<G1Point, G2Point>>& input);
 
-nonstd::variant<bool, std::string> ecpairing(
+std::variant<bool, std::string> ecpairing(
     const std::vector<std::pair<G1Point, G2Point>>& input);
 
-nonstd::variant<G1Point, std::string> ecadd(const G1Point& input_a,
-                                            const G1Point& input_b);
+std::variant<G1Point, std::string> ecadd(const G1Point& input_a,
+                                         const G1Point& input_b);
 
-nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
-                                            const uint256_t& factor);
+std::variant<G1Point, std::string> ecmul(const G1Point& point,
+                                         const uint256_t& factor);
 
 #endif /* ecops_hpp */

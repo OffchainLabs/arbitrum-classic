@@ -16,19 +16,17 @@
 
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
 
-#include <avm_values/vmValueParser.hpp>
-
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
 
-void saveValue(Transaction& transaction,
+void saveValue(ReadWriteTransaction& transaction,
                const value& val,
                uint32_t expected_ref_count,
                bool expected_status) {
@@ -38,44 +36,49 @@ void saveValue(Transaction& transaction,
     REQUIRE(results.reference_count == expected_ref_count);
 }
 
-void getValue(const Transaction& transaction,
-              const value& value,
-              uint32_t expected_ref_count,
-              bool expected_status,
-              ValueCache& value_cache) {
-    auto results = getValue(transaction, hash_value(value), value_cache);
-
-    REQUIRE(results.status.ok() == expected_status);
-    REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(hash_value(results.data) == hash_value(value));
+DbResult<value> getValue(const ReadTransaction& transaction,
+                         const value& value_target,
+                         uint32_t expected_ref_count,
+                         bool expected_status,
+                         ValueCache& value_cache) {
+    auto res = getValue(transaction, hash_value(value_target), value_cache);
+    if (expected_status) {
+        REQUIRE(std::holds_alternative<CountedData<value>>(res));
+        REQUIRE(std::get<CountedData<value>>(res).reference_count ==
+                expected_ref_count);
+        REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+                hash_value(value_target));
+    } else {
+        REQUIRE(std::holds_alternative<rocksdb::Status>(res));
+    }
+    return res;
 }
 
-void getTuple(const Transaction& transaction,
+void getTuple(const ReadTransaction& transaction,
               const value& val,
               uint32_t expected_ref_count,
               bool expected_status,
               ValueCache& value_cache) {
-    const auto& tuple = val.get<Tuple>();
-    auto results = getValue(transaction, hash(tuple), value_cache);
-
-    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
-
-    auto loadedTuple = nonstd::get<Tuple>(results.data);
-    REQUIRE(results.reference_count == expected_ref_count);
-    REQUIRE(loadedTuple == tuple);
-    REQUIRE(loadedTuple.tuple_size() == tuple.tuple_size());
-    REQUIRE(results.status.ok() == expected_status);
+    auto res = getValue(transaction, val, expected_ref_count, expected_status,
+                        value_cache);
+    const auto& tuple = std::get<Tuple>(val);
+    if (expected_status) {
+        REQUIRE(std::holds_alternative<Tuple>(
+            std::get<CountedData<value>>(res).data));
+        REQUIRE(std::get<Tuple>(std::get<CountedData<value>>(res).data) ==
+                tuple);
+    }
 }
 
-void getTupleValues(const Transaction& transaction,
+void getTupleValues(const ReadTransaction& transaction,
                     uint256_t tuple_hash,
                     std::vector<uint256_t> value_hashes,
                     ValueCache& value_cache) {
     auto results = getValue(transaction, tuple_hash, value_cache);
-    REQUIRE(results.status.ok());
-    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
-
-    auto tuple = nonstd::get<Tuple>(results.data);
+    REQUIRE(std::holds_alternative<CountedData<value>>(results));
+    auto val = std::get<CountedData<value>>(results).data;
+    REQUIRE(std::holds_alternative<Tuple>(val));
+    auto tuple = std::get<Tuple>(val);
     REQUIRE(tuple.tuple_size() == value_hashes.size());
 
     for (size_t i = 0; i < value_hashes.size(); i++) {
@@ -85,12 +88,12 @@ void getTupleValues(const Transaction& transaction,
 
 TEST_CASE("Save value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save num") {
@@ -105,24 +108,24 @@ TEST_CASE("Save value") {
 
 TEST_CASE("Save tuple") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
     }
     SECTION("save 2, 1 num tuples") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction, tuple, 2, true);
     }
     SECTION("saved tuple in tuple") {
         uint256_t num = 1;
-        value inner_tuple = Tuple(num);
-        auto tuple = Tuple(inner_tuple);
+        value inner_tuple = Tuple::createTuple(num);
+        auto tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction, tuple, 2, true);
     }
@@ -130,9 +133,9 @@ TEST_CASE("Save tuple") {
 
 TEST_CASE("Save and get value") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
+    ValueCache value_cache{1, 0};
 
     SECTION("save empty tuple") {
         auto tuple = Tuple();
@@ -158,34 +161,34 @@ TEST_CASE("Save and get value") {
 
 TEST_CASE("Save and get tuple values") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
+    ValueCache value_cache{1, 0};
 
     SECTION("save num tuple") {
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(num)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save codepoint tuple") {
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save codepoint tuple") {
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash(code_point_stub)};
         getTupleValues(*transaction, hash(tuple), hashes, value_cache);
     }
     SECTION("save nested tuple") {
         value inner_tuple = Tuple();
-        value tuple = Tuple(inner_tuple);
+        value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, tuple, 1, true);
         std::vector<uint256_t> hashes{hash_value(inner_tuple)};
         getTupleValues(*transaction, hash_value(tuple), hashes, value_cache);
@@ -214,28 +217,28 @@ TEST_CASE("Save and get tuple values") {
 
 TEST_CASE("Save And Get Tuple") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("save 1 num tuple") {
+        ValueCache value_cache{1, 0};
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save codepoint in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         CodePointStub code_point_stub({0, 1}, 654546);
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save 1 num tuple twice") {
-        value_cache.clear();
-        auto transaction2 = storage.makeTransaction();
+        ValueCache value_cache{1, 0};
+        auto transaction2 = storage.makeReadWriteTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         saveValue(*transaction, tuple, 1, true);
         saveValue(*transaction2, tuple, 2, true);
         getTuple(*transaction, tuple, 2, true, value_cache);
@@ -244,7 +247,7 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 0, true, value_cache);
     }
     SECTION("save 2 num tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         std::vector<CodePoint> code;
         uint256_t num = 1;
         uint256_t num2 = 2;
@@ -253,21 +256,21 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, tuple, 1, true, value_cache);
     }
     SECTION("save tuple in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         uint256_t num = 1;
-        auto inner_tuple = Tuple(num);
-        auto tuple = Tuple(value(inner_tuple));
+        auto inner_tuple = Tuple::createTuple(num);
+        auto tuple = Tuple::createTuple(inner_tuple);
         REQUIRE(hash(tuple) != hash(inner_tuple));
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
     }
     SECTION("save 2 tuples in tuple") {
-        value_cache.clear();
+        ValueCache value_cache{1, 0};
         uint256_t num = 1;
-        value inner_tuple = Tuple(num);
+        value inner_tuple = Tuple::createTuple(num);
         uint256_t num2 = 2;
-        value inner_tuple2 = Tuple(num2);
+        value inner_tuple2 = Tuple::createTuple(num2);
         auto tuple = Tuple(inner_tuple, inner_tuple2);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
@@ -275,36 +278,36 @@ TEST_CASE("Save And Get Tuple") {
         getTuple(*transaction, inner_tuple2, 1, true, value_cache);
     }
     SECTION("save saved tuple in tuple") {
-        value_cache.clear();
-        auto transaction2 = storage.makeTransaction();
+        ValueCache value_cache{1, 0};
+        auto transaction2 = storage.makeReadWriteTransaction();
         uint256_t num = 1;
-        value inner_tuple = Tuple(num);
-        value tuple = Tuple(inner_tuple);
+        value inner_tuple = Tuple::createTuple(num);
+        value tuple = Tuple::createTuple(inner_tuple);
         saveValue(*transaction, inner_tuple, 1, true);
         getTuple(*transaction, inner_tuple, 1, true, value_cache);
         saveValue(*transaction, tuple, 1, true);
         getTuple(*transaction, tuple, 1, true, value_cache);
 
-        // Clear cache to get real reference count
-        value_cache.clear();
-        getTuple(*transaction, inner_tuple, 2, true, value_cache);
+        // Use different cache to get real reference count
+        ValueCache value_cache2{1, 0};
+        getTuple(*transaction, inner_tuple, 2, true, value_cache2);
 
         // Test cache
-        getTuple(*transaction, inner_tuple, 0, true, value_cache);
+        getTuple(*transaction, inner_tuple, 0, true, value_cache2);
     }
 }
 
 TEST_CASE("Checkpoint Benchmark") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
     uint256_t num = 1;
-    value tuple = Tuple(num);
+    value tuple = Tuple::createTuple(num);
     for (uint64_t i = 1; i < 100000; i++) {
-        tuple = Tuple(tuple);
+        tuple = Tuple::createTuple(tuple);
     }
     saveValue(*transaction, tuple);
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
 
     auto tuple_hash = hash_value(tuple);
     // Initial get to populate cache
@@ -318,25 +321,28 @@ TEST_CASE("Checkpoint Benchmark") {
     };
 }
 
-void saveState(Transaction& transaction,
+void saveState(ReadWriteTransaction& transaction,
                const Machine& machine,
                uint256_t expected_ref_count) {
     auto results = saveMachine(transaction, machine);
-    REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(results.status.ok());
+    REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(transaction.commit().ok());
 }
 
-void checkSavedState(const Transaction& transaction,
+void checkSavedState(const ReadWriteTransaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
-    auto results = getMachineState(transaction, expected_machine.hash());
-    REQUIRE(results.status.ok());
-    REQUIRE(results.reference_count == expected_ref_count);
+    auto expected_hash = expected_machine.hash();
+    REQUIRE(expected_hash);
+    auto results = getMachineStateKeys(transaction, *expected_hash);
+    REQUIRE(std::holds_alternative<CountedData<MachineStateKeys>>(results));
+    auto res = std::get<CountedData<MachineStateKeys>>(results);
+    REQUIRE(res.reference_count == expected_ref_count);
 
-    auto data = results.data;
+    auto data = res.data;
     REQUIRE(data.status == expected_machine.machine_state.state);
-    REQUIRE(data.pc == expected_machine.machine_state.pc);
+    REQUIRE(data.pc.pc == expected_machine.machine_state.pc);
     REQUIRE(
         data.datastack_hash ==
         hash(expected_machine.machine_state.stack.getTupleRepresentation()));
@@ -346,36 +352,41 @@ void checkSavedState(const Transaction& transaction,
     REQUIRE(data.register_hash ==
             hash_value(expected_machine.machine_state.registerVal));
 
-    ValueCache value_cache{};
-    REQUIRE(
-        getValue(transaction, data.datastack_hash, value_cache).status.ok());
-    REQUIRE(getValue(transaction, data.auxstack_hash, value_cache).status.ok());
-    REQUIRE(getValue(transaction, data.register_hash, value_cache).status.ok());
+    ValueCache value_cache{1, 0};
+    REQUIRE(!std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, data.datastack_hash, value_cache)));
+    REQUIRE(!std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, data.auxstack_hash, value_cache)));
+    REQUIRE(!std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, data.register_hash, value_cache)));
 }
 
-void checkDeletedCheckpoint(Transaction& transaction,
+void checkDeletedCheckpoint(ReadTransaction& transaction,
                             const Machine& deleted_machine) {
-    auto results = getMachineState(transaction, deleted_machine.hash());
-    REQUIRE(!results.status.ok());
+    auto deleted_hash = deleted_machine.hash();
+    REQUIRE(deleted_hash);
+    auto results = getMachineStateKeys(transaction, *deleted_hash);
+    REQUIRE(std::holds_alternative<rocksdb::Status>(results));
 
     auto datastack_tup =
         deleted_machine.machine_state.stack.getTupleRepresentation();
     auto auxstack_tup =
         deleted_machine.machine_state.auxstack.getTupleRepresentation();
-    ValueCache value_cache{};
-    REQUIRE(
-        !getValue(transaction, hash(datastack_tup), value_cache).status.ok());
-    REQUIRE(
-        !getValue(transaction, hash(auxstack_tup), value_cache).status.ok());
-    REQUIRE(!getValue(transaction,
-                      hash_value(deleted_machine.machine_state.registerVal),
-                      value_cache)
-                 .status.ok());
+    ValueCache value_cache{1, 0};
+    REQUIRE(std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, hash(datastack_tup), value_cache)));
+    REQUIRE(std::holds_alternative<rocksdb::Status>(
+        getValue(transaction, hash(auxstack_tup), value_cache)));
+    REQUIRE(std::holds_alternative<rocksdb::Status>(getValue(
+        transaction, hash_value(deleted_machine.machine_state.registerVal),
+        value_cache)));
 }
 
-void deleteCheckpoint(Transaction& transaction,
+void deleteCheckpoint(ReadWriteTransaction& transaction,
                       const Machine& deleted_machine) {
-    auto res = deleteMachine(transaction, deleted_machine.hash());
+    auto deleted_hash = deleted_machine.hash();
+    REQUIRE(deleted_hash);
+    auto res = deleteMachine(transaction, *deleted_hash);
     REQUIRE(res.status.ok());
     checkDeletedCheckpoint(transaction, deleted_machine);
 }
@@ -403,12 +414,14 @@ Machine getComplexMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
 
-    Tuple staged_message(uint256_t{100}, uint256_t{200});
+    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
+
+    staged_variant staged_message;
 
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
                                 arb_gas_remaining, state, pc, err_pc,
-                                std::move(staged_message)));
+                                std::move(staged_message), output));
 }
 
 Machine getDefaultMachine() {
@@ -422,16 +435,18 @@ Machine getDefaultMachine() {
     CodePointRef pc(0, 0);
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
-    Tuple staged_message;
-    return Machine(MachineState(
-        std::move(code), register_val, std::move(static_val), data_stack,
-        aux_stack, arb_gas_remaining, state, pc, err_pc, staged_message));
+    auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
+    staged_variant staged_message;
+    return Machine(MachineState(std::move(code), register_val,
+                                std::move(static_val), data_stack, aux_stack,
+                                arb_gas_remaining, state, pc, err_pc,
+                                staged_message, output));
 }
 
 TEST_CASE("Save Machinestatedata") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
@@ -445,8 +460,8 @@ TEST_CASE("Save Machinestatedata") {
 
 TEST_CASE("Get Machinestate data") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
@@ -462,8 +477,8 @@ TEST_CASE("Get Machinestate data") {
 
 TEST_CASE("Delete checkpoint") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
 
     SECTION("default") {
         auto machine = getDefaultMachine();
@@ -479,26 +494,30 @@ TEST_CASE("Delete checkpoint") {
         auto machine = getComplexMachine();
         saveState(*transaction, machine, 1);
         {
-            auto transaction2 = storage.makeTransaction();
+            auto transaction2 = storage.makeReadWriteTransaction();
             saveState(*transaction2, machine, 2);
         }
-        auto transaction3 = storage.makeTransaction();
-        auto res = deleteMachine(*transaction3, machine.hash());
+        auto transaction3 = storage.makeReadWriteTransaction();
+        auto machine_hash = machine.hash();
+        REQUIRE(machine_hash);
+        auto res = deleteMachine(*transaction3, *machine.hash());
         REQUIRE(res.status.ok());
-        auto res2 = deleteMachine(*transaction3, machine.hash());
+        auto res2 = deleteMachine(*transaction3, *machine.hash());
         REQUIRE(res2.status.ok());
         checkDeletedCheckpoint(*transaction3, machine);
     }
     SECTION("delete checkpoint saved twice, reordered") {
-        auto transaction2 = storage.makeTransaction();
+        auto transaction2 = storage.makeReadWriteTransaction();
         auto machine = getComplexMachine();
         saveState(*transaction, machine, 1);
         saveState(*transaction2, machine, 2);
 
         checkSavedState(*transaction, machine, 2);
-        auto res = deleteMachine(*transaction, machine.hash());
+        auto machine_hash = machine.hash();
+        REQUIRE(machine_hash);
+        auto res = deleteMachine(*transaction, *machine.hash());
         checkSavedState(*transaction, machine, 1);
-        auto res2 = deleteMachine(*transaction, machine.hash());
+        auto res2 = deleteMachine(*transaction, *machine.hash());
         checkDeletedCheckpoint(*transaction, machine);
     }
 }

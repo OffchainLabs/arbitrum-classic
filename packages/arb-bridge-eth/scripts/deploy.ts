@@ -1,14 +1,13 @@
-import { BuidlerRuntimeEnvironment } from '@nomiclabs/buidler/types'
 import { Contract } from 'ethers'
+import { ethers } from 'hardhat'
 
 type ContractName =
-  | 'ArbFactory'
+  | 'RollupCreatorNoProxy'
+  | 'NodeFactory'
   | 'ChallengeFactory'
-  | 'ArbRollup'
-  | 'GlobalInbox'
-  | 'InboxTopChallenge'
-  | 'ExecutionChallenge'
   | 'OneStepProof'
+  | 'OneStepProof2'
+  | 'OneStepProofHash'
 
 const logDeploy = (contractName: string, contract: Contract) => {
   console.log(
@@ -16,78 +15,79 @@ const logDeploy = (contractName: string, contract: Contract) => {
   )
 }
 
-export default async function deploy_contracts(
-  bre: BuidlerRuntimeEnvironment
-): Promise<Record<ContractName, Contract>> {
-  const ethers = bre.ethers
-
-  const ExecutionChallenge = await ethers.getContractFactory(
-    'ExecutionChallenge'
-  )
+export default async function deploy_contracts(): Promise<
+  Record<ContractName, Contract>
+> {
   const OneStepProof = await ethers.getContractFactory('OneStepProof')
-  const InboxTopChallenge = await ethers.getContractFactory('InboxTopChallenge')
-  const ArbRollup = await ethers.getContractFactory('ArbRollup')
-  const GlobalInbox = await ethers.getContractFactory('GlobalInbox')
+  const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
+  const OneStepProofHash = await ethers.getContractFactory('OneStepProofHash')
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
-  const ArbFactory = await ethers.getContractFactory('ArbFactory')
+  const NodeFactory = await ethers.getContractFactory('NodeFactory')
+  const Rollup = await ethers.getContractFactory('Rollup')
+  const RollupCreatorNoProxy = await ethers.getContractFactory(
+    'RollupCreatorNoProxy'
+  )
 
   const oneStepProof = await OneStepProof.deploy()
   logDeploy('OneStepProof', oneStepProof)
-  const inboxTopChallenge = await InboxTopChallenge.deploy()
-  logDeploy('InboxTopChallenge', inboxTopChallenge)
-  const executionChallenge = await ExecutionChallenge.deploy()
-  logDeploy('ExecutionChallenge', executionChallenge)
-  const arbRollup = await ArbRollup.deploy()
-  logDeploy('ArbRollup', arbRollup)
-  const globalInbox = await GlobalInbox.deploy()
-  logDeploy('GlobalInbox', globalInbox)
+  const oneStepProof2 = await OneStepProof2.deploy()
+  logDeploy('OneStepProof2', oneStepProof2)
+  const oneStepProof3 = await OneStepProofHash.deploy()
+  logDeploy('OneStepProofHash', oneStepProof3)
 
-  const challengeFactory = await ChallengeFactory.deploy(
-    inboxTopChallenge.address,
-    executionChallenge.address,
-    oneStepProof.address
-  )
+  const challengeFactory = await ChallengeFactory.deploy([
+    oneStepProof.address,
+    oneStepProof2.address,
+    oneStepProof3.address,
+  ])
   logDeploy('ChallengeFactory', challengeFactory)
 
-  const arbFactory = await ArbFactory.deploy(
-    arbRollup.address,
-    globalInbox.address,
-    challengeFactory.address
-  )
-  logDeploy('ArbFactory', arbFactory)
+  const nodeFactory = await NodeFactory.deploy()
+  logDeploy('NodeFactory', nodeFactory)
+
+  const rollupTemplate = await Rollup.deploy()
+  logDeploy('Rollup', rollupTemplate)
+
+  const rollupCreatorNoProxy = await RollupCreatorNoProxy.deploy()
+  logDeploy('RollupCreatorNoProxy', rollupCreatorNoProxy)
 
   await Promise.all([
     oneStepProof.deployed().then(() => {
       console.log('OneStepProof deployed')
     }),
-    inboxTopChallenge.deployed().then(() => {
-      console.log('InboxTopChallenge deployed')
+    oneStepProof2.deployed().then(() => {
+      console.log('OneStepProof2 deployed')
     }),
-    executionChallenge.deployed().then(() => {
-      console.log('ExecutionChallenge deployed')
-    }),
-    arbRollup.deployed().then(() => {
-      console.log('ArbRollup deployed')
-    }),
-    globalInbox.deployed().then(() => {
-      console.log('GlobalInbox deployed')
+    oneStepProof3.deployed().then(() => {
+      console.log('OneStepProofHash deployed')
     }),
     challengeFactory.deployed().then(() => {
       console.log('ChallengeFactory deployed')
     }),
-    arbFactory.deployed().then(() => {
-      console.log('ArbFactory deployed')
+    nodeFactory.deployed().then(() => {
+      console.log('NodeFactory deployed')
+    }),
+    rollupTemplate.deployed().then(() => {
+      console.log('Rollup deployed')
+    }),
+    rollupCreatorNoProxy.deployed().then(() => {
+      console.log('RollupCreatorNoProxy deployed')
     }),
   ])
 
+  await rollupCreatorNoProxy.setTemplates(
+    rollupTemplate.address,
+    challengeFactory.address,
+    nodeFactory.address
+  )
+
   const contracts: Record<ContractName, Contract> = {
-    ArbFactory: arbFactory,
+    RollupCreatorNoProxy: rollupCreatorNoProxy,
+    NodeFactory: nodeFactory,
     ChallengeFactory: challengeFactory,
-    ArbRollup: arbRollup,
-    GlobalInbox: globalInbox,
-    InboxTopChallenge: inboxTopChallenge,
-    ExecutionChallenge: executionChallenge,
     OneStepProof: oneStepProof,
+    OneStepProof2: oneStepProof2,
+    OneStepProofHash: oneStepProof3,
   }
   return contracts
 }

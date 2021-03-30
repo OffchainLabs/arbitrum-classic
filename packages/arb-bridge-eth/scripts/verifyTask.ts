@@ -1,16 +1,13 @@
-import { task } from '@nomiclabs/buidler/config'
-import fs from 'fs'
+import { task } from 'hardhat/config'
 
 export default function setupVerifyTask(): void {
   task(
     'verify-contracts',
     'Verifies arbitrum deployment on etherscan',
-    async (taskArgs, bre) => {
+    async (_taskArgs, bre) => {
       const { deployments } = bre
       await deployments.getOrNull('ArbFactory')
       const contracts = await deployments.all()
-      const network = await bre.ethers.provider.getNetwork()
-      const chainId = network.chainId
 
       console.log('Verifying contracts on etherscan')
       for (const contractName in contracts) {

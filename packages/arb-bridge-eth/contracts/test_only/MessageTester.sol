@@ -16,19 +16,18 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
-import "../inbox/Messages.sol";
+import "../bridge/Messages.sol";
 
 contract MessageTester {
-    using Hashing for Value.Data;
-
     function messageHash(
         uint8 messageType,
         address sender,
         uint256 blockNumber,
         uint256 timestamp,
         uint256 inboxSeqNum,
+        uint256 gasPriceL1,
         bytes32 messageDataHash
     ) public pure returns (bytes32) {
         return
@@ -38,82 +37,12 @@ contract MessageTester {
                 blockNumber,
                 timestamp,
                 inboxSeqNum,
+                gasPriceL1,
                 messageDataHash
             );
     }
 
-    function messageValueHash(
-        uint8 messageType,
-        uint256 blockNumber,
-        uint256 timestamp,
-        address sender,
-        uint256 inboxSeqNum,
-        bytes memory messageData
-    ) public pure returns (bytes32) {
-        return
-            Messages
-                .messageValue(messageType, blockNumber, timestamp, sender, inboxSeqNum, messageData)
-                .hash();
-    }
-
     function addMessageToInbox(bytes32 inbox, bytes32 message) public pure returns (bytes32) {
         return Messages.addMessageToInbox(inbox, message);
-    }
-
-    function unmarshalOutgoingMessage(bytes memory data, uint256 startOffset)
-        public
-        pure
-        returns (
-            bool, // valid
-            uint256, // offset
-            uint8, // kind
-            address, // sender
-            bytes memory // data
-        )
-    {
-        (bool valid, uint256 offset, Messages.OutgoingMessage memory message) = Messages
-            .unmarshalOutgoingMessage(data, startOffset);
-        return (valid, offset, message.kind, message.sender, message.data);
-    }
-
-    function parseEthMessage(bytes memory data)
-        public
-        pure
-        returns (
-            bool valid,
-            address dest,
-            uint256 value
-        )
-    {
-        (bool isValid, Messages.EthMessage memory message) = Messages.parseEthMessage(data);
-        return (isValid, message.dest, message.value);
-    }
-
-    function parseERC20Message(bytes memory data)
-        public
-        pure
-        returns (
-            bool valid,
-            address token,
-            address dest,
-            uint256 value
-        )
-    {
-        (bool isValid, Messages.ERC20Message memory message) = Messages.parseERC20Message(data);
-        return (isValid, message.token, message.dest, message.value);
-    }
-
-    function parseERC721Message(bytes memory data)
-        public
-        pure
-        returns (
-            bool valid,
-            address token,
-            address dest,
-            uint256 id
-        )
-    {
-        (bool isValid, Messages.ERC721Message memory message) = Messages.parseERC721Message(data);
-        return (isValid, message.token, message.dest, message.id);
     }
 }

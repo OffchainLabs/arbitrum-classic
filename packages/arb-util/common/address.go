@@ -77,18 +77,6 @@ func (a Address) Hex() string {
 	return hexutil.Encode(a[:])
 }
 
-func (a Address) MarshallToBuf() *AddressBuf {
-	return &AddressBuf{
-		Value: a[:],
-	}
-}
-
-func (a *AddressBuf) Unmarshal() Address {
-	var ret Address
-	copy(ret[:], a.Value)
-	return ret
-}
-
 func HexToAddress(hex string) Address {
 	return NewAddressFromEth(ethcommon.HexToAddress(hex))
 }

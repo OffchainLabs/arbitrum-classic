@@ -17,7 +17,7 @@
 package gotest
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -37,7 +37,9 @@ func OpCodeTestFiles() []string {
 	}
 	filenames := make([]string, 0, len(files))
 	for _, file := range files {
-		filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		if file.Name() != "inbox.mexe" {
+			filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		}
 	}
 
 	return filenames
@@ -49,17 +51,20 @@ func ArbOSTestFiles() []string {
 		err := errors.New("failed to get filename")
 		panic(err)
 	}
-	testCaseDir := filepath.Join(filepath.Dir(filename), "../tests/arbos-cases")
+	testCaseDir := filepath.Join(filepath.Dir(filename), "../../arb-os/replayTests")
 	files, err := ioutil.ReadDir(testCaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 	filenames := make([]string, 0, len(files))
-	extension := ".aoslog"
+	extensions := []string{".aoslog", ".json"}
 	for _, file := range files {
 		name := file.Name()
-		if len(name) > len(extension) && name[len(name)-len(extension):] == extension {
-			filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+		for _, extension := range extensions {
+			if len(name) > len(extension) && name[len(name)-len(extension):] == extension {
+				filenames = append(filenames, filepath.Join(testCaseDir, file.Name()))
+				break
+			}
 		}
 	}
 

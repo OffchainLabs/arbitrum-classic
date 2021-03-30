@@ -41,7 +41,7 @@ static T shrink(uint256_t i) {
 namespace machineoperation {
 
 uint256_t& assumeInt(value& val) {
-    auto aNum = nonstd::get_if<uint256_t>(&val);
+    auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -49,7 +49,7 @@ uint256_t& assumeInt(value& val) {
 }
 
 const uint256_t& assumeInt(const value& val) {
-    auto aNum = nonstd::get_if<uint256_t>(&val);
+    auto aNum = std::get_if<uint256_t>(&val);
     if (!aNum) {
         throw bad_pop_type{};
     }
@@ -57,7 +57,7 @@ const uint256_t& assumeInt(const value& val) {
 }
 
 const CodePointStub& assumeCodePoint(const value& val) {
-    auto cp = nonstd::get_if<CodePointStub>(&val);
+    auto cp = std::get_if<CodePointStub>(&val);
     if (!cp) {
         throw bad_pop_type{};
     }
@@ -72,20 +72,28 @@ uint64_t assumeInt64(uint256_t& val) {
     return static_cast<uint64_t>(val);
 }
 
-Tuple& assumeTuple(value& val) {
-    auto tup = nonstd::get_if<Tuple>(&val);
+const Tuple& assumeTuple(const value& val) {
+    auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
     }
     return *tup;
 }
 
-const Tuple& assumeTuple(const value& val) {
-    auto tup = nonstd::get_if<Tuple>(&val);
+Tuple& assumeTuple(value& val) {
+    auto tup = std::get_if<Tuple>(&val);
     if (!tup) {
         throw bad_pop_type{};
     }
     return *tup;
+}
+
+Buffer& assumeBuffer(value& val) {
+    auto buf = std::get_if<Buffer>(&val);
+    if (!buf) {
+        throw bad_pop_type{};
+    }
+    return *buf;
 }
 
 void add(MachineState& m) {
@@ -392,14 +400,17 @@ void hashOp(MachineState& m) {
     ++m.pc;
 }
 
+struct ValueTypeVisitor {
+    ValueTypes operator()(const uint256_t&) const { return NUM; }
+    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
+    ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const HashPreImage&) const { return TUPLE; }
+    ValueTypes operator()(const Buffer&) const { return BUFFER; }
+};
+
 void typeOp(MachineState& m) {
     m.stack.prepForMod(1);
-    if (nonstd::holds_alternative<uint256_t>(m.stack[0]))
-        m.stack[0] = NUM;
-    else if (nonstd::holds_alternative<CodePointStub>(m.stack[0]))
-        m.stack[0] = CODEPT;
-    else if (nonstd::holds_alternative<Tuple>(m.stack[0]))
-        m.stack[0] = TUPLE;
+    m.stack[0] = std::visit(ValueTypeVisitor{}, m.stack[0]);
     ++m.pc;
 }
 
@@ -408,7 +419,7 @@ void ethhash2Op(MachineState& m) {
     auto& aNum = assumeInt(m.stack[0]);
     auto& bNum = assumeInt(m.stack[1]);
 
-    std::array<unsigned char, 64> inData;
+    std::array<unsigned char, 64> inData{};
     auto it = to_big_endian(aNum, inData.begin());
     to_big_endian(bNum, it);
 
@@ -492,7 +503,7 @@ void sha256F(MachineState& m) {
     auto& input_first_int = assumeInt(m.stack[1]);
     auto& input_second_int = assumeInt(m.stack[2]);
 
-    std::array<uint8_t, 64> input_data;
+    std::array<uint8_t, 64> input_data{};
     intx::be::unsafe::store(input_data.data(), input_first_int);
     intx::be::unsafe::store(input_data.data() + 32, input_second_int);
 
@@ -591,7 +602,7 @@ void errPush(MachineState& m) {
 
 void errSet(MachineState& m) {
     m.stack.prepForMod(1);
-    auto codePointVal = nonstd::get_if<CodePointStub>(&m.stack[0]);
+    auto codePointVal = std::get_if<CodePointStub>(&m.stack[0]);
     if (!codePointVal) {
         m.state = Status::Error;
     } else {
@@ -683,15 +694,15 @@ void tlen(MachineState& m) {
 
 namespace {
 uint256_t parseSignature(MachineState& m) {
+    std::array<unsigned char, 64> sig_raw{};
+    auto it = to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
+    to_big_endian(assumeInt(m.stack[1]), it);
     auto recovery_int = assumeInt(m.stack[2]);
+    auto message = be::store<ethash::hash256>(assumeInt(m.stack[3]));
+
     if (recovery_int != 0 && recovery_int != 1) {
         return 0;
     }
-    std::array<unsigned char, 64> sig_raw;
-    auto it = to_big_endian(assumeInt(m.stack[0]), sig_raw.begin());
-    to_big_endian(assumeInt(m.stack[1]), it);
-
-    auto message = be::store<ethash::hash256>(assumeInt(m.stack[3]));
 
     static secp256k1_context* context = secp256k1_context_create(
         SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
@@ -708,7 +719,7 @@ uint256_t parseSignature(MachineState& m) {
         return 0;
     }
 
-    std::array<unsigned char, 65> pubkey_raw;
+    std::array<unsigned char, 65> pubkey_raw{};
     size_t output_length = pubkey_raw.size();
     int serialized_pubkey = secp256k1_ec_pubkey_serialize(
         context, pubkey_raw.data(), &output_length, &pubkey,
@@ -742,12 +753,12 @@ void ec_add(MachineState& m) {
 
     auto ret = ecadd({aVal, bVal}, {cVal, dVal});
 
-    if (nonstd::holds_alternative<std::string>(ret)) {
+    if (std::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
         return;
     }
 
-    G1Point ans = ret.get<G1Point>();
+    G1Point ans = std::get<G1Point>(ret);
     cVal = ans.x;
     dVal = ans.y;
     m.stack.popClear();
@@ -763,12 +774,12 @@ void ec_mul(MachineState& m) {
 
     auto ret = ecmul({aVal, bVal}, cVal);
 
-    if (nonstd::holds_alternative<std::string>(ret)) {
+    if (std::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
         return;
     }
 
-    G1Point ans = ret.get<G1Point>();
+    G1Point ans = std::get<G1Point>(ret);
     bVal = ans.x;
     cVal = ans.y;
     m.stack.popClear();
@@ -801,19 +812,19 @@ void ec_pairing(MachineState& m) {
                    assumeInt(next.get_element_unsafe(3)),
                    assumeInt(next.get_element_unsafe(4)),
                    assumeInt(next.get_element_unsafe(5))};
-        points.push_back({g1, g2});
+        points.emplace_back(g1, g2);
     }
     if (val->tuple_size() != 0) {
         throw bad_pop_type{};
     }
 
     auto ret = ecpairing(points);
-    if (nonstd::holds_alternative<std::string>(ret)) {
+    if (std::holds_alternative<std::string>(ret)) {
         m.state = Status::Error;
         return;
     }
 
-    m.stack[0] = ret.get<bool>() ? 1 : 0;
+    m.stack[0] = std::get<bool>(ret) ? 1 : 0;
     ++m.pc;
 }
 
@@ -824,15 +835,16 @@ uint64_t ec_pairing_variable_gas_cost(const MachineState& m) {
         return gas_cost;
     }
     try {
-        const Tuple* val = &assumeTuple(m.stack[0]);
+        const value* val = &m.stack[0];
         for (int i = 0; i < max_ec_pairing_points; i++) {
-            if (val->tuple_size() == 0) {
+            const Tuple* tup = &assumeTuple(*val);
+            if (tup->tuple_size() == 0) {
                 break;
             }
-            if (val->tuple_size() != 2) {
+            if (tup->tuple_size() != 2) {
                 throw bad_pop_type{};
             }
-            val = &assumeTuple(val->get_element_unsafe(1));
+            val = &tup->get_element_unsafe(1);
             gas_cost += ec_pair_gas_cost;
         }
     } catch (const std::exception&) {
@@ -848,7 +860,7 @@ BlockReason breakpoint(MachineState& m) {
 
 void log(MachineState& m) {
     m.stack.prepForMod(1);
-    m.context.logs.push_back(std::move(m.stack[0]));
+    m.addProcessedLog(std::move(m.stack[0]));
     m.stack.popClear();
     ++m.pc;
 }
@@ -859,58 +871,78 @@ void debug(MachineState& m) {
     ++m.pc;
 }
 
-bool send(MachineState& m) {
-    m.stack.prepForMod(1);
+void send(MachineState& m) {
+    m.stack.prepForMod(2);
 
-    auto val_size = getSize(m.stack[0]);
-    bool success;
+    auto msg_size = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& buf = assumeBuffer(m.stack[1]);
 
-    if (val_size > send_size_limit) {
-        success = false;
-    } else {
-        m.context.outMessage.push_back(std::move(m.stack[0]));
-        m.stack.popClear();
-        ++m.pc;
-
-        success = true;
+    // Note: the last msg_size == 0 check is implied by the buf.lastIndex()
+    // check, but it's additionally specified for clarity and in case the
+    // lastIndex method is refactored out.
+    if (msg_size > send_size_limit || buf.lastIndex() >= msg_size ||
+        msg_size == 0) {
+        m.state = Status::Error;
+        std::cerr << "Send failure: over size limit" << std::endl;
+        return;
     }
 
-    return success;
+    auto vec = std::vector<uint8_t>(msg_size);
+    for (uint64_t i = 0; i < msg_size; i++) {
+        vec[i] = buf.get(i);
+    }
+    m.addProcessedSend(std::move(vec));
+    m.stack.popClear();
+    m.stack.popClear();
+    ++m.pc;
 }
 
 BlockReason inboxPeekOp(MachineState& m) {
     m.stack.prepForMod(1);
-    bool has_staged_message = m.staged_message != Tuple{};
-    if (!has_staged_message && m.context.inboxEmpty()) {
-        if (!m.context.fake_inbox_peek_value) {
-            return InboxBlocked();
+    if (m.stagedMessageEmpty()) {
+        if (!m.context.inboxEmpty()) {
+            m.staged_message = m.context.popInbox();
+        } else if (m.context.next_block_height.has_value()) {
+            // The inboxPeekOp should always leave a message Tuple in
+            // staged_message so that hashes always come out consistently.
+            // The current message is annotated as end of block, and the next
+            // block number is known, so store the blocked number as a uint256_t
+            // value in staged_message.  This way, any function
+            // that uses staged_message can throw an error when staged_message
+            // is something other than a non-empty Tuple, and the uint256_t can
+            // be replaced by a valid message Tuple when it becomes available.
+            m.staged_message = *m.context.next_block_height;
         }
+    }
 
-        // When fake_inbox_peek_value is set we're in callserver mode. Use
-        // that value as the message value
-        m.stack[0] = m.stack[0] == *m.context.fake_inbox_peek_value ? 1 : 0;
-        ++m.pc;
-        return NotBlocked{};
+    auto next_block_height = m.getStagedMessageBlockHeight();
+    if (!next_block_height) {
+        // Don't have information needed to continue
+        return InboxBlocked();
     }
-    if (!has_staged_message) {
-        m.staged_message = m.context.popInbox();
-    }
-    m.stack[0] = m.stack[0] == m.staged_message.get_element(1) ? 1 : 0;
+
+    m.stack[0] = m.stack[0] == value{*next_block_height} ? 1 : 0;
     ++m.pc;
     return NotBlocked{};
 }
 
 BlockReason inboxOp(MachineState& m) {
-    bool has_staged_message = m.staged_message != Tuple{};
-    if (!has_staged_message && m.context.inboxEmpty()) {
+    if (m.stagedMessageUnresolved()) {
         return InboxBlocked();
     }
-    if (has_staged_message) {
-        m.stack.push(m.staged_message);
-        m.staged_message = Tuple();
+
+    InboxMessage next_message;
+    if (std::holds_alternative<InboxMessage>(m.staged_message)) {
+        next_message = std::get<InboxMessage>(m.staged_message);
+    } else if (m.stagedMessageEmpty() && !m.context.inboxEmpty()) {
+        next_message = m.context.popInbox();
     } else {
-        m.stack.push(m.context.popInbox());
+        return InboxBlocked();
     }
+
+    m.addProcessedMessage(next_message);
+    m.stack.push(next_message.toTuple());
+    m.staged_message = std::monostate();
     ++m.pc;
     return NotBlocked{};
 }
@@ -936,7 +968,7 @@ void errcodept(MachineState& m) {
 
 void pushinsn(MachineState& m) {
     m.stack.prepForMod(2);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[1]);
+    auto target = std::get_if<CodePointStub>(&m.stack[1]);
     if (!target) {
         m.state = Status::Error;
         return;
@@ -950,7 +982,7 @@ void pushinsn(MachineState& m) {
 
 void pushinsnimm(MachineState& m) {
     m.stack.prepForMod(3);
-    auto target = nonstd::get_if<CodePointStub>(&m.stack[2]);
+    auto target = std::get_if<CodePointStub>(&m.stack[2]);
     if (!target) {
         m.state = Status::Error;
         return;
@@ -965,17 +997,149 @@ void pushinsnimm(MachineState& m) {
 }
 
 BlockReason sideload(MachineState& m) {
-    if (m.context.sideload_value.tuple_size() != 0) {
-        m.stack.push(m.context.sideload_value);
-        m.context.sideload_value = Tuple{};
+    m.stack.prepForMod(1);
+    auto& block_num = assumeInt(m.stack[0]);
+    m.output.last_sideload = block_num;
+    if (!m.context.sideloads.empty()) {
+        m.stack[0] = m.context.sideloads.back().toTuple();
+        m.context.sideloads.pop_back();
     } else {
-        if (m.context.numSteps != 0 && m.context.blockingSideload) {
-            return SideloadBlocked{};
+        if (m.context.stop_on_sideload && !m.context.first_instruction) {
+            return SideloadBlocked{block_num};
         }
-        m.stack.push(Tuple{});
+        m.stack[0] = Tuple();
     }
     ++m.pc;
     return NotBlocked{};
+}
+
+void newbuffer(MachineState& m) {
+    m.stack.prepForMod(0);
+    m.stack.push(Buffer{});
+    ++m.pc;
+}
+
+void getbuffer8(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    auto res = uint256_t(md.get(offset));
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void getbuffer64(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    if (offset + 7 < offset)
+        throw int_out_of_bounds{};
+    uint64_t res = 0;
+    for (int i = 0; i < 8; i++) {
+        res = res << 8U;
+        res = res | md.get(offset + i);
+    }
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(uint256_t(res));
+    ++m.pc;
+}
+
+void getbuffer256(MachineState& m) {
+    m.stack.prepForMod(2);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    if (offset + 31 < offset)
+        throw int_out_of_bounds{};
+    uint256_t res = 0;
+    std::vector<uint8_t> data(32);
+    if ((offset + 31) % ALIGN < offset % ALIGN) {
+        data = md.get_many(offset, ALIGN - (offset % ALIGN));
+        auto data2 = md.get_many(offset + ALIGN - (offset % ALIGN),
+                                 32 - (ALIGN - (offset % ALIGN)));
+        data.insert(data.end(), data2.begin(), data2.end());
+    } else {
+        data = md.get_many(offset, 32);
+    }
+    for (int i = 0; i < 32; i++) {
+        res = res << 8;
+        res = res | data[i];
+    }
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void setbuffer8(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val_int = assumeInt(m.stack[1]);
+    if (val_int > std::numeric_limits<uint8_t>::max()) {
+        throw int_out_of_bounds{};
+    }
+    auto val = static_cast<uint8_t>(val_int);
+    Buffer& md = assumeBuffer(m.stack[2]);
+    auto res = md.set(offset, val);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void setbuffer64(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    auto val = assumeInt64(assumeInt(m.stack[1]));
+    if (offset + 7 < offset)
+        throw int_out_of_bounds{};
+    // The initial value is copied here, there might be a way to optimize that
+    // away
+    Buffer res = assumeBuffer(m.stack[2]);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    for (int i = 0; i < 8; i++) {
+        res = res.set(offset + 7 - i, val & 0xffU);
+        val = val >> 8U;
+    }
+    m.stack.push(res);
+    ++m.pc;
+}
+
+void setbuffer256(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto offset = assumeInt64(assumeInt(m.stack[0]));
+    if (offset + 31 < offset)
+        throw int_out_of_bounds{};
+    auto val = assumeInt(m.stack[1]);
+    // The initial value is copied here, there might be a way to optimize that
+    // away
+    Buffer res = assumeBuffer(m.stack[2]);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    auto buf = std::vector<uint8_t>(32);
+    for (int i = 0; i < 32; i++) {
+        buf[31 - i] = static_cast<uint8_t>(val & 0xff);
+        val = val >> 8;
+    }
+
+    if ((offset + 31) % ALIGN < offset % ALIGN) {
+        auto data1 = std::vector<uint8_t>(
+            buf.begin(), buf.begin() + (ALIGN - (offset % ALIGN)));
+        auto data2 = std::vector<uint8_t>(
+            buf.begin() + (ALIGN - (offset % ALIGN)), buf.end());
+        res = res.set_many(offset, data1);
+        res = res.set_many(offset + ALIGN - (offset % ALIGN), data2);
+    } else {
+        res = res.set_many(offset, buf);
+    }
+    m.stack.push(res);
+    ++m.pc;
 }
 
 }  // namespace machineoperation

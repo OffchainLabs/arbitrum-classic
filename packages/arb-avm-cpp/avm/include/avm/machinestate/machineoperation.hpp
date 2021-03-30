@@ -88,7 +88,7 @@ uint64_t ec_pairing_variable_gas_cost(const MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);
-bool send(MachineState& m);
+void send(MachineState& m);
 BlockReason inboxPeekOp(MachineState& m);
 BlockReason inboxOp(MachineState& m);
 void setgas(MachineState& m);
@@ -97,6 +97,14 @@ void errcodept(MachineState& m);
 void pushinsn(MachineState& m);
 void pushinsnimm(MachineState& m);
 BlockReason sideload(MachineState& m);
+
+void newbuffer(MachineState& m);
+void getbuffer8(MachineState& m);
+void getbuffer64(MachineState& m);
+void getbuffer256(MachineState& m);
+void setbuffer8(MachineState& m);
+void setbuffer64(MachineState& m);
+void setbuffer256(MachineState& m);
 
 namespace internal {
 void encodeKeccakState(const Tuple& tup, uint64_t* state);

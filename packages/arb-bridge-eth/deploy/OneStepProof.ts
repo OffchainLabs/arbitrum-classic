@@ -1,23 +1,15 @@
-import {
-  BuidlerRuntimeEnvironment,
-  DeployFunction,
-} from '@nomiclabs/buidler/types'
+import { HardhatRuntimeEnvironment } from 'hardhat/types'
+import { DeployFunction } from 'hardhat-deploy/types'
 
-const func: DeployFunction = async (bre: BuidlerRuntimeEnvironment) => {
-  const { deployments, getNamedAccounts } = bre
-  const { deploy, log } = deployments
+const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+  const { deployments, getNamedAccounts } = hre
+  const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  let contract = await deployments.getOrNull('OneStepProof')
-  if (!contract) {
-    const deployResult = await deploy('OneStepProof', { from: deployer })
-    contract = await deployments.get('OneStepProof')
-    if (deployResult.newlyDeployed && deployResult.receipt) {
-      log(
-        `OneStepProof deployed at ${contract.address} for ${deployResult.receipt.gasUsed}`
-      )
-    }
-  }
+  await deploy('OneStepProof', {
+    from: deployer,
+    args: [],
+  })
 }
 
 module.exports = func

@@ -1,15 +1,13 @@
 #!/bin/bash
-PREFIX=../../arbos-contracts/contracts
+PREFIX=../../arb-os/contracts/arbos/builtin
+PREFIX2=../../arb-bridge-peripherals/contracts/rpc-utils
 PACKAGE=arboscontracts
-NM=$(realpath ./../../../node_modules)
-OZ=$NM/@openzeppelin
-OZCONN=$OZ/contracts
-IGNORED=$PREFIX/ArbSys.sol:ArbSys,$OZCONN/GSN/Context.sol:Context,$OZCONN/math/SafeMath.sol:SafeMath
 
 abigen --sol=$PREFIX/ArbInfo.sol --pkg=$PACKAGE --out=arbinfo.go
 abigen --sol=$PREFIX/ArbSys.sol --pkg=$PACKAGE --out=arbsys.go
-solc --combined-json bin,abi,userdoc,devdoc,metadata --allow-paths $NM @openzeppelin=$OZ ../../arbos-contracts/contracts/ArbERC20.sol --overwrite -o .
-abigen --pkg=arboscontracts --out=arbERC20.go --combined-json combined.json --exc=$IGNORED
-solc --combined-json bin,abi,userdoc,devdoc,metadata --allow-paths $NM @openzeppelin=$NM/@openzeppelin ../../arbos-contracts/contracts/ArbERC721.sol --overwrite -o .
-abigen --pkg=arboscontracts --out=arbERC721.go --combined-json combined.json --exc=$IGNORED
-rm combined.json
+abigen --sol=$PREFIX/ArbAddressTable.sol --pkg=$PACKAGE --out=arbaddresstable.go
+abigen --sol=$PREFIX/ArbBLS.sol --pkg=$PACKAGE --out=arbbls.go
+abigen --sol=$PREFIX/ArbFunctionTable.sol --pkg=$PACKAGE --out=arbfunctiontable.go
+abigen --sol=$PREFIX/ArbOwner.sol --pkg=$PACKAGE --out=arbowner.go
+abigen --sol=$PREFIX/ArbRetryableTx.sol --pkg=$PACKAGE --out=arbretryable.go
+abigen --sol=$PREFIX2/NodeInterface.sol --pkg=$PACKAGE --out=nodeinterface.go

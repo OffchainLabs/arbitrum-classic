@@ -18,8 +18,6 @@ package value
 
 import (
 	"io"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 const (
@@ -27,16 +25,14 @@ const (
 	TypeCodeCodePoint     uint8 = 1
 	TypeCodeHashPreImage  uint8 = 2
 	TypeCodeTuple         uint8 = 3
-	TypeCodeCodePointStub uint8 = 12
+	TypeCodeBuffer        uint8 = 12
+	TypeCodeCodePointStub uint8 = 13
 )
 
 type Value interface {
 	TypeCode() uint8
-	Clone() Value
 	Equal(Value) bool
-	Hash() common.Hash
 	Size() int64
-	Marshal(io.Writer) error
 	String() string
 }
 
@@ -52,14 +48,6 @@ func (e UnmarshalError) Error() string {
 	return e.str
 }
 
-func MarshalValue(v Value, w io.Writer) error {
-	_, err := w.Write([]byte{v.TypeCode()})
-	if err != nil {
-		return err
-	}
-	return v.Marshal(w)
-}
-
 func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {
 	switch {
 	case tipe == TypeCodeInt:
@@ -70,6 +58,8 @@ func UnmarshalValueWithType(tipe byte, r io.Reader) (Value, error) {
 		return NewHashPreImageFromReader(r)
 	case tipe <= TypeCodeTuple+MaxTupleSize:
 		return NewSizedTupleFromReader(r, tipe-TypeCodeTuple)
+	case tipe == TypeCodeBuffer:
+		return NewBufferFromReader(r)
 	case tipe == TypeCodeCodePointStub:
 		return NewCodePointStubFromReader(r)
 	default:

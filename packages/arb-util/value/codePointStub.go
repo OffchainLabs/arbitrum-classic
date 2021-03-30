@@ -72,9 +72,6 @@ func (cp CodePointStub) Clone() Value {
 }
 
 func (cp CodePointStub) Equal(val Value) bool {
-	if cp2, ok := val.(CodePointValue); ok {
-		return cp.hash == cp2.Hash()
-	}
 	if cp2, ok := val.(CodePointStub); ok {
 		return cp.hash == cp2.hash
 	}

@@ -2,7 +2,7 @@
 
 // Taken from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 /*
 The MIT License (MIT)
@@ -28,71 +28,23 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //solhint-disable no-inline-assembly
 
 import "./ICloneable.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract CloneFactory {
+    using Clones for address;
     string private constant CLONE_MASTER = "CLONE_MASTER";
 
     function createClone(ICloneable target) internal returns (address result) {
         require(target.isMaster(), CLONE_MASTER);
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := create(0, clone, 0x37)
-        }
+        result = address(target).clone();
     }
 
     function create2Clone(ICloneable target, bytes32 salt) internal returns (address result) {
         require(target.isMaster(), CLONE_MASTER);
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := create2(0, clone, 0x37, salt)
-        }
+        result = address(target).cloneDeterministic(salt);
     }
 
-    function isClone(ICloneable target, address query) internal view returns (bool result) {
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x363d3d373d3d3d363d7300000000000000000000000000000000000000000000)
-            mstore(add(clone, 0xa), targetBytes)
-            mstore(
-                add(clone, 0x1e),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-
-            let other := add(clone, 0x40)
-            extcodecopy(query, other, 0, 0x2d)
-            result := and(
-                eq(mload(clone), mload(other)),
-                eq(mload(add(clone, 0xd)), mload(add(other, 0xd)))
-            )
-        }
-    }
-
-    function cloneCodeHash(ICloneable target) internal pure returns (bytes32 result) {
-        bytes20 targetBytes = bytes20(address(target));
-        assembly {
-            let clone := mload(0x40)
-            mstore(clone, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000000000000000000000)
-            mstore(add(clone, 0x14), targetBytes)
-            mstore(
-                add(clone, 0x28),
-                0x5af43d82803e903d91602b57fd5bf30000000000000000000000000000000000
-            )
-            result := keccak256(clone, 0x37)
-        }
+    function calculateCreate2CloneAddress(ICloneable target, bytes32 salt) internal view returns (address calculatedAddress) {
+        calculatedAddress = address(target).predictDeterministicAddress(salt, address(this));
     }
 }

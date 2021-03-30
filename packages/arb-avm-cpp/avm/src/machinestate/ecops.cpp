@@ -20,8 +20,6 @@
 #include <libff/algebra/curves/alt_bn128/alt_bn128_pp.hpp>
 #include <libff/common/profiling.hpp>
 
-#include <nonstd/variant.hpp>
-
 using namespace libff;
 
 void initEcOps() {
@@ -34,23 +32,26 @@ void initEcOps() {
 }
 
 void mpz_export_and_pad32(uint8_t* output, mpz_t input) {
+    uint8_t tmp[32];
     size_t countp;
-    mpz_export(output, &countp, 1, 1, 1, 0, input);
+    mpz_export(tmp, &countp, 1, 1, 1, 0, input);
 
-    if (countp < 32) {
-        uint8_t difference = 32 - countp;
-
-        for (int i = 0; i < 32 - difference; i++) {
-            output[32 - difference - i] = output[32 - difference - i - 1];
-        }
-
-        for (int i = 0; i < difference; i++) {
-            output[i] = 0;
-        }
+    size_t padding = 32 - countp;
+    for (size_t i = 0; i < padding; i++) {
+        output[i] = 0;
+    }
+    for (size_t i = 0; i < countp; i++) {
+        output[i + padding] = tmp[i];
     }
 }
 
 G1Point toG1ArbPoint(G1<alt_bn128_pp> P) {
+    if (P.is_zero()) {
+        // This is a special case defined in EIP-196.
+        // libff would encode this as {0, 1}
+        return {0, 0};
+    }
+
     P.to_affine_coordinates();
 
     alt_bn128_Fq X = P.X;
@@ -120,8 +121,7 @@ G2Point toG2ArbPoint(G2<alt_bn128_pp> P) {
 // also assumes 64 bytes, 0..31 for X and 32...64 for Y, representing a curve
 // point using affine coordinates if either X or Y is less than 32 bytes, they
 // are assumed to be padded with leading 0s
-nonstd::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(
-    const G1Point& point) {
+std::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(const G1Point& point) {
     uint8_t xbytes[32];
     intx::be::store(xbytes, point.x);
     uint8_t ybytes[32];
@@ -169,8 +169,7 @@ nonstd::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(
 // also assumes 128 bytes representing a curve point using affine coordinates
 // if either X or Y is less than 64 bytes, they are assumed to be padded with
 // leading 0s
-nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
-    const G2Point& point) {
+std::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(const G2Point& point) {
     uint8_t xc0bytes[32];
     intx::be::store(xc0bytes, point.x0);
     uint8_t xc1bytes[32];
@@ -236,57 +235,58 @@ nonstd::variant<G2<alt_bn128_pp>, std::string> g2PfromBytes(
     return P;
 }
 
-nonstd::variant<alt_bn128_GT, std::string> ecpairing_internal(
+std::variant<alt_bn128_GT, std::string> ecpairing_internal(
     const std::vector<std::pair<G1Point, G2Point>>& input) {
     alt_bn128_Fq12 prod = alt_bn128_Fq12::one();
 
     for (const auto& item : input) {
         auto g1 = g1PfromBytes(item.first);
         auto g2 = g2PfromBytes(item.second);
-        if (nonstd::holds_alternative<std::string>(g1)) {
-            return g1.get<std::string>();
+        if (std::holds_alternative<std::string>(g1)) {
+            return std::get<std::string>(g1);
         }
-        if (nonstd::holds_alternative<std::string>(g2)) {
-            return g2.get<std::string>();
+        if (std::holds_alternative<std::string>(g2)) {
+            return std::get<std::string>(g2);
         }
-        prod = prod * alt_bn128_pp::pairing(g1.get<G1<alt_bn128_pp>>(),
-                                            g2.get<G2<alt_bn128_pp>>());
+        prod = prod * alt_bn128_pp::pairing(std::get<G1<alt_bn128_pp>>(g1),
+                                            std::get<G2<alt_bn128_pp>>(g2));
     }
 
     return alt_bn128_final_exponentiation(prod);
 }
 
-nonstd::variant<bool, std::string> ecpairing(
+std::variant<bool, std::string> ecpairing(
     const std::vector<std::pair<G1Point, G2Point>>& input) {
     initEcOps();
     auto res = ecpairing_internal(input);
-    if (nonstd::holds_alternative<std::string>(res)) {
-        return res.get<std::string>();
+    if (std::holds_alternative<std::string>(res)) {
+        return std::get<std::string>(res);
     }
-    return res.get<alt_bn128_GT>() == GT<alt_bn128_pp>::one();
+    return std::get<alt_bn128_GT>(res) == GT<alt_bn128_pp>::one();
 }
 
-nonstd::variant<G1Point, std::string> ecadd(const G1Point& input_a,
-                                            const G1Point& input_b) {
+std::variant<G1Point, std::string> ecadd(const G1Point& input_a,
+                                         const G1Point& input_b) {
     initEcOps();
     auto a = g1PfromBytes(input_a);
     auto b = g1PfromBytes(input_b);
-    if (nonstd::holds_alternative<std::string>(a)) {
-        return a.get<std::string>();
+    if (std::holds_alternative<std::string>(a)) {
+        return std::get<std::string>(a);
     }
-    if (nonstd::holds_alternative<std::string>(b)) {
-        return b.get<std::string>();
+    if (std::holds_alternative<std::string>(b)) {
+        return std::get<std::string>(b);
     }
-    return toG1ArbPoint(a.get<G1<alt_bn128_pp>>() + b.get<G1<alt_bn128_pp>>());
+    return toG1ArbPoint(std::get<G1<alt_bn128_pp>>(a) +
+                        std::get<G1<alt_bn128_pp>>(b));
 }
 
-nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
-                                            const uint256_t& factor) {
+std::variant<G1Point, std::string> ecmul(const G1Point& point,
+                                         const uint256_t& factor) {
     initEcOps();
     auto a = g1PfromBytes(point);
 
-    if (nonstd::holds_alternative<std::string>(a)) {
-        return a.get<std::string>();
+    if (std::holds_alternative<std::string>(a)) {
+        return std::get<std::string>(a);
     }
 
     uint8_t sbytes[32];
@@ -297,7 +297,7 @@ nonstd::variant<G1Point, std::string> ecmul(const G1Point& point,
     mpz_import(mpzs, 32, 1, 1, 1, 0, sbytes);
     bigint<BIG_INT_FOR_UINT256> s(mpzs);
     mpz_clear(mpzs);
-    return toG1ArbPoint(s * a.get<G1<alt_bn128_pp>>());
+    return toG1ArbPoint(s * std::get<G1<alt_bn128_pp>>(a));
 }
 
 std::ostream& operator<<(std::ostream& os, const G1Point& val) {

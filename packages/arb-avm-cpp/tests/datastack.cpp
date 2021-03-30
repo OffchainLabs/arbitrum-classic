@@ -16,7 +16,8 @@
 
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
+#include <data_storage/readwritetransaction.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/value.hpp>
 
@@ -31,25 +32,39 @@
 std::string dbpath =
     boost::filesystem::current_path().generic_string() + "/machineDb";
 
-void initializeDatastack(const Transaction& transaction,
+void checkGetTupleResult(const DbResult<value>& res,
+                         uint256_t expected_count,
+                         uint256_t expected_hash) {
+    REQUIRE(std::holds_alternative<CountedData<value>>(res));
+    REQUIRE(
+        std::holds_alternative<Tuple>(std::get<CountedData<value>>(res).data));
+    REQUIRE(std::get<CountedData<value>>(res).reference_count ==
+            expected_count);
+    REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+            expected_hash);
+}
+
+void initializeDatastack(const ReadTransaction& transaction,
                          uint256_t tuple_hash,
                          uint256_t expected_hash,
                          uint64_t expected_size) {
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto results = ::getValue(transaction, tuple_hash, value_cache);
-    REQUIRE(results.status.ok());
-    REQUIRE(nonstd::holds_alternative<Tuple>(results.data));
+    REQUIRE(std::holds_alternative<CountedData<value>>(results));
+    REQUIRE(std::holds_alternative<Tuple>(
+        std::get<CountedData<value>>(results).data));
 
-    Datastack data_stack(nonstd::get<Tuple>(results.data));
+    Datastack data_stack(
+        std::get<Tuple>(std::get<CountedData<value>>(results).data));
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);
 }
 
 void saveDataStack(const Datastack& data_stack) {
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto transaction = storage.makeTransaction();
+    auto transaction = storage.makeReadWriteTransaction();
 
     auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(*transaction, tuple_ret);
@@ -60,9 +75,9 @@ void saveDataStack(const Datastack& data_stack) {
 }
 
 void saveDataStackTwice(const Datastack& data_stack) {
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     std::vector<CodePoint> code;
-    auto transaction = storage.makeTransaction();
+    auto transaction = storage.makeReadWriteTransaction();
 
     auto tuple_ret = data_stack.getTupleRepresentation();
     auto results = saveValue(*transaction, tuple_ret);
@@ -73,7 +88,7 @@ void saveDataStackTwice(const Datastack& data_stack) {
     REQUIRE(results2.reference_count == 2);
 }
 
-void saveAndGetDataStack(Transaction& transaction,
+void saveAndGetDataStack(ReadWriteTransaction& transaction,
                          const Datastack& data_stack,
                          uint256_t expected_hash) {
     auto tuple_ret = data_stack.getTupleRepresentation();
@@ -81,16 +96,12 @@ void saveAndGetDataStack(Transaction& transaction,
     REQUIRE(results.status.ok());
     transaction.commit();
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto get_results = getValue(transaction, expected_hash, value_cache);
-
-    REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
-    REQUIRE(get_results.status.ok());
-    REQUIRE(get_results.reference_count == 1);
-    REQUIRE(hash_value(get_results.data) == expected_hash);
+    checkGetTupleResult(get_results, 1, expected_hash);
 }
 
-void saveTwiceAndGetDataStack(Transaction& transaction,
+void saveTwiceAndGetDataStack(ReadWriteTransaction& transaction,
                               const Datastack& data_stack,
                               uint256_t expected_hash) {
     auto tuple_ret = data_stack.getTupleRepresentation();
@@ -100,19 +111,15 @@ void saveTwiceAndGetDataStack(Transaction& transaction,
     REQUIRE(results2.status.ok());
     transaction.commit();
 
-    ValueCache value_cache{};
+    ValueCache value_cache{1, 0};
     auto get_results = getValue(transaction, expected_hash, value_cache);
-
-    REQUIRE(nonstd::holds_alternative<Tuple>(get_results.data));
-    REQUIRE(get_results.status.ok());
-    REQUIRE(get_results.reference_count == 2);
-    REQUIRE(hash_value(get_results.data) == expected_hash);
+    checkGetTupleResult(get_results, 2, expected_hash);
 }
 
 TEST_CASE("Initialize datastack") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    auto transaction = storage.makeTransaction();
+    ArbStorage storage(dbpath);
+    auto transaction = storage.makeReadWriteTransaction();
     Datastack data_stack;
 
     SECTION("default") {
@@ -134,7 +141,7 @@ TEST_CASE("Initialize datastack") {
     SECTION("push num, tuple") {
         CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
-        auto tuple = Tuple(code_point_stub);
+        auto tuple = Tuple::createTuple(code_point_stub);
         data_stack.push(num);
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
@@ -146,7 +153,7 @@ TEST_CASE("Initialize datastack") {
     SECTION("push codepoint, tuple") {
         CodePointStub code_point_stub{{0, 0}, 3452345};
         uint256_t num = 1;
-        auto tuple = Tuple(num);
+        auto tuple = Tuple::createTuple(num);
         data_stack.push(code_point_stub);
         data_stack.push(tuple);
         auto tuple_ret = data_stack.getTupleRepresentation();
@@ -166,54 +173,54 @@ TEST_CASE("Save datastack") {
     SECTION("save with values") {
         uint256_t num = 1;
         uint256_t intVal = 5435;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveDataStack(datastack);
     }
     SECTION("save with values, twice") {
         uint256_t num = 1;
         uint256_t intVal = 5435;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveDataStackTwice(datastack);
     }
 }
 
 TEST_CASE("Save and get datastack") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
+    ArbStorage storage(dbpath);
     Datastack datastack;
 
     SECTION("save datastack and get") {
         uint256_t intVal = 5435;
-        auto transaction = storage.makeTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
     SECTION("save datastack twice and get") {
         uint256_t intVal = 5435;
-        auto transaction = storage.makeTransaction();
+        auto transaction = storage.makeReadWriteTransaction();
         uint256_t num = 1;
-        auto tuple = Tuple(intVal);
+        auto tuple = Tuple::createTuple(intVal);
         datastack.push(num);
         datastack.push(tuple);
         Tuple tup0;
-        auto tup1 = Tuple(tuple, tup0);
-        auto tup_rep = Tuple(num, tup1);
+        auto tup1 = Tuple(num, tup0);
+        auto tup_rep = Tuple(tuple, tup1);
         saveTwiceAndGetDataStack(*transaction, datastack, hash(tup_rep));
     }
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
 // SafeMath comes from @openzeppelin under the MIT License
 
@@ -162,5 +162,9 @@ library SafeMath {
     ) internal pure returns (uint256) {
         require(b != 0, errorMessage);
         return a % b;
+    }
+
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a > b ? a : b;
     }
 }

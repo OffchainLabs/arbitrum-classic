@@ -19,6 +19,7 @@
 
 #include <avm_values/codepoint.hpp>
 
+#include <cassert>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -55,9 +56,14 @@ class CodeSegment {
     // Return the subset of this code segment starting in the given pc
     std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment_id,
                                            uint64_t pc) const {
+        // Make endpoint pc + 1 since pc should be included in segment
         return std::make_shared<CodeSegment>(
             new_segment_id,
-            std::vector<CodePoint>{code.begin(), code.begin() + pc});
+            std::vector<CodePoint>{
+                code.begin(),
+                code.begin() +
+                    static_cast<std::vector<CodePoint>::difference_type>(pc) +
+                    1});
     }
 
    public:
@@ -120,6 +126,9 @@ class Code {
     void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_id = segment->segmentID();
+        if (segment_id >= next_segment_num) {
+            throw std::runtime_error("code segment loaded incorrectly");
+        }
         if (segments.find(segment->segmentID()) == segments.end()) {
             segments[segment_id] = std::move(segment);
         }
@@ -173,22 +182,16 @@ class Code {
                 return segment->addOperation(std::move(op));
             }
 
-            // The segment is full and other code is referencing it, so we must
-            // allocate a new segment
-            auto new_segment =
-                std::make_shared<CodeSegment>(ref.segment, segment->code);
-            auto stub = new_segment->addOperation(std::move(op));
-            segments[ref.segment] = std::move(new_segment);
-            return stub;
-        } else {
-            // This segment was already mutated elsewhere, therefore we must
-            // make a copy
-            uint64_t new_segment_num = next_segment_num++;
-            auto new_segment = segment->getSubset(new_segment_num, ref.pc);
-            auto stub = new_segment->addOperation(std::move(op));
-            segments[new_segment_num] = std::move(new_segment);
-            return stub;
+            // Fall back to making a copy as there are other references and no
+            // space to add this operation
         }
+        // This segment was already mutated elsewhere, therefore we must
+        // make a copy
+        uint64_t new_segment_num = next_segment_num++;
+        auto new_segment = segment->getSubset(new_segment_num, ref.pc);
+        auto stub = new_segment->addOperation(std::move(op));
+        segments[new_segment_num] = std::move(new_segment);
+        return stub;
     }
 
     CodePointRef initialCodePointRef() const {

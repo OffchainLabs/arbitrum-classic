@@ -1,0 +1,31 @@
+#!/bin/bash
+### --------------------------------------------------------------------
+### update-ts-abi
+### --------------------------------------------------------------------
+echo 'Generating typechain interfaces for arb-bridge-eth:'
+yarn workspace arb-bridge-eth typechain
+
+echo 'Generating typechain interfaces for arbos-contracts:'
+yarn workspace arbos-contracts typechain
+
+echo 'Generating typechain interfaces for arb-bridge-peripherals:'
+yarn workspace arb-bridge-peripherals typechain
+
+echo 'Copying interfaces into arb-ts:'
+
+rm -rf packages/arb-ts/src/lib/abi/*
+
+cd ../arb-bridge-eth/build/types
+
+\cp -rf * ../../../arb-ts/src/lib/abi
+
+            
+cd ../../../arb-os/contracts/src/types
+
+\cp -rf * ../../../../arb-ts/src/lib/abi
+
+cd ../../../../arb-bridge-peripherals/build/types
+
+\cp -rf * ../../../arb-ts/src/lib/abi
+
+cd ../../../arb-ts

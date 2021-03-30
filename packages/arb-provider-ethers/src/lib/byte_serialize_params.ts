@@ -10,8 +10,10 @@ type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]
 type BytesNumber = 1 | 4 | 8 | 16 | 32
 
 // to use:
-// const mySerializeParamsFunction = argSerializerConstructor("aggreator")
-export const argSerializerConstructor = (arbProvider: JsonRpcProvider) => {
+// const mySerializeParamsFunction = argSerializerConstructor("rpcurl")
+export const argSerializerConstructor = (
+  arbProvider: JsonRpcProvider
+): ((params: PrimativeOrPrimativeArray[]) => Promise<Uint8Array>) => {
   return async (params: PrimativeOrPrimativeArray[]) => {
     return await serializeParams(params, async (address: string) => {
       return await getAddressIndex(address, arbProvider)
@@ -19,7 +21,8 @@ export const argSerializerConstructor = (arbProvider: JsonRpcProvider) => {
   }
 }
 
-const isAddress = (input: any) => typeof input === 'string' && _isAddress(input)
+const isAddress = (input: PrimativeType) =>
+  typeof input === 'string' && _isAddress(input)
 
 const toUint = (val: PrimativeType, bytes: BytesNumber) =>
   hexZeroPad(BigNumber.from(val).toHexString(), bytes)
@@ -45,7 +48,7 @@ export const serializeParams = async (
   params: PrimativeOrPrimativeArray[],
   addressToIndex: (address: string) => Promise<number> = () =>
     new Promise(exec => exec(-1))
-) => {
+): Promise<Uint8Array> => {
   const formattedParams: string[] = []
 
   for (const param of params) {

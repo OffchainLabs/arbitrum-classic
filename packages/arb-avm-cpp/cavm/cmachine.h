@@ -18,7 +18,7 @@
 #define cmachine_h
 
 #include <stdint.h>
-#include "ccheckpointstorage.h"
+#include "carbstorage.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -49,22 +49,15 @@ typedef struct {
 } CBlockReason;
 
 typedef struct {
-    uint64_t inbox_messages_consumed;
-    ByteSlice outMessages;
-    int outMessageCount;
-    ByteSlice logs;
-    int logCount;
-    ByteSlice debugPrints;
-    int debugPrintCount;
-    uint64_t numSteps;
-    uint64_t numGas;
-} RawAssertion;
+    ByteSlice standard_proof;
+    ByteSlice buffer_proof;
+} COneStepProof;
 
 CMachine* machineCreate(const char* filename);
 void machineDestroy(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
-void machineHash(CMachine* m, void* ret);
+int machineHash(CMachine* m, void* ret);
 CMachine* machineClone(CMachine* m);
 
 // Ret must have 32 bytes of storage allocated for returned hash
@@ -72,32 +65,30 @@ CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
 RawAssertion executeAssertion(CMachine* m,
-                              uint64_t maxSteps,
-                              void* inbox_messages,
-                              uint64_t message_count,
-                              uint64_t wallLimit);
+                              const CMachineExecutionConfig* c,
+                              void* before_send_acc_data,
+                              void* before_log_acc_data);
 
-RawAssertion executeCallServerAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* fake_inbox_peek_value,
-                                        uint64_t wallLimit);
-
-RawAssertion executeSideloadedAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* sideload,
-                                        uint64_t wallLimit);
-
-ByteSlice machineMarshallForProof(CMachine* m);
+COneStepProof machineMarshallForProof(CMachine* m);
 
 ByteSlice machineMarshallState(CMachine* m);
 
-void machinePrint(CMachine* m);
+char* machineInfo(CMachine* m);
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* storage);
+CMachineExecutionConfig* machineExecutionConfigCreate();
+void machineExecutionConfigDestroy(CMachineExecutionConfig* m);
+void* machineExecutionConfigClone(CMachineExecutionConfig* c);
+void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
+                                     uint64_t max_gas,
+                                     int go_over_gas);
+void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
+                                            ByteSliceArray bytes);
+void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
+                                              void* next_block_height);
+void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
+                                        ByteSliceArray bytes);
+void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
+                                             int stop_on_sideload);
 
 #ifdef __cplusplus
 }

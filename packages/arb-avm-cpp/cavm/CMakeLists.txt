@@ -14,27 +14,27 @@
 
 cmake_minimum_required (VERSION 3.5)
 
-set (CMAKE_CXX_STANDARD 14)
+set (CMAKE_CXX_STANDARD 17)
 
 project (cavm LANGUAGES CXX)
 
 
 set(LIB_HEADERS
   caggregator.h
-  cblockstore.h
+  carbcore.h
+  carbstorage.h
+  cexecutioncursor.h
   cmachine.h
-  ccheckpointstorage.h
-  cvaluecache.h
-  utils.hpp
   ctypes.h
+  utils.hpp
 )
 
 set(LIB_SOURCES
   caggregator.cpp
-  cblockstore.cpp
+  carbcore.cpp
+  carbstorage.cpp
+  cexecutioncursor.cpp
   cmachine.cpp
-  ccheckpointstorage.cpp
-  cvaluecache.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})

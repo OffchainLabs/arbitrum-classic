@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,34 +19,56 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include <data_storage/keyvaluestore.hpp>
-#include <data_storage/storageresultfwd.hpp>
+#include <avm_values/bigint.hpp>
+#include <data_storage/storageresult.hpp>
 
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/utilities/transaction_db.h>
 
 class Transaction;
+class ReadTransaction;
 
 class DataStorage {
+    friend Transaction;
+
    public:
+    enum column_family_indexes {
+        DEFAULT_COLUMN = 0,
+        STATE_COLUMN,
+        CHECKPOINT_COLUMN,
+        MESSAGEENTRY_COLUMN,
+        LOG_COLUMN,
+        SEND_COLUMN,
+        SIDELOAD_COLUMN,
+        AGGREGATOR_COLUMN,
+        REFCOUNTED_COLUMN,
+        FAMILY_COLUMN_COUNT
+    };
     std::string txn_db_path;
     std::unique_ptr<rocksdb::TransactionDB> txn_db;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> default_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> blocks_column;
-    std::unique_ptr<rocksdb::ColumnFamilyHandle> node_column;
+    std::vector<rocksdb::ColumnFamilyHandle*> column_handles;
+    rocksdb::FlushOptions flush_options;
+    size_t next_column_to_flush{0};
 
-    DataStorage(const std::string& db_path);
+    explicit DataStorage(const std::string& db_path);
+
+    rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
 
-    std::unique_ptr<rocksdb::Transaction> beginTransaction() {
+   private:
+    [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction()
+        const {
         return std::unique_ptr<rocksdb::Transaction>{
             txn_db->BeginTransaction(rocksdb::WriteOptions())};
     }
 };
 
 class Transaction {
+    friend ReadTransaction;
+
    public:
     std::shared_ptr<DataStorage> datastorage;
     std::unique_ptr<rocksdb::Transaction> transaction;
@@ -59,6 +81,10 @@ class Transaction {
     rocksdb::Status commit() { return transaction->Commit(); }
 
     rocksdb::Status rollback() { return transaction->Rollback(); }
+
+   private:
+    static std::unique_ptr<Transaction> makeTransaction(
+        std::shared_ptr<DataStorage> store);
 };
 
 #endif /* datastorage_hpp */

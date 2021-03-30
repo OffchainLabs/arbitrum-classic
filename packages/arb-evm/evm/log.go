@@ -18,23 +18,43 @@ package evm
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	errors2 "github.com/pkg/errors"
-	"math/big"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"strings"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "evm").Logger()
 
 type Log struct {
 	Address common.Address
 	Topics  []common.Hash
 	Data    []byte
+}
+
+func CompareLogs(log1 Log, log2 Log) []string {
+	var differences []string
+	if log1.Address != log2.Address {
+		differences = append(differences, fmt.Sprintf("different address %v and %v", log1.Address, log2.Address))
+	}
+	if len(log1.Topics) != len(log2.Topics) {
+		differences = append(differences, fmt.Sprintf("different topic count %v and %v", len(log1.Topics), len(log2.Topics)))
+	} else {
+		for i, topic1 := range log1.Topics {
+			topic2 := log2.Topics[i]
+			if topic1 != topic2 {
+				differences = append(differences, fmt.Sprintf("different topic %v and %v", topic1, topic2))
+			}
+		}
+	}
+	if !bytes.Equal(log1.Data, log2.Data) {
+		differences = append(differences, fmt.Sprintf("different address 0x%X and 0x%X", log1.Data, log2.Data))
+	}
+	return differences
 }
 
 func NewRandomLog(topicCount int32) Log {
@@ -120,8 +140,8 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	if !ok {
 		return Log{}, errors.New("log must be a tuple")
 	}
-	if tupVal.Len() < 3 {
-		return Log{}, fmt.Errorf("log tuple must be at least size 3, but is %v", tupVal)
+	if tupVal.Len() < 2 {
+		return Log{}, errors.Errorf("log tuple must be at least size 2, but is %v", tupVal)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -134,7 +154,7 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	var address common.Address
 	copy(address[:], contractIDBytes[12:])
 	logDataByteVal, _ := tupVal.GetByInt64(1)
-	logData, err := inbox.ByteStackToHex(logDataByteVal)
+	logData, err := inbox.ByteArrayToBytes(logDataByteVal)
 	if err != nil {
 		return Log{}, err
 	}
@@ -150,41 +170,18 @@ func NewLogFromValue(val value.Value) (Log, error) {
 	return Log{address, topics, logData}, nil
 }
 
-func (l Log) AsValue() (*value.TupleValue, error) {
-	data := []value.Value{
-		value.NewValueFromAddress(l.Address),
-		inbox.BytesToByteStack(l.Data),
-	}
-	for _, topic := range l.Topics {
-		data = append(data, value.NewIntValue(new(big.Int).SetBytes(topic.Bytes())))
-	}
-	return value.NewTupleFromSlice(data)
-}
-
 func LogStackToLogs(val value.Value) ([]Log, error) {
 	logValues, err := inbox.StackValueToList(val)
 	if err != nil {
-		return nil, errors2.Wrap(err, "log stack was not a stack")
+		return nil, errors.Wrap(err, "log stack was not a stack")
 	}
 	logs := make([]Log, 0, len(logValues))
-	for i := range logValues {
-		// Flip the order of the logs
-		log, err := NewLogFromValue(logValues[len(logValues)-1-i])
+	for _, logVal := range logValues {
+		evmLog, err := NewLogFromValue(logVal)
 		if err != nil {
 			return nil, err
 		}
-		logs = append(logs, log)
+		logs = append(logs, evmLog)
 	}
 	return logs, nil
-}
-
-func LogsToLogStack(logs []Log) *value.TupleValue {
-	logValues := make([]value.Value, 0, len(logs))
-	for i := range logs {
-		logValue, err := logs[len(logs)-1-i].AsValue()
-		if err == nil {
-			logValues = append(logValues, logValue)
-		}
-	}
-	return inbox.ListToStackValue(logValues)
 }

@@ -8,6 +8,8 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-validator v0.7.3
 	github.com/offchainlabs/arbitrum/packages/arb-validator-core v0.7.3
+	github.com/pkg/errors v0.9.1
+	github.com/rs/zerolog v1.20.0
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-validator => ../../packages/arb-validator
@@ -19,7 +21,5 @@ replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../../packages/
 replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../../packages/arb-evm
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../../packages/arb-util
-
-replace github.com/offchainlabs/arbitrum/packages/arb-checkpointer => ../../packages/arb-checkpointer
 
 replace github.com/offchainlabs/arbitrum/packages/arb-tx-aggregator => ../../packages/arb-tx-aggregator

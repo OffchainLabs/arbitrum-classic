@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@
 #include "utils.hpp"
 
 #include <avm/machine.hpp>
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/value/machine.hpp>
 
-#include <sys/stat.h>
-#include <fstream>
 #include <iostream>
+#include <sstream>
 
 typedef struct {
     uint64_t stepCount;
 } cassertion;
 
-Machine* read_files(std::string filename) {
+Machine* read_files(const std::string& filename) {
     try {
         return new Machine(Machine::loadFromFile(filename));
     } catch (const std::exception& e) {
@@ -52,40 +51,36 @@ void machineDestroy(CMachine* m) {
     delete static_cast<Machine*>(m);
 }
 
-int checkpointMachine(CMachine* m, CCheckpointStorage* s) {
-    auto machine = static_cast<Machine*>(m);
-    auto storage = static_cast<CheckpointStorage*>(s);
-    auto transaction = storage->makeTransaction();
-    auto result = saveMachine(*transaction, *machine);
-    if (!result.status.ok()) {
-        return false;
-    }
-    return transaction->commit().ok();
-}
-
-void machineHash(CMachine* m, void* ret) {
+int machineHash(CMachine* m, void* ret) {
     assert(m);
-    uint256_t retHash = static_cast<Machine*>(m)->hash();
-    std::array<unsigned char, 32> val;
-    to_big_endian(retHash, val.begin());
+    auto optionalHash = static_cast<Machine*>(m)->hash();
+    if (!optionalHash) {
+        return 0;
+    }
+    std::array<unsigned char, 32> val{};
+    to_big_endian(*optionalHash, val.begin());
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+
+    return 1;
 }
 
 void* machineClone(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    Machine* cloneMach = new Machine(*mach);
+    auto mach = static_cast<Machine*>(m);
+    auto cloneMach = new Machine(*mach);
     return static_cast<void*>(cloneMach);
 }
 
-void machinePrint(CMachine* m) {
+char* machineInfo(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    std::cout << "Machine info\n" << *mach << std::endl;
+    auto mach = static_cast<Machine*>(m);
+    std::stringstream ss;
+    ss << *mach;
+    return strdup(ss.str().c_str());
 }
 
 CStatus machineCurrentStatus(CMachine* m) {
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     switch (mach->currentStatus()) {
         case Status::Extensive:
             return STATUS_EXTENSIVE;
@@ -126,134 +121,99 @@ struct ReasonConverter {
 
 CBlockReason machineIsBlocked(CMachine* m, int newMessages) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     auto blockReason = mach->isBlocked(newMessages != 0);
-    return nonstd::visit(ReasonConverter{}, blockReason);
+    return std::visit(ReasonConverter{}, blockReason);
 }
 
-ByteSlice machineMarshallForProof(CMachine* m) {
+COneStepProof machineMarshallForProof(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    std::vector<unsigned char> buffer;
-    return returnCharVector(mach->marshalForProof());
+    auto mach = static_cast<Machine*>(m);
+    auto osp = mach->marshalForProof();
+    auto standard = returnCharVector(osp.standard_proof);
+    auto buf = returnCharVector(osp.buffer_proof);
+    return {standard, buf};
 }
 
 ByteSlice machineMarshallState(CMachine* m) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
+    auto mach = static_cast<Machine*>(m);
     std::vector<unsigned char> buffer;
     return returnCharVector(mach->marshalState());
 }
 
-RawAssertion makeRawAssertion(Assertion& assertion) {
-    std::vector<unsigned char> outMsgData;
-    for (const auto& outMsg : assertion.outMessages) {
-        marshal_value(outMsg, outMsgData);
-    }
-    std::vector<unsigned char> logData;
-    for (const auto& log : assertion.logs) {
-        marshal_value(log, logData);
-    }
-
-    std::vector<unsigned char> debugPrintData;
-    for (const auto& debugPrint : assertion.debugPrints) {
-        marshal_value(debugPrint, debugPrintData);
-    }
-
-    return {assertion.inbox_messages_consumed,
-            returnCharVector(outMsgData),
-            static_cast<int>(assertion.outMessages.size()),
-            returnCharVector(logData),
-            static_cast<int>(assertion.logs.size()),
-            returnCharVector(debugPrintData),
-            static_cast<int>(assertion.debugPrints.size()),
-            assertion.stepCount,
-            assertion.gasCount};
+CMachineExecutionConfig* machineExecutionConfigCreate() {
+    return new MachineExecutionConfig();
 }
 
-RawAssertion makeEmptyAssertion() {
-    return {0, returnCharVector(std::vector<char>{}),
-            0, returnCharVector(std::vector<char>{}),
-            0, returnCharVector(std::vector<char>{}),
-            0, 0,
-            0};
-}
-
-Tuple getTuple(void* data) {
-    auto charData = reinterpret_cast<const char*>(data);
-    return nonstd::get<Tuple>(deserialize_value(charData));
-}
-
-std::vector<Tuple> getInboxMessages(void* data, uint64_t message_count) {
-    auto charData = reinterpret_cast<const char*>(data);
-    std::vector<Tuple> messages;
-    for (uint64_t i = 0; i < message_count; ++i) {
-        messages.push_back(deserialize_value(charData).get<Tuple>());
+void machineExecutionConfigDestroy(CMachineExecutionConfig* m) {
+    if (m == nullptr) {
+        return;
     }
-    return messages;
+    delete static_cast<MachineExecutionConfig*>(m);
+}
+
+void* machineExecutionConfigClone(CMachineExecutionConfig* c) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    auto cloneConf = new MachineExecutionConfig(*config);
+    return static_cast<void*>(cloneConf);
+}
+
+void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
+                                     uint64_t max_gas,
+                                     int go_over_gas) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->max_gas = max_gas;
+    config->go_over_gas = go_over_gas;
+}
+
+void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
+                                            ByteSliceArray bytes) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
+}
+
+void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
+                                              void* next_block_height) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->next_block_height = receiveUint256(next_block_height);
+}
+
+void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
+                                        ByteSliceArray bytes) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->setSideloadsFromBytes(receiveByteSliceArray(bytes));
+}
+
+void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
+                                             int stop_on_sideload) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->stop_on_sideload = stop_on_sideload;
 }
 
 RawAssertion executeAssertion(CMachine* m,
-                              uint64_t maxSteps,
-                              void* inbox_messages,
-                              uint64_t message_count,
-                              uint64_t wallLimit) {
+                              const CMachineExecutionConfig* c,
+                              void* before_send_acc_data,
+                              void* before_log_acc_data) {
     assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-    auto messages = getInboxMessages(inbox_messages, message_count);
+    assert(c);
+    auto mach = static_cast<Machine*>(m);
+    auto config = static_cast<const MachineExecutionConfig*>(c);
+    auto before_send_acc = receiveUint256(before_send_acc_data);
+    auto before_log_acc = receiveUint256(before_log_acc_data);
 
     try {
-        Assertion assertion = mach->run(maxSteps, std::move(messages),
-                                        std::chrono::seconds{wallLimit});
-        return makeRawAssertion(assertion);
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to make assertion " << e.what() << "\n";
-        return makeEmptyAssertion();
-    }
-}
-
-RawAssertion executeCallServerAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* fake_inbox_peek_value,
-                                        uint64_t wallLimit) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-
-    auto messages = getInboxMessages(inbox_messages, message_count);
-    auto fake_inbox_peek_value_data =
-        reinterpret_cast<const char*>(fake_inbox_peek_value);
-    auto fake_inbox_peek = deserialize_value(fake_inbox_peek_value_data);
-
-    try {
-        Assertion assertion = mach->runCallServer(
-            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
-            std::move(fake_inbox_peek));
-        return makeRawAssertion(assertion);
-    } catch (const std::exception& e) {
-        std::cerr << "Failed to make assertion " << e.what() << "\n";
-        return makeEmptyAssertion();
-    }
-}
-
-RawAssertion executeSideloadedAssertion(CMachine* m,
-                                        uint64_t maxSteps,
-                                        void* inbox_messages,
-                                        uint64_t message_count,
-                                        void* sideload,
-                                        uint64_t wallLimit) {
-    assert(m);
-    Machine* mach = static_cast<Machine*>(m);
-
-    auto messages = getInboxMessages(inbox_messages, message_count);
-    auto sideload_value = getTuple(sideload);
-
-    try {
-        Assertion assertion = mach->runSideloaded(
-            maxSteps, std::move(messages), std::chrono::seconds{wallLimit},
-            std::move(sideload_value));
-        return makeRawAssertion(assertion);
+        mach->machine_state.context = AssertionContext{*config};
+        mach->machine_state.context.max_gas +=
+            mach->machine_state.output.arb_gas_used;
+        Assertion assertion = mach->run();
+        return makeRawAssertion(assertion, before_send_acc, before_log_acc);
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
         return makeEmptyAssertion();

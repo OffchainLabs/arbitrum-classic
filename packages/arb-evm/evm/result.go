@@ -17,20 +17,17 @@
 package evm
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	errors2 "github.com/pkg/errors"
-	"math/big"
-	"math/rand"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
+	"github.com/pkg/errors"
+	"math/big"
 )
 
 type ResultType int
@@ -43,178 +40,11 @@ const (
 	InsufficientTxFundsCode  ResultType = 4
 	BadSequenceCode          ResultType = 5
 	InvalidMessageFormatCode ResultType = 6
+	ContractAlreadyExists    ResultType = 7
 	UnknownErrorCode         ResultType = 255
 )
 
 type Result interface {
-	AsValue() value.Value
-}
-
-type Provenance struct {
-	L1SeqNum        *big.Int
-	ParentRequestId common.Hash
-	IndexInParent   *big.Int
-}
-
-func NewProvenanceFromValue(val value.Value) (Provenance, error) {
-	failRet := Provenance{}
-	tup, ok := val.(*value.TupleValue)
-	if !ok {
-		return failRet, errors.New("val must be a tuple")
-	}
-	if tup.Len() != 3 {
-		return failRet, fmt.Errorf("expected tuple of length 3, but recieved tuple of length %v", tup.Len())
-	}
-
-	// Tuple size already verified above, so error can be ignored
-	l1SeqNumVal, _ := tup.GetByInt64(0)
-	parentRequestIdVal, _ := tup.GetByInt64(1)
-	indexInParentVal, _ := tup.GetByInt64(2)
-
-	l1SeqNumInt, ok := l1SeqNumVal.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("provenance l1SeqNum must be an int")
-	}
-
-	parentRequestIdInt, ok := parentRequestIdVal.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("provenance parentRequestId must be an int")
-	}
-
-	indexInParentInt, ok := indexInParentVal.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("provenance indexInParent must be an int")
-	}
-
-	indexInParent := indexInParentInt.BigInt()
-	if indexInParent.Cmp(math.MaxBig256) == 0 {
-		indexInParent = nil
-	}
-
-	var parentRequestId common.Hash
-	copy(parentRequestId[:], math.U256Bytes(parentRequestIdInt.BigInt()))
-
-	return Provenance{
-		L1SeqNum:        l1SeqNumInt.BigInt(),
-		ParentRequestId: parentRequestId,
-		IndexInParent:   indexInParent,
-	}, nil
-}
-
-func (p Provenance) AsValue() value.Value {
-	parent := p.IndexInParent
-	if parent == nil {
-		parent = math.MaxBig256
-	}
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(p.L1SeqNum),
-		value.NewIntValue(new(big.Int).SetBytes(p.ParentRequestId[:])),
-		value.NewIntValue(parent),
-	})
-	return tup
-}
-
-type IncomingRequest struct {
-	Kind       inbox.Type
-	Sender     common.Address
-	MessageID  common.Hash
-	Data       []byte
-	ChainTime  inbox.ChainTime
-	Provenance Provenance
-}
-
-func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
-	failRet := IncomingRequest{}
-	tup, ok := val.(*value.TupleValue)
-	if !ok {
-		return failRet, errors.New("val must be a tuple")
-	}
-	if tup.Len() != 7 {
-		return failRet, fmt.Errorf("expected tuple of length 7, but recieved tuple of length %v", tup.Len())
-	}
-
-	// Tuple size already verified above, so error can be ignored
-	kind, _ := tup.GetByInt64(0)
-	blockNumber, _ := tup.GetByInt64(1)
-	timestamp, _ := tup.GetByInt64(2)
-	sender, _ := tup.GetByInt64(3)
-	inboxSeqNum, _ := tup.GetByInt64(4)
-	messageData, _ := tup.GetByInt64(5)
-	provenanceVal, _ := tup.GetByInt64(6)
-
-	kindInt, ok := kind.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("inbox message kind must be an int")
-	}
-
-	blockNumberInt, ok := blockNumber.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("blockNumber must be an int")
-	}
-
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("timestamp must be an int")
-	}
-
-	senderInt, ok := sender.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("sender must be an int")
-	}
-
-	messageIDInt, ok := inboxSeqNum.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("inboxSeqNum must be an int")
-	}
-	var messageID common.Hash
-	copy(messageID[:], math.U256Bytes(messageIDInt.BigInt()))
-
-	data, err := inbox.ByteStackToHex(messageData)
-	if err != nil {
-		return failRet, errors2.Wrap(err, "unmarshalling input data")
-	}
-
-	provenance, err := NewProvenanceFromValue(provenanceVal)
-	if err != nil {
-		return failRet, err
-	}
-
-	return IncomingRequest{
-		Kind:      inbox.Type(kindInt.BigInt().Uint64()),
-		Sender:    inbox.NewAddressFromInt(senderInt),
-		MessageID: messageID,
-		Data:      data,
-		ChainTime: inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocks(blockNumberInt.BigInt()),
-			Timestamp: timestampInt.BigInt(),
-		},
-		Provenance: provenance,
-	}, nil
-}
-
-func NewRandomIncomingRequest() IncomingRequest {
-	return IncomingRequest{
-		Kind:      inbox.Type(rand.Uint32()),
-		Sender:    common.RandAddress(),
-		MessageID: common.RandHash(),
-		Data:      common.RandBytes(200),
-		ChainTime: inbox.NewRandomChainTime(),
-	}
-}
-
-func (ir IncomingRequest) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(int64(ir.Kind)),
-		value.NewIntValue(ir.ChainTime.BlockNum.AsInt()),
-		value.NewIntValue(ir.ChainTime.Timestamp),
-		inbox.NewIntFromAddress(ir.Sender),
-		value.NewIntValue(new(big.Int).SetBytes(ir.MessageID[:])),
-		inbox.BytesToByteStack(ir.Data),
-		ir.Provenance.AsValue(),
-	})
-	return tup
 }
 
 type TxResult struct {
@@ -227,6 +57,42 @@ type TxResult struct {
 	CumulativeGas   *big.Int
 	TxIndex         *big.Int
 	StartLogIndex   *big.Int
+	FeeStats        *FeeStats
+}
+
+func CompareResults(res1 *TxResult, res2 *TxResult) []string {
+	var differences []string
+	differences = append(differences, CompareIncomingRequests(res1.IncomingRequest, res2.IncomingRequest)...)
+	if res1.ResultCode != res2.ResultCode {
+		differences = append(differences, fmt.Sprintf("different result code %v and %v", res1.ResultCode, res2.ResultCode))
+	}
+	if !bytes.Equal(res1.ReturnData, res2.ReturnData) {
+		differences = append(differences, fmt.Sprintf("different return data 0x%X and 0x%X", res1.ReturnData, res2.ReturnData))
+	}
+	if len(res1.EVMLogs) != len(res2.EVMLogs) {
+
+	} else {
+		for i, log1 := range res1.EVMLogs {
+			log2 := res2.EVMLogs[i]
+			differences = append(differences, CompareLogs(log1, log2)...)
+		}
+	}
+	if res1.GasUsed.Cmp(res2.GasUsed) != 0 {
+		differences = append(differences, fmt.Sprintf("different gas used %v and %v", res1.GasUsed, res2.GasUsed))
+	}
+	if res1.GasPrice.Cmp(res2.GasPrice) != 0 {
+		differences = append(differences, fmt.Sprintf("different gas price %v and %v", res1.GasPrice, res2.GasPrice))
+	}
+	if res1.CumulativeGas.Cmp(res2.CumulativeGas) != 0 {
+		differences = append(differences, fmt.Sprintf("different cumulative gas %v and %v", res1.CumulativeGas, res2.CumulativeGas))
+	}
+	if res1.TxIndex.Cmp(res2.TxIndex) != 0 {
+		differences = append(differences, fmt.Sprintf("different tx index %v and %v", res1.TxIndex, res2.TxIndex))
+	}
+	if res1.StartLogIndex.Cmp(res2.StartLogIndex) != 0 {
+		differences = append(differences, fmt.Sprintf("different start log index %v and %v", res1.StartLogIndex, res2.StartLogIndex))
+	}
+	return differences
 }
 
 func (r *TxResult) String() string {
@@ -241,35 +107,6 @@ func (r *TxResult) String() string {
 	)
 }
 
-func (r *TxResult) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	resultInfo, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(int64(r.ResultCode)),
-		inbox.BytesToByteStack(r.ReturnData),
-		LogsToLogStack(r.EVMLogs),
-	})
-
-	// Static slice correct size, so error can be ignored
-	chainInfo, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(r.CumulativeGas),
-		value.NewIntValue(r.TxIndex),
-		value.NewIntValue(r.StartLogIndex),
-	})
-
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(0),
-		r.IncomingRequest.AsValue(),
-		resultInfo,
-		value.NewTuple2(
-			value.NewIntValue(r.GasUsed),
-			value.NewIntValue(r.GasPrice),
-		),
-		chainInfo,
-	})
-	return tup
-}
-
 func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
 	evmLogs := make([]*types.Log, 0, len(r.EVMLogs))
 	logIndex := r.StartLogIndex.Uint64()
@@ -278,7 +115,7 @@ func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
 			Address:     l.Address.ToEthAddress(),
 			Topics:      common.NewEthHashesFromHashes(l.Topics),
 			Data:        l.Data,
-			BlockNumber: r.IncomingRequest.ChainTime.BlockNum.AsInt().Uint64(),
+			BlockNumber: r.IncomingRequest.L2BlockNumber.Uint64(),
 			TxHash:      r.IncomingRequest.MessageID.ToEthHash(),
 			TxIndex:     uint(r.TxIndex.Uint64()),
 			BlockHash:   blockHash.ToEthHash(),
@@ -320,15 +157,104 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		ContractAddress:   contractAddress,
 		GasUsed:           r.GasUsed.Uint64(),
 		BlockHash:         blockHash.ToEthHash(),
-		BlockNumber:       r.IncomingRequest.ChainTime.BlockNum.AsInt(),
+		BlockNumber:       r.IncomingRequest.L2BlockNumber,
 		TransactionIndex:  uint(r.TxIndex.Uint64()),
 	}
 }
 
-func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value) (*TxResult, error) {
+type FeeSet struct {
+	L1Transaction *big.Int
+	L1Calldata    *big.Int
+	L2Storage     *big.Int
+	L2Computation *big.Int
+}
+
+func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 4 {
+		return nil, errors.Errorf("expected fee set tuple of length 4, but recieved %v", val)
+	}
+	l1Transaction, _ := tup.GetByInt64(0)
+	l1Calldata, _ := tup.GetByInt64(1)
+	l2Storage, _ := tup.GetByInt64(2)
+	l2Computation, _ := tup.GetByInt64(3)
+
+	l1TransactionInt, ok := l1Transaction.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1Transaction must be an int")
+	}
+	l1CalldataInt, ok := l1Calldata.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l1Calldata must be an int")
+	}
+	l2StorageInt, ok := l2Storage.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l2Storage must be an int")
+	}
+	l2ComputationInt, ok := l2Computation.(value.IntValue)
+	if !ok {
+		return nil, errors.New("l2Computation must be an int")
+	}
+
+	return &FeeSet{
+		L1Transaction: l1TransactionInt.BigInt(),
+		L1Calldata:    l1CalldataInt.BigInt(),
+		L2Storage:     l2StorageInt.BigInt(),
+		L2Computation: l2ComputationInt.BigInt(),
+	}, nil
+}
+
+type FeeStats struct {
+	Price      *FeeSet
+	UnitsUsed  *FeeSet
+	Paid       *FeeSet
+	Aggregator *common.Address
+}
+
+func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok || tup.Len() != 4 {
+		return nil, errors.Errorf("expected gas fee tuple of length 4, but recieved %v", val)
+	}
+	pricesVal, _ := tup.GetByInt64(0)
+	unitsVal, _ := tup.GetByInt64(1)
+	paidVal, _ := tup.GetByInt64(2)
+	aggregator, _ := tup.GetByInt64(3)
+
+	prices, err := NewFeeSetFromValue(pricesVal)
+	if err != nil {
+		return nil, err
+	}
+	units, err := NewFeeSetFromValue(unitsVal)
+	if err != nil {
+		return nil, err
+	}
+	paid, err := NewFeeSetFromValue(paidVal)
+	if err != nil {
+		return nil, err
+	}
+	aggregatorInt, ok := aggregator.(value.IntValue)
+	if !ok {
+		return nil, errors.New("aggregator must be an int")
+	}
+	rawAggregatorAddress := inbox.NewAddressFromInt(aggregatorInt)
+	blankAddress := common.Address{}
+	var aggAddress *common.Address
+	if rawAggregatorAddress != blankAddress {
+		aggAddress = &rawAggregatorAddress
+	}
+	return &FeeStats{
+		Price:      prices,
+		UnitsUsed:  units,
+		Paid:       paid,
+		Aggregator: aggAddress,
+	}, nil
+}
+
+func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.Value, chainInfo value.Value, feeStatsVal value.Value) (*TxResult, error) {
 	resultTup, ok := resultInfo.(*value.TupleValue)
 	if !ok || resultTup.Len() != 3 {
-		return nil, fmt.Errorf("advise expected result info tuple of length 3, but recieved %v", resultTup)
+		return nil, errors.Errorf("expected result info tuple of length 3, but recieved %v", resultTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -338,7 +264,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 
 	gasInfoTup, ok := gasInfo.(*value.TupleValue)
 	if !ok || gasInfoTup.Len() != 2 {
-		return nil, fmt.Errorf("advise expected gas info tuple of length 2, but recieved %v", gasInfoTup)
+		return nil, errors.Errorf("advise expected gas info tuple of length 2, but recieved %v", gasInfoTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -347,7 +273,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 
 	chainInfoTup, ok := chainInfo.(*value.TupleValue)
 	if !ok || chainInfoTup.Len() != 3 {
-		return nil, fmt.Errorf("advise expected tx block data tuple of length 3, but recieved %v", resultTup)
+		return nil, errors.Errorf("advise expected tx block data tuple of length 3, but recieved %v", resultTup)
 	}
 
 	// Tuple size already verified above, so error can be ignored
@@ -359,13 +285,13 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 	if err != nil {
 		return nil, err
 	}
-	returnBytes, err := inbox.ByteStackToHex(returnData)
+	returnBytes, err := inbox.ByteArrayToBytes(returnData)
 	if err != nil {
-		return nil, errors2.Wrap(err, "umarshalling return data")
+		return nil, errors.Wrap(err, "umarshalling return data")
 	}
 	logs, err := LogStackToLogs(evmLogs)
 	if err != nil {
-		return nil, errors2.Wrap(err, "unmarshaling logs")
+		return nil, errors.Wrap(err, "unmarshaling logs")
 	}
 	resultCodeInt, ok := resultCode.(value.IntValue)
 	if !ok {
@@ -392,6 +318,10 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 		return nil, errors.New("startLogIndex must be an int")
 	}
 
+	feeStats, err := NewFeeStatsFromValue(feeStatsVal)
+	if err != nil {
+		return nil, err
+	}
 	return &TxResult{
 		IncomingRequest: l1Msg,
 		ResultCode:      ResultType(resultCodeInt.BigInt().Uint64()),
@@ -402,137 +332,7 @@ func parseTxResult(l1MsgVal value.Value, resultInfo value.Value, gasInfo value.V
 		CumulativeGas:   cumulativeGasInt.BigInt(),
 		TxIndex:         txIndexInt.BigInt(),
 		StartLogIndex:   startLogIndexInt.BigInt(),
-	}, nil
-}
-
-type OutputStatistics struct {
-	GasUsed      *big.Int
-	TxCount      *big.Int
-	EVMLogCount  *big.Int
-	AVMLogCount  *big.Int
-	AVMSendCount *big.Int
-}
-
-func (os *OutputStatistics) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewIntValue(os.GasUsed),
-		value.NewIntValue(os.TxCount),
-		value.NewIntValue(os.EVMLogCount),
-		value.NewIntValue(os.AVMLogCount),
-		value.NewIntValue(os.AVMSendCount),
-	})
-	return tup
-}
-
-type BlockInfo struct {
-	BlockNum   *big.Int
-	Timestamp  *big.Int
-	GasLimit   *big.Int
-	BlockStats *OutputStatistics
-	ChainStats *OutputStatistics
-}
-
-func (b *BlockInfo) LastAVMLog() *big.Int {
-	return new(big.Int).Sub(b.ChainStats.AVMLogCount, big.NewInt(1))
-}
-
-func (b *BlockInfo) FirstAVMLog() *big.Int {
-	return new(big.Int).Sub(b.LastAVMLog(), b.BlockStats.AVMLogCount)
-}
-
-func (b *BlockInfo) LastAVMSend() *big.Int {
-	return new(big.Int).Sub(b.ChainStats.AVMSendCount, big.NewInt(1))
-}
-
-func (b *BlockInfo) FirstAVMSend() *big.Int {
-	return new(big.Int).Sub(b.LastAVMSend(), b.BlockStats.AVMSendCount)
-}
-
-func (b *BlockInfo) AsValue() value.Value {
-	// Static slice correct size, so error can be ignored
-	tup, _ := value.NewTupleFromSlice([]value.Value{
-		value.NewInt64Value(1),
-		value.NewIntValue(b.BlockNum),
-		value.NewIntValue(b.Timestamp),
-		value.NewIntValue(b.GasLimit),
-		b.BlockStats.AsValue(),
-		b.ChainStats.AsValue(),
-	})
-	return tup
-}
-
-func parseBlockResult(blockNum value.Value, timestamp value.Value, gasLimit value.Value, blockStatsRaw value.Value, chainStatsRaw value.Value) (*BlockInfo, error) {
-	blockNumInt, ok := blockNum.(value.IntValue)
-	if !ok {
-		return nil, errors.New("blockNum must be an int")
-	}
-	timestampInt, ok := timestamp.(value.IntValue)
-	if !ok {
-		return nil, errors.New("timestamp must be an int")
-	}
-	gasLimitInt, ok := gasLimit.(value.IntValue)
-	if !ok {
-		return nil, errors.New("gasLimit must be an int")
-	}
-	blockStats, err := parseOutputStatistics(blockStatsRaw)
-	if err != nil {
-		return nil, err
-	}
-
-	chainStats, err := parseOutputStatistics(chainStatsRaw)
-	if err != nil {
-		return nil, err
-	}
-
-	return &BlockInfo{
-		BlockNum:   blockNumInt.BigInt(),
-		Timestamp:  timestampInt.BigInt(),
-		GasLimit:   gasLimitInt.BigInt(),
-		BlockStats: blockStats,
-		ChainStats: chainStats,
-	}, nil
-}
-
-func parseOutputStatistics(val value.Value) (*OutputStatistics, error) {
-	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 5 {
-		return nil, errors.New("expected result to be nonempty tuple")
-	}
-
-	// Tuple size already verified above, so error can be ignored
-	gasUsed, _ := tup.GetByInt64(0)
-	txCount, _ := tup.GetByInt64(1)
-	evmLogCount, _ := tup.GetByInt64(2)
-	avmLogCount, _ := tup.GetByInt64(3)
-	avmSendCount, _ := tup.GetByInt64(4)
-
-	gasUsedInt, ok := gasUsed.(value.IntValue)
-	if !ok {
-		return nil, errors.New("gasUsed must be an int")
-	}
-	txCountInt, ok := txCount.(value.IntValue)
-	if !ok {
-		return nil, errors.New("txCount must be an int")
-	}
-	evmLogCountInt, ok := evmLogCount.(value.IntValue)
-	if !ok {
-		return nil, errors.New("evmLogCount must be an int")
-	}
-	avmLogCountInt, ok := avmLogCount.(value.IntValue)
-	if !ok {
-		return nil, errors.New("avmLogCount must be an int")
-	}
-	avmSendCountInt, ok := avmSendCount.(value.IntValue)
-	if !ok {
-		return nil, errors.New("avmSendCount must be an int")
-	}
-	return &OutputStatistics{
-		GasUsed:      gasUsedInt.BigInt(),
-		TxCount:      txCountInt.BigInt(),
-		EVMLogCount:  evmLogCountInt.BigInt(),
-		AVMLogCount:  avmLogCountInt.BigInt(),
-		AVMSendCount: avmSendCountInt.BigInt(),
+		FeeStats:        feeStats,
 	}, nil
 }
 
@@ -550,8 +350,8 @@ func NewResultFromValue(val value.Value) (Result, error) {
 	}
 
 	if kindInt.BigInt().Uint64() == 0 {
-		if tup.Len() != 5 {
-			return nil, fmt.Errorf("tx result expected tuple of length 5, but recieved len %v: %v", tup.Len(), tup)
+		if tup.Len() != 6 {
+			return nil, errors.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
@@ -559,20 +359,27 @@ func NewResultFromValue(val value.Value) (Result, error) {
 		resultInfo, _ := tup.GetByInt64(2)
 		gasInfo, _ := tup.GetByInt64(3)
 		chainInfo, _ := tup.GetByInt64(4)
-		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo)
+		feeStats, _ := tup.GetByInt64(5)
+		return parseTxResult(l1MsgVal, resultInfo, gasInfo, chainInfo, feeStats)
 	} else if kindInt.BigInt().Uint64() == 1 {
-		if tup.Len() != 6 {
-			return nil, fmt.Errorf("tx result expected tuple of length 6, but recieved len %v: %v", tup.Len(), tup)
+		if tup.Len() != 8 {
+			return nil, errors.Errorf("block result expected tuple of length 8, but received len %v: %v", tup.Len(), tup)
 		}
 
 		// Tuple size already verified above, so error can be ignored
 		blockNum, _ := tup.GetByInt64(1)
 		timestamp, _ := tup.GetByInt64(2)
-		gasLimit, _ := tup.GetByInt64(3)
-		blockStatsRaw, _ := tup.GetByInt64(4)
-		chainStatsRaw, _ := tup.GetByInt64(5)
+		blockStatsRaw, _ := tup.GetByInt64(3)
+		chainStatsRaw, _ := tup.GetByInt64(4)
+		gasStats, _ := tup.GetByInt64(5)
+		previousHeight, _ := tup.GetByInt64(6)
+		l1BlockNum, _ := tup.GetByInt64(7)
 
-		return parseBlockResult(blockNum, timestamp, gasLimit, blockStatsRaw, chainStatsRaw)
+		return parseBlockResult(blockNum, timestamp, blockStatsRaw, chainStatsRaw, gasStats, previousHeight, l1BlockNum)
+	} else if kindInt.BigInt().Uint64() == 2 {
+		return NewSendResultFromValue(tup)
+	} else if kindInt.BigInt().Uint64() == 3 {
+		return NewMerkleRootLogResultFromValue(tup)
 	} else {
 		return nil, errors.New("unknown result kind")
 	}
@@ -585,19 +392,7 @@ func NewTxResultFromValue(val value.Value) (*TxResult, error) {
 	}
 	txRes, ok := res.(*TxResult)
 	if !ok {
-		return nil, errors.New("got block result but expected transaction")
-	}
-	return txRes, nil
-}
-
-func NewBlockResultFromValue(val value.Value) (*BlockInfo, error) {
-	res, err := NewResultFromValue(val)
-	if err != nil {
-		return nil, err
-	}
-	txRes, ok := res.(*BlockInfo)
-	if !ok {
-		return nil, errors.New("got transaction result but expected block")
+		return nil, errors.Errorf("got %T but expected TxResult", res)
 	}
 	return txRes, nil
 }

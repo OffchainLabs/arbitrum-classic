@@ -16,35 +16,46 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.5.11;
+pragma solidity ^0.6.11;
 
-import "../challenge/IChallengeFactory.sol";
-import "../rollup/IStaking.sol";
+import "../challenge/ChallengeFactory.sol";
 
-contract ChallengeTester is IStaking {
-    IChallengeFactory private challengeFactory;
+contract ChallengeTester {
+    address public challenge;
+    bool public challengeCompleted;
+    address public winner;
+    address public loser;
+    ChallengeFactory public challengeFactory;
 
-    constructor(address challengeFactory_) public {
-        challengeFactory = IChallengeFactory(challengeFactory_);
+    constructor(IOneStepProof[] memory _executors) public {
+        challengeFactory = new ChallengeFactory(_executors);
     }
 
-    function resolveChallenge(address payable, address) external {
-        return;
+    /* solhint-disable-next-line no-unused-vars */
+    function completeChallenge(address _winner, address payable _loser) external {
+        winner = _winner;
+        loser = _loser;
+        challengeCompleted = true;
     }
 
     function startChallenge(
-        address payable asserterAddress,
-        address payable challengerAddress,
-        uint128 challengerPeriodTicks,
-        bytes32 challengerDataHash,
-        uint256 challengeType
+        bytes32 executionHash,
+        uint256 maxMessageCount,
+        address payable asserter,
+        address payable challenger,
+        uint256 asserterTimeLeft,
+        uint256 challengerTimeLeft,
+        IBridge bridge
     ) public {
-        challengeFactory.createChallenge(
-            asserterAddress,
-            challengerAddress,
-            challengerPeriodTicks,
-            challengerDataHash,
-            challengeType
+        challenge = challengeFactory.createChallenge(
+            address(this),
+            executionHash,
+            maxMessageCount,
+            asserter,
+            challenger,
+            asserterTimeLeft,
+            challengerTimeLeft,
+            bridge
         );
     }
 }

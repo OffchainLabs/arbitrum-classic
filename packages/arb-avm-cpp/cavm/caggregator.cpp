@@ -26,84 +26,66 @@ void deleteAggregatorStore(CAggregatorStore* agg) {
     delete static_cast<AggregatorStore*>(agg);
 }
 
-Uint64Result aggregatorLogCount(const CAggregatorStore* agg) {
+Uint64Result aggregatorBlockCount(const CAggregatorStore* agg) {
     try {
-        return {static_cast<const AggregatorStore*>(agg)->logCount(), true};
-    } catch (const std::exception&) {
-        return {0, false};
-    }
-}
-
-int aggregatorSaveLog(CAggregatorStore* agg,
-                      const void* data,
-                      uint64_t length) {
-    try {
-        auto ptr = reinterpret_cast<const char*>(data);
-        static_cast<AggregatorStore*>(agg)->saveLog({ptr, ptr + length});
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
-ByteSliceResult aggregatorGetLog(const CAggregatorStore* agg, uint64_t index) {
-    try {
-        auto data = returnCharVector(
-            static_cast<const AggregatorStore*>(agg)->getLog(index));
-        return {data, true};
-    } catch (const std::exception&) {
-        return {{nullptr, 0}, false};
-    }
-}
-
-Uint64Result aggregatorMessageCount(const CAggregatorStore* agg) {
-    try {
-        return {static_cast<const AggregatorStore*>(agg)->messageCount(), true};
-    } catch (const std::exception&) {
-        return {0, false};
-    }
-}
-
-int aggregatorSaveMessage(CAggregatorStore* agg,
-                          const void* data,
-                          uint64_t length) {
-    try {
-        auto ptr = reinterpret_cast<const char*>(data);
-        static_cast<AggregatorStore*>(agg)->saveMessage({ptr, ptr + length});
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
-ByteSliceResult aggregatorGetMessage(const CAggregatorStore* agg,
-                                     uint64_t index) {
-    try {
-        auto data = returnCharVector(
-            static_cast<const AggregatorStore*>(agg)->getMessage(index));
-        return {data, true};
-    } catch (const std::exception&) {
-        return {{nullptr, 0}, false};
-    }
-}
-
-CBlockData aggregatorLatestBlock(const CAggregatorStore* agg) {
-    try {
-        auto latest = static_cast<const AggregatorStore*>(agg)->latestBlock();
-        return {true, latest.first, returnCharVector(latest.second)};
+        auto count = static_cast<const AggregatorStore*>(agg)->blockCount();
+        return {count, true};
     } catch (const std::exception& e) {
-        return {false, 0, ByteSlice{nullptr, 0}};
+        std::cerr << "Exception loading block count: " << e.what() << std::endl;
+        return {0, false};
     }
 }
 
-int aggregatorSaveBlock(CAggregatorStore* agg,
-                        uint64_t height,
-                        const void* data,
-                        int data_length) {
+int aggregatorSaveMessageBatch(CAggregatorStore* agg_ptr,
+                               const void* batch_num_ptr,
+                               const uint64_t log_index) {
     try {
-        auto ptr = reinterpret_cast<const char*>(data);
-        static_cast<AggregatorStore*>(agg)->saveBlock(height,
-                                                      {ptr, ptr + data_length});
+        auto agg = static_cast<AggregatorStore*>(agg_ptr);
+        auto batch_num = receiveUint256(batch_num_ptr);
+
+        agg->saveMessageBatch(batch_num, log_index);
+
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+Uint64Result aggregatorGetMessageBatch(CAggregatorStore* agg_ptr,
+                                       const void* batch_num_ptr) {
+    try {
+        auto agg = static_cast<AggregatorStore*>(agg_ptr);
+        auto batch_num = receiveUint256(batch_num_ptr);
+        auto index = agg->getMessageBatch(batch_num);
+        if (index) {
+            return {*index, true};
+        } else {
+            return {0, false};
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "aggregatorGetMessageBatch error: " << e.what()
+                  << std::endl;
+        return {0, false};
+    }
+}
+
+int aggregatorSaveBlock(CAggregatorStore* agg_ptr,
+                        const uint64_t height,
+                        const void* block_hash_ptr,
+                        const ByteSliceArray requests_data,
+                        const uint64_t* log_indexes,
+                        const void* block_data,
+                        const int block_data_length) {
+    try {
+        auto agg = static_cast<AggregatorStore*>(agg_ptr);
+        auto block_hash = receiveUint256(block_hash_ptr);
+        auto request_ids = receiveUint256Array(requests_data);
+        auto block_ptr = reinterpret_cast<const char*>(block_data);
+
+        agg->saveBlock(height, block_hash, request_ids, log_indexes,
+                       {block_ptr, block_ptr + block_data_length});
+
         return true;
     } catch (const std::exception& e) {
         std::cerr << "aggregatorSaveBlock error: " << e.what() << std::endl;
@@ -120,13 +102,9 @@ CBlockData aggregatorGetBlock(const CAggregatorStore* agg, uint64_t height) {
     }
 }
 
-int aggregatorReorg(CAggregatorStore* agg,
-                    uint64_t block_height,
-                    uint64_t message_count,
-                    uint64_t log_count) {
+int aggregatorReorg(CAggregatorStore* agg, uint64_t block_height) {
     try {
-        static_cast<AggregatorStore*>(agg)->reorg(block_height, message_count,
-                                                  log_count);
+        static_cast<AggregatorStore*>(agg)->reorg(block_height);
         return true;
     } catch (const std::exception& e) {
         std::cerr << "aggregatorRestoreBlock error: " << e.what() << std::endl;
@@ -147,18 +125,6 @@ Uint64Result aggregatorGetPossibleRequestInfo(const CAggregatorStore* agg,
     }
 }
 
-int aggregatorSaveRequest(CAggregatorStore* agg,
-                          const void* request_id,
-                          uint64_t log_index) {
-    try {
-        static_cast<AggregatorStore*>(agg)->saveRequest(
-            receiveUint256(request_id), log_index);
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
-    }
-}
-
 // block_hash is 32 bytes long
 Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
                                         const void* block_hash) {
@@ -171,14 +137,29 @@ Uint64Result aggregatorGetPossibleBlock(const CAggregatorStore* agg,
     }
 }
 
-int aggregatorSaveBlockHash(CAggregatorStore* agg,
-                            const void* block_hash,
-                            uint64_t block_height) {
+Uint256Result aggregatorLogsProcessedCount(CAggregatorStore* agg) {
+    auto store = static_cast<AggregatorStore*>(agg);
     try {
-        static_cast<AggregatorStore*>(agg)->saveBlockHash(
-            receiveUint256(block_hash), block_height);
-        return 1;
-    } catch (const std::exception&) {
-        return 0;
+        auto count_result = store->logsProcessedCount();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+int aggregatorUpdateLogsProcessedCount(CAggregatorStore* agg, void* count_ptr) {
+    auto count = receiveUint256(count_ptr);
+    auto store = static_cast<AggregatorStore*>(agg);
+
+    try {
+        store->updateLogsProcessedCount(count);
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to update log processed count: " << e.what()
+                  << std::endl;
+        return false;
     }
 }

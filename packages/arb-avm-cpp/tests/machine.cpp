@@ -17,13 +17,12 @@
 #include "config.hpp"
 #include "helper.hpp"
 
-#include <data_storage/checkpointstorage.hpp>
+#include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
-#include <avm/machinestate/ecops.hpp>
 
 #define CATCH_CONFIG_ENABLE_BENCHMARKING 1
 #include <catch2/catch.hpp>
@@ -32,102 +31,121 @@
 
 auto execution_path = boost::filesystem::current_path();
 
-void checkpointState(CheckpointStorage& storage, Machine& machine) {
-    auto transaction = storage.makeTransaction();
+void checkpointState(ArbStorage& storage, Machine& machine) {
+    auto transaction = storage.makeReadWriteTransaction();
     auto results = saveMachine(*transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction->commit().ok());
 }
 
-void checkpointStateTwice(CheckpointStorage& storage, Machine& machine) {
-    auto transaction1 = storage.makeTransaction();
+void checkpointStateTwice(ArbStorage& storage, Machine& machine) {
+    auto transaction1 = storage.makeReadWriteTransaction();
     auto results = saveMachine(*transaction1, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 1);
     REQUIRE(transaction1->commit().ok());
 
-    auto transaction2 = storage.makeTransaction();
+    auto transaction2 = storage.makeReadWriteTransaction();
     auto results2 = saveMachine(*transaction2, machine);
     REQUIRE(results2.status.ok());
     REQUIRE(results2.reference_count == 2);
     REQUIRE(transaction2->commit().ok());
 }
 
-void deleteCheckpoint(Transaction& transaction, Machine& machine) {
-    auto results = deleteMachine(transaction, machine.hash());
+void deleteCheckpoint(ReadWriteTransaction& transaction, Machine& machine) {
+    auto machine_hash = machine.hash();
+    REQUIRE(machine_hash);
+    auto results = deleteMachine(transaction, *machine_hash);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 0);
 }
 
-void restoreCheckpoint(CheckpointStorage& storage,
+void restoreCheckpoint(ArbStorage& storage,
                        Machine& expected_machine,
                        ValueCache& value_cache) {
-    auto mach = storage.getMachine(expected_machine.hash(), value_cache);
-    REQUIRE(mach.hash() == expected_machine.hash());
+    auto machine_hash = expected_machine.hash();
+    REQUIRE(machine_hash);
+    auto mach = storage.getMachine(*machine_hash, value_cache);
+    REQUIRE(mach->hash() == expected_machine.hash());
 }
 
 TEST_CASE("Checkpoint State") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    storage.initialize(test_contract_path);
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    REQUIRE(storage.initialize(test_contract_path).ok());
+    ValueCache value_cache{1, 0};
 
     auto machine = storage.getInitialMachine(value_cache);
-    machine.run(1, {}, std::chrono::seconds{0});
+    MachineExecutionConfig execConfig;
+    execConfig.max_gas = 3;
+    execConfig.next_block_height = 3;
+    machine->machine_state.context = AssertionContext(execConfig);
+    machine->run();
 
-    SECTION("default") { checkpointState(storage, machine); }
-    SECTION("save twice") { checkpointStateTwice(storage, machine); }
+    SECTION("default") { checkpointState(storage, *machine); }
+    SECTION("save twice") { checkpointStateTwice(storage, *machine); }
     SECTION("assert machine hash") {
-        auto hash1 = machine.hash();
-        auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, machine);
+        auto hash1 = machine->hash();
+        REQUIRE(hash1);
+        auto transaction = storage.makeReadWriteTransaction();
+        auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        auto machine2 = storage.getMachine(hash1, value_cache);
-        auto hash2 = machine2.hash();
+        auto machine2 = storage.getMachine(*hash1, value_cache);
+        auto hash2 = machine2->hash();
         REQUIRE(hash2 == hash1);
     }
 }
 
 TEST_CASE("Delete machine checkpoint") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    storage.initialize(test_contract_path);
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    REQUIRE(storage.initialize(test_contract_path).ok());
+    ValueCache value_cache{1, 0};
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
-        machine.run(1, {}, std::chrono::seconds{0});
-        auto transaction = storage.makeTransaction();
-        saveMachine(*transaction, machine);
-        machine.run(100, {}, std::chrono::seconds{0});
-        saveMachine(*transaction, machine);
-        deleteCheckpoint(*transaction, machine);
+        MachineExecutionConfig execConfig;
+        execConfig.max_gas = 4;
+        execConfig.next_block_height = 3;
+        machine->machine_state.context = AssertionContext(execConfig);
+        machine->run();
+        auto transaction = storage.makeReadWriteTransaction();
+        saveMachine(*transaction, *machine);
+        execConfig.max_gas = 0;
+        machine->machine_state.context = AssertionContext(execConfig);
+        machine->run();
+        saveMachine(*transaction, *machine);
+        deleteCheckpoint(*transaction, *machine);
         REQUIRE(transaction->commit().ok());
     }
 }
 
 TEST_CASE("Restore checkpoint") {
     DBDeleter deleter;
-    CheckpointStorage storage(dbpath);
-    storage.initialize(test_contract_path);
-    ValueCache value_cache{};
+    ArbStorage storage(dbpath);
+    REQUIRE(storage.initialize(test_contract_path).ok());
+    ValueCache value_cache{1, 0};
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
-        auto transaction = storage.makeTransaction();
-        auto results = saveMachine(*transaction, machine);
+        auto transaction = storage.makeReadWriteTransaction();
+        auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        restoreCheckpoint(storage, machine, value_cache);
+        restoreCheckpoint(storage, *machine, value_cache);
     }
 }
 
 TEST_CASE("Proof") {
     auto machine = Machine::loadFromFile(test_contract_path);
     while (true) {
-        auto assertion = machine.run(1, {}, std::chrono::seconds{0});
+        MachineExecutionConfig execConfig;
+        execConfig.max_gas = 3;
+        execConfig.next_block_height = 3;
+        machine.machine_state.context = AssertionContext(execConfig);
+        auto assertion = machine.run();
         machine.marshalForProof();
         if (assertion.stepCount == 0) {
             break;
@@ -197,11 +215,65 @@ TEST_CASE("MachineTestVectors") {
                 std::string{machine_test_cases_path} + "/" + filename + ".mexe";
 
             auto mach = Machine::loadFromFile(test_file);
-            while (
-                nonstd::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
-                mach.run(1, {}, std::chrono::seconds{0});
+            MachineExecutionConfig execConfig;
+            while (std::holds_alternative<NotBlocked>(mach.isBlocked(false))) {
+                mach.run();
             }
             REQUIRE(mach.currentStatus() == Status::Halted);
         }
     }
+}
+
+TEST_CASE("Stopping on sideload") {
+    auto orig_machine = Machine::loadFromFile(
+        std::string(machine_test_cases_path) + "/sideloadtest.mexe");
+    MachineExecutionConfig execConfig;
+
+    // First, test running straight past the sideload
+    Machine machine = orig_machine;
+    machine.machine_state.context = AssertionContext(execConfig);
+    auto assertion = machine.run();
+    REQUIRE(machine.currentStatus() == Status::Error);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 13);
+
+    // Next, test running past the sideload with a value specified
+    machine = orig_machine;
+    execConfig.sideloads.emplace_back(InboxMessage());
+    execConfig.stop_on_sideload = true;  // Shouldn't matter
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
+    REQUIRE(machine.currentStatus() == Status::Halted);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 23);
+
+    // Next, test stopping on the sideload but continuing
+    machine = orig_machine;
+    execConfig.sideloads.clear();
+    execConfig.stop_on_sideload = true;
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
+    REQUIRE(machine.currentStatus() == Status::Extensive);
+    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
+    REQUIRE(assertion.gasCount == 1);
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
+    REQUIRE(machine.currentStatus() == Status::Error);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 12);
+
+    // Next, test stopping on the sideload and adding a value
+    machine = orig_machine;
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
+    REQUIRE(machine.currentStatus() == Status::Extensive);
+    REQUIRE(assertion.sideloadBlockNumber == uint256_t(0x321));
+    REQUIRE(assertion.gasCount == 1);
+
+    execConfig.sideloads.emplace_back(InboxMessage());
+    machine.machine_state.context = AssertionContext(execConfig);
+    assertion = machine.run();
+    REQUIRE(machine.currentStatus() == Status::Halted);
+    REQUIRE(!assertion.sideloadBlockNumber);
+    REQUIRE(assertion.gasCount == 22);
 }
