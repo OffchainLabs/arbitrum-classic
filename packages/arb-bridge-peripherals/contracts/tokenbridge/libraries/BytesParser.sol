@@ -28,7 +28,8 @@ library BytesParserWithDefault {
         if(input.length == 0) {
             return defaultValue;
         } else {
-            return input.toUint8(0);
+            // TODO: try catch to handle error
+            return abi.decode(input, (uint8));
         }
     }
 
