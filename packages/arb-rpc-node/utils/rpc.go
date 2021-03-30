@@ -50,7 +50,7 @@ func LaunchRPC(handler http.Handler, port string, flags RPCFlags) error {
 }
 
 func LaunchWS(server *rpc.Server, port string, flags RPCFlags) error {
-	return launchServer(server.WebsocketHandler([]string{"0.0.0.0"}), port, flags)
+	return launchServer(server.WebsocketHandler([]string{"*"}), port, flags)
 }
 
 func launchServer(handler http.Handler, port string, flags RPCFlags) error {

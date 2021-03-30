@@ -12,43 +12,7 @@ import {
 
 interface ArbSysInterface extends Interface {
   functions: {
-    addressTable_addressExists: TypedFunctionDescription<{
-      encode([addr]: [string]): string
-    }>
-
-    addressTable_compress: TypedFunctionDescription<{
-      encode([addr]: [string]): string
-    }>
-
-    addressTable_decompress: TypedFunctionDescription<{
-      encode([buf, offset]: [Arrayish, BigNumberish]): string
-    }>
-
-    addressTable_lookup: TypedFunctionDescription<{
-      encode([addr]: [string]): string
-    }>
-
-    addressTable_lookupIndex: TypedFunctionDescription<{
-      encode([index]: [BigNumberish]): string
-    }>
-
-    addressTable_register: TypedFunctionDescription<{
-      encode([addr]: [string]): string
-    }>
-
-    addressTable_size: TypedFunctionDescription<{ encode([]: []): string }>
-
-    functionTableGet: TypedFunctionDescription<{
-      encode([addr, index]: [string, BigNumberish]): string
-    }>
-
-    functionTableSize: TypedFunctionDescription<{
-      encode([addr]: [string]): string
-    }>
-
-    getBlsPublicKey: TypedFunctionDescription<{
-      encode([addr]: [string]): string
-    }>
+    arbOSVersion: TypedFunctionDescription<{ encode([]: []): string }>
 
     getStorageAt: TypedFunctionDescription<{
       encode([account, index]: [string, BigNumberish]): string
@@ -56,19 +20,6 @@ interface ArbSysInterface extends Interface {
 
     getTransactionCount: TypedFunctionDescription<{
       encode([account]: [string]): string
-    }>
-
-    registerBlsKey: TypedFunctionDescription<{
-      encode([x0, x1, y0, y1]: [
-        BigNumberish,
-        BigNumberish,
-        BigNumberish,
-        BigNumberish
-      ]): string
-    }>
-
-    uploadFunctionTable: TypedFunctionDescription<{
-      encode([buf]: [Arrayish]): string
     }>
 
     withdrawERC20: TypedFunctionDescription<{
@@ -119,127 +70,9 @@ export class ArbSys extends Contract {
   interface: ArbSysInterface
 
   functions: {
-    addressTable_addressExists(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<boolean>
+    arbOSVersion(overrides?: TransactionOverrides): Promise<BigNumber>
 
-    'addressTable_addressExists(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<boolean>
-
-    addressTable_compress(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<string>
-
-    'addressTable_compress(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<string>
-
-    addressTable_decompress(
-      buf: Arrayish,
-      offset: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<{
-      0: string
-      1: BigNumber
-    }>
-
-    'addressTable_decompress(bytes,uint256)'(
-      buf: Arrayish,
-      offset: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<{
-      0: string
-      1: BigNumber
-    }>
-
-    addressTable_lookup(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'addressTable_lookup(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_lookupIndex(
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<string>
-
-    'addressTable_lookupIndex(uint256)'(
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<string>
-
-    addressTable_register(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    'addressTable_register(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    addressTable_size(overrides?: TransactionOverrides): Promise<BigNumber>
-
-    'addressTable_size()'(overrides?: TransactionOverrides): Promise<BigNumber>
-
-    functionTableGet(
-      addr: string,
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<{
-      0: BigNumber
-      1: boolean
-      2: BigNumber
-    }>
-
-    'functionTableGet(address,uint256)'(
-      addr: string,
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<{
-      0: BigNumber
-      1: boolean
-      2: BigNumber
-    }>
-
-    functionTableSize(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'functionTableSize(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    getBlsPublicKey(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<{
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: BigNumber
-    }>
-
-    'getBlsPublicKey(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<{
-      0: BigNumber
-      1: BigNumber
-      2: BigNumber
-      3: BigNumber
-    }>
+    'arbOSVersion()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     getStorageAt(
       account: string,
@@ -262,32 +95,6 @@ export class ArbSys extends Contract {
       account: string,
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
-
-    registerBlsKey(
-      x0: BigNumberish,
-      x1: BigNumberish,
-      y0: BigNumberish,
-      y1: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    'registerBlsKey(uint256,uint256,uint256,uint256)'(
-      x0: BigNumberish,
-      x1: BigNumberish,
-      y0: BigNumberish,
-      y1: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    uploadFunctionTable(
-      buf: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
-
-    'uploadFunctionTable(bytes)'(
-      buf: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<ContractTransaction>
 
     withdrawERC20(
       dest: string,
@@ -324,127 +131,9 @@ export class ArbSys extends Contract {
     ): Promise<ContractTransaction>
   }
 
-  addressTable_addressExists(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<boolean>
+  arbOSVersion(overrides?: TransactionOverrides): Promise<BigNumber>
 
-  'addressTable_addressExists(address)'(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<boolean>
-
-  addressTable_compress(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<string>
-
-  'addressTable_compress(address)'(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<string>
-
-  addressTable_decompress(
-    buf: Arrayish,
-    offset: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<{
-    0: string
-    1: BigNumber
-  }>
-
-  'addressTable_decompress(bytes,uint256)'(
-    buf: Arrayish,
-    offset: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<{
-    0: string
-    1: BigNumber
-  }>
-
-  addressTable_lookup(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<BigNumber>
-
-  'addressTable_lookup(address)'(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<BigNumber>
-
-  addressTable_lookupIndex(
-    index: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<string>
-
-  'addressTable_lookupIndex(uint256)'(
-    index: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<string>
-
-  addressTable_register(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  'addressTable_register(address)'(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  addressTable_size(overrides?: TransactionOverrides): Promise<BigNumber>
-
-  'addressTable_size()'(overrides?: TransactionOverrides): Promise<BigNumber>
-
-  functionTableGet(
-    addr: string,
-    index: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<{
-    0: BigNumber
-    1: boolean
-    2: BigNumber
-  }>
-
-  'functionTableGet(address,uint256)'(
-    addr: string,
-    index: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<{
-    0: BigNumber
-    1: boolean
-    2: BigNumber
-  }>
-
-  functionTableSize(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<BigNumber>
-
-  'functionTableSize(address)'(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<BigNumber>
-
-  getBlsPublicKey(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<{
-    0: BigNumber
-    1: BigNumber
-    2: BigNumber
-    3: BigNumber
-  }>
-
-  'getBlsPublicKey(address)'(
-    addr: string,
-    overrides?: TransactionOverrides
-  ): Promise<{
-    0: BigNumber
-    1: BigNumber
-    2: BigNumber
-    3: BigNumber
-  }>
+  'arbOSVersion()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
   getStorageAt(
     account: string,
@@ -467,32 +156,6 @@ export class ArbSys extends Contract {
     account: string,
     overrides?: TransactionOverrides
   ): Promise<BigNumber>
-
-  registerBlsKey(
-    x0: BigNumberish,
-    x1: BigNumberish,
-    y0: BigNumberish,
-    y1: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  'registerBlsKey(uint256,uint256,uint256,uint256)'(
-    x0: BigNumberish,
-    x1: BigNumberish,
-    y0: BigNumberish,
-    y1: BigNumberish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  uploadFunctionTable(
-    buf: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
-
-  'uploadFunctionTable(bytes)'(
-    buf: Arrayish,
-    overrides?: TransactionOverrides
-  ): Promise<ContractTransaction>
 
   withdrawERC20(
     dest: string,
@@ -545,103 +208,9 @@ export class ArbSys extends Contract {
   }
 
   estimate: {
-    addressTable_addressExists(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
+    arbOSVersion(overrides?: TransactionOverrides): Promise<BigNumber>
 
-    'addressTable_addressExists(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_compress(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'addressTable_compress(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_decompress(
-      buf: Arrayish,
-      offset: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'addressTable_decompress(bytes,uint256)'(
-      buf: Arrayish,
-      offset: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_lookup(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'addressTable_lookup(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_lookupIndex(
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'addressTable_lookupIndex(uint256)'(
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_register(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'addressTable_register(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    addressTable_size(overrides?: TransactionOverrides): Promise<BigNumber>
-
-    'addressTable_size()'(overrides?: TransactionOverrides): Promise<BigNumber>
-
-    functionTableGet(
-      addr: string,
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'functionTableGet(address,uint256)'(
-      addr: string,
-      index: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    functionTableSize(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'functionTableSize(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    getBlsPublicKey(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'getBlsPublicKey(address)'(
-      addr: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
+    'arbOSVersion()'(overrides?: TransactionOverrides): Promise<BigNumber>
 
     getStorageAt(
       account: string,
@@ -662,32 +231,6 @@ export class ArbSys extends Contract {
 
     'getTransactionCount(address)'(
       account: string,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    registerBlsKey(
-      x0: BigNumberish,
-      x1: BigNumberish,
-      y0: BigNumberish,
-      y1: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'registerBlsKey(uint256,uint256,uint256,uint256)'(
-      x0: BigNumberish,
-      x1: BigNumberish,
-      y0: BigNumberish,
-      y1: BigNumberish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    uploadFunctionTable(
-      buf: Arrayish,
-      overrides?: TransactionOverrides
-    ): Promise<BigNumber>
-
-    'uploadFunctionTable(bytes)'(
-      buf: Arrayish,
       overrides?: TransactionOverrides
     ): Promise<BigNumber>
 
