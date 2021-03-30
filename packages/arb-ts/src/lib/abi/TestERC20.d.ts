@@ -28,6 +28,7 @@ interface TestERC20Interface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
+    'mint()': FunctionFragment
     'name()': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
@@ -53,6 +54,7 @@ interface TestERC20Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'mint', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
@@ -80,6 +82,7 @@ interface TestERC20Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
@@ -170,6 +173,10 @@ export class TestERC20 extends Contract {
       addedValue: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    mint(overrides?: Overrides): Promise<ContractTransaction>
+
+    'mint()'(overrides?: Overrides): Promise<ContractTransaction>
 
     name(overrides?: CallOverrides): Promise<[string]>
 
@@ -269,6 +276,10 @@ export class TestERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  mint(overrides?: Overrides): Promise<ContractTransaction>
+
+  'mint()'(overrides?: Overrides): Promise<ContractTransaction>
+
   name(overrides?: CallOverrides): Promise<string>
 
   'name()'(overrides?: CallOverrides): Promise<string>
@@ -366,6 +377,10 @@ export class TestERC20 extends Contract {
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
+
+    mint(overrides?: CallOverrides): Promise<void>
+
+    'mint()'(overrides?: CallOverrides): Promise<void>
 
     name(overrides?: CallOverrides): Promise<string>
 
@@ -476,6 +491,10 @@ export class TestERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    mint(overrides?: Overrides): Promise<BigNumber>
+
+    'mint()'(overrides?: Overrides): Promise<BigNumber>
+
     name(overrides?: CallOverrides): Promise<BigNumber>
 
     'name()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -577,6 +596,10 @@ export class TestERC20 extends Contract {
       addedValue: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    mint(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'mint()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     name(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
