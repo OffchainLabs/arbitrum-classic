@@ -18,7 +18,6 @@ package speedtest
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/rs/zerolog/log"
 	"io/ioutil"
 	"math/big"
 	"strconv"
@@ -26,34 +25,28 @@ import (
 	"testing"
 )
 
-var logger = log.With().Caller().Str("component", "speedtest").Logger()
-
-func getInsnMultiplier(filePath string) uint64 {
+func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 	ll := len(filePath)
 	numPopsStr := filePath[ll-6 : ll-5]
 	numPops, err := strconv.Atoi(numPopsStr)
 	if err != nil {
-		logger.Fatal().
-			Stack().
-			Err(err).
-			Str("filepath", filePath).
-			Msg("numPops failed string conversion")
+		b.Log("filepath", filePath)
+		b.Log("numPops failed string conversion")
+		b.Fatal(err)
 	}
 	numPushesStr := filePath[ll-8 : ll-7]
 	numPushes, err := strconv.Atoi(numPushesStr)
 	if err != nil {
-		logger.Fatal().
-			Stack().
-			Err(err).
-			Str("filepath", filePath).
-			Msg("numPushes failed string conversion")
+		b.Log("filepath", filePath)
+		b.Log("numPushes failed string conversion")
+		b.Fatal(err)
 	}
 	numExtraUnderscores := strings.Count(filePath, "_") - 2
 	return uint64(1 + numExtraUnderscores + numPops + numPushes)
 }
 
 func runExecutableFile(b *testing.B, filePath string) {
-	insnMultiplier := getInsnMultiplier(filePath)
+	insnMultiplier := getInsnMultiplier(b, filePath)
 	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
 	if err != nil {
 		b.Fatal(err)
@@ -81,27 +74,23 @@ func runExecutableFile(b *testing.B, filePath string) {
 	_, _, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil, true)
 }
 
-func nameFromFn(fn string) string {
+func nameFromFn(b *testing.B, fn string) string {
 	ll := len(fn)
 	fnSlices := strings.Split(fn[:ll-7], "/")
 	ret := fnSlices[len(fnSlices)-1]
 	numPopsStr := fn[ll-6 : ll-5]
 	numPops, err := strconv.Atoi(numPopsStr)
 	if err != nil {
-		logger.Fatal().
-			Stack().
-			Err(err).
-			Str("fn", fn).
-			Msg("numPops failed string conversion")
+		b.Log("fn", fn)
+		b.Log("numPops failed string conversion")
+		b.Fatal(err)
 	}
 	numPushesStr := fn[ll-8 : ll-7]
 	numPushes, err := strconv.Atoi(numPushesStr)
 	if err != nil {
-		logger.Fatal().
-			Stack().
-			Err(err).
-			Str("fn", fn).
-			Msg("numPushes failed string conversion")
+		b.Log("fn", fn)
+		b.Log("numPushes failed string conversion")
+		b.Fatal(err)
 	}
 	for i := 0; i < numPushes; i++ {
 		ret = "push_" + ret
@@ -113,22 +102,20 @@ func nameFromFn(fn string) string {
 }
 
 func BenchmarkInsns(b *testing.B) {
-	executables := getExecutables()
+	executables := getExecutables(b)
 	for _, fn := range executables {
-		b.Run(nameFromFn(fn), func(b *testing.B) {
+		b.Run(nameFromFn(b, fn), func(b *testing.B) {
 			runExecutableFile(b, fn)
 		})
 	}
 }
 
-func getExecutables() []string {
+func getExecutables(b *testing.B) []string {
 	var ret []string
 	fileInfos, err := ioutil.ReadDir("./executables/")
 	if err != nil {
-		logger.Fatal().
-			Stack().
-			Err(err).
-			Msg("Error reading executables directory")
+		b.Log("Error reading executables directory")
+		b.Fatal(err)
 	}
 	for _, fileInfo := range fileInfos {
 		if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".mexe") {

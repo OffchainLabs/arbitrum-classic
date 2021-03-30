@@ -26,20 +26,17 @@ func TestMessageBatch(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	defer func() {
 		if err := os.RemoveAll(dePath); err != nil {
-			logger.Error().Stack().Err(err).Send()
 			t.Fatal(err)
 		}
 	}()
 
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
@@ -50,7 +47,6 @@ func TestMessageBatch(t *testing.T) {
 	testLogIndex := uint64(0xDEADBEEFA1B2C3D4)
 	err = nodeStore.SaveMessageBatch(testBatchNumber, testLogIndex)
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
@@ -59,6 +55,6 @@ func TestMessageBatch(t *testing.T) {
 		t.Fatal("GetMessageBatch should have returned log")
 	}
 	if *logIndex != testLogIndex {
-		logger.Error().Msg("logIndex doesnt match testLogIndex")
+		t.Error("logIndex doesnt match testLogIndex")
 	}
 }

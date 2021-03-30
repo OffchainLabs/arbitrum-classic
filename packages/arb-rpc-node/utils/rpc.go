@@ -26,7 +26,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var logger = log.With().Caller().Str("component", "rpc").Logger()
+var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
 type RPCFlags struct {
 	certFile *string

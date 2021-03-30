@@ -39,7 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Str("component", "web3").Logger()
+var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
 
 type Server struct {
 	srv         *aggregator.Server

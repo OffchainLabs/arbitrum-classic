@@ -28,7 +28,7 @@ import (
 	"strings"
 )
 
-var logger = log.With().Caller().Str("component", "evm").Logger()
+var logger = log.With().Stack().Caller().Stack().Str("component", "evm").Logger()
 
 type Log struct {
 	Address common.Address

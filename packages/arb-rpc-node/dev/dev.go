@@ -28,7 +28,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-var logger = log.With().Caller().Str("component", "dev").Logger()
+var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
 func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
 	owner := common.RandAddress()
@@ -46,7 +46,7 @@ func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Back
 
 	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		logger.Fatal().Err(err).Send()
 	}
 
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
@@ -57,7 +57,7 @@ func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Back
 	}
 
 	if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		logger.Fatal().Err(err).Send()
 	}
 
 	return monitor, backend, db, rollupAddress
