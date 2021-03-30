@@ -30,7 +30,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Str("component", "staker").Logger()
+var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
 
 type Monitor struct {
 	Storage machine.ArbStorage

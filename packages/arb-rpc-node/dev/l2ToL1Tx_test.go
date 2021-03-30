@@ -73,7 +73,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		}),
 	}
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	latest, err := backend.db.LatestBlock()

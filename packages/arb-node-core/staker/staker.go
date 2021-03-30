@@ -66,7 +66,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				}
 			}
 			if err != nil {
-				logger.Warn().Stack().Err(err).Send()
+				logger.Warn().Err(err).Send()
 				<-time.After(backoff)
 				if backoff < 60*time.Second {
 					backoff *= 2

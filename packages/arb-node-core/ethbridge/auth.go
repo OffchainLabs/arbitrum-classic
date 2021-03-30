@@ -30,7 +30,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "ethbridge").Logger()
+var logger = log.With().Caller().Stack().Str("component", "ethbridge").Logger()
 
 const (
 	smallNonceRepeatCount = 100
@@ -57,7 +57,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	if auth.Nonce == nil {
 		// Not incrementing nonce, so nothing else to do
 		if err != nil {
-			logger.Error().Stack().Err(err).Str("nonce", "nil").Msg("error when nonce not set")
+			logger.Error().Err(err).Str("nonce", "nil").Msg("error when nonce not set")
 			return addr, nil, err
 		}
 
@@ -67,7 +67,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 
 	for i := 0; i < smallNonceRepeatCount && err != nil && strings.Contains(err.Error(), smallNonceError); i++ {
 		// Increment nonce and try again
-		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Msg("incrementing nonce and submitting tx again")
+		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Msg("incrementing nonce and submitting tx again")
 
 		t.auth.Nonce = t.auth.Nonce.Add(t.auth.Nonce, big.NewInt(1))
 		auth.Nonce = t.auth.Nonce
@@ -78,7 +78,7 @@ func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth 
 	}
 
 	if err != nil {
-		logger.Error().Stack().Err(err).Str("nonce", auth.Nonce.String()).Send()
+		logger.Error().Err(err).Str("nonce", auth.Nonce.String()).Send()
 		return addr, nil, err
 	}
 

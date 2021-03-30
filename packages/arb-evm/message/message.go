@@ -26,7 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-var logger = log.With().Caller().Str("component", "message").Logger()
+var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
 	EthType          inbox.Type = 0
