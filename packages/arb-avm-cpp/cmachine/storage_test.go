@@ -29,7 +29,6 @@ func TestCheckpoint(t *testing.T) {
 
 	defer func() {
 		if err := os.RemoveAll(dePath); err != nil {
-			logger.Error().Stack().Err(err).Send()
 			t.Fatal(err)
 		}
 	}()

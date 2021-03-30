@@ -27,20 +27,17 @@ func TestExecutionCursor(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	defer func() {
 		if err := os.RemoveAll(dePath); err != nil {
-			logger.Error().Stack().Err(err).Send()
 			t.Fatal(err)
 		}
 	}()
 
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
@@ -52,31 +49,23 @@ func TestExecutionCursor(t *testing.T) {
 	lookup := arbStorage.GetArbCore()
 	cursor, err := lookup.GetExecutionCursor(big.NewInt(0))
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	if !cursor.InboxAcc().Equals(common.Hash{}) {
-		logger.Error().Msg("inbox acc isn't zero at beginning")
+		t.Error("inbox acc isn't zero at beginning")
 	}
 	if !cursor.SendAcc().Equals(common.Hash{}) {
-		logger.Error().Msg("send acc isn't zero at beginning")
+		t.Error("send acc isn't zero at beginning")
 	}
 	if !cursor.LogAcc().Equals(common.Hash{}) {
-		logger.Error().Msg("log acc isn't zero at beginning")
+		t.Error("log acc isn't zero at beginning")
 	}
 
 	err = lookup.AdvanceExecutionCursor(cursor, big.NewInt(10000), true)
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
-	if cursor.InboxAcc().Equals(common.Hash{}) {
-		logger.Error().Msg("inbox acc is zero after execution")
-	}
-	if cursor.SendAcc().Equals(common.Hash{}) {
-		logger.Error().Msg("send acc is zero after execution")
-	}
 	if cursor.LogAcc().Equals(common.Hash{}) {
-		logger.Error().Msg("log acc is zero after execution")
+		t.Error("log acc is zero after execution")
 	}
 }

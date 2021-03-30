@@ -85,7 +85,7 @@ func (p *statelessBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 	if p.db != nil {
 		sender, err := types.Sender(p.signer, tx)
 		if err != nil {
-			rejectLogger.Info().Stack().Err(err).Str("reason", "sender").Msg(rejectMsg)
+			rejectLogger.Info().Err(err).Str("reason", "sender").Msg(rejectMsg)
 			return REMOVE, errors.New("couldn't recover sender")
 		}
 		snap, err := p.db.LatestSnapshot()
@@ -94,7 +94,7 @@ func (p *statelessBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 		}
 		txCount, err := snap.GetTransactionCount(arbcommon.NewAddressFromEth(sender))
 		if err != nil {
-			rejectLogger.Info().Stack().Err(err).Str("reason", "snapshot").Msg(rejectMsg)
+			rejectLogger.Info().Err(err).Str("reason", "snapshot").Msg(rejectMsg)
 			return REMOVE, errors.New("aggregator failed to verify nonce")
 		}
 

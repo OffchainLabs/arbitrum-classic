@@ -65,7 +65,7 @@ func init() {
 	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Str("component", "arb-dev-node").Logger()
+	logger = log.With().Caller().Stack().Str("component", "arb-dev-node").Logger()
 }
 
 func main() {
@@ -84,7 +84,7 @@ func main() {
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error parsing arguments")
+		logger.Fatal().Err(err).Msg("Error parsing arguments")
 	}
 
 	if *enablePProf {
@@ -101,12 +101,12 @@ func main() {
 
 	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		logger.Fatal().Err(err).Send()
 	}
 
 	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
-		logger.Fatal().Stack().Send()
+		logger.Fatal().Send()
 	}
 	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
@@ -137,7 +137,7 @@ func main() {
 		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
 		account, err := wallet.Derive(path, false)
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Send()
+			logger.Fatal().Err(err).Send()
 		}
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -151,7 +151,7 @@ func main() {
 			}),
 		}
 		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
-			logger.Fatal().Stack().Err(err).Send()
+			logger.Fatal().Err(err).Send()
 		}
 		accounts = append(accounts, account)
 	}
@@ -169,7 +169,7 @@ func main() {
 	for i, account := range accounts {
 		privKey, err := wallet.PrivateKeyHex(account)
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Send()
+			logger.Fatal().Err(err).Send()
 		}
 		fmt.Printf("(%v) 0x%v\n", i, privKey)
 	}
@@ -179,7 +179,7 @@ func main() {
 	for _, account := range accounts {
 		privKey, err := wallet.PrivateKey(account)
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Send()
+			logger.Fatal().Err(err).Send()
 		}
 		privateKeys = append(privateKeys, privKey)
 	}
@@ -215,6 +215,6 @@ func main() {
 		true,
 		plugins,
 	); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error running LaunchNode")
+		logger.Fatal().Err(err).Msg("Error running LaunchNode")
 	}
 }

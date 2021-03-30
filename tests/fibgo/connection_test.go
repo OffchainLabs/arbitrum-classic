@@ -102,7 +102,7 @@ func setupValidators(ctx context.Context, rollupAddress common.Address, authClie
 			return err
 		}
 
-		manager.AddListener(ctx, chainlistener.NewAnnouncerListener(authClient.Address()))
+		manager.AddListener(ctx, chainlistener.NewAnnouncerListener(authClient.Address().String()))
 
 		validatorListener := chainlistener.NewValidatorChainListener(
 			ctx,
