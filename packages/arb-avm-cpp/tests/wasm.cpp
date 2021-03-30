@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 
+/*
 const int LEVEL = 5;
 
 value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level) {
@@ -69,9 +70,11 @@ uint256_t runMachine(MachineState &machine_state) {
     }    
     return start_gas - machine_state.arb_gas_remaining;
 }
+*/
 
 TEST_CASE("Wasm") {
     SECTION("Code to hash") {
+        /*
         std::ifstream labels_input_stream("/home/sami/arb-os/labels.json");
         if (!labels_input_stream.is_open()) {
             throw std::runtime_error("doesn't exist");
@@ -112,22 +115,23 @@ TEST_CASE("Wasm") {
 
         auto table = make_table(labels);
         std::cerr << "Here " << intx::to_string(stub.hash, 16) << " " << labels.size() << " \n";
-        std::cerr << "Table " << table << " hash " << intx::to_string(hash_value(table), 16) << "\n";
-        // std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << "\n";
+        // std::cerr << "Table " << table << " hash " << intx::to_string(hash_value(table), 16) << "\n";
+        std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << "\n";
         MachineState state(code, 0);
-        state.stack.push(123);
-        state.stack.push(Buffer());
-        state.stack.push(std::move(table));
+        */
+
+        auto state = makeWasmMachine(123, Buffer());
 
         std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
 
-        uint256_t gasUsed = runMachine(state);
+        uint256_t gasUsed = runWasmMachine(state);
 
         std::cerr << "Stopping " << intx::to_string(state.hash().value(), 16) << " gas used " << gasUsed << "\n";
 
         OneStepProof proof;
         state.marshalWasmProof(proof);
         std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
+        marshal_uint256_t(gasUsed, proof.buffer_proof);
     }
 
 }

@@ -236,8 +236,14 @@ struct MachineState {
 
     void marshalWasmProof(OneStepProof& proof) const;
 
+    MachineState initialWasmMachine() const;
+    MachineState finalWasmMachine() const;
+
    private:
     void marshalBufferProof(OneStepProof& proof) const;
 };
+
+MachineState makeWasmMachine(uint64_t len, Buffer buf);
+uint256_t runWasmMachine(MachineState &machine_state);
 
 #endif /* machinestate_hpp */

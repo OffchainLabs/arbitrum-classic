@@ -25,6 +25,7 @@
 #include <ethash/keccak.hpp>
 
 #include <iostream>
+#include <fstream>
 
 namespace {
 uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
@@ -389,6 +390,120 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
     }
 }
 
+const int LEVEL = 5;
+
+value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level) {
+    if (level == 0) {
+        std::vector<value> v;
+        for (int i = 0; i < 8; i++) {
+            uint64_t idx = prefix + (i << shift);
+            if (idx < tab.size()) {
+                v.push_back(tab[idx]);
+            } else {
+                v.push_back(0);
+            }
+        }
+        return Tuple::createTuple(v);
+    }
+    std::vector<value> v;
+    for (int i = 0; i < 8; i++) {
+        v.push_back(table_to_tuple2(tab, prefix + (i << shift), shift + 3, level - 1));
+    }
+    return Tuple::createTuple(v);
+}
+
+value make_table(std::vector<value> tab) {
+    return table_to_tuple2(tab, 0, 0, LEVEL-1);
+}
+
+MachineState makeWasmMachine(uint64_t len, Buffer buf) {
+    std::ifstream labels_input_stream("/home/sami/arb-os/labels.json");
+    if (!labels_input_stream.is_open()) {
+        throw std::runtime_error("doesn't exist");
+    }
+    nlohmann::json labels_json;
+    labels_input_stream >> labels_json;
+    std::vector<bool> has_labels;
+    for (auto elem : labels_json) {
+        has_labels.push_back(elem.get<int>() == 1);
+    }
+    // Load JSON
+    std::ifstream executable_input_stream("/home/sami/arb-os/foo2.json");
+    if (!executable_input_stream.is_open()) {
+        throw std::runtime_error("doesn't exist");
+    }
+    nlohmann::json executable_json;
+    executable_input_stream >> executable_json;
+    auto& json_code = executable_json.at("code");
+    if (!json_code.is_array()) {
+        throw std::runtime_error("expected code to be array");
+    }
+    auto code = std::make_shared<Code>(0);
+    CodePointStub stub = code->addSegment();
+    std::vector<value> labels;
+    int idx = json_code.size();
+    for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
+        Operation op = simple_operation_from_json(*it);
+        stub = code->addOperation(stub.pc, op);
+        idx--;
+        std::cerr << "Loaded op " << op << " idx " << idx << "\n";
+        if (has_labels[idx]) {
+            std::cerr << "Label " << stub << " at " << labels.size() << "\n";
+            labels.push_back(stub);
+        }
+    }
+
+    std::reverse(labels.begin(), labels.end());
+
+    auto table = make_table(labels);
+    std::cerr << "Here " << intx::to_string(stub.hash, 16) << " " << labels.size() << " \n";
+    // std::cerr << "Table " << table << " hash " << intx::to_string(hash_value(table), 16) << "\n";
+    std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << "\n";
+    MachineState state(code, 0);
+    state.stack.push(len);
+    state.stack.push(buf);
+    state.stack.push(std::move(table));
+
+    return state;
+}
+
+uint256_t runWasmMachine(MachineState &machine_state) {
+    uint256_t start_steps = machine_state.output.total_steps;
+    uint256_t start_gas = machine_state.output.arb_gas_used;
+
+    bool has_gas_limit = machine_state.context.max_gas != 0;
+    BlockReason block_reason = NotBlocked{};
+    uint256_t initialConsumed = machine_state.getTotalMessagesRead();
+    while (true) {
+        if (has_gas_limit) {
+            if (!machine_state.context.go_over_gas) {
+                if (machine_state.nextGasCost() +
+                        machine_state.output.arb_gas_used >
+                    machine_state.context.max_gas) {
+                    // Next step would go over gas limit
+                    break;
+                }
+            } else if (machine_state.output.arb_gas_used >=
+                       machine_state.context.max_gas) {
+                // Last step reached or went over gas limit
+                break;
+            }
+        }
+
+        auto op = machine_state.loadCurrentInstruction();
+        std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
+        if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
+            std::cerr << "stack top " << machine_state.stack[0] << "\n";
+        }
+
+        block_reason = machine_state.runOne();
+        if (!std::get_if<NotBlocked>(&block_reason)) {
+            break;
+        }
+    }    
+    return start_gas - machine_state.arb_gas_remaining;
+}
+
 void MachineState::marshalWasmProof(OneStepProof &proof) const {
     auto staged_message_tuple = getStagedMessageTuple();
     if (!staged_message_tuple) {
@@ -432,6 +547,20 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
 
     proof.buffer_proof.push_back(current_op.immediate ? 1 : 0);
 
+}
+
+MachineState MachineState::initialWasmMachine() const {
+    // TODO: take immeds into account
+    uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&stack[0]));
+    Buffer buf = *std::get_if<Buffer>(&stack[1]);
+
+    return makeWasmMachine(len, buf);
+}
+
+MachineState MachineState::finalWasmMachine() const {
+    auto state = initialWasmMachine();
+    runWasmMachine(state);
+    return state;
 }
 
 OneStepProof MachineState::marshalForProof() const {
@@ -496,7 +625,26 @@ OneStepProof MachineState::marshalForProof() const {
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
-    if (!underflowed) {
+    if (current_op.opcode == OpCode::WASM_TEST) {
+
+        // TODO: take immeds into account
+        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&stack[0]));
+        Buffer buf = *std::get_if<Buffer>(&stack[1]);
+
+        auto state = makeWasmMachine(len, buf);
+
+        std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
+
+        uint256_t gasUsed = runWasmMachine(state);
+
+        std::cerr << "Stopping " << intx::to_string(state.hash().value(), 16) << " gas used " << gasUsed << "\n";
+
+        OneStepProof proof;
+        state.marshalWasmProof(proof);
+        std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
+        marshal_uint256_t(gasUsed, proof.buffer_proof);
+
+    } else if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
     }
