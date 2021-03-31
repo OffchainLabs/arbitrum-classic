@@ -22,7 +22,7 @@ type configTestStruct struct {
 	inboxReaderName   string
 }
 
-func (config *configTestStruct) loadTestConfig() {
+func (config *configTestStruct) newTestConfig() {
 	//Configuration constants
 	const successfulStatus = 200
 	const largeBufferSize = 200
@@ -172,10 +172,10 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 	time.Sleep(config.timeDelayTests)
 	const largeBigInt = 20
 	testBigInt := big.NewInt(largeBigInt)
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: *testBigInt}
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: *testBigInt}
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "arbCorePosition", ValBigInt: *testBigInt}
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "getNextBlockToRead", ValBigInt: *testBigInt}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: new(big.Int).Set(testBigInt)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(testBigInt)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "arbCorePosition", ValBigInt: new(big.Int).Set(testBigInt)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(testBigInt)}
 
 	//Test server response
 	res, err := http.Get(config.nodehealthAddress + config.readinessEndpoint)
@@ -191,8 +191,8 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 
 	const smallBigInt = 10
 	blockTest := big.NewInt(smallBigInt)
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: *blockTest}
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: *testBigInt}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: new(big.Int).Set(blockTest)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(testBigInt)}
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
@@ -212,7 +212,7 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 
 func TestNodeHealth(t *testing.T) {
 	config := configTestStruct{}
-	config.loadTestConfig()
+	config.newTestConfig()
 
 	//Generate sample servers for testing
 	go startTestingServerFail()
