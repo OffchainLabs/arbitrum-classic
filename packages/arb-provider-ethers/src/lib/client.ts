@@ -111,7 +111,11 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            resolve(result.transactionHash)
+             if (result.transactionHash === undefined) { // fixes error TS2345
+                resolve(undefined)
+             } else {
+                resolve(result.transactionHash)
+             }
           }
         }
       )
@@ -130,7 +134,11 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            resolve(result.height)
+             if (result.height === undefined) { // fixes error TS2345
+                resolve(undefined)
+             } else {
+                resolve(result.height)
+             }
           }
         }
       )
@@ -150,7 +158,11 @@ export class ArbClient {
             } else if (error) {
               reject(error)
             } else {
-              resolve(result)
+              if (result === undefined) { // fixes error TS2345
+                    resolve(undefined)
+               } else {
+                    resolve(result)
+               }
             }
           }
         )
@@ -261,7 +273,11 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            resolve(result.logs)
+            if (result.logs === undefined) { // fixes error TS2345
+              resolve(undefined)
+            } else {
+              resolve(result.logs)
+            }
           }
         }
       )
@@ -280,7 +296,11 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
-            resolve(result.chainAddress)
+            if (result.chainAddress === undefined) { // fixes error TS2345
+              resolve(undefined)
+            } else {
+              resolve(result.chainAddress)
+            }
           }
         }
       )
