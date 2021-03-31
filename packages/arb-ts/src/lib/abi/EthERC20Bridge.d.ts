@@ -33,8 +33,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'inbox()': FunctionFragment
     'initialize(address,address,uint256,uint256,uint256,address,address,address)': FunctionFragment
     'l2ArbTokenBridgeAddress()': FunctionFragment
-    'notifyCustomToken(address,uint256,uint256,uint256)': FunctionFragment
-    'registerCustomL2Token(address)': FunctionFragment
+    'registerCustomL2Token(address,uint256,uint256,uint256,address)': FunctionFragment
     'updateTokenInfo(address,uint8,uint256,uint256,uint256)': FunctionFragment
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
@@ -110,12 +109,8 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'notifyCustomToken',
-    values: [string, BigNumberish, BigNumberish, BigNumberish]
-  ): string
-  encodeFunctionData(
     functionFragment: 'registerCustomL2Token',
-    values: [string]
+    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
   ): string
   encodeFunctionData(
     functionFragment: 'updateTokenInfo',
@@ -158,10 +153,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'l2ArbTokenBridgeAddress',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'notifyCustomToken',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -345,30 +336,22 @@ export class EthERC20Bridge extends Contract {
 
     'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<[string]>
 
-    notifyCustomToken(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'notifyCustomToken(address,uint256,uint256,uint256)'(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
     registerCustomL2Token(
       l2CustomTokenAddress: string,
-      overrides?: Overrides
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'registerCustomL2Token(address)'(
+    'registerCustomL2Token(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
-      overrides?: Overrides
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     updateTokenInfo(
@@ -549,30 +532,22 @@ export class EthERC20Bridge extends Contract {
 
   'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<string>
 
-  notifyCustomToken(
-    l1CustomTokenAddress: string,
-    maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'notifyCustomToken(address,uint256,uint256,uint256)'(
-    l1CustomTokenAddress: string,
-    maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
   registerCustomL2Token(
     l2CustomTokenAddress: string,
-    overrides?: Overrides
+    maxSubmissionCost: BigNumberish,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    refundAddress: string,
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'registerCustomL2Token(address)'(
+  'registerCustomL2Token(address,uint256,uint256,uint256,address)'(
     l2CustomTokenAddress: string,
-    overrides?: Overrides
+    maxSubmissionCost: BigNumberish,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    refundAddress: string,
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   updateTokenInfo(
@@ -753,31 +728,23 @@ export class EthERC20Bridge extends Contract {
 
     'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<string>
 
-    notifyCustomToken(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'notifyCustomToken(address,uint256,uint256,uint256)'(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     registerCustomL2Token(
       l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
-    'registerCustomL2Token(address)'(
+    'registerCustomL2Token(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     updateTokenInfo(
       erc20: string,
@@ -983,30 +950,22 @@ export class EthERC20Bridge extends Contract {
 
     'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    notifyCustomToken(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'notifyCustomToken(address,uint256,uint256,uint256)'(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
     registerCustomL2Token(
       l2CustomTokenAddress: string,
-      overrides?: Overrides
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'registerCustomL2Token(address)'(
+    'registerCustomL2Token(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
-      overrides?: Overrides
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     updateTokenInfo(
@@ -1195,30 +1154,22 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    notifyCustomToken(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'notifyCustomToken(address,uint256,uint256,uint256)'(
-      l1CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
     registerCustomL2Token(
       l2CustomTokenAddress: string,
-      overrides?: Overrides
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'registerCustomL2Token(address)'(
+    'registerCustomL2Token(address,uint256,uint256,uint256,address)'(
       l2CustomTokenAddress: string,
-      overrides?: Overrides
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     updateTokenInfo(

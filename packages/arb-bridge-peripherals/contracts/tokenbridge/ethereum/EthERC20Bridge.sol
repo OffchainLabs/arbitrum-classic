@@ -110,21 +110,26 @@ contract EthERC20Bridge {
     // function handleDeployFail() internal override {}
 
     /**
-     * @notice Notify the L2 side of the bridge that a given token has opted into a custom implementation
-     * @dev Anyone can call this method repeatedly in case the L2 call fails for some reason. There's no harm in
-     * allowing this to be called multiple times
+     * @notice Update the L1 custom token registry directly and L2 side via  a retryable ticket
+     * @dev
      */
-    function notifyCustomToken(
-        address l1CustomTokenAddress,
+    function registerCustomL2Token(
+        address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
         uint256 maxGas,
-        uint256 gasPriceBid
+        uint256 gasPriceBid,
+        address refundAddress
     ) external payable returns (uint256) {
-        address l2CustomTokenAddress = customL2Tokens[l1CustomTokenAddress];
-        require(l2CustomTokenAddress != address(0), "NOT_REGISTERED");
+        address l1CustomTokenAddress = msg.sender;
+        require(
+            customL2Tokens[l1CustomTokenAddress] == address(0),
+            "Cannot re-register a custom token address"
+        );
+        customL2Tokens[l1CustomTokenAddress] = l2CustomTokenAddress;
+
         bytes memory data =
-            abi.encodeWithSignature(
-                "customTokenRegistered(address,address)",
+            abi.encodeWithSelector(
+                ArbTokenBridge.customTokenRegistered.selector,
                 l1CustomTokenAddress,
                 l2CustomTokenAddress
             );
@@ -133,22 +138,14 @@ contract EthERC20Bridge {
                 l2ArbTokenBridgeAddress,
                 0,
                 maxSubmissionCost,
-                msg.sender,
-                msg.sender,
+                refundAddress,
+                refundAddress,
                 maxGas,
                 gasPriceBid,
                 data
             );
         emit ActivateCustomToken(seqNum, l1CustomTokenAddress, l2CustomTokenAddress);
         return seqNum;
-    }
-
-    function registerCustomL2Token(address l2CustomTokenAddress) external {
-        require(
-            customL2Tokens[msg.sender] == address(0),
-            "Cannot re-register a custom token address"
-        );
-        customL2Tokens[msg.sender] = l2CustomTokenAddress;
     }
 
     function fastWithdrawalFromL2(
