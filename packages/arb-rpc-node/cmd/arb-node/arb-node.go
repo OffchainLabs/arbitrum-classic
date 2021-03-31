@@ -70,6 +70,13 @@ func main() {
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+
+	go func() {
+		err := nodehealth.NodeHealthCheck(healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
 	go nodehealth.NodeHealthCheck(healthChan)
 
 	ctx := context.Background()
