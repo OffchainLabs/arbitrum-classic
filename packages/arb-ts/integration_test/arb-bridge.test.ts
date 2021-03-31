@@ -627,6 +627,8 @@ describe.skip('ERC777', () => {
   })
 })
 
-describe.skip('scrap paper', () => {
-  console.log('just for scraps')
+describe.skip('scrap paper', async () => {
+  it('', () => {
+    console.log('just for scraps')
+  })
 })
