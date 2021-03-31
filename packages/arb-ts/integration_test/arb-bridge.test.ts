@@ -507,7 +507,6 @@ describe('CustomToken', () => {
     expect(depositRec.status).to.equal(1)
     await wait(10000)
 
-    // TODO 'ERC20' is a noop here
     const tokenDepositData = (
       await bridge.getDepositTokenEventData(depositRec)
     )[0] as DepositTokenEventResult
