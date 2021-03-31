@@ -127,20 +127,20 @@ func (e *ExecutionImpl) OneStepProof(
 	prevBisection *core.Bisection,
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
-) error {
+) (byte, machine.Machine, error) {
 	previousCut, previousMachine, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 
 	proofData, bufferProofData, err := previousMachine.MarshalForProof()
 	if err != nil {
-		return err
+		return 0, nil, err
 	}
 
 	opcode := proofData[0]
 
-	return challenge.OneStepProveExecution(
+	return opcode, previousMachine, challenge.OneStepProveExecution(
 		ctx,
 		prevBisection,
 		segmentToChallenge,

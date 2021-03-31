@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -54,10 +55,10 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
 	challengeImpl := ExecutionImpl{}
-	return handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
+	return c.handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
 }
 
-func handleChallenge(
+func (c *Challenger) handleChallenge(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
 	assertion *core.Assertion,
@@ -116,7 +117,7 @@ func handleChallenge(
 		)
 	} else {
 		// Steps == 1: Do a one step proof, proving the execution of this step specifically
-		return challengeImpl.OneStepProof(
+		opcode, machine, err := challengeImpl.OneStepProof(
 			ctx,
 			challenge,
 			lookup,
@@ -125,6 +126,16 @@ func handleChallenge(
 			cutToChallenge,
 			inconsistentSegment,
 		)
+		if opcode == 241 {
+			// Get new lookup
+			storage, err := cmachine.NewArbStorage("/tmp/arbStorage")
+			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
+			arbCore := storage.GetArbCore()
+			arbCore.StartThread()
+			c.lookup = arbCore
+			return err
+		}
+		return err
 	}
 }
 

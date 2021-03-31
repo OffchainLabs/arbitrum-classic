@@ -50,6 +50,11 @@ type Machine struct {
 	c unsafe.Pointer
 }
 
+type ExtendedMachine interface {
+	machine.Machine
+	UnsafePointer() unsafe.Pointer
+}
+
 func New(codeFile string) (*Machine, error) {
 	cFilename := C.CString(codeFile)
 	defer C.free(unsafe.Pointer(cFilename))
@@ -73,6 +78,10 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 	ret := &Machine{cMachine}
 	runtime.SetFinalizer(ret, cdestroyVM)
 	return ret
+}
+
+func (m *Machine) UnsafePointer() unsafe.Pointer {
+	return m.c
 }
 
 func (m *Machine) Hash() (ret common.Hash, err error) {
