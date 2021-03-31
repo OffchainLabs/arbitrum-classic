@@ -16,21 +16,21 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, ethers } from 'ethers'
-import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__Factory'
+import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
 import { ArbTokenBridge } from './abi/ArbTokenBridge'
 import { ArbSys } from './abi/ArbSys'
-import { ArbSys__factory } from './abi/factories/ArbSys__Factory'
+import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
-import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__Factory'
-import { StandardArbERC777__factory } from './abi/factories/StandardArbERC777__Factory'
+import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
+import { StandardArbERC777__factory } from './abi/factories/StandardArbERC777__factory'
 import { IArbToken } from './abi/IArbToken'
-import { IArbToken__factory } from './abi/factories/IArbToken__Factory'
+import { IArbToken__factory } from './abi/factories/IArbToken__factory'
 import { ArbRetryableTx__factory } from './abi/factories/ArbRetryableTx__factory'
 import { ArbRetryableTx } from './abi/ArbRetryableTx'
 
 import { StandardArbERC777 } from './abi/StandardArbERC777'
 
-const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
+export const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
 
 export interface L2TokenData {
@@ -87,6 +87,9 @@ export class L2Bridge {
     })
   }
 
+  public getLatestBlock() {
+    return this.l2Provider.getBlock('latest')
+  }
   public async withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
@@ -95,6 +98,9 @@ export class L2Bridge {
     const destination = destinationAddress || (await this.getWalletAddress())
 
     const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
+    if (!tokenData) {
+      throw new Error("Can't withdraw; token not deployed")
+    }
     const erc20TokenData = tokenData.ERC20
 
     if (!erc20TokenData) {
@@ -113,6 +119,9 @@ export class L2Bridge {
     const destination = destinationAddress || (await this.getWalletAddress())
 
     const tokenData = await this.getAndUpdateL2TokenData(erc20l1Address)
+    if (!tokenData) {
+      throw new Error("Can't withdraw; token not deployed")
+    }
     const erc777TokenData = tokenData.ERC777
 
     if (!erc777TokenData) {
@@ -136,6 +145,7 @@ export class L2Bridge {
       ERC777: undefined,
       CUSTOM: undefined,
     }
+    this.l2Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
 
     // handle custom L2 token:
@@ -159,7 +169,6 @@ export class L2Bridge {
       } catch (err) {
         console.warn("Count not get custom token's balance", err)
       }
-      return tokenData
     }
 
     const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
@@ -179,7 +188,7 @@ export class L2Bridge {
         }
       } else {
         console.info(
-          `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed`
+          `Corresponding ArbERC20 for ${erc20L1Address} not yet deployed (would be at ${l2ERC20Address})`
         )
       }
     } else {
@@ -189,7 +198,6 @@ export class L2Bridge {
       )
       const balance = await arbERC20TokenContract.balanceOf(walletAddress)
       tokenData.ERC20.balance = balance
-      return tokenData
     }
 
     if (!tokenData.ERC777) {
@@ -203,7 +211,6 @@ export class L2Bridge {
           contract: arbERC77TokenContract,
           balance,
         }
-        return tokenData
       } else {
         console.info(
           `Corresponding ArbERC777 for ${erc20L1Address} not yet deployed`
@@ -216,9 +223,13 @@ export class L2Bridge {
       )
       const balance = await arbERC777TokenContract.balanceOf(walletAddress)
       tokenData.ERC777.balance = balance
-      return tokenData
     }
-    throw new Error(`No L2 token for ${erc20L1Address} found`)
+    if (tokenData.ERC20 || tokenData.ERC777 || tokenData.CUSTOM) {
+      return tokenData
+    } else {
+      console.warn(`No L2 token for ${erc20L1Address} found`)
+      return
+    }
   }
 
   public getERC20L2Address(erc20L1Address: string) {

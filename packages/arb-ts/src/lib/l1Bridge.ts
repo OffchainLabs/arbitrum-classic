@@ -16,14 +16,14 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, constants, utils } from 'ethers'
-import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__Factory'
+import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
 import { EthERC20Bridge } from './abi/EthERC20Bridge'
 import { Inbox } from './abi/Inbox'
-import { Inbox__factory } from './abi/factories/Inbox__Factory'
+import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ERC20 } from './abi/ERC20'
 
-import { ERC20__factory } from './abi/factories/ERC20__Factory'
-import { OZERC777__factory } from './abi/factories/OZERC777__Factory'
+import { ERC20__factory } from './abi/factories/ERC20__factory'
+import { OZERC777__factory } from './abi/factories/OZERC777__factory'
 import { addressToSymbol } from './bridge_helpers'
 
 utils.computeAddress
@@ -37,6 +37,7 @@ export interface L1TokenData {
     allowed: boolean
     symbol: string
     decimals: number
+    name: string
   }
   ERC777?: {
     contract: OZERC777__factory
@@ -95,6 +96,7 @@ export class L1Bridge {
       ERC777: undefined,
       CUSTOM: undefined,
     }
+    this.l1Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
     const indboxAddress = (await this.getInbox()).address
 
@@ -109,19 +111,21 @@ export class L1Bridge {
 
         const allowance = await ethERC20TokenContract.allowance(
           walletAddress,
-          indboxAddress
+          this.ethERC20Bridge.address
         )
         // non-standard
-        let symbol, decimals
+        let symbol, decimals, name
         try {
           symbol = await ethERC20TokenContract.symbol()
           decimals = await ethERC20TokenContract.decimals()
+          name = await ethERC20TokenContract.name()
         } catch (e) {
           console.info(
             `Weird but technically standard ERC20! ah! ${erc20L1Address}`
           )
           symbol = addressToSymbol(erc20L1Address)
           decimals = 18 // 🤷‍♂️
+          name = symbol + '_Token'
         }
 
         const allowed = await allowance.gte(MIN_APPROVAL.div(2))
@@ -131,6 +135,7 @@ export class L1Bridge {
           allowed,
           symbol,
           decimals,
+          name,
         }
       } else {
         throw new Error(`No ERC20 at ${erc20L1Address} `)
@@ -146,7 +151,7 @@ export class L1Bridge {
       if (!tokenData.ERC20.allowed) {
         const allowance = await ethERC20TokenContract.allowance(
           walletAddress,
-          indboxAddress
+          this.ethERC20Bridge.address
         )
         tokenData.ERC20.allowed = allowance.gte(MIN_APPROVAL.div(2))
       }
@@ -166,12 +171,14 @@ export class L1Bridge {
 
   public async approveToken(erc20L1Address: string) {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
-    const inboxAddress = (await this.getInbox()).address
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
     }
 
-    return tokenData.ERC20.contract.approve(inboxAddress, MIN_APPROVAL)
+    return tokenData.ERC20.contract.approve(
+      this.ethERC20Bridge.address,
+      MIN_APPROVAL
+    )
   }
 
   public async depositAsERC20(
@@ -193,7 +200,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      '0x'
     )
   }
   public async depositAsERC777(
@@ -211,7 +219,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      ''
     )
   }
 
@@ -236,7 +245,8 @@ export class L1Bridge {
       amount,
       maxSubmissionCost,
       maxGas,
-      gasPriceBid
+      gasPriceBid,
+      ''
     )
   }
 

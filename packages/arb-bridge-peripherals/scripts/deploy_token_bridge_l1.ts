@@ -18,14 +18,7 @@ const main = async () => {
 
   console.log('deployer', accounts[0].address)
 
-  const SafeERC20Namer = await ethers.getContractFactory('SafeERC20Namer')
-  const safeERC20Namer = await SafeERC20Namer.deploy()
-
-  const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge', {
-    libraries: {
-      SafeERC20Namer: safeERC20Namer.address,
-    },
-  })
+  const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
 
   const maxSubmissionCost = 0
   const gasPrice = 0
@@ -80,7 +73,7 @@ const main = async () => {
 
   const inboxSequenceNumber = seqNums[0]
 
-  const l2DeployTxHash = await bridge.calculateL2TransactionHash(
+  const l2DeployTxHash = await bridge.calculateL2RetryableTransactionHash(
     inboxSequenceNumber
   )
   const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
