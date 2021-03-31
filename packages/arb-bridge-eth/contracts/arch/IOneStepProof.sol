@@ -22,9 +22,9 @@ import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 
 interface IOneStepProof {
+    // Bridges is sequencer bridge then delayed bridge
     function executeStep(
-        ISequencerInbox sequencerBridge,
-        IBridge delayedBridge,
+        address[2] calldata bridges,
         uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
@@ -39,8 +39,7 @@ interface IOneStepProof {
         );
 
     function executeStepDebug(
-        ISequencerInbox sequencerBridge,
-        IBridge delayedBridge,
+        address[2] calldata bridges,
         uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,

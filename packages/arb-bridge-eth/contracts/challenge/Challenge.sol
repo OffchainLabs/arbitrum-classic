@@ -66,8 +66,7 @@ contract Challenge is Cloneable, IChallenge {
     bytes32 private constant UNREACHABLE_ASSERTION = bytes32(uint256(0));
 
     IOneStepProof[] public executors;
-    ISequencerInbox public sequencerBridge;
-    IBridge public delayedBridge;
+    address[2] public bridges;
 
     IRollup internal resultReceiver;
 
@@ -133,8 +132,7 @@ contract Challenge is Cloneable, IChallenge {
         challengeState = _executionHash;
 
         lastMoveBlock = block.number;
-        sequencerBridge = _sequencerBridge;
-        delayedBridge = _delayedBridge;
+        bridges = [address(_sequencerBridge), address(_delayedBridge)];
 
         emit InitiatedChallenge();
     }
@@ -261,8 +259,7 @@ contract Challenge is Cloneable, IChallenge {
                 bytes32[4] memory proofFields
             ) =
                 executors[prover].executeStep(
-                    sequencerBridge,
-                    delayedBridge,
+                    bridges,
                     _initialMessagesAndBatchesRead,
                     _initialAccs,
                     _executionProof,

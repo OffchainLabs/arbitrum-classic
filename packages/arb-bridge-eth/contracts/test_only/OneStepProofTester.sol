@@ -21,18 +21,26 @@ pragma solidity ^0.6.11;
 import "../arch/IOneStepProof.sol";
 
 contract OneStepProofTester {
-    event OneStepProofResult(uint64 gas, uint256 totalMessagesRead, bytes32[4] fields);
+    event OneStepProofResult(uint64 gas, uint256[2] totalMessagesAndBatchesRead, bytes32[4] fields);
 
     function executeStepTest(
         address executor,
+        ISequencerInbox sequencerBridge,
         IBridge bridge,
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external {
-        (uint64 gas, uint256 totalMessagesRead, bytes32[4] memory fields) =
-            IOneStepProof(executor).executeStep(bridge, initialMessagesRead, accs, proof, bproof);
-        emit OneStepProofResult(gas, totalMessagesRead, fields);
+        address[2] memory bridges = [address(sequencerBridge), address(bridge)];
+        (uint64 gas, uint256[2] memory totalMessagesAndBatchesRead, bytes32[4] memory fields) =
+            IOneStepProof(executor).executeStep(
+                bridges,
+                initialMessagesAndBatchesRead,
+                accs,
+                proof,
+                bproof
+            );
+        emit OneStepProofResult(gas, totalMessagesAndBatchesRead, fields);
     }
 }

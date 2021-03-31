@@ -149,8 +149,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     // accs is [sendAcc, logAcc]
     function executeStep(
-        ISequencerInbox sequencerBridge,
-        IBridge delayedBridge,
+        address[2] calldata bridges,
         uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
@@ -166,14 +165,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         )
     {
         AssertionContext memory context =
-            initializeExecutionContext(
-                initialMessagesAndBatchesRead,
-                accs,
-                proof,
-                bproof,
-                sequencerBridge,
-                delayedBridge
-            );
+            initializeExecutionContext(initialMessagesAndBatchesRead, accs, proof, bproof, bridges);
 
         executeOp(context);
 
@@ -181,22 +173,14 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function executeStepDebug(
-        ISequencerInbox sequencerBridge,
-        IBridge delayedBridge,
+        address[2] calldata bridges,
         uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
         AssertionContext memory context =
-            initializeExecutionContext(
-                initialMessagesAndBatchesRead,
-                accs,
-                proof,
-                bproof,
-                sequencerBridge,
-                delayedBridge
-            );
+            initializeExecutionContext(initialMessagesAndBatchesRead, accs, proof, bproof, bridges);
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);
@@ -298,8 +282,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
-        ISequencerInbox sequencerBridge,
-        IBridge delayedBridge
+        address[2] calldata bridges
     ) internal pure returns (AssertionContext memory) {
         uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
@@ -322,8 +305,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
         offset += 1;
 
         AssertionContext memory context;
-        context.sequencerBridge = sequencerBridge;
-        context.delayedBridge = delayedBridge;
+        context.sequencerBridge = ISequencerInbox(bridges[0]);
+        context.delayedBridge = IBridge(bridges[0]);
         context.startMachine = mach;
         context.afterMachine = mach.clone();
         context.totalMessagesRead = initialMessagesAndBatchesRead[0];
