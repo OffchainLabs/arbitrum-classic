@@ -6,6 +6,7 @@ import (
 	"github.com/heptiolabs/healthcheck"
 	"math/big"
 	"net/http"
+	"testing"
 	"time"
 )
 
@@ -209,7 +210,7 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 	return nil
 }
 
-func nodeHealthTest() error {
+func TestNodeHealth(t *testing.T) {
 	config := configTestStruct{}
 	config.loadTestConfig()
 
@@ -223,32 +224,30 @@ func nodeHealthTest() error {
 	//Test startup configuration delay
 	err := startUpTest(&config)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	//Primary aSync Test
 	err = aSyncTest(healthChan, &config)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	//Test failing OpenEthereum Node
 	err = openEthereumFailure(healthChan, &config)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	//Test adding primary after start
 	err = addPrimaryWhileRunning(healthChan, &config)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	//Test InboxReader block status check
 	err = inboxReaderTest(healthChan, &config)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
-
-	return nil
 }
