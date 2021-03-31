@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../bridge/Bridge.sol";
+import "../bridge/SequencerInbox.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 import "./RollupEventBridge.sol";
@@ -77,7 +78,8 @@ contract RollupCreator is Ownable, CloneFactory {
 
     struct CreateRollupFrame {
         ProxyAdmin admin;
-        Bridge bridge;
+        Bridge delayedBridge;
+        SequencerInbox sequencerInbox;
         Inbox inbox;
         RollupEventBridge rollupEventBridge;
         Outbox outbox;
@@ -95,13 +97,14 @@ contract RollupCreator is Ownable, CloneFactory {
             new TransparentUpgradeableProxy(address(rollupTemplate), address(frame.admin), "")
         );
 
-        frame.bridge = new Bridge();
-        frame.inbox = new Inbox(IBridge(frame.bridge));
-        frame.rollupEventBridge = new RollupEventBridge(address(frame.bridge), frame.rollup);
-        frame.bridge.setInbox(address(frame.inbox), true);
-        frame.outbox = new Outbox(frame.rollup, IBridge(frame.bridge));
+        frame.delayedBridge = new Bridge();
+        // TODO initialize sequencerInbox
+        frame.inbox = new Inbox(IBridge(frame.delayedBridge));
+        frame.rollupEventBridge = new RollupEventBridge(address(frame.delayedBridge), frame.rollup);
+        frame.delayedBridge.setInbox(address(frame.inbox), true);
+        frame.outbox = new Outbox(frame.rollup, IBridge(frame.delayedBridge));
 
-        frame.bridge.transferOwnership(frame.rollup);
+        frame.delayedBridge.transferOwnership(frame.rollup);
         frame.admin.transferOwnership(frame.rollup);
         IRollup(frame.rollup).initialize(
             config.machineHash,
@@ -114,7 +117,8 @@ contract RollupCreator is Ownable, CloneFactory {
             config.extraConfig,
             [
                 address(frame.admin),
-                address(frame.bridge),
+                address(frame.delayedBridge),
+                address(frame.sequencerInbox),
                 address(frame.outbox),
                 address(frame.rollupEventBridge),
                 challengeFactory,

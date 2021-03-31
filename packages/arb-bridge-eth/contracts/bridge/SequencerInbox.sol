@@ -36,6 +36,18 @@ contract SequencerInbox is ISequencerInbox {
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
+    constructor(
+        IBridge _delayedInbox,
+        address _sequencer,
+        uint256 _maxDelayBlocks,
+        uint256 _maxDelaySeconds
+    ) public {
+        delayedInbox = _delayedInbox;
+        sequencer = _sequencer;
+        maxDelayBlocks = _maxDelayBlocks;
+        maxDelaySeconds = _maxDelaySeconds;
+    }
+
     function forceInclusion(
         uint256 _totalDelayedMessagesRead,
         uint8 kind,
@@ -180,7 +192,7 @@ contract SequencerInbox is ISequencerInbox {
         bytes32 acc = keccak256(abi.encodePacked("Previous batch:", beforeAcc));
         uint256 count = messageCount;
         if (_totalDelayedMessagesRead > totalDelayedMessagesRead) {
-            require(_totalDelayedMesagesRead <= delayedInbox.messageCount());
+            require(_totalDelayedMessagesRead <= delayedInbox.messageCount());
             acc = keccak256(
                 abi.encodePacked(
                     "Delayed messages:",

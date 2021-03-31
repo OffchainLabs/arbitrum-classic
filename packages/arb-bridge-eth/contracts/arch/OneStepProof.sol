@@ -473,14 +473,14 @@ contract OneStepProof is OneStepProofCommon {
 
         uint256 seqBatchNum;
         (context.offset, seqBatchNum) = Marshaling.deserializeInt(proof, context.offset);
-        // Shouldn't be necessar, but confirm that the sequence batch number makes sense.
+        // Shouldn't be necessary, but confirm that the sequence batch number makes sense.
         require(
-            seqBatchNum == context.seqBatchNum || seqBatchNum == context.seqBatchNum + 1,
+            seqBatchNum == context.seqBatchesRead || seqBatchNum + 1 == context.seqBatchesRead,
             "SEQ_BATCH_NUM"
         );
         uint8 isDelayed = uint8(proof[context.offset]);
         context.offset++;
-        require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED");
+        require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED_VAL");
 
         bytes32 acc;
         if (isDelayed == 0) {
@@ -560,7 +560,7 @@ contract OneStepProof is OneStepProofCommon {
         require(acc == context.sequencerBridge.inboxAccs(seqBatchNum), "WRONG_BATCH_ACC");
 
         context.totalMessagesRead++;
-        context.seqBatchNum = seqBatchNum;
+        context.seqBatchesRead = seqBatchNum + 1;
 
         return Value.newTuple(tupData);
     }

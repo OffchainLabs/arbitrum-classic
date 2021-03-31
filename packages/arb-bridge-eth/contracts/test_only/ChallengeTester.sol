@@ -41,21 +41,25 @@ contract ChallengeTester {
     function startChallenge(
         bytes32 executionHash,
         uint256 maxMessageCount,
+        uint256 maxSeqBatchCount,
         address payable asserter,
         address payable challenger,
         uint256 asserterTimeLeft,
         uint256 challengerTimeLeft,
-        IBridge bridge
+        ISequencerInbox sequencerBridge,
+        IBridge delayedBridge
     ) public {
         challenge = challengeFactory.createChallenge(
             address(this),
             executionHash,
             maxMessageCount,
+            maxSeqBatchCount,
             asserter,
             challenger,
             asserterTimeLeft,
             challengerTimeLeft,
-            bridge
+            sequencerBridge,
+            delayedBridge
         );
     }
 }

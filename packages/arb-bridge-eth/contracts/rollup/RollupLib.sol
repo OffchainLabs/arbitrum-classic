@@ -37,12 +37,13 @@ library RollupLib {
         uint256 gasUsed;
         bytes32 machineHash;
         uint256 inboxCount;
+        uint256 sequencerBatchCount;
         uint256 sendCount;
         uint256 logCount;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint256 proposedBlock;
-        uint256 inboxMaxCount;
+        uint256 batchMaxCount;
     }
 
     function stateHash(ExecutionState memory execState) internal pure returns (bytes32) {
@@ -52,12 +53,13 @@ library RollupLib {
                     execState.gasUsed,
                     execState.machineHash,
                     execState.inboxCount,
+                    execState.sequencerBatchCount,
                     execState.sendCount,
                     execState.logCount,
                     execState.sendAcc,
                     execState.logAcc,
                     execState.proposedBlock,
-                    execState.inboxMaxCount
+                    execState.batchMaxCount
                 )
             );
     }
@@ -69,7 +71,7 @@ library RollupLib {
 
     function decodeExecutionState(
         bytes32[3] memory bytes32Fields,
-        uint256[4] memory intFields,
+        uint256[5] memory intFields,
         uint256 proposedBlock,
         uint256 inboxMaxCount
     ) internal pure returns (ExecutionState memory) {
@@ -80,6 +82,7 @@ library RollupLib {
                 intFields[1],
                 intFields[2],
                 intFields[3],
+                intFields[4],
                 bytes32Fields[1],
                 bytes32Fields[2],
                 proposedBlock,
@@ -89,7 +92,7 @@ library RollupLib {
 
     function decodeAssertion(
         bytes32[3][2] memory bytes32Fields,
-        uint256[4][2] memory intFields,
+        uint256[5][2] memory intFields,
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
         uint256 inboxMaxCount
@@ -116,6 +119,7 @@ library RollupLib {
                 state.gasUsed,
                 ChallengeLib.assertionRestHash(
                     state.inboxCount,
+                    state.sequencerBatchCount,
                     state.machineHash,
                     state.sendAcc,
                     state.sendCount,
@@ -140,15 +144,22 @@ library RollupLib {
         bytes32 assertionExecHash,
         uint256 blockProposed
     ) internal pure returns (bytes32) {
-        return challengeRootHash(assertionExecHash, blockProposed, assertion.afterState.inboxCount);
+        return
+            challengeRootHash(
+                assertionExecHash,
+                blockProposed,
+                assertion.afterState.inboxCount,
+                assertion.afterState.sequencerBatchCount
+            );
     }
 
     function challengeRootHash(
         bytes32 execution,
         uint256 proposedTime,
-        uint256 maxMessageCount
+        uint256 maxMessageCount,
+        uint256 maxBatchCount
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(execution, proposedTime, maxMessageCount));
+        return keccak256(abi.encodePacked(execution, proposedTime, maxMessageCount, maxBatchCount));
     }
 
     function confirmHash(Assertion memory assertion) internal pure returns (bytes32) {

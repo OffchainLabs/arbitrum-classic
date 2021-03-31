@@ -22,6 +22,7 @@ import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 abstract contract OneStepProofCommon is IOneStepProof {
     using Machine for Machine.Data;
@@ -148,8 +149,9 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     // accs is [sendAcc, logAcc]
     function executeStep(
-        IBridge bridge,
-        uint256 initialMessagesRead,
+        ISequencerInbox sequencerBridge,
+        IBridge delayedBridge,
+        uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -159,12 +161,19 @@ abstract contract OneStepProofCommon is IOneStepProof {
         override
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256[2] memory afterMessagesAndBatchesRead,
             bytes32[4] memory fields
         )
     {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+            initializeExecutionContext(
+                initialMessagesAndBatchesRead,
+                accs,
+                proof,
+                bproof,
+                sequencerBridge,
+                delayedBridge
+            );
 
         executeOp(context);
 
@@ -172,14 +181,22 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function executeStepDebug(
-        IBridge bridge,
-        uint256 initialMessagesRead,
+        ISequencerInbox sequencerBridge,
+        IBridge delayedBridge,
+        uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+            initializeExecutionContext(
+                initialMessagesAndBatchesRead,
+                accs,
+                proof,
+                bproof,
+                sequencerBridge,
+                delayedBridge
+            );
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);
@@ -198,13 +215,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
         pure
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256[2] memory afterMessagesAndBatchesRead,
             bytes32[4] memory fields
         )
     {
         return (
             context.gas,
-            context.totalMessagesRead,
+            [context.totalMessagesRead, context.seqBatchesRead],
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
@@ -231,12 +248,12 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     struct AssertionContext {
-        IBridge sequencerBridge;
+        ISequencerInbox sequencerBridge;
         IBridge delayedBridge;
         Machine.Data startMachine;
         Machine.Data afterMachine;
         uint256 totalMessagesRead;
-        uint256 seqBatchNum;
+        uint256 seqBatchesRead;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -277,11 +294,12 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function initializeExecutionContext(
-        uint256 initialMessagesRead,
+        uint256[2] calldata initialMessagesAndBatchesRead,
         bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
-        IBridge bridge
+        ISequencerInbox sequencerBridge,
+        IBridge delayedBridge
     ) internal pure returns (AssertionContext memory) {
         uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
@@ -304,10 +322,12 @@ abstract contract OneStepProofCommon is IOneStepProof {
         offset += 1;
 
         AssertionContext memory context;
-        // TODO: populate sequencerBridge and delayedBridge
+        context.sequencerBridge = sequencerBridge;
+        context.delayedBridge = delayedBridge;
         context.startMachine = mach;
         context.afterMachine = mach.clone();
-        context.totalMessagesRead = initialMessagesRead;
+        context.totalMessagesRead = initialMessagesAndBatchesRead[0];
+        context.seqBatchesRead = initialMessagesAndBatchesRead[1];
         context.sendAcc = accs[0];
         context.logAcc = accs[1];
         context.gas = 0;

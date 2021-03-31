@@ -29,7 +29,7 @@ interface IRollup {
         uint256 inboxMaxCount,
         bytes32 afterInboxAcc,
         bytes32[3][2] assertionBytes32Fields,
-        uint256[4][2] assertionIntFields
+        uint256[5][2] assertionIntFields
     );
 
     event NodeConfirmed(
@@ -58,7 +58,7 @@ interface IRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[6] calldata connectedContracts
+        address[7] calldata connectedContracts
     ) external;
 
     function completeChallenge(address winningStaker, address losingStaker) external;

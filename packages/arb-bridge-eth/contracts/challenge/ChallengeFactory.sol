@@ -35,23 +35,26 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address _resultReceiver,
         bytes32 _executionHash,
         uint256 _maxMessageCount,
+        uint256 _maxSequencerBatchCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        ISequencerInbox _sequencerBridge,
+        IBridge _delayedBridge
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
             executors,
             _resultReceiver,
             _executionHash,
-            _maxMessageCount,
+            [_maxMessageCount, _maxSequencerBatchCount],
             _asserter,
             _challenger,
             _asserterTimeLeft,
             _challengerTimeLeft,
-            _bridge
+            _sequencerBridge,
+            _delayedBridge
         );
         return address(clone);
     }
