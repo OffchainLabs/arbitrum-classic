@@ -72,14 +72,16 @@ contract SequencerInbox is ISequencerInbox {
         require(l1BlockNumber + maxDelayBlocks < block.number);
         require(l1Timestamp + maxDelaySeconds < block.timestamp);
 
-        bytes32 prevDelayedAcc = 0;
-        if (_totalDelayedMessagesRead > 1) {
-            prevDelayedAcc = delayedInbox.inboxAccs(_totalDelayedMessagesRead - 2);
+        {
+            bytes32 prevDelayedAcc = 0;
+            if (_totalDelayedMessagesRead > 1) {
+                prevDelayedAcc = delayedInbox.inboxAccs(_totalDelayedMessagesRead - 2);
+            }
+            require(
+                delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1) ==
+                    Messages.addMessageToInbox(prevDelayedAcc, messageHash)
+            );
         }
-        require(
-            delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1) ==
-                Messages.addMessageToInbox(prevDelayedAcc, messageHash)
-        );
 
         uint256 startNum = messageCount;
         (bytes32 beforeSeqAcc, bytes32 acc, uint256 count) =

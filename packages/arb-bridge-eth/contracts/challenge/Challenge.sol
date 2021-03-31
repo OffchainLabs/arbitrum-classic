@@ -247,8 +247,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
         uint256[2] calldata _initialMessagesAndBatchesRead,
-        bytes32 _initialSendAcc,
-        bytes32 _initialLogAcc,
+        bytes32[2] calldata _initialAccs,
         uint256[3] memory _initialState,
         bytes memory _executionProof,
         bytes memory _bufferProof,
@@ -265,7 +264,7 @@ contract Challenge is Cloneable, IChallenge {
                     sequencerBridge,
                     delayedBridge,
                     _initialMessagesAndBatchesRead,
-                    [_initialSendAcc, _initialLogAcc],
+                    _initialAccs,
                     _executionProof,
                     _bufferProof
                 );
@@ -287,8 +286,8 @@ contract Challenge is Cloneable, IChallenge {
             require(
                 _oldEndHash !=
                     oneStepProofExecutionAfter(
-                        _initialSendAcc,
-                        _initialLogAcc,
+                        _initialAccs[0],
+                        _initialAccs[1],
                         _initialState,
                         gasUsed,
                         totalMessagesAndBatchesRead,
@@ -302,8 +301,8 @@ contract Challenge is Cloneable, IChallenge {
                 _challengedSegmentLength,
                 oneStepProofExecutionBefore(
                     _initialMessagesAndBatchesRead,
-                    _initialSendAcc,
-                    _initialLogAcc,
+                    _initialAccs[0],
+                    _initialAccs[1],
                     _initialState,
                     proofFields
                 ),
@@ -456,6 +455,8 @@ contract Challenge is Cloneable, IChallenge {
         uint256[2] memory totalMessagesAndBatchesRead,
         bytes32[4] memory proofFields
     ) private pure returns (bytes32) {
+        uint256 newSendCount = _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1));
+        uint256 newLogCount = _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1));
         // The one step proof already guarantees us that firstMessage and lastMessage
         // are either one or 0 messages apart and the same is true for logs. Therefore
         // we can infer the message count and log count based on whether the fields
@@ -468,9 +469,9 @@ contract Challenge is Cloneable, IChallenge {
                     totalMessagesAndBatchesRead[1],
                     proofFields[1],
                     proofFields[2],
-                    _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1)),
+                    newSendCount,
                     proofFields[3],
-                    _initialState[2].add((_initialLogAcc == proofFields[3] ? 0 : 1))
+                    newLogCount
                 )
             );
     }

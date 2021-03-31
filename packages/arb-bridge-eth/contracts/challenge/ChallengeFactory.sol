@@ -44,11 +44,12 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         IBridge _delayedBridge
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);
+        uint256[2] memory maxMessageAndBatchCounts = [_maxMessageCount, _maxSequencerBatchCount];
         IChallenge(clone).initializeChallenge(
             executors,
             _resultReceiver,
             _executionHash,
-            [_maxMessageCount, _maxSequencerBatchCount],
+            maxMessageAndBatchCounts,
             _asserter,
             _challenger,
             _asserterTimeLeft,
