@@ -36,7 +36,7 @@ const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
   ERC777?: { contract: StandardArbERC777; balance: BigNumber }
-  CUSTOM?: { contract: IArbToken; balance: BigNumber } // Force custom to have l1Address (in, ie., IArbToken)
+  CUSTOM?: { contract: StandardArbERC20; balance: BigNumber } // Here we don't use the particlar custom token's interface; for the sake of this sdk that's fine
 }
 
 export interface Tokens {
@@ -160,7 +160,7 @@ export class L2Bridge {
       erc20L1Address
     )
     if (customTokenAddress !== ethers.constants.AddressZero) {
-      const customTokenContract = IArbToken__factory.connect(
+      const customTokenContract = StandardArbERC20__factory.connect(
         customTokenAddress,
         this.l2Signer
       )
@@ -174,7 +174,7 @@ export class L2Bridge {
         )) as BigNumber
         tokenData.CUSTOM.balance = balance
       } catch (err) {
-        console.warn("Count not get custom token's balance", err)
+        console.warn("Could not get custom token's balance", err)
       }
     }
 
