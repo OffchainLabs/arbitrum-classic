@@ -21,11 +21,31 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'l2Address',
+        name: 'l2CustomTokenAddress',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGas',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'gasPriceBid',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'refundAddress',
         type: 'address',
       },
     ],
-    name: 'registerL2Token',
+    name: 'registerTokenOnL2',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
