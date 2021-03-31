@@ -231,10 +231,12 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     struct AssertionContext {
-        IBridge bridge;
+        IBridge sequencerBridge;
+        IBridge delayedBridge;
         Machine.Data startMachine;
         Machine.Data afterMachine;
         uint256 totalMessagesRead;
+        uint256 seqBatchNum;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -302,7 +304,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         offset += 1;
 
         AssertionContext memory context;
-        context.bridge = bridge;
+        // TODO: populate sequencerBridge and delayedBridge
         context.startMachine = mach;
         context.afterMachine = mach.clone();
         context.totalMessagesRead = initialMessagesRead;
