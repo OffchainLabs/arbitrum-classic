@@ -7,6 +7,7 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { providers, utils } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
+import { ARB_SYS_ADDRESS } from './l2Bridge'
 
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
@@ -260,14 +261,10 @@ export class BridgeHelper {
 
   static getWithdrawalsInL2Transaction = async (
     l2Transaction: providers.TransactionReceipt,
-    l2Provider: providers.Provider,
-    arbSysAddress?: string
+    l2Provider: providers.Provider
   ): Promise<Array<L2ToL1EventResult>> => {
     // TODO: can we use dummies to get interface?
-    const contract = ArbSys__factory.connect(
-      arbSysAddress || 'arbSysAddress',
-      l2Provider
-    )
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
@@ -289,10 +286,10 @@ export class BridgeHelper {
 
   static getInboxSeqNumFromContractTransaction = async (
     l2Transaction: providers.TransactionReceipt,
-    inboxAddress?: string
+    inboxAddress: string
   ) => {
     const factory = new Inbox__factory()
-    const contract = factory.attach(inboxAddress || 'inboxAddress')
+    const contract = factory.attach(inboxAddress)
     const iface = contract.interface
     const messageDelivered = iface.getEvent('InboxMessageDelivered')
     const messageDeliveredFromOrigin = iface.getEvent(
@@ -625,13 +622,9 @@ export class BridgeHelper {
 
   static getL2ToL1EventData = async (
     destinationAddress: string,
-    l2Provider: providers.Provider,
-    arbSysAddress?: string
+    l2Provider: providers.Provider
   ) => {
-    const contract = ArbSys__factory.connect(
-      arbSysAddress || 'arbSysAddress',
-      l2Provider
-    )
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
     const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
@@ -642,7 +635,7 @@ export class BridgeHelper {
     ]
 
     const logs = await l2Provider.getLogs({
-      address: arbSysAddress,
+      address: ARB_SYS_ADDRESS,
       topics,
       fromBlock: 0,
       toBlock: 'latest',

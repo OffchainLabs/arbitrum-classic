@@ -213,8 +213,7 @@ export class Bridge extends L2Bridge {
   ) {
     return BridgeHelper.getWithdrawalsInL2Transaction(
       l2Transaction,
-      this.l2Provider,
-      ARB_SYS_ADDRESS
+      this.l2Provider
     )
   }
 
@@ -330,10 +329,6 @@ export class Bridge extends L2Bridge {
   }
 
   public async getL2ToL1EventData(destinationAddress: string) {
-    return BridgeHelper.getL2ToL1EventData(
-      destinationAddress,
-      this.l2Provider,
-      ARB_SYS_ADDRESS
-    )
+    return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
   }
 }
