@@ -47,4 +47,9 @@ interface ISequencerInbox {
     function maxDelaySeconds() external view returns (uint256);
 
     function inboxAccs(uint256 index) external view returns (bytes32);
+
+    function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 inboxCount)
+        external
+        view
+        returns (bytes32);
 }

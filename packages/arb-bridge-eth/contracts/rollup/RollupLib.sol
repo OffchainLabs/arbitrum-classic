@@ -19,8 +19,6 @@
 pragma solidity ^0.6.11;
 
 import "../challenge/ChallengeLib.sol";
-import "../bridge/interfaces/ISequencerInbox.sol";
-import "../arch/Marshaling.sol";
 import "./INode.sol";
 
 library RollupLib {
@@ -221,82 +219,5 @@ library RollupLib {
 
     function nodeAccumulator(bytes32 prevAcc, bytes32 newNodeHash) internal pure returns (bytes32) {
         return keccak256(abi.encodePacked(prevAcc, newNodeHash));
-    }
-
-    function proveSeqBatchMsgCount(
-        bytes calldata proof,
-        uint256 offset,
-        bytes32 acc
-    ) internal pure returns (uint256, uint256) {
-        uint256 messageCount;
-
-        bytes32 buildingAcc;
-        (offset, buildingAcc) = Marshaling.deserializeBytes32(proof, offset);
-        uint8 isDelayed = uint8(proof[offset]);
-        offset++;
-        require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED_NUM");
-        if (isDelayed == 0) {
-            uint256 seqNum;
-            bytes32 messageHash;
-            (offset, seqNum) = Marshaling.deserializeInt(proof, offset);
-            (offset, messageHash) = Marshaling.deserializeBytes32(proof, offset);
-            buildingAcc = keccak256(
-                abi.encodePacked("Sequencer message:", buildingAcc, seqNum, messageHash)
-            );
-            messageCount = seqNum + 1;
-        } else {
-            uint256 firstSequencerSeqNum;
-            uint256 delayedStart;
-            uint256 delayedEnd;
-            bytes32 delayedEndAcc;
-            (offset, firstSequencerSeqNum) = Marshaling.deserializeInt(proof, offset);
-            (offset, delayedStart) = Marshaling.deserializeInt(proof, offset);
-            (offset, delayedEnd) = Marshaling.deserializeInt(proof, offset);
-            (offset, delayedEndAcc) = Marshaling.deserializeBytes32(proof, offset);
-            buildingAcc = keccak256(
-                abi.encodePacked(
-                    "Delayed messages:",
-                    buildingAcc,
-                    firstSequencerSeqNum,
-                    delayedStart,
-                    delayedEnd,
-                    delayedEndAcc
-                )
-            );
-            messageCount = delayedEnd - delayedStart + firstSequencerSeqNum;
-        }
-        require(buildingAcc == acc, "BATCH_ACC");
-
-        return (offset, messageCount);
-    }
-
-    function proveSequencerBatchContains(
-        ISequencerInbox sequencerBridge,
-        bytes calldata proof,
-        uint256 inboxCount
-    ) internal view returns (bytes32) {
-        if (inboxCount == 0) {
-            return 0;
-        }
-
-        (uint256 offset, uint256 seqBatchNum) = Marshaling.deserializeInt(proof, 0);
-        uint256 lastBatchCount = 0;
-        if (seqBatchNum > 0) {
-            (offset, lastBatchCount) = proveSeqBatchMsgCount(
-                proof,
-                offset,
-                sequencerBridge.inboxAccs(seqBatchNum - 1)
-            );
-            lastBatchCount++;
-        }
-
-        bytes32 seqBatchAcc = sequencerBridge.inboxAccs(seqBatchNum);
-        uint256 thisBatchCount;
-        (offset, thisBatchCount) = proveSeqBatchMsgCount(proof, offset, seqBatchAcc);
-
-        require(inboxCount > lastBatchCount, "BATCH_START");
-        require(inboxCount <= thisBatchCount, "BATCH_END");
-
-        return seqBatchAcc;
     }
 }

@@ -34,7 +34,6 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
-import "../arch/Marshaling.sol";
 
 contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
@@ -467,8 +466,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 "PREV_STATE_HASH"
             );
 
-            frame.sequencerBatchAcc = RollupLib.proveSequencerBatchContains(
-                sequencerBridge,
+            frame.sequencerBatchAcc = sequencerBridge.proveBatchContainsSequenceNumber(
                 sequencerBatchProof,
                 assertion.afterState.inboxCount
             );
