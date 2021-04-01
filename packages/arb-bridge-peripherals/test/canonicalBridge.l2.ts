@@ -282,6 +282,9 @@ describe('Bridge peripherals layer 2', () => {
     const num = 9
     const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
 
+    // we need to hardcode this value as you can only send 63/64 of your remaining
+    // gas into a call a high gas limit makes the test pass artificially
+    const gasLimit = ethers.BigNumber.from(9000000)
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
@@ -291,12 +294,18 @@ describe('Bridge peripherals layer 2', () => {
       decimals,
       callHookData,
       {
-        // we need to hardcode this value as you can only send 63/64 of your remaining
-        // gas into a call a high gas limit makes the test pass artificially
-        gasLimit: 9000000,
+        gasLimit,
       }
     )
     const receipt = await tx.wait()
+
+    const gasUsed = receipt.gasUsed
+    const diff = gasLimit.sub(gasUsed)
+    // expect to save enough gas for subsequent mint, with at most a 10% margin
+    assert(
+      diff.mul(10).lte(gasLimit),
+      'Did not reserve the correct amount of gas'
+    )
 
     // MintAndCallTriggered(bool,address,address,uint256,bytes)
     const eventTopic =
