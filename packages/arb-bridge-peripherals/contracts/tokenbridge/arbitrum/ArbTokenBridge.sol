@@ -181,6 +181,8 @@ contract ArbTokenBridge is ProxySetter {
         require(success, "External onTokenTransfer reverted");
     }
 
+    event GasLeft(uint256 gasLeft);
+
     function handleCallHookData(
         IArbToken token,
         uint256 amount,
@@ -189,9 +191,11 @@ contract ArbTokenBridge is ProxySetter {
         bytes memory callHookData
     ) internal {
         bool success;
+        emit GasLeft(gasleft());
         try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
             success = true;
         } catch {
+            emit GasLeft(gasleft());
             // if reverted, then credit sender's account
             token.bridgeMint(sender, amount, "");
             // TODO: should try to submit callHookData for the hook?
