@@ -48,12 +48,8 @@ import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
 contract L2Called is ITransferReceiver {
     event Called(uint256 num);
-    uint256[] foo;
-    uint256 i = 0;
 
     constructor() public {}
-
-    event GasLeft(uint256 gasLeft);
 
     // This function can be anything
     function postDepositHook(uint256 num) public {
@@ -74,13 +70,7 @@ contract L2Called is ITransferReceiver {
             revert();
         } else if (num == 9) {
             // this should use all gas
-            emit GasLeft(gasleft());
-            while (gasleft() > 20000) {
-                emit GasLeft(gasleft());
-                i = i + 1;
-                foo.push(i);
-            }
-            // assert(false);
+            while (gasleft() > 0) {}
             return true;
         } else {
             return false;

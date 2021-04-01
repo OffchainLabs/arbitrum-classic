@@ -53,6 +53,10 @@ contract ArbTokenBridge is ProxySetter {
     address public templateERC777;
     address public l1Pair;
 
+    // amount of arbgas necessary to send user tokens in case
+    // of the "onTokenTransfer" call consumes all available gas
+    uint256 internal immutable arbgasReserveIfCallRevert = 250000;
+
     event MintAndCallTriggered(
         bool success,
         address indexed sender,
@@ -176,12 +180,16 @@ contract ArbTokenBridge is ProxySetter {
         // the token's transfer hook does not get triggered here
         // since the bridge already triggers a hook
         token.bridgeMint(dest, amount, "");
-        bool success = ITransferReceiver(dest).onTokenTransfer(sender, amount, data);
+
+        // ~7 300 000 arbgas used to get here
+        uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert;
+        require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
+
+        bool success =
+            ITransferReceiver(dest).onTokenTransfer{ gas: gasAvailable }(sender, amount, data);
 
         require(success, "External onTokenTransfer reverted");
     }
-
-    event GasLeft(uint256 gasLeft);
 
     function handleCallHookData(
         IArbToken token,
@@ -191,11 +199,9 @@ contract ArbTokenBridge is ProxySetter {
         bytes memory callHookData
     ) internal {
         bool success;
-        emit GasLeft(gasleft());
         try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
             success = true;
         } catch {
-            emit GasLeft(gasleft());
             // if reverted, then credit sender's account
             token.bridgeMint(sender, amount, "");
             // TODO: should try to submit callHookData for the hook?

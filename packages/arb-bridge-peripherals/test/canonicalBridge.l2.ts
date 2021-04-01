@@ -262,9 +262,9 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
-  it.only('should revert post mint call correctly when out of gas', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000325'
-    const sender = '0x0000000000000000000000000000000000000005'
+  it('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
+    const l1ERC20 = '0x0000000000000000000000000000000000001325'
+    const sender = '0x0000000000000000000000000000000000000015'
     const amount = '1'
     const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
 
@@ -289,18 +289,14 @@ describe('Bridge peripherals layer 2', () => {
       dest,
       amount,
       decimals,
-      callHookData
+      callHookData,
+      {
+        // we need to hardcode this value as you can only send 63/64 of your remaining
+        // gas into a call a high gas limit makes the test pass artificially
+        gasLimit: 9000000,
+      }
     )
     const receipt = await tx.wait()
-
-    const gasEvent =
-      '0xd6dca172e276f53402f777ced9d49668ea6fb3e2c3f241df4bc1ff2370ffb2e5'
-    const gasEvents: Array<any> = receipt.events.filter(
-      (event: any) => event.topics[0] === gasEvent
-    )
-
-    console.log('gas')
-    gasEvents.map(ev => console.log(ev.args.gasLeft.toNumber()))
 
     // MintAndCallTriggered(bool,address,address,uint256,bytes)
     const eventTopic =
