@@ -250,7 +250,8 @@ export class L1Bridge {
     maxSubmissionCost: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
-    destinationAddress?: string
+    destinationAddress?: string,
+    overrides: TransactionOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
     const customTokenL2Address = await this.ethERC20Bridge.customL2Tokens(
@@ -266,7 +267,8 @@ export class L1Bridge {
       maxSubmissionCost,
       maxGas,
       gasPriceBid,
-      ''
+      '0x',
+      overrides
     )
   }
 
