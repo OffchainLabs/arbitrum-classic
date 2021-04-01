@@ -481,7 +481,7 @@ contract OneStepProof is OneStepProofCommon {
         if (isDelayed == 0) {
             (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
             // Start the proof at an arbitrary previous accumulator, as we validate the end accumulator.
-            acc = keccak256(abi.encodePacked("Sequencer message:", acc, messageHash));
+            acc = keccak256(abi.encodePacked("Sequencer message:", acc, inboxSeqNum, messageHash));
         } else {
             // Delayed messages are always at the start of a batch, so we can fetch the previous accumulator.
             bytes32 prevBatchAcc = 0;
@@ -539,7 +539,6 @@ contract OneStepProof is OneStepProofCommon {
         require(inboxSeqNum == context.totalMessagesRead, "WRONG_MSG_SEQ_NUM");
 
         // Get to the end of the batch by hashing in arbitrary future sequencer messages.
-        // Critically, the proof from here cannot cross a batch, as that's hashed differently.
         uint256 remainingSeqMessages;
         (context.offset, remainingSeqMessages) = Marshaling.deserializeInt(proof, context.offset);
         for (uint256 i = 0; i < remainingSeqMessages; i++) {
@@ -548,7 +547,9 @@ contract OneStepProof is OneStepProofCommon {
                 proof,
                 context.offset
             );
-            acc = keccak256(abi.encodePacked("Sequencer message:", acc, newerMessageHash));
+            acc = keccak256(
+                abi.encodePacked("Sequencer message:", acc, inboxSeqNum + 1 + i, newerMessageHash)
+            );
         }
 
         require(acc == context.sequencerBridge.inboxAccs(seqBatchNum), "WRONG_BATCH_ACC");
