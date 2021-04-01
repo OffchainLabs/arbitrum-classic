@@ -71,7 +71,6 @@ contract Challenge is Cloneable, IChallenge {
     IRollup internal resultReceiver;
 
     uint256 maxMessageCount;
-    uint256 maxSeqBatchCount;
 
     address public override asserter;
     address public override challenger;
@@ -105,7 +104,7 @@ contract Challenge is Cloneable, IChallenge {
         IOneStepProof[] calldata _executors,
         address _resultReceiver,
         bytes32 _executionHash,
-        uint256[2] calldata _maxMessageAndBatchCounts,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,
@@ -119,8 +118,7 @@ contract Challenge is Cloneable, IChallenge {
 
         resultReceiver = IRollup(_resultReceiver);
 
-        maxMessageCount = _maxMessageAndBatchCounts[0];
-        maxSeqBatchCount = _maxMessageAndBatchCounts[1];
+        maxMessageCount = _maxMessageCount;
 
         asserter = _asserter;
         challenger = _challenger;
@@ -244,7 +242,7 @@ contract Challenge is Cloneable, IChallenge {
         uint256 _challengedSegmentStart,
         uint256 _challengedSegmentLength,
         bytes32 _oldEndHash,
-        uint256[2] calldata _initialMessagesAndBatchesRead,
+        uint256 _initialMessagesRead,
         bytes32[2] calldata _initialAccs,
         uint256[3] memory _initialState,
         bytes memory _executionProof,
@@ -253,21 +251,16 @@ contract Challenge is Cloneable, IChallenge {
     ) public onlyOnTurn {
         bytes32 rootHash;
         {
-            (
-                uint64 gasUsed,
-                uint256[2] memory totalMessagesAndBatchesRead,
-                bytes32[4] memory proofFields
-            ) =
+            (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =
                 executors[prover].executeStep(
                     bridges,
-                    _initialMessagesAndBatchesRead,
+                    _initialMessagesRead,
                     _initialAccs,
                     _executionProof,
                     _bufferProof
                 );
 
-            require(totalMessagesAndBatchesRead[0] <= maxMessageCount, "TOO_MANY_MESSAGES");
-            require(totalMessagesAndBatchesRead[1] <= maxSeqBatchCount, "TOO_MANY_BATCHES");
+            require(totalMessagesRead <= maxMessageCount, "TOO_MANY_MESSAGES");
 
             require(
                 // if false, this segment must be proven with proveContinuedExecution
@@ -287,7 +280,7 @@ contract Challenge is Cloneable, IChallenge {
                         _initialAccs[1],
                         _initialState,
                         gasUsed,
-                        totalMessagesAndBatchesRead,
+                        totalMessagesRead,
                         proofFields
                     ),
                 "WRONG_END"
@@ -297,7 +290,7 @@ contract Challenge is Cloneable, IChallenge {
                 _challengedSegmentStart,
                 _challengedSegmentLength,
                 oneStepProofExecutionBefore(
-                    _initialMessagesAndBatchesRead,
+                    _initialMessagesRead,
                     _initialAccs[0],
                     _initialAccs[1],
                     _initialState,
@@ -423,7 +416,7 @@ contract Challenge is Cloneable, IChallenge {
     //  afterMessagesHash
     //  afterLogsHash
     function oneStepProofExecutionBefore(
-        uint256[2] calldata _initialMessagesAndBatchesRead,
+        uint256 _initialMessagesRead,
         bytes32 _initialSendAcc,
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
@@ -433,8 +426,7 @@ contract Challenge is Cloneable, IChallenge {
             ChallengeLib.assertionHash(
                 _initialState[0],
                 ChallengeLib.assertionRestHash(
-                    _initialMessagesAndBatchesRead[0],
-                    _initialMessagesAndBatchesRead[1],
+                    _initialMessagesRead,
                     proofFields[0],
                     _initialSendAcc,
                     _initialState[1],
@@ -449,7 +441,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes32 _initialLogAcc,
         uint256[3] memory _initialState,
         uint64 gasUsed,
-        uint256[2] memory totalMessagesAndBatchesRead,
+        uint256 totalMessagesRead,
         bytes32[4] memory proofFields
     ) private pure returns (bytes32) {
         uint256 newSendCount = _initialState[1].add((_initialSendAcc == proofFields[2] ? 0 : 1));
@@ -462,8 +454,7 @@ contract Challenge is Cloneable, IChallenge {
             ChallengeLib.assertionHash(
                 _initialState[0].add(gasUsed),
                 ChallengeLib.assertionRestHash(
-                    totalMessagesAndBatchesRead[0],
-                    totalMessagesAndBatchesRead[1],
+                    totalMessagesRead,
                     proofFields[1],
                     proofFields[2],
                     newSendCount,

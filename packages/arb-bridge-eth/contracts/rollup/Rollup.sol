@@ -34,6 +34,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
+import "../arch/Marshaling.sol";
 
 contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
@@ -124,7 +125,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     0, // total gas used
                     _machineHash,
                     0, // inbox count
-                    0, // batch count
                     0, // send count
                     0, // log count
                     0, // send acc
@@ -422,6 +422,82 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
+    function proveSeqBatchMsgCount(
+        bytes calldata proof,
+        uint256 offset,
+        bytes32 acc
+    ) internal returns (uint256, uint256) {
+        uint256 messageCount;
+
+        bytes32 buildingAcc;
+        (offset, buildingAcc) = Marshaling.deserializeBytes32(proof, offset);
+        uint8 isDelayed = uint8(proof[offset]);
+        offset++;
+        require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED_NUM");
+        if (isDelayed == 0) {
+            uint256 seqNum;
+            bytes32 messageHash;
+            (offset, seqNum) = Marshaling.deserializeInt(proof, offset);
+            (offset, messageHash) = Marshaling.deserializeBytes32(proof, offset);
+            buildingAcc = keccak256(
+                abi.encodePacked("Sequencer message:", buildingAcc, seqNum, messageHash)
+            );
+            messageCount = seqNum + 1;
+        } else {
+            uint256 firstSequencerSeqNum;
+            uint256 delayedStart;
+            uint256 delayedEnd;
+            bytes32 delayedEndAcc;
+            (offset, firstSequencerSeqNum) = Marshaling.deserializeInt(proof, offset);
+            (offset, delayedStart) = Marshaling.deserializeInt(proof, offset);
+            (offset, delayedEnd) = Marshaling.deserializeInt(proof, offset);
+            (offset, delayedEndAcc) = Marshaling.deserializeBytes32(proof, offset);
+            buildingAcc = keccak256(
+                abi.encodePacked(
+                    "Delayed messages:",
+                    buildingAcc,
+                    firstSequencerSeqNum,
+                    delayedStart,
+                    delayedEnd,
+                    delayedEndAcc
+                )
+            );
+            messageCount = delayedEnd - delayedStart + firstSequencerSeqNum;
+        }
+        require(buildingAcc == acc, "BATCH_ACC");
+
+        return (offset, messageCount);
+    }
+
+    function proveSequencerBatchContains(bytes calldata proof, uint256 inboxCount)
+        internal
+        returns (bytes32)
+    {
+        if (inboxCount == 0) {
+            return 0;
+        }
+
+        (uint256 offset, uint256 seqBatchNum) = Marshaling.deserializeInt(proof, 0);
+        uint256 lastBatchCount = 0;
+        if (seqBatchNum > 0) {
+            (offset, lastBatchCount) = proveSeqBatchMsgCount(
+                proof,
+                offset,
+                sequencerBridge.inboxAccs(seqBatchNum - 1)
+            );
+            lastBatchCount++;
+        }
+
+        bytes32 seqBatchAcc = sequencerBridge.inboxAccs(seqBatchNum);
+        uint256 thisBatchCount;
+        (offset, thisBatchCount) = proveSeqBatchMsgCount(proof, offset, seqBatchAcc);
+
+        require(inboxCount > lastBatchCount, "BATCH_START");
+        require(inboxCount <= thisBatchCount, "BATCH_END");
+
+        return seqBatchAcc;
+    }
+
     /**
      * @notice Move stake onto a new node
      * @param expectedNodeHash The hash of the node being created (protects against reorgs)
@@ -431,14 +507,15 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function stakeOnNewNode(
         bytes32 expectedNodeHash,
         bytes32[3][2] calldata assertionBytes32Fields,
-        uint256[5][2] calldata assertionIntFields,
+        uint256[4][2] calldata assertionIntFields,
         uint256 beforeProposedBlock,
-        uint256 beforeInboxMaxCount
+        uint256 beforeInboxMaxCount,
+        bytes calldata sequencerBatchProof
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        uint256 maxSequencerBatchCount = sequencerBridge.messageCount();
-        bytes32 sequencerBatchAcc = 0;
+        bytes32 sequencerBatchAcc;
+        uint256 currentInboxSize = sequencerBridge.messageCount();
         INode node;
         bytes32 executionHash;
         INode prevNode = getNode(latestStakedNode(msg.sender));
@@ -450,13 +527,18 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     assertionIntFields,
                     beforeProposedBlock,
                     beforeInboxMaxCount,
-                    maxSequencerBatchCount
+                    currentInboxSize
                 );
             executionHash = RollupLib.executionHash(assertion);
             // Make sure the previous state is correct against the node being built on
             require(
                 RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
                 "PREV_STATE_HASH"
+            );
+
+            sequencerBatchAcc = proveSequencerBatchContains(
+                sequencerBatchProof,
+                assertion.afterState.inboxCount
             );
 
             uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
@@ -467,7 +549,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             // Minimum size requirements: each assertion must satisfy either
             require(
                 // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                assertion.afterState.sequencerBatchCount >= assertion.beforeState.batchMaxCount ||
+                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
                     // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
                     gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
                     assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
@@ -495,20 +577,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             );
 
             // Ensure that the assertion doesn't read past the end of the current inbox
-            require(
-                assertion.afterState.sequencerBatchCount <= maxSequencerBatchCount,
-                "BATCH_PAST_END"
-            );
-            // This check shouldn't be necessary, but might as well check this
-            require(
-                assertion.afterState.inboxCount <= sequencerBridge.messageCount(),
-                "INBOX_PAST_END"
-            );
-            if (assertion.afterState.sequencerBatchCount > 0) {
-                sequencerBatchAcc = sequencerBridge.inboxAccs(
-                    assertion.afterState.sequencerBatchCount - 1
-                );
-            }
+            require(assertion.afterState.inboxCount <= currentInboxSize, "INBOX_PAST_END");
 
             node = INode(
                 nodeFactory.createNode(
@@ -523,8 +592,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         {
             bytes32 lastHash;
-            uint256 latestSibling = prevNode.latestChildNumber();
-            bool hasSibling = latestSibling > 0;
+            bool hasSibling = prevNode.latestChildNumber() > 0;
             if (hasSibling) {
                 lastHash = getNodeHash(prevNode.latestChildNumber());
             } else {
@@ -541,9 +609,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         emit NodeCreated(
             latestNodeCreated(),
             getNodeHash(node.prev()),
-            getNodeHash(latestNodeCreated()),
+            expectedNodeHash,
             executionHash,
-            maxSequencerBatchCount,
+            currentInboxSize,
             sequencerBatchAcc,
             assertionBytes32Fields,
             assertionIntFields
@@ -593,14 +661,14 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      * @param nodeNums Nodes of the stakers engaged in the challenge. The first node should be the earliest and is the one challenged
      * @param executionHashes Challenge related data for the two nodes
      * @param proposedTimes Times that the two nodes were proposed
-     * @param maxMessageAndBatchCounts Total number of messages and batches consumed by the two nodes
+     * @param maxMessageCounts Total number of messages consumed by the two nodes
      */
     function createChallenge(
         address payable[2] calldata stakers,
         uint256[2] calldata nodeNums,
         bytes32[2] calldata executionHashes,
         uint256[2] calldata proposedTimes,
-        uint256[2][2] calldata maxMessageAndBatchCounts
+        uint256[2] calldata maxMessageCounts
     ) external whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
@@ -622,8 +690,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 RollupLib.challengeRootHash(
                     executionHashes[0],
                     proposedTimes[0],
-                    maxMessageAndBatchCounts[0][0],
-                    maxMessageAndBatchCounts[0][1]
+                    maxMessageCounts[0]
                 ),
             "CHAL_HASH1"
         );
@@ -633,8 +700,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 RollupLib.challengeRootHash(
                     executionHashes[1],
                     proposedTimes[1],
-                    maxMessageAndBatchCounts[1][0],
-                    maxMessageAndBatchCounts[1][1]
+                    maxMessageCounts[1]
                 ),
             "CHAL_HASH2"
         );
@@ -653,8 +719,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             challengeFactory.createChallenge(
                 address(this),
                 executionHashes[0],
-                maxMessageAndBatchCounts[0][0],
-                maxMessageAndBatchCounts[0][1],
+                maxMessageCounts[0],
                 stakers[0],
                 stakers[1],
                 commonEndTime.sub(proposedTimes[0]),

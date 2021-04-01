@@ -27,9 +27,9 @@ interface IRollup {
         bytes32 nodeHash,
         bytes32 executionHash,
         uint256 inboxMaxCount,
-        bytes32 afterInboxAcc,
+        bytes32 afterInboxBatchAcc,
         bytes32[3][2] assertionBytes32Fields,
-        uint256[5][2] assertionIntFields
+        uint256[4][2] assertionIntFields
     );
 
     event NodeConfirmed(

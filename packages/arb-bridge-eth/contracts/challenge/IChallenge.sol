@@ -27,7 +27,7 @@ interface IChallenge {
         IOneStepProof[] calldata _executors,
         address _resultReceiver,
         bytes32 _executionHash,
-        uint256[2] calldata _maxMessageAndBatchCounts,
+        uint256 _maxMessageCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,

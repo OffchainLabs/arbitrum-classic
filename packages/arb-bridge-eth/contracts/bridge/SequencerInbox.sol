@@ -169,7 +169,7 @@ contract SequencerInbox is ISequencerInbox {
                     tx.gasprice,
                     messageDataHash
                 );
-            acc = keccak256(abi.encodePacked("Sequencer message:", acc, messageHash));
+            acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, messageHash));
             offset += lengths[i];
             count++;
         }
@@ -191,7 +191,7 @@ contract SequencerInbox is ISequencerInbox {
         if (inboxAccs.length > 0) {
             beforeAcc = inboxAccs[inboxAccs.length - 1];
         }
-        bytes32 acc = keccak256(abi.encodePacked("Previous batch:", beforeAcc));
+        bytes32 acc = beforeAcc;
         uint256 count = messageCount;
         if (_totalDelayedMessagesRead > totalDelayedMessagesRead) {
             require(_totalDelayedMessagesRead <= delayedInbox.messageCount());
@@ -200,8 +200,8 @@ contract SequencerInbox is ISequencerInbox {
                     "Delayed messages:",
                     acc,
                     count,
-                    _totalDelayedMessagesRead,
                     totalDelayedMessagesRead,
+                    _totalDelayedMessagesRead,
                     delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1)
                 )
             );

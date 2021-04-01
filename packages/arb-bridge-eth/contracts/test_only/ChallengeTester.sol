@@ -41,7 +41,6 @@ contract ChallengeTester {
     function startChallenge(
         bytes32 executionHash,
         uint256 maxMessageCount,
-        uint256 maxSeqBatchCount,
         address payable asserter,
         address payable challenger,
         uint256 asserterTimeLeft,
@@ -53,7 +52,6 @@ contract ChallengeTester {
             address(this),
             executionHash,
             maxMessageCount,
-            maxSeqBatchCount,
             asserter,
             challenger,
             asserterTimeLeft,

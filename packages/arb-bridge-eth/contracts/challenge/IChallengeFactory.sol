@@ -26,7 +26,6 @@ interface IChallengeFactory {
         address _resultReceiver,
         bytes32 _executionHash,
         uint256 _maxMessageCount,
-        uint256 _maxSequencerBatchCount,
         address _asserter,
         address _challenger,
         uint256 _asserterTimeLeft,

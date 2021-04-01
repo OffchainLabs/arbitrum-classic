@@ -25,7 +25,7 @@ interface IOneStepProof {
     // Bridges is sequencer bridge then delayed bridge
     function executeStep(
         address[2] calldata bridges,
-        uint256[2] calldata initialMessagesAndBatchesRead,
+        uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -34,13 +34,13 @@ interface IOneStepProof {
         view
         returns (
             uint64 gas,
-            uint256[2] memory afterMessagesAndBatchesRead,
+            uint256 afterMessagesRead,
             bytes32[4] memory fields
         );
 
     function executeStepDebug(
         address[2] calldata bridges,
-        uint256[2] calldata initialMessagesAndBatchesRead,
+        uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof

@@ -150,7 +150,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     // accs is [sendAcc, logAcc]
     function executeStep(
         address[2] calldata bridges,
-        uint256[2] calldata initialMessagesAndBatchesRead,
+        uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
@@ -160,12 +160,12 @@ abstract contract OneStepProofCommon is IOneStepProof {
         override
         returns (
             uint64 gas,
-            uint256[2] memory afterMessagesAndBatchesRead,
+            uint256 afterMessagesRead,
             bytes32[4] memory fields
         )
     {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesAndBatchesRead, accs, proof, bproof, bridges);
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
 
         executeOp(context);
 
@@ -174,13 +174,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     function executeStepDebug(
         address[2] calldata bridges,
-        uint256[2] calldata initialMessagesAndBatchesRead,
+        uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesAndBatchesRead, accs, proof, bproof, bridges);
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);
@@ -199,13 +199,13 @@ abstract contract OneStepProofCommon is IOneStepProof {
         pure
         returns (
             uint64 gas,
-            uint256[2] memory afterMessagesAndBatchesRead,
+            uint256 afterMessagesRead,
             bytes32[4] memory fields
         )
     {
         return (
             context.gas,
-            [context.totalMessagesRead, context.seqBatchesRead],
+            context.totalMessagesRead,
             [
                 Machine.hash(context.startMachine),
                 Machine.hash(context.afterMachine),
@@ -237,7 +237,6 @@ abstract contract OneStepProofCommon is IOneStepProof {
         Machine.Data startMachine;
         Machine.Data afterMachine;
         uint256 totalMessagesRead;
-        uint256 seqBatchesRead;
         bytes32 sendAcc;
         bytes32 logAcc;
         uint64 gas;
@@ -278,7 +277,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function initializeExecutionContext(
-        uint256[2] calldata initialMessagesAndBatchesRead,
+        uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
@@ -309,8 +308,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         context.delayedBridge = IBridge(bridges[0]);
         context.startMachine = mach;
         context.afterMachine = mach.clone();
-        context.totalMessagesRead = initialMessagesAndBatchesRead[0];
-        context.seqBatchesRead = initialMessagesAndBatchesRead[1];
+        context.totalMessagesRead = initialMessagesRead;
         context.sendAcc = accs[0];
         context.logAcc = accs[1];
         context.gas = 0;
