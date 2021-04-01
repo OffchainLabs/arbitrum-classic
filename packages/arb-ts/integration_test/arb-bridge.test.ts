@@ -108,7 +108,7 @@ const bridge = new Bridge(
   l2TestWallet
 )
 
-describe('before', () => {
+before('setup', () => {
   it("'prefunded wallet' is indeed prefunded", async () => {
     const balance = await preFundedWallet.getBalance()
     const hasBalance = balance.gt(utils.parseEther(depositAmount))
@@ -136,7 +136,7 @@ describe('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
 
-  it('has expected initial values', async () => {
+  before('has expected initial values', async () => {
     testWalletL1EthBalance = await bridge.getAndUpdateL1EthBalance()
     testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
     expect(testWalletL1EthBalance.eq(parseEther(depositAmount))).to.be.true
@@ -182,7 +182,7 @@ const tokenDepositAmountE18 = utils.parseUnits('50', 18)
 const tokenWithdrawAmountE18 = utils.parseUnits('2', 18)
 
 describe('ERC20', () => {
-  it('create/ensure l1 erc20 w initial supply', async () => {
+  before('create/ensure l1 erc20 w initial supply', async () => {
     wait(10000)
     const testTokenFactory = await new TestERC20__factory(preFundedWallet)
     const testToken = await (async () => {
@@ -391,8 +391,9 @@ describe('ERC20', () => {
 describe('CustomToken', () => {
   let l1CustomToken: TestCustomTokenL1
   let l2CustomToken: TestArbCustomToken
-  if (!existantCustomTokenL1 && !existantCustomTokenL2) {
-    it('sets up a new custom token, L1 and L2', async () => {
+
+  before('sets up a new custom token, L1 and L2', async () => {
+    if (!existantCustomTokenL1 && !existantCustomTokenL2) {
       prettyLog("No custom token addresses given; we'll do it live!")
       const customTokenFactory = await new TestCustomTokenL1__factory(
         preFundedWallet
@@ -414,8 +415,7 @@ describe('CustomToken', () => {
       rec = await l2CustomToken.deployTransaction.wait()
       expect(rec.status).to.equal(1)
       prettyLog('Deployed a new custom L2 token at ' + l2CustomToken.address)
-    })
-    it('l1 token registers custom L2 token and notifies the ArbTokenBridge', async () => {
+
       const registerRes = await l1CustomToken.registerTokenOnL2(
         l2CustomToken.address,
         Zero,
@@ -452,20 +452,29 @@ describe('CustomToken', () => {
         l1CustomToken.address
       )
       expect(l2AddressHopefully).to.equal(l2CustomToken.address)
-    })
-  } else {
-    l1CustomToken = TestCustomTokenL1__factory.connect(
-      existantCustomTokenL1,
-      preFundedWallet
-    )
-    l2CustomToken = TestArbCustomToken__factory.connect(
-      existantCustomTokenL2,
-      l2TestWallet
-    )
-    prettyLog(
-      `Connected to pre-deployed custom token addresses. L1:${l1CustomToken.address} L2: ${l2CustomToken.address}`
-    )
-  }
+    } else {
+      prettyLog(
+        "Connecting to pre-deployed custom tokens and ensuring they're property registered:"
+      )
+      l1CustomToken = TestCustomTokenL1__factory.connect(
+        existantCustomTokenL1,
+        preFundedWallet
+      )
+      l2CustomToken = TestArbCustomToken__factory.connect(
+        existantCustomTokenL2,
+        l2TestWallet
+      )
+
+      const l2CustonTokenAddressInEthBridge = await bridge.ethERC20Bridge.customL2Tokens(
+        existantCustomTokenL1
+      )
+
+      expect(l2CustonTokenAddressInEthBridge).to.equal(existantCustomTokenL2)
+      prettyLog(
+        `Connected to pre-deployed, pre-registered custom token addresses. L1:${l1CustomToken.address} L2: ${l2CustomToken.address}`
+      )
+    }
+  })
 
   it('setup: mint some custom token and send to test address', async () => {
     const mintRes = await l1CustomToken.mint()
