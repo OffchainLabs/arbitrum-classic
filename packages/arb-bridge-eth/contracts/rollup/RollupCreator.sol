@@ -59,6 +59,9 @@ contract RollupCreator is Ownable, CloneFactory {
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
+        address _sequencer,
+        uint256 _sequencerDelayBlocks,
+        uint256 _sequencerDelaySeconds,
         bytes calldata _extraConfig
     ) external returns (IRollup) {
         return
@@ -71,6 +74,9 @@ contract RollupCreator is Ownable, CloneFactory {
                     _baseStake,
                     _stakeToken,
                     _owner,
+                    _sequencer,
+                    _sequencerDelayBlocks,
+                    _sequencerDelaySeconds,
                     _extraConfig
                 )
             );
@@ -98,7 +104,12 @@ contract RollupCreator is Ownable, CloneFactory {
         );
 
         frame.delayedBridge = new Bridge();
-        // TODO initialize sequencerInbox
+        frame.sequencerInbox = new SequencerInbox(
+            IBridge(frame.delayedBridge),
+            config.sequencer,
+            config.sequencerDelayBlocks,
+            config.sequencerDelaySeconds
+        );
         frame.inbox = new Inbox(IBridge(frame.delayedBridge));
         frame.rollupEventBridge = new RollupEventBridge(address(frame.delayedBridge), frame.rollup);
         frame.delayedBridge.setInbox(address(frame.inbox), true);
