@@ -3,6 +3,7 @@ import { ethers } from 'hardhat'
 
 type ContractName =
   | 'RollupCreatorNoProxy'
+  | 'BridgeCreator'
   | 'NodeFactory'
   | 'ChallengeFactory'
   | 'OneStepProof'
@@ -24,6 +25,7 @@ export default async function deploy_contracts(): Promise<
   const ChallengeFactory = await ethers.getContractFactory('ChallengeFactory')
   const NodeFactory = await ethers.getContractFactory('NodeFactory')
   const Rollup = await ethers.getContractFactory('Rollup')
+  const BridgeCreator = await ethers.getContractFactory('BridgeCreator')
   const RollupCreatorNoProxy = await ethers.getContractFactory(
     'RollupCreatorNoProxy'
   )
@@ -48,6 +50,9 @@ export default async function deploy_contracts(): Promise<
   const rollupTemplate = await Rollup.deploy()
   logDeploy('Rollup', rollupTemplate)
 
+  const bridgeCreator = await BridgeCreator.deploy()
+  logDeploy('BridgeCreator', bridgeCreator)
+
   const rollupCreatorNoProxy = await RollupCreatorNoProxy.deploy()
   logDeploy('RollupCreatorNoProxy', rollupCreatorNoProxy)
 
@@ -70,12 +75,16 @@ export default async function deploy_contracts(): Promise<
     rollupTemplate.deployed().then(() => {
       console.log('Rollup deployed')
     }),
+    bridgeCreator.deployed().then(() => {
+      console.log('BridgeCreator deployed')
+    }),
     rollupCreatorNoProxy.deployed().then(() => {
       console.log('RollupCreatorNoProxy deployed')
     }),
   ])
 
   await rollupCreatorNoProxy.setTemplates(
+    bridgeCreator.address,
     rollupTemplate.address,
     challengeFactory.address,
     nodeFactory.address
@@ -83,6 +92,7 @@ export default async function deploy_contracts(): Promise<
 
   const contracts: Record<ContractName, Contract> = {
     RollupCreatorNoProxy: rollupCreatorNoProxy,
+    BridgeCreator: bridgeCreator,
     NodeFactory: nodeFactory,
     ChallengeFactory: challengeFactory,
     OneStepProof: oneStepProof,

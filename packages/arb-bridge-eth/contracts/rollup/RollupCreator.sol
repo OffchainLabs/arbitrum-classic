@@ -23,6 +23,7 @@ import "../bridge/SequencerInbox.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 import "./RollupEventBridge.sol";
+import "./BridgeCreator.sol";
 
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
@@ -37,15 +38,18 @@ import "../libraries/ICloneable.sol";
 contract RollupCreator is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress, address inboxAddress);
 
+    BridgeCreator bridgeCreator;
     ICloneable rollupTemplate;
     address challengeFactory;
     address nodeFactory;
 
     function setTemplates(
+        BridgeCreator _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
         address _nodeFactory
     ) external onlyOwner {
+        bridgeCreator = _bridgeCreator;
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
@@ -103,19 +107,19 @@ contract RollupCreator is Ownable, CloneFactory {
             new TransparentUpgradeableProxy(address(rollupTemplate), address(frame.admin), "")
         );
 
-        frame.delayedBridge = new Bridge();
-        frame.sequencerInbox = new SequencerInbox(
-            IBridge(frame.delayedBridge),
+        (
+            frame.delayedBridge,
+            frame.sequencerInbox,
+            frame.inbox,
+            frame.rollupEventBridge,
+            frame.outbox
+        ) = bridgeCreator.createBridge(
+            frame.rollup,
             config.sequencer,
             config.sequencerDelayBlocks,
             config.sequencerDelaySeconds
         );
-        frame.inbox = new Inbox(IBridge(frame.delayedBridge));
-        frame.rollupEventBridge = new RollupEventBridge(address(frame.delayedBridge), frame.rollup);
-        frame.delayedBridge.setInbox(address(frame.inbox), true);
-        frame.outbox = new Outbox(frame.rollup, IBridge(frame.delayedBridge));
 
-        frame.delayedBridge.transferOwnership(frame.rollup);
         frame.admin.transferOwnership(frame.rollup);
         IRollup(frame.rollup).initialize(
             config.machineHash,
