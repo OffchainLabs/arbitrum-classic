@@ -422,80 +422,12 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
-    function proveSeqBatchMsgCount(
-        bytes calldata proof,
-        uint256 offset,
-        bytes32 acc
-    ) internal returns (uint256, uint256) {
-        uint256 messageCount;
-
-        bytes32 buildingAcc;
-        (offset, buildingAcc) = Marshaling.deserializeBytes32(proof, offset);
-        uint8 isDelayed = uint8(proof[offset]);
-        offset++;
-        require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED_NUM");
-        if (isDelayed == 0) {
-            uint256 seqNum;
-            bytes32 messageHash;
-            (offset, seqNum) = Marshaling.deserializeInt(proof, offset);
-            (offset, messageHash) = Marshaling.deserializeBytes32(proof, offset);
-            buildingAcc = keccak256(
-                abi.encodePacked("Sequencer message:", buildingAcc, seqNum, messageHash)
-            );
-            messageCount = seqNum + 1;
-        } else {
-            uint256 firstSequencerSeqNum;
-            uint256 delayedStart;
-            uint256 delayedEnd;
-            bytes32 delayedEndAcc;
-            (offset, firstSequencerSeqNum) = Marshaling.deserializeInt(proof, offset);
-            (offset, delayedStart) = Marshaling.deserializeInt(proof, offset);
-            (offset, delayedEnd) = Marshaling.deserializeInt(proof, offset);
-            (offset, delayedEndAcc) = Marshaling.deserializeBytes32(proof, offset);
-            buildingAcc = keccak256(
-                abi.encodePacked(
-                    "Delayed messages:",
-                    buildingAcc,
-                    firstSequencerSeqNum,
-                    delayedStart,
-                    delayedEnd,
-                    delayedEndAcc
-                )
-            );
-            messageCount = delayedEnd - delayedStart + firstSequencerSeqNum;
-        }
-        require(buildingAcc == acc, "BATCH_ACC");
-
-        return (offset, messageCount);
-    }
-
-    function proveSequencerBatchContains(bytes calldata proof, uint256 inboxCount)
-        internal
-        returns (bytes32)
-    {
-        if (inboxCount == 0) {
-            return 0;
-        }
-
-        (uint256 offset, uint256 seqBatchNum) = Marshaling.deserializeInt(proof, 0);
-        uint256 lastBatchCount = 0;
-        if (seqBatchNum > 0) {
-            (offset, lastBatchCount) = proveSeqBatchMsgCount(
-                proof,
-                offset,
-                sequencerBridge.inboxAccs(seqBatchNum - 1)
-            );
-            lastBatchCount++;
-        }
-
-        bytes32 seqBatchAcc = sequencerBridge.inboxAccs(seqBatchNum);
-        uint256 thisBatchCount;
-        (offset, thisBatchCount) = proveSeqBatchMsgCount(proof, offset, seqBatchAcc);
-
-        require(inboxCount > lastBatchCount, "BATCH_START");
-        require(inboxCount <= thisBatchCount, "BATCH_END");
-
-        return seqBatchAcc;
+    struct StakeOnNewNodeFrame {
+        bytes32 sequencerBatchAcc;
+        uint256 currentInboxSize;
+        INode node;
+        bytes32 executionHash;
+        INode prevNode;
     }
 
     /**
@@ -514,11 +446,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        bytes32 sequencerBatchAcc;
-        uint256 currentInboxSize = sequencerBridge.messageCount();
-        INode node;
-        bytes32 executionHash;
         INode prevNode = getNode(latestStakedNode(msg.sender));
+        StakeOnNewNodeFrame memory frame;
+        frame.currentInboxSize = sequencerBridge.messageCount();
+        frame.prevNode = getNode(latestStakedNode(msg.sender));
         {
             uint256 nodeNum = latestNodeCreated() + 1;
             RollupLib.Assertion memory assertion =
@@ -527,16 +458,17 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     assertionIntFields,
                     beforeProposedBlock,
                     beforeInboxMaxCount,
-                    currentInboxSize
+                    frame.currentInboxSize
                 );
-            executionHash = RollupLib.executionHash(assertion);
+            frame.executionHash = RollupLib.executionHash(assertion);
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
+                RollupLib.stateHash(assertion.beforeState) == frame.prevNode.stateHash(),
                 "PREV_STATE_HASH"
             );
 
-            sequencerBatchAcc = proveSequencerBatchContains(
+            frame.sequencerBatchAcc = RollupLib.proveSequencerBatchContains(
+                sequencerBridge,
                 sequencerBatchProof,
                 assertion.afterState.inboxCount
             );
@@ -565,7 +497,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 // Set deadline rounding up to the nearest block
                 uint256 checkTime =
                     gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
-                deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock())
+                deadlineBlock = max(
+                    block.number.add(confirmPeriodBlocks),
+                    frame.prevNode.deadlineBlock()
+                )
                     .add(checkTime);
             }
 
@@ -577,12 +512,12 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             );
 
             // Ensure that the assertion doesn't read past the end of the current inbox
-            require(assertion.afterState.inboxCount <= currentInboxSize, "INBOX_PAST_END");
+            require(assertion.afterState.inboxCount <= frame.currentInboxSize, "INBOX_PAST_END");
 
-            node = INode(
+            frame.node = INode(
                 nodeFactory.createNode(
                     RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, executionHash, block.number),
+                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
                     deadlineBlock
@@ -596,23 +531,28 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             if (hasSibling) {
                 lastHash = getNodeHash(prevNode.latestChildNumber());
             } else {
-                lastHash = getNodeHash(node.prev());
+                lastHash = getNodeHash(frame.node.prev());
             }
             bytes32 nodeHash =
-                RollupLib.nodeHash(hasSibling, lastHash, executionHash, sequencerBatchAcc);
+                RollupLib.nodeHash(
+                    hasSibling,
+                    lastHash,
+                    frame.executionHash,
+                    frame.sequencerBatchAcc
+                );
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
-            nodeCreated(node, nodeHash);
+            nodeCreated(frame.node, nodeHash);
             prevNode.childCreated(latestNodeCreated());
         }
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit NodeCreated(
             latestNodeCreated(),
-            getNodeHash(node.prev()),
+            getNodeHash(frame.node.prev()),
             expectedNodeHash,
-            executionHash,
-            currentInboxSize,
-            sequencerBatchAcc,
+            frame.executionHash,
+            frame.currentInboxSize,
+            frame.sequencerBatchAcc,
             assertionBytes32Fields,
             assertionIntFields
         );
