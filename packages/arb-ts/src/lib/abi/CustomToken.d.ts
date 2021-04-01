@@ -20,7 +20,7 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface ICustomTokenInterface extends ethers.utils.Interface {
+interface CustomTokenInterface extends ethers.utils.Interface {
   functions: {
     'balanceOf(address)': FunctionFragment
     'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
@@ -50,7 +50,7 @@ interface ICustomTokenInterface extends ethers.utils.Interface {
   events: {}
 }
 
-export class ICustomToken extends Contract {
+export class CustomToken extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -61,7 +61,7 @@ export class ICustomToken extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: ICustomTokenInterface
+  interface: CustomTokenInterface
 
   functions: {
     balanceOf(account: string, overrides?: CallOverrides): Promise<[BigNumber]>

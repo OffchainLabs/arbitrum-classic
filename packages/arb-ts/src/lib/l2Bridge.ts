@@ -21,6 +21,8 @@ import { ArbTokenBridge } from './abi/ArbTokenBridge'
 import { ArbSys } from './abi/ArbSys'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
+import { ICustomToken } from './abi/ICustomToken'
+import { ICustomToken__factory } from './abi/factories/ICustomToken__factory'
 import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
 import { StandardArbERC777__factory } from './abi/factories/StandardArbERC777__factory'
 import { IArbToken } from './abi/IArbToken'
@@ -36,7 +38,7 @@ const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
 export interface L2TokenData {
   ERC20?: { contract: StandardArbERC20; balance: BigNumber }
   ERC777?: { contract: StandardArbERC777; balance: BigNumber }
-  CUSTOM?: { contract: StandardArbERC20; balance: BigNumber } // Here we don't use the particlar custom token's interface; for the sake of this sdk that's fine
+  CUSTOM?: { contract: ICustomToken; balance: BigNumber } // Here we don't use the particlar custom token's interface; for the sake of this sdk that's fine
 }
 
 export interface Tokens {
@@ -160,7 +162,7 @@ export class L2Bridge {
       erc20L1Address
     )
     if (customTokenAddress !== ethers.constants.AddressZero) {
-      const customTokenContract = StandardArbERC20__factory.connect(
+      const customTokenContract = ICustomToken__factory.connect(
         customTokenAddress,
         this.l2Signer
       )

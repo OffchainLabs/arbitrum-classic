@@ -18,15 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../../tokenbridge/arbitrum/open-zeppelin/OZERC20.sol";
+import "../../tokenbridge/arbitrum/open-zeppelin/OZERC777.sol";
 
-contract TestERC20 is OZERC20 {
-    constructor() public{
-        _name="IntArbTestToken";
-        _symbol="IARB";
-        _decimals=uint8(18);
-    } 
-    function mint() external {
-        _mint(msg.sender, 50000000);
+contract TestERC777 is OZERC777 {
+    constructor() public {
+        _mint(msg.sender, 50000000, "", "");
     }
 }

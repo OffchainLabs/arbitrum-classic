@@ -5,14 +5,14 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { ICustomToken } from '../ICustomToken'
+import type { CustomToken } from '../CustomToken'
 
-export class ICustomToken__factory {
+export class CustomToken__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): ICustomToken {
-    return new Contract(address, _abi, signerOrProvider) as ICustomToken
+  ): CustomToken {
+    return new Contract(address, _abi, signerOrProvider) as CustomToken
   }
 }
 

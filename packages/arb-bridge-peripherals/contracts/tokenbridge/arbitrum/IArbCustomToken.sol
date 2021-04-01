@@ -24,6 +24,4 @@ interface IArbCustomToken {
         uint256 amount,
         bytes memory data
     ) external;
-
-    function withdraw(address destination, uint256 amount) external;
 }

@@ -26,5 +26,13 @@ interface ICustomToken {
         uint256 maxGas,
         uint256 gasPriceBid,
         address refundAddress
-    ) external;
+    ) external virtual;
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external virtual returns (bool);
+
+    function balanceOf(address account) external view virtual returns (uint256);
 }

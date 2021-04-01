@@ -18,9 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-import "../../tokenbridge/arbitrum/IArbCustomToken.sol";
-import "../../tokenbridge/arbitrum/open-zeppelin/OZERC20.sol";
-import "../../tokenbridge/arbitrum/ArbTokenBridge.sol";
+import "../arbitrum/IArbCustomToken.sol";
+import "../arbitrum/open-zeppelin/OZERC20.sol";
+import "../arbitrum/ArbTokenBridge.sol";
 
 contract TestArbCustomToken is OZERC20, IArbCustomToken {
     ArbTokenBridge public bridge;
@@ -48,7 +48,7 @@ contract TestArbCustomToken is OZERC20, IArbCustomToken {
         _mint(account, amount);
     }
 
-    function withdraw(address destination, uint256 amount) external override {
+    function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
         bridge.withdraw(l1Address, destination, amount);
     }
