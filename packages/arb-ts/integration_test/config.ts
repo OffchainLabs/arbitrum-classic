@@ -2,8 +2,8 @@ import { utils } from 'ethers'
 export default {
   kovan4: {
     ethRPC: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
-    // arbRPC: 'https://kovan4.arbitrum.io/rpc',
-    arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
+    arbRPC: 'https://kovan4.arbitrum.io/rpc',
+    // arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
     preFundedSignerPK:
       process.env['DEVNET_PRIVKEY'] ||
       '0x8803565d1ab75cf6a04656e2a638c65a2984f810ce2f5f8270601aca4e25e067',
@@ -16,7 +16,7 @@ export default {
     // existantTestERC20: '',
     // existantCustomTokenL1: '',
     // existantCustomTokenL2: '',
-    defaultWait: 10000,
+    defaultWait: 0,
   },
   devnet: {
     ethRPC: 'https://devnet.arbitrum.io/rpc',
