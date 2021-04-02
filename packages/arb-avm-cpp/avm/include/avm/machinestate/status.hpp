@@ -20,7 +20,7 @@
 #include <avm/inboxmessage.hpp>
 #include <variant>
 
-typedef std::variant<std::monostate, InboxMessage, uint256_t> staged_variant;
+typedef std::variant<std::monostate, MachineMessage, uint256_t> staged_variant;
 
 enum class Status { Extensive, Halted, Error };
 

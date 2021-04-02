@@ -33,7 +33,7 @@ class MachineExecutionConfig;
 struct MachineState;
 
 struct AssertionContext {
-    std::vector<InboxMessage> inbox_messages;
+    std::vector<MachineMessage> inbox_messages;
     std::optional<uint256_t> next_block_height;
 
     std::vector<std::vector<uint8_t>> sends;
@@ -55,13 +55,13 @@ struct AssertionContext {
 
     // popInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    InboxMessage popInbox() {
+    MachineMessage popInbox() {
         return inbox_messages[inbox_messages_consumed++];
     }
 
     // peekInbox assumes that the number of messages already consumed is less
     // than the number of messages in the inbox
-    [[nodiscard]] const InboxMessage& peekInbox() const {
+    [[nodiscard]] const MachineMessage& peekInbox() const {
         return inbox_messages[inbox_messages_consumed];
     }
 
@@ -84,10 +84,31 @@ struct OneStepProof {
 
 struct InboxState {
     uint256_t count;
+    uint256_t batch_count;
     uint256_t accumulator;
+    uint256_t delayed_count;
 
-    void addMessage(const InboxMessage& message) {
-        accumulator = hash_inbox(accumulator, message.serialize());
+    void addMessage(const MachineMessage& message) {
+        if (message.batch_index + 1 == batch_count) {
+            if (message.accumulator != accumulator) {
+                throw std::runtime_error(
+                    "Attempted to add incompatible message to inbox state");
+            }
+        } else {
+            if (message.batch_index != batch_count) {
+                throw std::runtime_error(
+                    "Attempted to add non-sequential message to inbox state");
+            }
+            accumulator = message.accumulator;
+        }
+        if (message.delayed_index) {
+            if (message.delayed_index != delayed_count) {
+                throw std::runtime_error(
+                    "Attempted to add non-sequential delayed message to inbox "
+                    "state");
+            }
+            delayed_count = *message.delayed_index + 1;
+        }
         count += 1;
     }
 
@@ -99,27 +120,25 @@ struct InboxState {
         }
     }
 
-    std::optional<uint256_t> accWithStaged(
+    std::optional<InboxState> inboxWithStaged(
         const staged_variant& staged_message) const {
-        if (std::holds_alternative<InboxMessage>(staged_message)) {
-            return hash_inbox(
-                accumulator,
-                std::get<InboxMessage>(staged_message).serialize());
+        if (auto message = std::get_if<MachineMessage>(&staged_message)) {
+            InboxState new_state(*this);
+            new_state.addMessage(*message);
+            return new_state;
         } else if (std::holds_alternative<std::monostate>(staged_message)) {
-            return accumulator;
+            return *this;
         } else {
             return std::nullopt;
         }
     }
 
-    std::optional<InboxState> inboxWithStaged(
-        const staged_variant& staged_message) {
-        auto acc = accWithStaged(staged_message);
-        if (acc) {
-            return InboxState{countWithStaged(staged_message), *acc};
-        } else {
-            return std::nullopt;
+    std::optional<uint256_t> accWithStaged(
+        const staged_variant& staged_message) const {
+        if (auto new_state = inboxWithStaged(staged_message)) {
+            return new_state->accumulator;
         }
+        return std::nullopt;
     }
 };
 
@@ -230,7 +249,7 @@ struct MachineState {
     std::optional<Tuple> getStagedMessageTuple() const;
     uint256_t getTotalMessagesRead() const;
 
-    void addProcessedMessage(const InboxMessage& message);
+    void addProcessedMessage(const MachineMessage& message);
     void addProcessedSend(std::vector<uint8_t> data);
     void addProcessedLog(value log_val);
 

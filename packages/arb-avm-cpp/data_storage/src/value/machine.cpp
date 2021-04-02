@@ -52,14 +52,14 @@ void serializeStagedVariant(staged_variant message,
 
     if (std::holds_alternative<uint256_t>(message)) {
         next_block_height = std::get<uint256_t>(message);
-    } else if (std::holds_alternative<InboxMessage>(message)) {
+    } else if (std::holds_alternative<MachineMessage>(message)) {
         inbox_message_present = 1;
     }
 
     marshal_uint256_t(next_block_height, state_data_vector);
     state_data_vector.push_back(inbox_message_present);
     if (inbox_message_present == 1) {
-        std::get<InboxMessage>(message).serializeImpl(state_data_vector);
+        std::get<MachineMessage>(message).serializeImpl(state_data_vector);
     }
 }
 
@@ -72,7 +72,7 @@ staged_variant extractStagedVariant(
     uint8_t inbox_message_present = iter[0];
     iter++;
     if (inbox_message_present == 1) {
-        message = extractInboxMessageImpl(iter, end);
+        message = extractMachineMessageImpl(iter, end);
     } else if (next_block_height != 0) {
         message = next_block_height;
     } else {

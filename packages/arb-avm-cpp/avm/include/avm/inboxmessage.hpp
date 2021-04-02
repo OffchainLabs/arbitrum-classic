@@ -61,12 +61,34 @@ struct InboxMessage {
     void serializeImpl(std::vector<unsigned char>& state_data_vector) const;
 };
 
+struct MachineMessage {
+    InboxMessage message;
+    uint256_t batch_index;
+    uint256_t accumulator;
+    std::optional<uint256_t> delayed_index{};
+
+    MachineMessage() = default;
+    MachineMessage(InboxMessage message_,
+                   uint256_t batch_index_,
+                   uint256_t accumulator_,
+                   std::optional<uint256_t> delayed_index_)
+        : message(message_),
+          batch_index(batch_index_),
+          accumulator(accumulator_),
+          delayed_index(delayed_index_) {}
+
+    void serializeImpl(std::vector<unsigned char>& state_data_vector) const;
+};
+
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state);
 uint256_t hash_inbox(const uint256_t& previous_inbox_acc,
                      const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessage(
     const std::vector<unsigned char>& stored_state);
 InboxMessage extractInboxMessageImpl(
+    std::vector<unsigned char>::const_iterator current_iter,
+    const std::vector<unsigned char>::const_iterator end);
+MachineMessage extractMachineMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end);
 // An efficient version of extractInboxMessage that ignores everything except

@@ -931,9 +931,9 @@ BlockReason inboxOp(MachineState& m) {
         return InboxBlocked();
     }
 
-    InboxMessage next_message;
-    if (std::holds_alternative<InboxMessage>(m.staged_message)) {
-        next_message = std::get<InboxMessage>(m.staged_message);
+    MachineMessage next_message;
+    if (std::holds_alternative<MachineMessage>(m.staged_message)) {
+        next_message = std::get<MachineMessage>(m.staged_message);
     } else if (m.stagedMessageEmpty() && !m.context.inboxEmpty()) {
         next_message = m.context.popInbox();
     } else {
@@ -941,7 +941,7 @@ BlockReason inboxOp(MachineState& m) {
     }
 
     m.addProcessedMessage(next_message);
-    m.stack.push(next_message.toTuple());
+    m.stack.push(next_message.message.toTuple());
     m.staged_message = std::monostate();
     ++m.pc;
     return NotBlocked{};

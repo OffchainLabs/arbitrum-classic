@@ -57,12 +57,12 @@ std::optional<Tuple> MachineStateKeys::getStagedMessageTuple() const {
         return std::nullopt;
     }
 
-    if (!std::holds_alternative<InboxMessage>(staged_message)) {
+    if (!std::holds_alternative<MachineMessage>(staged_message)) {
         // Staged message is empty
         return Tuple{};
     }
 
-    return std::get<InboxMessage>(staged_message).toTuple();
+    return std::get<MachineMessage>(staged_message).message.toTuple();
 }
 
 std::optional<uint256_t> MachineStateKeys::machineHash() const {
@@ -102,7 +102,7 @@ std::optional<uint256_t> MachineStateKeys::machineHash() const {
     return intx::be::load<uint256_t>(hash_val);
 }
 
-void MachineState::addProcessedMessage(const InboxMessage& message) {
+void MachineState::addProcessedMessage(const MachineMessage& message) {
     output.fully_processed_inbox.addMessage(message);
 }
 
@@ -462,7 +462,7 @@ OneStepProof MachineState::marshalForProof() const {
         if (context.inboxEmpty()) {
             throw std::runtime_error("Can't generate proof with empty inbox");
         }
-        auto message_data = context.peekInbox().serializeForProof();
+        auto message_data = context.peekInbox().message.serializeForProof();
         proof.standard_proof.insert(proof.standard_proof.end(),
                                     message_data.begin(), message_data.end());
     }
@@ -940,12 +940,12 @@ std::optional<Tuple> MachineState::getStagedMessageTuple() const {
         return std::nullopt;
     }
 
-    if (!std::holds_alternative<InboxMessage>(staged_message)) {
+    if (!std::holds_alternative<MachineMessage>(staged_message)) {
         // Staged message is empty
         return Tuple{};
     }
 
-    return std::get<InboxMessage>(staged_message).toTuple();
+    return std::get<MachineMessage>(staged_message).message.toTuple();
 }
 
 bool MachineState::stagedMessageEmpty() const {
@@ -962,12 +962,12 @@ std::optional<uint256_t> MachineState::getStagedMessageBlockHeight() const {
         return std::get<uint256_t>(staged_message);
     }
 
-    if (!std::holds_alternative<InboxMessage>(staged_message)) {
+    if (!std::holds_alternative<MachineMessage>(staged_message)) {
         // Staged message is empty
         return std::nullopt;
     }
 
-    return std::get<InboxMessage>(staged_message).block_number;
+    return std::get<MachineMessage>(staged_message).message.block_number;
 }
 
 uint256_t MachineState::getTotalMessagesRead() const {
