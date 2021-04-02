@@ -50,6 +50,9 @@ contract EthERC20Bridge {
 
     address public l2ArbTokenBridgeAddress;
     IInbox public inbox;
+    // assumes only ERC20 tokens.
+    // can only deposit after a deploy attempt
+    mapping(address => bool) public deployAttempt;
 
     modifier onlyL2Address {
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
@@ -224,6 +227,8 @@ contract EthERC20Bridge {
         RetryableTxParams memory retryableParams,
         bytes memory callHookData
     ) internal returns (uint256) {
+        // deploy attempt made
+        deployAttempt[erc20] = true;
         // TODO: DRY up the code
         require(tokenType != StandardTokenType.Custom, "Can't deploy custom from bridge");
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
@@ -275,6 +280,8 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid
     ) external payable returns (uint256) {
+        // deploy attempt made
+        deployAttempt[erc20] = true;
         require(tokenType != StandardTokenType.Custom, "Can't deploy custom from bridge");
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
         bytes memory name = callStatic(erc20, ERC20.name.selector);
@@ -319,6 +326,7 @@ contract EthERC20Bridge {
         StandardTokenType tokenType,
         bytes memory callHookData
     ) private returns (uint256) {
+        require(deployAttempt[erc20], "Must have attempted to deploy before depositing");
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
         IERC20(erc20).safeTransferFrom(sender, l2ArbTokenBridgeAddress, amount);
 
