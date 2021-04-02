@@ -111,6 +111,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
+            if (result.transactionHash === undefined) return
             resolve(result.transactionHash)
           }
         }
@@ -130,6 +131,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
+            if (result.height === undefined) return
             resolve(result.height)
           }
         }
@@ -150,6 +152,7 @@ export class ArbClient {
             } else if (error) {
               reject(error)
             } else {
+              if (result === undefined) return
               resolve(result)
             }
           }
@@ -261,6 +264,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
+            if (result.logs === undefined) return
             resolve(result.logs)
           }
         }
@@ -280,6 +284,7 @@ export class ArbClient {
           } else if (error) {
             reject(error)
           } else {
+            if (result.chainAddress === undefined) return
             resolve(result.chainAddress)
           }
         }
@@ -287,3 +292,4 @@ export class ArbClient {
     })
   }
 }
+
