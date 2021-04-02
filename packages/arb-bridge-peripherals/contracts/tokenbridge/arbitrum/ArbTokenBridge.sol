@@ -210,23 +210,38 @@ contract ArbTokenBridge is ProxySetter {
         emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
     }
 
-    // function deployAndMintFromL1(
-    //     address l1ERC20,
-    //     address sender,
-    //     StandardTokenType tokenType,
-    //     address dest,
-    //     uint256 amount,
-    //     bytes calldata _decimals,
-    //     bytes calldata data
-    // ) external onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
+    function deployAndMintFromL1(
+        address l1ERC20,
+        address sender,
+        StandardTokenType tokenType,
+        address dest,
+        uint256 amount,
+        bytes calldata data
+    ) external onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
+        require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
 
-    // }
+        // TODO: is it cheaper to concat and pass in length of first bytearray?
+        // values are encoded by L1 bridge so should not revert
+        (bytes memory initializeData, bytes memory callHookData) = abi.decode(data, (bytes, bytes));
+
+        // TODO: if already deployed, revert or skip?
+        _deployFromL1(l1ERC20, tokenType, initializeData);
+        _mintFromL1(l1ERC20, sender, tokenType, dest, amount, true, callHookData);
+    }
 
     function deployFromL1(
         address l1ERC20,
         StandardTokenType tokenType,
         bytes calldata initializeData
     ) external onlyEthPair {
+        _deployFromL1(l1ERC20, tokenType, initializeData);
+    }
+
+    function _deployFromL1(
+        address l1ERC20,
+        StandardTokenType tokenType,
+        bytes memory initializeData
+    ) internal {
         require(tokenType != StandardTokenType.Custom, "Can't deploy custom from bridge");
         address l2TokenAddress = calculateBridgeTokenAddress(l1ERC20, tokenType);
         bool isDeployed = l2TokenAddress.isContract();
@@ -254,10 +269,25 @@ contract ArbTokenBridge is ProxySetter {
         address dest,
         uint256 amount,
         bytes calldata callHookData
-    ) external onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
+    ) external onlyEthPair {
+        // this should never skip contract validation
+        _mintFromL1(l1ERC20, sender, tokenType, dest, amount, false, callHookData);
+    }
+
+    function _mintFromL1(
+        address l1ERC20,
+        address sender,
+        StandardTokenType tokenType,
+        address dest,
+        uint256 amount,
+        bool skipContractExistValidation,
+        bytes memory callHookData
+    ) internal ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
         address l2TokenAddress = calculateBridgeTokenAddress(l1ERC20, tokenType);
 
-        if (!l2TokenAddress.isContract()) {
+        // skip validation needed if this is called in same tx as deploy
+        // since code size only visisble at end of tx execution
+        if (!skipContractExistValidation && !l2TokenAddress.isContract()) {
             // could keep fails in storage in order to be replayed
             // and expect the token to handle these once its created. ie:
             // mapping(address => FailedMint[]) public failedMintByL2Address;

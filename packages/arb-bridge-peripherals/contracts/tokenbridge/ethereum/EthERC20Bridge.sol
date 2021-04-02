@@ -62,9 +62,7 @@ contract EthERC20Bridge {
     event DeployToken(
         uint256 indexed seqNum,
         address indexed l1Address,
-        bytes name,
-        bytes symbol,
-        bytes decimals
+        StandardTokenType indexed tokenType
     );
 
     event DepositToken(
@@ -197,6 +195,80 @@ contract EthERC20Bridge {
         return res;
     }
 
+    function deployAndDepositToL2(
+        address erc20,
+        address destination,
+        uint256 amount,
+        StandardTokenType tokenType,
+        // uint[3] memory retryableParams,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes calldata callHookData
+    ) external payable returns (uint256) {
+        return
+            _deployAndDepositToL2(
+                erc20,
+                destination,
+                amount,
+                tokenType,
+                RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
+                callHookData
+            );
+    }
+
+    function _deployAndDepositToL2(
+        address erc20,
+        address destination,
+        uint256 amount,
+        StandardTokenType tokenType,
+        RetryableTxParams memory retryableParams,
+        bytes memory callHookData
+    ) internal returns (uint256) {
+        // TODO: DRY up the code
+        require(tokenType != StandardTokenType.Custom, "Can't deploy custom from bridge");
+        require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
+        IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
+
+        bytes memory bridgeEncodedData =
+            abi.encode(
+                abi.encode(
+                    callStatic(erc20, ERC20.name.selector),
+                    callStatic(erc20, ERC20.symbol.selector),
+                    callStatic(erc20, ERC20.decimals.selector)
+                ),
+                callHookData
+            );
+
+        bytes memory data =
+            abi.encodeWithSelector(
+                ArbTokenBridge.deployAndMintFromL1.selector,
+                erc20,
+                msg.sender,
+                tokenType,
+                destination,
+                amount,
+                bridgeEncodedData
+            );
+
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
+                l2ArbTokenBridgeAddress,
+                0,
+                retryableParams.maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                retryableParams.maxGas,
+                retryableParams.gasPriceBid,
+                data
+            );
+
+        emit DeployToken(seqNum, erc20, tokenType);
+        emit DepositToken(destination, msg.sender, seqNum, tokenType, amount, erc20);
+
+        return seqNum;
+    }
+
     function deployTokenToL2(
         address erc20,
         StandardTokenType tokenType,
@@ -205,6 +277,7 @@ contract EthERC20Bridge {
         uint256 gasPriceBid
     ) external payable returns (uint256) {
         require(tokenType != StandardTokenType.Custom, "Can't deploy custom from bridge");
+        require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
         bytes memory name = callStatic(erc20, ERC20.name.selector);
         bytes memory symbol = callStatic(erc20, ERC20.symbol.selector);
         bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
@@ -227,7 +300,7 @@ contract EthERC20Bridge {
                 gasPriceBid,
                 data
             );
-        emit DeployToken(seqNum, erc20, name, symbol, decimals);
+        emit DeployToken(seqNum, erc20, tokenType);
         return seqNum;
     }
 
@@ -248,9 +321,8 @@ contract EthERC20Bridge {
         bytes memory callHookData
     ) private returns (uint256) {
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
-        IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
-        // uint256 seqNum = 0;
-        // {
+        IERC20(erc20).safeTransferFrom(sender, l2ArbTokenBridgeAddress, amount);
+
         bytes memory data =
             abi.encodeWithSelector(
                 ArbTokenBridge.mintFromL1.selector,
@@ -262,19 +334,17 @@ contract EthERC20Bridge {
                 callHookData
             );
 
-        // seqNum = inbox.createRetryableTicket{ value: msg.value }(
         uint256 seqNum =
             inbox.createRetryableTicket{ value: msg.value }(
                 l2ArbTokenBridgeAddress,
                 0,
                 retryableParams.maxSubmissionCost,
-                msg.sender,
-                msg.sender,
+                sender,
+                sender,
                 retryableParams.maxGas,
                 retryableParams.gasPriceBid,
                 data
             );
-        // }
 
         emit DepositToken(destination, sender, seqNum, tokenType, amount, erc20);
         return seqNum;
