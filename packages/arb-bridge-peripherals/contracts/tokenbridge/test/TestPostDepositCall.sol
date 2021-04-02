@@ -68,6 +68,10 @@ contract L2Called is ITransferReceiver {
             return true;
         } else if (num == 7) {
             revert();
+        } else if (num == 9) {
+            // this should use all gas
+            while (gasleft() > 0) {}
+            return true;
         } else {
             return false;
         }

@@ -214,6 +214,7 @@ describe('Bridge peripherals layer 2', () => {
     const L2Called = await ethers.getContractFactory('L2Called')
     const l2Called = await L2Called.deploy()
     const dest = l2Called.address
+    // 7 is revert()
     const num = 7
     const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
 
@@ -227,6 +228,84 @@ describe('Bridge peripherals layer 2', () => {
       callHookData
     )
     const receipt = await tx.wait()
+
+    // MintAndCallTriggered(bool,address,address,uint256,bytes)
+    const eventTopic =
+      '0xe934ad33409d1a25da34f3e31354e20013f314d227c3d53952d3e130ece06011'
+
+    const filteredEvents: Array<any> = receipt.events.filter(
+      (event: any) => event.topics[0] === eventTopic
+    )
+
+    assert.equal(
+      filteredEvents.length,
+      1,
+      'Token post mint hook should have emitted event'
+    )
+
+    const success: boolean = filteredEvents[0].args.success
+    assert.equal(success, false, 'Token post mint hook should have reverted')
+
+    // dest should hold not hold amount when reverted
+    const Erc20 = await ethers.getContractFactory('OZERC20')
+    const erc20 = await Erc20.attach(l2ERC20Address)
+
+    assert.equal(
+      (await erc20.balanceOf(dest)).toString(),
+      '0',
+      'L2Called contract should not be holding coins'
+    )
+    assert.equal(
+      (await erc20.balanceOf(sender)).toString(),
+      amount,
+      'Sender should hold coins'
+    )
+  })
+
+  it('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
+    const l1ERC20 = '0x0000000000000000000000000000000000001325'
+    const sender = '0x0000000000000000000000000000000000000015'
+    const amount = '1'
+    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
+
+    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
+      l1ERC20
+    )
+
+    const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
+    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
+
+    const L2Called = await ethers.getContractFactory('L2Called')
+    const l2Called = await L2Called.deploy()
+    const dest = l2Called.address
+    // 9 is assert(false)
+    const num = 9
+    const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
+
+    // we need to hardcode this value as you can only send 63/64 of your remaining
+    // gas into a call a high gas limit makes the test pass artificially
+    const gasLimit = ethers.BigNumber.from(9000000)
+    const tx = await testBridge.mintFromL1(
+      l1ERC20,
+      sender,
+      TOKEN_TYPE_ENUM.ERC20,
+      dest,
+      amount,
+      decimals,
+      callHookData,
+      {
+        gasLimit,
+      }
+    )
+    const receipt = await tx.wait()
+
+    const gasUsed = receipt.gasUsed
+    const diff = gasLimit.sub(gasUsed)
+    // expect to save enough gas for subsequent mint, with at most a 10% margin
+    assert(
+      diff.mul(10).lte(gasLimit),
+      'Did not reserve the correct amount of gas'
+    )
 
     // MintAndCallTriggered(bool,address,address,uint256,bytes)
     const eventTopic =
