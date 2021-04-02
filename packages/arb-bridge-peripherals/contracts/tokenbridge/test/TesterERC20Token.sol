@@ -32,6 +32,10 @@ contract TesterERC20Token {
         name = _name;
         symbol = _symbol;
     }
+
+    function transferFrom(address from, uint256 amount) external returns (bool) {
+        return true;
+    }
 }
 
 contract TesterERC20TokenNoMetadata {

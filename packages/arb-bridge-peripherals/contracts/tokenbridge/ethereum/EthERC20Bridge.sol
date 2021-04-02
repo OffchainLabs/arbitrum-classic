@@ -200,7 +200,6 @@ contract EthERC20Bridge {
         address destination,
         uint256 amount,
         StandardTokenType tokenType,
-        // uint[3] memory retryableParams,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid,
