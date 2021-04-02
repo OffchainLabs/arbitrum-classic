@@ -210,52 +210,73 @@ contract ArbTokenBridge is ProxySetter {
         emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
     }
 
+    // function deployAndMintFromL1(
+    //     address l1ERC20,
+    //     address sender,
+    //     StandardTokenType tokenType,
+    //     address dest,
+    //     uint256 amount,
+    //     bytes calldata _decimals,
+    //     bytes calldata data
+    // ) external onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
+
+    // }
+
+    function deployFromL1(
+        address l1ERC20,
+        StandardTokenType tokenType,
+        bytes calldata initializeData
+    ) external onlyEthPair {
+        require(tokenType != StandardTokenType.Custom, "Can't deploy custom from bridge");
+        address l2TokenAddress = calculateBridgeTokenAddress(l1ERC20, tokenType);
+        bool isDeployed = l2TokenAddress.isContract();
+        require(!isDeployed, "Token already deployed");
+
+        address beacon = tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777;
+        deployBeacon = beacon;
+        bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
+        ClonableBeaconProxy createdContract = new ClonableBeaconProxy{ salt: salt }();
+        deployBeacon = address(0);
+        require(address(createdContract) == l2TokenAddress, "Incorrect deploy address");
+        emit TokenCreated(l1ERC20, address(createdContract), tokenType);
+
+        IArbToken token = IArbToken(l2TokenAddress);
+
+        // send arbitrary bytes to be parsed, so we don't assume an interface
+        bool initSuccess = token.bridgeInitialize(l1ERC20, initializeData);
+        require(initSuccess, "Bridge init failed");
+    }
+
     function mintFromL1(
         address l1ERC20,
         address sender,
         StandardTokenType tokenType,
         address dest,
         uint256 amount,
-        bytes calldata _decimals,
         bytes calldata callHookData
     ) external onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
-        IArbToken token =
-            ensureTokenExists(l1ERC20, BytesParserWithDefault.toUint8(_decimals, 18), tokenType);
+        address l2TokenAddress = calculateBridgeTokenAddress(l1ERC20, tokenType);
 
-        if (callHookData.length > 0) {
+        if (!l2TokenAddress.isContract()) {
+            // could keep fails in storage in order to be replayed
+            // and expect the token to handle these once its created. ie:
+            // mapping(address => FailedMint[]) public failedMintByL2Address;
+
+            // This should be uncommon, for now just withdraw to sender
+            _withdraw(l1ERC20, sender, amount);
+            return;
+        }
+
+        IArbToken token = IArbToken(l2TokenAddress);
+
+        bool shouldCallHook = callHookData.length > 0;
+        if (shouldCallHook) {
             handleCallHookData(token, amount, sender, dest, callHookData);
         } else {
             token.bridgeMint(dest, amount, "");
         }
 
-        emit TokenMinted(
-            l1ERC20,
-            address(token),
-            tokenType,
-            sender,
-            dest,
-            amount,
-            callHookData.length > 0
-        );
-    }
-
-    function updateTokenInfo(
-        address l1ERC20,
-        StandardTokenType tokenType,
-        bytes calldata _name,
-        bytes calldata _symbol,
-        bytes calldata _decimals
-    ) external onlyEthPair noCustomToken(l1ERC20) {
-        // no custom token as we assume custom implementation has correct info
-        require(tokenType != StandardTokenType.Custom, "Cant update info of custom token");
-        string memory name = BytesParserWithDefault.toString(_name, "");
-        string memory symbol = BytesParserWithDefault.toString(_symbol, "");
-        uint8 decimals = BytesParserWithDefault.toUint8(_decimals, 18);
-
-        IArbToken token = ensureTokenExists(l1ERC20, decimals, tokenType);
-        token.updateInfo(name, symbol, decimals);
-
-        emit TokenDataUpdated(l1ERC20, address(token), tokenType, name, symbol, decimals);
+        emit TokenMinted(l1ERC20, address(token), tokenType, sender, dest, amount, shouldCallHook);
     }
 
     function customTokenRegistered(address l1Address, address l2Address) external onlyEthPair {
@@ -268,6 +289,14 @@ contract ArbTokenBridge is ProxySetter {
         address destination,
         uint256 amount
     ) external onlyFromL2Token(l1ERC20) {
+        _withdraw(l1ERC20, destination, amount);
+    }
+
+    function _withdraw(
+        address l1ERC20,
+        address destination,
+        uint256 amount
+    ) internal {
         uint256 id =
             ArbSys(100).sendTxToL1(
                 l1Pair,
@@ -339,40 +368,5 @@ contract ArbTokenBridge is ProxySetter {
 
     function getBeacon() external view override returns (address) {
         return deployBeacon;
-    }
-
-    function ensureTokenExists(
-        address l1ERC20,
-        uint8 decimals,
-        StandardTokenType tokenType
-    ) private returns (IArbToken) {
-        address _customToken = customToken[l1ERC20];
-        if (_customToken != address(0)) {
-            return IArbToken(_customToken);
-        }
-        address l2Contract =
-            tokenType == StandardTokenType.ERC20
-                ? calculateBridgedERC20Address(l1ERC20)
-                : calculateBridgedERC777Address(l1ERC20);
-
-        if (!l2Contract.isContract()) {
-            address beacon = tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777;
-            deployBeacon = beacon;
-            bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
-            ClonableBeaconProxy createdContract = new ClonableBeaconProxy{ salt: salt }();
-            deployBeacon = address(0);
-            IArbToken(address(createdContract)).initialize(address(this), l1ERC20, decimals);
-            require(address(createdContract) == l2Contract, "Incorrect deploy address");
-            emit TokenCreated(l1ERC20, address(createdContract), tokenType);
-        }
-        return IArbToken(l2Contract);
-    }
-
-    function ensureERC777TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
-        return ensureTokenExists(l1ERC20, decimals, StandardTokenType.ERC777);
-    }
-
-    function ensureERC20TokenExists(address l1ERC20, uint8 decimals) private returns (IArbToken) {
-        return ensureTokenExists(l1ERC20, decimals, StandardTokenType.ERC20);
     }
 }
