@@ -92,6 +92,10 @@ func startUpTest(config *configTestStruct) error {
 func aSyncTest(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Test Removing Primary aSync")
 	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	const smallBigInt = 10
+	blockTest := big.NewInt(10)
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: new(big.Int).Set(blockTest)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(blockTest)}
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
