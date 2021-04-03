@@ -62,10 +62,10 @@ func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct
 	asyncData := asyncDataStruct{}
 
 	//Check the healthcheck endpoint for OpenEthereum
-	asyncData.checkOpenethereum = checkEndpoint(config, config.openethereumHealthcheckRPC)
+	asyncData.checkOpenethereum = checkEndpoint(config, &config.openethereumHealthcheckRPC)
 
 	//Check the primary endpoint
-	asyncData.checkPrimary = checkEndpoint(config, config.primaryHealthcheckRPC)
+	asyncData.checkPrimary = checkEndpoint(config, &config.primaryHealthcheckRPC)
 
 	//Check how many blocks the inboxReader is behind
 	asyncData.inboxReaderStatus = checkInboxReader(config, state)
@@ -138,14 +138,18 @@ func newConfig() *configStruct {
 	return &config
 }
 
-func checkEndpoint(config *configStruct, endpoint string) healthcheck.Check {
+func checkEndpoint(config *configStruct, endpoint *string) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
 		config.mu.Lock()
-		defer config.mu.Unlock()
+		endpointStr := *endpoint
+		config.mu.Unlock()
+		if endpointStr == "" {
+			return nil
+		}
 
 		//Retrieve status code from healthcheck endpoint
-		res, err := http.Get(endpoint + "/ready")
+		res, err := http.Get(endpointStr + "/ready")
 
 		//Check the response code to determine if OpenEthereum is reeady
 		if err != nil {
@@ -166,13 +170,11 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 		state.mu.Lock()
 		defer state.mu.Unlock()
 		//Calculate out the block difference
-		const subtractionBigInt = 0
-		blockDifference := big.NewInt(subtractionBigInt).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.currentHeight)
+		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.currentHeight)
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
 		//Compare the tolerance using CmpAbs, fail if > then tolerance
-		const greaterThanReturn = 1
-		if blockDifference.CmpAbs(tolerance) == greaterThanReturn {
+		if blockDifference.CmpAbs(tolerance) > 0 {
 			return errors.New("InboxReader catching up")
 		}
 		return nil
@@ -203,7 +205,9 @@ func waitConfig(config *configStruct) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
 	for config.openethereumHealthcheckRPC == "" {
+		config.mu.Unlock()
 		time.Sleep(config.loopDelayTimer)
+		config.mu.Lock()
 	}
 }
 

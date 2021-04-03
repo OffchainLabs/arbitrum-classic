@@ -72,10 +72,7 @@ func main() {
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.NodeHealthCheck(healthChan)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
+		nodehealth.NodeHealthCheck(healthChan)
 	}()
 	go nodehealth.NodeHealthCheck(healthChan)
 
