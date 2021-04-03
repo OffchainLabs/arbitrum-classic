@@ -170,6 +170,12 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 		state.mu.Lock()
 		defer state.mu.Unlock()
 		//Calculate out the block difference
+		if state.inboxReader.caughtUpTarget == nil {
+			return errors.New("InboxReader caughtUpTarget not available yet")
+		}
+		if state.inboxReader.currentHeight == nil {
+			return errors.New("InboxReader currentHeight not available yet")
+		}
 		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.currentHeight)
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
