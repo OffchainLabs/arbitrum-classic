@@ -112,4 +112,10 @@ class ReadTransaction {
         rocksdb::Slice key_slice) const;
 };
 
+class ReadConsistentTransaction : public ReadTransaction {
+   protected:
+    ReadConsistentTransaction(std::shared_ptr<DataStorage> store)
+        : ReadTransaction(std::move(store)) {}
+};
+
 #endif  // data_storage_readtransaction_hpp

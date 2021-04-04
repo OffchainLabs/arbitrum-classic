@@ -19,7 +19,7 @@
 #include <utility>
 
 ReadWriteTransaction::ReadWriteTransaction(std::shared_ptr<DataStorage> store)
-    : ReadTransaction(std::move(store)) {}
+    : ReadConsistentTransaction(std::move(store)) {}
 
 rocksdb::Status ReadWriteTransaction::defaultPut(const rocksdb::Slice& key,
                                                  const rocksdb::Slice& value) {

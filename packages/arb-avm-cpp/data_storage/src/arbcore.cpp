@@ -63,33 +63,6 @@ ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
     }
 }
 
-ValueResult<MessageEntry> ArbCore::getMessageEntry(
-    const ReadTransaction& tx,
-    uint256_t message_sequence_number) const {
-    std::vector<unsigned char> previous_key;
-    marshal_uint256_t(message_sequence_number, previous_key);
-
-    auto messages_inserted = messageEntryInsertedCountImpl(tx);
-    if (!messages_inserted.status.ok()) {
-        return {messages_inserted.status, {}};
-    }
-
-    if (message_sequence_number >= messages_inserted.data) {
-        // Don't allow stale entries to be used
-        return {rocksdb::Status::NotFound(), {}};
-    }
-
-    auto result = tx.messageEntryGetVector(vecToSlice(previous_key));
-    if (!result.status.ok()) {
-        return {result.status, {}};
-    }
-
-    auto parsed_state =
-        extractMessageEntry(message_sequence_number, vecToSlice(result.data));
-
-    return {result.status, std::move(parsed_state)};
-}
-
 bool ArbCore::machineIdle() {
     return machine_idle;
 }
@@ -279,8 +252,7 @@ rocksdb::Status ArbCore::triggerSaveCheckpoint() {
 
 rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     auto& state = machine->machine_state;
-    if (!isValid(tx, state.output.fully_processed_inbox,
-                 state.staged_message)) {
+    if (!isValid(tx, state.output.fully_processed_inbox)) {
         std::cerr << "Attempted to save invalid checkpoint at gas "
                   << state.output.arb_gas_used << std::endl;
         assert(false);
@@ -376,8 +348,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                 if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
                     (message_sequence_number >=
                      checkpoint.getTotalMessagesRead() - 1)) {
-                    if (isValid(tx, checkpoint.output.fully_processed_inbox,
-                                checkpoint.staged_message)) {
+                    if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                         // Good checkpoint
                         return checkpoint;
                     }
@@ -651,9 +622,8 @@ void ArbCore::operator()() {
     while (!arbcore_abort) {
         bool isMachineValid;
         {
-            ReadTransaction tx(data_storage);
-            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
-                                     machine->getReorgData().max_staged);
+            ReadSnapshotTransaction tx(data_storage);
+            isMachineValid = isValid(tx, machine->getReorgData());
         }
         if (!isMachineValid) {
             std::cerr
@@ -824,37 +794,7 @@ void ArbCore::operator()() {
                 execConfig.next_block_height = std::nullopt;
             }
 
-            bool resolved_staged = false;
-            if (machine->machine_state.stagedMessageUnresolved()) {
-                // Resolve staged message if possible.  If message not found,
-                // machine will just be blocked
-                auto sequence_number =
-                    machine->machine_state.getTotalMessagesRead() - 1;
-                auto message_lookup = getMessageEntry(tx, sequence_number);
-                if (message_lookup.status.ok()) {
-                    auto inbox_message =
-                        extractInboxMessage(message_lookup.data.data);
-                    machine->machine_state.staged_message = inbox_message;
-                    if (messages.empty() &&
-                        message_lookup.data.last_message_in_block) {
-                        execConfig.next_block_height =
-                            message_lookup.data.block_height + 1;
-                    }
-                }
-                if (!message_lookup.status.IsNotFound() &&
-                    !message_lookup.status.ok()) {
-                    core_error_string = "error resolving staged message";
-                    machine_error = true;
-                    std::cerr << "ArbCore error: " << core_error_string << ": "
-                              << message_lookup.status.ToString() << "\n";
-                    break;
-                }
-                if (message_lookup.status.ok()) {
-                    resolved_staged = true;
-                }
-            }
-
-            if (!messages.empty() || resolved_staged) {
+            if (!messages.empty()) {
                 execConfig.setInboxMessagesFromBytes(messages);
 
                 auto success = machine->runMachine(execConfig);
@@ -1029,55 +969,6 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     auto result = getMessagesImpl(tx, index, count);
 
     return {result.status, result.data.first};
-}
-
-ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
-                      std::optional<uint256_t>>>
-ArbCore::getMessagesImpl(const ReadTransaction& tx,
-                         uint256_t index,
-                         uint256_t count) const {
-    if (count == 0) {
-        return {rocksdb::Status::OK(), {}};
-    }
-
-    // Check if attempting to get entries past current valid messages
-    auto message_count = messageEntryInsertedCountImpl(tx);
-    if (!message_count.status.ok()) {
-        return {message_count.status, {}};
-    }
-    auto max_message_count = message_count.data;
-    if (index >= max_message_count) {
-        return {rocksdb::Status::NotFound(), {}};
-    }
-    if (index + count > max_message_count) {
-        count = max_message_count - index;
-    }
-
-    std::vector<unsigned char> key;
-    marshal_uint256_t(index, key);
-    auto key_slice = vecToSlice(key);
-
-    auto results = tx.messageEntryGetVectorVector(
-        key_slice, intx::narrow_cast<size_t>(count));
-    if (!results.status.ok()) {
-        return {results.status, {}};
-    }
-
-    std::vector<std::vector<unsigned char>> messages;
-    messages.reserve(results.data.size());
-    std::optional<uint256_t> next_block_height;
-    auto last_index = results.data.size() - 1;
-    for (size_t i = 0; i <= last_index; i++) {
-        auto message_entry =
-            extractMessageEntry(0, vecToSlice(results.data[i]));
-
-        messages.push_back(message_entry.data);
-        if (i == last_index && message_entry.last_message_in_block) {
-            next_block_height = message_entry.block_height + 1;
-        }
-    }
-
-    return {rocksdb::Status::OK(), {std::move(messages), next_block_height}};
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
@@ -1420,7 +1311,7 @@ ArbCore::executionCursorGetMessages(ReadTransaction& tx,
 }
 
 ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
-    ReadSnapshotTransaction& tx,
+    ReadConsistentTransaction& tx,
     const InboxState& fully_processed_inbox,
     size_t count) {
     std::vector<MachineMessage> messages(count);
@@ -1557,7 +1448,7 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
     return {rocksdb::Status::OK(), messages};
 }
 
-bool ArbCore::isValid(ReadSnapshotTransaction& tx,
+bool ArbCore::isValid(ReadConsistentTransaction& tx,
                       const InboxState& fully_processed_inbox) {
     auto res = readNextMessages(tx, fully_processed_inbox, 0);
     return res.status.ok();

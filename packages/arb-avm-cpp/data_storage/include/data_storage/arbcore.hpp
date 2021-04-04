@@ -270,11 +270,6 @@ class ArbCore {
         uint256_t index2);
 
    private:
-    ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
-                          std::optional<uint256_t>>>
-    getMessagesImpl(const ReadTransaction& tx,
-                    uint256_t index,
-                    uint256_t count) const;
     template <typename T>
     rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
                                          T& machine_state);
@@ -313,11 +308,11 @@ class ArbCore {
                                                   ValueCache& valueCache);
 
     ValueResult<std::vector<MachineMessage>> readNextMessages(
-        ReadSnapshotTransaction& tx,
+        ReadConsistentTransaction& tx,
         const InboxState& fully_processed_inbox,
         size_t count);
 
-    bool isValid(ReadSnapshotTransaction& tx,
+    bool isValid(ReadConsistentTransaction& tx,
                  const InboxState& fully_processed_inbox);
 
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>

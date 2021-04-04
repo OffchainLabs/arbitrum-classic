@@ -19,7 +19,7 @@
 
 #include <data_storage/readtransaction.hpp>
 
-class ReadWriteTransaction : public ReadTransaction {
+class ReadWriteTransaction : public ReadConsistentTransaction {
    private:
     rocksdb::WriteOptions write_options{};
 
