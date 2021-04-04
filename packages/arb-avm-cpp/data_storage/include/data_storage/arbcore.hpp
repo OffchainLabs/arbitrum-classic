@@ -45,6 +45,11 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
+struct RawMessageAndAccumulator {
+    std::vector<unsigned char> message;
+    uint256_t accumulator;
+};
+
 class ArbCore {
    public:
     typedef enum {
@@ -270,10 +275,15 @@ class ArbCore {
         uint256_t index2);
 
    private:
-    ValueResult<std::vector<std::vector<unsigned char>>> getMessagesImpl(
-        const ReadTransaction& tx,
+    ValueResult<std::vector<RawMessageAndAccumulator>> getMessagesImpl(
+        const ReadConsistentTransaction& tx,
         uint256_t index,
-        uint256_t count) const;
+        uint256_t count,
+        std::optional<uint256_t> start_acc) const;
+    ValueResult<SequencerBatchItem> getNextSequencerBatchItem(
+        const ReadTransaction& tx,
+        uint256_t sequence_number) const;
+
     template <typename T>
     rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
                                          T& machine_state);
@@ -306,12 +316,12 @@ class ArbCore {
                                                   ValueCache& valueCache);
 
     ValueResult<std::vector<MachineMessage>> readNextMessages(
-        ReadConsistentTransaction& tx,
+        const ReadConsistentTransaction& tx,
         const InboxState& fully_processed_inbox,
-        size_t count);
+        size_t count) const;
 
-    bool isValid(ReadConsistentTransaction& tx,
-                 const InboxState& fully_processed_inbox);
+    bool isValid(const ReadTransaction& tx,
+                 const InboxState& fully_processed_inbox) const;
 
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>
     executionCursorGetMessages(ReadTransaction& tx,
