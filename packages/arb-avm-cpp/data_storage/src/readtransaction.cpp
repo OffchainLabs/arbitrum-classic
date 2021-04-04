@@ -16,7 +16,7 @@
 
 #include "data_storage/readtransaction.hpp"
 #include <data_storage/storageresult.hpp>
-#include "value/utils.hpp"
+#include <data_storage/value/utils.hpp>
 
 ReadTransaction::ReadTransaction(std::shared_ptr<DataStorage> store)
     : transaction(Transaction::makeTransaction(std::move(store))) {}

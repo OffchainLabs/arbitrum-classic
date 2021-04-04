@@ -24,6 +24,7 @@
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresultfwd.hpp>
 #include <data_storage/value/machine.hpp>
+#include <data_storage/value/utils.hpp>
 #include <utility>
 
 struct SequencerBatchItem {
@@ -37,12 +38,13 @@ struct SequencerBatchItem {
 
 template <typename Iterator>
 SequencerBatchItem deserializeSequencerBatchItem(uint256_t last_sequence_number,
-                                                 Iterator& entry_vector) {
+                                                 Iterator& current_iter,
+                                                 Iterator& end_iter) {
     auto accumulator = extractUint256(current_iter);
     auto total_delayed_count = extractUint256(current_iter);
     std::optional<std::vector<unsigned char>> sequencer_message;
-    if (current_iter != entry_vector.end()) {
-        sequencer_message = std::vector(current_iter, entry_vector.end());
+    if (current_iter != end_iter) {
+        sequencer_message = std::vector(current_iter, end_iter);
     }
     return {last_sequence_number, accumulator, total_delayed_count,
             sequencer_message};
@@ -61,9 +63,10 @@ struct DelayedMessage {
 
 template <typename Iterator>
 DelayedMessage deserializeDelayedMessage(uint256_t delayed_sequence_number,
-                                         Iterator& current_iter) {
+                                         Iterator& current_iter,
+                                         Iterator& end_iter) {
     auto delayed_accumulator = extractUint256(current_iter);
-    std::vector<unsigned char> message(current_iter, entry_vector.end());
+    std::vector<unsigned char> message(current_iter, end_iter);
     return {delayed_sequence_number, delayed_accumulator, message};
 }
 

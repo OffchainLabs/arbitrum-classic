@@ -16,8 +16,6 @@
 
 #include <data_storage/arbcore.hpp>
 
-#include "value/utils.hpp"
-
 #include <avm/inboxmessage.hpp>
 #include <avm/machinethread.hpp>
 #include <data_storage/aggregator.hpp>
@@ -26,6 +24,7 @@
 #include <data_storage/readwritetransaction.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/machine.hpp>
+#include <data_storage/value/utils.hpp>
 #include <data_storage/value/value.hpp>
 #include <data_storage/value/valuecache.hpp>
 
@@ -590,7 +589,6 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         state_data.status,
         state_data.pc.pc,
         state_data.err_pc,
-        state_data.staged_message,
         state_data.output};
 
     return std::make_unique<T>(state);
@@ -950,12 +948,12 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     return {result.status, bytes_vec};
 }
 
-ValueResult<std::vector<RawMessageAndAccumulator>> ArbCore::getMessagesImpl(
+ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
     const ReadConsistentTransaction& tx,
     uint256_t index,
     uint256_t count,
     std::optional<uint256_t> start_acc) const {
-    std::vector<RawMessageAndAccumulator> messages;
+    std::vector<RawMessageInfo> messages;
 
     uint256_t start = index;
     uint256_t end = start + count;
@@ -985,9 +983,10 @@ ValueResult<std::vector<RawMessageAndAccumulator>> ArbCore::getMessagesImpl(
             reinterpret_cast<const unsigned char*>(seq_batch_it->key().data());
         auto item_value_ptr = reinterpret_cast<const unsigned char*>(
             seq_batch_it->value().data());
+        auto item_value_end_ptr = item_value_ptr + seq_batch_it->value().size();
         auto last_sequence_number = extractUint256(item_key_ptr);
-        auto item =
-            deserializeSequencerBatchItem(last_sequence_number, item_value_ptr);
+        auto item = deserializeSequencerBatchItem(
+            last_sequence_number, item_value_ptr, item_value_end_ptr);
 
         if (needs_consistency_check) {
             if (start_acc && item.accumulator != *start_acc) {
@@ -1013,7 +1012,8 @@ ValueResult<std::vector<RawMessageAndAccumulator>> ArbCore::getMessagesImpl(
         }
 
         if (item.sequencer_message) {
-            messages.emplace_back(*item.sequencer_message, item.accumulator);
+            messages.emplace_back(std::move(*item.sequencer_message),
+                                  item.last_sequence_number, item.accumulator);
             if (prev_delayed_count != item.total_delayed_count) {
                 throw std::runtime_error(
                     "Sequencer batch item included both sequencer message and "
@@ -1032,6 +1032,7 @@ ValueResult<std::vector<RawMessageAndAccumulator>> ArbCore::getMessagesImpl(
                 delayed_msg_it->Seek(delayed_msg_lower_bound);
             }
 
+            auto next_sequence_number = index + messages.size();
             while (delayed_msg_it->Valid() &&
                    prev_delayed_count < item.total_delayed_count &&
                    messages.size() < count) {
@@ -1039,15 +1040,19 @@ ValueResult<std::vector<RawMessageAndAccumulator>> ArbCore::getMessagesImpl(
                     delayed_msg_it->key().data());
                 auto delayed_value_ptr = reinterpret_cast<const unsigned char*>(
                     delayed_msg_it->value().data());
+                auto delayed_value_end_ptr =
+                    delayed_value_ptr + delayed_msg_it->value().size();
                 if (extractUint256(delayed_key_ptr) != prev_delayed_count) {
                     throw std::runtime_error(
                         "Got wrong delayed message from database");
                 }
                 auto delayed_message = deserializeDelayedMessage(
-                    prev_delayed_count, delayed_value_ptr);
-                messages.emplace_back(delayed_message.message,
-                                      item.accumulator);
+                    prev_delayed_count, delayed_value_ptr,
+                    delayed_value_end_ptr);
+                messages.emplace_back(std::move(delayed_message.message),
+                                      next_sequence_number, item.accumulator);
                 prev_delayed_count += 1;
+                next_sequence_number += 1;
                 delayed_msg_it->Next();
             }
 
@@ -1104,8 +1109,10 @@ ValueResult<SequencerBatchItem> ArbCore::getNextSequencerBatchItem(
         reinterpret_cast<const unsigned char*>(seq_batch_it->key().data());
     auto value_ptr =
         reinterpret_cast<const unsigned char*>(seq_batch_it->value().data());
+    auto value_end_ptr = value_ptr + seq_batch_it->value().size();
     auto last_sequence_number = extractUint256(key_ptr);
-    auto item = deserializeSequencerBatchItem(last_sequence_number, value_ptr);
+    auto item = deserializeSequencerBatchItem(last_sequence_number, value_ptr,
+                                              value_end_ptr);
     return {rocksdb::Status::OK(), item};
 }
 
@@ -1388,9 +1395,6 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
             return std::get<rocksdb::Status>(checkpoint_result);
         }
 
-        auto& machine_state_keys =
-            std::get<MachineStateKeys>(checkpoint_result);
-
         return checkpoint_result;
     }
 }
@@ -1408,8 +1412,9 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
     }
 
     for (auto& raw_message : raw_result.data) {
-        messages.emplace_back(extractInboxMessage(raw_message.message),
-                              raw_message.accumulator);
+        auto message = extractInboxMessage(raw_message.message);
+        message.inbox_sequence_number = raw_message.sequence_number;
+        messages.emplace_back(message, raw_message.accumulator);
     }
 
     return {rocksdb::Status::OK(), messages};

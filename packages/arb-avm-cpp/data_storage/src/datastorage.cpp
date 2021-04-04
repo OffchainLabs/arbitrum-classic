@@ -16,12 +16,11 @@
 
 #include <data_storage/datastorage.hpp>
 
-#include "value/utils.hpp"
-
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <string>
 

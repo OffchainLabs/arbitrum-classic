@@ -35,8 +35,6 @@ class ReadWriteTransaction : public ReadConsistentTransaction {
                              const rocksdb::Slice& value);
     rocksdb::Status checkpointPut(const rocksdb::Slice& key,
                                   const rocksdb::Slice& value);
-    rocksdb::Status messageEntryPut(const rocksdb::Slice& key,
-                                    const rocksdb::Slice& value);
     rocksdb::Status logPut(const rocksdb::Slice& key,
                            const rocksdb::Slice& value);
     rocksdb::Status sendPut(const rocksdb::Slice& key,
@@ -49,7 +47,6 @@ class ReadWriteTransaction : public ReadConsistentTransaction {
     rocksdb::Status defaultDelete(const rocksdb::Slice& key);
     rocksdb::Status stateDelete(const rocksdb::Slice& key);
     rocksdb::Status checkpointDelete(const rocksdb::Slice& key);
-    rocksdb::Status messageEntryDelete(const rocksdb::Slice& key);
     rocksdb::Status logDelete(const rocksdb::Slice& key);
     rocksdb::Status sendDelete(const rocksdb::Slice& key);
     rocksdb::Status sideloadDelete(const rocksdb::Slice& key);

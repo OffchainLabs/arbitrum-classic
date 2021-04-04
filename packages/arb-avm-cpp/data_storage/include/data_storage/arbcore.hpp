@@ -45,9 +45,17 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
-struct RawMessageAndAccumulator {
+struct RawMessageInfo {
     std::vector<unsigned char> message;
+    uint256_t sequence_number;
     uint256_t accumulator;
+
+    RawMessageInfo(std::vector<unsigned char> message_,
+                   uint256_t sequence_number_,
+                   uint256_t accumulator_)
+        : message(std::move(message_)),
+          sequence_number(sequence_number_),
+          accumulator(accumulator_) {}
 };
 
 class ArbCore {
@@ -275,7 +283,7 @@ class ArbCore {
         uint256_t index2);
 
    private:
-    ValueResult<std::vector<RawMessageAndAccumulator>> getMessagesImpl(
+    ValueResult<std::vector<RawMessageInfo>> getMessagesImpl(
         const ReadConsistentTransaction& tx,
         uint256_t index,
         uint256_t count,

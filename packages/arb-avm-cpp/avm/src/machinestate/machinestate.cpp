@@ -32,7 +32,6 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 
 AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
-      next_block_height(config.next_block_height),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
@@ -50,7 +49,7 @@ MachineStateKeys::MachineStateKeys(const MachineState& machine)
       status(machine.state),
       output(machine.output) {}
 
-std::optional<uint256_t> MachineStateKeys::machineHash() const {
+uint256_t MachineStateKeys::machineHash() const {
     if (status == Status::Halted)
         return 0;
     if (status == Status::Error)

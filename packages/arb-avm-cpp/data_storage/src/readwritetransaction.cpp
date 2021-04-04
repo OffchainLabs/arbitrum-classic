@@ -44,15 +44,6 @@ rocksdb::Status ReadWriteTransaction::checkpointPut(
         key, value);
 }
 
-rocksdb::Status ReadWriteTransaction::messageEntryPut(
-    const rocksdb::Slice& key,
-    const rocksdb::Slice& value) {
-    return transaction->transaction->Put(
-        transaction->datastorage
-            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
-        key, value);
-}
-
 rocksdb::Status ReadWriteTransaction::logPut(const rocksdb::Slice& key,
                                              const rocksdb::Slice& value) {
     return transaction->transaction->Put(
@@ -108,13 +99,6 @@ rocksdb::Status ReadWriteTransaction::checkpointDelete(
     return transaction->transaction->Delete(
         transaction->datastorage
             ->column_handles[DataStorage::CHECKPOINT_COLUMN],
-        key);
-}
-rocksdb::Status ReadWriteTransaction::messageEntryDelete(
-    const rocksdb::Slice& key) {
-    return transaction->transaction->Delete(
-        transaction->datastorage
-            ->column_handles[DataStorage::MESSAGEENTRY_COLUMN],
         key);
 }
 rocksdb::Status ReadWriteTransaction::logDelete(const rocksdb::Slice& key) {

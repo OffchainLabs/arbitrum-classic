@@ -18,10 +18,10 @@
 #include <utility>
 
 #include "referencecount.hpp"
-#include "utils.hpp"
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <avm_values/tuple.hpp>
 #include <cstdint>

@@ -15,7 +15,6 @@
  */
 
 #include "carbstorage.h"
-#include "utils.hpp"
 
 #include <data_storage/aggregator.hpp>
 #include <data_storage/arbstorage.hpp>

@@ -15,9 +15,9 @@
  */
 
 #include <data_storage/messageentry.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include "value/referencecount.hpp"
-#include "value/utils.hpp"
 
 std::vector<unsigned char> serializeSequencerBatchItem(
     const SequencerBatchItem& item) {
