@@ -110,7 +110,6 @@ int main(int argc, char* argv[]) {
 
     MachineExecutionConfig execConfig;
     execConfig.inbox_messages = inbox_messages;
-    execConfig.next_block_height = 100000000;
     mach->machine_state.context = AssertionContext{execConfig};
     auto assertion = mach->run();
 

@@ -238,7 +238,7 @@ class ArbCore {
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
-        uint256_t message_group_size,
+        size_t message_group_size,
         ValueCache& cache);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
@@ -270,6 +270,10 @@ class ArbCore {
         uint256_t index2);
 
    private:
+    ValueResult<std::vector<std::vector<unsigned char>>> getMessagesImpl(
+        const ReadTransaction& tx,
+        uint256_t index,
+        uint256_t count) const;
     template <typename T>
     rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
                                          T& machine_state);
@@ -296,12 +300,6 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& sends);
 
    private:
-    std::optional<rocksdb::Status> addMessages(
-        const std::vector<std::vector<unsigned char>>& new_messages,
-        bool last_block_complete,
-        const uint256_t& prev_inbox_acc,
-        const std::optional<uint256_t>& reorg_message_count,
-        ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,

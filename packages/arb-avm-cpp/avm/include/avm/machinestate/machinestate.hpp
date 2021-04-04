@@ -34,7 +34,6 @@ struct MachineState;
 
 struct AssertionContext {
     std::vector<MachineMessage> inbox_messages;
-    std::optional<uint256_t> next_block_height;
 
     std::vector<std::vector<uint8_t>> sends;
     std::vector<value> logs;

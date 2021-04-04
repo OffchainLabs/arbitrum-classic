@@ -617,7 +617,7 @@ void ArbCore::operator()() {
     ValueCache cache{5, 0};
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
-    uint256_t max_message_batch_size = 10;
+    size_t max_message_batch_size = 10;
 
     while (!arbcore_abort) {
         bool isMachineValid;
@@ -753,49 +753,20 @@ void ArbCore::operator()() {
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
             // Start execution of machine if new message available
-            ReadTransaction tx(data_storage);
-            auto messages_count = messageEntryInsertedCountImpl(tx);
-            if (!messages_count.status.ok()) {
-                core_error_string = messages_count.status.ToString();
+            ReadSnapshotTransaction tx(data_storage);
+            auto messages_result = readNextMessages(
+                tx, machine->machine_state.output.fully_processed_inbox,
+                max_message_batch_size);
+            if (!messages_result.status.ok()) {
+                core_error_string = messages_result.status.ToString();
                 machine_error = true;
-                std::cerr << "ArbCore message count fetching failed: "
+                std::cerr << "ArbCore failed getting message entry: "
                           << core_error_string << "\n";
                 break;
             }
-            auto total_messages_read =
-                machine->machine_state.getTotalMessagesRead();
 
-            std::vector<std::vector<unsigned char>> messages;
-            if (messages_count.data > total_messages_read) {
-                // New messages to process
-                auto message_batch_size = max_message_batch_size;
-                if (message_batch_size > messages_count.data) {
-                    message_batch_size = messages_count.data;
-                }
-                auto next_messages_result = getMessagesImpl(
-                    tx, total_messages_read, message_batch_size);
-                if (!next_messages_result.status.ok()) {
-                    core_error_string = next_messages_result.status.ToString();
-                    machine_error = true;
-                    std::cerr << "ArbCore failed getting message entry: "
-                              << core_error_string << "\n";
-                    break;
-                }
-                messages.insert(messages.end(),
-                                next_messages_result.data.first.begin(),
-                                next_messages_result.data.first.end());
-                if (next_messages_result.data.second) {
-                    execConfig.next_block_height =
-                        *next_messages_result.data.second;
-                } else {
-                    execConfig.next_block_height = std::nullopt;
-                }
-            } else {
-                execConfig.next_block_height = std::nullopt;
-            }
-
-            if (!messages.empty()) {
-                execConfig.setInboxMessagesFromBytes(messages);
+            if (!messages_result.data.empty()) {
+                execConfig.inbox_messages = messages_result.data;
 
                 auto success = machine->runMachine(execConfig);
                 if (!success) {
@@ -968,7 +939,14 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
 
     auto result = getMessagesImpl(tx, index, count);
 
-    return {result.status, result.data.first};
+    return {result.status, result.data};
+}
+
+ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessagesImpl(
+    const ReadTransaction& tx,
+    uint256_t index,
+    uint256_t count) const {
+    throw std::runtime_error("TODO: something like readNextMessages");
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
@@ -1149,7 +1127,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
     ExecutionCursor& execution_cursor,
     uint256_t total_gas_used,
     bool go_over_gas,
-    uint256_t message_group_size,
+    size_t message_group_size,
     ValueCache& cache) {
     auto handle_reorg = true;
     size_t reorg_attempts = 0;
@@ -1207,20 +1185,20 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                     break;
                 }
 
-                auto get_messages_result = executionCursorGetMessages(
-                    tx, execution_cursor, message_group_size);
+                auto get_messages_result = readNextMessages(
+                    tx, execution_cursor.getOutput().fully_processed_inbox,
+                    message_group_size);
+                if (!get_messages_result.status.IsNotFound()) {
+                    // Reorg occurred, need to recreate machine
+                    handle_reorg = true;
+                    break;
+                }
                 if (!get_messages_result.status.ok()) {
                     std::cout << "Error getting messages for execution cursor"
                               << std::endl;
                     return get_messages_result.status;
                 }
-                if (!get_messages_result.data.first) {
-                    // Reorg occurred, need to recreate machine
-                    handle_reorg = true;
-                    break;
-                }
-                execConfig.inbox_messages =
-                    std::move(get_messages_result.data.second);
+                execConfig.inbox_messages = std::move(get_messages_result.data);
             }
 
             auto& mach =
@@ -1298,16 +1276,6 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
 
         return checkpoint_result;
     }
-}
-
-ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-ArbCore::executionCursorGetMessages(ReadTransaction& tx,
-                                    const ExecutionCursor& execution_cursor,
-                                    const uint256_t& orig_message_group_size) {
-    const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-
-    return executionCursorGetMessagesNoLock(tx, execution_cursor,
-                                            orig_message_group_size);
 }
 
 ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
@@ -1454,70 +1422,6 @@ bool ArbCore::isValid(ReadConsistentTransaction& tx,
     return res.status.ok();
 }
 
-ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-ArbCore::executionCursorGetMessagesNoLock(
-    ReadTransaction& tx,
-    const ExecutionCursor& execution_cursor,
-    const uint256_t& orig_message_group_size) {
-    auto message_group_size = orig_message_group_size;
-    std::vector<InboxMessage> messages;
-
-    if (!isValid(tx, execution_cursor.getOutput().fully_processed_inbox,
-                 execution_cursor.getStaged())) {
-        // Obsolete machine, reorg occurred
-        return {rocksdb::Status::OK(), std::make_pair(false, messages)};
-    }
-
-    auto current_message_sequence_number =
-        execution_cursor.getTotalMessagesRead();
-
-    auto inserted_message_count_result = messageEntryInsertedCountImpl(tx);
-    if (!inserted_message_count_result.status.ok()) {
-        return {inserted_message_count_result.status,
-                std::make_pair(false, messages)};
-    }
-
-    if (current_message_sequence_number > inserted_message_count_result.data) {
-        // No messages to read
-        return {rocksdb::Status::OK(), std::make_pair(true, messages)};
-    }
-
-    if (current_message_sequence_number + message_group_size >
-        inserted_message_count_result.data) {
-        // Don't read past primary machine
-        message_group_size = inserted_message_count_result.data -
-                             current_message_sequence_number;
-    }
-
-    if (message_group_size == 0) {
-        // No messages to read
-        return {rocksdb::Status::OK(), std::make_pair(true, messages)};
-    }
-
-    std::vector<unsigned char> message_key;
-    marshal_uint256_t(current_message_sequence_number, message_key);
-    auto message_key_slice = vecToSlice(message_key);
-
-    auto results = tx.messageEntryGetVectorVector(
-        message_key_slice, intx::narrow_cast<size_t>(message_group_size));
-    if (!results.status.ok()) {
-        std::cerr
-            << "Failed getting set of message entries for execution cursor"
-            << std::endl;
-        return {results.status, std::make_pair(false, messages)};
-    }
-
-    auto total_size = results.data.size();
-    messages.reserve(total_size);
-    for (const auto& data : results.data) {
-        auto message_entry = extractMessageEntry(0, vecToSlice(data));
-        auto inbox_message = extractInboxMessage(message_entry.data);
-        messages.push_back(inbox_message);
-    }
-
-    return {rocksdb::Status::OK(), std::make_pair(true, std::move(messages))};
-}
-
 ValueResult<uint256_t> ArbCore::logInsertedCount() const {
     ReadTransaction tx(data_storage);
 
@@ -1589,223 +1493,6 @@ rocksdb::Status ArbCore::updateMessageEntryInsertedCount(
     marshal_uint256_t(message_index, value);
     return tx.statePut(vecToSlice(message_entry_inserted_key),
                        vecToSlice(value));
-}
-
-// addMessages stores all messages from given block into database.
-// The last message in the list is flagged as the last message in the block.
-// Returns std::nullopt when caller needs to provide messages from earlier
-// block.
-std::optional<rocksdb::Status> ArbCore::addMessages(
-    const std::vector<std::vector<unsigned char>>& new_messages,
-    bool last_block_complete,
-    const uint256_t& prev_inbox_acc,
-    const std::optional<uint256_t>& reorg_message_count,
-    ValueCache& cache) {
-    uint256_t current_sequence_number = 0;
-    uint256_t existing_message_count = 0;
-    uint256_t previous_inbox_acc = 0;
-
-    {
-        ReadTransaction tx(data_storage);
-        auto message_count_result = messageEntryInsertedCountImpl(tx);
-        if (!message_count_result.status.ok()) {
-            std::cerr << "error in addMessages getting message entry count: "
-                      << message_count_result.status.ToString() << std::endl;
-            return message_count_result.status;
-        }
-        existing_message_count = message_count_result.data;
-
-        previous_inbox_acc = prev_inbox_acc;
-
-        if (!new_messages.empty()) {
-            auto first_message = extractInboxMessage(new_messages[0]);
-
-            if (first_message.inbox_sequence_number > 0) {
-                if (first_message.inbox_sequence_number >
-                    existing_message_count) {
-                    // Not allowed to skip message sequence numbers, ask for
-                    // older messages
-                    return std::nullopt;
-                }
-
-                // Check that previous_inbox_acc matches acc from previous
-                // message
-                auto previous_sequence_number =
-                    first_message.inbox_sequence_number - 1;
-                auto previous_result =
-                    getMessageEntry(tx, previous_sequence_number);
-                if (!previous_result.status.ok()) {
-                    std::cerr
-                        << "error in addMessages getting previous message: "
-                        << previous_result.status.ToString() << std::endl;
-                    return previous_result.status;
-                }
-
-                if (previous_result.data.inbox_acc != previous_inbox_acc) {
-                    // Previous inbox doesn't match which means reorg happened
-                    // and caller needs to try again with messages from earlier
-                    // block
-                    return std::nullopt;
-                }
-
-                current_sequence_number = first_message.inbox_sequence_number;
-            }
-        } else {
-            if (!reorg_message_count) {
-                std::cerr << "reorg_sequence_number must be provided if no "
-                          << "messages provided" << std::endl;
-                return std::nullopt;
-            }
-
-            if (*reorg_message_count == 0) {
-                std::cerr << "cannot reorg past first message right now"
-                          << std::endl;
-                return std::nullopt;
-            }
-            current_sequence_number = *reorg_message_count;
-        }
-    }
-
-    size_t new_messages_count = new_messages.size();
-    size_t new_messages_index = 0;
-    {
-        ReadTransaction tx(data_storage);
-
-        // Skip any valid messages that we already have in database
-        while ((current_sequence_number < existing_message_count) &&
-               (new_messages_index < new_messages_count)) {
-            auto existing_message_entry =
-                getMessageEntry(tx, current_sequence_number);
-            if (!existing_message_entry.status.ok()) {
-                return existing_message_entry.status;
-            }
-            auto& message = new_messages[new_messages_index];
-            auto current_inbox_acc = hash_inbox(previous_inbox_acc, message);
-            if (existing_message_entry.data.inbox_acc != current_inbox_acc) {
-                // Entry doesn't match because of reorg
-                break;
-            }
-
-            if (existing_message_entry.data.last_message_in_block) {
-                bool new_message_is_last;
-                if (new_messages_index == new_messages_count - 1) {
-                    new_message_is_last = last_block_complete;
-                } else {
-                    // Check if the block number changes in the next message
-                    new_message_is_last =
-                        extractInboxMessageBlockNumber(message) !=
-                        extractInboxMessageBlockNumber(
-                            new_messages[new_messages_index + 1]);
-                }
-                if (!new_message_is_last) {
-                    // existing message was marked as last message in block but
-                    // new message is not marked as last message, so they should
-                    // be considered different
-                    break;
-                }
-            }
-
-            new_messages_index++;
-            previous_inbox_acc = current_inbox_acc;
-            current_sequence_number += 1;
-        }
-    }
-
-    if (current_sequence_number < existing_message_count) {
-        // Reorg occurred
-        const std::lock_guard<std::mutex> lock(core_reorg_mutex);
-
-        bool isMachineValid;
-        {
-            ReadWriteTransaction tx(data_storage);
-
-            // Truncate MessageEntries to last valid message
-            updateMessageEntryInsertedCount(tx, current_sequence_number);
-
-            auto status = tx.commit();
-            if (!status.ok()) {
-                std::cerr << "error committing first part of addMessages: "
-                          << status.ToString() << std::endl;
-                return status;
-            }
-
-            isMachineValid = isValid(tx, machine->getReorgData().max_inbox,
-                                     machine->getReorgData().max_staged);
-        }
-
-        if (!isMachineValid) {
-            // Reorg checkpoint and everything else
-            auto reorg_status = reorgToMessageOrBefore(
-                current_sequence_number - 1, false, cache);
-            if (!reorg_status.ok()) {
-                std::cerr
-                    << "error in addMessages calling reorgToMessageOrBefore: "
-                    << reorg_status.ToString() << std::endl;
-                return reorg_status;
-            }
-        }
-    }
-
-    ReadWriteTransaction tx(data_storage);
-
-    while (new_messages_index < new_messages_count) {
-        // Encode key
-        std::vector<unsigned char> key;
-        marshal_uint256_t(current_sequence_number, key);
-
-        auto current_inbox_acc =
-            hash_inbox(previous_inbox_acc, new_messages[new_messages_index]);
-
-        auto next_inbox_message =
-            extractInboxMessage(new_messages[new_messages_index]);
-        auto current_inbox_message = std::move(next_inbox_message);
-        if (new_messages_index < new_messages_count) {
-            next_inbox_message =
-                extractInboxMessage(new_messages[new_messages_index]);
-        } else {
-            next_inbox_message = {};
-        }
-
-        bool last_message_in_block;
-        if (last_block_complete &&
-            ((new_messages_index == new_messages_count - 1) ||
-             current_inbox_message.block_number !=
-                 next_inbox_message.block_number)) {
-            last_message_in_block = true;
-        } else {
-            last_message_in_block = false;
-        }
-
-        // Encode message entry
-        auto messageEntry = MessageEntry{
-            current_sequence_number, current_inbox_acc,
-            intx::narrow_cast<uint64_t>(current_inbox_message.block_number),
-            last_message_in_block, (new_messages[new_messages_index])};
-        auto serialized_messageentry = serializeMessageEntry(messageEntry);
-
-        // Save message entry into database
-        auto put_status = tx.messageEntryPut(
-            vecToSlice(key), vecToSlice(serialized_messageentry));
-        if (!put_status.ok()) {
-            std::cerr << "error saving message entry into database: "
-                      << put_status.ToString() << std::endl;
-            return put_status;
-        }
-
-        new_messages_index++;
-        previous_inbox_acc = current_inbox_acc;
-        current_sequence_number += 1;
-    }
-
-    updateMessageEntryInsertedCount(tx, current_sequence_number);
-
-    auto status = tx.commit();
-    if (!status.ok()) {
-        std::cerr << "error committing final part of addMessages: "
-                  << status.ToString() << std::endl;
-    }
-
-    return status;
 }
 
 // deleteLogsStartingAt deletes the given index along with any

@@ -176,13 +176,6 @@ void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
     config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
 }
 
-void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
-                                              void* next_block_height) {
-    assert(c);
-    auto config = static_cast<MachineExecutionConfig*>(c);
-    config->next_block_height = receiveUint256(next_block_height);
-}
-
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
                                         ByteSliceArray bytes) {
     assert(c);
