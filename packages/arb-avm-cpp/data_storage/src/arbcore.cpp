@@ -1461,16 +1461,32 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
         auto last_sequence_number = extractUint256(item_key_ptr);
         auto item =
             deserializeSequencerBatchItem(last_sequence_number, item_value_ptr);
+
         if (needs_consistency_check) {
             if (item.accumulator != fully_processed_inbox.accumulator) {
                 return {rocksdb::Status::NotFound(), {}};
             }
-            assert(item.last_sequence_number + 1 ==
-                   fully_processed_inbox.count);
             needs_consistency_check = false;
+            if (count == 0) {
+                // Skip some possible work attempting to read delayed messages
+                break;
+            }
             prev_delayed_count = item.total_delayed_count;
-            continue;
+            if (item.last_sequence_number >= fully_processed_inbox.count) {
+                // We are in the middle of a delayed batch
+                assert(!item.sequencer_message);
+                // Offset prev_delayed_count by the distance to the end of the
+                // batch
+                prev_delayed_count -=
+                    item.last_sequence_number + 1 - fully_processed_inbox.count;
+            } else {
+                // We are just after this batch item
+                assert(item.last_sequence_number + 1 ==
+                       fully_processed_inbox.count);
+                continue;
+            }
         }
+
         if (item.sequencer_message) {
             messages.emplace_back(extractInboxMessage(*item.sequencer_message),
                                   item.accumulator);
