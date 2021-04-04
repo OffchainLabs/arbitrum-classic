@@ -91,8 +91,8 @@ enum class OpCode : uint8_t {
     LOG,
 
     SEND = 0x70,
-    INBOX_PEEK,
-    INBOX,
+    // INBOX_PEEK,
+    INBOX = 0x72,
     ERROR,
     HALT,
     SET_GAS,
@@ -185,7 +185,6 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
     {OpCode::LOG, "log"},
 
     {OpCode::SEND, "send"},
-    {OpCode::INBOX_PEEK, "inboxpeek"},
     {OpCode::INBOX, "inbox"},
     {OpCode::ERROR, "error"},
     {OpCode::HALT, "halt"},
@@ -285,7 +284,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
         {OpCode::LOG, {MarshalLevel::STUB}},
 
         {OpCode::SEND, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
-        {OpCode::INBOX_PEEK, {MarshalLevel::SINGLE}},
         {OpCode::INBOX, {}},
         {OpCode::ERROR, {}},
         {OpCode::HALT, {}},
@@ -385,7 +383,6 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
                                {OpCode::LOG, {}},
 
                                {OpCode::SEND, {}},
-                               {OpCode::INBOX_PEEK, {}},
                                {OpCode::INBOX, {}},
                                {OpCode::ERROR, {}},
                                {OpCode::HALT, {}},
@@ -474,7 +471,6 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
     {OpCode::LOG, 100},
 
     {OpCode::SEND, 100},
-    {OpCode::INBOX_PEEK, 40},
     {OpCode::INBOX, 40},
     {OpCode::ERROR, 5},
     {OpCode::HALT, 10},

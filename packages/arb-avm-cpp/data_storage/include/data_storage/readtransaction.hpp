@@ -37,8 +37,6 @@ class ReadTransaction {
                              std::string* value) const;
     rocksdb::Status checkpointGet(const rocksdb::Slice& key,
                                   std::string* value) const;
-    rocksdb::Status messageEntryGet(const rocksdb::Slice& key,
-                                    std::string* value) const;
     rocksdb::Status logGet(const rocksdb::Slice& key, std::string* value) const;
     rocksdb::Status sendGet(const rocksdb::Slice& key,
                             std::string* value) const;
@@ -53,8 +51,12 @@ class ReadTransaction {
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> stateGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> checkpointGetIterator()
         const;
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> messageEntryGetIterator()
-        const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator>
+    sequencerBatchItemGetIterator(rocksdb::Slice* lower_bound = nullptr,
+                                  rocksdb::Slice* upper_bound = nullptr) const;
+    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> delayedMessageGetIterator(
+        rocksdb::Slice* lower_bound = nullptr,
+        rocksdb::Slice* upper_bound = nullptr) const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> logGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sendGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> sideloadGetIterator()
@@ -70,8 +72,6 @@ class ReadTransaction {
         rocksdb::Slice key_slice) const;
     [[nodiscard]] ValueResult<uint256_t> checkpointGetUint256(
         rocksdb::Slice key_slice) const;
-    [[nodiscard]] ValueResult<uint256_t> messageEntryGetUint256(
-        rocksdb::Slice key_slice) const;
     [[nodiscard]] ValueResult<uint256_t> logGetUint256(
         rocksdb::Slice key_slice) const;
     [[nodiscard]] ValueResult<uint256_t> sendGetUint256(
@@ -82,12 +82,12 @@ class ReadTransaction {
         rocksdb::Slice first_key_slice,
         size_t count) const;
     [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>>
-    messageEntryGetVectorVector(rocksdb::Slice first_key_slice,
-                                size_t count) const;
+    sequencerBatchItemGetVectorVector(rocksdb::Slice first_key_slice,
+                                      size_t count) const;
     [[nodiscard]] ValueResult<std::vector<std::vector<unsigned char>>>
     sendGetVectorVector(rocksdb::Slice first_key_slice, size_t count) const;
-    [[nodiscard]] ValueResult<std::vector<unsigned char>> messageEntryGetVector(
-        rocksdb::Slice first_key_slice) const;
+    [[nodiscard]] ValueResult<std::vector<unsigned char>>
+    sequencerBatchItemGetVector(rocksdb::Slice first_key_slice) const;
     [[nodiscard]] ValueResult<std::vector<unsigned char>> checkpointGetVector(
         rocksdb::Slice first_key_slice) const;
     [[nodiscard]] ValueResult<uint256_t> aggregatorGetUint256(

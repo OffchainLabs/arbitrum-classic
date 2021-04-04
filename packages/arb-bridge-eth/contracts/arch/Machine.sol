@@ -50,7 +50,6 @@ library Machine {
         Value.Data staticVal;
         uint256 arbGasRemaining;
         bytes32 errHandlerHash;
-        Value.Data pendingMessage;
         uint256 status;
     }
 
@@ -72,8 +71,6 @@ library Machine {
                     DebugPrint.uint2str(machine.arbGasRemaining),
                     ", \n",
                     DebugPrint.bytes32string(machine.errHandlerHash),
-                    ", \n",
-                    DebugPrint.bytes32string(machine.pendingMessage.hash()),
                     ")\n"
                 )
             );
@@ -114,8 +111,7 @@ library Machine {
                         machine.registerVal.hash(),
                         machine.staticVal.hash(),
                         machine.arbGasRemaining,
-                        machine.errHandlerHash,
-                        machine.pendingMessage.hash()
+                        machine.errHandlerHash
                     )
                 );
         }
@@ -131,7 +127,6 @@ library Machine {
                 machine.staticVal,
                 machine.arbGasRemaining,
                 machine.errHandlerHash,
-                machine.pendingMessage,
                 machine.status
             );
     }
@@ -156,7 +151,6 @@ library Machine {
         (offset, m.staticVal) = Marshaling.deserialize(data, offset);
         (offset, m.arbGasRemaining) = Marshaling.deserializeInt(data, offset);
         (offset, errHandler) = Marshaling.deserializeInt(data, offset);
-        (offset, m.pendingMessage) = Marshaling.deserialize(data, offset);
 
         m.instructionStackHash = bytes32(instructionStack);
         m.errHandlerHash = bytes32(errHandler);

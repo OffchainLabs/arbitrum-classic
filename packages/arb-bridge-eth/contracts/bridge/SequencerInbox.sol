@@ -59,7 +59,7 @@ contract SequencerInbox is ISequencerInbox {
         address sender,
         bytes32 messageDataHash
     ) external {
-        require(_totalDelayedMessagesRead > totalDelayedMessagesRead);
+        require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         bytes32 messageHash =
             Messages.messageHash(
                 kind,
@@ -70,8 +70,8 @@ contract SequencerInbox is ISequencerInbox {
                 gasPriceL1,
                 messageDataHash
             );
-        require(l1BlockNumber + maxDelayBlocks < block.number);
-        require(l1Timestamp + maxDelaySeconds < block.timestamp);
+        require(l1BlockNumber + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
+        require(l1Timestamp + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
         {
             bytes32 prevDelayedAcc = 0;
@@ -80,7 +80,8 @@ contract SequencerInbox is ISequencerInbox {
             }
             require(
                 delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1) ==
-                    Messages.addMessageToInbox(prevDelayedAcc, messageHash)
+                    Messages.addMessageToInbox(prevDelayedAcc, messageHash),
+                "DELAYED_ACCUMULATOR"
             );
         }
 
@@ -152,7 +153,7 @@ contract SequencerInbox is ISequencerInbox {
         require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
         require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
         require(timestamp <= block.timestamp, "TIME_TOO_NEW");
-        require(_totalDelayedMessagesRead >= totalDelayedMessagesRead);
+        require(_totalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
 
         (bytes32 beforeAcc, bytes32 acc, uint256 count) =
             includeDelayedMessages(_totalDelayedMessagesRead);
@@ -195,7 +196,7 @@ contract SequencerInbox is ISequencerInbox {
         bytes32 acc = beforeAcc;
         uint256 count = messageCount;
         if (_totalDelayedMessagesRead > totalDelayedMessagesRead) {
-            require(_totalDelayedMessagesRead <= delayedInbox.messageCount());
+            require(_totalDelayedMessagesRead <= delayedInbox.messageCount(), "DELAYED_TOO_FAR");
             acc = keccak256(
                 abi.encodePacked(
                     "Delayed messages:",

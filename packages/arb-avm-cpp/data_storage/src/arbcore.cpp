@@ -1419,40 +1419,132 @@ ArbCore::executionCursorGetMessages(ReadTransaction& tx,
                                             orig_message_group_size);
 }
 
-bool ArbCore::isValid(ReadTransaction& tx,
-                      const InboxState& fully_processed_inbox,
-                      const staged_variant& staged_message) {
-    auto inbox_accumulator = fully_processed_inbox.accumulator;
-    auto total_read = fully_processed_inbox.count;
-    auto possible_inbox_acc =
-        fully_processed_inbox.accWithStaged(staged_message);
-    if (possible_inbox_acc) {
-        inbox_accumulator = *possible_inbox_acc;
-        total_read = fully_processed_inbox.countWithStaged(staged_message);
+ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
+    ReadSnapshotTransaction& tx,
+    const InboxState& fully_processed_inbox,
+    size_t count) {
+    std::vector<MachineMessage> messages(count);
+    uint256_t start = fully_processed_inbox.count;
+    uint256_t end = start + count;
+    bool needs_consistency_check = false;
+    if (start > 0) {
+        // Check the previous item to ensure the inbox state is valid
+        start -= 1;
+        needs_consistency_check = true;
     }
 
-    if (total_read > 0) {
-        auto stored_result = getMessageEntry(tx, total_read - 1);
-        if (!stored_result.status.ok()) {
-            // Obsolete machine, reorg occurred
-            return false;
-        }
+    std::vector<unsigned char> tmp(32 * 3);
+    rocksdb::Slice seq_batch_lower_bound;
+    {
+        auto ptr = reinterpret_cast<const char*>(tmp.data() + tmp.size());
+        marshal_uint256_t(start, tmp);
+        seq_batch_lower_bound = {ptr, 32};
+    }
+    rocksdb::Slice seq_batch_upper_bound;
+    {
+        auto ptr = reinterpret_cast<const char*>(tmp.data() + tmp.size());
+        marshal_uint256_t(end, tmp);
+        seq_batch_upper_bound = {ptr, 32};
+    }
+    auto seq_batch_it = tx.sequencerBatchItemGetIterator(
+        &seq_batch_lower_bound, &seq_batch_upper_bound);
 
-        if (inbox_accumulator != stored_result.data.inbox_acc) {
-            // Obsolete machine, reorg occurred
-            return false;
-        }
-
-        if (!possible_inbox_acc.has_value()) {
-            // We must have an unresolved staged message
-            // Verify that the last consumed is still the last in the block
-            if (!stored_result.data.last_message_in_block) {
-                // Reorg occured
-                return false;
+    uint256_t prev_delayed_count = 0;
+    rocksdb::Slice delayed_msg_lower_bound;
+    std::unique_ptr<rocksdb::Iterator> delayed_msg_it;
+    for (seq_batch_it->Seek(seq_batch_lower_bound); seq_batch_it->Valid();
+         seq_batch_it->Next()) {
+        auto item_key_ptr =
+            reinterpret_cast<const unsigned char*>(seq_batch_it->key().data());
+        auto item_value_ptr = reinterpret_cast<const unsigned char*>(
+            seq_batch_it->value().data());
+        auto last_sequence_number = extractUint256(item_key_ptr);
+        auto item =
+            deserializeSequencerBatchItem(last_sequence_number, item_value_ptr);
+        if (needs_consistency_check) {
+            if (item.accumulator != fully_processed_inbox.accumulator) {
+                return {rocksdb::Status::NotFound(), {}};
             }
+            assert(item.last_sequence_number + 1 ==
+                   fully_processed_inbox.count);
+            needs_consistency_check = false;
+            prev_delayed_count = item.total_delayed_count;
+            continue;
         }
+        if (item.sequencer_message) {
+            messages.emplace_back(extractInboxMessage(*item.sequencer_message),
+                                  item.accumulator);
+            if (prev_delayed_count != item.total_delayed_count) {
+                throw std::runtime_error(
+                    "Sequencer batch item included both sequencer message and "
+                    "delayed messages");
+            }
+        } else if (item.total_delayed_count > prev_delayed_count) {
+            if (!delayed_msg_it) {
+                {
+                    auto ptr =
+                        reinterpret_cast<const char*>(tmp.data() + tmp.size());
+                    marshal_uint256_t(prev_delayed_count, tmp);
+                    delayed_msg_lower_bound = {ptr, 32};
+                }
+                delayed_msg_it =
+                    tx.delayedMessageGetIterator(&delayed_msg_lower_bound);
+            }
+
+            while (delayed_msg_it->Valid() &&
+                   prev_delayed_count < item.total_delayed_count &&
+                   messages.size() < count) {
+                auto delayed_key_ptr = reinterpret_cast<const unsigned char*>(
+                    delayed_msg_it->key().data());
+                auto delayed_value_ptr = reinterpret_cast<const unsigned char*>(
+                    delayed_msg_it->value().data());
+                if (extractUint256(delayed_key_ptr) != prev_delayed_count) {
+                    throw std::runtime_error(
+                        "Got wrong delayed message from database");
+                }
+                auto delayed_message = deserializeDelayedMessage(
+                    prev_delayed_count, delayed_value_ptr);
+                messages.emplace_back(
+                    extractInboxMessage(delayed_message.message),
+                    item.accumulator);
+                prev_delayed_count += 1;
+                delayed_msg_it->Next();
+            }
+
+            if (!delayed_msg_it->status().ok()) {
+                return {delayed_msg_it->status(), {}};
+            }
+            if (messages.size() < count &&
+                prev_delayed_count != item.total_delayed_count) {
+                throw std::runtime_error(
+                    "Sequencer batch item referenced nonexistent delayed "
+                    "messages");
+            }
+        } else {
+            // This batch item does nothing?
+            assert(false);
+        }
+        if (messages.size() >= count) {
+            break;
+        }
+        assert(item.last_sequence_number + 1 ==
+               fully_processed_inbox.count + messages.size());
     }
-    return true;
+
+    if (!seq_batch_it->status().ok()) {
+        return {seq_batch_it->status(), {}};
+    }
+    if (needs_consistency_check) {
+        return {rocksdb::Status::NotFound(), {}};
+    }
+
+    return {rocksdb::Status::OK(), messages};
+}
+
+bool ArbCore::isValid(ReadSnapshotTransaction& tx,
+                      const InboxState& fully_processed_inbox) {
+    auto res = readNextMessages(tx, fully_processed_inbox, 0);
+    return res.status.ok();
 }
 
 ValueResult<std::pair<bool, std::vector<InboxMessage>>>

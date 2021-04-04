@@ -182,26 +182,14 @@ InboxMessage InboxMessage::fromTuple(const Tuple& tup) {
 
 void MachineMessage::serializeImpl(
     std::vector<unsigned char>& state_data_vector) const {
-    marshal_uint256_t(batch_index, state_data_vector);
     marshal_uint256_t(accumulator, state_data_vector);
-    if (delayed_index) {
-        state_data_vector.push_back(1);
-        marshal_uint256_t(*delayed_index, state_data_vector);
-    } else {
-        state_data_vector.push_back(0);
-    }
     message.serializeImpl(state_data_vector);
 }
 
 MachineMessage extractMachineMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end) {
-    uint256_t batch_index = extractUint256(current_iter);
     uint256_t accumulator = extractUint256(current_iter);
-    std::optional<uint256_t> delayed_index;
-    if (*current_iter++) {
-        delayed_index = extractUint256(current_iter);
-    }
     InboxMessage message = extractInboxMessageImpl(current_iter, end);
-    return {message, batch_index, accumulator, delayed_index};
+    return {message, accumulator};
 }

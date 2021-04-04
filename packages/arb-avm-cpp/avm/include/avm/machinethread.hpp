@@ -27,11 +27,6 @@
 #include <thread>
 #include <vector>
 
-struct ReorgState {
-    InboxState max_inbox;
-    staged_variant max_staged;
-};
-
 class MachineThread : public Machine {
    public:
     typedef enum {
@@ -45,7 +40,7 @@ class MachineThread : public Machine {
    private:
     std::unique_ptr<std::thread> machine_thread;
 
-    ReorgState reorg_check_data;
+    InboxState reorg_check_data;
 
     // Machine thread communication
     std::atomic<bool> machine_abort{false};
@@ -58,8 +53,7 @@ class MachineThread : public Machine {
     ~MachineThread() { abortMachine(); }
     explicit MachineThread(MachineState machine_state_)
         : Machine(std::move(machine_state_)),
-          reorg_check_data{machine_state.output.fully_processed_inbox,
-                           machine_state.staged_message} {}
+          reorg_check_data(machine_state.output.fully_processed_inbox) {}
     MachineThread(std::shared_ptr<Code> code, value static_val)
         : Machine(std::move(code), std::move(static_val)) {}
 
@@ -70,7 +64,7 @@ class MachineThread : public Machine {
     std::string getErrorString();
     void clearError();
     Assertion nextAssertion();
-    ReorgState getReorgData() const { return reorg_check_data; }
+    InboxState getReorgData() const { return reorg_check_data; }
 
     void operator()();
 };

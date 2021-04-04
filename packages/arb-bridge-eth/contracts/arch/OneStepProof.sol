@@ -559,26 +559,8 @@ contract OneStepProof is OneStepProofCommon {
         return Value.newTuple(tupData);
     }
 
-    function executeInboxPeekInsn(AssertionContext memory context) internal view {
-        Value.Data memory val = popVal(context.stack);
-        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
-            context.afterMachine.pendingMessage = incrementInbox(context);
-        }
-        // The pending message must be a tuple of size at least 2
-        pushVal(
-            context.stack,
-            Value.newBoolean(context.afterMachine.pendingMessage.tupleVal[1].hash() == val.hash())
-        );
-    }
-
     function executeInboxInsn(AssertionContext memory context) internal view {
-        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
-            // The pending message field is already full
-            pushVal(context.stack, context.afterMachine.pendingMessage);
-            context.afterMachine.pendingMessage = Value.newEmptyTuple();
-        } else {
-            pushVal(context.stack, incrementInbox(context));
-        }
+        pushVal(context.stack, incrementInbox(context));
     }
 
     function executeSetGasInsn(AssertionContext memory context) internal pure {
@@ -891,8 +873,6 @@ contract OneStepProof is OneStepProofCommon {
             return (0, 0, 100, executeNopInsn);
         } else if (opCode == OP_LOG) {
             return (1, 0, 100, executeLogInsn);
-        } else if (opCode == OP_INBOX_PEEK) {
-            return (1, 0, 40, executeInboxPeekInsn);
         } else if (opCode == OP_INBOX) {
             return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {

@@ -84,61 +84,15 @@ struct OneStepProof {
 
 struct InboxState {
     uint256_t count;
-    uint256_t batch_count;
     uint256_t accumulator;
-    uint256_t delayed_count;
 
     void addMessage(const MachineMessage& message) {
-        if (message.batch_index + 1 == batch_count) {
-            if (message.accumulator != accumulator) {
-                throw std::runtime_error(
-                    "Attempted to add incompatible message to inbox state");
-            }
-        } else {
-            if (message.batch_index != batch_count) {
-                throw std::runtime_error(
-                    "Attempted to add non-sequential message to inbox state");
-            }
-            accumulator = message.accumulator;
-        }
-        if (message.delayed_index) {
-            if (message.delayed_index != delayed_count) {
-                throw std::runtime_error(
-                    "Attempted to add non-sequential delayed message to inbox "
-                    "state");
-            }
-            delayed_count = *message.delayed_index + 1;
+        accumulator = message.accumulator;
+        if (message.message.inbox_sequence_number != count) {
+            throw std::runtime_error(
+                "Attempted to add non-sequential message to inbox state");
         }
         count += 1;
-    }
-
-    uint256_t countWithStaged(const staged_variant& staged_message) const {
-        if (std::holds_alternative<std::monostate>(staged_message)) {
-            return count;
-        } else {
-            return count + 1;
-        }
-    }
-
-    std::optional<InboxState> inboxWithStaged(
-        const staged_variant& staged_message) const {
-        if (auto message = std::get_if<MachineMessage>(&staged_message)) {
-            InboxState new_state(*this);
-            new_state.addMessage(*message);
-            return new_state;
-        } else if (std::holds_alternative<std::monostate>(staged_message)) {
-            return *this;
-        } else {
-            return std::nullopt;
-        }
-    }
-
-    std::optional<uint256_t> accWithStaged(
-        const staged_variant& staged_message) const {
-        if (auto new_state = inboxWithStaged(staged_message)) {
-            return new_state->accumulator;
-        }
-        return std::nullopt;
     }
 };
 
@@ -161,7 +115,6 @@ struct MachineStateKeys {
     uint256_t arb_gas_remaining;
     CodePointStub pc;
     CodePointStub err_pc;
-    staged_variant staged_message;
     Status status;
     MachineOutput output;
 
@@ -172,7 +125,6 @@ struct MachineStateKeys {
                      uint256_t arb_gas_remaining_,
                      CodePointStub pc_,
                      CodePointStub err_pc_,
-                     staged_variant staged_message_,
                      Status status_,
                      MachineOutput output_)
         : static_hash(static_hash_),
@@ -182,7 +134,6 @@ struct MachineStateKeys {
           arb_gas_remaining(arb_gas_remaining_),
           pc(pc_),
           err_pc(err_pc_),
-          staged_message(std::move(staged_message_)),
           status(status_),
           output(std::move(output_)) {}
 
@@ -206,7 +157,6 @@ struct MachineState {
     Status state{Status::Extensive};
     CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
-    staged_variant staged_message{std::monostate()};
 
     MachineOutput output;
 
@@ -227,7 +177,6 @@ struct MachineState {
                  Status state_,
                  CodePointRef pc_,
                  CodePointStub errpc_,
-                 staged_variant staged_message_,
                  MachineOutput output_);
 
     uint256_t getMachineSize() const;

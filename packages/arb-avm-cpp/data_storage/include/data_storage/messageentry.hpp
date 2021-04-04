@@ -26,39 +26,47 @@
 #include <data_storage/value/machine.hpp>
 #include <utility>
 
-struct MessageEntry {
-    // sequence_number not serialized/deserialized because it is part of index
-    uint256_t sequence_number{};
+struct SequencerBatchItem {
+    // last_sequence_number is the key in the DB; not serialized in the value
+    uint256_t last_sequence_number;
 
-    uint256_t inbox_acc;
-    uint64_t block_height{};
-    bool last_message_in_block{};
-    std::vector<unsigned char> data;
-
-    MessageEntry() = default;
-    MessageEntry(uint256_t sequence_number,
-                 uint256_t inbox_acc,
-                 uint64_t block_height,
-                 bool last_message_in_block,
-                 std::vector<unsigned char> message)
-        : sequence_number(sequence_number),
-          inbox_acc(inbox_acc),
-          block_height(block_height),
-          last_message_in_block(last_message_in_block),
-          data(std::move(message)) {}
+    uint256_t accumulator;
+    uint256_t total_delayed_count;
+    std::optional<std::vector<unsigned char>> sequencer_message;
 };
 
-MessageEntry extractMessageEntry(uint256_t sequence_number,
-                                 rocksdb::Slice value);
+template <typename Iterator>
+SequencerBatchItem deserializeSequencerBatchItem(uint256_t last_sequence_number,
+                                                 Iterator& entry_vector) {
+    auto accumulator = extractUint256(current_iter);
+    auto total_delayed_count = extractUint256(current_iter);
+    std::optional<std::vector<unsigned char>> sequencer_message;
+    if (current_iter != entry_vector.end()) {
+        sequencer_message = std::vector(current_iter, entry_vector.end());
+    }
+    return {last_sequence_number, accumulator, total_delayed_count,
+            sequencer_message};
+}
 
-MessageEntry deserializeMessageEntry(
-    uint256_t sequence_number,
-    const std::vector<unsigned char>& entry_vector);
+std::vector<unsigned char> serializeSequencerBatchItem(
+    const SequencerBatchItem& item);
 
-std::vector<unsigned char> serializeMessageEntry(
-    const MessageEntry& state_data);
+struct DelayedMessage {
+    // delayed_sequence_number is the key in the DB; not serialized in the value
+    uint256_t delayed_sequence_number;
 
-bool operator==(const MessageEntry& lhs, const MessageEntry& rhs);
-bool operator!=(const MessageEntry& lhs, const MessageEntry& rhs);
+    uint256_t delayed_accumulator;
+    std::vector<unsigned char> message;
+};
+
+template <typename Iterator>
+DelayedMessage deserializeDelayedMessage(uint256_t delayed_sequence_number,
+                                         Iterator& current_iter) {
+    auto delayed_accumulator = extractUint256(current_iter);
+    std::vector<unsigned char> message(current_iter, entry_vector.end());
+    return {delayed_sequence_number, delayed_accumulator, message};
+}
+
+std::vector<unsigned char> serializeDelayedMessage(const DelayedMessage& item);
 
 #endif /* data_storage_messageentry_hpp */

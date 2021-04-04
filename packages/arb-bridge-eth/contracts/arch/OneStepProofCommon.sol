@@ -113,7 +113,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     // System operations
     uint8 internal constant OP_SEND = 0x70;
-    uint8 internal constant OP_INBOX_PEEK = 0x71;
+    // OP_INBOX_PEEK has been removed
     uint8 internal constant OP_INBOX = 0x72;
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;

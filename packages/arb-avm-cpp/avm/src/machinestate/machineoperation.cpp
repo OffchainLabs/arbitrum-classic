@@ -897,44 +897,13 @@ void send(MachineState& m) {
     ++m.pc;
 }
 
-BlockReason inboxPeekOp(MachineState& m) {
-    m.stack.prepForMod(1);
-    if (m.stagedMessageEmpty()) {
-        if (!m.context.inboxEmpty()) {
-            m.staged_message = m.context.popInbox();
-        } else if (m.context.next_block_height.has_value()) {
-            // The inboxPeekOp should always leave a message Tuple in
-            // staged_message so that hashes always come out consistently.
-            // The current message is annotated as end of block, and the next
-            // block number is known, so store the blocked number as a uint256_t
-            // value in staged_message.  This way, any function
-            // that uses staged_message can throw an error when staged_message
-            // is something other than a non-empty Tuple, and the uint256_t can
-            // be replaced by a valid message Tuple when it becomes available.
-            m.staged_message = *m.context.next_block_height;
-        }
-    }
-
-    auto next_block_height = m.getStagedMessageBlockHeight();
-    if (!next_block_height) {
-        // Don't have information needed to continue
-        return InboxBlocked();
-    }
-
-    m.stack[0] = m.stack[0] == value{*next_block_height} ? 1 : 0;
-    ++m.pc;
-    return NotBlocked{};
-}
-
 BlockReason inboxOp(MachineState& m) {
     if (m.stagedMessageUnresolved()) {
         return InboxBlocked();
     }
 
     MachineMessage next_message;
-    if (std::holds_alternative<MachineMessage>(m.staged_message)) {
-        next_message = std::get<MachineMessage>(m.staged_message);
-    } else if (m.stagedMessageEmpty() && !m.context.inboxEmpty()) {
+    if (!m.context.inboxEmpty()) {
         next_message = m.context.popInbox();
     } else {
         return InboxBlocked();
@@ -942,7 +911,6 @@ BlockReason inboxOp(MachineState& m) {
 
     m.addProcessedMessage(next_message);
     m.stack.push(next_message.message.toTuple());
-    m.staged_message = std::monostate();
     ++m.pc;
     return NotBlocked{};
 }

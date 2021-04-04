@@ -279,9 +279,6 @@ class ArbCore {
     rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
                                          T& machine_state);
     // Private database interaction
-    ValueResult<MessageEntry> getMessageEntry(
-        const ReadTransaction& tx,
-        uint256_t message_sequence_number) const;
     ValueResult<uint256_t> logInsertedCountImpl(
         const ReadTransaction& tx) const;
 
@@ -315,9 +312,13 @@ class ArbCore {
                                                   uint256_t count,
                                                   ValueCache& valueCache);
 
-    bool isValid(ReadTransaction& tx,
-                 const InboxState& fully_processed_inbox,
-                 const staged_variant& staged_message);
+    ValueResult<std::vector<MachineMessage>> readNextMessages(
+        ReadSnapshotTransaction& tx,
+        const InboxState& fully_processed_inbox,
+        size_t count);
+
+    bool isValid(ReadSnapshotTransaction& tx,
+                 const InboxState& fully_processed_inbox);
 
     ValueResult<std::pair<bool, std::vector<InboxMessage>>>
     executionCursorGetMessages(ReadTransaction& tx,
