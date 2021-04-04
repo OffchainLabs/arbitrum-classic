@@ -44,7 +44,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Caller().Str("component", "txdb").Logger()
+var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type ChainTimeGetter interface {
 	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
@@ -231,7 +231,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("Error parsing log result")
+		logger.Error().Err(err).Msg("Error parsing log result")
 		return nil
 	}
 

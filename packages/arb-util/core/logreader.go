@@ -9,7 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "core").Logger()
+var logger = log.With().Caller().Stack().Str("component", "core").Logger()
 
 type LogReader struct {
 	consumer    LogConsumer

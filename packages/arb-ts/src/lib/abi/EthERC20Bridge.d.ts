@@ -35,9 +35,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'l2Address()': FunctionFragment
     'notifyCustomToken(address,uint256,uint256,uint256)': FunctionFragment
     'registerCustomL2Token(address)': FunctionFragment
-    'updateL2Address(address)': FunctionFragment
-    'updateOwner(address)': FunctionFragment
-    'updateTemplates(address,address)': FunctionFragment
     'updateTokenInfo(address,uint8,uint256,uint256,uint256)': FunctionFragment
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
@@ -118,15 +115,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     values: [string]
   ): string
   encodeFunctionData(
-    functionFragment: 'updateL2Address',
-    values: [string]
-  ): string
-  encodeFunctionData(functionFragment: 'updateOwner', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'updateTemplates',
-    values: [string, string]
-  ): string
-  encodeFunctionData(
     functionFragment: 'updateTokenInfo',
     values: [string, BigNumberish, BigNumberish, BigNumberish, BigNumberish]
   ): string
@@ -172,15 +160,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'registerCustomL2Token',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'updateL2Address',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'updateOwner', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'updateTemplates',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -383,38 +362,6 @@ export class EthERC20Bridge extends Contract {
 
     'registerCustomL2Token(address)'(
       l2Address: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateL2Address(
-      newL2Address: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateL2Address(address)'(
-      newL2Address: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateOwner(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -622,38 +569,6 @@ export class EthERC20Bridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  updateL2Address(
-    newL2Address: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateL2Address(address)'(
-    newL2Address: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  updateOwner(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateOwner(address)'(
-    newOwner: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  updateTemplates(
-    erc20: string,
-    erc777: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateTemplates(address,address)'(
-    erc20: string,
-    erc777: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   updateTokenInfo(
     erc20: string,
     tokenType: BigNumberish,
@@ -855,35 +770,6 @@ export class EthERC20Bridge extends Contract {
 
     'registerCustomL2Token(address)'(
       l2Address: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    updateL2Address(
-      newL2Address: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateL2Address(address)'(
-      newL2Address: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    updateOwner(newOwner: string, overrides?: CallOverrides): Promise<void>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1117,35 +1003,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    updateL2Address(
-      newL2Address: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateL2Address(address)'(
-      newL2Address: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    updateOwner(newOwner: string, overrides?: Overrides): Promise<BigNumber>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     updateTokenInfo(
       erc20: string,
       tokenType: BigNumberish,
@@ -1351,38 +1208,6 @@ export class EthERC20Bridge extends Contract {
 
     'registerCustomL2Token(address)'(
       l2Address: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateL2Address(
-      newL2Address: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateL2Address(address)'(
-      newL2Address: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateOwner(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateOwner(address)'(
-      newOwner: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateTemplates(
-      erc20: string,
-      erc777: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateTemplates(address,address)'(
-      erc20: string,
-      erc777: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
