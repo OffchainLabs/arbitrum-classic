@@ -219,7 +219,8 @@ contract EthERC20Bridge {
         bytes memory callHookData
     ) internal returns (uint256) {
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
-        // TODO: check deploy attempt
+        require(deployAttempt[erc20], "Must have attempted to deploy before depositing");
+
         IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
         uint256 seqNum = 0;
         {
@@ -307,8 +308,11 @@ contract EthERC20Bridge {
     ) internal returns (uint256) {
         require(tokenType != StandardTokenType.Custom, "Custom token should already be deployed");
         require(tokenType != StandardTokenType.ERC777, "777 disabled");
-        // TODO: write to mapping that deploy attempt
+        // record that deploy attempt was made
+        deployAttempt[erc20] = true;
 
+        // TODO: use OZ's ERC20Metadata once available
+        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
         bytes memory deployData =
             abi.encode(
                 callStatic(erc20, ERC20.name.selector),
