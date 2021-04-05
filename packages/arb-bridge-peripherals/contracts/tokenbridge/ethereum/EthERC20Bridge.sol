@@ -51,6 +51,10 @@ contract EthERC20Bridge {
     address public l2ArbTokenBridgeAddress;
     IInbox public inbox;
 
+    // assumes only ERC20 tokens are deployed.
+    // can only deposit after a deploy attempt
+    mapping(address => bool) public deployAttempt;
+
     modifier onlyL2Address {
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
         require(l2ArbTokenBridgeAddress == outbox.l2ToL1Sender(), "Not from l2 buddy");
@@ -59,12 +63,10 @@ contract EthERC20Bridge {
 
     event ActivateCustomToken(uint256 indexed seqNum, address indexed l1Address, address l2Address);
 
-    event UpdateTokenInfo(
+    event DeployToken(
         uint256 indexed seqNum,
         address indexed l1Address,
-        bytes name,
-        bytes symbol,
-        bytes decimals
+        StandardTokenType indexed tokenType
     );
 
     event DepositToken(
@@ -121,6 +123,8 @@ contract EthERC20Bridge {
         address refundAddress
     ) external payable returns (uint256) {
         address l1CustomTokenAddress = msg.sender;
+        // TODO: what happens if users already bridged token to L2?
+        // require(!deployAttempt[l1CustomTokenAddress], "Token already deployed in L2");
         require(
             customL2Tokens[l1CustomTokenAddress] == address(0),
             "Cannot re-register a custom token address"
@@ -197,41 +201,6 @@ contract EthERC20Bridge {
         return res;
     }
 
-    function updateTokenInfo(
-        address erc20,
-        StandardTokenType tokenType,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid
-    ) external payable returns (uint256) {
-        bytes memory name = callStatic(erc20, ERC20.name.selector);
-        bytes memory symbol = callStatic(erc20, ERC20.symbol.selector);
-        bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
-
-        bytes memory data =
-            abi.encodeWithSelector(
-                ArbTokenBridge.updateTokenInfo.selector,
-                erc20,
-                tokenType,
-                name,
-                symbol,
-                decimals
-            );
-        uint256 seqNum =
-            inbox.createRetryableTicket{ value: msg.value }(
-                l2ArbTokenBridgeAddress,
-                0,
-                maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                maxGas,
-                gasPriceBid,
-                data
-            );
-        emit UpdateTokenInfo(seqNum, erc20, name, symbol, decimals);
-        return seqNum;
-    }
-
     // hacky struct to avoid stack size limit
     struct RetryableTxParams {
         uint256 maxSubmissionCost;
@@ -246,13 +215,14 @@ contract EthERC20Bridge {
         uint256 amount,
         RetryableTxParams memory retryableParams,
         StandardTokenType tokenType,
+        bytes memory deployData,
         bytes memory callHookData
-    ) private returns (uint256) {
+    ) internal returns (uint256) {
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
+        // TODO: check deploy attempt
         IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
         uint256 seqNum = 0;
         {
-            bytes memory decimals = callStatic(erc20, ERC20.decimals.selector);
             bytes memory data =
                 abi.encodeWithSelector(
                     ArbTokenBridge.mintFromL1.selector,
@@ -261,7 +231,7 @@ contract EthERC20Bridge {
                     tokenType,
                     destination,
                     amount,
-                    decimals,
+                    deployData,
                     callHookData
                 );
 
@@ -281,6 +251,84 @@ contract EthERC20Bridge {
         return seqNum;
     }
 
+    function deployAndDepositAsERC20(
+        address erc20,
+        address destination,
+        uint256 amount,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes calldata callHookData
+    ) external payable returns (uint256) {
+        return
+            deployAndDeposit(
+                erc20,
+                destination,
+                amount,
+                maxSubmissionCost,
+                maxGas,
+                gasPriceBid,
+                StandardTokenType.ERC20,
+                callHookData
+            );
+    }
+
+    function deployAndDepositAsERC777(
+        address erc20,
+        address destination,
+        uint256 amount,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes calldata callHookData
+    ) external payable returns (uint256) {
+        return
+            deployAndDeposit(
+                erc20,
+                destination,
+                amount,
+                maxSubmissionCost,
+                maxGas,
+                gasPriceBid,
+                StandardTokenType.ERC777,
+                callHookData
+            );
+    }
+
+    function deployAndDeposit(
+        address erc20,
+        address destination,
+        uint256 amount,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        StandardTokenType tokenType,
+        bytes calldata callHookData
+    ) internal returns (uint256) {
+        require(tokenType != StandardTokenType.Custom, "Custom token should already be deployed");
+        require(tokenType != StandardTokenType.ERC777, "777 disabled");
+        // TODO: write to mapping that deploy attempt
+
+        bytes memory deployData =
+            abi.encode(
+                callStatic(erc20, ERC20.name.selector),
+                callStatic(erc20, ERC20.symbol.selector),
+                callStatic(erc20, ERC20.decimals.selector)
+            );
+
+        return
+            depositToken(
+                erc20,
+                msg.sender,
+                destination,
+                amount,
+                RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
+                tokenType,
+                deployData,
+                callHookData
+            );
+    }
+
     function depositAsERC777(
         address erc20,
         address destination,
@@ -298,6 +346,7 @@ contract EthERC20Bridge {
                 amount,
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
                 StandardTokenType.ERC777,
+                "",
                 callHookData
             );
     }
@@ -319,6 +368,7 @@ contract EthERC20Bridge {
                 amount,
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
                 StandardTokenType.ERC20,
+                "",
                 callHookData
             );
     }
@@ -342,6 +392,7 @@ contract EthERC20Bridge {
                 amount,
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
                 StandardTokenType.Custom,
+                "",
                 callHookData
             );
     }
