@@ -57,22 +57,24 @@ void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr) {
 }
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           ByteSliceArray inbox_messages,
                            void* previous_inbox_acc_ptr,
-                           const int last_block_complete,
+                           ByteSliceArray sequencer_batch_items_slice,
+                           ByteSliceArray delayed_messages_slice,
                            void* reorg_message_count_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto messages = receiveByteSliceArray(inbox_messages);
     auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
+    auto sequencer_batch_items =
+        receiveByteSliceArray(sequencer_batch_items_slice);
+    auto delayed_messages = receiveByteSliceArray(delayed_messages_slice);
     std::optional<uint256_t> reorg_message_count;
     if (reorg_message_count_ptr != nullptr) {
         reorg_message_count = receiveUint256(reorg_message_count_ptr);
     }
 
     try {
-        auto status =
-            arb_core->deliverMessages(std::move(messages), previous_inbox_acc,
-                                      last_block_complete, reorg_message_count);
+        auto status = arb_core->deliverMessages(
+            previous_inbox_acc, std::move(sequencer_batch_items),
+            std::move(delayed_messages), reorg_message_count);
         return status;
     } catch (const std::exception& e) {
         return false;
@@ -218,6 +220,28 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
         return true;
     } catch (const std::exception& e) {
         return false;
+    }
+}
+
+int64_t arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr,
+                                      const void* data,
+                                      uint64_t count) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        std::vector<std::pair<uint256_t, uint256_t>> input;
+        for (uint64_t i = 0; i < count; i++) {
+            auto seq_num = extractUint256(data);
+            auto acc = extractUint256(data);
+            input.emplace_back(seq_num, acc);
+        }
+
+        auto result = arb_core->countMatchingBatchAccs(input);
+        if (!result.status.ok()) {
+            return -1;
+        }
+        return static_cast<int64_t>(result.data);
+    } catch (const std::exception& e) {
+        return -1;
     }
 }
 

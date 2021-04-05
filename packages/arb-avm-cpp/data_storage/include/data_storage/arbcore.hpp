@@ -61,11 +61,10 @@ struct RawMessageInfo {
 class ArbCore {
    public:
     typedef enum {
-        MESSAGES_EMPTY,       // Out: Ready to receive messages
-        MESSAGES_READY,       // In:  Messages in vector
-        MESSAGES_SUCCESS,     // Out:  Messages processed successfully
-        MESSAGES_NEED_OLDER,  // Out: Last message invalid, need older messages
-        MESSAGES_ERROR        // Out: Error processing messages
+        MESSAGES_EMPTY,    // Out: Ready to receive messages
+        MESSAGES_READY,    // In:  Messages in vector
+        MESSAGES_SUCCESS,  // Out:  Messages processed successfully
+        MESSAGES_ERROR     // Out: Error processing messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -76,10 +75,10 @@ class ArbCore {
 
    private:
     struct message_data_struct {
-        std::vector<std::vector<unsigned char>> messages;
-        uint256_t previous_inbox_acc;
-        bool last_block_complete{false};
-        std::optional<uint256_t> reorg_message_count;
+        uint256_t previous_batch_acc;
+        std::vector<std::vector<unsigned char>> sequencer_batch_items;
+        std::vector<std::vector<unsigned char>> delayed_messages;
+        std::optional<uint256_t> reorg_batch_items;
     };
 
    private:
@@ -206,10 +205,11 @@ class ArbCore {
 
    public:
     // Sending messages to core thread
-    bool deliverMessages(std::vector<std::vector<unsigned char>> messages,
-                         const uint256_t& previous_inbox_acc,
-                         bool last_block_complete,
-                         const std::optional<uint256_t>& reorg_height);
+    bool deliverMessages(
+        const uint256_t& previous_inbox_acc,
+        std::vector<std::vector<unsigned char>> sequencer_batch_items,
+        std::vector<std::vector<unsigned char>> delayed_messages,
+        const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
     std::string messagesClearError();
 
@@ -281,6 +281,9 @@ class ArbCore {
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
         uint256_t index2);
+
+    ValueResult<size_t> countMatchingBatchAccs(
+        std::vector<std::pair<uint256_t, uint256_t>> seq_nums_and_accs) const;
 
    private:
     ValueResult<std::vector<RawMessageInfo>> getMessagesImpl(

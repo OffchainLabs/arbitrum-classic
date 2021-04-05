@@ -30,9 +30,9 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           ByteSliceArray inbox_messages,
                            void* previous_inbox_acc_ptr,
-                           int last_block_complete,
+                           ByteSliceArray sequencer_batch_items_slice,
+                           ByteSliceArray delayed_messages_slice,
                            void* reorg_message_count_ptr);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
@@ -59,6 +59,9 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
                            const void* index2_ptr,
                            void* ret1,
                            void* ret2);
+int64_t arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr,
+                                      const void* data,
+                                      uint64_t count);
 
 Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
                                            const void* index_ptr);

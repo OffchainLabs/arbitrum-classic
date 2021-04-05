@@ -75,8 +75,7 @@ ArbCore::message_status_enum ArbCore::messagesStatus() {
 }
 
 std::string ArbCore::messagesClearError() {
-    if (message_data_status != ArbCore::MESSAGES_ERROR &&
-        message_data_status != ArbCore::MESSAGES_NEED_OLDER) {
+    if (message_data_status != ArbCore::MESSAGES_ERROR) {
         return "";
     }
 
@@ -119,18 +118,18 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(
-    std::vector<std::vector<unsigned char>> messages,
-    const uint256_t& previous_inbox_acc,
-    bool last_block_complete,
-    const std::optional<uint256_t>& reorg_message_count) {
+    const uint256_t& previous_batch_acc,
+    std::vector<std::vector<unsigned char>> sequencer_batch_items,
+    std::vector<std::vector<unsigned char>> delayed_messages,
+    const std::optional<uint256_t>& reorg_batch_items) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
     }
 
-    message_data.messages = std::move(messages);
-    message_data.previous_inbox_acc = previous_inbox_acc;
-    message_data.last_block_complete = last_block_complete;
-    message_data.reorg_message_count = reorg_message_count;
+    message_data.previous_batch_acc = previous_batch_acc;
+    message_data.sequencer_batch_items = std::move(sequencer_batch_items);
+    message_data.delayed_messages = std::move(delayed_messages);
+    message_data.reorg_batch_items = reorg_batch_items;
 
     message_data_status = MESSAGES_READY;
 
@@ -637,15 +636,12 @@ void ArbCore::operator()() {
         }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
-            auto add_status = addMessages(
-                message_data.messages, message_data.last_block_complete,
-                message_data.previous_inbox_acc,
-                message_data.reorg_message_count, cache);
-            if (!add_status) {
-                // Messages from previous block invalid because of reorg so
-                // request older messages
-                message_data_status = MESSAGES_NEED_OLDER;
-            } else if (!add_status->ok()) {
+            auto add_status =
+                addMessages(message_data.previous_batch_acc,
+                            message_data.sequencer_batch_items,
+                            message_data.delayed_messages,
+                            message_data.reorg_batch_items, cache);
+            if (!add_status->ok()) {
                 core_error_string = add_status->ToString();
                 message_data_status = MESSAGES_ERROR;
                 std::cerr << "ArbCore inbox processed stopped with error: "
@@ -1173,6 +1169,56 @@ ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
 
     return {rocksdb::Status::OK(),
             {result1.data.accumulator, result2.data.accumulator}};
+}
+
+ValueResult<size_t> ArbCore::countMatchingBatchAccs(
+    std::vector<std::pair<uint256_t, uint256_t>> seq_nums_and_accs) const {
+    if (seq_nums_and_accs.empty()) {
+        return {rocksdb::Status::OK(), 0};
+    }
+
+    size_t matching = 0;
+    std::vector<unsigned char> tmp(32 * 2);
+    uint256_t first_seq = seq_nums_and_accs[0].first;
+    rocksdb::Slice lower_bound;
+    {
+        auto ptr = reinterpret_cast<const char*>(tmp.data());
+        marshal_uint256_t(first_seq, tmp);
+        lower_bound = {ptr, 32};
+    }
+
+    ReadTransaction tx(data_storage);
+    auto it = tx.sequencerBatchItemGetIterator(&lower_bound);
+    for (auto& seq_and_acc : seq_nums_and_accs) {
+        if (seq_and_acc.first < first_seq) {
+            throw std::runtime_error(
+                "countMatchingBatchAccs received unsorted parameters");
+        }
+        rocksdb::Slice key_slice;
+        {
+            tmp.resize(32);
+            auto ptr = reinterpret_cast<const char*>(tmp.data() + tmp.size());
+            marshal_uint256_t(seq_and_acc.first, tmp);
+            key_slice = {ptr, 32};
+        }
+        it->Seek(key_slice);
+        if (!it->Valid()) {
+            if (!it->status().ok()) {
+                return {it->status(), 0};
+            }
+            break;
+        }
+        auto value_ptr =
+            reinterpret_cast<const unsigned char*>(it->value().data());
+        auto have_acc = extractUint256(value_ptr);
+        if (have_acc == seq_and_acc.second) {
+            matching++;
+        } else {
+            break;
+        }
+    }
+
+    return {rocksdb::Status::OK(), matching};
 }
 
 uint256_t ArbCore::machineMessagesRead() {
