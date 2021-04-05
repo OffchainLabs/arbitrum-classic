@@ -87,8 +87,6 @@ interface IArbTokenBridge {
 
     function customTokenRegistered(address l1Address, address l2Address) external;
 
-    function calculateBridgedERC777Address(address l1ERC20) external view returns (address);
-
     function calculateBridgedERC20Address(address l1ERC20) external view returns (address);
 
     function calculateBridgeTokenAddress(address l1ERC20, StandardTokenType tokenType)

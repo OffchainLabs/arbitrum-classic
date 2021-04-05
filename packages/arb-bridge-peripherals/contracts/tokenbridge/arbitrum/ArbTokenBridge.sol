@@ -19,7 +19,6 @@
 pragma solidity ^0.6.11;
 
 import "./StandardArbERC20.sol";
-import "./StandardArbERC777.sol";
 import "../libraries/ClonableBeaconProxy.sol";
 import "../ethereum/EthERC20Bridge.sol";
 
@@ -51,7 +50,9 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     address private deployBeacon;
 
     address public templateERC20;
-    address public templateERC777;
+    // TODO: delete __placeholder__
+    // Can't delete now as it will break the storage layout of the proxy contract
+    address public __placeholder__;
     address public l1Pair;
 
     // amount of arbgas necessary to send user tokens in case
@@ -66,19 +67,14 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
 
     modifier onlyFromStandardL2Token(address l1ERC20) {
         // I.e., can't be called by a custom token
-        require(
-            msg.sender == calculateBridgedERC777Address(l1ERC20) ||
-                msg.sender == calculateBridgedERC20Address(l1ERC20),
-            "NOT_FROM_STANDARD_TOKEN"
-        );
+        require(msg.sender == calculateBridgedERC20Address(l1ERC20), "NOT_FROM_STANDARD_TOKEN");
         _;
     }
 
     modifier onlyFromL2Token(address l1ERC20) {
         // This ensures that this method can only be called by the L2 token
         require(
-            msg.sender == calculateBridgedERC777Address(l1ERC20) ||
-                msg.sender == calculateBridgedERC20Address(l1ERC20) ||
+            msg.sender == calculateBridgedERC20Address(l1ERC20) ||
                 msg.sender == customToken[l1ERC20],
             "NOT_FROM_TOKEN"
         );
@@ -87,9 +83,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     modifier onlyToL2Token(address l1ERC20, address to) {
         // This ensures that this method can only be called by the L2 token
         require(
-            to == calculateBridgedERC777Address(l1ERC20) ||
-                to == calculateBridgedERC20Address(l1ERC20) ||
-                to == customToken[l1ERC20],
+            to == calculateBridgedERC20Address(l1ERC20) || to == customToken[l1ERC20],
             "NOT_TO_TOKEN"
         );
         _;
@@ -105,15 +99,10 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         _;
     }
 
-    function initialize(
-        address _l1Pair,
-        address _templateERC777,
-        address _templateERC20
-    ) external {
+    function initialize(address _l1Pair, address _templateERC20) external {
         require(address(l1Pair) == address(0), "already init");
         require(_l1Pair != address(0), "L1 pair can't be address 0");
         templateERC20 = _templateERC20;
-        templateERC777 = _templateERC777;
 
         l1Pair = _l1Pair;
 
@@ -210,7 +199,8 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         StandardTokenType tokenType,
         bytes memory deployData
     ) internal returns (address) {
-        address beacon = tokenType == StandardTokenType.ERC20 ? templateERC20 : templateERC777;
+        require(tokenType != StandardTokenType.Custom, "Custom tokens are already deployed");
+        address beacon = templateERC20;
 
         deployBeacon = beacon;
         bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
@@ -292,8 +282,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     {
         if (tokenType == StandardTokenType.ERC20) {
             return calculateBridgedERC20Address(l1ERC20);
-        } else if (tokenType == StandardTokenType.ERC777) {
-            return calculateBridgedERC777Address(l1ERC20);
         } else if (tokenType == StandardTokenType.Custom) {
             address l2Addr = customToken[l1ERC20];
             require(l2Addr != address(0), "No custom address set");
@@ -301,14 +289,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         } else {
             revert("Token type not recognized");
         }
-    }
-
-    function calculateBridgedERC777Address(address l1ERC20) public view override returns (address) {
-        return
-            Create2.computeAddress(
-                keccak256(abi.encodePacked(l1ERC20, templateERC777)),
-                cloneableProxyHash
-            );
     }
 
     function calculateBridgedERC20Address(address l1ERC20) public view override returns (address) {

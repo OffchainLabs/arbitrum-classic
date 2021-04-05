@@ -68,12 +68,6 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
     ) external {
         _burn(msg.sender, amount);
         // migrating from 20 to 777, so allow data
-        bridge.migrate(
-            l1Address,
-            target,
-            msg.sender,
-            DecimalConverter.from20to777(amount, _decimals),
-            data
-        );
+        bridge.migrate(l1Address, target, msg.sender, amount, data);
     }
 }

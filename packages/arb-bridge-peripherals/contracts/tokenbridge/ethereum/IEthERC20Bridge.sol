@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-enum StandardTokenType { ERC20, ERC777, Custom }
+enum StandardTokenType { ERC20, Custom }
 
 interface IEthERC20Bridge {
     event ActivateCustomToken(uint256 indexed seqNum, address indexed l1Address, address l2Address);
@@ -73,26 +73,6 @@ interface IEthERC20Bridge {
         bytes calldata callHookData
     ) external payable returns (uint256);
 
-    function deployAndDepositAsERC777(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable returns (uint256);
-
-    function depositAsERC777(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable returns (uint256);
-
     function depositAsERC20(
         address erc20,
         address destination,
@@ -112,8 +92,6 @@ interface IEthERC20Bridge {
         uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable returns (uint256);
-
-    function calculateL2ERC777Address(address erc20) external view returns (address);
 
     function calculateL2ERC20Address(address erc20) external view returns (address);
 }

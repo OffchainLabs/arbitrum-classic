@@ -53,11 +53,7 @@ describe('Bridge peripherals layer 2', () => {
     accounts = await ethers.getSigners()
     TestBridge = await ethers.getContractFactory('ArbTokenBridge')
     const StandardArbERC20 = await ethers.getContractFactory('StandardArbERC20')
-    const StandardArbERC777 = await ethers.getContractFactory(
-      'StandardArbERC777'
-    )
     const standardArbERC20Logic = await StandardArbERC20.deploy()
-    const standardArbERC777Logic = await StandardArbERC777.deploy()
 
     const UpgradeableBeacon = await ethers.getContractFactory(
       'UpgradeableBeacon'
@@ -67,14 +63,10 @@ describe('Bridge peripherals layer 2', () => {
       standardArbERC20Logic.address
     )
 
-    const standardArbERC777Proxy = await UpgradeableBeacon.deploy(
-      standardArbERC20Logic.address
-    )
     erc20Proxy = standardArbERC20Proxy.address
     testBridge = await TestBridge.deploy()
     await testBridge.initialize(
       accounts[0].address,
-      standardArbERC777Proxy.address,
       standardArbERC20Proxy.address
     )
 
@@ -447,48 +439,6 @@ describe('Bridge peripherals layer 2', () => {
     assert.equal(success, false, 'Token post mint hook should have reverted')
   })
 
-  it.skip('should mint erc777 tokens correctly', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const sender = '0x0000000000000000000000000000000000000002'
-    const dest = sender
-    const amount = 10
-    const decimalVal = 18
-    const decimals = ethers.utils.defaultAbiCoder.encode(
-      ['uint8'],
-      [decimalVal]
-    )
-
-    const l2ERC777Address = await testBridge.calculateBridgedERC777Address(
-      l1ERC20
-    )
-
-    const preTokenCode = await ethers.provider.getCode(l2ERC777Address)
-    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
-
-    const tx = await testBridge.mintFromL1(
-      l1ERC20,
-      sender,
-      TOKEN_TYPE_ENUM.ERC777,
-      dest,
-      amount,
-      decimals,
-      '0x'
-    )
-
-    const postTokenCode = await ethers.provider.getCode(l2ERC777Address)
-    assert.notEqual(
-      postTokenCode,
-      '0x',
-      'Token not deployed to correct address'
-    )
-
-    const Erc777 = await ethers.getContractFactory('StandardArbERC777')
-    const erc777 = await Erc777.attach(l2ERC777Address)
-
-    const balance = await erc777.balanceOf(dest)
-    assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
-  })
-
   it.skip('should burn and mint tokens correctly on migrate', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000002'
     const sender = accounts[0].address
@@ -545,40 +495,6 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
-  it.skip('should fail to migrate from erc20 to non-deployed erc777', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000003'
-    const sender = accounts[0].address
-    const dest = sender
-    const amount = '1'
-    const decimals = ethers.utils.defaultAbiCoder.encode(['uint8'], ['18'])
-
-    const tx20 = await testBridge.mintFromL1(
-      l1ERC20,
-      sender,
-      TOKEN_TYPE_ENUM.ERC20,
-      dest,
-      amount,
-      decimals,
-      '0x'
-    )
-
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
-    const l2ERC777Address = await testBridge.calculateBridgedERC777Address(
-      l1ERC20
-    )
-
-    const Erc20 = await ethers.getContractFactory('StandardArbERC20')
-    const erc20 = await Erc20.attach(l2ERC20Address)
-    try {
-      const migrate = await erc20.migrate(amount, l2ERC777Address, '0x')
-      assert.equal(true, false, 'Migration should have failed')
-    } catch (e) {
-      assert.equal(e.message, 'execution reverted', 'Migration did not fail')
-    }
-  })
-
   it('should burn on withdraw', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
     const sender = accounts[0].address
@@ -586,7 +502,7 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '10'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC777Address = await testBridge.calculateBridgedERC20Address(
+    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
       l1ERC20
     )
 
@@ -600,8 +516,8 @@ describe('Bridge peripherals layer 2', () => {
       '0x'
     )
 
-    const Erc20 = await ethers.getContractFactory('StandardArbERC777')
-    const erc20 = await Erc20.attach(l2ERC777Address)
+    const Erc20 = await ethers.getContractFactory('StandardArbERC20')
+    const erc20 = await Erc20.attach(l2ERC20Address)
 
     const balance = await erc20.balanceOf(dest)
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')

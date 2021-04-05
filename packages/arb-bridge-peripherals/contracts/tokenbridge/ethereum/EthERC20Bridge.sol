@@ -44,7 +44,9 @@ contract EthERC20Bridge is IEthERC20Bridge {
 
     mapping(address => address) public customL2Tokens;
 
-    address private l2TemplateERC777;
+    // TODO: delete __placeholder__
+    // Can't delete now as it will break the storage layout of the proxy contract
+    address private __placeholder__;
     address private l2TemplateERC20;
     bytes32 private cloneableProxyHash;
 
@@ -67,32 +69,16 @@ contract EthERC20Bridge is IEthERC20Bridge {
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPrice,
-        address _l2TemplateERC777,
         address _l2TemplateERC20,
         address _l2ArbTokenBridgeAddress
     ) external payable {
         require(address(l2TemplateERC20) == address(0), "already initialized");
-        l2TemplateERC777 = _l2TemplateERC777;
         l2TemplateERC20 = _l2TemplateERC20;
 
-        // bytes memory deployCode =
-        //     abi.encodePacked(
-        //         type(ArbTokenBridge).creationCode,
-        //         abi.encode(address(this), _l2TemplateERC777, _l2TemplateERC20)
-        //     );
         l2ArbTokenBridgeAddress = _l2ArbTokenBridgeAddress;
         inbox = IInbox(_inbox);
         cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
-        // TODO: this stores the creation code in state, but we don't actually need that
-        // L1Buddy.initiateBuddyDeploy(_maxSubmissionCost, _maxGas, _gasPrice, deployCode);
     }
-
-    // function handleDeploySuccess() internal override {
-    //     // this deletes the codehash from state!
-    //     L1Buddy.handleDeploySuccess();
-    // }
-
-    // function handleDeployFail() internal override {}
 
     /**
      * @notice Update the L1 custom token registry directly and L2 side via  a retryable ticket
@@ -201,7 +187,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory deployData,
         bytes memory callHookData
     ) internal returns (uint256) {
-        require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
         require(hasTriedDeploy[erc20], "Must have attempted to deploy before depositing");
 
         IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
@@ -257,28 +242,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
             );
     }
 
-    function deployAndDepositAsERC777(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable override returns (uint256) {
-        return
-            deployAndDeposit(
-                erc20,
-                destination,
-                amount,
-                maxSubmissionCost,
-                maxGas,
-                gasPriceBid,
-                StandardTokenType.ERC777,
-                callHookData
-            );
-    }
-
     function deployAndDeposit(
         address erc20,
         address destination,
@@ -290,7 +253,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes calldata callHookData
     ) internal returns (uint256) {
         require(tokenType != StandardTokenType.Custom, "Custom token should already be deployed");
-        require(tokenType != StandardTokenType.ERC777, "777 disabled");
         // record that deploy attempt was made
         hasTriedDeploy[erc20] = true;
 
@@ -312,28 +274,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
                 tokenType,
                 deployData,
-                callHookData
-            );
-    }
-
-    function depositAsERC777(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable override returns (uint256) {
-        return
-            depositToken(
-                erc20,
-                msg.sender,
-                destination,
-                amount,
-                RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                StandardTokenType.ERC777,
-                "",
                 callHookData
             );
     }
@@ -382,11 +322,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 "",
                 callHookData
             );
-    }
-
-    function calculateL2ERC777Address(address erc20) external view override returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC777));
-        return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
     }
 
     function calculateL2ERC20Address(address erc20) external view override returns (address) {
