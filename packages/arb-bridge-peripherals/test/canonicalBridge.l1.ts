@@ -30,7 +30,6 @@ describe('Bridge peripherals layer 1', () => {
   const maxSubmissionCost = 0
   const maxGas = 1000000000
   const gasPrice = 0
-  const l2Template777 = '0x0000000000000000000000000000000000000777'
   const l2Template20 = '0x0000000000000000000000000000000000000020'
   const l2Address = '0x1100000000000000000000000000000000000011'
 
@@ -51,7 +50,6 @@ describe('Bridge peripherals layer 1', () => {
       maxSubmissionCost,
       maxGas,
       gasPrice,
-      l2Template777,
       l2Template20,
       l2Address
     )
