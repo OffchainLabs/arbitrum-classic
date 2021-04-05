@@ -28,6 +28,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "../libraries/BytesParser.sol";
 
 import "./IArbToken.sol";
+import "./IArbTokenBridge.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 interface ITransferReceiver {
@@ -38,7 +39,7 @@ interface ITransferReceiver {
     ) external returns (bool);
 }
 
-contract ArbTokenBridge is ProxySetter {
+contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     using Address for address;
 
     /// @notice This mapping is from L1 address to L2 address
@@ -56,46 +57,6 @@ contract ArbTokenBridge is ProxySetter {
     // amount of arbgas necessary to send user tokens in case
     // of the "onTokenTransfer" call consumes all available gas
     uint256 internal immutable arbgasReserveIfCallRevert = 250000;
-
-    event MintAndCallTriggered(
-        bool success,
-        address indexed sender,
-        address indexed dest,
-        uint256 amount,
-        bytes callHookData
-    );
-
-    event WithdrawToken(
-        uint256 id,
-        address indexed l1Address,
-        uint256 indexed amount,
-        address indexed destination,
-        uint256 exitNum
-    );
-
-    event TokenCreated(
-        address indexed l1Address,
-        address indexed l2Address,
-        StandardTokenType indexed tokenType
-    );
-
-    event TokenMinted(
-        address l1Address,
-        address indexed l2Address,
-        StandardTokenType tokenType,
-        address indexed sender,
-        address indexed dest,
-        uint256 amount,
-        bool usedCallHook
-    );
-
-    event TokenMigrated(
-        address indexed from,
-        address indexed to,
-        address indexed account,
-        uint256 amount,
-        bytes data
-    );
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -210,7 +171,7 @@ contract ArbTokenBridge is ProxySetter {
         uint256 amount,
         bytes calldata deployData,
         bytes calldata callHookData
-    ) external onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
+    ) external override onlyEthPair ifCustomSelectedRequireCustom(l1ERC20, tokenType) {
         address expectedAddress = calculateBridgeTokenAddress(l1ERC20, tokenType);
 
         if (!expectedAddress.isContract()) {
@@ -263,7 +224,11 @@ contract ArbTokenBridge is ProxySetter {
         return createdContract;
     }
 
-    function customTokenRegistered(address l1Address, address l2Address) external onlyEthPair {
+    function customTokenRegistered(address l1Address, address l2Address)
+        external
+        override
+        onlyEthPair
+    {
         // TODO: what happens if users already bridged tokens?
         customToken[l1Address] = l2Address;
         emit TokenCreated(l1Address, l2Address, StandardTokenType.Custom);
@@ -273,7 +238,7 @@ contract ArbTokenBridge is ProxySetter {
         address l1ERC20,
         address destination,
         uint256 amount
-    ) external onlyFromL2Token(l1ERC20) returns (uint256) {
+    ) external override onlyFromL2Token(l1ERC20) returns (uint256) {
         return _withdraw(l1ERC20, destination, amount);
     }
 
@@ -308,6 +273,7 @@ contract ArbTokenBridge is ProxySetter {
         bytes memory data
     )
         external
+        override
         onlyFromStandardL2Token(l1ERC20)
         onlyToL2Token(l1ERC20, target)
         noCustomToken(l1ERC20)
@@ -321,6 +287,7 @@ contract ArbTokenBridge is ProxySetter {
     function calculateBridgeTokenAddress(address l1ERC20, StandardTokenType tokenType)
         public
         view
+        override
         returns (address)
     {
         if (tokenType == StandardTokenType.ERC20) {
@@ -336,7 +303,7 @@ contract ArbTokenBridge is ProxySetter {
         }
     }
 
-    function calculateBridgedERC777Address(address l1ERC20) public view returns (address) {
+    function calculateBridgedERC777Address(address l1ERC20) public view override returns (address) {
         return
             Create2.computeAddress(
                 keccak256(abi.encodePacked(l1ERC20, templateERC777)),
@@ -344,7 +311,7 @@ contract ArbTokenBridge is ProxySetter {
             );
     }
 
-    function calculateBridgedERC20Address(address l1ERC20) public view returns (address) {
+    function calculateBridgedERC20Address(address l1ERC20) public view override returns (address) {
         return
             Create2.computeAddress(
                 keccak256(abi.encodePacked(l1ERC20, templateERC20)),

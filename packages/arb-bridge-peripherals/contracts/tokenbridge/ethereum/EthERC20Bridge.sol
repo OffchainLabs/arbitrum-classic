@@ -32,9 +32,9 @@ import "../../buddybridge/ethereum/L1Buddy.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
-enum StandardTokenType { ERC20, ERC777, Custom }
+import "./IEthERC20Bridge.sol";
 
-contract EthERC20Bridge {
+contract EthERC20Bridge is IEthERC20Bridge {
     using SafeERC20 for IERC20;
 
     address internal constant USED_ADDRESS = address(0x01);
@@ -53,30 +53,13 @@ contract EthERC20Bridge {
 
     // assumes only ERC20 tokens are deployed.
     // can only deposit after a deploy attempt
-    mapping(address => bool) public deployAttempt;
+    mapping(address => bool) public override hasTriedDeploy;
 
     modifier onlyL2Address {
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
         require(l2ArbTokenBridgeAddress == outbox.l2ToL1Sender(), "Not from l2 buddy");
         _;
     }
-
-    event ActivateCustomToken(uint256 indexed seqNum, address indexed l1Address, address l2Address);
-
-    event DeployToken(
-        uint256 indexed seqNum,
-        address indexed l1Address,
-        StandardTokenType indexed tokenType
-    );
-
-    event DepositToken(
-        address indexed destination,
-        address sender,
-        uint256 indexed seqNum,
-        StandardTokenType indexed tokenType,
-        uint256 value,
-        address tokenAddress
-    );
 
     function initialize(
         address _inbox,
@@ -121,10 +104,10 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         address refundAddress
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         address l1CustomTokenAddress = msg.sender;
         // TODO: what happens if users already bridged token to L2?
-        // require(!deployAttempt[l1CustomTokenAddress], "Token already deployed in L2");
+        // require(!hasTriedDeploy[l1CustomTokenAddress], "Token already deployed in L2");
         require(
             customL2Tokens[l1CustomTokenAddress] == address(0),
             "Cannot re-register a custom token address"
@@ -158,7 +141,7 @@ contract EthERC20Bridge {
         address erc20,
         uint256 amount,
         uint256 exitNum
-    ) public {
+    ) public override {
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
         address msgSender = outbox.l2ToL1Sender();
 
@@ -180,7 +163,7 @@ contract EthERC20Bridge {
         address erc20,
         address destination,
         uint256 amount
-    ) external onlyL2Address {
+    ) external override onlyL2Address {
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
         address exitAddress = redirectedExits[withdrawData];
         redirectedExits[withdrawData] = USED_ADDRESS;
@@ -219,7 +202,7 @@ contract EthERC20Bridge {
         bytes memory callHookData
     ) internal returns (uint256) {
         require(tokenType != StandardTokenType.ERC777, "777 implementation disabled");
-        require(deployAttempt[erc20], "Must have attempted to deploy before depositing");
+        require(hasTriedDeploy[erc20], "Must have attempted to deploy before depositing");
 
         IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
         uint256 seqNum = 0;
@@ -260,7 +243,7 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         return
             deployAndDeposit(
                 erc20,
@@ -282,7 +265,7 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         return
             deployAndDeposit(
                 erc20,
@@ -309,7 +292,7 @@ contract EthERC20Bridge {
         require(tokenType != StandardTokenType.Custom, "Custom token should already be deployed");
         require(tokenType != StandardTokenType.ERC777, "777 disabled");
         // record that deploy attempt was made
-        deployAttempt[erc20] = true;
+        hasTriedDeploy[erc20] = true;
 
         // TODO: use OZ's ERC20Metadata once available
         // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
@@ -341,7 +324,7 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         return
             depositToken(
                 erc20,
@@ -363,7 +346,7 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         return
             depositToken(
                 erc20,
@@ -385,7 +368,7 @@ contract EthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         // TODO: should this not be checked in the L2?
         require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
         return
@@ -401,12 +384,12 @@ contract EthERC20Bridge {
             );
     }
 
-    function calculateL2ERC777Address(address erc20) external view returns (address) {
+    function calculateL2ERC777Address(address erc20) external view override returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC777));
         return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
     }
 
-    function calculateL2ERC20Address(address erc20) external view returns (address) {
+    function calculateL2ERC20Address(address erc20) external view override returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC20));
         return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
     }
