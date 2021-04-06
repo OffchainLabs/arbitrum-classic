@@ -34,12 +34,16 @@ struct SequencerBatchItem {
     uint256_t accumulator;
     uint256_t total_delayed_count;
     std::optional<std::vector<unsigned char>> sequencer_message;
+
+    uint256_t computeAccumulator(uint256_t prev_acc,
+                                 uint256_t prev_delayed_count,
+                                 uint256_t delayed_acc);
 };
 
 template <typename Iterator>
 SequencerBatchItem deserializeSequencerBatchItem(uint256_t last_sequence_number,
                                                  Iterator& current_iter,
-                                                 Iterator& end_iter) {
+                                                 const Iterator& end_iter) {
     auto accumulator = extractUint256(current_iter);
     auto total_delayed_count = extractUint256(current_iter);
     std::optional<std::vector<unsigned char>> sequencer_message;
@@ -48,6 +52,11 @@ SequencerBatchItem deserializeSequencerBatchItem(uint256_t last_sequence_number,
     }
     return {last_sequence_number, accumulator, total_delayed_count,
             sequencer_message};
+}
+
+template <typename Iterator>
+uint256_t deserializeSequencerBatchItemAccumulator(Iterator& current_iter) {
+    return extractUint256(current_iter);
 }
 
 std::vector<unsigned char> serializeSequencerBatchItem(
@@ -64,10 +73,15 @@ struct DelayedMessage {
 template <typename Iterator>
 DelayedMessage deserializeDelayedMessage(uint256_t delayed_sequence_number,
                                          Iterator& current_iter,
-                                         Iterator& end_iter) {
+                                         const Iterator& end_iter) {
     auto delayed_accumulator = extractUint256(current_iter);
     std::vector<unsigned char> message(current_iter, end_iter);
     return {delayed_sequence_number, delayed_accumulator, message};
+}
+
+template <typename Iterator>
+uint256_t deserializeDelayedMessageAccumulator(Iterator& current_iter) {
+    return extractUint256(current_iter);
 }
 
 std::vector<unsigned char> serializeDelayedMessage(const DelayedMessage& item);

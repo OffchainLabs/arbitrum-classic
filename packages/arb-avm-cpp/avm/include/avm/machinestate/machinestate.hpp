@@ -137,7 +137,6 @@ struct MachineStateKeys {
           output(std::move(output_)) {}
 
     MachineStateKeys(const MachineState& machine);
-    bool stagedMessageUnresolved() const;
     std::optional<Tuple> getStagedMessageTuple() const;
 
     uint256_t getTotalMessagesRead() const;
@@ -192,7 +191,6 @@ struct MachineState {
     uint256_t nextGasCost() const;
 
     bool stagedMessageEmpty() const;
-    bool stagedMessageUnresolved() const;
     std::optional<uint256_t> getStagedMessageBlockHeight() const;
     std::optional<Tuple> getStagedMessageTuple() const;
     uint256_t getTotalMessagesRead() const;

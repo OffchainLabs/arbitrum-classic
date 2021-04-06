@@ -43,6 +43,10 @@ class ReadWriteTransaction : public ReadConsistentTransaction {
                                 const rocksdb::Slice& value);
     rocksdb::Status refCountedPut(const rocksdb::Slice& key,
                                   const rocksdb::Slice& value);
+    rocksdb::Status sequencerBatchItemPut(const rocksdb::Slice& key,
+                                          const rocksdb::Slice& value);
+    rocksdb::Status delayedMessagePut(const rocksdb::Slice& key,
+                                      const rocksdb::Slice& value);
 
     rocksdb::Status defaultDelete(const rocksdb::Slice& key);
     rocksdb::Status stateDelete(const rocksdb::Slice& key);
@@ -54,6 +58,8 @@ class ReadWriteTransaction : public ReadConsistentTransaction {
                                   const rocksdb::Slice& value);
     rocksdb::Status aggregatorDelete(const rocksdb::Slice& key);
     rocksdb::Status refCountedDelete(const rocksdb::Slice& key);
+    rocksdb::Status sequencerBatchItemDelete(const rocksdb::Slice& key);
+    rocksdb::Status delayedMessageDelete(const rocksdb::Slice& key);
 };
 
 #endif  // data_storage_readwritetransaction_hpp

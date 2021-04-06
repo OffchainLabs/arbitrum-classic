@@ -38,8 +38,7 @@ DbResult<MachineStateKeys> getMachineStateKeys(
     const ReadTransaction& transaction,
     uint256_t machineHash);
 MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator iter,
-    std::vector<unsigned char>::const_iterator end);
+    std::vector<unsigned char>::const_iterator iter);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
 rocksdb::Status saveMachineState(ReadWriteTransaction& transaction,

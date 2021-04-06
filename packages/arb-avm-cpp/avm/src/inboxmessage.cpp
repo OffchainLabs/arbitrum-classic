@@ -20,7 +20,7 @@
 
 #include <ethash/keccak.hpp>
 
-uint256_t InboxMessage::hash(const uint256_t& previous_inbox_acc) const {
+uint256_t InboxMessage::hash() const {
     std::vector<unsigned char> inbox_vector;
 
     inbox_vector.push_back(kind);
@@ -32,9 +32,7 @@ uint256_t InboxMessage::hash(const uint256_t& previous_inbox_acc) const {
     auto data_hash = ::hash(data);
     marshal_uint256_t(data_hash, inbox_vector);
 
-    auto message_hash = ::hash(inbox_vector);
-
-    return ::hash(previous_inbox_acc, message_hash);
+    return ::hash(inbox_vector);
 }
 
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {

@@ -167,10 +167,9 @@ class ArbCore {
         ReadTransaction& tx,
         const uint256_t& total_gas,
         bool after_gas);
-    rocksdb::Status reorgToMessageOrBefore(
-        const uint256_t& message_sequence_number,
-        bool use_latest,
-        ValueCache& cache);
+    rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
+                                                bool use_latest,
+                                                ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
         const ReadTransaction& transaction,
@@ -313,6 +312,8 @@ class ArbCore {
                                              rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
+    ValueResult<uint256_t> totalDelayedMessagesSequencedImpl(
+        const ReadTransaction& tx) const;
 
     rocksdb::Status saveLogs(ReadWriteTransaction& tx,
                              const std::vector<value>& val);
@@ -321,6 +322,8 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& sends);
 
    private:
+    rocksdb::Status addMessages(const message_data_struct& data,
+                                ValueCache& cache);
     ValueResult<std::vector<value>> getLogsNoLock(ReadTransaction& tx,
                                                   uint256_t index,
                                                   uint256_t count,
@@ -334,27 +337,14 @@ class ArbCore {
     bool isValid(const ReadTransaction& tx,
                  const InboxState& fully_processed_inbox) const;
 
-    ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-    executionCursorGetMessages(ReadTransaction& tx,
-                               const ExecutionCursor& execution_cursor,
-                               const uint256_t& orig_message_group_size);
-    ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-    executionCursorGetMessagesNoLock(ReadTransaction& tx,
-                                     const ExecutionCursor& execution_cursor,
-                                     const uint256_t& orig_message_group_size);
-
     std::variant<rocksdb::Status, MachineStateKeys> getClosestExecutionMachine(
         ReadTransaction& tx,
-        const uint256_t& total_gas_used,
-        bool is_for_sideload = false);
+        const uint256_t& total_gas_used);
 
     rocksdb::Status updateLogInsertedCount(ReadWriteTransaction& tx,
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
-    rocksdb::Status updateMessageEntryInsertedCount(
-        ReadWriteTransaction& tx,
-        const uint256_t& message_index);
 
    public:
     // Public sideload interaction

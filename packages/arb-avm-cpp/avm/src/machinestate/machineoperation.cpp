@@ -898,10 +898,6 @@ void send(MachineState& m) {
 }
 
 BlockReason inboxOp(MachineState& m) {
-    if (m.stagedMessageUnresolved()) {
-        return InboxBlocked();
-    }
-
     MachineMessage next_message;
     if (!m.context.inboxEmpty()) {
         next_message = m.context.popInbox();

@@ -229,9 +229,10 @@ int64_t arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr,
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {
         std::vector<std::pair<uint256_t, uint256_t>> input;
+        auto data2 = reinterpret_cast<const char*>(data);
         for (uint64_t i = 0; i < count; i++) {
-            auto seq_num = extractUint256(data);
-            auto acc = extractUint256(data);
+            auto seq_num = extractUint256(data2);
+            auto acc = extractUint256(data2);
             input.emplace_back(seq_num, acc);
         }
 

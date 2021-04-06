@@ -42,7 +42,6 @@ constexpr auto log_inserted_key = std::array<char, 1>{-60};
 constexpr auto log_processed_key = std::array<char, 1>{-61};
 constexpr auto send_inserted_key = std::array<char, 1>{-62};
 constexpr auto send_processed_key = std::array<char, 1>{-63};
-constexpr auto message_entry_inserted_key = std::array<char, 1>{-64};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 
 constexpr auto sideload_cache_size = 20;
@@ -140,7 +139,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
-    auto status = reorgToMessageOrBefore(0, true, cache);
+    auto status = reorgToMessageCountOrBefore(0, true, cache);
     if (status.ok()) {
         return status;
     }
@@ -169,10 +168,6 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
         throw std::runtime_error("failed to initialize log inserted count");
     }
     status = updateSendInsertedCount(tx, 0);
-    if (!status.ok()) {
-        throw std::runtime_error("failed to initialize log inserted count");
-    }
-    status = updateMessageEntryInsertedCount(tx, 0);
     if (!status.ok()) {
         throw std::runtime_error("failed to initialize log inserted count");
     }
@@ -301,13 +296,13 @@ rocksdb::Status ArbCore::saveAssertion(ReadWriteTransaction& tx,
     return rocksdb::Status::OK();
 }
 
-// reorgToMessageOrBefore resets the checkpoint and database entries
+// reorgToMessageCountOrBefore resets the checkpoint and database entries
 // such that machine state is at or before the requested message. cleaning
 // up old references as needed.
 // If use_latest is true, message_sequence_number is ignored and the latest
 // checkpoint is used.
-rocksdb::Status ArbCore::reorgToMessageOrBefore(
-    const uint256_t& message_sequence_number,
+rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
+    const uint256_t& message_count,
     bool use_latest,
     ValueCache& cache) {
     std::variant<MachineStateKeys, rocksdb::Status> setup =
@@ -316,7 +311,7 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
     if (use_latest) {
         std::cerr << "Reloading latest checkpoint" << std::endl;
     } else {
-        std::cerr << "Reorganizing to message " << message_sequence_number
+        std::cerr << "Reorganizing to message count " << message_count
                   << std::endl;
     }
 
@@ -341,11 +336,10 @@ rocksdb::Status ArbCore::reorgToMessageOrBefore(
                 std::vector<unsigned char> checkpoint_vector(
                     it->value().data(),
                     it->value().data() + it->value().size());
-                auto checkpoint = extractMachineStateKeys(
-                    checkpoint_vector.begin(), checkpoint_vector.end());
+                auto checkpoint =
+                    extractMachineStateKeys(checkpoint_vector.begin());
                 if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
-                    (message_sequence_number >=
-                     checkpoint.getTotalMessagesRead() - 1)) {
+                    (message_count >= checkpoint.getTotalMessagesRead())) {
                     if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
                         // Good checkpoint
                         return checkpoint;
@@ -455,7 +449,7 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpoint(
     if (!result.status.ok()) {
         return result.status;
     }
-    return extractMachineStateKeys(result.data.begin(), result.data.end());
+    return extractMachineStateKeys(result.data.begin());
 }
 
 bool ArbCore::isCheckpointsEmpty(ReadTransaction& tx) const {
@@ -509,7 +503,7 @@ std::variant<rocksdb::Status, MachineStateKeys> ArbCore::getCheckpointUsingGas(
 
     std::vector<unsigned char> saved_value(
         it->value().data(), it->value().data() + it->value().size());
-    return extractMachineStateKeys(saved_value.begin(), saved_value.end());
+    return extractMachineStateKeys(saved_value.begin());
 }
 
 template <class T>
@@ -627,22 +621,18 @@ void ArbCore::operator()() {
                 << "Core thread operating on invalid machine. Rolling back."
                 << std::endl;
             assert(false);
-            auto status = reorgToMessageOrBefore(0, true, cache);
+            auto status = reorgToMessageCountOrBefore(0, true, cache);
             if (!status.ok()) {
-                std::cerr
-                    << "Error in core thread calling reorgToMessageOrBefore: "
-                    << status.ToString() << std::endl;
+                std::cerr << "Error in core thread calling "
+                             "reorgToMessageCountOrBefore: "
+                          << status.ToString() << std::endl;
             }
         }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
-            auto add_status =
-                addMessages(message_data.previous_batch_acc,
-                            message_data.sequencer_batch_items,
-                            message_data.delayed_messages,
-                            message_data.reorg_batch_items, cache);
-            if (!add_status->ok()) {
-                core_error_string = add_status->ToString();
+            auto add_status = addMessages(message_data, cache);
+            if (!add_status.ok()) {
+                core_error_string = add_status.ToString();
                 message_data_status = MESSAGES_ERROR;
                 std::cerr << "ArbCore inbox processed stopped with error: "
                           << core_error_string << "\n";
@@ -952,7 +942,6 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
     std::vector<RawMessageInfo> messages;
 
     uint256_t start = index;
-    uint256_t end = start + count;
     bool needs_consistency_check = false;
     if (start > 0) {
         // Check the previous item to ensure the inbox state is valid
@@ -1280,9 +1269,8 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
             // up to the target gas will be cheaper than loading the checkpoint
             // from disk and running it. We just need to check that the
             // execution cursor is still valid (a reorg hasn't occurred).
-            auto result =
-                executionCursorGetMessagesNoLock(tx, execution_cursor, 0);
-            if (result.status.ok() && result.data.first) {
+            if (isValid(tx,
+                        execution_cursor.getOutput().fully_processed_inbox)) {
                 // Execution cursor machine still valid, so use it
                 already_newer = true;
             }
@@ -1429,8 +1417,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
 
 std::variant<rocksdb::Status, MachineStateKeys>
 ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
-                                    const uint256_t& total_gas_used,
-                                    bool is_for_sideload) {
+                                    const uint256_t& total_gas_used) {
     auto target_gas_used = total_gas_used;
     while (true) {
         const std::lock_guard<std::mutex> lock(core_reorg_mutex);
@@ -1538,16 +1525,231 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
 
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     const ReadTransaction& tx) const {
-    return tx.stateGetUint256(vecToSlice(message_entry_inserted_key));
+    auto it = tx.sequencerBatchItemGetIterator();
+    it->SeekToLast();
+    if (it->Valid()) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto seq_num = extractUint256(key_ptr);
+        return {rocksdb::Status::OK(), seq_num + 1};
+    } else {
+        return {it->status(), 0};
+    }
 }
 
-rocksdb::Status ArbCore::updateMessageEntryInsertedCount(
-    ReadWriteTransaction& tx,
-    const uint256_t& message_index) {
-    std::vector<unsigned char> value;
-    marshal_uint256_t(message_index, value);
-    return tx.statePut(vecToSlice(message_entry_inserted_key),
-                       vecToSlice(value));
+ValueResult<uint256_t> ArbCore::totalDelayedMessagesSequencedImpl(
+    const ReadTransaction& tx) const {
+    auto it = tx.sequencerBatchItemGetIterator();
+    it->SeekToLast();
+    if (it->Valid()) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto value_ptr =
+            reinterpret_cast<const unsigned char*>(it->value().data());
+        auto value_end_ptr = value_ptr + it->value().size();
+        auto item = deserializeSequencerBatchItem(extractUint256(key_ptr),
+                                                  value_ptr, value_end_ptr);
+        return {rocksdb::Status::OK(), item.total_delayed_count};
+    } else {
+        return {it->status(), 0};
+    }
+}
+
+rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
+                                     ValueCache& cache) {
+    std::vector<std::pair<SequencerBatchItem, rocksdb::Slice>> seq_batch_items;
+    for (auto& bytes : data.sequencer_batch_items) {
+        auto it = bytes.begin();
+        auto last_seq_num = extractUint256(it);
+        rocksdb::Slice value_slice = {reinterpret_cast<const char*>(&*it),
+                                      static_cast<size_t>(bytes.end() - it)};
+        auto seq_message =
+            deserializeSequencerBatchItem(last_seq_num, it, bytes.end());
+        seq_batch_items.emplace_back(seq_message, value_slice);
+    }
+
+    std::vector<std::pair<DelayedMessage, rocksdb::Slice>> delayed_messages;
+    for (auto& bytes : data.delayed_messages) {
+        auto it = bytes.begin();
+        auto seq_num = extractUint256(it);
+        rocksdb::Slice value_slice = {reinterpret_cast<const char*>(&*it),
+                                      static_cast<size_t>(bytes.end() - it)};
+        auto delayed_message =
+            deserializeDelayedMessage(seq_num, it, bytes.end());
+        delayed_messages.emplace_back(delayed_message, value_slice);
+    }
+
+    std::optional<uint256_t> reorging_to_count;
+    {
+        std::vector<unsigned char> tmp(32);
+        ReadWriteTransaction tx(data_storage);
+        size_t duplicate_seq_batch_items = 0;
+
+        if (seq_batch_items.size() > 0) {
+            uint256_t start = seq_batch_items[0].first.last_sequence_number;
+            rocksdb::Slice lower_bound;
+            {
+                auto ptr =
+                    reinterpret_cast<const char*>(tmp.data() + tmp.size());
+                marshal_uint256_t(start, tmp);
+                lower_bound = {ptr, 32};
+            }
+            auto seq_batch_it = tx.sequencerBatchItemGetIterator(&lower_bound);
+            seq_batch_it->Seek(lower_bound);
+            for (auto& item_and_bytes : seq_batch_items) {
+                auto& item = item_and_bytes.first;
+                if (!seq_batch_it->Valid()) {
+                    if (!seq_batch_it->status().ok()) {
+                        return seq_batch_it->status();
+                    }
+                    break;
+                }
+                auto value_ptr = reinterpret_cast<const unsigned char*>(
+                    seq_batch_it->value().data());
+                auto accumulator =
+                    deserializeSequencerBatchItemAccumulator(value_ptr);
+                if (accumulator != item.accumulator) {
+                    if (duplicate_seq_batch_items == 0 &&
+                        item.last_sequence_number != 0) {
+                        throw std::runtime_error(
+                            "Attempted to add invalid sequencer batch items");
+                    }
+                    if (duplicate_seq_batch_items > 0) {
+                        auto last_valid_seq_num =
+                            seq_batch_items[duplicate_seq_batch_items - 1]
+                                .first.last_sequence_number;
+                        reorging_to_count = last_valid_seq_num + 1;
+                    } else {
+                        reorging_to_count = 0;
+                    }
+
+                    // Ideally we would use DeleteRange here, but as far as I
+                    // can tell it isn't supported on transactions.
+                    while (seq_batch_it->Valid()) {
+                        auto status =
+                            tx.sequencerBatchItemDelete(seq_batch_it->key());
+                        if (!status.ok()) {
+                            return status;
+                        }
+                        seq_batch_it->Next();
+                        if (!seq_batch_it->status().ok()) {
+                            return seq_batch_it->status();
+                        }
+                    }
+                    break;
+                }
+                duplicate_seq_batch_items++;
+                seq_batch_it->Next();
+            }
+        } else if (data.reorg_batch_items) {
+            auto seq_batch_it = tx.sequencerBatchItemGetIterator();
+            seq_batch_it->SeekToLast();
+            for (uint256_t i = 0;
+                 i < *data.reorg_batch_items && seq_batch_it->Valid(); i += 1) {
+                auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
+                if (!status.ok()) {
+                    return status;
+                }
+                seq_batch_it->Prev();
+            }
+            if (!seq_batch_it->status().ok()) {
+                return seq_batch_it->status();
+            }
+        }
+
+        if (delayed_messages.size() > 0) {
+            auto delayed_msg_seq_res = totalDelayedMessagesSequencedImpl(tx);
+            if (!delayed_msg_seq_res.status.ok()) {
+                return delayed_msg_seq_res.status;
+            }
+            uint256_t start = delayed_messages[0].first.delayed_sequence_number;
+            rocksdb::Slice lower_bound;
+            {
+                auto ptr =
+                    reinterpret_cast<const char*>(tmp.data() + tmp.size());
+                marshal_uint256_t(start, tmp);
+                lower_bound = {ptr, 32};
+            }
+            auto seq_batch_it = tx.delayedMessageGetIterator(&lower_bound);
+            seq_batch_it->Seek(lower_bound);
+            auto inserting = false;
+            for (auto& item : delayed_messages) {
+                auto& message = item.first;
+                auto& value_slice = item.second;
+
+                if (!inserting) {
+                    if (!seq_batch_it->Valid()) {
+                        if (!seq_batch_it->status().ok()) {
+                            return seq_batch_it->status();
+                        }
+                        inserting = true;
+                    }
+                    auto value_ptr = reinterpret_cast<const unsigned char*>(
+                        seq_batch_it->value().data());
+                    auto db_accumulator =
+                        deserializeDelayedMessageAccumulator(value_ptr);
+                    if (message.delayed_accumulator == db_accumulator) {
+                        seq_batch_it->Next();
+                    } else {
+                        if (message.delayed_sequence_number <
+                            delayed_msg_seq_res.data) {
+                            throw std::runtime_error(
+                                "Attempted to reorg sequenced delayed "
+                                "messages");
+                        }
+                        // Ideally we would use DeleteRange here, but as far as
+                        // I can tell it isn't supported on transactions.
+                        while (seq_batch_it->Valid()) {
+                            auto status =
+                                tx.delayedMessageDelete(seq_batch_it->key());
+                            if (!status.ok()) {
+                                return status;
+                            }
+                            seq_batch_it->Next();
+                            if (!seq_batch_it->status().ok()) {
+                                return seq_batch_it->status();
+                            }
+                        }
+                        inserting = true;
+                    }
+                }
+
+                if (inserting) {
+                    // TODO validate accumulator
+                    std::vector<unsigned char> key_vec;
+                    marshal_uint256_t(message.delayed_sequence_number, key_vec);
+                    auto key_slice = vecToSlice(key_vec);
+                    auto status = tx.delayedMessagePut(key_slice, value_slice);
+                    if (!status.ok()) {
+                        return status;
+                    }
+                }
+            }
+        }
+        for (size_t i = duplicate_seq_batch_items; i < seq_batch_items.size();
+             i++) {
+            auto& item_and_slice = seq_batch_items[i];
+            // TODO validate accumulator
+            std::vector<unsigned char> key_vec;
+            marshal_uint256_t(item_and_slice.first.last_sequence_number,
+                              key_vec);
+            auto status = tx.sequencerBatchItemPut(vecToSlice(key_vec),
+                                                   item_and_slice.second);
+            if (!status.ok()) {
+                return status;
+            }
+        }
+        auto status = tx.commit();
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    if (reorging_to_count) {
+        auto status =
+            reorgToMessageCountOrBefore(*reorging_to_count, false, cache);
+        if (!status.ok()) {
+            return status;
+        }
+    }
+    return rocksdb::Status::OK();
 }
 
 // deleteLogsStartingAt deletes the given index along with any
@@ -2004,7 +2206,7 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
         }
 
         auto closest_checkpoint =
-            getClosestExecutionMachine(tx, position_res.data, true);
+            getClosestExecutionMachine(tx, position_res.data);
         if (std::holds_alternative<rocksdb::Status>(closest_checkpoint)) {
             return {std::get<rocksdb::Status>(closest_checkpoint), nullptr};
         }

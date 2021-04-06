@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
     ValueCache value_cache{1, 0};
     auto mach = storage.getInitialMachine(value_cache);
 
-    std::vector<InboxMessage> inbox_messages;
+    std::vector<MachineMessage> inbox_messages;
     if (argc == 5) {
         if (std::string(argv[3]) == "--inbox") {
             std::ifstream file(argv[4], std::ios::binary);
@@ -90,8 +90,10 @@ int main(int argc, char* argv[]) {
             auto data = reinterpret_cast<const char*>(raw_inbox.data());
             auto inbox_val = std::get<Tuple>(deserialize_value(data));
             while (inbox_val != Tuple{}) {
-                inbox_messages.push_back(InboxMessage::fromTuple(
-                    std::get<Tuple>(inbox_val.get_element(1))));
+                inbox_messages.emplace_back(
+                    InboxMessage::fromTuple(
+                        std::get<Tuple>(inbox_val.get_element(1))),
+                    0);
                 inbox_val =
                     std::get<Tuple>(std::move(inbox_val.get_element(0)));
             }
@@ -102,8 +104,10 @@ int main(int argc, char* argv[]) {
             file >> j;
 
             for (auto& val : j["inbox"]) {
-                inbox_messages.push_back(InboxMessage::fromTuple(
-                    std::get<Tuple>(simple_value_from_json(val))));
+                inbox_messages.emplace_back(
+                    InboxMessage::fromTuple(
+                        std::get<Tuple>(simple_value_from_json(val))),
+                    0);
             }
         }
     }
@@ -128,7 +132,7 @@ int main(int argc, char* argv[]) {
         throw std::runtime_error("Can't get machine hash");
     }
     auto mach2 = storage.getMachine(*mach->hash(), value_cache);
-    execConfig.inbox_messages = std::vector<InboxMessage>();
+    execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();
     return 0;

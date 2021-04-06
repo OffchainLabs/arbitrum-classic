@@ -416,12 +416,9 @@ Machine getComplexMachine() {
 
     auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 65};
 
-    staged_variant staged_message;
-
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
-                                std::move(staged_message), output));
+                                arb_gas_remaining, state, pc, err_pc, output));
 }
 
 Machine getDefaultMachine() {
@@ -436,11 +433,9 @@ Machine getDefaultMachine() {
     CodePointStub err_pc({0, 0}, 968769876);
     Status state = Status::Extensive;
     auto output = MachineOutput{{42, 54}, 23, 54, 12, 65, 76, 43, 34};
-    staged_variant staged_message;
     return Machine(MachineState(std::move(code), register_val,
                                 std::move(static_val), data_stack, aux_stack,
-                                arb_gas_remaining, state, pc, err_pc,
-                                staged_message, output));
+                                arb_gas_remaining, state, pc, err_pc, output));
 }
 
 TEST_CASE("Save Machinestatedata") {

@@ -52,7 +52,7 @@ struct InboxMessage {
 
     static InboxMessage fromTuple(const Tuple& tup);
 
-    [[nodiscard]] uint256_t hash(const uint256_t& previous_inbox_acc) const;
+    [[nodiscard]] uint256_t hash() const;
 
     [[nodiscard]] Tuple toTuple() const;
     [[nodiscard]] std::vector<unsigned char> serialize() const;

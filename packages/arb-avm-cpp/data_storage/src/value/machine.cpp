@@ -76,8 +76,7 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
 }
 
 MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator iter,
-    const std::vector<unsigned char>::const_iterator end) {
+    std::vector<unsigned char>::const_iterator iter) {
     auto status = static_cast<Status>(*iter);
     ++iter;
     auto static_hash = extractUint256(iter);
@@ -172,8 +171,7 @@ DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
 
     if (delete_results.reference_count < 1) {
         auto iter = results.stored_value.cbegin();
-        auto parsed_state =
-            extractMachineStateKeys(iter, results.stored_value.cend());
+        auto parsed_state = extractMachineStateKeys(iter);
 
         deleteMachineState(tx, parsed_state);
     }
@@ -192,8 +190,7 @@ DbResult<MachineStateKeys> getMachineStateKeys(
         return results.status;
     }
     auto iter = results.stored_value.cbegin();
-    auto parsed_state =
-        extractMachineStateKeys(iter, results.stored_value.cend());
+    auto parsed_state = extractMachineStateKeys(iter);
 
     return CountedData<MachineStateKeys>{results.reference_count, parsed_state};
 }
