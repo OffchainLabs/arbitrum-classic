@@ -102,6 +102,10 @@ func (c FaultyCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor,
 	return c.ArbCore.AdvanceExecutionCursor(faultyCursor.ExecutionCursor, maxGas, goOverGas)
 }
 
+func (c FaultyCore) GetLastMachine() (machine.Machine, error) {
+	return c.ArbCore.GetLastMachine()
+}
+
 func (c FaultyCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	faultyCursor := executionCursor.(FaultyExecutionCursor)
 	return c.ArbCore.TakeMachine(faultyCursor.ExecutionCursor)
