@@ -37,16 +37,13 @@ interface IArbTokenBridge {
         uint256 exitNum
     );
 
-    event TokenCreated(
-        address indexed l1Address,
-        address indexed l2Address,
-        StandardTokenType indexed tokenType
-    );
+    event TokenCreated(address indexed l1Address, address indexed l2Address);
+
+    event CustomTokenRegistered(address indexed l1Address, address indexed l2Address);
 
     event TokenMinted(
         address l1Address,
         address indexed l2Address,
-        StandardTokenType tokenType,
         address indexed sender,
         address indexed dest,
         uint256 amount,
@@ -63,7 +60,6 @@ interface IArbTokenBridge {
     function mintFromL1(
         address l1ERC20,
         address sender,
-        StandardTokenType tokenType,
         address dest,
         uint256 amount,
         bytes calldata deployData,

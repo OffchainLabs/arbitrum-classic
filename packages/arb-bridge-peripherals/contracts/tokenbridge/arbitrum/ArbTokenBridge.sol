@@ -58,7 +58,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
 
     // amount of arbgas necessary to send user tokens in case
     // of the "onTokenTransfer" call consumes all available gas
-    uint256 internal immutable arbgasReserveIfCallRevert = 250000;
+    uint256 internal constant arbgasReserveIfCallRevert = 250000;
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
@@ -119,36 +119,20 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     function mintFromL1(
         address l1ERC20,
         address sender,
-        StandardTokenType tokenType,
         address dest,
         uint256 amount,
         bytes calldata deployData,
         bytes calldata callHookData
     ) external override onlyEthPair {
-        if (customToken[l1ERC20] != address(0)) {
-            // there is a custom token implementation
-            if (tokenType != StandardTokenType.Custom) {
-                // The L1 contract shouldn't let this happen!
-                // if it does happen, withdraw to sender
-                _withdraw(l1ERC20, sender, amount);
-                return;
-            }
-        } else {
-            // there is no custom token implementation
-            if (tokenType == StandardTokenType.Custom) {
-                // The L1 contract shouldn't let this happen!
-                // if it does happen, withdraw to sender
-                _withdraw(l1ERC20, sender, amount);
-                return;
-            }
-        }
+        address customTokenAddr = customToken[l1ERC20];
+        bool isCustom = customTokenAddr != address(0);
 
-        address expectedAddress = calculateL2TokenAddress(l1ERC20);
+        address expectedAddress = isCustom ? customTokenAddr : _calculateL2TokenAddress(l1ERC20);
 
         if (!expectedAddress.isContract()) {
-            if (deployData.length > 0) {
-                // require(tokenType != StandardTokenType.Custom, "Custom tokens are already deployed");
+            if (deployData.length > 0 && !isCustom) {
                 address deployedToken = deployToken(l1ERC20, deployData);
+                // TODO: should we require or withdraw here? deploy should always work.
                 require(deployedToken == expectedAddress, "Token not deployed to expected address");
             } else {
                 // withdraw funds to user as no deployData and no contract deployed
@@ -167,15 +151,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
             IArbToken(expectedAddress).bridgeMint(dest, amount);
         }
 
-        emit TokenMinted(
-            l1ERC20,
-            expectedAddress,
-            tokenType,
-            sender,
-            dest,
-            amount,
-            callHookData.length > 0
-        );
+        emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, callHookData.length > 0);
     }
 
     function deployToken(address l1ERC20, bytes memory deployData) internal returns (address) {
@@ -190,7 +166,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         // TODO: should we return address(0) instead of reverting?
         require(initSuccess, "Bridge init on token failed");
 
-        emit TokenCreated(l1ERC20, createdContract, StandardTokenType.ERC20);
+        emit TokenCreated(l1ERC20, createdContract);
         return createdContract;
     }
 
@@ -200,8 +176,10 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         onlyEthPair
     {
         // This assumed token contract is initialized and ready to be used.
+        require(l2Address.isContract(), "L2 custom token is not yet deployed");
+        // TODO: if is not contract, should revert or send callback to L1 to update custom token mapping?
         customToken[l1Address] = l2Address;
-        emit TokenCreated(l1Address, l2Address, StandardTokenType.Custom);
+        emit CustomTokenRegistered(l1Address, l2Address);
     }
 
     function withdraw(
@@ -212,7 +190,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         address expectedSender =
             customToken[l1ERC20] != address(0)
                 ? customToken[l1ERC20]
-                : calculateL2TokenAddress(l1ERC20);
+                : _calculateL2TokenAddress(l1ERC20);
 
         require(msg.sender == expectedSender, "Withdraw can only be triggered by expected sender");
         return _withdraw(l1ERC20, destination, amount);
@@ -248,7 +226,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         uint256 amount
     ) external override {
         address customTokenAddr = customToken[l1ERC20];
-        address l2StandardToken = calculateL2TokenAddress(l1ERC20);
+        address l2StandardToken = _calculateL2TokenAddress(l1ERC20);
         require(customTokenAddr != address(0), "Needs to have custom token implementation");
         require(msg.sender == l2StandardToken, "Migration should be called by token contract");
 
@@ -258,6 +236,10 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     }
 
     function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
+        return _calculateL2TokenAddress(l1ERC20);
+    }
+
+    function _calculateL2TokenAddress(address l1ERC20) internal view returns (address) {
         address customTokenAddr = customToken[l1ERC20];
         if (customTokenAddr != address(0)) {
             return customTokenAddr;

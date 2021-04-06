@@ -40,7 +40,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
     address internal constant USED_ADDRESS = address(0x01);
 
     // exitNum => exitDataHash => LP
-    mapping(bytes32 => address) redirectedExits;
+    mapping(bytes32 => address) public redirectedExits;
 
     mapping(address => address) public customL2Tokens;
 
@@ -92,8 +92,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
         address refundAddress
     ) external payable override returns (uint256) {
         address l1CustomTokenAddress = msg.sender;
-        // TODO: what happens if users already bridged token to L2?
-        // require(!hasTriedDeploy[l1CustomTokenAddress], "Token already deployed in L2");
         require(
             customL2Tokens[l1CustomTokenAddress] == address(0),
             "Cannot re-register a custom token address"
@@ -183,7 +181,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
         address destination,
         uint256 amount,
         RetryableTxParams memory retryableParams,
-        StandardTokenType tokenType,
         bytes memory deployData,
         bytes memory callHookData
     ) internal returns (uint256) {
@@ -197,7 +194,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
                     IArbTokenBridge.mintFromL1.selector,
                     erc20,
                     sender,
-                    tokenType,
                     destination,
                     amount,
                     deployData,
@@ -216,30 +212,8 @@ contract EthERC20Bridge is IEthERC20Bridge {
             );
         }
 
-        emit DepositToken(destination, sender, seqNum, tokenType, amount, erc20);
+        emit DepositToken(destination, sender, seqNum, amount, erc20);
         return seqNum;
-    }
-
-    function deployAndDepositAsERC20(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable override returns (uint256) {
-        return
-            deployAndDeposit(
-                erc20,
-                destination,
-                amount,
-                maxSubmissionCost,
-                maxGas,
-                gasPriceBid,
-                StandardTokenType.ERC20,
-                callHookData
-            );
     }
 
     function deployAndDeposit(
@@ -249,12 +223,12 @@ contract EthERC20Bridge is IEthERC20Bridge {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid,
-        StandardTokenType tokenType,
         bytes calldata callHookData
-    ) internal returns (uint256) {
-        require(tokenType != StandardTokenType.Custom, "Custom token should already be deployed");
+    ) external payable override returns (uint256) {
+        require(customL2Tokens[erc20] == address(0), "Custom token implementation cannot be set");
         // record that deploy attempt was made
         hasTriedDeploy[erc20] = true;
+        // multiple deploy attempts shouldn't be an issue
 
         // TODO: use OZ's ERC20Metadata once available
         // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
@@ -272,13 +246,12 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 destination,
                 amount,
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                tokenType,
                 deployData,
                 callHookData
             );
     }
 
-    function depositAsERC20(
+    function deposit(
         address erc20,
         address destination,
         uint256 amount,
@@ -294,31 +267,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 destination,
                 amount,
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                StandardTokenType.ERC20,
-                "",
-                callHookData
-            );
-    }
-
-    function depositAsCustomToken(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable override returns (uint256) {
-        // TODO: should this not be checked in the L2?
-        require(customL2Tokens[erc20] != address(0), "Custom token not deployed");
-        return
-            depositToken(
-                erc20,
-                msg.sender,
-                destination,
-                amount,
-                RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                StandardTokenType.Custom,
                 "",
                 callHookData
             );
