@@ -53,13 +53,6 @@ export interface DepositTokenEventResult {
   tokenAddress: string
 }
 
-export interface UpdateTokenEventResult {
-  seqNum: BigNumber
-  l1Address: string
-  name: string
-  symbol: string
-  decimals: number
-}
 export interface BuddyDeployEventResult {
   _sender: string
   _contract: string

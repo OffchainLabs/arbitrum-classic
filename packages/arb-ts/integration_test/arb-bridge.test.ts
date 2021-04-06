@@ -11,9 +11,7 @@ import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
 import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
 
-import { TestERC777__factory } from '../src/lib/abi/factories/TestERC777__factory'
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
-import { StandardArbERC777__factory } from '../src/lib/abi/factories/StandardArbERC777__factory'
 import { StandardArbERC20 } from '../src/lib/abi/StandardArbERC20'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
 
@@ -278,7 +276,7 @@ describe('ERC20', () => {
     expect(balance.eq(tokenDepositAmmount)).to.be.true
   })
 
-  it('L1 and L2 implementations of calculateL2ERC777Address match', async () => {
+  it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
     // this uses the ArbTokenBridge impmentation
     const erc20L2AddressAsPerL2 = await bridge.getERC20L2Address(erc20Address)
     const erc20L2AddressAsPerL1 = await bridge.ethERC20Bridge.calculateL2ERC20Address(
@@ -343,13 +341,13 @@ describe('ERC20', () => {
         l2RetriableHash
       )
       expect(retriableReceipt.status).to.equal(1)
-      const l2eventData = (
-        await BridgeHelper.getUpdateTokenInfoEventResultL2(
-          retriableReceipt,
-          bridge.arbTokenBridge.address
-        )
-      )[0]
-      expect(l2eventData).to.exist
+      // const l2eventData = (
+      //   await BridgeHelper.getUpdateTokenInfoEventResultL2(
+      //     retriableReceipt,
+      //     bridge.arbTokenBridge.address
+      //   )
+      // )[0]
+      // expect(l2eventData).to.exist
 
       l2Symbol = await l2Contract.symbol()
       l2Name = await l2Contract.name()
@@ -559,79 +557,6 @@ describe('CustomToken', () => {
     expect(
       testWalletL2Balance &&
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmmount)
-    ).to.be.true
-  })
-})
-
-describe.skip('ERC777', () => {
-  it('initial ERC777 deposit works', async () => {
-    const despositRes = await bridge.depositAsERC777(
-      erc20Address,
-      tokenDepositAmmount,
-      BigNumber.from(10000000000000),
-      BigNumber.from(0),
-      undefined,
-      { gasLimit: 210000, gasPrice: l1gasPrice }
-    )
-
-    const depositRec = await despositRes.wait()
-
-    const tokenDepositData = (
-      await bridge.getDepositTokenEventData(depositRec)
-    )[0] as DepositTokenEventResult
-    const seqNum = tokenDepositData.seqNum
-
-    const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
-      seqNum
-    )
-
-    const retriableReceipt = await arbProvider.waitForTransaction(
-      l2RetriableHash
-    )
-    expect(depositRec.status).to.equal(1)
-    expect(retriableReceipt.status).to.equal(1)
-
-    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
-
-    const testWalletL2Balance = l2Data && l2Data.ERC777 && l2Data.ERC777.balance
-    expect(testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmountE18))
-      .to.be.true
-  })
-
-  it('erc777 is properly deployed in L2', async () => {
-    const erc777L2Address = await bridge.getERC777L2Address(erc20Address)
-
-    const arbERC777 = StandardArbERC777__factory.connect(
-      erc777L2Address,
-      arbProvider
-    )
-    const l2Code = await arbProvider.getCode(erc777L2Address)
-    expect(l2Code.length > 2).to.be.true
-    const balance = await arbERC777.balanceOf(l1TestWallet.address)
-    expect(balance.eq(tokenDepositAmountE18)).to.be.true
-  })
-
-  it('withdraw erc77', async () => {
-    const withdrawRes = await bridge.withdrawERC777(
-      erc20Address,
-      tokenWithdrawAmountE18
-    )
-    const withdrawRec = await withdrawRes.wait()
-    expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = (
-      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
-    )[0]
-
-    expect(withdrawEventData).to.exist
-    await wait()
-
-    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
-    const testWalletL2Balance = l2Data && l2Data.ERC777 && l2Data.ERC777.balance
-    expect(
-      testWalletL2Balance &&
-        testWalletL2Balance
-          .add(tokenWithdrawAmountE18)
-          .eq(tokenDepositAmountE18)
     ).to.be.true
   })
 })

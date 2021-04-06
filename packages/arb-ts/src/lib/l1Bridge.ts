@@ -23,7 +23,6 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ERC20 } from './abi/ERC20'
 
 import { ERC20__factory } from './abi/factories/ERC20__factory'
-import { OZERC777__factory } from './abi/factories/OZERC777__factory'
 import { addressToSymbol } from './bridge_helpers'
 import { TransactionOverrides } from './bridge_helpers'
 
@@ -39,12 +38,6 @@ export interface L1TokenData {
     symbol: string
     decimals: number
     name: string
-  }
-  ERC777?: {
-    contract: OZERC777__factory
-    balance: BigNumber
-    allowed: boolean
-    symbol: string
   }
   CUSTOM?: {
     contract: ERC20
@@ -94,7 +87,6 @@ export class L1Bridge {
   public async getAndUpdateL1TokenData(erc20L1Address: string) {
     const tokenData = this.l1Tokens[erc20L1Address] || {
       ERC20: undefined,
-      ERC777: undefined,
       CUSTOM: undefined,
     }
     this.l1Tokens[erc20L1Address] = tokenData

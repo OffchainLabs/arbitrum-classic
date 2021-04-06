@@ -21,11 +21,7 @@ const main = async () => {
 
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
 
-  if (
-    deployments.buddyDeployer === '' ||
-    deployments.standardArbERC20 === '' ||
-    deployments.standardArbERC777 === ''
-  )
+  if (deployments.buddyDeployer === '' || deployments.standardArbERC20 === '')
     throw new Error("Deployments.json doesn't include the necessary addresses")
 
   const maxSubmissionCost = 0

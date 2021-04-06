@@ -238,7 +238,7 @@ describe('Bridge peripherals layer 2', () => {
     )
 
     // dest should hold amount and sender 0
-    const Erc20 = await ethers.getContractFactory('OZERC20')
+    const Erc20 = await ethers.getContractFactory('aeERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)
 
     assert.equal(
@@ -302,7 +302,7 @@ describe('Bridge peripherals layer 2', () => {
     assert.equal(success, false, 'Token post mint hook should have reverted')
 
     // dest should hold not hold amount when reverted
-    const Erc20 = await ethers.getContractFactory('OZERC20')
+    const Erc20 = await ethers.getContractFactory('aeERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)
 
     assert.equal(
@@ -380,7 +380,7 @@ describe('Bridge peripherals layer 2', () => {
     assert.equal(success, false, 'Token post mint hook should have reverted')
 
     // dest should hold not hold amount when reverted
-    const Erc20 = await ethers.getContractFactory('OZERC20')
+    const Erc20 = await ethers.getContractFactory('aeERC20')
     const erc20 = await Erc20.attach(l2ERC20Address)
 
     assert.equal(
