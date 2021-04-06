@@ -38,11 +38,7 @@ contract TestArbCustomToken is aeERC20, IArbCustomToken {
 
     function someWackyCustomStuff() public {}
 
-    function bridgeMint(
-        address account,
-        uint256 amount,
-        bytes memory data
-    ) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyBridge {
         _mint(account, amount);
     }
 

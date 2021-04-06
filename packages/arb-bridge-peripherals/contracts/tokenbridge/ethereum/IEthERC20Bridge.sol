@@ -93,5 +93,5 @@ interface IEthERC20Bridge {
         bytes calldata callHookData
     ) external payable returns (uint256);
 
-    function calculateL2ERC20Address(address erc20) external view returns (address);
+    function calculateL2TokenAddress(address erc20) external view returns (address);
 }

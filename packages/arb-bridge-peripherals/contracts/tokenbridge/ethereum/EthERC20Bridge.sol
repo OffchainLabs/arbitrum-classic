@@ -324,8 +324,13 @@ contract EthERC20Bridge is IEthERC20Bridge {
             );
     }
 
-    function calculateL2ERC20Address(address erc20) external view override returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC20));
-        return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
+    function calculateL2TokenAddress(address erc20) public view override returns (address) {
+        address customTokenAddr = customL2Tokens[erc20];
+        if (customTokenAddr != address(0)) {
+            return customTokenAddr;
+        } else {
+            bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC20));
+            return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
+        }
     }
 }

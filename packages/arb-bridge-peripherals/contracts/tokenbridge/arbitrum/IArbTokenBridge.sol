@@ -57,8 +57,7 @@ interface IArbTokenBridge {
         address indexed from,
         address indexed to,
         address indexed account,
-        uint256 amount,
-        bytes data
+        uint256 amount
     );
 
     function mintFromL1(
@@ -81,16 +80,10 @@ interface IArbTokenBridge {
         address l1ERC20,
         address target,
         address account,
-        uint256 amount,
-        bytes memory data
+        uint256 amount
     ) external;
 
     function customTokenRegistered(address l1Address, address l2Address) external;
 
-    function calculateBridgedERC20Address(address l1ERC20) external view returns (address);
-
-    function calculateBridgeTokenAddress(address l1ERC20, StandardTokenType tokenType)
-        external
-        view
-        returns (address);
+    function calculateL2TokenAddress(address l1ERC20) external view returns (address);
 }

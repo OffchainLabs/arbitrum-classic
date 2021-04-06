@@ -19,11 +19,7 @@
 pragma solidity ^0.6.11;
 
 interface IArbToken {
-    function bridgeMint(
-        address account,
-        uint256 amount,
-        bytes memory data
-    ) external;
+    function bridgeMint(address account, uint256 amount) external;
 
     function bridgeInit(address _l1Address, bytes memory _data) external returns (bool);
 }
