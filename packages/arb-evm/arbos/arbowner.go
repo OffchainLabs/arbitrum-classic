@@ -24,10 +24,12 @@ import (
 )
 
 var (
-	giveOwnershipABI        abi.Method
-	startArbOSUpgradeABI    abi.Method
-	continueArbOSUpgradeABI abi.Method
-	finishArbOSUpgradeABI   abi.Method
+	giveOwnershipABI         abi.Method
+	startArbOSUpgradeABI     abi.Method
+	continueArbOSUpgradeABI  abi.Method
+	finishArbOSUpgradeABI    abi.Method
+	setFeesEnabledABI        abi.Method
+	setFairGasPriceSenderABI abi.Method
 )
 
 func init() {
@@ -40,6 +42,8 @@ func init() {
 	startArbOSUpgradeABI = arbowner.Methods["startCodeUpload"]
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
+	setFeesEnabledABI = arbowner.Methods["setFeesEnabled"]
+	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 }
 
 func GiveOwnershipData(newOwnerAddr common.Address) []byte {
@@ -56,4 +60,12 @@ func ContinueArbOSUpgradeData(data []byte) []byte {
 
 func FinishArbOSUpgradeData() []byte {
 	return makeFuncData(finishArbOSUpgradeABI)
+}
+
+func SetFairGasPriceSender(sender common.Address) []byte {
+	return makeFuncData(setFairGasPriceSenderABI, sender)
+}
+
+func SetFeesEnabled(enabled bool) []byte {
+	return makeFuncData(setFeesEnabledABI, enabled)
 }

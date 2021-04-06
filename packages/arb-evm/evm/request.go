@@ -30,15 +30,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-type AggregatorInfo struct {
-	Aggregator    *big.Int
-	CalldataBytes *big.Int
-}
-
-func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error) {
+func NewValueFromOptional(val value.Value) (value.Value, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok {
-		return nil, errors.New("optional aggregator info must be a tuple")
+		return nil, errors.New("optional must be a tuple")
 	}
 	if tup.Len() == 0 {
 		return nil, errors.New("optional too short")
@@ -55,42 +50,89 @@ func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error
 		return nil, errors.New("optional had unknown code")
 	}
 	if tup.Len() != 2 {
-		return nil, errors.New("optional with value too short")
+		return nil, errors.New("optional with value wrong length")
 	}
-
 	nestedVal, _ := tup.GetByInt64(1)
+	return nestedVal, nil
+}
+
+type AggregatorInfo struct {
+	Aggregator    *common.Address
+	CalldataBytes *big.Int
+}
+
+func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error) {
+	nestedVal, err := NewValueFromOptional(val)
+	if err != nil {
+		return nil, err
+	}
+	if nestedVal == nil {
+		return nil, nil
+	}
 	nestedTup, ok := nestedVal.(*value.TupleValue)
 	if !ok || nestedTup.Len() != 2 {
 		return nil, errors.Errorf("expected tuple of length 2, but recieved %v", nestedVal)
 	}
 
-	aggregator, _ := nestedTup.GetByInt64(0)
+	aggregatorOpt, _ := nestedTup.GetByInt64(0)
 	calldataBytes, _ := nestedTup.GetByInt64(1)
 
-	aggregatorInt, ok := aggregator.(value.IntValue)
-	if !ok {
-		return nil, errors.New("aggregator must be an int")
+	var aggAddress *common.Address
+	aggregator, err := NewValueFromOptional(aggregatorOpt)
+	if err != nil {
+		return nil, err
+	}
+	if aggregator != nil {
+		aggregatorInt, ok := aggregator.(value.IntValue)
+		if !ok {
+			return nil, errors.New("aggregator must be an int")
+		}
+		rawAggregatorAddress := inbox.NewAddressFromInt(aggregatorInt)
+		blankAddress := common.Address{}
+		if rawAggregatorAddress != blankAddress {
+			aggAddress = &rawAggregatorAddress
+		}
 	}
 	calldataBytesInt, ok := calldataBytes.(value.IntValue)
 	if !ok {
 		return nil, errors.New("calldataBytes must be an int")
 	}
 	return &AggregatorInfo{
-		Aggregator:    aggregatorInt.BigInt(),
+		Aggregator:    aggAddress,
 		CalldataBytes: calldataBytesInt.BigInt(),
 	}, nil
 }
 
-func (a *AggregatorInfo) AsOptionalValue() value.Value {
-	if a == nil {
-		return value.NewEmptyTuple()
-	}
-	val := value.NewTuple2(
-		value.NewIntValue(a.Aggregator),
-		value.NewIntValue(a.CalldataBytes),
-	)
-	tup, _ := value.NewTupleFromSlice([]value.Value{val})
+func newEmptyOptional() value.Value {
+	tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(0)})
 	return tup
+}
+
+func newOptional(val value.Value) value.Value {
+	if val == nil {
+		tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(0)})
+		return tup
+	}
+	tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(1), val})
+	return tup
+}
+
+func (a *AggregatorInfo) AsOptionalValue() value.Value {
+	var val value.Value
+	if a != nil {
+		var aggVal value.Value
+		if a.Aggregator != nil {
+			aggVal = inbox.NewIntFromAddress(*a.Aggregator)
+		}
+
+		val := value.NewTuple2(
+			newOptional(aggVal),
+			value.NewIntValue(a.CalldataBytes),
+		)
+		tup, _ := value.NewTupleFromSlice([]value.Value{val})
+		val = tup
+	}
+	return newOptional(val)
 }
 
 type Provenance struct {
@@ -173,7 +215,7 @@ type IncomingRequest struct {
 
 func (r IncomingRequest) String() string {
 	return fmt.Sprintf(
-		"IncomingRequest(%v, %v, %v, %v, %v, %v, %v, %v, %v)",
+		"IncomingRequest(kind=%v, sender=%v, id=%v, data=%v, l1Block=%v, l2Block=%v, timestamp=%v, provenance=%v, aggregator=%v)",
 		r.Kind,
 		r.Sender,
 		r.MessageID,

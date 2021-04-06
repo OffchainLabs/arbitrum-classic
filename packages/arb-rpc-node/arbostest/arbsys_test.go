@@ -153,7 +153,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), big.NewInt(0), chainTime),

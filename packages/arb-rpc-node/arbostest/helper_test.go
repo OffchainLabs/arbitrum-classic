@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"github.com/ethereum/go-ethereum/common/math"
 	"math/big"
 	"testing"
 
@@ -35,18 +36,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func initMsg() message.Init {
-	return message.Init{
-		ChainParams: protocol.ChainParams{
-			StakeRequirement:          big.NewInt(0),
-			StakeToken:                common.Address{},
-			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:         0,
-			ArbGasSpeedLimitPerSecond: 1000000000,
-		},
-		Owner:       owner,
-		ExtraConfig: []byte{},
+func initMsg(options []message.ChainConfigOption) message.Init {
+	params := protocol.ChainParams{
+		StakeRequirement:          big.NewInt(0),
+		StakeToken:                common.Address{},
+		GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
+		MaxExecutionSteps:         0,
+		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
+	return message.NewInitMessage(params, owner, options)
 }
 
 func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
@@ -114,10 +112,30 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 	return txResults
 }
 
+func extractTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+	t.Helper()
+	results := processResults(t, logs)
+	txResults := make([]*evm.TxResult, 0, len(results))
+	for _, res := range results {
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			continue
+		}
+		txResults = append(txResults, txRes)
+	}
+	return txResults
+}
+
 func txResultCheck(t *testing.T, res *evm.TxResult, correct evm.ResultType) {
 	t.Helper()
 	if res.ResultCode != correct {
 		t.Log("result", res)
+		nested, err := message.NestedMessage(res.IncomingRequest.Data, res.IncomingRequest.Kind)
+		if err != nil {
+			t.Log("Invalid nested", err)
+		} else {
+			t.Log("Nested:", nested)
+		}
 		t.Log("data", hexutil.Encode(res.ReturnData))
 		t.Fatal("unexpected result", res.ResultCode)
 	}
@@ -159,7 +177,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	failIfError(t, err)
 	t.Log(string(testCase))
 
-	if len(assertion.Logs) != logCount {
+	if logCount != math.MaxInt32 && len(assertion.Logs) != logCount {
 		t.Fatal("unexpected log count ", len(assertion.Logs), "instead of", logCount)
 	}
 
@@ -178,18 +196,27 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	return assertion.Logs, assertion.Sends, snap, assertion
 }
 
+type InboxBuilder struct {
+	Messages []inbox.InboxMessage
+}
+
+func (ib *InboxBuilder) AddMessage(msg message.Message, sender common.Address, gasPrice *big.Int, time inbox.ChainTime) {
+	newMsg := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(ib.Messages))), gasPrice, time)
+	ib.Messages = append(ib.Messages, newMsg)
+}
+
 func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime))
-	for i, msg := range messages {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(msg, sender, big.NewInt(int64(1+i)), big.NewInt(0), chainTime))
+	ib := &InboxBuilder{}
+	ib.AddMessage(initMsg(nil), chain, big.NewInt(0), chainTime)
+	for _, msg := range messages {
+		ib.AddMessage(msg, chain, big.NewInt(0), chainTime)
 	}
-	return inboxMessages
+	return ib.Messages
 }
 
 func checkBalance(t *testing.T, snap *snapshot.Snapshot, account common.Address, balance *big.Int) {

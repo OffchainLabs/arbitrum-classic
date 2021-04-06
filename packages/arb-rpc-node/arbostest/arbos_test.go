@@ -128,7 +128,7 @@ func TestBlocks(t *testing.T) {
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), startTime),
+		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	messages = append(

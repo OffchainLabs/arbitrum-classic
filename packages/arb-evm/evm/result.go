@@ -97,7 +97,7 @@ func CompareResults(res1 *TxResult, res2 *TxResult) []string {
 
 func (r *TxResult) String() string {
 	return fmt.Sprintf(
-		"TxResult(%v, %v, %v, %v, %v, %v)",
+		"TxResult(request=%v, resultCode=%v, returnData=%v, evmLogs=%v, gasUsed=%v, gasPrice=%v)",
 		r.IncomingRequest,
 		r.ResultCode,
 		hexutil.Encode(r.ReturnData),
@@ -167,6 +167,13 @@ type FeeSet struct {
 	L1Calldata    *big.Int
 	L2Storage     *big.Int
 	L2Computation *big.Int
+}
+
+func (fs *FeeSet) Total() *big.Int {
+	total := new(big.Int).Add(fs.L1Transaction, fs.L1Calldata)
+	total = total.Add(total, fs.L2Storage)
+	total = total.Add(total, fs.L2Computation)
+	return total
 }
 
 func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
