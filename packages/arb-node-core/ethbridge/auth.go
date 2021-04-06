@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"math/big"
 	"strings"
 	"sync"
@@ -42,10 +43,17 @@ type TransactAuth struct {
 	auth *bind.TransactOpts
 }
 
-func NewTransactAuth(auth *bind.TransactOpts) *TransactAuth {
+func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (*TransactAuth, error) {
+	if auth.Nonce == nil {
+		nonce, err := client.PendingNonceAt(ctx, auth.From)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to get nonce")
+		}
+		auth.Nonce = new(big.Int).SetUint64(nonce)
+	}
 	return &TransactAuth{
 		auth: auth,
-	}
+	}, nil
 }
 
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
