@@ -126,8 +126,8 @@ class ArbCore {
     std::atomic<bool> machine_error{false};
     std::string machine_error_string;
 
-    MachineOutput last_machine_output;
-    std::shared_mutex last_machine_output_mutex;
+    std::unique_ptr<Machine> last_machine;
+    std::shared_mutex last_machine_mutex;
 
    public:
     ArbCore() = delete;
@@ -189,6 +189,7 @@ class ArbCore {
     // Managing machine state
     bool machineIdle();
     std::optional<std::string> machineClearError();
+    std::unique_ptr<Machine> getLastMachine();
     uint256_t machineMessagesRead();
 
    public:
