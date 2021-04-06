@@ -21,12 +21,6 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-wit
 import { Contract, ContractFactory } from 'ethers'
 import { deploy1820Registry } from '../scripts/utils'
 
-const TOKEN_TYPE_ENUM = {
-  ERC20: 0,
-  ERC777: 1,
-  Custom: 2,
-}
-
 const encodeTokenInitData = (
   name: string,
   symbol: string,
@@ -76,18 +70,16 @@ describe('Bridge peripherals layer 2', () => {
   it('should calculate proxy address correctly', async function () {
     const address: string = (await testBridge.functions.templateERC20())[0]
     // OZ's init code not the same as in https://eips.ethereum.org/EIPS/eip-1167
-    const proxyBytecode =
-      '0x3d602d80600a3d3981f3363d3d373d3d3d363d73' +
-      address.substr(2) +
-      '5af43d82803e903d91602b57fd5bf3'
+    // const proxyBytecode =
+    //   '0x3d602d80600a3d3981f3363d3d373d3d3d363d73' +
+    //   address.substr(2) +
+    //   '5af43d82803e903d91602b57fd5bf3'
 
     const ClonableBeaconProxy = await ethers.getContractFactory(
       'ClonableBeaconProxy'
     )
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
     const salt = ethers.utils.solidityKeccak256(
       ['address', 'address'],
       [l1ERC20, erc20Proxy]
@@ -116,9 +108,7 @@ describe('Bridge peripherals layer 2', () => {
     const decimals = '18'
     const deployData = encodeTokenInitData(name, symbol, decimals)
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -126,7 +116,6 @@ describe('Bridge peripherals layer 2', () => {
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       deployData,
@@ -159,9 +148,7 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -169,7 +156,6 @@ describe('Bridge peripherals layer 2', () => {
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       initializeData,
@@ -196,9 +182,7 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -212,7 +196,6 @@ describe('Bridge peripherals layer 2', () => {
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       initializeData,
@@ -259,9 +242,7 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -276,7 +257,6 @@ describe('Bridge peripherals layer 2', () => {
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       initializeData,
@@ -323,9 +303,7 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -343,7 +321,6 @@ describe('Bridge peripherals layer 2', () => {
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       initializeData,
@@ -401,9 +378,7 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -413,7 +388,6 @@ describe('Bridge peripherals layer 2', () => {
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       initializeData,
@@ -439,6 +413,7 @@ describe('Bridge peripherals layer 2', () => {
     assert.equal(success, false, 'Token post mint hook should have reverted')
   })
 
+  /*
   it.skip('should burn and mint tokens correctly on migrate', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000002'
     const sender = accounts[0].address
@@ -494,6 +469,7 @@ describe('Bridge peripherals layer 2', () => {
       'Tokens not migrated correctly on burn'
     )
   })
+  */
 
   it('should burn on withdraw', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
@@ -502,14 +478,11 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '10'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateBridgedERC20Address(
-      l1ERC20
-    )
+    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
 
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
-      TOKEN_TYPE_ENUM.ERC20,
       dest,
       amount,
       initializeData,
