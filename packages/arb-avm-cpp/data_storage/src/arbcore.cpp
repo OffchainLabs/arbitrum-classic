@@ -183,6 +183,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     machine = std::make_unique<MachineThread>(
         MachineState{code, executable.static_val});
 
+    last_machine = std::make_unique<Machine>(*machine);
+
     ReadWriteTransaction tx(data_storage);
     // Need to initialize database from scratch
 
@@ -1145,7 +1147,12 @@ std::unique_ptr<Machine> ArbCore::getLastMachine() {
 
 uint256_t ArbCore::machineMessagesRead() {
     std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
-    return last_machine->machine_state.output.fully_processed_inbox.count;
+    assert(last_machine);
+    if (last_machine) {
+        return last_machine->machine_state.output.fully_processed_inbox.count;
+    } else {
+        return 0;
+    }
 }
 
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
