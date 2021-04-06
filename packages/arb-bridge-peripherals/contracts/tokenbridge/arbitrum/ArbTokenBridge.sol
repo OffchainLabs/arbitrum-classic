@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./StandardArbERC20.sol";
 import "../libraries/ClonableBeaconProxy.sol";
-import "../ethereum/EthERC20Bridge.sol";
+import "../ethereum/IEthERC20Bridge.sol";
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
@@ -241,7 +241,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
             ArbSys(100).sendTxToL1(
                 l1Pair,
                 abi.encodeWithSelector(
-                    EthERC20Bridge.withdrawFromL2.selector,
+                    IEthERC20Bridge.withdrawFromL2.selector,
                     exitNum,
                     l1ERC20,
                     destination,

@@ -22,33 +22,31 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   functions: {
+    '__placeholder__()': FunctionFragment
     'calculateBridgeTokenAddress(address,uint8)': FunctionFragment
     'calculateBridgedERC20Address(address)': FunctionFragment
-    'calculateBridgedERC777Address(address)': FunctionFragment
     'customToken(address)': FunctionFragment
     'customTokenRegistered(address,address)': FunctionFragment
     'getBeacon()': FunctionFragment
-    'initialize(address,address,address)': FunctionFragment
+    'initialize(address,address)': FunctionFragment
     'l1Pair()': FunctionFragment
     'migrate(address,address,address,uint256,bytes)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'mintFromL1(address,address,uint8,address,uint256,bytes,bytes)': FunctionFragment
     'templateERC20()': FunctionFragment
-    'templateERC777()': FunctionFragment
-    'updateTokenInfo(address,uint8,bytes,bytes,bytes)': FunctionFragment
     'withdraw(address,address,uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: '__placeholder__',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateBridgeTokenAddress',
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'calculateBridgedERC20Address',
-    values: [string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'calculateBridgedERC777Address',
     values: [string]
   ): string
   encodeFunctionData(functionFragment: 'customToken', values: [string]): string
@@ -59,7 +57,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'getBeacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [string, string, string]
+    values: [string, string]
   ): string
   encodeFunctionData(functionFragment: 'l1Pair', values?: undefined): string
   encodeFunctionData(
@@ -87,28 +85,20 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'templateERC777',
-    values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'updateTokenInfo',
-    values: [string, BigNumberish, BytesLike, BytesLike, BytesLike]
-  ): string
-  encodeFunctionData(
     functionFragment: 'withdraw',
     values: [string, string, BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: '__placeholder__',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'calculateBridgeTokenAddress',
     data: BytesLike
   ): Result
   decodeFunctionResult(
     functionFragment: 'calculateBridgedERC20Address',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'calculateBridgedERC777Address',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'customToken', data: BytesLike): Result
@@ -126,20 +116,11 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'templateERC20',
     data: BytesLike
   ): Result
-  decodeFunctionResult(
-    functionFragment: 'templateERC777',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'updateTokenInfo',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {
     'MintAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TokenCreated(address,address,uint8)': EventFragment
-    'TokenDataUpdated(address,address,uint8,string,string,uint8)': EventFragment
     'TokenMigrated(address,address,address,uint256,bytes)': EventFragment
     'TokenMinted(address,address,uint8,address,address,uint256,bool)': EventFragment
     'WithdrawToken(uint256,address,uint256,address,uint256)': EventFragment
@@ -147,7 +128,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
 
   getEvent(nameOrSignatureOrTopic: 'MintAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenCreated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TokenDataUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenMigrated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenMinted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawToken'): EventFragment
@@ -167,6 +147,10 @@ export class ArbTokenBridge extends Contract {
   interface: ArbTokenBridgeInterface
 
   functions: {
+    __placeholder__(overrides?: CallOverrides): Promise<[string]>
+
+    '__placeholder__()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateBridgeTokenAddress(
       l1ERC20: string,
       tokenType: BigNumberish,
@@ -185,16 +169,6 @@ export class ArbTokenBridge extends Contract {
     ): Promise<[string]>
 
     'calculateBridgedERC20Address(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    calculateBridgedERC777Address(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'calculateBridgedERC777Address(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<[string]>
@@ -224,14 +198,12 @@ export class ArbTokenBridge extends Contract {
 
     initialize(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address)'(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -282,7 +254,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -293,7 +265,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -301,28 +273,6 @@ export class ArbTokenBridge extends Contract {
     templateERC20(overrides?: CallOverrides): Promise<[string]>
 
     'templateERC20()'(overrides?: CallOverrides): Promise<[string]>
-
-    templateERC777(overrides?: CallOverrides): Promise<[string]>
-
-    'templateERC777()'(overrides?: CallOverrides): Promise<[string]>
-
-    updateTokenInfo(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateTokenInfo(address,uint8,bytes,bytes,bytes)'(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
 
     withdraw(
       l1ERC20: string,
@@ -338,6 +288,10 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  __placeholder__(overrides?: CallOverrides): Promise<string>
+
+  '__placeholder__()'(overrides?: CallOverrides): Promise<string>
 
   calculateBridgeTokenAddress(
     l1ERC20: string,
@@ -357,16 +311,6 @@ export class ArbTokenBridge extends Contract {
   ): Promise<string>
 
   'calculateBridgedERC20Address(address)'(
-    l1ERC20: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
-  calculateBridgedERC777Address(
-    l1ERC20: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
-  'calculateBridgedERC777Address(address)'(
     l1ERC20: string,
     overrides?: CallOverrides
   ): Promise<string>
@@ -396,14 +340,12 @@ export class ArbTokenBridge extends Contract {
 
   initialize(
     _l1Pair: string,
-    _templateERC777: string,
     _templateERC20: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address,address,address)'(
+  'initialize(address,address)'(
     _l1Pair: string,
-    _templateERC777: string,
     _templateERC20: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -454,7 +396,7 @@ export class ArbTokenBridge extends Contract {
     tokenType: BigNumberish,
     dest: string,
     amount: BigNumberish,
-    _decimals: BytesLike,
+    deployData: BytesLike,
     callHookData: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -465,7 +407,7 @@ export class ArbTokenBridge extends Contract {
     tokenType: BigNumberish,
     dest: string,
     amount: BigNumberish,
-    _decimals: BytesLike,
+    deployData: BytesLike,
     callHookData: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -473,28 +415,6 @@ export class ArbTokenBridge extends Contract {
   templateERC20(overrides?: CallOverrides): Promise<string>
 
   'templateERC20()'(overrides?: CallOverrides): Promise<string>
-
-  templateERC777(overrides?: CallOverrides): Promise<string>
-
-  'templateERC777()'(overrides?: CallOverrides): Promise<string>
-
-  updateTokenInfo(
-    l1ERC20: string,
-    tokenType: BigNumberish,
-    _name: BytesLike,
-    _symbol: BytesLike,
-    _decimals: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateTokenInfo(address,uint8,bytes,bytes,bytes)'(
-    l1ERC20: string,
-    tokenType: BigNumberish,
-    _name: BytesLike,
-    _symbol: BytesLike,
-    _decimals: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
 
   withdraw(
     l1ERC20: string,
@@ -511,6 +431,10 @@ export class ArbTokenBridge extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    __placeholder__(overrides?: CallOverrides): Promise<string>
+
+    '__placeholder__()'(overrides?: CallOverrides): Promise<string>
+
     calculateBridgeTokenAddress(
       l1ERC20: string,
       tokenType: BigNumberish,
@@ -529,16 +453,6 @@ export class ArbTokenBridge extends Contract {
     ): Promise<string>
 
     'calculateBridgedERC20Address(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    calculateBridgedERC777Address(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
-    'calculateBridgedERC777Address(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<string>
@@ -568,14 +482,12 @@ export class ArbTokenBridge extends Contract {
 
     initialize(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address)'(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -626,7 +538,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
@@ -637,7 +549,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
@@ -646,41 +558,19 @@ export class ArbTokenBridge extends Contract {
 
     'templateERC20()'(overrides?: CallOverrides): Promise<string>
 
-    templateERC777(overrides?: CallOverrides): Promise<string>
-
-    'templateERC777()'(overrides?: CallOverrides): Promise<string>
-
-    updateTokenInfo(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateTokenInfo(address,uint8,bytes,bytes,bytes)'(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     withdraw(
       l1ERC20: string,
       destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'withdraw(address,address,uint256)'(
       l1ERC20: string,
       destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
   }
 
   filters: {
@@ -696,15 +586,6 @@ export class ArbTokenBridge extends Contract {
       l1Address: string | null,
       l2Address: string | null,
       tokenType: BigNumberish | null
-    ): EventFilter
-
-    TokenDataUpdated(
-      l1Address: null,
-      l2Addess: string | null,
-      tokenType: BigNumberish | null,
-      name: null,
-      symbol: null,
-      decimals: null
     ): EventFilter
 
     TokenMigrated(
@@ -735,6 +616,10 @@ export class ArbTokenBridge extends Contract {
   }
 
   estimateGas: {
+    __placeholder__(overrides?: CallOverrides): Promise<BigNumber>
+
+    '__placeholder__()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateBridgeTokenAddress(
       l1ERC20: string,
       tokenType: BigNumberish,
@@ -753,16 +638,6 @@ export class ArbTokenBridge extends Contract {
     ): Promise<BigNumber>
 
     'calculateBridgedERC20Address(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    calculateBridgedERC777Address(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'calculateBridgedERC777Address(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -792,14 +667,12 @@ export class ArbTokenBridge extends Contract {
 
     initialize(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address)'(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -850,7 +723,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -861,7 +734,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -869,28 +742,6 @@ export class ArbTokenBridge extends Contract {
     templateERC20(overrides?: CallOverrides): Promise<BigNumber>
 
     'templateERC20()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    templateERC777(overrides?: CallOverrides): Promise<BigNumber>
-
-    'templateERC777()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    updateTokenInfo(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateTokenInfo(address,uint8,bytes,bytes,bytes)'(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
 
     withdraw(
       l1ERC20: string,
@@ -908,6 +759,12 @@ export class ArbTokenBridge extends Contract {
   }
 
   populateTransaction: {
+    __placeholder__(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    '__placeholder__()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     calculateBridgeTokenAddress(
       l1ERC20: string,
       tokenType: BigNumberish,
@@ -926,16 +783,6 @@ export class ArbTokenBridge extends Contract {
     ): Promise<PopulatedTransaction>
 
     'calculateBridgedERC20Address(address)'(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    calculateBridgedERC777Address(
-      l1ERC20: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'calculateBridgedERC777Address(address)'(
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -968,14 +815,12 @@ export class ArbTokenBridge extends Contract {
 
     initialize(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address)'(
       _l1Pair: string,
-      _templateERC777: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -1026,7 +871,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -1037,7 +882,7 @@ export class ArbTokenBridge extends Contract {
       tokenType: BigNumberish,
       dest: string,
       amount: BigNumberish,
-      _decimals: BytesLike,
+      deployData: BytesLike,
       callHookData: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -1045,28 +890,6 @@ export class ArbTokenBridge extends Contract {
     templateERC20(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'templateERC20()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    templateERC777(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'templateERC777()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    updateTokenInfo(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateTokenInfo(address,uint8,bytes,bytes,bytes)'(
-      l1ERC20: string,
-      tokenType: BigNumberish,
-      _name: BytesLike,
-      _symbol: BytesLike,
-      _decimals: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
 
     withdraw(
       l1ERC20: string,

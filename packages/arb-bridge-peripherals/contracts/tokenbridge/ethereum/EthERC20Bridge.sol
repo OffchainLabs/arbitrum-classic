@@ -23,7 +23,7 @@ import "../libraries/ClonableBeaconProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "../arbitrum/ArbTokenBridge.sol";
+import "../arbitrum/IArbTokenBridge.sol";
 
 import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
@@ -102,7 +102,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
 
         bytes memory data =
             abi.encodeWithSelector(
-                ArbTokenBridge.customTokenRegistered.selector,
+                IArbTokenBridge.customTokenRegistered.selector,
                 l1CustomTokenAddress,
                 l2CustomTokenAddress
             );
@@ -194,7 +194,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
         {
             bytes memory data =
                 abi.encodeWithSelector(
-                    ArbTokenBridge.mintFromL1.selector,
+                    IArbTokenBridge.mintFromL1.selector,
                     erc20,
                     sender,
                     tokenType,

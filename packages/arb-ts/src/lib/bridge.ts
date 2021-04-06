@@ -311,14 +311,14 @@ export class Bridge extends L2Bridge {
     return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
   }
 
-  public getUpdateTokenInfoEventResult = (
-    l1Transaction: ethers.providers.TransactionReceipt
-  ): Promise<Array<UpdateTokenEventResult>> => {
-    return BridgeHelper.getUpdateTokenInfoEventResult(
-      l1Transaction,
-      this.arbTokenBridge.address
-    )
-  }
+  // public getUpdateTokenInfoEventResult = (
+  //   l1Transaction: ethers.providers.TransactionReceipt
+  // ): Promise<Array<UpdateTokenEventResult>> => {
+  //   return BridgeHelper.getUpdateTokenInfoEventResult(
+  //     l1Transaction,
+  //     this.arbTokenBridge.address
+  //   )
+  // }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {
     return BridgeHelper.getTokenWithdrawEventData(

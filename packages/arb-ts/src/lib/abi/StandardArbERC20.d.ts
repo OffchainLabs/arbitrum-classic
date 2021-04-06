@@ -26,11 +26,11 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     'approve(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
     'bridge()': FunctionFragment
+    'bridgeInit(address,bytes)': FunctionFragment
     'bridgeMint(address,uint256,bytes)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(address,address,uint8)': FunctionFragment
     'isMaster()': FunctionFragment
     'l1Address()': FunctionFragment
     'migrate(uint256,address,bytes)': FunctionFragment
@@ -39,7 +39,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
-    'updateInfo(string,string,uint8)': FunctionFragment
     'withdraw(address,uint256)': FunctionFragment
   }
 
@@ -54,6 +53,10 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
+    functionFragment: 'bridgeInit',
+    values: [string, BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'bridgeMint',
     values: [string, BigNumberish, BytesLike]
   ): string
@@ -65,10 +68,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
@@ -91,10 +90,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(
-    functionFragment: 'updateInfo',
-    values: [string, string, BigNumberish]
-  ): string
-  encodeFunctionData(
     functionFragment: 'withdraw',
     values: [string, BigNumberish]
   ): string
@@ -103,6 +98,7 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridgeInit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
   decodeFunctionResult(
@@ -113,7 +109,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
@@ -125,7 +120,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'updateInfo', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {
@@ -186,6 +180,18 @@ export class StandardArbERC20 extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -225,20 +231,6 @@ export class StandardArbERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -302,20 +294,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     withdraw(
       destination: string,
       amount: BigNumberish,
@@ -364,6 +342,18 @@ export class StandardArbERC20 extends Contract {
 
   'bridge()'(overrides?: CallOverrides): Promise<string>
 
+  bridgeInit(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'bridgeInit(address,bytes)'(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   bridgeMint(
     account: string,
     amount: BigNumberish,
@@ -403,20 +393,6 @@ export class StandardArbERC20 extends Contract {
   'increaseAllowance(address,uint256)'(
     spender: string,
     addedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  initialize(
-    _bridge: string,
-    _l1Address: string,
-    decimals_: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address,address,uint8)'(
-    _bridge: string,
-    _l1Address: string,
-    decimals_: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -480,20 +456,6 @@ export class StandardArbERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  updateInfo(
-    newName: string,
-    newSymbol: string,
-    newDecimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateInfo(string,string,uint8)'(
-    newName: string,
-    newSymbol: string,
-    newDecimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   withdraw(
     destination: string,
     amount: BigNumberish,
@@ -542,6 +504,18 @@ export class StandardArbERC20 extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<string>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -583,20 +557,6 @@ export class StandardArbERC20 extends Contract {
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     isMaster(overrides?: CallOverrides): Promise<boolean>
 
@@ -658,20 +618,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     withdraw(
       destination: string,
       amount: BigNumberish,
@@ -731,6 +677,18 @@ export class StandardArbERC20 extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -770,20 +728,6 @@ export class StandardArbERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -847,20 +791,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     withdraw(
       destination: string,
       amount: BigNumberish,
@@ -913,6 +843,18 @@ export class StandardArbERC20 extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -952,20 +894,6 @@ export class StandardArbERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      decimals_: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -1026,20 +954,6 @@ export class StandardArbERC20 extends Contract {
       sender: string,
       recipient: string,
       amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

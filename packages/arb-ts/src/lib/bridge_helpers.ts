@@ -213,21 +213,6 @@ export class BridgeHelper {
     )
   }
 
-  static getUpdateTokenInfoEventResult = async (
-    l1Transaction: providers.TransactionReceipt,
-    l1BridgeAddress: string
-  ): Promise<Array<UpdateTokenEventResult>> => {
-    const factory = new EthERC20Bridge__factory()
-    const contract = factory.attach(l1BridgeAddress)
-    const iface = contract.interface
-    const event = iface.getEvent('UpdateTokenInfo')
-    const eventTopic = iface.getEventTopic(event)
-    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as UpdateTokenEventResult
-    )
-  }
-
   static getActivateCustomTokenEventResult = async (
     l1Transaction: providers.TransactionReceipt,
     l1BridgeAddress: string
@@ -244,19 +229,6 @@ export class BridgeHelper {
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as ActivateCustomTokenResult
     )
-  }
-
-  static getUpdateTokenInfoEventResultL2 = async (
-    l2Transaction: providers.TransactionReceipt,
-    l2BridgeAddress: string
-  ): Promise<Array<any>> => {
-    const factory = new ArbTokenBridge__factory()
-    const contract = factory.attach(l2BridgeAddress)
-    const iface = contract.interface
-    const event = iface.getEvent('TokenDataUpdated')
-    const eventTopic = iface.getEventTopic(event)
-    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(log => (iface.parseLog(log).args as unknown) as any)
   }
 
   static getWithdrawalsInL2Transaction = async (
