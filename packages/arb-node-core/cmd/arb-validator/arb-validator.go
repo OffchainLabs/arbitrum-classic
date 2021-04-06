@@ -190,7 +190,11 @@ func main() {
 		logger.Fatal().Msg("Error starting ArbCore thread")
 	}
 
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, ethbridge.NewTransactAuth(auth))
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Error creating connecting to chain")
+	}
+	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error creating validator wallet")
 	}
