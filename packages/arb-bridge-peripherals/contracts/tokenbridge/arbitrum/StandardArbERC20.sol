@@ -18,13 +18,14 @@
 
 pragma solidity ^0.6.11;
 
-import "./open-zeppelin/OZERC20.sol";
+// import "./open-zeppelin/OZERC20.sol";
+import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
 import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 import "../libraries/BytesParser.sol";
 
-contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
+contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
     ArbTokenBridge public bridge;
     address public l1Address;
 
@@ -42,9 +43,11 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
             abi.decode(_data, (bytes, bytes, bytes));
         // what if decode reverts? shouldn't as this is encoded by L1 contract
 
-        _name = BytesParserWithDefault.toString(name, "");
-        _symbol = BytesParserWithDefault.toString(symbol, "");
-        _decimals = BytesParserWithDefault.toUint8(decimals, 18);
+        aeERC20.initialize(
+            BytesParserWithDefault.toString(name, ""),
+            BytesParserWithDefault.toString(symbol, ""),
+            BytesParserWithDefault.toUint8(decimals, 18)
+        );
         return true;
     }
 

@@ -2,9 +2,9 @@
 
 pragma solidity ^0.6.11;
 
-import "../../tokenbridge/arbitrum/open-zeppelin/OZERC20.sol";
-import "../../tokenbridge/ethereum/ICustomToken.sol";
-import "../../tokenbridge/ethereum/EthERC20Bridge.sol";
+// import "../libraries/aeERC20.sol";
+import "../ethereum/ICustomToken.sol";
+import "../ethereum/EthERC20Bridge.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";

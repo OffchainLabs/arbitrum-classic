@@ -19,10 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "../arbitrum/IArbCustomToken.sol";
-import "../arbitrum/open-zeppelin/OZERC20.sol";
+import "../libraries/aeERC20.sol";
 import "../arbitrum/ArbTokenBridge.sol";
 
-contract TestArbCustomToken is OZERC20, IArbCustomToken {
+contract TestArbCustomToken is aeERC20, IArbCustomToken {
     ArbTokenBridge public bridge;
     address public l1Address;
     modifier onlyBridge {
@@ -33,9 +33,7 @@ contract TestArbCustomToken is OZERC20, IArbCustomToken {
     constructor(address _bridge, address _l1Address) public {
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
-        _name = "TestCustomToken";
-        _symbol = "CARB";
-        _decimals = uint8(18);
+        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function someWackyCustomStuff() public {}
