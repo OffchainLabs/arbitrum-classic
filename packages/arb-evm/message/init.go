@@ -17,6 +17,8 @@
 package message
 
 import (
+	"bytes"
+	"encoding/binary"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -24,10 +26,36 @@ import (
 	"math/big"
 )
 
+var InitOptionSetChargingParams uint64 = 2
+var InitOptionSetDefaultAggregator uint64 = 3
+
 type Init struct {
 	protocol.ChainParams
 	Owner       common.Address
 	ExtraConfig []byte
+}
+
+func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) Init {
+	data := make([]byte, 0)
+	for _, item := range config {
+		itemData := item.AsData()
+		optionId := item.OptionCode()
+		var w bytes.Buffer
+		if err := binary.Write(&w, binary.BigEndian, &optionId); err != nil {
+			logger.Fatal().Err(err).Send()
+		}
+		length := uint64(len(itemData))
+		if err := binary.Write(&w, binary.BigEndian, &length); err != nil {
+			logger.Fatal().Err(err).Send()
+		}
+		data = append(data, w.Bytes()...)
+		data = append(data, itemData...)
+	}
+	return Init{
+		ChainParams: params,
+		Owner:       owner,
+		ExtraConfig: data,
+	}
 }
 
 func NewInitFromData(data []byte) Init {
@@ -64,4 +92,47 @@ func (m Init) AsData() []byte {
 	data = append(data, addressData(m.Owner)...)
 	data = append(data, m.ExtraConfig...)
 	return data
+}
+
+type ChainConfigOption interface {
+	OptionCode() uint64
+	AsData() []byte
+}
+
+type FeeConfig struct {
+	SpeedLimitPerSecond    *big.Int
+	L1GasPerL2Tx           *big.Int
+	L1GasPerL2Calldata     *big.Int
+	L1GasPerStorage        *big.Int
+	ArbGasDivisor          *big.Int
+	NetFeeRecipient        common.Address
+	CongestionFeeRecipient common.Address
+}
+
+func (c FeeConfig) OptionCode() uint64 {
+	return InitOptionSetChargingParams
+}
+
+func (c FeeConfig) AsData() []byte {
+	data := make([]byte, 0)
+	data = append(data, math.U256Bytes(c.SpeedLimitPerSecond)...)
+	data = append(data, math.U256Bytes(c.L1GasPerL2Tx)...)
+	data = append(data, math.U256Bytes(c.L1GasPerL2Calldata)...)
+	data = append(data, math.U256Bytes(c.L1GasPerStorage)...)
+	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
+	data = append(data, addressData(c.NetFeeRecipient)...)
+	data = append(data, addressData(c.CongestionFeeRecipient)...)
+	return data
+}
+
+type DefaultAggConfig struct {
+	Aggregator common.Address
+}
+
+func (c DefaultAggConfig) OptionCode() uint64 {
+	return InitOptionSetDefaultAggregator
+}
+
+func (c DefaultAggConfig) AsData() []byte {
+	return addressData(c.Aggregator)
 }

@@ -1,7 +1,24 @@
+/*
+* Copyright 2021, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package dev
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"math/big"
@@ -15,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
@@ -25,21 +41,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
-	owner := common.RandAddress()
+func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
 	rollupAddress := common.RandAddress()
-	initMsg := message.Init{
-		ChainParams: config,
-		Owner:       owner,
-		ExtraConfig: nil,
-	}
 
-	monitor, err := staker.NewMonitor(dir, arbos.Path())
+	monitor, err := staker.NewMonitor(dir, arbosPath)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("error opening monitor")
 	}
@@ -49,13 +58,23 @@ func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Back
 		logger.Fatal().Err(err).Send()
 	}
 
+	aggregator := common.RandAddress()
+	for i := range config {
+		opt := config[len(config)-1-i]
+		if aggConfig, ok := opt.(message.DefaultAggConfig); ok {
+			aggregator = aggConfig.Aggregator
+			break
+		}
+	}
+
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 	l1 := NewL1Emulator()
-	backend, err := NewBackend(monitor.Core, db, l1, signer)
+	backend, err := NewBackend(monitor.Core, db, l1, signer, aggregator, big.NewInt(10000))
 	if err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 
+	initMsg := message.NewInitMessage(params, owner, config)
 	if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
 		logger.Fatal().Err(err).Send()
 	}
@@ -119,16 +138,20 @@ type Backend struct {
 	db         *txdb.TxDB
 	l1Emulator *L1Emulator
 	signer     types.Signer
+	aggregator common.Address
+	l1GasPrice *big.Int
 
 	newTxFeed event.Feed
 }
 
-func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) (*Backend, error) {
+func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) (*Backend, error) {
 	return &Backend{
 		arbcore:    arbcore,
 		db:         db,
 		l1Emulator: l1,
 		signer:     signer,
+		aggregator: aggregator,
+		l1GasPrice: l1GasPrice,
 	}, nil
 }
 
@@ -196,7 +219,8 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	if err != nil {
 		return err
 	}
-	arbMsg, err := message.NewL2Message(arbTx)
+
+	arbMsg, err := message.NewTransactionBatchFromMessages([]message.AbstractL2Message{arbTx})
 	if err != nil {
 		return err
 	}
@@ -212,7 +236,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		Msg("sent transaction")
 	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
 	block := b.l1Emulator.GenerateBlock()
-	if _, err := b.addInboxMessage(arbMsg, common.NewAddressFromEth(sender), block); err != nil {
+	if _, err := b.addInboxMessage(message.NewSafeL2Message(arbMsg), b.aggregator, b.l1GasPrice, block); err != nil {
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
@@ -233,7 +257,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 		// Insert an empty block instead
 		block := b.l1Emulator.GenerateBlock()
-		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
+		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), b.aggregator, b.l1GasPrice, block); err != nil {
 			return err
 		}
 
@@ -246,10 +270,10 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (common.Hash, error) {
 	b.Lock()
 	defer b.Unlock()
-	return b.addInboxMessage(msg, sender, b.l1Emulator.GenerateBlock())
+	return b.addInboxMessage(msg, sender, big.NewInt(0), b.l1Emulator.GenerateBlock())
 }
 
-func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, block L1BlockInfo) (common.Hash, error) {
+func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, gasPrice *big.Int, block L1BlockInfo) (common.Hash, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  block.blockId.Height,
 		Timestamp: block.timestamp,
@@ -258,7 +282,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 	if err != nil {
 		return common.Hash{}, err
 	}
-	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), big.NewInt(0), chainTime)
+	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), gasPrice, chainTime)
 
 	requestId := message.CalculateRequestId(b.signer.ChainID(), msgCount)
 	var prevHash common.Hash

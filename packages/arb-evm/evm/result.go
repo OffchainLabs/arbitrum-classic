@@ -211,6 +211,10 @@ type FeeStats struct {
 	Aggregator *common.Address
 }
 
+func (fs *FeeStats) String() string {
+	return fmt.Sprintf("FeeStats{Prices=%v, Units=%v, Paid=%v, Aggregator=%v}", fs.Price, fs.UnitsUsed, fs.Paid, fs.Aggregator)
+}
+
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() != 4 {
