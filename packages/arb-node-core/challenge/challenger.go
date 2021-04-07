@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
@@ -50,12 +51,87 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Lookup bisection %v\n", prevBisection)
 
 	if prevBisection == nil {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
 	challengeImpl := ExecutionImpl{}
 	return c.handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
+}
+
+func (c *Challenger) FollowConflict(ctx context.Context) error {
+	challengeState, err := c.challenge.ChallengeState(ctx)
+	if err != nil {
+		return err
+	}
+
+	prevBisection, err := c.challenge.LookupBisection(ctx, challengeState)
+	if err != nil {
+		return err
+	}
+
+	if prevBisection == nil {
+		prevBisection = c.challengedNode.InitialExecutionBisection()
+	}
+	challengeImpl := ExecutionImpl{}
+	return c.followChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
+}
+
+func (c *Challenger) followChallenge(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	assertion *core.Assertion,
+	lookup core.ArbCoreLookup,
+	challengeImpl ExecutionImpl,
+	prevBisection *core.Bisection,
+) error {
+	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
+	fmt.Printf("hmm what %v %v\n", prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
+	divergence, err := challengeImpl.FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
+	if err != nil {
+		return err
+	}
+	if divergence.DifferentIndex == 0 {
+		return errors.New("first cut was already wrong")
+	}
+	cutToChallenge := divergence.DifferentIndex - 1
+	inconsistentSegment := &core.ChallengeSegment{
+		Start:  prevCutOffsets[cutToChallenge],
+		Length: new(big.Int).Sub(prevCutOffsets[cutToChallenge+1], prevCutOffsets[cutToChallenge]),
+	}
+
+	cmp := divergence.SegmentSteps.Cmp(big.NewInt(1))
+	if cmp > 0 || divergence.EndIsUnreachable {
+		fmt.Printf("divergence 1")
+		return nil
+	} else if cmp < 0 {
+		fmt.Printf("divergence 2")
+		return nil
+	} else {
+		fmt.Printf("divergence one step proof")
+		// Steps == 1: Do a one step proof, proving the execution of this step specifically
+		opcode, machine, err := challengeImpl.OneStepProofInfo(
+			ctx,
+			challenge,
+			lookup,
+			assertion,
+			prevBisection,
+			cutToChallenge,
+			inconsistentSegment,
+		)
+		if opcode == 241 {
+			// Get new lookup
+			fmt.Printf("Found wasm test, making new lookup\n")
+			storage, err := cmachine.NewArbStorage("/tmp/arbStorage")
+			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
+			arbCore := storage.GetArbCore()
+			arbCore.StartThread()
+			c.lookup = arbCore
+			return err
+		}
+		return err
+	}
 }
 
 func (c *Challenger) handleChallenge(
@@ -67,6 +143,7 @@ func (c *Challenger) handleChallenge(
 	prevBisection *core.Bisection,
 ) error {
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
+	fmt.Printf("hmm what %v %v\n", prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
 	divergence, err := challengeImpl.FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
 		return err
@@ -128,6 +205,7 @@ func (c *Challenger) handleChallenge(
 		)
 		if opcode == 241 {
 			// Get new lookup
+			fmt.Printf("Found wasm test, making new lookup\n")
 			storage, err := cmachine.NewArbStorage("/tmp/arbStorage")
 			storage.InitializeForWasm((machine).(cmachine.ExtendedMachine))
 			arbCore := storage.GetArbCore()

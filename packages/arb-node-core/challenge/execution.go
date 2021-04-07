@@ -22,6 +22,7 @@ var unreachableCut core.SimpleCut = core.NewSimpleCut([32]byte{})
 
 func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (core.Cut, *big.Int, error) {
 	state, steps, err := execTracker.GetExecutionState(gasTarget)
+	fmt.Printf("got cut %v gas target %v\n", state, gasTarget)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,6 +82,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		}
 		lastSteps = newSteps
 	}
+	fmt.Printf("no divergence %v cuts %v\n", offsets, cuts)
 	return errRes, errors.New("no divergence found in cuts")
 }
 
@@ -153,6 +155,32 @@ func (e *ExecutionImpl) OneStepProof(
 		bufferProofData,
 		opcode,
 	)
+}
+
+func (e *ExecutionImpl) OneStepProofInfo(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	lookup core.ArbCoreLookup,
+	assertion *core.Assertion,
+	prevBisection *core.Bisection,
+	segmentToChallenge int,
+	challengedSegment *core.ChallengeSegment,
+) (byte, machine.Machine, error) {
+	_, previousMachine, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	proofData, bufferProofData, err := previousMachine.MarshalForProof()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	opcode := proofData[0]
+
+	fmt.Printf("buffer %v, op %v\n", bufferProofData, opcode)
+
+	return opcode, previousMachine, nil
 }
 
 func (e *ExecutionImpl) ProveContinuedExecution(

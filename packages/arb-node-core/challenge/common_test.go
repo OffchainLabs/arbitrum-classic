@@ -58,7 +58,10 @@ func executeChallenge(
 		t.Logf("executing challenge round %v", rounds)
 		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
-			err := challenger.HandleConflict(ctx)
+			// err = asserter.FollowConflict(ctx)
+			// test.FailIfError(t, err)
+
+			err = challenger.HandleConflict(ctx)
 			test.FailIfError(t, err)
 
 			if challengerBackend.TransactionCount() == 0 {
@@ -72,7 +75,10 @@ func executeChallenge(
 			t.Log("Challenger Used", receipt.GasUsed, "gas")
 			turn = ethbridge.ASSERTER_TURN
 		} else {
-			err := asserter.HandleConflict(ctx)
+			// err = challenger.FollowConflict(ctx)
+			// test.FailIfError(t, err)
+
+			err = asserter.HandleConflict(ctx)
 			if asserterMayFail && err != nil {
 				t.Logf("Asserter failed challenge: %v", err.Error())
 				return rounds

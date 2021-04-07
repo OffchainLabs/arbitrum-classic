@@ -34,16 +34,13 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 }
 
 func TestWasmChallenge(t *testing.T) {
-	t.Logf("here")
 	messages := []inbox.InboxMessage{makeInitMsg()}
 	startGas := big.NewInt(0)
 	endGas := big.NewInt(100012)
 	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arb-os/wasm-inst.json")
-	t.Logf("here 2")
-	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(50000)}
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(500)}
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
-	t.Logf("here 3")
 
 	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
 	if err != nil {

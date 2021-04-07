@@ -43,6 +43,11 @@ contract Challenge is Cloneable, IChallenge {
     event AsserterTimedOut();
     event ChallengerTimedOut();
     event OneStepProofCompleted();
+    event OneStepProofContinue(
+        bytes32 indexed challengeRoot,
+        uint256 challengedSegmentStart,
+        uint256 challengedSegmentLength
+    );
     event ContinuedExecutionProven();
 
     // Can only initialize once
@@ -315,6 +320,7 @@ contract Challenge is Cloneable, IChallenge {
             _currentWin();
         } else {
             updateNewRoot(kludge1, kludge2, kludge3);
+            emit OneStepProofContinue(challengeState, _challengedSegmentStart, _challengedSegmentLength);
         }
     }
 
@@ -356,6 +362,8 @@ contract Challenge is Cloneable, IChallenge {
         hashes[0] = startHash;
         hashes[1] = endHash;
         updateBisectionRoot(hashes, 0, length);
+
+        emit Bisected(challengeState, 0, length, hashes);
     }
 
     function updateBisectionRoot(
