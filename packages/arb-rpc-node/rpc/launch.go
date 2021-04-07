@@ -81,14 +81,20 @@ func LaunchNode(
 		}
 		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
-		auth := ethbridge.NewTransactAuth(batcherMode.Auth)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		inbox, err := ethbridge.NewStandardInbox(batcherMode.InboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
 			return err
 		}
 		batch = batcher.NewStatelessBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
 	case StatefulBatcherMode:
-		auth := ethbridge.NewTransactAuth(batcherMode.Auth)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
 		inbox, err := ethbridge.NewStandardInbox(batcherMode.InboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
 			return err
