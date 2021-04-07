@@ -2,6 +2,7 @@ package challenge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -139,6 +140,8 @@ func (e *ExecutionImpl) OneStepProof(
 	}
 
 	opcode := proofData[0]
+
+	fmt.Printf("buffer %v, op %v\n", bufferProofData, opcode)
 
 	return opcode, previousMachine, challenge.OneStepProveExecution(
 		ctx,

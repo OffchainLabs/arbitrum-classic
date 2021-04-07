@@ -800,6 +800,7 @@ void ArbCore::operator()() {
             }
 
             status = tx.commit();
+            machine_idle = true;
             if (!status.ok()) {
                 core_error_string = status.ToString();
                 machine_error = true;

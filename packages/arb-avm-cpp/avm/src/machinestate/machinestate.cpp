@@ -428,7 +428,7 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
         has_labels.push_back(elem.get<int>() == 1);
     }
     // Load JSON
-    std::ifstream executable_input_stream("/home/sami/arb-os/foo2.json");
+    std::ifstream executable_input_stream("/home/sami/arb-os/wasm-program.json");
     if (!executable_input_stream.is_open()) {
         throw std::runtime_error("doesn't exist");
     }
@@ -513,6 +513,8 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
+
+    std::cerr << "Final machine opcode " << current_op << "\n";
 
     std::vector<MarshalLevel> stackPops = { MarshalLevel::SINGLE, MarshalLevel::SINGLE };
 
@@ -639,7 +641,6 @@ OneStepProof MachineState::marshalForProof() const {
 
         std::cerr << "Stopping " << intx::to_string(state.hash().value(), 16) << " gas used " << gasUsed << "\n";
 
-        OneStepProof proof;
         state.marshalWasmProof(proof);
         std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
@@ -707,6 +708,8 @@ BlockReason MachineState::runOne() {
     }
 
     auto& instruction = loadCurrentInstruction();
+
+    std::cerr << "Running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];

@@ -558,10 +558,12 @@ contract OneStepProof2 is OneStepProofCommon {
         Value.Data[] memory auxstackVals,
         uint256 len
     ) {
-        // uint8 opCode = uint8(proof[0]);
+        require(proof.length >= 3, "wasm proof empty");
+        uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
         uint8 auxstackCount = uint8(proof[2]);
         uint256 offset = 3;
+        require(opCode == OP_STOP, "wasm final state must halt");
 
         // Leave some extra space for values pushed on the stack in the proofs
         stackVals = new Value.Data[](stackCount + 4);
@@ -616,13 +618,10 @@ contract OneStepProof2 is OneStepProofCommon {
             handleOpcodeError(context);
             return;
         }
-        (Machine.Data memory finalMachine,
-         Value.Data[] memory stackVals,
-         Value.Data[] memory auxstackVals, 
-         uint256 len) = decodeWasmData(context.bufProof);
         Value.Data[] memory init = new Value.Data[](2);
         init[0] = val1;
         init[1] = Value.newEmptyTuple();
+        // Construct initial machine
         Machine.Data memory initialMachine = Machine.Data(
             wasmProgram,
             mkPair(Value.newHashedValue(wasmProgramLink, wasmProgramLinkSize),
@@ -635,12 +634,13 @@ contract OneStepProof2 is OneStepProofCommon {
             Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status
         );
-        // Construct initial machine
         // Final machine is given
+        (Machine.Data memory finalMachine,
+         Value.Data[] memory stackVals,
+         Value.Data[] memory auxstackVals, 
+         uint256 len) = decodeWasmData(context.bufProof);
         // Return value must come from the final machine
-        require(finalMachine.status == Machine.MACHINE_HALT, "Wasm program must halt");
-        require(finalMachine.dataStack.isTuple());
-        require(stackVals.length >= 2);
+        require(stackVals.length >= 2, "Not enough wasm stack returns");
         pushVal(context.stack, stackVals[1]);
         pushVal(context.stack, stackVals[0]);
         context.startState = Machine.hash(initialMachine);

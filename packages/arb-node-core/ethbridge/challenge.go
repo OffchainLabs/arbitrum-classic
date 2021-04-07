@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -110,9 +111,10 @@ func (c *Challenge) OneStepProveExecution(
 	prevCutHashes, prevTree := calculateBisectionTree(prevBisection)
 	nodes, path := prevTree.GetProof(segmentToChallenge)
 	var prover uint8
-	if (opcode >= 0xa1 && opcode <= 0xa6) || opcode == 0x70 {
+	if (opcode >= 0xa1 && opcode <= 0xa6) || opcode == 0x70 || opcode == 0xf1 {
 		// OSP2 (covers buffer related stuff)
 		prover = 1
+		fmt.Printf("Buffer proof len %v\n", len(bufferProof))
 	} else if opcode >= 0x20 && opcode <= 0x24 {
 		// OSPHash
 		prover = 2

@@ -67,6 +67,10 @@ func FailIfError(t *testing.T, err error) {
 }
 
 func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
+	return PrepareArbCoreGen(t, messages, arbos.Path())
+}
+
+func PrepareArbCoreGen(t *testing.T, messages []inbox.InboxMessage, path string) (core.ArbCore, func()) {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	FailIfError(t, err)
 	storage, err := cmachine.NewArbStorage(tmpDir)
@@ -87,7 +91,7 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, 
 		}
 	})()
 
-	err = storage.Initialize(arbos.Path())
+	err = storage.Initialize(path)
 	FailIfError(t, err)
 
 	arbCore := storage.GetArbCore()
@@ -103,6 +107,7 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, 
 	for {
 		msgCount, err := arbCore.GetMessageCount()
 		FailIfError(t, err)
+		t.Logf("is idle? %v", arbCore.MachineIdle())
 		if arbCore.MachineIdle() && msgCount.Cmp(big.NewInt(int64(len(messages)))) >= 0 {
 			break
 		}

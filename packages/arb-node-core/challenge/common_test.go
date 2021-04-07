@@ -28,18 +28,23 @@ func executeChallenge(
 	asserterMayFail bool,
 ) int {
 	ctx := context.Background()
+	t.Logf("init 1")
 
 	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime)
 
 	asserterBackend, err := ethbridge.NewBuilderBackend(asserterWallet)
+	t.Logf("init 2")
 	test.FailIfError(t, err)
 	challengerBackend, err := ethbridge.NewBuilderBackend(challengerWallet)
 	test.FailIfError(t, err)
+	t.Logf("init 3")
 
 	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, asserterBackend)
 	test.FailIfError(t, err)
+	t.Logf("init 4")
 	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, challengerBackend)
 	test.FailIfError(t, err)
+	t.Logf("init 5")
 
 	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, client)
 	test.FailIfError(t, err)

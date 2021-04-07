@@ -1022,6 +1022,7 @@ void wasm_test(MachineState& m) {
     m.stack.popClear();
     m.stack.push(md);
     m.stack.push(len);
+    ++m.pc;
 }
 
 void newbuffer(MachineState& m) {
