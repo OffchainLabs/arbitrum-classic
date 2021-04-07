@@ -2,12 +2,13 @@ package dev
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -268,7 +269,17 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 			return common.Hash{}, err
 		}
 	}
-	successful, err := core.DeliverMessagesAndWait(b.arbcore, []inbox.InboxMessage{inboxMessage}, prevHash, true)
+	seqBatchItem := inbox.SequencerBatchItem{
+		LastSeqNum:        msgCount,
+		Accumulator:       common.Hash{},
+		TotalDelayedCount: big.NewInt(0),
+		SequencerMessage:  inboxMessage.ToBytes(),
+	}
+	seqBatchItem.Accumulator, err = seqBatchItem.ComputeAccumulator(prevHash, big.NewInt(0), common.Hash{})
+	if err != nil {
+		return common.Hash{}, err
+	}
+	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem}, nil, nil, nil)
 	if err != nil {
 		return common.Hash{}, err
 	}

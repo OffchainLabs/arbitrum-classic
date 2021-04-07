@@ -36,11 +36,11 @@ set(LIB_HEADERS
   include/data_storage/value/machine.hpp
   include/data_storage/value/value.hpp
   include/data_storage/value/valuecache.hpp
+  include/data_storage/value/utils.hpp
 )
 
 set(LIB_PRIVATE_HEADERS
   src/value/referencecount.hpp
-  src/value/utils.hpp
 )
 
 set(LIB_SOURCES

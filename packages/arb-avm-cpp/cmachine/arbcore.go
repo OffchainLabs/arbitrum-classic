@@ -82,29 +82,35 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgMessageCount *big.Int) bool {
-	rawInboxData := encodeInboxMessages(messages)
-	byteSlices := encodeByteSliceList(rawInboxData)
+func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
+}
 
-	var cReorgMessageCount unsafe.Pointer
-	if reorgMessageCount != nil {
-		reorgMessageCount := math.U256Bytes(reorgMessageCount)
-		cReorgMessageCount = unsafeDataPointer(reorgMessageCount)
+func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeDelayedMessages(delayedMessages))
+}
+
+func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
+	var bytes [][]byte
+	for _, num := range nums {
+		bytes = append(bytes, math.U256Bytes(num))
+	}
+	return bytesArrayToByteSliceArray(bytes)
+}
+
+func (ac *ArbCore) DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, seqBatchPositions []*big.Int, reorgSeqBatchItemCount *big.Int) bool {
+	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
+	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
+	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
+	seqBatchPositionsSlice := u256ArrayToByteSliceArray(seqBatchPositions)
+
+	var cReorgSeqBatchItemCount unsafe.Pointer
+	if reorgSeqBatchItemCount != nil {
+		reorgSeqBatchItemCount := math.U256Bytes(reorgSeqBatchItemCount)
+		cReorgSeqBatchItemCount = unsafeDataPointer(reorgSeqBatchItemCount)
 	}
 
-	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
-	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
-	for i, data := range byteSlices {
-		sliceArray[i] = data
-	}
-	defer C.free(sliceArrayData)
-	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-	cLastBlockComplete := 0
-	if lastBlockComplete {
-		cLastBlockComplete = 1
-	}
-
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete), cReorgMessageCount)
+	status := C.arbCoreDeliverMessages(ac.c, previousSeqBatchAccPtr, seqBatchItemsSlice, delayedMessagesSlice, seqBatchPositionsSlice, cReorgSeqBatchItemCount)
 	return status == 1
 }
 

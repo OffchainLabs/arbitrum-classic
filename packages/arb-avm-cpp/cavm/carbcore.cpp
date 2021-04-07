@@ -60,11 +60,14 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,
                            ByteSliceArray delayed_messages_slice,
+                           ByteSliceArray sequencer_batch_positions_slice,
                            void* reorg_message_count_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
     auto sequencer_batch_items =
         receiveByteSliceArray(sequencer_batch_items_slice);
+    auto sequencer_batch_positions =
+        receiveUint256Array(sequencer_batch_positions_slice);
     auto delayed_messages = receiveByteSliceArray(delayed_messages_slice);
     std::optional<uint256_t> reorg_message_count;
     if (reorg_message_count_ptr != nullptr) {
@@ -74,7 +77,8 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
     try {
         auto status = arb_core->deliverMessages(
             previous_inbox_acc, std::move(sequencer_batch_items),
-            std::move(delayed_messages), reorg_message_count);
+            std::move(delayed_messages), std::move(sequencer_batch_positions),
+            reorg_message_count);
         return status;
     } catch (const std::exception& e) {
         return false;

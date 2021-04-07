@@ -156,7 +156,7 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
-	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000000, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 
 	// If the machine wasn't able to run and it reports that it is currently
 	// blocked, return the block reason to give the client more information

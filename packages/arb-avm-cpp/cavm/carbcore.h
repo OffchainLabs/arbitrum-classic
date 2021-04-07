@@ -33,6 +33,7 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,
                            ByteSliceArray delayed_messages_slice,
+                           ByteSliceArray sequencer_batch_positions_slice,
                            void* reorg_message_count_ptr);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);

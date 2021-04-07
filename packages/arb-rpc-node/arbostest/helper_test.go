@@ -154,7 +154,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
 
-	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages, false)
+	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages)
 	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.Logs, assertion.Sends)
 	failIfError(t, err)
 	t.Log(string(testCase))
@@ -172,7 +172,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 		lastMessage := inboxMessages[len(inboxMessages)-1]
 		seq := new(big.Int).Add(lastMessage.InboxSeqNum, big.NewInt(1))
 		msg := message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, seq, big.NewInt(0), lastMessage.ChainTime)
-		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, true, nil, true, common.Hash{}, common.Hash{})
+		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, nil, true, common.Hash{}, common.Hash{})
 		snap = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
 	}
 	return assertion.Logs, assertion.Sends, snap, assertion

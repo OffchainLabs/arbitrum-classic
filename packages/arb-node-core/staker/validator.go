@@ -42,7 +42,8 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	bridgeAddress, err := rollup.Bridge(ctx)
+	panic("TODO: redo inbox reader")
+	bridgeAddress, err := rollup.DelayedBridge(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +245,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			break
 		}
 		if correctNode == nil {
-			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, nd.AfterInboxAcc)
+			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, nd.AfterInboxBatchAcc)
 			if err != nil {
 				return nil, false, err
 			}

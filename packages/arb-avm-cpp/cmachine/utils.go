@@ -24,10 +24,11 @@ import "C"
 
 import (
 	"bytes"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"unsafe"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func unsafeDataPointer(data []byte) unsafe.Pointer {
@@ -87,6 +88,22 @@ func encodeInboxMessages(inboxMessages []inbox.InboxMessage) [][]byte {
 	data := make([][]byte, 0, len(inboxMessages))
 	for _, msg := range inboxMessages {
 		data = append(data, msg.ToBytes())
+	}
+	return data
+}
+
+func encodeSequencerBatchItems(seqBatchItems []inbox.SequencerBatchItem) [][]byte {
+	data := make([][]byte, 0, len(seqBatchItems))
+	for _, msg := range seqBatchItems {
+		data = append(data, msg.ToBytesWithSeqNum())
+	}
+	return data
+}
+
+func encodeDelayedMessages(delayedMessages []inbox.DelayedMessage) [][]byte {
+	data := make([][]byte, 0, len(delayedMessages))
+	for _, msg := range delayedMessages {
+		data = append(data, msg.ToBytesWithSeqNum())
 	}
 	return data
 }

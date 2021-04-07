@@ -73,7 +73,8 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAdd
 	if err != nil {
 		return nil, err
 	}
-	bridgeAddress, err := rollup.Bridge(context.Background())
+	panic("TODO: redo inbox reader")
+	bridgeAddress, err := rollup.DelayedBridge(context.Background())
 	if err != nil {
 		return nil, err
 	}

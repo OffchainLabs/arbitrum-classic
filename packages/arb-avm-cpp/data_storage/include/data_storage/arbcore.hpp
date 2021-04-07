@@ -78,6 +78,9 @@ class ArbCore {
         uint256_t previous_batch_acc;
         std::vector<std::vector<unsigned char>> sequencer_batch_items;
         std::vector<std::vector<unsigned char>> delayed_messages;
+        // TODO: use this and validate previous_batch_acc lies on a batch
+        // boundary
+        std::vector<uint256_t> sequencer_batch_positions;
         std::optional<uint256_t> reorg_batch_items;
     };
 
@@ -208,6 +211,7 @@ class ArbCore {
         const uint256_t& previous_inbox_acc,
         std::vector<std::vector<unsigned char>> sequencer_batch_items,
         std::vector<std::vector<unsigned char>> delayed_messages,
+        std::vector<uint256_t> sequencer_batch_positions,
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
     std::string messagesClearError();

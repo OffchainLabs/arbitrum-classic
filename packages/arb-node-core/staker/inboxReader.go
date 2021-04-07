@@ -7,7 +7,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 )
 
@@ -186,14 +185,5 @@ func (ir *InboxReader) addMessages(newMessages []*ethbridge.DeliveredInboxMessag
 		return false, errors.New("must have messages to add")
 	}
 
-	messages := make([]inbox.InboxMessage, 0, len(newMessages))
-	for _, msg := range newMessages {
-		messages = append(messages, msg.Message)
-	}
-	return core.DeliverMessagesAndWait(
-		ir.db,
-		messages,
-		newMessages[0].BeforeInboxAcc,
-		true,
-	)
+	panic("TODO: rewrite inboxReader")
 }

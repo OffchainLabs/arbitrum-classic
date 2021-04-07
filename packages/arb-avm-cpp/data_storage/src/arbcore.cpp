@@ -120,6 +120,7 @@ bool ArbCore::deliverMessages(
     const uint256_t& previous_batch_acc,
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
+    std::vector<uint256_t> sequencer_batch_positions,
     const std::optional<uint256_t>& reorg_batch_items) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
@@ -128,6 +129,8 @@ bool ArbCore::deliverMessages(
     message_data.previous_batch_acc = previous_batch_acc;
     message_data.sequencer_batch_items = std::move(sequencer_batch_items);
     message_data.delayed_messages = std::move(delayed_messages);
+    message_data.sequencer_batch_positions =
+        std::move(sequencer_batch_positions);
     message_data.reorg_batch_items = reorg_batch_items;
 
     message_data_status = MESSAGES_READY;
@@ -926,7 +929,8 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
         return {result.status, {}};
     }
 
-    std::vector<std::vector<unsigned char>> bytes_vec(result.data.size());
+    std::vector<std::vector<unsigned char>> bytes_vec;
+    bytes_vec.reserve(result.data.size());
     for (auto& message_and_acc : result.data) {
         bytes_vec.push_back(std::move(message_and_acc.message));
     }
@@ -949,7 +953,8 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
         needs_consistency_check = true;
     }
 
-    std::vector<unsigned char> tmp(32 * 2);
+    std::vector<unsigned char> tmp;
+    tmp.reserve(32 * 2);
     rocksdb::Slice seq_batch_lower_bound;
     {
         auto ptr = reinterpret_cast<const char*>(tmp.data() + tmp.size());
@@ -1073,7 +1078,8 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
 ValueResult<SequencerBatchItem> ArbCore::getNextSequencerBatchItem(
     const ReadTransaction& tx,
     uint256_t sequence_number) const {
-    std::vector<unsigned char> tmp(32);
+    std::vector<unsigned char> tmp;
+    tmp.reserve(32);
     rocksdb::Slice seq_batch_lower_bound;
     {
         auto ptr = reinterpret_cast<const char*>(tmp.data());
@@ -1162,12 +1168,14 @@ ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
 
 ValueResult<size_t> ArbCore::countMatchingBatchAccs(
     std::vector<std::pair<uint256_t, uint256_t>> seq_nums_and_accs) const {
+    // TODO: validate sequence numbers lies on batch boundaries
     if (seq_nums_and_accs.empty()) {
         return {rocksdb::Status::OK(), 0};
     }
 
     size_t matching = 0;
-    std::vector<unsigned char> tmp(32 * 2);
+    std::vector<unsigned char> tmp;
+    tmp.reserve(32 * 2);
     uint256_t first_seq = seq_nums_and_accs[0].first;
     rocksdb::Slice lower_bound;
     {
@@ -1436,7 +1444,8 @@ ValueResult<std::vector<MachineMessage>> ArbCore::readNextMessages(
     const ReadConsistentTransaction& tx,
     const InboxState& fully_processed_inbox,
     size_t count) const {
-    std::vector<MachineMessage> messages(count);
+    std::vector<MachineMessage> messages;
+    messages.reserve(count);
 
     auto raw_result = getMessagesImpl(tx, fully_processed_inbox.count, count,
                                       fully_processed_inbox.accumulator);
@@ -1579,7 +1588,8 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
 
     std::optional<uint256_t> reorging_to_count;
     {
-        std::vector<unsigned char> tmp(32);
+        std::vector<unsigned char> tmp;
+        tmp.reserve(32);
         ReadWriteTransaction tx(data_storage);
         size_t duplicate_seq_batch_items = 0;
 

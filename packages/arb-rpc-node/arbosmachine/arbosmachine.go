@@ -253,9 +253,8 @@ func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
+	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
 	handleDebugPrints(debugPrints)
 	return assertion, debugPrints, numSteps
 }

@@ -28,11 +28,8 @@ package cmachine
 import "C"
 
 import (
-	"math/big"
 	"runtime"
 	"unsafe"
-
-	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -156,13 +153,11 @@ func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64) {
 	return m.ExecuteAssertionAdvanced(
 		maxGas,
 		goOverGas,
 		messages,
-		finalMessageOfBlock,
 		nil,
 		false,
 		common.Hash{},
@@ -170,9 +165,8 @@ func (m *Machine) ExecuteAssertion(
 	)
 }
 
-func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
-	rawInboxData := encodeInboxMessages(messages)
-	byteSlices := encodeByteSliceList(rawInboxData)
+func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
+	byteSlices := encodeByteSliceList(bytes)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
 	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
 	for i, data := range byteSlices {
@@ -181,11 +175,14 @@ func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteS
 	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
 }
 
+func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeInboxMessages(messages))
+}
+
 func (m *Machine) ExecuteAssertionAdvanced(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
 	beforeSendAcc common.Hash,
@@ -204,11 +201,6 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
-	if finalMessageOfBlock && len(messages) > 0 {
-		nextBlockHeight := new(big.Int).Add(messages[len(messages)-1].ChainTime.BlockNum.AsInt(), big.NewInt(1))
-		nextBlockHeightData := math.U256Bytes(nextBlockHeight)
-		C.machineExecutionConfigSetNextBlockHeight(conf, unsafeDataPointer(nextBlockHeightData))
-	}
 
 	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
 	defer C.free(sideloadsData.slices)
