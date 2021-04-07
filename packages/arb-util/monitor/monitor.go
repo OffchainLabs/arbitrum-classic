@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-var logger = log.With().Str("component", "monitor").Logger()
+var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
 
 var GlobalMonitor = NewMonitor()
 

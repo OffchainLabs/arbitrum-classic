@@ -66,7 +66,7 @@ func main() {
 	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
 
 	// Print line number that log was created on
-	logger = log.With().Caller().Str("component", "arb-node").Logger()
+	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
@@ -97,7 +97,7 @@ func main() {
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error parsing arguments")
+		logger.Fatal().Err(err).Msg("Error parsing arguments")
 	}
 
 	if fs.NArg() != 3 {
@@ -119,12 +119,12 @@ func main() {
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error running NewRPcEthClient")
+		logger.Fatal().Err(err).Msg("Error running NewRPcEthClient")
 	}
 
 	l1ChainId, err := ethclint.ChainID(context.Background())
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error getting chain ID")
+		logger.Fatal().Err(err).Msg("Error getting chain ID")
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
@@ -140,7 +140,7 @@ func main() {
 	} else {
 		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Msg("Error running GetKeystore")
+			logger.Fatal().Err(err).Msg("Error running GetKeystore")
 		}
 
 		if *inboxAddressStr == "" {
@@ -156,7 +156,7 @@ func main() {
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
 		); err != nil {
-			logger.Fatal().Stack().Err(err).Msg("error waiting for balance")
+			logger.Fatal().Err(err).Msg("error waiting for balance")
 		}
 
 		if *keepPendingState {
@@ -177,7 +177,7 @@ func main() {
 
 	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
 	if err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		logger.Fatal().Err(err).Send()
 	}
 
 	var inboxReader *staker.InboxReader
@@ -187,7 +187,7 @@ func main() {
 		if err == nil {
 			break
 		}
-		logger.Warn().Stack().Err(err).
+		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
@@ -209,6 +209,6 @@ func main() {
 		time.Duration(*maxBatchTime)*time.Second,
 		batcherMode,
 	); err != nil {
-		logger.Fatal().Stack().Err(err).Msg("Error running LaunchNode")
+		logger.Fatal().Err(err).Msg("Error running LaunchNode")
 	}
 }

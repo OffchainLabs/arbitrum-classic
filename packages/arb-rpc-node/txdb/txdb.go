@@ -44,7 +44,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Caller().Str("component", "txdb").Logger()
+var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type ChainTimeGetter interface {
 	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
@@ -149,7 +149,7 @@ func processBlockResults(block *evm.BlockInfo, avmLogs []value.Value) ([]*evm.Tx
 		if !ok {
 			return nil, errors.Errorf("expected tx result but got %T", res)
 		}
-		if txRes.IncomingRequest.L2BlockNumber.Cmp(block.BlockNum) != 0 {
+		if txRes.ResultCode != evm.RevertCode && txRes.IncomingRequest.L2BlockNumber.Cmp(block.BlockNum) != 0 {
 			return nil, errors.New("tx from wrong block")
 		}
 		results = append(results, txRes)
@@ -231,7 +231,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("Error parsing log result")
+		logger.Error().Err(err).Msg("Error parsing log result")
 		return nil
 	}
 
@@ -333,7 +333,8 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	requests := make([]machine.EVMRequestInfo, 0, len(txResults))
 
 	for i, txRes := range txResults {
-		if txRes.ResultCode != evm.ReturnCode && txRes.ResultCode != evm.RevertCode {
+		// && txRes.ResultCode != evm.RevertCode
+		if txRes.ResultCode != evm.ReturnCode {
 			// If this log was for an invalid transaction, only save the request if it hasn't been saved before
 			if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) != nil {
 				continue

@@ -36,7 +36,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "test").Logger()
+var logger = log.With().Caller().Stack().Str("component", "test").Logger()
 
 func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]ethcore.GenesisAccount)
@@ -45,7 +45,7 @@ func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
 		if err != nil {
-			logger.Fatal().Stack().Err(err).Send()
+			logger.Fatal().Err(err).Send()
 		}
 		pks = append(pks, privateKey)
 

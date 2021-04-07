@@ -24,7 +24,7 @@ interface IArbTokenInterface extends ethers.utils.Interface {
   functions: {
     'bridgeMint(address,uint256,bytes)': FunctionFragment
     'initialize(address,address,uint8)': FunctionFragment
-    'updateInfo(string,string)': FunctionFragment
+    'updateInfo(string,string,uint8)': FunctionFragment
     'withdraw(address,uint256)': FunctionFragment
   }
 
@@ -38,7 +38,7 @@ interface IArbTokenInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'updateInfo',
-    values: [string, string]
+    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'withdraw',
@@ -98,12 +98,14 @@ export class IArbToken extends Contract {
     updateInfo(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'updateInfo(string,string)'(
+    'updateInfo(string,string,uint8)'(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -151,12 +153,14 @@ export class IArbToken extends Contract {
   updateInfo(
     newName: string,
     newSymbol: string,
+    newDecimals: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'updateInfo(string,string)'(
+  'updateInfo(string,string,uint8)'(
     newName: string,
     newSymbol: string,
+    newDecimals: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -204,12 +208,14 @@ export class IArbToken extends Contract {
     updateInfo(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'updateInfo(string,string)'(
+    'updateInfo(string,string,uint8)'(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -260,12 +266,14 @@ export class IArbToken extends Contract {
     updateInfo(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'updateInfo(string,string)'(
+    'updateInfo(string,string,uint8)'(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -314,12 +322,14 @@ export class IArbToken extends Contract {
     updateInfo(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'updateInfo(string,string)'(
+    'updateInfo(string,string,uint8)'(
       newName: string,
       newSymbol: string,
+      newDecimals: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

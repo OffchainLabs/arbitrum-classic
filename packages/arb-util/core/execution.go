@@ -30,7 +30,8 @@ type ExecutionTracker struct {
 	sortedStopPoints []*big.Int
 	stopPointIndex   map[string]int
 
-	cursors []ExecutionCursor
+	initialCursor ExecutionCursor
+	cursors       []ExecutionCursor
 }
 
 func NewExecutionTracker(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int) *ExecutionTracker {
@@ -60,12 +61,20 @@ func NewExecutionTracker(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*
 	}
 }
 
+func NewExecutionTrackerWithInitialCursor(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int, initialCursor ExecutionCursor) *ExecutionTracker {
+	cursor := NewExecutionTracker(lookup, goOverGas, stopPointsArg)
+	cursor.initialCursor = initialCursor
+	return cursor
+}
+
 func (e *ExecutionTracker) fillInCursors(max int) error {
 	for i := len(e.cursors); i <= max; i++ {
 		var nextCursor ExecutionCursor
 		var err error
 		if i > 0 {
 			nextCursor = e.cursors[i-1].Clone()
+		} else if e.initialCursor != nil {
+			nextCursor = e.initialCursor.Clone()
 		} else {
 			nextCursor, err = e.lookup.GetExecutionCursor(e.sortedStopPoints[i])
 			// Note: we still might need to advance since we can't set goOverGas here
@@ -86,16 +95,23 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 	return nil
 }
 
-func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState, *big.Int, error) {
+func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int) (ExecutionCursor, error) {
 	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
 	if !ok {
-		return nil, nil, errors.New("invalid gas used")
+		return nil, errors.New("invalid gas used")
 	}
 	if err := e.fillInCursors(index); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	cursor := e.cursors[index]
+	return e.cursors[index].Clone(), nil
+}
+
+func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState, *big.Int, error) {
+	cursor, err := e.GetExecutionCursor(gasUsed)
+	if err != nil {
+		return nil, nil, err
+	}
 	return NewExecutionState(cursor), cursor.TotalSteps(), nil
 }
 
