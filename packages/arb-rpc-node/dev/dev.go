@@ -264,7 +264,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 	requestId := message.CalculateRequestId(b.signer.ChainID(), msgCount)
 	var prevHash common.Hash
 	if msgCount.Cmp(big.NewInt(0)) > 0 {
-		prevHash, err = b.arbcore.GetInboxAcc(msgCount.Sub(msgCount, big.NewInt(1)))
+		prevHash, err = b.arbcore.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
 		if err != nil {
 			return common.Hash{}, err
 		}
@@ -279,7 +279,30 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 	if err != nil {
 		return common.Hash{}, err
 	}
-	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem}, nil, nil, nil)
+
+	nextBlockMessage := inbox.InboxMessage{
+		Kind:        6,
+		Sender:      common.Address{},
+		InboxSeqNum: big.NewInt(0),
+		GasPrice:    big.NewInt(0),
+		Data:        []byte{},
+		ChainTime: inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		},
+	}
+	nextBlockBatchItem := inbox.SequencerBatchItem{
+		LastSeqNum:        new(big.Int).Add(msgCount, big.NewInt(1)),
+		Accumulator:       common.Hash{},
+		TotalDelayedCount: big.NewInt(0),
+		SequencerMessage:  nextBlockMessage.ToBytes(),
+	}
+	nextBlockBatchItem.Accumulator, err = nextBlockBatchItem.ComputeAccumulator(seqBatchItem.Accumulator, big.NewInt(0), common.Hash{})
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil, nil)
 	if err != nil {
 		return common.Hash{}, err
 	}
