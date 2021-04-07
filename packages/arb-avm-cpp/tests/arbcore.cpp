@@ -272,5 +272,18 @@ TEST_CASE("ArbCore inbox") {
     REQUIRE(cursor.status.ok());
     REQUIRE(cursor.data->getOutput().arb_gas_used > 0);
     REQUIRE(cursor.data->getOutput().arb_gas_used <= position.data);
-    REQUIRE(cursor.data->machineHash().has_value());
+
+    auto cursor_machine_hash = cursor.data->machineHash();
+    REQUIRE(cursor_machine_hash.has_value());
+
+    auto cursor_machine =
+        arbCore->takeExecutionCursorMachine(*cursor.data.get(), value_cache);
+    REQUIRE(cursor_machine);
+    REQUIRE(cursor_machine_hash.value() == cursor_machine->hash());
+
+    auto machine = arbCore->getLastMachine();
+    REQUIRE(machine);
+    auto machine_hash = machine->hash();
+    // staged message cannot be resolved at this point
+    REQUIRE(!machine_hash);
 }

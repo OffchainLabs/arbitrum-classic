@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"time"
 
-	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
@@ -45,6 +45,7 @@ import (
 )
 
 var logger zerolog.Logger
+
 var pprofMux *http.ServeMux
 
 func init() {
@@ -61,10 +62,18 @@ func main() {
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
+
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+
+	go func() {
+		err := nodehealth.NodeHealthCheck(healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
@@ -82,6 +91,7 @@ func main() {
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -96,6 +106,10 @@ func main() {
 			cmdhelp.WalletArgsString,
 			utils.RollupArgsString,
 		)
+	}
+
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+		logger.Fatal().Err(err).Send()
 	}
 
 	if *enablePProf {
@@ -119,6 +133,9 @@ func main() {
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
+
+	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: rollupArgs.EthURL}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: *forwardTxURL}
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
@@ -173,6 +190,7 @@ func main() {
 		if err == nil {
 			break
 		}
+		inboxReader.HealthChan = healthChan
 		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).

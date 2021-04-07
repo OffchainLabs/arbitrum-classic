@@ -76,8 +76,12 @@ func main() {
 	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
 	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
 	if err := flagSet.Parse(os.Args[6:]); err != nil {
 		logger.Fatal().Err(err).Msg("failed parsing command line arguments")
+	}
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+		logger.Fatal().Err(err).Send()
 	}
 
 	if *enablePProf {
