@@ -24,8 +24,8 @@ import (
 )
 
 func AddLogFlags(fs *flag.FlagSet) (*string, *string) {
-	gethLogLevel := fs.String("rpcloglevel", "", "log level for rpc")
-	arbLogLevel := fs.String("arbloglevel", "", "log level for general arb node logging")
+	gethLogLevel := fs.String("rpcloglevel", "info", "log level for rpc")
+	arbLogLevel := fs.String("arbloglevel", "info", "log level for general arb node logging")
 	return gethLogLevel, arbLogLevel
 }
 
