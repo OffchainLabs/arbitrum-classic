@@ -36,6 +36,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
@@ -44,6 +45,7 @@ import (
 )
 
 var logger zerolog.Logger
+
 var pprofMux *http.ServeMux
 
 func init() {
@@ -62,6 +64,16 @@ func main() {
 
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
+
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+
+	go func() {
+		err := nodehealth.NodeHealthCheck(healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
@@ -122,6 +134,9 @@ func main() {
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
+	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: rollupArgs.EthURL}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: *forwardTxURL}
+
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
 		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
@@ -170,6 +185,7 @@ func main() {
 	}
 
 	var inboxReader *staker.InboxReader
+	inboxReader.HealthChan = healthChan
 	for {
 		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
 		if err == nil {
