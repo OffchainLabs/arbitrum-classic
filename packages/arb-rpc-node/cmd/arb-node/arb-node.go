@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"time"
 
-	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 
@@ -63,8 +62,6 @@ func main() {
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
@@ -94,6 +91,7 @@ func main() {
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -108,6 +106,10 @@ func main() {
 			cmdhelp.WalletArgsString,
 			utils.RollupArgsString,
 		)
+	}
+
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+		logger.Fatal().Err(err).Send()
 	}
 
 	if *enablePProf {
