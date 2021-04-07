@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,20 +16,12 @@
  * limitations under the License.
  */
 
-package web3
+pragma solidity ^0.6.11;
 
-import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-)
+import "../../tokenbridge/arbitrum/open-zeppelin/OZERC777.sol";
 
-type Web3 struct {
-}
-
-func (web3 *Web3) ClientVersion() string {
-	return "arb-rpc-node/v0.8.0"
-}
-
-func (web3 *Web3) Sha3(data hexutil.Bytes) hexutil.Bytes {
-	return crypto.Keccak256(data)
+contract TestERC777 is OZERC777 {
+    constructor() public {
+        _mint(msg.sender, 50000000, "", "");
+    }
 }

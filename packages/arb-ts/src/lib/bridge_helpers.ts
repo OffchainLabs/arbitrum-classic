@@ -7,6 +7,7 @@ import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { providers, utils } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
+import { ARB_SYS_ADDRESS } from './l2Bridge'
 
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
@@ -77,6 +78,12 @@ export interface OutboxProofData {
   timestamp: BigNumber
   amount: BigNumber
   calldataForL1: string
+}
+
+export interface ActivateCustomTokenResult {
+  seqNum: BigNumber
+  l1Addresss: string
+  l2Address: string
 }
 
 export type ChainIdOrProvider = BigNumber | providers.Provider
@@ -192,16 +199,14 @@ export class BridgeHelper {
 
   static getDepositTokenEventData = async (
     l1Transaction: providers.TransactionReceipt,
-    tokenType: 'ERC20' | 'ERC777' = 'ERC20',
-    l2BridgeAddress?: string
+    l2BridgeAddress: string
   ): Promise<Array<DepositTokenEventResult>> => {
     const factory = new EthERC20Bridge__factory()
     // TODO: does this work?
-    const contract = factory.attach(l2BridgeAddress || 'l2BridgeAddr')
+    const contract = factory.attach(l2BridgeAddress)
     const iface = contract.interface
     const event = iface.getEvent('DepositToken')
     const eventTopic = iface.getEventTopic(event)
-    // TODO: filter out if token type doesn't match
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult
@@ -210,17 +215,34 @@ export class BridgeHelper {
 
   static getUpdateTokenInfoEventResult = async (
     l1Transaction: providers.TransactionReceipt,
-    l2BridgeAddress: string
+    l1BridgeAddress: string
   ): Promise<Array<UpdateTokenEventResult>> => {
     const factory = new EthERC20Bridge__factory()
-    const contract = factory.attach(l2BridgeAddress)
+    const contract = factory.attach(l1BridgeAddress)
     const iface = contract.interface
     const event = iface.getEvent('UpdateTokenInfo')
     const eventTopic = iface.getEventTopic(event)
-    // TODO: filter out if token type doesn't match
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as UpdateTokenEventResult
+    )
+  }
+
+  static getActivateCustomTokenEventResult = async (
+    l1Transaction: providers.TransactionReceipt,
+    l1BridgeAddress: string
+  ): Promise<Array<ActivateCustomTokenResult>> => {
+    const factory = new EthERC20Bridge__factory()
+    const contract = factory.attach(l1BridgeAddress)
+    const iface = contract.interface
+    const event = iface.getEvent('ActivateCustomToken')
+    const eventTopic = iface.getEventTopic(event)
+
+    const logs = l1Transaction.logs.filter(log => {
+      return log.topics[0] === eventTopic
+    })
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as ActivateCustomTokenResult
     )
   }
 
@@ -233,21 +255,16 @@ export class BridgeHelper {
     const iface = contract.interface
     const event = iface.getEvent('TokenDataUpdated')
     const eventTopic = iface.getEventTopic(event)
-    // TODO: filter out if token type doesn't match
     const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(log => (iface.parseLog(log).args as unknown) as any)
   }
 
   static getWithdrawalsInL2Transaction = async (
     l2Transaction: providers.TransactionReceipt,
-    l2Provider: providers.Provider,
-    arbSysAddress?: string
+    l2Provider: providers.Provider
   ): Promise<Array<L2ToL1EventResult>> => {
     // TODO: can we use dummies to get interface?
-    const contract = ArbSys__factory.connect(
-      arbSysAddress || 'arbSysAddress',
-      l2Provider
-    )
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
@@ -269,10 +286,10 @@ export class BridgeHelper {
 
   static getInboxSeqNumFromContractTransaction = async (
     l2Transaction: providers.TransactionReceipt,
-    inboxAddress?: string
+    inboxAddress: string
   ) => {
     const factory = new Inbox__factory()
-    const contract = factory.attach(inboxAddress || 'inboxAddress')
+    const contract = factory.attach(inboxAddress)
     const iface = contract.interface
     const messageDelivered = iface.getEvent('InboxMessageDelivered')
     const messageDeliveredFromOrigin = iface.getEvent(
@@ -605,13 +622,9 @@ export class BridgeHelper {
 
   static getL2ToL1EventData = async (
     destinationAddress: string,
-    l2Provider: providers.Provider,
-    arbSysAddress?: string
+    l2Provider: providers.Provider
   ) => {
-    const contract = ArbSys__factory.connect(
-      arbSysAddress || 'arbSysAddress',
-      l2Provider
-    )
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
     const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
@@ -622,7 +635,7 @@ export class BridgeHelper {
     ]
 
     const logs = await l2Provider.getLogs({
-      address: arbSysAddress,
+      address: ARB_SYS_ADDRESS,
       topics,
       fromBlock: 0,
       toBlock: 'latest',

@@ -81,6 +81,7 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
                                   CExecutionCursor* execution_cursor_ptr,
                                   const void* max_gas_ptr,
                                   int go_over_gas);
+CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr);
 CMachine* arbCoreGetMachineForSideload(CArbCore* arbcore_ptr,

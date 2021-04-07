@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -14,20 +16,23 @@
  * limitations under the License.
  */
 
-package web3
+pragma solidity ^0.6.11;
+import "../arbitrum/open-zeppelin/OZERC20.sol";
 
-import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
-)
+interface ICustomToken {
+    function registerTokenOnL2(
+        address l2CustomTokenAddress,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address refundAddress
+    ) external virtual;
 
-type Web3 struct {
-}
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external virtual returns (bool);
 
-func (web3 *Web3) ClientVersion() string {
-	return "arb-rpc-node/v0.8.0"
-}
-
-func (web3 *Web3) Sha3(data hexutil.Bytes) hexutil.Bytes {
-	return crypto.Keccak256(data)
+    function balanceOf(address account) external view virtual returns (uint256);
 }
