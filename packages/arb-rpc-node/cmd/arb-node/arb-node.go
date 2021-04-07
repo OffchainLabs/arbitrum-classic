@@ -37,8 +37,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
@@ -72,9 +72,11 @@ func main() {
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		nodehealth.NodeHealthCheck(healthChan)
+		err := nodehealth.NodeHealthCheck(healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
 	}()
-	go nodehealth.NodeHealthCheck(healthChan)
 
 	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
