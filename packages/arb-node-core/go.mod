@@ -7,6 +7,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.1
 	github.com/offchainlabs/arbitrum/packages/arb-avm-cpp v0.8.0
 	github.com/offchainlabs/arbitrum/packages/arb-evm v0.8.0
+	github.com/offchainlabs/arbitrum/packages/arb-rpc-node v0.8.0 // indirect
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/rjeczalik/notify v0.9.2 // indirect
