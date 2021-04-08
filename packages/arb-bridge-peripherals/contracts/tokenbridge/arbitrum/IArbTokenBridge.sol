@@ -57,6 +57,10 @@ interface IArbTokenBridge {
         uint256 amount
     );
 
+    // The following functions are only callable by the L1 bridge
+
+    /// @notice Mints tokens in the L2
+    /// @dev This function is only callable by the L1 bridge
     function mintFromL1(
         address l1ERC20,
         address sender,
@@ -66,12 +70,14 @@ interface IArbTokenBridge {
         bytes calldata callHookData
     ) external;
 
-    function withdraw(
-        address l1ERC20,
-        address destination,
-        uint256 amount
-    ) external returns (uint256);
+    /// @notice Registers a custom ERC20 token implementation to be used when the bridge is minting tokens
+    /// @dev This function is only callable by the L1 bridge
+    function customTokenRegistered(address l1Address, address l2Address) external;
 
+    // The following functions are only callable by users in the L2
+
+    /// @notice Migrates user balance from an erc20 token to custom token implementation
+    /// @dev If a token is bridged before a custom implementation is set users can call this method to migrate to the custom version
     function migrate(
         address l1ERC20,
         address target,
@@ -79,7 +85,16 @@ interface IArbTokenBridge {
         uint256 amount
     ) external;
 
-    function customTokenRegistered(address l1Address, address l2Address) external;
+    /// @notice Withdraws user funds to the L1
+    /// @dev Users need to wait for the rollup's dispute period before triggering their withdrawal in the L1
+    /// @return unique withdrawal identifier needed to execute the withdrawal in the L1
+    function withdraw(
+        address l1ERC20,
+        address destination,
+        uint256 amount
+    ) external returns (uint256);
 
+    /// @notice An address oracle that provides users with the L2 address of an L1 token
+    /// @return address of L2 token that was created using this bridge
     function calculateL2TokenAddress(address l1ERC20) external view returns (address);
 }
