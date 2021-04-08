@@ -184,9 +184,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory deployData,
         bytes memory callHookData
     ) internal returns (uint256) {
-        require(hasTriedDeploy[erc20], "Must have attempted to deploy before depositing");
-
-        IERC20(erc20).safeTransferFrom(msg.sender, l2ArbTokenBridgeAddress, amount);
+        IERC20(erc20).safeTransferFrom(sender, l2ArbTokenBridgeAddress, amount);
         uint256 seqNum = 0;
         {
             bytes memory data =
@@ -204,8 +202,8 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 l2ArbTokenBridgeAddress,
                 0,
                 retryableParams.maxSubmissionCost,
-                msg.sender,
-                msg.sender,
+                sender,
+                sender,
                 retryableParams.maxGas,
                 retryableParams.gasPriceBid,
                 data
@@ -214,41 +212,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
 
         emit DepositToken(destination, sender, seqNum, amount, erc20);
         return seqNum;
-    }
-
-    function deployAndDeposit(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable override returns (uint256) {
-        require(customL2Tokens[erc20] == address(0), "Custom token implementation cannot be set");
-        // record that deploy attempt was made
-        hasTriedDeploy[erc20] = true;
-        // multiple deploy attempts shouldn't be an issue
-
-        // TODO: use OZ's ERC20Metadata once available
-        // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
-        bytes memory deployData =
-            abi.encode(
-                callStatic(erc20, ERC20.name.selector),
-                callStatic(erc20, ERC20.symbol.selector),
-                callStatic(erc20, ERC20.decimals.selector)
-            );
-
-        return
-            depositToken(
-                erc20,
-                msg.sender,
-                destination,
-                amount,
-                RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                deployData,
-                callHookData
-            );
     }
 
     function deposit(
@@ -260,6 +223,20 @@ contract EthERC20Bridge is IEthERC20Bridge {
         uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable override returns (uint256) {
+        bytes memory deployData = "";
+
+        // if no deploy done and no custom L2 token set
+        if (!hasTriedDeploy[erc20] && customL2Tokens[erc20] == address(0)) {
+            // TODO: use OZ's ERC20Metadata once available
+            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
+            deployData = abi.encode(
+                callStatic(erc20, ERC20.name.selector),
+                callStatic(erc20, ERC20.symbol.selector),
+                callStatic(erc20, ERC20.decimals.selector)
+            );
+            hasTriedDeploy[erc20] = true;
+        }
+
         return
             depositToken(
                 erc20,
@@ -267,7 +244,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 destination,
                 amount,
                 RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                "",
+                deployData,
                 callHookData
             );
     }

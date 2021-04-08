@@ -56,16 +56,6 @@ interface IEthERC20Bridge {
         uint256 amount
     ) external;
 
-    function deployAndDeposit(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable returns (uint256);
-
     function deposit(
         address erc20,
         address destination,
