@@ -23,6 +23,22 @@ interface IEthERC20Bridge {
 
     event DeployToken(uint256 indexed seqNum, address indexed l1Address);
 
+    event WithdrawRedirected(
+        address indexed user,
+        address indexed liquidityProvider,
+        address erc20,
+        uint256 amount,
+        uint256 indexed exitNum
+    );
+
+    event WithdrawExecuted(
+        address indexed withdrawInitiator,
+        address indexed destination,
+        address erc20,
+        uint256 amount,
+        uint256 indexed exitNum
+    );
+
     event DepositToken(
         address indexed destination,
         address sender,
@@ -46,13 +62,14 @@ interface IEthERC20Bridge {
         bytes memory liquidityProof,
         address erc20,
         uint256 amount,
-        uint256 exitNum
+        uint256 exitNum,
+        uint256 maxFee
     ) external;
 
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
-        address destination,
+        address withdrawInitiator,
         uint256 amount
     ) external;
 

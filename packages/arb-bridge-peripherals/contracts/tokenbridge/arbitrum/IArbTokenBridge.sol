@@ -32,9 +32,9 @@ interface IArbTokenBridge {
     event WithdrawToken(
         uint256 id,
         address indexed l1Address,
-        uint256 indexed amount,
+        uint256 amount,
         address indexed destination,
-        uint256 exitNum
+        uint256 indexed exitNum
     );
 
     event TokenCreated(address indexed l1Address, address indexed l2Address);

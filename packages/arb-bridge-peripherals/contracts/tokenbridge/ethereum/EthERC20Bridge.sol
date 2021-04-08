@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "../libraries/ClonableBeaconProxy.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
@@ -126,39 +127,51 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory liquidityProof,
         address erc20,
         uint256 amount,
-        uint256 exitNum
-    ) public override {
-        IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
-        address msgSender = outbox.l2ToL1Sender();
+        uint256 exitNum,
+        uint256 maxFee
+    ) external override {
+        // TODO: this only allows withdrawal if you were the withdrawal initiator
+        bytes32 withdrawData = encodeWithdrawal(exitNum, msg.sender, erc20, amount);
 
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msgSender, erc20, amount));
-        require(redirectedExits[withdrawData] == USED_ADDRESS, "ALREADY_EXITED");
+        require(redirectedExits[withdrawData] != USED_ADDRESS, "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
 
+        uint256 balancePrior = IERC20(erc20).balanceOf(msg.sender);
+
+        // Liquidity provider is responsible for validating if this is a valid exit
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            msgSender,
+            msg.sender,
             erc20,
             amount,
             exitNum,
             liquidityProof
         );
+
+        uint256 balancePost = IERC20(erc20).balanceOf(msg.sender);
+
+        // User must be sent at least (amount - maxFee) or execution reverts
+        require(
+            SafeMath.sub(balancePost, balancePrior) >= SafeMath.sub(amount, maxFee),
+            "User did not get credited with enough tokens"
+        );
+
+        emit WithdrawRedirected(msg.sender, liquidityProvider, erc20, amount, exitNum);
     }
 
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
-        address destination,
+        address withdrawInitiator,
         uint256 amount
     ) external override onlyL2Address {
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
+        bytes32 withdrawData = encodeWithdrawal(exitNum, withdrawInitiator, erc20, amount);
         address exitAddress = redirectedExits[withdrawData];
         redirectedExits[withdrawData] = USED_ADDRESS;
+        address dest = exitAddress != address(0) ? exitAddress : withdrawInitiator;
         // Unsafe external calls must occur below checks and effects
-        if (exitAddress != address(0)) {
-            IERC20(erc20).safeTransfer(exitAddress, amount);
-        } else {
-            IERC20(erc20).safeTransfer(destination, amount);
-        }
+        IERC20(erc20).safeTransfer(dest, amount);
+
+        emit WithdrawExecuted(withdrawInitiator, dest, erc20, amount, exitNum);
     }
 
     function callStatic(address targetContract, bytes4 targetFunction)
@@ -249,6 +262,15 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 deployData,
                 callHookData
             );
+    }
+
+    function encodeWithdrawal(
+        uint256 exitNum,
+        address user,
+        address erc20,
+        uint256 amount
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(exitNum, user, erc20, amount));
     }
 
     function calculateL2TokenAddress(address erc20) public view override returns (address) {
