@@ -92,9 +92,11 @@ contract EthERC20Bridge is IEthERC20Bridge {
         address refundAddress
     ) external payable override returns (uint256) {
         address l1CustomTokenAddress = msg.sender;
+        // Token must be registering for the first time, or retrying the same address
         require(
-            customL2Tokens[l1CustomTokenAddress] == address(0),
-            "Cannot re-register a custom token address"
+            customL2Tokens[l1CustomTokenAddress] == address(0) ||
+                customL2Tokens[l1CustomTokenAddress] == l2CustomTokenAddress,
+            "Cannot register a different custom token address"
         );
         customL2Tokens[l1CustomTokenAddress] = l2CustomTokenAddress;
 

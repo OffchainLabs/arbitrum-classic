@@ -132,8 +132,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         if (!expectedAddress.isContract()) {
             if (deployData.length > 0 && !isCustom) {
                 address deployedToken = deployToken(l1ERC20, deployData);
-                // TODO: should we require or withdraw here? deploy should always work.
-                require(deployedToken == expectedAddress, "Token not deployed to expected address");
+                assert(deployedToken == expectedAddress);
             } else {
                 // withdraw funds to user as no deployData and no contract deployed
                 // The L1 contract shouldn't let this happen!
@@ -163,8 +162,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         deployBeacon = address(0);
 
         bool initSuccess = IArbToken(createdContract).bridgeInit(l1ERC20, deployData);
-        // TODO: should we return address(0) instead of reverting?
-        require(initSuccess, "Bridge init on token failed");
+        assert(initSuccess);
 
         emit TokenCreated(l1ERC20, createdContract);
         return createdContract;
@@ -175,11 +173,16 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         override
         onlyEthPair
     {
-        // This assumed token contract is initialized and ready to be used.
-        require(l2Address.isContract(), "L2 custom token is not yet deployed");
-        // TODO: if is not contract, should revert or send callback to L1 to update custom token mapping?
-        customToken[l1Address] = l2Address;
-        emit CustomTokenRegistered(l1Address, l2Address);
+        if (l2Address.isContract()) {
+            // This assumed token contract is initialized and ready to be used.
+            customToken[l1Address] = l2Address;
+            emit CustomTokenRegistered(l1Address, l2Address);
+        } else {
+            // deploy erc20 temporarily, but users can migrate to custom implementation once deployed
+            bytes memory deployData =
+                abi.encode(bytes("Temporary Migrateable Token"), bytes("TMT"), uint8(18));
+            deployToken(l1Address, deployData);
+        }
     }
 
     function withdraw(
