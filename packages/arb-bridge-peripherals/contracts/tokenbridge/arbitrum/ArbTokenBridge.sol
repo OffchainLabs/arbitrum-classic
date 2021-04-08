@@ -142,7 +142,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
             }
         }
         // ignores deployData if token already deployed
-        // IArbToken token = IArbToken(expectedAddress);
 
         if (callHookData.length > 0) {
             handleCallHookData(expectedAddress, amount, sender, dest, callHookData);

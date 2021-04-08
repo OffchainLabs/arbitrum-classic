@@ -29,8 +29,6 @@ import "./IERC1363.sol";
 contract aeERC20 is ERC20PermitUpgradeable, IERC1363, ERC165Upgradeable {
     using AddressUpgradeable for address;
 
-    uint8 internal _decimals;
-
     function initialize(
         string memory name,
         string memory symbol,
@@ -39,11 +37,7 @@ contract aeERC20 is ERC20PermitUpgradeable, IERC1363, ERC165Upgradeable {
         __ERC20Permit_init(name);
         __ERC20_init(name, symbol);
         __ERC165_init();
-        _decimals = decimals;
-    }
-
-    function decimals() public view override returns (uint8) {
-        return _decimals;
+        _setupDecimals(decimals);
     }
 
     // ERC1363 implementation from https://github.com/vittominacori/erc1363-payable-token
