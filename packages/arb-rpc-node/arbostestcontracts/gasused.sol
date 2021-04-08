@@ -20,12 +20,20 @@ pragma solidity >=0.4.21 <0.7.0;
 
 contract GasUsed {
     uint256 a;
+    uint256 b;
 
-    constructor() public payable {}
+    constructor(bool shouldRevert) public payable {
+        require(!shouldRevert, "Shouldn't have asked to revert");
+    }
 
     function noop() external {}
 
     function sstore() external {
         a++;
+    }
+
+    function fail() external {
+        b++;
+        revert("tx failed");
     }
 }

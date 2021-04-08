@@ -17,8 +17,10 @@
 package arbostest
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -95,9 +97,8 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 	}
 }
 
-func addUserTxes(t *testing.T, ib *InboxBuilder, privKey *ecdsa.PrivateKey, userTxes []txTemplate, aggregator common.Address, initialDeposit *big.Int) {
+func addUserTxes(t *testing.T, ib *InboxBuilder, privKey *ecdsa.PrivateKey, userTxes []message.CompressedECDSATransaction, aggregator common.Address, initialDeposit *big.Int) {
 	userAddress := crypto.PubkeyToAddress(privKey.PublicKey)
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -117,19 +118,8 @@ func addUserTxes(t *testing.T, ib *InboxBuilder, privKey *ecdsa.PrivateKey, user
 	}
 	ib.AddMessage(deposit, chain, big.NewInt(0), chainTime)
 
-	for i, rawTx := range userTxes {
-		tx := types.NewTx(&types.LegacyTx{
-			Nonce:    uint64(i),
-			GasPrice: rawTx.GasPrice,
-			Gas:      rawTx.Gas,
-			To:       rawTx.To,
-			Value:    rawTx.Value,
-			Data:     rawTx.Data,
-		})
-		signedTx, err := types.SignTx(tx, signer, privKey)
-		failIfError(t, err)
-
-		batch, err := message.NewTransactionBatchFromMessages([]message.AbstractL2Message{message.NewCompressedECDSAFromEth(signedTx)})
+	for _, tx := range userTxes {
+		batch, err := message.NewTransactionBatchFromMessages([]message.AbstractL2Message{tx})
 		failIfError(t, err)
 		ib.AddMessage(message.NewSafeL2Message(batch), aggregator, big.NewInt(0), chainTime)
 		chainTime.BlockNum = common.NewTimeBlocksInt(int64(len(ib.Messages)))
@@ -144,32 +134,59 @@ type txTemplate struct {
 	Data     []byte
 
 	// Data to verify tx
-	nonzeroComputation bool
+	resultType         []evm.ResultType
+	nonzeroComputation []bool
 	correctStorageUsed int
+	calldataBytes      int
+	ranOutOfFunds      bool
 }
 
 func TestFees(t *testing.T) {
 	privKey, err := crypto.GenerateKey()
 	failIfError(t, err)
+	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
 	userAddress := common.NewAddressFromEth(crypto.PubkeyToAddress(privKey.PublicKey))
 
-	initialDeposit := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
+	initialDeposit := new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil)
+	initialDeposit = initialDeposit.Mul(initialDeposit, big.NewInt(4))
 
 	gasUsedABI, err := abi.JSON(strings.NewReader(arbostestcontracts.GasUsedABI))
 	failIfError(t, err)
 
 	contractDest := crypto.CreateAddress(userAddress.ToEthAddress(), 0)
 	eoaDest := common.RandAddress().ToEthAddress()
+
+	var conDeloyedLength int
+	{
+		client, keys := test.SimulatedBackend()
+		auth := bind.NewKeyedTransactor(keys[0])
+		addr, _, _, err := arbostestcontracts.DeployGasUsed(auth, client, false)
+		failIfError(t, err)
+		client.Commit()
+		deployedCode, err := client.CodeAt(context.Background(), addr, nil)
+		failIfError(t, err)
+		conDeloyedLength = len(deployedCode)
+	}
+
+	conDataSuccess := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
+	conDataSuccess = append(conDataSuccess, math.U256Bytes(big.NewInt(0))...)
+
+	conDataFailure := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
+	conDataFailure = append(conDataFailure, math.U256Bytes(big.NewInt(1))...)
+
 	rawTxes := []txTemplate{
+		// Successful call to constructor
 		{
 			GasPrice: big.NewInt(0),
-			Gas:      1000000000,
+			Gas:      300000000,
 			Value:    big.NewInt(0),
-			Data:     hexutil.MustDecode(arbostestcontracts.GasUsedBin),
+			Data:     conDataSuccess,
 
-			nonzeroComputation: true,
-			correctStorageUsed: (len(hexutil.MustDecode(arbostestcontracts.GasUsedBin)) + 32) / 32,
+			resultType:         []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation: []bool{true},
+			correctStorageUsed: (conDeloyedLength + 31) / 32,
 		},
+		// Successful call to method without storage
 		{
 			GasPrice: big.NewInt(0),
 			Gas:      100000000,
@@ -177,9 +194,11 @@ func TestFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["noop"]),
 
-			nonzeroComputation: true,
+			resultType:         []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation: []bool{true},
 			correctStorageUsed: 0,
 		},
+		// Successful call to storage allocating method
 		{
 			GasPrice: big.NewInt(0),
 			Gas:      100000000,
@@ -187,16 +206,54 @@ func TestFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     makeFuncData(t, gasUsedABI.Methods["sstore"]),
 
-			nonzeroComputation: true,
+			resultType:         []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation: []bool{true},
 			correctStorageUsed: 1,
 		},
+		// Successful eth transfer to EOA
 		{
 			GasPrice: big.NewInt(0),
 			Gas:      100000000,
 			To:       &eoaDest,
 			Value:    big.NewInt(100000),
 
-			nonzeroComputation: false,
+			resultType:         []evm.ResultType{evm.ReturnCode},
+			nonzeroComputation: []bool{false},
+			correctStorageUsed: 0,
+		},
+		// Reverted constructor
+		{
+			GasPrice: big.NewInt(0),
+			Gas:      1000000000,
+			Value:    big.NewInt(0),
+			Data:     conDataFailure,
+
+			resultType:         []evm.ResultType{evm.RevertCode},
+			nonzeroComputation: []bool{true},
+			correctStorageUsed: 0,
+		},
+		// Reverted storage allocating function call
+		{
+			GasPrice: big.NewInt(0),
+			Gas:      100000000,
+			To:       &contractDest,
+			Value:    big.NewInt(0),
+			Data:     makeFuncData(t, gasUsedABI.Methods["fail"]),
+
+			resultType:         []evm.ResultType{evm.RevertCode},
+			nonzeroComputation: []bool{true},
+			correctStorageUsed: 0,
+		},
+		// Reverted since insufficient funds
+		{
+			GasPrice: big.NewInt(0),
+			Gas:      10000000000,
+			To:       &contractDest,
+			Value:    big.NewInt(0),
+			Data:     common.RandBytes(100000),
+
+			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasForBaseFee},
+			nonzeroComputation: []bool{true, false, false},
 			correctStorageUsed: 0,
 		},
 	}
@@ -217,9 +274,32 @@ func TestFees(t *testing.T) {
 		addInitialization(ib, aggregator, netFeeRecipient, congestionFeeRecipient)
 	}
 
+	buildCompressedTxes := func() []message.CompressedECDSATransaction {
+		compressedTxes := make([]message.CompressedECDSATransaction, 0)
+		for i, rawTx := range rawTxes {
+			tx := types.NewTx(&types.LegacyTx{
+				Nonce:    uint64(i),
+				GasPrice: new(big.Int).Set(rawTx.GasPrice),
+				Gas:      rawTx.Gas,
+				To:       rawTx.To,
+				Value:    new(big.Int).Set(rawTx.Value),
+				Data:     append([]byte{}, rawTx.Data...),
+			})
+			signedTx, err := types.SignTx(tx, signer, privKey)
+			failIfError(t, err)
+			compressedTxes = append(compressedTxes, message.NewCompressedECDSAFromEth(signedTx))
+		}
+		return compressedTxes
+	}
+	for i, compressedTx := range buildCompressedTxes() {
+		l2, err := message.NewL2Message(compressedTx)
+		failIfError(t, err)
+		rawTxes[i].calldataBytes = len(l2.Data)
+	}
+
 	addUserTxesLoc := func(ib *InboxBuilder, agg common.Address) {
 		t.Helper()
-		addUserTxes(t, ib, privKey, rawTxes, agg, initialDeposit)
+		addUserTxes(t, ib, privKey, buildCompressedTxes(), agg, initialDeposit)
 	}
 
 	noFeeIB := &InboxBuilder{}
@@ -237,22 +317,38 @@ func TestFees(t *testing.T) {
 	addEnableFeesMessages(feeWithAggIB)
 	addUserTxesLoc(feeWithAggIB, aggregator)
 
-	noFeeResults, noFeeSnap := processMessages(t, noFeeIB, len(rawTxes))
-	feeResults, feeSnap := processMessages(t, feeIB, len(rawTxes))
-	feeWithAggResults, feeWithAggSnap := processMessages(t, feeWithAggIB, len(rawTxes))
-
-	checkResults := func(results []*evm.TxResult, aggregator common.Address) {
+	processMessages := func(ib *InboxBuilder, index int, aggregator common.Address) ([]*evm.TxResult, *snapshot.Snapshot, *big.Int) {
+		t.Helper()
+		logs, _, snap, _ := runAssertionWithoutPrint(t, ib.Messages, math.MaxInt32, 0)
+		rawResults := extractTxResults(t, logs)
+		allResultsSucceeded(t, rawResults[:len(rawResults)-len(rawTxes)])
+		results := rawResults[len(rawResults)-len(rawTxes):]
+		amountUnpaid := big.NewInt(0)
 		for i, res := range results {
-			checkGas(t, res, rawTxes[i].nonzeroComputation, rawTxes[i].correctStorageUsed, aggregator)
+			resType := rawTxes[i].resultType[0]
+			if len(rawTxes[i].resultType) > 1 {
+				resType = rawTxes[i].resultType[index]
+			}
+			txResultCheck(t, res, resType)
+			unpaid := checkGas(t, res, rawTxes[i], aggregator, index)
+			amountUnpaid = amountUnpaid.Add(amountUnpaid, unpaid)
 		}
+		return results, snap, amountUnpaid
 	}
 
 	t.Log("Checking results for no fee")
-	checkResults(noFeeResults, aggregator)
+	noFeeResults, noFeeSnap, unpaidNoFee := processMessages(noFeeIB, 0, aggregator)
 	t.Log("Checking results for fee")
-	checkResults(feeResults, otherAgg)
+	feeResults, feeSnap, unpaidFeed := processMessages(feeIB, 1, otherAgg)
 	t.Log("Checking results for fee with agg")
-	checkResults(feeWithAggResults, aggregator)
+	feeWithAggResults, feeWithAggSnap, _ := processMessages(feeWithAggIB, 2, aggregator)
+
+	if unpaidNoFee.Cmp(big.NewInt(0)) != 0 {
+		t.Error("shouldn't have unpaid")
+	}
+	if unpaidFeed.Cmp(big.NewInt(0)) != 0 {
+		t.Error("shouldn't have unpaid")
+	}
 
 	checkPairedUnitsEqual(t, noFeeResults, feeResults)
 	checkPairedUnitsEqual(t, noFeeResults, feeWithAggResults)
@@ -299,14 +395,27 @@ func TestFees(t *testing.T) {
 	checkPaid := func(snap *snapshot.Snapshot, results []*evm.TxResult) *big.Int {
 		t.Helper()
 
+		correctCount := int64(0)
+		for _, res := range results {
+			if res.ResultCode == evm.ReturnCode || res.ResultCode == evm.RevertCode {
+				correctCount++
+			}
+		}
+
 		txCount, err := snap.GetTransactionCount(userAddress)
 		test.FailIfError(t, err)
 
-		if txCount.Cmp(big.NewInt(int64(len(rawTxes)))) != 0 {
+		if txCount.Cmp(big.NewInt(correctCount)) != 0 {
 			t.Error("wrong tx count", txCount)
 		}
 
 		userBal, err := snap.GetBalance(userAddress)
+		test.FailIfError(t, err)
+
+		aggBal, err := snap.GetBalance(aggregator)
+		test.FailIfError(t, err)
+
+		netFeeRecipientBal, err := snap.GetBalance(netFeeRecipient)
 		test.FailIfError(t, err)
 
 		reportedPaid := big.NewInt(0)
@@ -319,6 +428,12 @@ func TestFees(t *testing.T) {
 			t.Error("wrong amount deducted from user got", amountPaid, "but expected", reportedPaid)
 		}
 		t.Log("Total paid", amountPaid)
+		t.Log("Remaining balance", userBal)
+
+		amountReceived := new(big.Int).Add(aggBal, netFeeRecipientBal)
+		if amountReceived.Cmp(amountPaid) != 0 {
+			t.Error("payment was not equal to amount received", amountReceived, amountPaid)
+		}
 		return amountPaid
 	}
 
@@ -394,21 +509,12 @@ func TestFees(t *testing.T) {
 		t.Error("paid fee with fees disabled")
 	}
 
-	noAggPaid := checkPaid(feeSnap, feeResults)
+	checkPaid(feeSnap, feeResults)
 	checkPaid(feeWithAggSnap, feeWithAggResults)
 
 	checkTotalReceived(noFeeSnap, noFeeResults)
 	checkTotalReceived(feeSnap, feeResults)
 	l1PaidWithAgg, l2PaidWithAgg := checkTotalReceived(feeWithAggSnap, feeWithAggResults)
-	{
-		netFeeRecipientBal, err := feeWithAggSnap.GetBalance(netFeeRecipient)
-		test.FailIfError(t, err)
-
-		if netFeeRecipientBal.Cmp(noAggPaid) != 0 {
-			t.Error("network fee should be the same")
-		}
-	}
-
 	{
 		t.Helper()
 		aggBal, err := feeWithAggSnap.GetBalance(aggregator)
@@ -434,14 +540,6 @@ func TestFees(t *testing.T) {
 	}
 }
 
-func processMessages(t *testing.T, ib *InboxBuilder, userTxCount int) ([]*evm.TxResult, *snapshot.Snapshot) {
-	t.Helper()
-	logs, _, snap, _ := runAssertion(t, ib.Messages, math.MaxInt32, 0)
-	results := extractTxResults(t, logs)
-	allResultsSucceeded(t, results)
-	return results[len(results)-userTxCount:], snap
-}
-
 func checkPairedUnitsEqual(t *testing.T, res1 []*evm.TxResult, res2 []*evm.TxResult) {
 	t.Helper()
 	for i, res := range res1 {
@@ -459,29 +557,36 @@ func checkUnitsEqual(t *testing.T, res1 *evm.TxResult, res2 *evm.TxResult) {
 	if unitsUsed1.L1Transaction.Cmp(unitsUsed2.L1Transaction) != 0 {
 		t.Error("different transaction count used")
 	}
-	if new(big.Int).Sub(unitsUsed1.L2Computation, unitsUsed2.L2Computation).CmpAbs(big.NewInt(2000)) > 0 {
-		t.Error("computation used outside of acceptable range", unitsUsed1.L2Computation, unitsUsed2.L2Computation)
-	}
-	if unitsUsed1.L2Storage.Cmp(unitsUsed2.L2Storage) != 0 {
-		t.Error("different storage count used", unitsUsed1.L2Storage, unitsUsed2.L2Storage)
+	if res1.ResultCode == res2.ResultCode {
+		if new(big.Int).Sub(unitsUsed1.L2Computation, unitsUsed2.L2Computation).CmpAbs(big.NewInt(2000)) > 0 {
+			t.Error("computation used outside of acceptable range", unitsUsed1.L2Computation, unitsUsed2.L2Computation)
+		}
+		if unitsUsed1.L2Storage.Cmp(unitsUsed2.L2Storage) != 0 {
+			t.Error("different storage count used", unitsUsed1.L2Storage, unitsUsed2.L2Storage)
+		}
 	}
 }
 
-func checkGas(t *testing.T, res *evm.TxResult, nonzeroComputation bool, correctStorageUsed int, aggregator common.Address) {
+func checkGas(t *testing.T, res *evm.TxResult, correct txTemplate, aggregator common.Address, index int) *big.Int {
 	t.Helper()
+
 	unitsUsed := res.FeeStats.UnitsUsed
 	prices := res.FeeStats.Price
 	paid := res.FeeStats.Paid
 	t.Log("UnitsUsed", res.FeeStats.UnitsUsed)
 	t.Log("Price", res.FeeStats.Price)
 	t.Log("Paid", res.FeeStats.Paid, "Total", res.FeeStats.Paid.Total())
-	if unitsUsed.L1Calldata.Cmp(big.NewInt(0)) <= 0 {
-		t.Error("should have nonzero calldata used")
+	if unitsUsed.L1Calldata.Cmp(big.NewInt(int64(correct.calldataBytes))) != 0 {
+		t.Error("wrong calldata used, got", unitsUsed.L1Calldata, "but expected", correct.calldataBytes)
 	}
 	if unitsUsed.L1Transaction.Cmp(big.NewInt(1)) != 0 {
 		t.Error("should have one tx used")
 	}
-	if nonzeroComputation {
+	nonZeroComp := correct.nonzeroComputation[0]
+	if len(correct.nonzeroComputation) > 1 {
+		nonZeroComp = correct.nonzeroComputation[index]
+	}
+	if nonZeroComp {
 		if unitsUsed.L2Computation.Cmp(big.NewInt(0)) <= 0 {
 			t.Error("should have nonzero computation used")
 		}
@@ -491,8 +596,8 @@ func checkGas(t *testing.T, res *evm.TxResult, nonzeroComputation bool, correctS
 		}
 	}
 
-	if unitsUsed.L2Storage.Cmp(big.NewInt(int64(correctStorageUsed))) != 0 {
-		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correctStorageUsed)
+	if unitsUsed.L2Storage.Cmp(big.NewInt(int64(correct.correctStorageUsed))) != 0 {
+		t.Error("wrong storage count used got", unitsUsed.L2Storage, "but expected", correct.correctStorageUsed)
 	}
 
 	if res.IncomingRequest.AggregatorInfo.Aggregator == nil {
@@ -501,18 +606,39 @@ func checkGas(t *testing.T, res *evm.TxResult, nonzeroComputation bool, correctS
 		t.Error("wrong aggregator", *res.IncomingRequest.AggregatorInfo.Aggregator)
 	}
 
-	l1TxPaid := new(big.Int).Mul(unitsUsed.L1Transaction, prices.L1Transaction)
-	if l1TxPaid.Cmp(paid.L1Transaction) != 0 {
-		t.Error("wrong paid for l1 transaction got", paid.L1Transaction, "but expected", l1TxPaid)
+	l1TxPaidGoal := new(big.Int).Mul(unitsUsed.L1Transaction, prices.L1Transaction)
+	l1CalldataGoal := new(big.Int).Mul(unitsUsed.L1Calldata, prices.L1Calldata)
+	l2ComputationGoal := new(big.Int).Mul(unitsUsed.L2Computation, prices.L2Computation)
+	l2StorageGoal := new(big.Int).Mul(unitsUsed.L2Storage, prices.L2Storage)
+	if l1TxPaidGoal.Cmp(paid.L1Transaction) < 0 {
+		t.Error("overpaid for l1 tx, paid", paid.L1Transaction, "but wanted", l1TxPaidGoal)
 	}
-	l1CalldataPaid := new(big.Int).Mul(unitsUsed.L1Calldata, prices.L1Calldata)
-	if l1CalldataPaid.Cmp(paid.L1Calldata) != 0 {
-		t.Error("wrong paid for l1 calldata got", paid.L1Calldata, "but expected", l1CalldataPaid)
+	if l1CalldataGoal.Cmp(paid.L1Calldata) < 0 {
+		t.Error("overpaid for l1 calldata got", paid.L1Calldata, "but expected", l1CalldataGoal)
 	}
-	if new(big.Int).Mul(unitsUsed.L2Computation, prices.L2Computation).Cmp(paid.L2Computation) != 0 {
-		t.Error("wrong paid for l2 computation")
+	if l2ComputationGoal.Cmp(paid.L2Computation) < 0 {
+		t.Error("overpaid for l2 computation")
 	}
-	if new(big.Int).Mul(unitsUsed.L2Storage, prices.L2Storage).Cmp(paid.L2Storage) != 0 {
-		t.Error("wrong paid for l2 storage")
+	if l2StorageGoal.Cmp(paid.L2Storage) < 0 {
+		t.Error("overpaid for l2 storage")
 	}
+
+	l1TxUnpaid := new(big.Int).Sub(l1TxPaidGoal, paid.L1Transaction)
+	l1CalldataUnpaid := new(big.Int).Sub(l1CalldataGoal, paid.L1Calldata)
+	l2ComputationUnpaid := new(big.Int).Sub(l2ComputationGoal, paid.L2Computation)
+	l2StorageUnpaid := new(big.Int).Sub(l2StorageGoal, paid.L2Storage)
+
+	if l2ComputationUnpaid.Cmp(big.NewInt(0)) != 0 {
+		t.Error("unpaid computation amount", l2ComputationUnpaid)
+	}
+
+	if l2StorageUnpaid.Cmp(big.NewInt(0)) != 0 {
+		t.Error("unpaid storage amount", l2StorageUnpaid)
+	}
+
+	totalUnpaid := new(big.Int).Add(l1TxUnpaid, l1CalldataUnpaid)
+	if totalUnpaid.Cmp(big.NewInt(0)) != 0 && res.ResultCode != evm.InsufficientGasForBaseFee {
+		t.Error("gas left unpaid, but got wrong error")
+	}
+	return totalUnpaid
 }

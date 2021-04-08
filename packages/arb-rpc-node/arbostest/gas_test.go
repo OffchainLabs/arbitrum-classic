@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
@@ -27,13 +28,15 @@ import (
 )
 
 func TestGas(t *testing.T) {
+	conData := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
+	conData = append(conData, math.U256Bytes(big.NewInt(0))...)
 	constructorTx := message.Transaction{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{0},
 		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode(arbostestcontracts.GasUsedBin),
+		Data:        conData,
 	}
 
 	noopEOACallTx := message.Transaction{

@@ -168,14 +168,20 @@ func failIfError(t *testing.T, err error) {
 
 func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
 	t.Helper()
+	logs, sends, snap, assertion := runAssertionWithoutPrint(t, inboxMessages, logCount, sendCount)
+	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.Logs, assertion.Sends)
+	failIfError(t, err)
+	t.Log(string(testCase))
+	return logs, sends, snap, assertion
+}
+
+func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
+	t.Helper()
 	cmach, err := cmachine.New(arbos.Path())
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
 
 	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages, false)
-	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.Logs, assertion.Sends)
-	failIfError(t, err)
-	t.Log(string(testCase))
 
 	if logCount != math.MaxInt32 && len(assertion.Logs) != logCount {
 		t.Fatal("unexpected log count ", len(assertion.Logs), "instead of", logCount)

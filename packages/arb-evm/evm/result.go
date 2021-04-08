@@ -33,15 +33,17 @@ import (
 type ResultType int
 
 const (
-	ReturnCode               ResultType = 0
-	RevertCode               ResultType = 1
-	CongestionCode           ResultType = 2
-	InsufficientGasFundsCode ResultType = 3
-	InsufficientTxFundsCode  ResultType = 4
-	BadSequenceCode          ResultType = 5
-	InvalidMessageFormatCode ResultType = 6
-	ContractAlreadyExists    ResultType = 7
-	UnknownErrorCode         ResultType = 255
+	ReturnCode                ResultType = 0
+	RevertCode                ResultType = 1
+	CongestionCode            ResultType = 2
+	InsufficientGasFundsCode  ResultType = 3
+	InsufficientTxFundsCode   ResultType = 4
+	BadSequenceCode           ResultType = 5
+	InvalidMessageFormatCode  ResultType = 6
+	ContractAlreadyExists     ResultType = 7
+	ExceededTxGasLimit        ResultType = 8
+	InsufficientGasForBaseFee ResultType = 9
+	UnknownErrorCode          ResultType = 255
 )
 
 type Result interface {
