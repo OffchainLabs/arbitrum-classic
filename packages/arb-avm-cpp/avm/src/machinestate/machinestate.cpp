@@ -242,6 +242,7 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             nbuffer1 = nbuffer;
             aligned = false;
         }
+        std::cerr << "setting " << (loc+i) << ":" << int(static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff)) << "\n";
         nbuffer = nbuffer.set(
             loc + i,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
@@ -250,6 +251,7 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     auto nproof1 = nbuffer1.makeNormalizationProof();
 
     if (aligned) {
+        std::cerr << "they were aligned " << v << "\n";
         insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
@@ -446,9 +448,9 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
         Operation op = simple_operation_from_json(*it);
         stub = code->addOperation(stub.pc, op);
         idx--;
-        std::cerr << "Loaded op " << op << " idx " << idx << "\n";
+        // std::cerr << "Loaded op " << op << " idx " << idx << "\n";
         if (has_labels[idx]) {
-            std::cerr << "Label " << stub << " at " << labels.size() << "\n";
+            // std::cerr << "Label " << stub << " at " << labels.size() << "\n";
             labels.push_back(stub);
         }
     }
@@ -458,18 +460,22 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
     auto table = make_table(labels);
     std::cerr << "Here " << intx::to_string(stub.hash, 16) << " " << labels.size() << " \n";
     // std::cerr << "Table " << table << " hash " << intx::to_string(hash_value(table), 16) << "\n";
-    std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << "\n";
+    std::cerr << "Table hash " << intx::to_string(hash_value(table), 16) << " size " << getSize(table) << "\n";
     MachineState state(code, 0);
     state.stack.push(len);
     state.stack.push(buf);
     state.stack.push(std::move(table));
+    state.arb_gas_remaining = 1000000;
+    state.output.arb_gas_used = 0;
+
+    std::cerr << state;
 
     return state;
 }
 
 uint256_t runWasmMachine(MachineState &machine_state) {
     uint256_t start_steps = machine_state.output.total_steps;
-    uint256_t start_gas = machine_state.output.arb_gas_used;
+    uint256_t start_gas = machine_state.arb_gas_remaining;
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
@@ -491,10 +497,12 @@ uint256_t runWasmMachine(MachineState &machine_state) {
         }
 
         auto op = machine_state.loadCurrentInstruction();
+        /*
         std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
         if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
             std::cerr << "stack top " << machine_state.stack[0] << "\n";
         }
+        */
 
         block_reason = machine_state.runOne();
         if (!std::get_if<NotBlocked>(&block_reason)) {
@@ -709,7 +717,7 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
-    std::cerr << "Running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
+    std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
@@ -1114,7 +1122,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     }
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
-    os << "data stack: " << val.stack << "\n";
+    // os << "data stack: " << val.stack << "\n";
     auto& current_code_point = val.code->loadCodePoint(val.pc);
     os << "operation " << current_code_point.op << "\n";
     os << "codePointHash " << intx::to_string(hash(current_code_point), 16)

@@ -38,7 +38,7 @@ func TestWasmChallenge(t *testing.T) {
 	startGas := big.NewInt(0)
 	endGas := big.NewInt(100012)
 	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arb-os/wasm-inst.json")
-	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(500)}
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(400)}
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 

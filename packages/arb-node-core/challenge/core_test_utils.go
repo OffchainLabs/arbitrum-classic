@@ -1,8 +1,9 @@
 package challenge
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -73,6 +74,13 @@ func NewFaultyCore(core core.ArbCore, config FaultConfig) FaultyCore {
 	return FaultyCore{
 		config:  config,
 		ArbCore: core,
+	}
+}
+
+func (c FaultyCore) SubLookup(lookup core.ArbCore) core.ArbCoreLookup {
+	return FaultyCore{
+		config:  c.config,
+		ArbCore: lookup,
 	}
 }
 

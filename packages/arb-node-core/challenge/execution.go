@@ -22,7 +22,9 @@ var unreachableCut core.SimpleCut = core.NewSimpleCut([32]byte{})
 
 func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (core.Cut, *big.Int, error) {
 	state, steps, err := execTracker.GetExecutionState(gasTarget)
-	fmt.Printf("got cut %v gas target %v\n", state, gasTarget)
+	mach, err := execTracker.GetMachine(gasTarget)
+	mach_hash, err := mach.Hash()
+	fmt.Printf("got cut %v gas target %v machine %v\n", state, gasTarget, mach_hash)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,6 +68,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		SegmentSteps:     big.NewInt(0),
 		EndIsUnreachable: false,
 	}
+	fmt.Printf("search divergence %v cuts %v\n", offsets, cuts)
 	execTracker := core.NewExecutionTracker(lookup, true, offsets)
 	lastSteps := big.NewInt(0)
 	for i, offset := range offsets {
@@ -73,6 +76,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		if err != nil {
 			return errRes, err
 		}
+		fmt.Printf("found cut at %v: %v hash %v other hash %v\n", offsets, localCut, localCut.CutHash(), cuts[i].CutHash())
 		if localCut.CutHash() != cuts[i].CutHash() {
 			return DivergenceInfo{
 				DifferentIndex:   i,
@@ -155,6 +159,30 @@ func (e *ExecutionImpl) OneStepProof(
 		bufferProofData,
 		opcode,
 	)
+}
+
+func (e *ExecutionImpl) OneStepProofMachine(
+	ctx context.Context,
+	challenge *ethbridge.Challenge,
+	lookup core.ArbCoreLookup,
+	assertion *core.Assertion,
+	challengedSegment *core.ChallengeSegment,
+) (byte, machine.Machine, error) {
+	_, previousMachine, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	proofData, bufferProofData, err := previousMachine.MarshalForProof()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	opcode := proofData[0]
+
+	fmt.Printf("buffer %v, op %v\n", bufferProofData, opcode)
+
+	return opcode, previousMachine, nil
 }
 
 func (e *ExecutionImpl) OneStepProofInfo(

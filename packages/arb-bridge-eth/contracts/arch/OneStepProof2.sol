@@ -361,17 +361,17 @@ contract OneStepProof2 is OneStepProofCommon {
         bytes32 nword = get(buf, offset / 32, proof.proof1);
         if ((offset % 32) + 8 > 32) {
             for (uint256 i = 0; i < 8 - ((offset % 32) + 8 - 32); i++) {
-                nword = setByte(nword, (offset + i) % 32, arr[i + 24]);
+                nword = setByte(nword, (offset + i) % 32, arr[i]);
             }
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
             bytes32 nword2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 8 - ((offset % 32) + 8 - 32); i < 8; i++) {
-                nword2 = setByte(nword2, (offset + i) % 32, arr[i + 24]);
+                nword2 = setByte(nword2, (offset + i) % 32, arr[i]);
             }
             buf = set(buf, offset / 32 + 1, nword2, proof.proof2, proof.nproof2);
         } else {
             for (uint256 i = 0; i < 8; i++) {
-                nword = setByte(nword, (offset % 32) + i, arr[i + 24]);
+                nword = setByte(nword, (offset % 32) + i, arr[i]);
             }
             buf = set(buf, offset / 32, nword, proof.proof1, proof.nproof1);
         }
@@ -595,10 +595,10 @@ contract OneStepProof2 is OneStepProofCommon {
 
     }
 
-    bytes32 constant wasmProgram = 0;
-    bytes32 constant wasmProgramLink = 0;
-    uint256 constant wasmProgramLinkSize = 0;
-    bytes32 constant emptyHash = 0;
+    bytes32 constant wasmProgram = 0x3faaa61a216d4b286ad04c6c179bde264331a165ed061bd99b2be8ff9691278b;
+    bytes32 constant wasmProgramLink = 0x78d9c98562fac06b16d0d6d31d456999104010688631d7d3d0a15e569122d37a;
+    uint256 constant wasmProgramLinkSize = 37449;
+    bytes32 constant errHandlerHash = 0xb4c00615f95dc249934075fcc669947596baf6e070ac80a59f79dae98aa932f0;
 
     function mkPair(Value.Data memory a, Value.Data memory b) internal pure returns (Value.Data memory) {
         Value.Data[] memory init = new Value.Data[](2);
@@ -628,9 +628,9 @@ contract OneStepProof2 is OneStepProofCommon {
               mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
             Value.newEmptyTuple(), //    machine.auxStack,
             Value.newEmptyTuple(), //    machine.registerVal,
-            Value.newEmptyTuple(), //    machine.staticVal,
-            100000000000, //    machine.arbGasRemaining,
-            emptyHash, //    machine.errHandlerHash,
+            Value.newInt(0), //    machine.staticVal,
+            1000000, //    machine.arbGasRemaining,
+            errHandlerHash, //    machine.errHandlerHash,
             Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status
         );

@@ -1115,6 +1115,7 @@ void setbuffer64(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     for (int i = 0; i < 8; i++) {
+        std::cerr << "set buf " << offset + 7 - i << ": " << (val & 0xffU) << "\n";
         res = res.set(offset + 7 - i, val & 0xffU);
         val = val >> 8U;
     }

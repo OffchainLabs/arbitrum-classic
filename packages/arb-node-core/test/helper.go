@@ -107,7 +107,6 @@ func PrepareArbCoreGen(t *testing.T, messages []inbox.InboxMessage, path string)
 	for {
 		msgCount, err := arbCore.GetMessageCount()
 		FailIfError(t, err)
-		t.Logf("is idle? %v", arbCore.MachineIdle())
 		if arbCore.MachineIdle() && msgCount.Cmp(big.NewInt(int64(len(messages)))) >= 0 {
 			break
 		}

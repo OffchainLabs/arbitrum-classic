@@ -63,7 +63,8 @@ int initializeArbStorageForWasm(CArbStorage* storage_ptr,
     auto storage = static_cast<ArbStorage*>(storage_ptr);
     auto machine = static_cast<Machine*>(machine_ptr);
     try {
-        auto status = storage->initialize(machine->machine_state);
+        auto wasm_machine = machine->machine_state.initialWasmMachine();
+        auto status = storage->initialize(wasm_machine);
         if (!status.ok()) {
             std::cerr << "Error initializing storage" << status.ToString()
                       << std::endl;

@@ -224,6 +224,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
 }
 
 rocksdb::Status ArbCore::initializeFromState(MachineState state) {
+    std::cerr << "Initialize arb core for wasm " << intx::to_string(*state.hash(), 16) << "\n";
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
 
@@ -238,8 +239,7 @@ rocksdb::Status ArbCore::initializeFromState(MachineState state) {
     }
 
     code = state.code; // ->addSegment(executable.code);
-    machine = std::make_unique<MachineThread>(
-        MachineState{code, 0});
+    machine = std::make_unique<MachineThread>(state);
 
     ReadWriteTransaction tx(data_storage);
     // Need to initialize database from scratch
@@ -340,6 +340,7 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     if (!status.ok()) {
         return status;
     }
+    std::cerr << "save machine " << intx::to_string(*machine->hash(), 16) << " used gas " << machine->machine_state.output.arb_gas_used << "\n";
 
     std::vector<unsigned char> key;
     marshal_uint256_t(machine->machine_state.output.arb_gas_used, key);
@@ -1183,6 +1184,7 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     ValueCache& cache) {
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
+        std::cerr << "get exec cursor " << total_gas_used << "\n";
         ReadSnapshotTransaction tx(data_storage);
 
         auto closest_checkpoint =

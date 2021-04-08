@@ -245,6 +245,10 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
+func (ac *ArbCore) SubLookup(lookup core.ArbCore) core.ArbCoreLookup {
+	return lookup
+}
+
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {

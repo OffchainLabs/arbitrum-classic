@@ -28,23 +28,18 @@ func executeChallenge(
 	asserterMayFail bool,
 ) int {
 	ctx := context.Background()
-	t.Logf("init 1")
 
 	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime)
 
 	asserterBackend, err := ethbridge.NewBuilderBackend(asserterWallet)
-	t.Logf("init 2")
 	test.FailIfError(t, err)
 	challengerBackend, err := ethbridge.NewBuilderBackend(challengerWallet)
 	test.FailIfError(t, err)
-	t.Logf("init 3")
 
 	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, asserterBackend)
 	test.FailIfError(t, err)
-	t.Logf("init 4")
 	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, challengerBackend)
 	test.FailIfError(t, err)
-	t.Logf("init 5")
 
 	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, client)
 	test.FailIfError(t, err)
@@ -58,9 +53,6 @@ func executeChallenge(
 		t.Logf("executing challenge round %v", rounds)
 		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
-			// err = asserter.FollowConflict(ctx)
-			// test.FailIfError(t, err)
-
 			err = challenger.HandleConflict(ctx)
 			test.FailIfError(t, err)
 
@@ -75,9 +67,6 @@ func executeChallenge(
 			t.Log("Challenger Used", receipt.GasUsed, "gas")
 			turn = ethbridge.ASSERTER_TURN
 		} else {
-			// err = challenger.FollowConflict(ctx)
-			// test.FailIfError(t, err)
-
 			err = asserter.HandleConflict(ctx)
 			if asserterMayFail && err != nil {
 				t.Logf("Asserter failed challenge: %v", err.Error())

@@ -357,10 +357,15 @@ contract Challenge is Cloneable, IChallenge {
         }
     }
 
+    function simpleCutHash(bytes32 machineHash, uint256 consumedGas) private pure returns (bytes32) {
+        bytes32 restHash = ChallengeLib.assertionRestHash(0, machineHash, 0, 0, 0, 0);
+        return ChallengeLib.assertionHash(consumedGas, restHash);
+    }
+
     function updateNewRoot(bytes32 startHash, bytes32 endHash, uint256 length) private {
         bytes32[] memory hashes = new bytes32[](2);
-        hashes[0] = startHash;
-        hashes[1] = endHash;
+        hashes[0] = simpleCutHash(startHash, 0);
+        hashes[1] = simpleCutHash(endHash, length);
         updateBisectionRoot(hashes, 0, length);
 
         emit Bisected(challengeState, 0, length, hashes);
