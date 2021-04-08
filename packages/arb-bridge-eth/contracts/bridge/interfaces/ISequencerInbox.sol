@@ -22,22 +22,28 @@ interface ISequencerInbox {
     event SequencerBatchDelivered(
         uint256 indexed firstMessageNum,
         bytes32 indexed beforeAcc,
+        bytes32 afterAcc,
         bytes transactions,
         uint256[] lengths,
         uint256 l1BlockNumber,
         uint256 timestamp,
-        uint256 totalDelayedMessagesRead
+        uint256 totalDelayedMessagesRead,
+        bytes32 delayedAcc
     );
 
     event SequencerBatchDeliveredFromOrigin(
         uint256 indexed firstMessageNum,
-        bytes32 indexed beforeAcc
+        bytes32 indexed beforeAcc,
+        bytes32 afterAcc,
+        bytes32 delayedAcc
     );
 
     event DelayedInboxForced(
         uint256 indexed firstMessageNum,
         bytes32 indexed beforeAcc,
-        uint256 totalDelayedMessagesRead
+        bytes32 afterAcc,
+        uint256 totalDelayedMessagesRead,
+        bytes32 delayedAcc
     );
 
     function messageCount() external view returns (uint256);
