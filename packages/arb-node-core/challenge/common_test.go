@@ -173,6 +173,7 @@ func initializeChallengeTest(
 	asserterTime *big.Int,
 	challengerTime *big.Int,
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
+	ctx := context.Background()
 	clnt, pks := test.SimulatedBackend()
 	deployer := bind.NewKeyedTransactor(pks[0])
 	asserter := bind.NewKeyedTransactor(pks[1])
@@ -195,10 +196,14 @@ func initializeChallengeTest(
 	challengerWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(challenger, client)
 	test.FailIfError(t, err)
 
-	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, ethbridge.NewTransactAuth(asserter))
+	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)
+	test.FailIfError(t, err)
+	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
 	test.FailIfError(t, err)
 
-	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, ethbridge.NewTransactAuth(challenger))
+	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger)
+	test.FailIfError(t, err)
+	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)
 
 	_, err = tester.StartChallenge(

@@ -402,6 +402,11 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
     }
 }
 
+CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    return static_cast<void*>(arbCore->getLastMachine().release());
+}
+
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
