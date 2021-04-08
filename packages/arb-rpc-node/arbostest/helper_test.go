@@ -220,7 +220,7 @@ func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
 	ib := &InboxBuilder{}
 	ib.AddMessage(initMsg(nil), chain, big.NewInt(0), chainTime)
 	for _, msg := range messages {
-		ib.AddMessage(msg, chain, big.NewInt(0), chainTime)
+		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
 	}
 	return ib.Messages
 }

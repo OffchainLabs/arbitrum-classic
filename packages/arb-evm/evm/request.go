@@ -74,16 +74,22 @@ func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error
 		return nil, errors.Errorf("expected tuple of length 2, but recieved %v", nestedVal)
 	}
 
-	aggregatorOpt, _ := nestedTup.GetByInt64(0)
+	aggregatorVal, _ := nestedTup.GetByInt64(0)
 	calldataBytes, _ := nestedTup.GetByInt64(1)
 
 	var aggAddress *common.Address
-	aggregator, err := NewValueFromOptional(aggregatorOpt)
-	if err != nil {
-		return nil, err
+
+	// ArbOS version upgrade from https://github.com/OffchainLabs/arb-os/pull/429
+	// Support aggregator field either as an address or and optional address
+	if _, ok := aggregatorVal.(value.IntValue); !ok {
+		aggregatorVal, err = NewValueFromOptional(aggregatorVal)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if aggregator != nil {
-		aggregatorInt, ok := aggregator.(value.IntValue)
+
+	if aggregatorVal != nil {
+		aggregatorInt, ok := aggregatorVal.(value.IntValue)
 		if !ok {
 			return nil, errors.New("aggregator must be an int")
 		}

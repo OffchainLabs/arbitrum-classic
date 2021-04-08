@@ -191,7 +191,7 @@ func (t Transaction) Destination() common.Address {
 
 func (t Transaction) String() string {
 	return fmt.Sprintf(
-		"Transaction(%v, %v, %v, %v, %v, %v)",
+		"Transaction(gas=%v, gasprice=%v, seq=%v, dest=%v, payment=%v, data=%v)",
 		t.MaxGas,
 		t.GasPriceBid,
 		t.SequenceNum,
