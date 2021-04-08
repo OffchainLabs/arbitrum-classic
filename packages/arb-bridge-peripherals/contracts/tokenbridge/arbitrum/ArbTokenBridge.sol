@@ -180,7 +180,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         } else {
             // deploy erc20 temporarily, but users can migrate to custom implementation once deployed
             bytes memory deployData =
-                abi.encode(bytes("Temporary Migrateable Token"), bytes("TMT"), uint8(18));
+                abi.encode(
+                    abi.encode("Temporary Migrateable Token"),
+                    abi.encode("TMT"),
+                    abi.encode(uint8(18))
+                );
             deployToken(l1Address, deployData);
         }
     }
