@@ -31,13 +31,7 @@ import "./IArbCustomToken.sol";
 import "./IArbTokenBridge.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
-interface ITransferReceiver {
-    function onTokenTransfer(
-        address,
-        uint256,
-        bytes calldata
-    ) external returns (bool);
-}
+import "../libraries/IERC1363.sol";
 
 contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     using Address for address;
@@ -84,6 +78,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         bytes memory data
     ) external {
         require(msg.sender == address(this), "Mint can only be called by self");
+        require(dest.isContract(), "Destination must be a contract");
 
         token.bridgeMint(dest, amount);
 
@@ -91,10 +86,19 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert;
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
-        bool success =
-            ITransferReceiver(dest).onTokenTransfer{ gas: gasAvailable }(sender, amount, data);
+        // TODO: should the operator be L1 or L2 bridge instead of the user?
+        bytes4 retval =
+            IERC1363Receiver(dest).onTransferReceived{ gas: gasAvailable }(
+                sender,
+                sender,
+                amount,
+                data
+            );
 
-        require(success, "External onTokenTransfer reverted");
+        require(
+            retval == IERC1363Receiver.onTransferReceived.selector,
+            "external logic on call fail"
+        );
     }
 
     function handleCallHookData(
