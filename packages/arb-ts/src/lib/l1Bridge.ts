@@ -189,7 +189,7 @@ export class L1Bridge {
     )
   }
 
-  public async depositAsERC20(
+  public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
     maxSubmissionCost: BigNumber,
@@ -203,56 +203,7 @@ export class L1Bridge {
     if (!tokenData.ERC20) {
       throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
     }
-    return this.ethERC20Bridge.depositAsERC20(
-      erc20L1Address,
-      destination,
-      amount,
-      maxSubmissionCost,
-      maxGas,
-      gasPriceBid,
-      '0x',
-      overrides
-    )
-  }
-  public async depositAsERC777(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxSubmissionCost: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
-    overrides: TransactionOverrides = {}
-  ) {
-    const destination = destinationAddress || (await this.getWalletAddress())
-    return this.ethERC20Bridge.depositAsERC777(
-      erc20L1Address,
-      destination,
-      amount,
-      maxSubmissionCost,
-      maxGas,
-      gasPriceBid,
-      '0x',
-      overrides
-    )
-  }
-
-  public async depositAsCustomToken(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxSubmissionCost: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
-    overrides: TransactionOverrides = {}
-  ) {
-    const destination = destinationAddress || (await this.getWalletAddress())
-    const customTokenL2Address = await this.ethERC20Bridge.customL2Tokens(
-      erc20L1Address
-    )
-    if (customTokenL2Address === constants.AddressZero) {
-      throw new Error(`Custom token at ${erc20L1Address} not registtered on L2`)
-    }
-    return this.ethERC20Bridge.depositAsCustomToken(
+    return this.ethERC20Bridge.deposit(
       erc20L1Address,
       destination,
       amount,

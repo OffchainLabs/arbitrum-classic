@@ -156,7 +156,6 @@ export class L2Bridge {
     }
 
     const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
-    const l2ERC777Address = await this.getERC777L2Address(erc20L1Address)
 
     // check if standard arb erc20:
     if (!tokenData.ERC20) {
@@ -197,7 +196,7 @@ export class L2Bridge {
     if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
       return address
     }
-    return this.arbTokenBridge.calculateBridgedERC20Address(erc20L1Address)
+    return this.arbTokenBridge.calculateL2TokenAddress(erc20L1Address)
   }
 
   public getERC20L1Address(erc20L2Address: string) {

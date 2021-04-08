@@ -21,27 +21,18 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface EthERC20BridgeInterface extends ethers.utils.Interface {
+interface IEthERC20BridgeInterface extends ethers.utils.Interface {
   functions: {
     'calculateL2TokenAddress(address)': FunctionFragment
-    'customL2Tokens(address)': FunctionFragment
     'deposit(address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'fastWithdrawalFromL2(address,bytes,address,uint256,uint256)': FunctionFragment
     'hasTriedDeploy(address)': FunctionFragment
-    'inbox()': FunctionFragment
-    'initialize(address,address,uint256,uint256,uint256,address,address)': FunctionFragment
-    'l2ArbTokenBridgeAddress()': FunctionFragment
-    'redirectedExits(bytes32)': FunctionFragment
     'registerCustomL2Token(address,uint256,uint256,uint256,address)': FunctionFragment
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
-    values: [string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'customL2Tokens',
     values: [string]
   ): string
   encodeFunctionData(
@@ -64,27 +55,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     functionFragment: 'hasTriedDeploy',
     values: [string]
   ): string
-  encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      string,
-      string
-    ]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'l2ArbTokenBridgeAddress',
-    values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'redirectedExits',
-    values: [BytesLike]
-  ): string
   encodeFunctionData(
     functionFragment: 'registerCustomL2Token',
     values: [string, BigNumberish, BigNumberish, BigNumberish, string]
@@ -98,10 +68,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
   ): Result
-  decodeFunctionResult(
-    functionFragment: 'customL2Tokens',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'fastWithdrawalFromL2',
@@ -109,16 +75,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'hasTriedDeploy',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'l2ArbTokenBridgeAddress',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -141,7 +97,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'DepositToken'): EventFragment
 }
 
-export class EthERC20Bridge extends Contract {
+export class IEthERC20Bridge extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -152,7 +108,7 @@ export class EthERC20Bridge extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: EthERC20BridgeInterface
+  interface: IEthERC20BridgeInterface
 
   functions: {
     calculateL2TokenAddress(
@@ -162,13 +118,6 @@ export class EthERC20Bridge extends Contract {
 
     'calculateL2TokenAddress(address)'(
       erc20: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<[string]>
-
-    'customL2Tokens(address)'(
-      arg0: string,
       overrides?: CallOverrides
     ): Promise<[string]>
 
@@ -212,52 +161,12 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<[boolean]>
+    hasTriedDeploy(erc20: string, overrides?: CallOverrides): Promise<[boolean]>
 
     'hasTriedDeploy(address)'(
-      arg0: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>
-
-    inbox(overrides?: CallOverrides): Promise<[string]>
-
-    'inbox()'(overrides?: CallOverrides): Promise<[string]>
-
-    initialize(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    l2ArbTokenBridgeAddress(overrides?: CallOverrides): Promise<[string]>
-
-    'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<[string]>
-
-    redirectedExits(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>
-
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>
 
     registerCustomL2Token(
       l2CustomTokenAddress: string,
@@ -304,13 +213,6 @@ export class EthERC20Bridge extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<string>
-
-  'customL2Tokens(address)'(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<string>
-
   deposit(
     erc20: string,
     destination: string,
@@ -351,49 +253,12 @@ export class EthERC20Bridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<boolean>
+  hasTriedDeploy(erc20: string, overrides?: CallOverrides): Promise<boolean>
 
   'hasTriedDeploy(address)'(
-    arg0: string,
+    erc20: string,
     overrides?: CallOverrides
   ): Promise<boolean>
-
-  inbox(overrides?: CallOverrides): Promise<string>
-
-  'inbox()'(overrides?: CallOverrides): Promise<string>
-
-  initialize(
-    _inbox: string,
-    _l2Deployer: string,
-    _maxSubmissionCost: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPrice: BigNumberish,
-    _l2TemplateERC20: string,
-    _l2ArbTokenBridgeAddress: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address,address,uint256,uint256,uint256,address,address)'(
-    _inbox: string,
-    _l2Deployer: string,
-    _maxSubmissionCost: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPrice: BigNumberish,
-    _l2TemplateERC20: string,
-    _l2ArbTokenBridgeAddress: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  l2ArbTokenBridgeAddress(overrides?: CallOverrides): Promise<string>
-
-  'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<string>
-
-  redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
-
-  'redirectedExits(bytes32)'(
-    arg0: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>
 
   registerCustomL2Token(
     l2CustomTokenAddress: string,
@@ -440,13 +305,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<string>
-
-    'customL2Tokens(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<string>
-
     deposit(
       erc20: string,
       destination: string,
@@ -487,49 +345,12 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<boolean>
+    hasTriedDeploy(erc20: string, overrides?: CallOverrides): Promise<boolean>
 
     'hasTriedDeploy(address)'(
-      arg0: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    inbox(overrides?: CallOverrides): Promise<string>
-
-    'inbox()'(overrides?: CallOverrides): Promise<string>
-
-    initialize(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    l2ArbTokenBridgeAddress(overrides?: CallOverrides): Promise<string>
-
-    'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<string>
-
-    redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
-
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<string>
 
     registerCustomL2Token(
       l2CustomTokenAddress: string,
@@ -598,13 +419,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    customL2Tokens(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'customL2Tokens(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     deposit(
       erc20: string,
       destination: string,
@@ -645,50 +459,10 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
+    hasTriedDeploy(erc20: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'hasTriedDeploy(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    inbox(overrides?: CallOverrides): Promise<BigNumber>
-
-    'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    initialize(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    l2ArbTokenBridgeAddress(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l2ArbTokenBridgeAddress()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    redirectedExits(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -738,16 +512,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    customL2Tokens(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'customL2Tokens(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     deposit(
       erc20: string,
       destination: string,
@@ -789,56 +553,12 @@ export class EthERC20Bridge extends Contract {
     ): Promise<PopulatedTransaction>
 
     hasTriedDeploy(
-      arg0: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'hasTriedDeploy(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    initialize(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
-      _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
-      _l2TemplateERC20: string,
-      _l2ArbTokenBridgeAddress: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    l2ArbTokenBridgeAddress(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'l2ArbTokenBridgeAddress()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    redirectedExits(
-      arg0: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'redirectedExits(bytes32)'(
-      arg0: BytesLike,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

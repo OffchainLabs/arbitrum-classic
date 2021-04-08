@@ -69,11 +69,6 @@ describe('Bridge peripherals layer 2', () => {
 
   it('should calculate proxy address correctly', async function () {
     const address: string = (await testBridge.functions.templateERC20())[0]
-    // OZ's init code not the same as in https://eips.ethereum.org/EIPS/eip-1167
-    // const proxyBytecode =
-    //   '0x3d602d80600a3d3981f3363d3d373d3d3d363d73' +
-    //   address.substr(2) +
-    //   '5af43d82803e903d91602b57fd5bf3'
 
     const ClonableBeaconProxy = await ethers.getContractFactory(
       'ClonableBeaconProxy'
