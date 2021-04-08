@@ -32,7 +32,7 @@ interface IEthERC20Bridge {
     );
 
     event WithdrawExecuted(
-        address indexed withdrawInitiator,
+        address indexed initialDestination,
         address indexed destination,
         address erc20,
         uint256 amount,
@@ -60,6 +60,7 @@ interface IEthERC20Bridge {
     function fastWithdrawalFromL2(
         address liquidityProvider,
         bytes memory liquidityProof,
+        address initialDestination,
         address erc20,
         uint256 amount,
         uint256 exitNum,
@@ -69,7 +70,7 @@ interface IEthERC20Bridge {
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
-        address withdrawInitiator,
+        address initialDestination,
         uint256 amount
     ) external;
 

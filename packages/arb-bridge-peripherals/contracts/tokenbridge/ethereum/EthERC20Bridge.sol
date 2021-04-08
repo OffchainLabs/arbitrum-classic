@@ -125,29 +125,33 @@ contract EthERC20Bridge is IEthERC20Bridge {
     function fastWithdrawalFromL2(
         address liquidityProvider,
         bytes memory liquidityProof,
+        address initialDestination,
         address erc20,
         uint256 amount,
         uint256 exitNum,
         uint256 maxFee
     ) external override {
-        // TODO: this only allows withdrawal if you were the withdrawal initiator
-        bytes32 withdrawData = encodeWithdrawal(exitNum, msg.sender, erc20, amount);
+        require(
+            initialDestination == msg.sender,
+            "You must own the exit to trigger a fast withdrawal"
+        );
+        bytes32 withdrawData = encodeWithdrawal(exitNum, initialDestination, erc20, amount);
 
         require(redirectedExits[withdrawData] != USED_ADDRESS, "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
 
-        uint256 balancePrior = IERC20(erc20).balanceOf(msg.sender);
+        uint256 balancePrior = IERC20(erc20).balanceOf(initialDestination);
 
         // Liquidity provider is responsible for validating if this is a valid exit
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            msg.sender,
+            initialDestination,
             erc20,
             amount,
             exitNum,
             liquidityProof
         );
 
-        uint256 balancePost = IERC20(erc20).balanceOf(msg.sender);
+        uint256 balancePost = IERC20(erc20).balanceOf(initialDestination);
 
         // User must be sent at least (amount - maxFee) or execution reverts
         require(
@@ -155,23 +159,23 @@ contract EthERC20Bridge is IEthERC20Bridge {
             "User did not get credited with enough tokens"
         );
 
-        emit WithdrawRedirected(msg.sender, liquidityProvider, erc20, amount, exitNum);
+        emit WithdrawRedirected(initialDestination, liquidityProvider, erc20, amount, exitNum);
     }
 
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
-        address withdrawInitiator,
+        address initialDestination,
         uint256 amount
     ) external override onlyL2Address {
-        bytes32 withdrawData = encodeWithdrawal(exitNum, withdrawInitiator, erc20, amount);
+        bytes32 withdrawData = encodeWithdrawal(exitNum, initialDestination, erc20, amount);
         address exitAddress = redirectedExits[withdrawData];
         redirectedExits[withdrawData] = USED_ADDRESS;
-        address dest = exitAddress != address(0) ? exitAddress : withdrawInitiator;
+        address dest = exitAddress != address(0) ? exitAddress : initialDestination;
         // Unsafe external calls must occur below checks and effects
         IERC20(erc20).safeTransfer(dest, amount);
 
-        emit WithdrawExecuted(withdrawInitiator, dest, erc20, amount, exitNum);
+        emit WithdrawExecuted(initialDestination, dest, erc20, amount, exitNum);
     }
 
     function callStatic(address targetContract, bytes4 targetFunction)
