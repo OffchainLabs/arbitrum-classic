@@ -580,6 +580,11 @@ contract OneStepProof2 is OneStepProofCommon {
         uint8 immediate = uint8(proof[offset]);
         offset += 1;
 
+        require(immediate == 0, "wasm final instruction cannot have immed");
+
+        Value.Data memory cp = Value.newCodePoint(uint8(opCode), mach.instructionStackHash);
+        mach.instructionStackHash = cp.hash();
+
         finalMachine = mach;
 
         (offset, len) = Marshaling.deserializeInt(proof, offset);

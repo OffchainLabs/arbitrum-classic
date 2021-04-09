@@ -8,9 +8,12 @@
 #include <iostream>
 
 #include <data_storage/arbstorage.hpp>
+#include <avm/machinestate/runwasm.hpp>
 
 TEST_CASE("Wasm") {
     SECTION("Code to hash") {
+
+        run_wasm_test();
 
         /*
 

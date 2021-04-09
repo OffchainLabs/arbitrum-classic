@@ -27,6 +27,7 @@ set(LIB_HEADERS
   include/avm/machinestate/ecops.hpp
   include/avm/machinestate/machineoperation.hpp
   include/avm/machinestate/machinestate.hpp
+  include/avm/machinestate/runwasm.hpp
   include/avm/machinestate/status.hpp
   include/avm/machinethread.hpp
 )
@@ -39,6 +40,7 @@ set(LIB_SOURCES
   src/machinestate/ecops.cpp
   src/machinestate/machineoperation.cpp
   src/machinestate/machinestate.cpp
+  src/machinestate/runwasm.cpp
   src/machinethread.cpp
 )
 
@@ -81,6 +83,7 @@ PUBLIC
         secp256k1
         ff
         picosha2
+        wasmtime
         ${GMP_LIBRARY}
         ${GMPXX_LIBRARY}
         ${LIBATOMIC_LIBRARY}
