@@ -21,7 +21,7 @@ import chalk from 'chalk'
 import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
 import { TestArbCustomToken } from '../src/lib/abi/TestArbCustomToken'
 
-const { Zero } = constants
+const { Zero, AddressZero } = constants
 console.log(chalk.green(`Starting Token Bridge Integrations Tests!`))
 console.log()
 
@@ -483,6 +483,115 @@ describe('CustomToken', () => {
       testWalletL2Balance &&
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmmount)
     ).to.be.true
+  })
+})
+
+describe('CustomToken: no-L2-yet-fallback case', () => {
+  let l1CustomToken: TestCustomTokenL1
+  before(
+    'deploys a new custom token, mints, approves, and registered the L2 side as some rando-address',
+    async () => {
+      prettyLog('deploying a new custom token')
+
+      const customTokenFactory = await new TestCustomTokenL1__factory(
+        preFundedWallet
+      )
+      l1CustomToken = await customTokenFactory.deploy(
+        bridge.ethERC20Bridge.address
+      )
+      const rec = await l1CustomToken.deployTransaction.wait()
+      expect(rec.status).to.equal(1)
+      prettyLog('Deployed a new customL1 Token at ' + l1CustomToken.address)
+
+      const approveRes = await bridge.approveToken(l1CustomToken.address)
+      const approveRec = await approveRes.wait()
+      expect(approveRec.status).to.equal(1)
+
+      const data = await bridge.getAndUpdateL1TokenData(l1CustomToken.address)
+      const allowed = data.ERC20 && data.ERC20.allowed
+      expect(allowed).to.be.true
+
+      const mintRes = await l1CustomToken.mint()
+      const mintRec = await mintRes.wait()
+
+      const randoAddress = Wallet.createRandom().address
+
+      const registerRes = await l1CustomToken.registerTokenOnL2(
+        randoAddress,
+        Zero,
+        BigNumber.from(10000000000000),
+        Zero,
+        l1TestWallet.address
+      )
+      const registerRec = await registerRes.wait()
+      expect(registerRec.status).to.equal(1)
+
+      const eventData = (
+        await BridgeHelper.getActivateCustomTokenEventResult(
+          registerRec,
+          bridge.ethERC20Bridge.address
+        )
+      )[0]
+
+      expect(eventData).to.exist
+
+      const { seqNum } = eventData
+
+      const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
+        seqNum
+      )
+
+      const retriableReceipt = await arbProvider.waitForTransaction(
+        l2RetriableHash
+      )
+
+      expect(retriableReceipt.status).to.equal(1)
+
+      wait()
+    }
+  )
+
+  it('did not register at rando address, instead deployed a TMT', async () => {
+    const nullAddressHopefully = await bridge.arbTokenBridge.customToken(
+      l1CustomToken.address
+    )
+    expect(nullAddressHopefully).to.equal(AddressZero)
+
+    const erc20L2Address = await bridge.getERC20L2Address(l1CustomToken.address)
+    const arbERC20 = StandardArbERC20__factory.connect(
+      erc20L2Address,
+      arbProvider
+    )
+    const symbol = await arbERC20.symbol()
+    expect(symbol).to.equal('TMT')
+  })
+
+  it('deposit into TMT works', async () => {
+    const despositRes = await bridge.deposit(
+      l1CustomToken.address,
+      tokenDepositAmmount,
+      BigNumber.from(10000000000000),
+      BigNumber.from(0),
+      undefined,
+      { gasLimit: 210000, gasPrice: l1gasPrice }
+    )
+    const depositRec = await despositRes.wait()
+    await wait()
+
+    const tokenDepositData = (
+      await bridge.getDepositTokenEventData(depositRec)
+    )[0] as DepositTokenEventResult
+    const seqNum = tokenDepositData.seqNum
+
+    const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
+      seqNum
+    )
+
+    const retriableReceipt = await arbProvider.waitForTransaction(
+      l2RetriableHash
+    )
+
+    expect(depositRec.status).to.equal(1)
   })
 })
 
