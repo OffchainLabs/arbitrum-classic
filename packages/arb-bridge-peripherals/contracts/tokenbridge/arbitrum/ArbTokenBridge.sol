@@ -112,6 +112,8 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             token.bridgeMint(sender, amount);
             success = false;
         }
+        // if success tokens got minted to dest, else to sender
+        emit TokenMinted(l1ERC20, expectedAddress, sender, success ? dest : sender, amount, true);
         emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
     }
 
@@ -166,9 +168,8 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             handleCallHookData(expectedAddress, amount, sender, dest, callHookData);
         } else {
             IArbToken(expectedAddress).bridgeMint(dest, amount);
+            emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, false);
         }
-
-        emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, callHookData.length > 0);
     }
 
     function deployToken(address l1ERC20, bytes memory deployData) internal returns (address) {
