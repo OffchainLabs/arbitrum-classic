@@ -132,15 +132,32 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             );
 
         if (!expectedAddress.isContract()) {
-            if (deployData.length > 0 && !TokenAddressHandler.isCustomToken(l1ERC20)) {
+            if (deployData.length > 0) {
                 address deployedToken = deployToken(l1ERC20, deployData);
                 assert(deployedToken == expectedAddress);
             } else {
-                // withdraw funds to user as no deployData and no contract deployed
-                // The L1 contract shouldn't let this happen!
-                // if it does happen, withdraw to sender
-                _withdraw(l1ERC20, sender, amount);
-                return;
+                if (TokenAddressHandler.isCustomToken(l1ERC20)) {
+                    // address handler expects a custom, but nothing deployed
+                    // no custom token deployed, expectedAddress is a temporary erc20
+                    expectedAddress = calculateL2ERC20TokenAddress(l1ERC20);
+                    if (!expectedAddress.isContract()) {
+                        // deploy erc20 temporarily, but users can migrate to custom implementation once deployed
+                        bytes memory deployData =
+                            abi.encode(
+                                abi.encode("Temporary Migrateable Token"),
+                                abi.encode("TMT"),
+                                abi.encode(uint8(18))
+                            );
+                        address deployedAddress = deployToken(l1ERC20, deployData);
+                        assert(deployedAddress == expectedAddress);
+                    }
+                } else {
+                    // withdraw funds to user as no deployData and no contract deployed
+                    // The L1 contract shouldn't let this happen!
+                    // if it does happen, withdraw to sender
+                    _withdraw(l1ERC20, sender, amount);
+                    return;
+                }
             }
         }
         // ignores deployData if token already deployed
@@ -174,20 +191,9 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         override
         onlyEthPair
     {
-        if (l2Address.isContract()) {
-            // This assumed token contract is initialized and ready to be used.
-            TokenAddressHandler.customL2Token[l1Address] = l2Address;
-            emit CustomTokenRegistered(l1Address, l2Address);
-        } else {
-            // deploy erc20 temporarily, but users can migrate to custom implementation once deployed
-            bytes memory deployData =
-                abi.encode(
-                    abi.encode("Temporary Migrateable Token"),
-                    abi.encode("TMT"),
-                    abi.encode(uint8(18))
-                );
-            deployToken(l1Address, deployData);
-        }
+        // This assumed token contract is initialized and ready to be used.
+        TokenAddressHandler.customL2Token[l1Address] = l2Address;
+        emit CustomTokenRegistered(l1Address, l2Address);
     }
 
     function withdraw(
