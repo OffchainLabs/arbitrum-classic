@@ -24,7 +24,7 @@ interface IArbTokenBridgeInterface extends ethers.utils.Interface {
   functions: {
     'calculateL2TokenAddress(address)': FunctionFragment
     'customTokenRegistered(address,address)': FunctionFragment
-    'migrate(address,address,address,uint256)': FunctionFragment
+    'migrate(address,address,uint256)': FunctionFragment
     'mintFromL1(address,address,address,uint256,bytes,bytes)': FunctionFragment
     'withdraw(address,address,uint256)': FunctionFragment
   }
@@ -39,7 +39,7 @@ interface IArbTokenBridgeInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'migrate',
-    values: [string, string, string, BigNumberish]
+    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'mintFromL1',
@@ -66,7 +66,7 @@ interface IArbTokenBridgeInterface extends ethers.utils.Interface {
     'CustomTokenRegistered(address,address)': EventFragment
     'MintAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TokenCreated(address,address)': EventFragment
-    'TokenMigrated(address,address,address,uint256)': EventFragment
+    'TokenMigrated(address,address,uint256)': EventFragment
     'TokenMinted(address,address,address,address,uint256,bool)': EventFragment
     'WithdrawToken(uint256,address,uint256,address,uint256)': EventFragment
   }
@@ -117,15 +117,13 @@ export class IArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -190,15 +188,13 @@ export class IArbTokenBridge extends Contract {
 
   migrate(
     l1ERC20: string,
-    target: string,
     account: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'migrate(address,address,address,uint256)'(
+  'migrate(address,address,uint256)'(
     l1ERC20: string,
-    target: string,
     account: string,
     amount: BigNumberish,
     overrides?: Overrides
@@ -263,15 +259,13 @@ export class IArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: CallOverrides
@@ -332,8 +326,7 @@ export class IArbTokenBridge extends Contract {
     ): EventFilter
 
     TokenMigrated(
-      from: string | null,
-      to: string | null,
+      l1Address: string | null,
       account: string | null,
       amount: null
     ): EventFilter
@@ -350,9 +343,9 @@ export class IArbTokenBridge extends Contract {
     WithdrawToken(
       id: null,
       l1Address: string | null,
-      amount: BigNumberish | null,
+      amount: null,
       destination: string | null,
-      exitNum: null
+      exitNum: BigNumberish | null
     ): EventFilter
   }
 
@@ -381,15 +374,13 @@ export class IArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -455,15 +446,13 @@ export class IArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides

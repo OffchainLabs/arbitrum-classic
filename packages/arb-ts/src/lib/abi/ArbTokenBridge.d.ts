@@ -22,14 +22,15 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   functions: {
-    '__placeholder__()': FunctionFragment
+    'calculateL2ERC20TokenAddress(address)': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
-    'customToken(address)': FunctionFragment
+    'customL2Token(address)': FunctionFragment
     'customTokenRegistered(address,address)': FunctionFragment
     'getBeacon()': FunctionFragment
     'initialize(address,address)': FunctionFragment
+    'isCustomToken(address)': FunctionFragment
     'l1Pair()': FunctionFragment
-    'migrate(address,address,address,uint256)': FunctionFragment
+    'migrate(address,address,uint256)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'mintFromL1(address,address,address,uint256,bytes,bytes)': FunctionFragment
     'templateERC20()': FunctionFragment
@@ -37,14 +38,17 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   }
 
   encodeFunctionData(
-    functionFragment: '__placeholder__',
-    values?: undefined
+    functionFragment: 'calculateL2ERC20TokenAddress',
+    values: [string]
   ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
   ): string
-  encodeFunctionData(functionFragment: 'customToken', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'customL2Token',
+    values: [string]
+  ): string
   encodeFunctionData(
     functionFragment: 'customTokenRegistered',
     values: [string, string]
@@ -54,10 +58,14 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'initialize',
     values: [string, string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'isCustomToken',
+    values: [string]
+  ): string
   encodeFunctionData(functionFragment: 'l1Pair', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'migrate',
-    values: [string, string, string, BigNumberish]
+    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'mintAndCall',
@@ -77,20 +85,27 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(
-    functionFragment: '__placeholder__',
+    functionFragment: 'calculateL2ERC20TokenAddress',
     data: BytesLike
   ): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'customToken', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'customL2Token',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'customTokenRegistered',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'getBeacon', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'isCustomToken',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'l1Pair', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
@@ -105,7 +120,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'CustomTokenRegistered(address,address)': EventFragment
     'MintAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TokenCreated(address,address)': EventFragment
-    'TokenMigrated(address,address,address,uint256)': EventFragment
+    'TokenMigrated(address,address,uint256)': EventFragment
     'TokenMinted(address,address,address,address,uint256,bool)': EventFragment
     'WithdrawToken(uint256,address,uint256,address,uint256)': EventFragment
   }
@@ -132,9 +147,15 @@ export class ArbTokenBridge extends Contract {
   interface: ArbTokenBridgeInterface
 
   functions: {
-    __placeholder__(overrides?: CallOverrides): Promise<[string]>
+    calculateL2ERC20TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
 
-    '__placeholder__()'(overrides?: CallOverrides): Promise<[string]>
+    'calculateL2ERC20TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -146,9 +167,9 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    customToken(arg0: string, overrides?: CallOverrides): Promise<[string]>
+    customL2Token(arg0: string, overrides?: CallOverrides): Promise<[string]>
 
-    'customToken(address)'(
+    'customL2Token(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<[string]>
@@ -181,21 +202,29 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    isCustomToken(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    'isCustomToken(address)'(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
     l1Pair(overrides?: CallOverrides): Promise<[string]>
 
     'l1Pair()'(overrides?: CallOverrides): Promise<[string]>
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -258,9 +287,15 @@ export class ArbTokenBridge extends Contract {
     ): Promise<ContractTransaction>
   }
 
-  __placeholder__(overrides?: CallOverrides): Promise<string>
+  calculateL2ERC20TokenAddress(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
-  '__placeholder__()'(overrides?: CallOverrides): Promise<string>
+  'calculateL2ERC20TokenAddress(address)'(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -272,9 +307,9 @@ export class ArbTokenBridge extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  customToken(arg0: string, overrides?: CallOverrides): Promise<string>
+  customL2Token(arg0: string, overrides?: CallOverrides): Promise<string>
 
-  'customToken(address)'(
+  'customL2Token(address)'(
     arg0: string,
     overrides?: CallOverrides
   ): Promise<string>
@@ -307,21 +342,26 @@ export class ArbTokenBridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  isCustomToken(l1Token: string, overrides?: CallOverrides): Promise<boolean>
+
+  'isCustomToken(address)'(
+    l1Token: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
   l1Pair(overrides?: CallOverrides): Promise<string>
 
   'l1Pair()'(overrides?: CallOverrides): Promise<string>
 
   migrate(
     l1ERC20: string,
-    target: string,
     account: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'migrate(address,address,address,uint256)'(
+  'migrate(address,address,uint256)'(
     l1ERC20: string,
-    target: string,
     account: string,
     amount: BigNumberish,
     overrides?: Overrides
@@ -384,9 +424,15 @@ export class ArbTokenBridge extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    __placeholder__(overrides?: CallOverrides): Promise<string>
+    calculateL2ERC20TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
 
-    '__placeholder__()'(overrides?: CallOverrides): Promise<string>
+    'calculateL2ERC20TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -398,9 +444,9 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    customToken(arg0: string, overrides?: CallOverrides): Promise<string>
+    customL2Token(arg0: string, overrides?: CallOverrides): Promise<string>
 
-    'customToken(address)'(
+    'customL2Token(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<string>
@@ -433,21 +479,26 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    isCustomToken(l1Token: string, overrides?: CallOverrides): Promise<boolean>
+
+    'isCustomToken(address)'(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     l1Pair(overrides?: CallOverrides): Promise<string>
 
     'l1Pair()'(overrides?: CallOverrides): Promise<string>
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: CallOverrides
@@ -530,8 +581,7 @@ export class ArbTokenBridge extends Contract {
     ): EventFilter
 
     TokenMigrated(
-      from: string | null,
-      to: string | null,
+      l1Address: string | null,
       account: string | null,
       amount: null
     ): EventFilter
@@ -548,16 +598,22 @@ export class ArbTokenBridge extends Contract {
     WithdrawToken(
       id: null,
       l1Address: string | null,
-      amount: BigNumberish | null,
+      amount: null,
       destination: string | null,
-      exitNum: null
+      exitNum: BigNumberish | null
     ): EventFilter
   }
 
   estimateGas: {
-    __placeholder__(overrides?: CallOverrides): Promise<BigNumber>
+    calculateL2ERC20TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
-    '__placeholder__()'(overrides?: CallOverrides): Promise<BigNumber>
+    'calculateL2ERC20TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -569,9 +625,9 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    customToken(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
+    customL2Token(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
 
-    'customToken(address)'(
+    'customL2Token(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -604,21 +660,29 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    isCustomToken(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'isCustomToken(address)'(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     l1Pair(overrides?: CallOverrides): Promise<BigNumber>
 
     'l1Pair()'(overrides?: CallOverrides): Promise<BigNumber>
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -682,9 +746,13 @@ export class ArbTokenBridge extends Contract {
   }
 
   populateTransaction: {
-    __placeholder__(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    calculateL2ERC20TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
-    '__placeholder__()'(
+    'calculateL2ERC20TokenAddress(address)'(
+      l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -698,12 +766,12 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    customToken(
+    customL2Token(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'customToken(address)'(
+    'customL2Token(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -736,21 +804,29 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    isCustomToken(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'isCustomToken(address)'(
+      l1Token: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     l1Pair(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l1Pair()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     migrate(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'migrate(address,address,address,uint256)'(
+    'migrate(address,address,uint256)'(
       l1ERC20: string,
-      target: string,
       account: string,
       amount: BigNumberish,
       overrides?: Overrides

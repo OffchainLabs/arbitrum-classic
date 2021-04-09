@@ -98,13 +98,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'to',
+        name: 'l1Address',
         type: 'address',
       },
       {
@@ -182,7 +176,7 @@ const _abi = [
         type: 'address',
       },
       {
-        indexed: true,
+        indexed: false,
         internalType: 'uint256',
         name: 'amount',
         type: 'uint256',
@@ -194,7 +188,7 @@ const _abi = [
         type: 'address',
       },
       {
-        indexed: false,
+        indexed: true,
         internalType: 'uint256',
         name: 'exitNum',
         type: 'uint256',
@@ -245,11 +239,6 @@ const _abi = [
       {
         internalType: 'address',
         name: 'l1ERC20',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'target',
         type: 'address',
       },
       {
