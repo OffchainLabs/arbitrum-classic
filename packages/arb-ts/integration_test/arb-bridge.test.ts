@@ -607,6 +607,10 @@ describe('CustomToken: no-L2-yet-fallback case', () => {
     )
     const symbol = await arbERC20.symbol()
     expect(symbol).to.equal('TMT')
+
+    const newCustomTokenBal = await arbERC20.balanceOf(l1TestWallet.address)
+
+    expect(newCustomTokenBal.eq(tokenDepositAmmount)).to.be.true
     // user should be able to withdraw
     // or migrate to custom token once deployed
   })
