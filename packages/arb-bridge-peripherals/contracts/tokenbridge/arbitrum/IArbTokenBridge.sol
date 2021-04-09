@@ -50,12 +50,7 @@ interface IArbTokenBridge {
         bool usedCallHook
     );
 
-    event TokenMigrated(
-        address indexed from,
-        address indexed to,
-        address indexed account,
-        uint256 amount
-    );
+    event TokenMigrated(address indexed l1Address, address indexed account, uint256 amount);
 
     // The following functions are only callable by the L1 bridge
 
@@ -80,7 +75,6 @@ interface IArbTokenBridge {
     /// @dev If a token is bridged before a custom implementation is set users can call this method to migrate to the custom version
     function migrate(
         address l1ERC20,
-        address target,
         address account,
         uint256 amount
     ) external;

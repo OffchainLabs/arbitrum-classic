@@ -237,7 +237,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     // users can call this method to migrate to the custom version
     function migrate(
         address l1ERC20,
-        address target,
         address account,
         uint256 amount
     ) external override {
@@ -255,7 +254,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
 
         // this assumes the l2StandardToken has burnt the user funds
         IArbCustomToken(l2CustomTokenAddress).bridgeMint(account, amount);
-        emit TokenMigrated(msg.sender, target, account, amount);
+        emit TokenMigrated(l1ERC20, account, amount);
     }
 
     function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
