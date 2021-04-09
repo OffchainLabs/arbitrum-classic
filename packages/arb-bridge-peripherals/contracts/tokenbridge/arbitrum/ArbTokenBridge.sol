@@ -125,13 +125,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         bytes calldata deployData,
         bytes calldata callHookData
     ) external override onlyEthPair {
-        address expectedAddress =
-            TokenAddressHandler.calculateL2TokenAddress(
-                l1ERC20,
-                templateERC20,
-                address(this),
-                cloneableProxyHash
-            );
+        address expectedAddress = calculateL2TokenAddress(l1ERC20);
 
         if (!expectedAddress.isContract()) {
             if (deployData.length > 0) {
@@ -204,7 +198,8 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     ) external override returns (uint256) {
         address expectedSender = calculateL2TokenAddress(l1ERC20);
 
-        // if expected address is custom, but it got self destructed users can still withdraw
+        // users can withdraw if its a standard erc20 token deployed by the bridge
+        // TODO: what happens if this was a rebasing stablecoin and user was supposed to hold less at time of withdrawal?
         require(
             msg.sender == expectedSender || msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
             "Withdraw can only be triggered by expected sender"
