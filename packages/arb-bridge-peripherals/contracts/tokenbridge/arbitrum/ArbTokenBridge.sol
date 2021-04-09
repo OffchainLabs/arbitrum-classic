@@ -242,8 +242,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             "Migration should be called by erc20 token contract"
         );
 
+        address l2CustomTokenAddress = TokenAddressHandler.customL2Token[l1ERC20];
+        require(l2CustomTokenAddress.isContract(), "L2 custom token must already be deployed");
+
         // this assumes the l2StandardToken has burnt the user funds
-        IArbCustomToken(TokenAddressHandler.customL2Token[l1ERC20]).bridgeMint(account, amount);
+        IArbCustomToken(l2CustomTokenAddress).bridgeMint(account, amount);
         emit TokenMigrated(msg.sender, target, account, amount);
     }
 
