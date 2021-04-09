@@ -53,7 +53,7 @@ func setupTest(t *testing.T, tmpDir string) (
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbos.Path(), config, common.RandAddress(), nil)
+	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
 	closeFunc := func() {
 		db.Close()
 		monitor.Close()

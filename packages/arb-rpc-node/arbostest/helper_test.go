@@ -177,7 +177,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 
 func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
 	t.Helper()
-	cmach, err := cmachine.New(arbos.Path())
+	cmach, err := cmachine.New(*arbosfile)
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
 

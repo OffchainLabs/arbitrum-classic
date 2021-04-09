@@ -142,9 +142,7 @@ type txTemplate struct {
 }
 
 func TestFees(t *testing.T) {
-	if true {
-		t.Skip("")
-	}
+	skipBelowVersion(t, 3)
 	privKey, err := crypto.GenerateKey()
 	failIfError(t, err)
 	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))

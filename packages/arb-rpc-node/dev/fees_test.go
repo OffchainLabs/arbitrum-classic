@@ -36,6 +36,7 @@ import (
 )
 
 func TestFees(t *testing.T) {
+	skipBelowVersion(t, 3)
 	tmpDir, err := ioutil.TempDir(".", "arbitrum")
 	test.FailIfError(t, err)
 	defer func() {
@@ -69,7 +70,7 @@ func TestFees(t *testing.T) {
 	}
 
 	aggInit := message.DefaultAggConfig{Aggregator: common.RandAddress()}
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbos.Path(), config, common.NewAddressFromEth(auth.From), []message.ChainConfigOption{feeConfigInit, aggInit})
+	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.NewAddressFromEth(auth.From), []message.ChainConfigOption{feeConfigInit, aggInit})
 	defer monitor.Close()
 	defer db.Close()
 

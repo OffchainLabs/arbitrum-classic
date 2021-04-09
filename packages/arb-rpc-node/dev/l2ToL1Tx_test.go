@@ -59,7 +59,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbos.Path(), config, common.RandAddress(), nil)
+	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
 	defer monitor.Close()
 	defer db.Close()
 
