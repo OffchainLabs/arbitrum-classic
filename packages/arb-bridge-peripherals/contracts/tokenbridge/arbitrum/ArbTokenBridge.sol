@@ -203,7 +203,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     ) external override returns (uint256) {
         address expectedSender = calculateL2TokenAddress(l1ERC20);
 
-        require(msg.sender == expectedSender, "Withdraw can only be triggered by expected sender");
+        // if expected address is custom, but it got self destructed users can still withdraw
+        require(
+            msg.sender == expectedSender || msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
+            "Withdraw can only be triggered by expected sender"
+        );
         return _withdraw(l1ERC20, destination, amount);
     }
 
