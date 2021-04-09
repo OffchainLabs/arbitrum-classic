@@ -96,27 +96,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         );
     }
 
-    function handleCallHookData(
-        address tokenAddress,
-        uint256 amount,
-        address sender,
-        address dest,
-        bytes memory callHookData
-    ) internal {
-        IArbToken token = IArbToken(tokenAddress);
-        bool success;
-        try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
-            success = true;
-        } catch {
-            // if reverted, then credit sender's account
-            token.bridgeMint(sender, amount);
-            success = false;
-        }
-        // if success tokens got minted to dest, else to sender
-        emit TokenMinted(l1ERC20, expectedAddress, sender, success ? dest : sender, amount, true);
-        emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
-    }
-
     function mintFromL1(
         address l1ERC20,
         address sender,
@@ -158,10 +137,28 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         }
         // ignores deployData if token already deployed
 
+        IArbToken token = IArbToken(expectedAddress);
         if (callHookData.length > 0) {
-            handleCallHookData(expectedAddress, amount, sender, dest, callHookData);
+            bool success;
+            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
+                success = true;
+            } catch {
+                // if reverted, then credit sender's account
+                token.bridgeMint(sender, amount);
+                success = false;
+            }
+            // if success tokens got minted to dest, else to sender
+            emit TokenMinted(
+                l1ERC20,
+                expectedAddress,
+                sender,
+                success ? dest : sender,
+                amount,
+                true
+            );
+            emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
         } else {
-            IArbToken(expectedAddress).bridgeMint(dest, amount);
+            token.bridgeMint(dest, amount);
             emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, false);
         }
     }
