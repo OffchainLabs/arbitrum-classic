@@ -144,7 +144,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
                 success = true;
             } catch {
                 // if reverted, then credit sender's account
-                token.bridgeMint(sender, amount);
+                try token.bridgeMint(sender, amount) {} catch {
+                    // if external bridgeMint fails, withdraw user funds and return
+                    _withdraw(l1ERC20, sender, amount);
+                    return;
+                }
                 success = false;
             }
             // if success tokens got minted to dest, else to sender
@@ -158,7 +162,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             );
             emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
         } else {
-            token.bridgeMint(dest, amount);
+            try token.bridgeMint(dest, amount) {} catch {
+                // if external bridgeMint fails, withdraw user funds and return
+                _withdraw(l1ERC20, sender, amount);
+                return;
+            }
             emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, false);
         }
     }
