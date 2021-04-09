@@ -20,25 +20,13 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface TestCustomTokenL1Interface extends ethers.utils.Interface {
+interface IERC1363Interface extends ethers.utils.Interface {
   functions: {
-    'DOMAIN_SEPARATOR()': FunctionFragment
     'allowance(address,address)': FunctionFragment
     'approve(address,uint256)': FunctionFragment
     'approveAndCall(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
-    'bridge()': FunctionFragment
-    'decimals()': FunctionFragment
-    'decreaseAllowance(address,uint256)': FunctionFragment
-    'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8)': FunctionFragment
-    'mint()': FunctionFragment
-    'name()': FunctionFragment
-    'nonces(address)': FunctionFragment
-    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
     'supportsInterface(bytes4)': FunctionFragment
-    'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
     'transferAndCall(address,uint256)': FunctionFragment
@@ -46,10 +34,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'transferFromAndCall(address,address,uint256,bytes)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'DOMAIN_SEPARATOR',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'allowance',
     values: [string, string]
@@ -63,44 +47,10 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
-  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
-  encodeFunctionData(functionFragment: 'decimals', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'decreaseAllowance',
-    values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'increaseAllowance',
-    values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
-  ): string
-  encodeFunctionData(functionFragment: 'mint', values?: undefined): string
-  encodeFunctionData(functionFragment: 'name', values?: undefined): string
-  encodeFunctionData(functionFragment: 'nonces', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'permit',
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BytesLike,
-      BytesLike
-    ]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'registerTokenOnL2',
-    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
-  ): string
   encodeFunctionData(
     functionFragment: 'supportsInterface',
     values: [BytesLike]
   ): string
-  encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'totalSupply',
     values?: undefined
@@ -122,10 +72,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     values: [string, string, BigNumberish, BytesLike]
   ): string
 
-  decodeFunctionResult(
-    functionFragment: 'DOMAIN_SEPARATOR',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
   decodeFunctionResult(
@@ -133,30 +79,10 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'decreaseAllowance',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'increaseAllowance',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'registerTokenOnL2',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(
     functionFragment: 'supportsInterface',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result
   decodeFunctionResult(
@@ -181,7 +107,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Transfer'): EventFragment
 }
 
-export class TestCustomTokenL1 extends Contract {
+export class IERC1363 extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -192,13 +118,9 @@ export class TestCustomTokenL1 extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: TestCustomTokenL1Interface
+  interface: IERC1363Interface
 
   functions: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<[string]>
-
-    'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<[string]>
-
     allowance(
       owner: string,
       spender: string,
@@ -243,107 +165,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    bridge(overrides?: CallOverrides): Promise<[string]>
-
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
-
-    decimals(overrides?: CallOverrides): Promise<[number]>
-
-    'decimals()'(overrides?: CallOverrides): Promise<[number]>
-
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    mint(overrides?: Overrides): Promise<ContractTransaction>
-
-    'mint()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    name(overrides?: CallOverrides): Promise<[string]>
-
-    'name()'(overrides?: CallOverrides): Promise<[string]>
-
-    nonces(owner: string, overrides?: CallOverrides): Promise<[BigNumber]>
-
-    'nonces(address)'(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    registerTokenOnL2(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     supportsInterface(
       interfaceId: BytesLike,
       overrides?: CallOverrides
@@ -353,10 +174,6 @@ export class TestCustomTokenL1 extends Contract {
       interfaceId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[boolean]>
-
-    symbol(overrides?: CallOverrides): Promise<[string]>
-
-    'symbol()'(overrides?: CallOverrides): Promise<[string]>
 
     totalSupply(overrides?: CallOverrides): Promise<[BigNumber]>
 
@@ -417,10 +234,6 @@ export class TestCustomTokenL1 extends Contract {
     ): Promise<ContractTransaction>
   }
 
-  DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>
-
-  'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<string>
-
   allowance(
     owner: string,
     spender: string,
@@ -465,107 +278,6 @@ export class TestCustomTokenL1 extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  bridge(overrides?: CallOverrides): Promise<string>
-
-  'bridge()'(overrides?: CallOverrides): Promise<string>
-
-  decimals(overrides?: CallOverrides): Promise<number>
-
-  'decimals()'(overrides?: CallOverrides): Promise<number>
-
-  decreaseAllowance(
-    spender: string,
-    subtractedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'decreaseAllowance(address,uint256)'(
-    spender: string,
-    subtractedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  increaseAllowance(
-    spender: string,
-    addedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'increaseAllowance(address,uint256)'(
-    spender: string,
-    addedValue: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  initialize(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(string,string,uint8)'(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  mint(overrides?: Overrides): Promise<ContractTransaction>
-
-  'mint()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  name(overrides?: CallOverrides): Promise<string>
-
-  'name()'(overrides?: CallOverrides): Promise<string>
-
-  nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
-
-  'nonces(address)'(
-    owner: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
-  permit(
-    owner: string,
-    spender: string,
-    value: BigNumberish,
-    deadline: BigNumberish,
-    v: BigNumberish,
-    r: BytesLike,
-    s: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
-    owner: string,
-    spender: string,
-    value: BigNumberish,
-    deadline: BigNumberish,
-    v: BigNumberish,
-    r: BytesLike,
-    s: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  registerTokenOnL2(
-    l2CustomTokenAddress: string,
-    maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    refundAddress: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
-    l2CustomTokenAddress: string,
-    maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    gasPriceBid: BigNumberish,
-    refundAddress: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   supportsInterface(
     interfaceId: BytesLike,
     overrides?: CallOverrides
@@ -575,10 +287,6 @@ export class TestCustomTokenL1 extends Contract {
     interfaceId: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>
-
-  symbol(overrides?: CallOverrides): Promise<string>
-
-  'symbol()'(overrides?: CallOverrides): Promise<string>
 
   totalSupply(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -639,10 +347,6 @@ export class TestCustomTokenL1 extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>
-
-    'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<string>
-
     allowance(
       owner: string,
       spender: string,
@@ -687,107 +391,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<string>
-
-    'bridge()'(overrides?: CallOverrides): Promise<string>
-
-    decimals(overrides?: CallOverrides): Promise<number>
-
-    'decimals()'(overrides?: CallOverrides): Promise<number>
-
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    mint(overrides?: CallOverrides): Promise<void>
-
-    'mint()'(overrides?: CallOverrides): Promise<void>
-
-    name(overrides?: CallOverrides): Promise<string>
-
-    'name()'(overrides?: CallOverrides): Promise<string>
-
-    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'nonces(address)'(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    registerTokenOnL2(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     supportsInterface(
       interfaceId: BytesLike,
       overrides?: CallOverrides
@@ -797,10 +400,6 @@ export class TestCustomTokenL1 extends Contract {
       interfaceId: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    symbol(overrides?: CallOverrides): Promise<string>
-
-    'symbol()'(overrides?: CallOverrides): Promise<string>
 
     totalSupply(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -872,10 +471,6 @@ export class TestCustomTokenL1 extends Contract {
   }
 
   estimateGas: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<BigNumber>
-
-    'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<BigNumber>
-
     allowance(
       owner: string,
       spender: string,
@@ -920,107 +515,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<BigNumber>
-
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    decimals(overrides?: CallOverrides): Promise<BigNumber>
-
-    'decimals()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    mint(overrides?: Overrides): Promise<BigNumber>
-
-    'mint()'(overrides?: Overrides): Promise<BigNumber>
-
-    name(overrides?: CallOverrides): Promise<BigNumber>
-
-    'name()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'nonces(address)'(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    registerTokenOnL2(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     supportsInterface(
       interfaceId: BytesLike,
       overrides?: CallOverrides
@@ -1030,10 +524,6 @@ export class TestCustomTokenL1 extends Contract {
       interfaceId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
-
-    symbol(overrides?: CallOverrides): Promise<BigNumber>
-
-    'symbol()'(overrides?: CallOverrides): Promise<BigNumber>
 
     totalSupply(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -1095,12 +585,6 @@ export class TestCustomTokenL1 extends Contract {
   }
 
   populateTransaction: {
-    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'DOMAIN_SEPARATOR()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     allowance(
       owner: string,
       spender: string,
@@ -1148,110 +632,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    decimals(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'decimals()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    decreaseAllowance(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'decreaseAllowance(address,uint256)'(
-      spender: string,
-      subtractedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    increaseAllowance(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'increaseAllowance(address,uint256)'(
-      spender: string,
-      addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    mint(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'mint()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    name(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'name()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    nonces(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'nonces(address)'(
-      owner: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    permit(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
-      owner: string,
-      spender: string,
-      value: BigNumberish,
-      deadline: BigNumberish,
-      v: BigNumberish,
-      r: BytesLike,
-      s: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    registerTokenOnL2(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
-      l2CustomTokenAddress: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      gasPriceBid: BigNumberish,
-      refundAddress: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     supportsInterface(
       interfaceId: BytesLike,
       overrides?: CallOverrides
@@ -1261,10 +641,6 @@ export class TestCustomTokenL1 extends Contract {
       interfaceId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
-
-    symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'symbol()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     totalSupply(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
