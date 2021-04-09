@@ -39,7 +39,7 @@ void runCheckArbCore(
 
     REQUIRE(arbCore->deliverMessages(prev_inbox_acc, raw_seq_batch_items,
                                      std::vector<std::vector<unsigned char>>(),
-                                     std::vector<uint256_t>(), std::nullopt));
+                                     std::nullopt));
 
     ArbCore::message_status_enum status;
     while (true) {

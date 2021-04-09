@@ -110,9 +110,9 @@ contract SequencerInbox is ISequencerInbox {
         emit DelayedInboxForced(
             startNum,
             beforeSeqAcc,
-            acc,
+            count,
             _totalDelayedMessagesRead,
-            getLastDelayedAcc()
+            [acc, getLastDelayedAcc()]
         );
     }
 
@@ -134,7 +134,13 @@ contract SequencerInbox is ISequencerInbox {
                 timestamp,
                 _totalDelayedMessagesRead
             );
-        emit SequencerBatchDeliveredFromOrigin(startNum, beforeAcc, afterAcc, getLastDelayedAcc());
+        emit SequencerBatchDeliveredFromOrigin(
+            startNum,
+            beforeAcc,
+            messageCount,
+            afterAcc,
+            getLastDelayedAcc()
+        );
     }
 
     function addSequencerL2Batch(
@@ -156,6 +162,7 @@ contract SequencerInbox is ISequencerInbox {
         emit SequencerBatchDelivered(
             startNum,
             beforeAcc,
+            messageCount,
             afterAcc,
             transactions,
             lengths,
@@ -208,6 +215,7 @@ contract SequencerInbox is ISequencerInbox {
                 count++;
             }
         }
+        require(count > messageCount, "EMPTY_BATCH");
         inboxAccs.push(acc);
         messageCount = count;
 

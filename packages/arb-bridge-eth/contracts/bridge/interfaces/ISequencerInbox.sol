@@ -22,6 +22,7 @@ interface ISequencerInbox {
     event SequencerBatchDelivered(
         uint256 indexed firstMessageNum,
         bytes32 indexed beforeAcc,
+        uint256 newMessageCount,
         bytes32 afterAcc,
         bytes transactions,
         uint256[] lengths,
@@ -34,6 +35,7 @@ interface ISequencerInbox {
     event SequencerBatchDeliveredFromOrigin(
         uint256 indexed firstMessageNum,
         bytes32 indexed beforeAcc,
+        uint256 newMessageCount,
         bytes32 afterAcc,
         bytes32 delayedAcc
     );
@@ -41,9 +43,9 @@ interface ISequencerInbox {
     event DelayedInboxForced(
         uint256 indexed firstMessageNum,
         bytes32 indexed beforeAcc,
-        bytes32 afterAcc,
+        uint256 newMessageCount,
         uint256 totalDelayedMessagesRead,
-        bytes32 delayedAcc
+        bytes32[2] afterAccAndDelayed
     );
 
     function messageCount() external view returns (uint256);

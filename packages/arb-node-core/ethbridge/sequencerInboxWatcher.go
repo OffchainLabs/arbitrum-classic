@@ -1,0 +1,330 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package ethbridge
+
+import (
+	"context"
+	"math/big"
+	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
+
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
+)
+
+var sequencerBridgeABI abi.ABI
+var sequencerBatchDeliveredID ethcommon.Hash
+var sequencerBatchDeliveredFromOriginID ethcommon.Hash
+var delayedInboxForcedID ethcommon.Hash
+
+func init() {
+	parsedBridgeABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.SequencerInboxABI))
+	if err != nil {
+		panic(err)
+	}
+	sequencerBatchDeliveredID = parsedBridgeABI.Events["SequencerBatchDelivered"].ID
+	sequencerBatchDeliveredFromOriginID = parsedBridgeABI.Events["SequencerBatchDeliveredFromOrigin"].ID
+	delayedInboxForcedID = parsedBridgeABI.Events["DelayedInboxForced"].ID
+	sequencerBridgeABI = parsedBridgeABI
+}
+
+type SequencerInboxWatcher struct {
+	con     *ethbridgecontracts.SequencerInbox
+	address ethcommon.Address
+	client  ethutils.EthClient
+}
+
+func NewSequencerInboxWatcher(address ethcommon.Address, client ethutils.EthClient) (*SequencerInboxWatcher, error) {
+	con, err := ethbridgecontracts.NewSequencerInbox(address, client)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return &SequencerInboxWatcher{
+		con:     con,
+		address: address,
+		client:  client,
+	}, nil
+}
+
+func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
+	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return latestHeader.Number, nil
+}
+
+type SequencerBatchRef interface {
+	GetBeforeCount() *big.Int
+	GetBeforeAcc() common.Hash
+	GetAfterCount() *big.Int
+	GetAfterAcc() common.Hash
+}
+
+func (r *SequencerInboxWatcher) LookupBatchesInRange(ctx context.Context, from, to *big.Int) ([]SequencerBatchRef, error) {
+	query := ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: from,
+		ToBlock:   to,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{sequencerBatchDeliveredID, sequencerBatchDeliveredFromOriginID, delayedInboxForcedID}},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	for _, evmLog := range logs {
+		monitor.GlobalMonitor.ReaderGotBatch(common.NewHashFromEth(evmLog.TxHash))
+	}
+	return r.logsToBatchRefs(ctx, logs)
+}
+
+type SequencerBatch struct {
+	transactionsData         []byte
+	transactionLengths       []*big.Int
+	L1BlockNumber            *big.Int
+	Timestamp                *big.Int
+	TotalDelayedMessagesRead *big.Int
+	BeforeCount              *big.Int
+	BeforeAcc                common.Hash
+	AfterCount               *big.Int
+	AfterAcc                 common.Hash
+	DelayedAcc               common.Hash
+	ChainTime                inbox.ChainTime
+	Sequencer                common.Address
+	GasPrice                 *big.Int
+}
+
+func (b SequencerBatch) GetBeforeCount() *big.Int {
+	return b.BeforeCount
+}
+
+func (b SequencerBatch) GetBeforeAcc() common.Hash {
+	return b.BeforeAcc
+}
+
+func (b SequencerBatch) GetAfterCount() *big.Int {
+	return b.AfterCount
+}
+
+func (b SequencerBatch) GetAfterAcc() common.Hash {
+	return b.AfterAcc
+}
+
+func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
+	count := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
+	delayedCount := new(big.Int).Sub(count, big.NewInt(int64(len(b.transactionLengths))))
+	hasDelayed := delayedCount.Cmp(big.NewInt(0)) > 0
+	itemCount := len(b.transactionLengths)
+	if hasDelayed {
+		itemCount++
+	}
+	ret := make([]inbox.SequencerBatchItem, 0, itemCount)
+	lastAcc := b.BeforeAcc
+	nextSeqNum := new(big.Int).Add(b.BeforeCount, delayedCount)
+	if hasDelayed {
+		// Create batch item to read delayed messages
+		lastSeqNum := new(big.Int).Sub(nextSeqNum, big.NewInt(1))
+		item := inbox.SequencerBatchItem{
+			LastSeqNum:        lastSeqNum,
+			Accumulator:       common.Hash{},
+			TotalDelayedCount: b.TotalDelayedMessagesRead,
+			SequencerMessage:  []byte{},
+		}
+		beforeDelayedCount := new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
+		item.RecomputeAccumulator(lastAcc, beforeDelayedCount, b.DelayedAcc)
+		lastAcc = item.Accumulator
+		ret = append(ret, item)
+	}
+	dataOffset := 0
+	for i := 0; i < len(b.transactionLengths); i++ {
+		// Sequencer batch items
+		var message inbox.InboxMessage
+		length := int(b.transactionLengths[i].Int64())
+		if length == 0 {
+			message = inbox.InboxMessage{
+				Kind:        6,
+				Sender:      common.Address{},
+				InboxSeqNum: big.NewInt(0),
+				GasPrice:    big.NewInt(0),
+				Data:        []byte{},
+				ChainTime: inbox.ChainTime{
+					BlockNum:  common.NewTimeBlocksInt(0),
+					Timestamp: big.NewInt(0),
+				},
+			}
+		} else {
+			message = inbox.InboxMessage{
+				Kind:        3,
+				Sender:      b.Sequencer,
+				InboxSeqNum: nextSeqNum,
+				GasPrice:    b.GasPrice,
+				Data:        b.transactionsData[dataOffset:(dataOffset + length)],
+				ChainTime:   b.ChainTime,
+			}
+		}
+		dataOffset += length
+		item := inbox.SequencerBatchItem{
+			LastSeqNum:        nextSeqNum,
+			Accumulator:       common.Hash{},
+			TotalDelayedCount: b.TotalDelayedMessagesRead,
+			SequencerMessage:  message.ToBytes(),
+		}
+		item.RecomputeAccumulator(lastAcc, b.TotalDelayedMessagesRead, b.DelayedAcc)
+		lastAcc = item.Accumulator
+		nextSeqNum.Add(nextSeqNum, big.NewInt(1))
+		ret = append(ret, item)
+	}
+	if nextSeqNum.Cmp(b.AfterCount) != 0 {
+		panic("Computed wrong sequence number")
+	}
+	return ret
+}
+
+type sequencerBatchOriginRef struct {
+	blockHash   ethcommon.Hash
+	txIndex     uint
+	beforeCount *big.Int
+	beforeAcc   common.Hash
+	afterCount  *big.Int
+	afterAcc    common.Hash
+	delayedAcc  common.Hash
+	chainTime   inbox.ChainTime
+}
+
+func (b sequencerBatchOriginRef) GetBeforeCount() *big.Int {
+	return b.beforeCount
+}
+
+func (b sequencerBatchOriginRef) GetBeforeAcc() common.Hash {
+	return b.beforeAcc
+}
+
+func (b sequencerBatchOriginRef) GetAfterCount() *big.Int {
+	return b.afterCount
+}
+
+func (b sequencerBatchOriginRef) GetAfterAcc() common.Hash {
+	return b.afterAcc
+}
+
+func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []types.Log) ([]SequencerBatchRef, error) {
+	if len(logs) == 0 {
+		return nil, nil
+	}
+	sequencerEthAddr, err := r.con.Sequencer(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, err
+	}
+	sequencer := common.NewAddressFromEth(sequencerEthAddr)
+	blockTimes := make(map[ethcommon.Hash]*big.Int)
+	refs := make([]SequencerBatchRef, 0, len(logs))
+	for _, log := range logs {
+		blockTime, ok := blockTimes[log.BlockHash]
+		if !ok {
+			header, err := r.client.HeaderByHash(ctx, log.BlockHash)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			blockTime = new(big.Int).SetUint64(header.Time)
+			blockTimes[log.BlockHash] = blockTime
+		}
+		chainTime := inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(log.BlockNumber)),
+			Timestamp: blockTime,
+		}
+
+		txData, err := r.client.TransactionInBlock(ctx, log.BlockHash, log.TxIndex)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		gasPrice := txData.GasPrice()
+
+		if log.Topics[0] == sequencerBatchDeliveredID {
+			parsed, err := r.con.ParseSequencerBatchDelivered(log)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			refs = append(refs, SequencerBatch{
+				transactionsData:         parsed.Transactions,
+				transactionLengths:       parsed.Lengths,
+				L1BlockNumber:            parsed.L1BlockNumber,
+				Timestamp:                parsed.Timestamp,
+				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
+				BeforeCount:              parsed.FirstMessageNum,
+				BeforeAcc:                parsed.BeforeAcc,
+				AfterCount:               parsed.NewMessageCount,
+				AfterAcc:                 parsed.AfterAcc,
+				DelayedAcc:               parsed.DelayedAcc,
+				Sequencer:                sequencer,
+				ChainTime:                chainTime,
+				GasPrice:                 gasPrice,
+			})
+		} else if log.Topics[0] == sequencerBatchDeliveredFromOriginID {
+			parsed, err := r.con.ParseSequencerBatchDeliveredFromOrigin(log)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			refs = append(refs, sequencerBatchOriginRef{
+				blockHash:  log.BlockHash,
+				txIndex:    log.TxIndex,
+				beforeAcc:  parsed.BeforeAcc,
+				afterCount: parsed.NewMessageCount,
+				afterAcc:   parsed.AfterAcc,
+				delayedAcc: parsed.DelayedAcc,
+				chainTime:  chainTime,
+			})
+		} else if log.Topics[0] == delayedInboxForcedID {
+			parsed, err := r.con.ParseDelayedInboxForced(log)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			refs = append(refs, SequencerBatch{
+				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
+				BeforeCount:              parsed.FirstMessageNum,
+				BeforeAcc:                parsed.BeforeAcc,
+				AfterCount:               parsed.NewMessageCount,
+				AfterAcc:                 parsed.AfterAccAndDelayed[0],
+				DelayedAcc:               parsed.AfterAccAndDelayed[1],
+				Sequencer:                sequencer,
+				ChainTime:                chainTime,
+				GasPrice:                 gasPrice,
+			})
+		} else {
+			return nil, errors.Errorf("Unexpected log topic %v", log.Topics[0].String())
+		}
+	}
+	return refs, nil
+}
+
+func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef SequencerBatchRef) (SequencerBatch, error) {
+	if batch, ok := genericRef.(SequencerBatch); ok {
+		return batch, nil
+	}
+	_ = genericRef.(sequencerBatchOriginRef)
+	panic("TODO: ResolveBatchRef sequencerBatchOriginRef")
+}

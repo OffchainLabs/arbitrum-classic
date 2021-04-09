@@ -37,7 +37,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var bridgeABI abi.ABI
+var delayedBridgeABI abi.ABI
 var messageDeliveredID ethcommon.Hash
 var inboxMessageDeliveredID ethcommon.Hash
 var inboxMessageFromOriginID ethcommon.Hash
@@ -48,7 +48,7 @@ func init() {
 		panic(err)
 	}
 	messageDeliveredID = parsedBridgeABI.Events["MessageDelivered"].ID
-	bridgeABI = parsedBridgeABI
+	delayedBridgeABI = parsedBridgeABI
 
 	parsedInboxABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.InboxABI))
 	if err != nil {
@@ -62,7 +62,7 @@ type InboxMessageGetter interface {
 	fillMessageDetails(ctx context.Context, messageNums []*big.Int, txData map[string]*types.Transaction, messages map[string][]byte, minBlockNum, maxBlockNum uint64) error
 }
 
-type BridgeWatcher struct {
+type DelayedBridgeWatcher struct {
 	con     *ethbridgecontracts.Bridge
 	address ethcommon.Address
 	client  ethutils.EthClient
@@ -70,13 +70,13 @@ type BridgeWatcher struct {
 	inboxes map[ethcommon.Address]InboxMessageGetter
 }
 
-func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*BridgeWatcher, error) {
+func NewDelayedBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*DelayedBridgeWatcher, error) {
 	con, err := ethbridgecontracts.NewBridge(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	return &BridgeWatcher{
+	return &DelayedBridgeWatcher{
 		con:     con,
 		address: address,
 		client:  client,
@@ -84,7 +84,7 @@ func NewBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*Br
 	}, nil
 }
 
-func (r *BridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
+func (r *DelayedBridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
 	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -92,7 +92,7 @@ func (r *BridgeWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error
 	return latestHeader.Number, nil
 }
 
-func (r *BridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big.Int) ([]*DeliveredInboxMessage, error) {
+func (r *DelayedBridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big.Int) ([]*DeliveredInboxMessage, error) {
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: from,
@@ -110,7 +110,7 @@ func (r *BridgeWatcher) LookupMessagesInRange(ctx context.Context, from, to *big
 	return r.logsToDeliveredMessages(ctx, logs)
 }
 
-func (r *BridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.Int) (*common.BlockId, error) {
+func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNum *big.Int) (*common.BlockId, error) {
 	var msgNumBytes ethcommon.Hash
 	copy(msgNumBytes[:], math.U256Bytes(messageNum))
 
@@ -152,7 +152,7 @@ func (d DeliveredInboxMessageList) Less(i, j int) bool {
 	return d[i].Message.InboxSeqNum.Cmp(d[j].Message.InboxSeqNum) < 0
 }
 
-func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []types.Log) ([]*DeliveredInboxMessage, error) {
+func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []types.Log) ([]*DeliveredInboxMessage, error) {
 	if len(logs) == 0 {
 		return nil, nil
 	}
@@ -241,7 +241,7 @@ func (r *BridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []type
 	return messages, nil
 }
 
-func (r *BridgeWatcher) getInboxGetter(inboxAddress ethcommon.Address) (InboxMessageGetter, error) {
+func (r *DelayedBridgeWatcher) getInboxGetter(inboxAddress ethcommon.Address) (InboxMessageGetter, error) {
 	curInbox, ok := r.inboxes[inboxAddress]
 	if ok {
 		return curInbox, nil

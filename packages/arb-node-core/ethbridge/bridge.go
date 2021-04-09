@@ -23,18 +23,18 @@ import (
 )
 
 type Bridge struct {
-	*BridgeWatcher
+	*DelayedBridgeWatcher
 	auth *TransactAuth
 }
 
 func NewBridge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Bridge, error) {
-	watcher, err := NewBridgeWatcher(address, client)
+	watcher, err := NewDelayedBridgeWatcher(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &Bridge{
-		BridgeWatcher: watcher,
-		auth:          auth,
+		DelayedBridgeWatcher: watcher,
+		auth:                 auth,
 	}, nil
 }
 

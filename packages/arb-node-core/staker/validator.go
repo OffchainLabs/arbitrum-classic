@@ -19,7 +19,7 @@ import (
 
 type Validator struct {
 	rollup         *ethbridge.Rollup
-	bridge         *ethbridge.BridgeWatcher
+	bridge         *ethbridge.DelayedBridgeWatcher
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
 	lookup         core.ArbCoreLookup
@@ -47,7 +47,7 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddress.ToEthAddress(), client)
+	bridge, err := ethbridge.NewDelayedBridgeWatcher(bridgeAddress.ToEthAddress(), client)
 	if err != nil {
 		return nil, err
 	}

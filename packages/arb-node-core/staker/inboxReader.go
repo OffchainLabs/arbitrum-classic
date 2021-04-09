@@ -6,13 +6,16 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 )
 
 type InboxReader struct {
 	// Only in run thread
-	bridge            *ethbridge.BridgeWatcher
+	delayedBridge     *ethbridge.DelayedBridgeWatcher
+	sequencerInbox    *ethbridge.SequencerInboxWatcher
 	db                core.ArbCore
 	firstMessageBlock *big.Int
 	caughtUp          bool
@@ -25,13 +28,14 @@ type InboxReader struct {
 	completed  chan bool
 }
 
-func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db core.ArbCore) (*InboxReader, error) {
+func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher, sequencerInbox *ethbridge.SequencerInboxWatcher, db core.ArbCore) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
 		return nil, err
 	}
 	return &InboxReader{
-		bridge:            bridge,
+		delayedBridge:     bridge,
+		sequencerInbox:    sequencerInbox,
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
 		completed:         make(chan bool, 1),
@@ -87,7 +91,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		default:
 		}
 
-		currentHeight, err := ir.bridge.CurrentBlockHeight(ctx)
+		currentHeight, err := ir.delayedBridge.CurrentBlockHeight(ctx)
 		if err != nil {
 			return err
 		}
@@ -106,13 +110,17 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			if to.Cmp(currentHeight) > 0 {
 				to = currentHeight
 			}
-			newMessages, err := ir.bridge.LookupMessagesInRange(ctx, from, to)
+			delayedMessages, err := ir.delayedBridge.LookupMessagesInRange(ctx, from, to)
+			if err != nil {
+				return err
+			}
+			sequencerBatches, err := ir.sequencerInbox.LookupBatchesInRange(ctx, from, to)
 			if err != nil {
 				return err
 			}
 			if ir.caughtUpTarget == nil && to.Cmp(currentHeight) == 0 {
-				if len(newMessages) > 0 {
-					ir.caughtUpTarget = newMessages[len(newMessages)-1].Message.InboxSeqNum
+				if len(sequencerBatches) > 0 {
+					ir.caughtUpTarget = sequencerBatches[len(sequencerBatches)-1].GetAfterCount()
 				} else {
 					dbMessageCount, err := ir.db.GetMessageCount()
 					if err != nil {
@@ -121,9 +129,53 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					ir.caughtUpTarget = dbMessageCount
 				}
 			}
-			if len(newMessages) < 40 {
+			if len(sequencerBatches) > 0 {
+				batchAccs := make([]common.Hash, 0, len(sequencerBatches)+1)
+				lastSeqNums := make([]*big.Int, 0, len(sequencerBatches)+1)
+				firstBeforeCount := sequencerBatches[0].GetBeforeCount()
+				checkingStart := firstBeforeCount.Cmp(big.NewInt(0)) > 0
+				if checkingStart {
+					lastSeqNums = append(lastSeqNums, new(big.Int).Sub(firstBeforeCount, big.NewInt(1)))
+					batchAccs = append(batchAccs, sequencerBatches[0].GetBeforeAcc())
+				}
+				for _, batch := range sequencerBatches {
+					if batch.GetBeforeAcc() != batchAccs[len(batchAccs)-1] {
+						return errors.New("Mismatching batch accumulators; reorg?")
+					}
+					afterCount := batch.GetAfterCount()
+					if afterCount.Cmp(big.NewInt(0)) > 0 {
+						lastSeqNums = append(lastSeqNums, new(big.Int).Sub(afterCount, big.NewInt(1)))
+						batchAccs = append(batchAccs, batch.GetAfterAcc())
+					}
+				}
+				matching, err := ir.db.CountMatchingBatchAccs(lastSeqNums, batchAccs)
+				if err != nil {
+					return err
+				}
+				reorging = false
+				if checkingStart {
+					if matching == 0 {
+						reorging = true
+					} else {
+						matching--
+					}
+				}
+				sequencerBatches = sequencerBatches[matching:]
+			}
+			if !reorging && len(delayedMessages) > 0 {
+				firstMsg := delayedMessages[0]
+				beforeAcc := firstMsg.BeforeInboxAcc
+				beforeSeqNum := new(big.Int).Sub(firstMsg.Message.InboxSeqNum, big.NewInt(1))
+				if beforeSeqNum.Cmp(big.NewInt(0)) >= 0 {
+					haveAcc, err := ir.db.GetDelayedInboxAcc(beforeSeqNum)
+					if err != nil || haveAcc != beforeAcc {
+						reorging = true
+					}
+				}
+			}
+			if len(sequencerBatches) < 5 {
 				blocksToFetch += 20
-			} else if len(newMessages) > 90 {
+			} else if len(sequencerBatches) > 10 {
 				blocksToFetch /= 2
 			}
 			if blocksToFetch == 0 {
@@ -132,21 +184,21 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			logger.Debug().
 				Str("from", from.String()).
 				Str("to", to.String()).
-				Int("count", len(newMessages)).
+				Int("delayedCount", len(delayedMessages)).
+				Int("batchCount", len(sequencerBatches)).
 				Msg("Looking up messages")
-			if len(newMessages) != 0 {
-				success, err := ir.addMessages(newMessages)
-				if err != nil {
-					return err
-				}
-				reorging = !success
-			}
 			if reorging {
 				from, err = ir.getPrevBlockForReorg(from)
 				if err != nil {
 					return err
 				}
 			} else {
+				if len(delayedMessages) != 0 || len(sequencerBatches) != 0 {
+					err := ir.addMessages(ctx, sequencerBatches, delayedMessages)
+					if err != nil {
+						return err
+					}
+				}
 				from = from.Add(to, big.NewInt(1))
 			}
 		}
@@ -180,10 +232,27 @@ func (ir *InboxReader) getPrevBlockForReorg(from *big.Int) (*big.Int, error) {
 	return newFrom, nil
 }
 
-func (ir *InboxReader) addMessages(newMessages []*ethbridge.DeliveredInboxMessage) (bool, error) {
-	if len(newMessages) == 0 {
-		return false, errors.New("must have messages to add")
+func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []ethbridge.SequencerBatchRef, deliveredDelayedMessages []*ethbridge.DeliveredInboxMessage) error {
+	var seqBatchItems []inbox.SequencerBatchItem
+	for _, ref := range sequencerBatchRefs {
+		batch, err := ir.sequencerInbox.ResolveBatchRef(ctx, ref)
+		if err != nil {
+			return err
+		}
+		seqBatchItems = append(seqBatchItems, batch.GetItems()...)
 	}
-
-	panic("TODO: rewrite inboxReader")
+	delayedMessages := make([]inbox.DelayedMessage, 0, len(deliveredDelayedMessages))
+	for _, deliveredMsg := range deliveredDelayedMessages {
+		msg := inbox.DelayedMessage{
+			DelayedSequenceNumber: deliveredMsg.Message.InboxSeqNum,
+			DelayedAccumulator:    deliveredMsg.AfterInboxAcc(),
+			Message:               deliveredMsg.Message.ToBytes(),
+		}
+		delayedMessages = append(delayedMessages, msg)
+	}
+	ok := ir.db.DeliverMessages(sequencerBatchRefs[0].GetBeforeAcc(), seqBatchItems, delayedMessages, nil)
+	if !ok {
+		return errors.New("Failed to deliver messages to ArbCore")
+	}
+	return nil
 }

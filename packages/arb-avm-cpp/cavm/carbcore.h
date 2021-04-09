@@ -33,7 +33,6 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,
                            ByteSliceArray delayed_messages_slice,
-                           ByteSliceArray sequencer_batch_positions_slice,
                            void* reorg_message_count_ptr);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
@@ -55,14 +54,15 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* count_ptr);
 
 int arbCoreGetInboxAcc(CArbCore* arbcore_ptr, const void* index_ptr, void* ret);
+int arbCoreGetDelayedInboxAcc(CArbCore* arbcore_ptr,
+                              const void* index_ptr,
+                              void* ret);
 int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
                            const void* index1_ptr,
                            const void* index2_ptr,
                            void* ret1,
                            void* ret2);
-int64_t arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr,
-                                      const void* data,
-                                      uint64_t count);
+int arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr, ByteSlice data);
 
 Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
                                            const void* index_ptr);

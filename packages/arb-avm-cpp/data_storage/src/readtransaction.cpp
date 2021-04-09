@@ -255,6 +255,15 @@ ReadTransaction::sequencerBatchItemGetVector(
         first_key_slice);
 }
 
+ValueResult<std::vector<unsigned char>>
+ReadTransaction::delayedMessageGetVector(
+    const rocksdb::Slice first_key_slice) const {
+    return getVectorUsingFamilyAndKey(
+        transaction->datastorage
+            ->column_handles[DataStorage::DELAYEDMESSAGE_COLUMN],
+        first_key_slice);
+}
+
 ValueResult<std::vector<unsigned char>> ReadTransaction::checkpointGetVector(
     const rocksdb::Slice first_key_slice) const {
     return getVectorUsingFamilyAndKey(

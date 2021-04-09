@@ -275,7 +275,7 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		TotalDelayedCount: big.NewInt(0),
 		SequencerMessage:  inboxMessage.ToBytes(),
 	}
-	seqBatchItem.Accumulator, err = seqBatchItem.ComputeAccumulator(prevHash, big.NewInt(0), common.Hash{})
+	err = seqBatchItem.RecomputeAccumulator(prevHash, big.NewInt(0), common.Hash{})
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -297,12 +297,12 @@ func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, bl
 		TotalDelayedCount: big.NewInt(0),
 		SequencerMessage:  nextBlockMessage.ToBytes(),
 	}
-	nextBlockBatchItem.Accumulator, err = nextBlockBatchItem.ComputeAccumulator(seqBatchItem.Accumulator, big.NewInt(0), common.Hash{})
+	err = nextBlockBatchItem.RecomputeAccumulator(seqBatchItem.Accumulator, big.NewInt(0), common.Hash{})
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil, nil)
+	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
 	if err != nil {
 		return common.Hash{}, err
 	}

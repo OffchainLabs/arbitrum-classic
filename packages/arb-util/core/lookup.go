@@ -57,7 +57,9 @@ type ArbCoreLookup interface {
 	ArbOutputLookup
 
 	GetInboxAcc(index *big.Int) (common.Hash, error)
+	GetDelayedInboxAcc(index *big.Int) (common.Hash, error)
 	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
+	CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error)
 
 	MachineMessagesRead() *big.Int
 
@@ -75,12 +77,12 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, seqBatchPositions []*big.Int, reorgSeqBatchItemCount *big.Int) bool
+	DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, seqBatchPositions []*big.Int, reorgSeqBatchItemCount *big.Int) (bool, error) {
-	if !db.DeliverMessages(previousSeqBatchAcc, seqBatchItems, delayedMessages, seqBatchPositions, reorgSeqBatchItemCount) {
+func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) (bool, error) {
+	if !db.DeliverMessages(previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
 		return false, errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)
@@ -97,7 +99,7 @@ func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, se
 }
 
 func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
-	if !db.DeliverMessages(common.Hash{}, nil, nil, nil, reorgMessageCount) {
+	if !db.DeliverMessages(common.Hash{}, nil, nil, reorgMessageCount) {
 		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)

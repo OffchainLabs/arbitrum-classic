@@ -120,7 +120,6 @@ bool ArbCore::deliverMessages(
     const uint256_t& previous_batch_acc,
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
-    std::vector<uint256_t> sequencer_batch_positions,
     const std::optional<uint256_t>& reorg_batch_items) {
     if (message_data_status != MESSAGES_EMPTY) {
         return false;
@@ -129,8 +128,6 @@ bool ArbCore::deliverMessages(
     message_data.previous_batch_acc = previous_batch_acc;
     message_data.sequencer_batch_items = std::move(sequencer_batch_items);
     message_data.delayed_messages = std::move(delayed_messages);
-    message_data.sequencer_batch_positions =
-        std::move(sequencer_batch_positions);
     message_data.reorg_batch_items = reorg_batch_items;
 
     message_data_status = MESSAGES_READY;
@@ -1145,6 +1142,23 @@ ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
     }
 
     return {rocksdb::Status::OK(), result.data.accumulator};
+}
+
+ValueResult<uint256_t> ArbCore::getDelayedInboxAcc(uint256_t index) {
+    ReadTransaction tx(data_storage);
+
+    std::vector<unsigned char> key_vec;
+    marshal_uint256_t(index, key_vec);
+    auto key_slice = vecToSlice(key_vec);
+    auto result = tx.delayedMessageGetVector(key_slice);
+    if (!result.status.ok()) {
+        return {result.status, 0};
+    }
+
+    auto it = result.data.begin();
+    uint256_t acc = deserializeDelayedMessageAccumulator(it);
+
+    return {rocksdb::Status::OK(), acc};
 }
 
 ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(

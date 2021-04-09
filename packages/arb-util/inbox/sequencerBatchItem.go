@@ -32,12 +32,12 @@ type SequencerBatchItem struct {
 	SequencerMessage  []byte
 }
 
-func (i SequencerBatchItem) ComputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) (common.Hash, error) {
+func (i SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) error {
 	var data []byte
 	delayedCmp := i.TotalDelayedCount.Cmp(prevDelayedCount)
 	if delayedCmp > 0 {
 		if len(i.SequencerMessage) > 0 {
-			return common.Hash{}, errors.New("Sequencer batch item has both sequencer message and delayed messages")
+			return errors.New("Sequencer batch item has both sequencer message and delayed messages")
 		}
 		data = append(data, "Delayed messages:"...)
 		data = append(data, prevAcc.Bytes()...)
@@ -55,13 +55,14 @@ func (i SequencerBatchItem) ComputeAccumulator(prevAcc common.Hash, prevDelayedC
 		data = append(data, math.U256Bytes(i.LastSeqNum)...)
 		msg, err := NewInboxMessageFromData(i.SequencerMessage)
 		if err != nil {
-			return common.Hash{}, err
+			return err
 		}
 		data = append(data, msg.CommitmentHash().Bytes()...)
 	} else {
-		return common.Hash{}, errors.New("Sequencer batch item delayed count went backwards")
+		return errors.New("Sequencer batch item delayed count went backwards")
 	}
-	return hashing.SoliditySHA3(data), nil
+	i.Accumulator = hashing.SoliditySHA3(data)
+	return nil
 }
 
 func (i SequencerBatchItem) ToBytesWithSeqNum() []byte {

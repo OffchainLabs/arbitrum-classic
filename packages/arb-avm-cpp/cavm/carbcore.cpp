@@ -60,14 +60,11 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,
                            ByteSliceArray delayed_messages_slice,
-                           ByteSliceArray sequencer_batch_positions_slice,
                            void* reorg_message_count_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
     auto sequencer_batch_items =
         receiveByteSliceArray(sequencer_batch_items_slice);
-    auto sequencer_batch_positions =
-        receiveUint256Array(sequencer_batch_positions_slice);
     auto delayed_messages = receiveByteSliceArray(delayed_messages_slice);
     std::optional<uint256_t> reorg_message_count;
     if (reorg_message_count_ptr != nullptr) {
@@ -77,8 +74,7 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
     try {
         auto status = arb_core->deliverMessages(
             previous_inbox_acc, std::move(sequencer_batch_items),
-            std::move(delayed_messages), std::move(sequencer_batch_positions),
-            reorg_message_count);
+            std::move(delayed_messages), reorg_message_count);
         return status;
     } catch (const std::exception& e) {
         return false;
@@ -201,6 +197,25 @@ int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
     }
 }
 
+int arbCoreGetDelayedInboxAcc(CArbCore* arbcore_ptr,
+                              const void* index_ptr,
+                              void* ret) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto result = arb_core->getDelayedInboxAcc(receiveUint256(index_ptr));
+        if (!result.status.ok()) {
+            return false;
+        }
+
+        std::array<unsigned char, 32> val{};
+        to_big_endian(result.data, val.begin());
+        std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
+        return true;
+    } catch (const std::exception& e) {
+        return false;
+    }
+}
+
 int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
                            const void* index1_ptr,
                            const void* index2_ptr,
@@ -227,16 +242,15 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
     }
 }
 
-int64_t arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr,
-                                      const void* data,
-                                      uint64_t count) {
+int arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr, ByteSlice data) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {
         std::vector<std::pair<uint256_t, uint256_t>> input;
-        auto data2 = reinterpret_cast<const char*>(data);
-        for (uint64_t i = 0; i < count; i++) {
-            auto seq_num = extractUint256(data2);
-            auto acc = extractUint256(data2);
+        auto bytes = receiveByteSlice(data);
+        auto it = bytes.begin();
+        for (uint64_t i = 0; i < bytes.size(); i += 64) {
+            auto seq_num = extractUint256(it);
+            auto acc = extractUint256(it);
             input.emplace_back(seq_num, acc);
         }
 

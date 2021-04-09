@@ -88,6 +88,8 @@ class ReadTransaction {
     sendGetVectorVector(rocksdb::Slice first_key_slice, size_t count) const;
     [[nodiscard]] ValueResult<std::vector<unsigned char>>
     sequencerBatchItemGetVector(rocksdb::Slice first_key_slice) const;
+    [[nodiscard]] ValueResult<std::vector<unsigned char>>
+    delayedMessageGetVector(rocksdb::Slice key) const;
     [[nodiscard]] ValueResult<std::vector<unsigned char>> checkpointGetVector(
         rocksdb::Slice first_key_slice) const;
     [[nodiscard]] ValueResult<uint256_t> aggregatorGetUint256(

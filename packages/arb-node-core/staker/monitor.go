@@ -73,16 +73,23 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAdd
 	if err != nil {
 		return nil, err
 	}
-	panic("TODO: redo inbox reader")
-	bridgeAddress, err := rollup.DelayedBridge(context.Background())
+	delayedBridgeAddress, err := rollup.DelayedBridge(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	bridgeWatcher, err := ethbridge.NewBridgeWatcher(bridgeAddress.ToEthAddress(), ethClient)
+	delayedBridgeWatcher, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), ethClient)
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, bridgeWatcher, m.Core)
+	sequencerAddress, err := rollup.SequencerBridge(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddress.ToEthAddress(), ethClient)
+	if err != nil {
+		return nil, err
+	}
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core)
 	if err != nil {
 		return nil, err
 	}
