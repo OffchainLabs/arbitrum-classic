@@ -45,9 +45,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
 
     mapping(address => address) public customL2Tokens;
 
-    // TODO: delete __placeholder__
-    // Can't delete now as it will break the storage layout of the proxy contract
-    address private __placeholder__;
     address private l2TemplateERC20;
     bytes32 private cloneableProxyHash;
 
@@ -204,20 +201,20 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory callHookData
     ) internal returns (uint256) {
         IERC20(erc20).safeTransferFrom(sender, l2ArbTokenBridgeAddress, amount);
-        uint256 seqNum = 0;
-        {
-            bytes memory data =
-                abi.encodeWithSelector(
-                    IArbTokenBridge.mintFromL1.selector,
-                    erc20,
-                    sender,
-                    destination,
-                    amount,
-                    deployData,
-                    callHookData
-                );
 
-            seqNum = inbox.createRetryableTicket{ value: msg.value }(
+        bytes memory data =
+            abi.encodeWithSelector(
+                IArbTokenBridge.mintFromL1.selector,
+                erc20,
+                sender,
+                destination,
+                amount,
+                deployData,
+                callHookData
+            );
+
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
                 l2ArbTokenBridgeAddress,
                 0,
                 retryableParams.maxSubmissionCost,
@@ -227,7 +224,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 retryableParams.gasPriceBid,
                 data
             );
-        }
 
         emit DepositToken(destination, sender, seqNum, amount, erc20);
         return seqNum;

@@ -45,9 +45,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     address private deployBeacon;
 
     address public templateERC20;
-    // TODO: delete __placeholder__
-    // Can't delete now as it will break the storage layout of the proxy contract
-    address public __placeholder__;
     address public l1Pair;
 
     // amount of arbgas necessary to send user tokens in case
