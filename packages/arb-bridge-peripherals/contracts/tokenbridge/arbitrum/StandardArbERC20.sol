@@ -18,12 +18,13 @@
 
 pragma solidity ^0.6.11;
 
-import "./open-zeppelin/OZERC20.sol";
+import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
 import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
+import "../libraries/BytesParser.sol";
 
-contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
+contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
     ArbTokenBridge public bridge;
     address public l1Address;
 
@@ -32,41 +33,34 @@ contract StandardArbERC20 is OZERC20, Cloneable, IArbToken {
         _;
     }
 
-    function initialize(
-        address _bridge,
-        address _l1Address,
-        uint8 decimals_
-    ) external override {
-        require(address(bridge) == address(0), "ALREADY_INIT");
-        bridge = ArbTokenBridge(_bridge);
+    function bridgeInit(address _l1Address, bytes memory _data) external override returns (bool) {
+        require(address(l1Address) == address(0), "Already inited");
+        bridge = ArbTokenBridge(msg.sender);
         l1Address = _l1Address;
-        _decimals = decimals_;
+
+        (bytes memory name, bytes memory symbol, bytes memory decimals) =
+            abi.decode(_data, (bytes, bytes, bytes));
+        // what if decode reverts? shouldn't as this is encoded by L1 contract
+
+        aeERC20.initialize(
+            BytesParserWithDefault.toString(name, ""),
+            BytesParserWithDefault.toString(symbol, ""),
+            BytesParserWithDefault.toUint8(decimals, 18)
+        );
+        return true;
     }
 
-    function updateInfo(string memory newName, string memory newSymbol, uint8 newDecimals) public override onlyBridge {
-        _name = newName;
-        _symbol = newSymbol;
-        _decimals = newDecimals;
-    }
-
-    function bridgeMint(address account, uint256 amount, bytes memory data) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyBridge {
         _mint(account, amount);
     }
 
-    function withdraw(address destination, uint256 amount) external override {
+    function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
         bridge.withdraw(l1Address, destination, amount);
     }
 
-    function migrate(uint256 amount, address target, bytes memory data) external {
+    function migrate(uint256 amount, address target) external {
         _burn(msg.sender, amount);
-        // migrating from 20 to 777, so allow data
-        bridge.migrate(
-            l1Address,
-            target,
-            msg.sender,
-            DecimalConverter.from20to777(amount, _decimals),
-            data
-        );
+        bridge.migrate(l1Address, target, msg.sender, amount);
     }
 }

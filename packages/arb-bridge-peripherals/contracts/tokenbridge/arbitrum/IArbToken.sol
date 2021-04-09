@@ -19,16 +19,7 @@
 pragma solidity ^0.6.11;
 
 interface IArbToken {
-    function initialize(
-        address _bridge,
-        address _l1Address,
-        uint8 _decimals
-    ) external;
+    function bridgeMint(address account, uint256 amount) external;
 
-    function bridgeMint(address account, uint256 amount, bytes memory data) external;
-
-    function withdraw(address destination, uint256 amount) external;
-
-    /// @dev This function is optional. If it's not enabled, this data won't be updatable based on its paired L1 contract
-    function updateInfo(string calldata newName, string calldata newSymbol, uint8 newDecimals) external;
+    function bridgeInit(address _l1Address, bytes memory _data) external returns (bool);
 }

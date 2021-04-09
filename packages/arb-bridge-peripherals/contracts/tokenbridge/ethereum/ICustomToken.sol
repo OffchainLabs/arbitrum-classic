@@ -17,7 +17,6 @@
  */
 
 pragma solidity ^0.6.11;
-import "../arbitrum/open-zeppelin/OZERC20.sol";
 
 interface ICustomToken {
     function registerTokenOnL2(
