@@ -144,7 +144,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
                 success = true;
             } catch {
                 // if reverted, then credit sender's account
-                token.bridgeMint(sender, amount);
+                try token.bridgeMint(sender, amount) {} catch {
+                    // if external bridgeMint fails, withdraw user funds and return
+                    _withdraw(l1ERC20, sender, amount);
+                    return;
+                }
                 success = false;
             }
             // if success tokens got minted to dest, else to sender
@@ -158,7 +162,11 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             );
             emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
         } else {
-            token.bridgeMint(dest, amount);
+            try token.bridgeMint(dest, amount) {} catch {
+                // if external bridgeMint fails, withdraw user funds and return
+                _withdraw(l1ERC20, sender, amount);
+                return;
+            }
             emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, false);
         }
     }
@@ -229,7 +237,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     // users can call this method to migrate to the custom version
     function migrate(
         address l1ERC20,
-        address target,
         address account,
         uint256 amount
     ) external override {
@@ -242,9 +249,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             "Migration should be called by erc20 token contract"
         );
 
+        address l2CustomTokenAddress = TokenAddressHandler.customL2Token[l1ERC20];
+        require(l2CustomTokenAddress.isContract(), "L2 custom token must already be deployed");
+
         // this assumes the l2StandardToken has burnt the user funds
-        IArbCustomToken(TokenAddressHandler.customL2Token[l1ERC20]).bridgeMint(account, amount);
-        emit TokenMigrated(msg.sender, target, account, amount);
+        IArbCustomToken(l2CustomTokenAddress).bridgeMint(account, amount);
+        emit TokenMigrated(l1ERC20, account, amount);
     }
 
     function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
