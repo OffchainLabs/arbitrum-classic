@@ -21,11 +21,7 @@ const main = async () => {
 
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
 
-  if (
-    deployments.buddyDeployer === '' ||
-    deployments.standardArbERC20 === '' ||
-    deployments.standardArbERC777 === ''
-  )
+  if (deployments.buddyDeployer === '' || deployments.standardArbERC20 === '')
     throw new Error("Deployments.json doesn't include the necessary addresses")
 
   const maxSubmissionCost = 0
@@ -35,8 +31,8 @@ const main = async () => {
 
   console.log('EthERC20Bridge logic deployed to:', ethERC20Bridge.address)
   const l2Provider = new providers.JsonRpcProvider(
-    'https://kovan4.arbitrum.io/rpc'
-    // 'https://devnet-l2.arbitrum.io/rpc'
+    // 'https://kovan4.arbitrum.io/rpc'
+    'https://devnet-l2.arbitrum.io/rpc'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
@@ -83,7 +79,7 @@ const main = async () => {
   const arbTokenBridgeProxy = await L2TransparentUpgradeableProxy.deploy(
     arbTokenBridge.address,
     l2ProxyAdmin.address,
-    '0x',
+    '0x'
   )
   await arbTokenBridgeProxy.deployed()
 
@@ -98,8 +94,7 @@ const main = async () => {
 
   const initL2Bridge = await arbTokenBridgeConnectedAsProxy.initialize(
     ethERC20BridgeProxy.address,
-    deployments.standardArbERC777,
-    deployments.standardArbERC20,
+    deployments.standardArbERC20
   )
 
   const ethERC20BridgeConnectedAsProxy = EthERC20Bridge__factory.connect(
@@ -113,12 +108,11 @@ const main = async () => {
     maxSubmissionCost,
     maxGas,
     gasPrice,
-    deployments.standardArbERC777,
     deployments.standardArbERC20,
     arbTokenBridgeProxy.address
   )
-  console.log("init L1 hash", initL1Bridge.hash)
-  console.log("init L2 hash", initL2Bridge.hash)
+  console.log('init L1 hash', initL1Bridge.hash)
+  console.log('init L2 hash', initL2Bridge.hash)
   // wait for inits
   await initL1Bridge.wait()
   await initL2Bridge.wait()

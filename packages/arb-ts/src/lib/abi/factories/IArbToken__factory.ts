@@ -21,6 +21,30 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
+        name: '_l1Address',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'bridgeInit',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
         name: 'account',
         type: 'address',
       },
@@ -29,77 +53,8 @@ const _abi = [
         name: 'amount',
         type: 'uint256',
       },
-      {
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
     ],
     name: 'bridgeMint',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '_bridge',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_l1Address',
-        type: 'address',
-      },
-      {
-        internalType: 'uint8',
-        name: '_decimals',
-        type: 'uint8',
-      },
-    ],
-    name: 'initialize',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'string',
-        name: 'newName',
-        type: 'string',
-      },
-      {
-        internalType: 'string',
-        name: 'newSymbol',
-        type: 'string',
-      },
-      {
-        internalType: 'uint8',
-        name: 'newDecimals',
-        type: 'uint8',
-      },
-    ],
-    name: 'updateInfo',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'destination',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'withdraw',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

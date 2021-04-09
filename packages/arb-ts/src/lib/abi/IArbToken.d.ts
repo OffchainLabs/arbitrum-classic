@@ -22,33 +22,21 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface IArbTokenInterface extends ethers.utils.Interface {
   functions: {
-    'bridgeMint(address,uint256,bytes)': FunctionFragment
-    'initialize(address,address,uint8)': FunctionFragment
-    'updateInfo(string,string,uint8)': FunctionFragment
-    'withdraw(address,uint256)': FunctionFragment
+    'bridgeInit(address,bytes)': FunctionFragment
+    'bridgeMint(address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
+    functionFragment: 'bridgeInit',
+    values: [string, BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'bridgeMint',
-    values: [string, BigNumberish, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'updateInfo',
-    values: [string, string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'withdraw',
     values: [string, BigNumberish]
   ): string
 
+  decodeFunctionResult(functionFragment: 'bridgeInit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'updateInfo', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {}
 }
@@ -67,166 +55,76 @@ export class IArbToken extends Contract {
   interface: IArbTokenInterface
 
   functions: {
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeMint(address,uint256)'(
       account: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
 
+  bridgeInit(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'bridgeInit(address,bytes)'(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   bridgeMint(
     account: string,
     amount: BigNumberish,
-    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'bridgeMint(address,uint256,bytes)'(
+  'bridgeMint(address,uint256)'(
     account: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  initialize(
-    _bridge: string,
-    _l1Address: string,
-    _decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address,address,uint8)'(
-    _bridge: string,
-    _l1Address: string,
-    _decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  updateInfo(
-    newName: string,
-    newSymbol: string,
-    newDecimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'updateInfo(string,string,uint8)'(
-    newName: string,
-    newSymbol: string,
-    newDecimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  withdraw(
-    destination: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'withdraw(address,uint256)'(
-    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   callStatic: {
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeMint(address,uint256)'(
       account: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -235,112 +133,52 @@ export class IArbToken extends Contract {
   filters: {}
 
   estimateGas: {
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeMint(address,uint256)'(
       account: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeMint(address,uint256)'(
       account: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address,address,uint8)'(
-      _bridge: string,
-      _l1Address: string,
-      _decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    updateInfo(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'updateInfo(string,string,uint8)'(
-      newName: string,
-      newSymbol: string,
-      newDecimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>

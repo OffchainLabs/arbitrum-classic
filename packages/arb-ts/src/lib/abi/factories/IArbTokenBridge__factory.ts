@@ -5,14 +5,14 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { IERC777 } from '../IERC777'
+import type { IArbTokenBridge } from '../IArbTokenBridge'
 
-export class IERC777__factory {
+export class IArbTokenBridge__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IERC777 {
-    return new Contract(address, _abi, signerOrProvider) as IERC777
+  ): IArbTokenBridge {
+    return new Contract(address, _abi, signerOrProvider) as IArbTokenBridge
   }
 }
 
@@ -23,263 +23,200 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'operator',
+        name: 'l1Address',
         type: 'address',
       },
       {
         indexed: true,
         internalType: 'address',
-        name: 'tokenHolder',
+        name: 'l2Address',
         type: 'address',
       },
     ],
-    name: 'AuthorizedOperator',
+    name: 'CustomTokenRegistered',
     type: 'event',
   },
   {
     anonymous: false,
     inputs: [
       {
-        indexed: true,
-        internalType: 'address',
-        name: 'operator',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'from',
-        type: 'address',
-      },
-      {
         indexed: false,
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'operatorData',
-        type: 'bytes',
-      },
-    ],
-    name: 'Burned',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'operator',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'operatorData',
-        type: 'bytes',
-      },
-    ],
-    name: 'Minted',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'operator',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'tokenHolder',
-        type: 'address',
-      },
-    ],
-    name: 'RevokedOperator',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'operator',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'operatorData',
-        type: 'bytes',
-      },
-    ],
-    name: 'Sent',
-    type: 'event',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'operator',
-        type: 'address',
-      },
-    ],
-    name: 'authorizeOperator',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'owner',
-        type: 'address',
-      },
-    ],
-    name: 'balanceOf',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
-    ],
-    name: 'burn',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'defaultOperators',
-    outputs: [
-      {
-        internalType: 'address[]',
-        name: '',
-        type: 'address[]',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'granularity',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'operator',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'tokenHolder',
-        type: 'address',
-      },
-    ],
-    name: 'isOperatorFor',
-    outputs: [
-      {
         internalType: 'bool',
-        name: '',
+        name: 'success',
+        type: 'bool',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'dest',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'callHookData',
+        type: 'bytes',
+      },
+    ],
+    name: 'MintAndCallTriggered',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'l1Address',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'l2Address',
+        type: 'address',
+      },
+    ],
+    name: 'TokenCreated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'TokenMigrated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'l1Address',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'l2Address',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'dest',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'usedCallHook',
         type: 'bool',
       },
     ],
-    stateMutability: 'view',
-    type: 'function',
+    name: 'TokenMinted',
+    type: 'event',
   },
   {
-    inputs: [],
-    name: 'name',
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'l1Address',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'destination',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'exitNum',
+        type: 'uint256',
+      },
+    ],
+    name: 'WithdrawToken',
+    type: 'event',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'l1ERC20',
+        type: 'address',
+      },
+    ],
+    name: 'calculateL2TokenAddress',
     outputs: [
       {
-        internalType: 'string',
+        internalType: 'address',
         name: '',
-        type: 'string',
+        type: 'address',
       },
     ],
     stateMutability: 'view',
@@ -287,6 +224,34 @@ const _abi = [
   },
   {
     inputs: [
+      {
+        internalType: 'address',
+        name: 'l1Address',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'l2Address',
+        type: 'address',
+      },
+    ],
+    name: 'customTokenRegistered',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'l1ERC20',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'target',
+        type: 'address',
+      },
       {
         internalType: 'address',
         name: 'account',
@@ -297,24 +262,19 @@ const _abi = [
         name: 'amount',
         type: 'uint256',
       },
-      {
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
-      {
-        internalType: 'bytes',
-        name: 'operatorData',
-        type: 'bytes',
-      },
     ],
-    name: 'operatorBurn',
+    name: 'migrate',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
+      {
+        internalType: 'address',
+        name: 'l1ERC20',
+        type: 'address',
+      },
       {
         internalType: 'address',
         name: 'sender',
@@ -322,7 +282,7 @@ const _abi = [
       },
       {
         internalType: 'address',
-        name: 'recipient',
+        name: 'dest',
         type: 'address',
       },
       {
@@ -332,16 +292,16 @@ const _abi = [
       },
       {
         internalType: 'bytes',
-        name: 'data',
+        name: 'deployData',
         type: 'bytes',
       },
       {
         internalType: 'bytes',
-        name: 'operatorData',
+        name: 'callHookData',
         type: 'bytes',
       },
     ],
-    name: 'operatorSend',
+    name: 'mintFromL1',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
@@ -350,20 +310,12 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'operator',
+        name: 'l1ERC20',
         type: 'address',
       },
-    ],
-    name: 'revokeOperator',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
       {
         internalType: 'address',
-        name: 'recipient',
+        name: 'destination',
         type: 'address',
       },
       {
@@ -371,33 +323,8 @@ const _abi = [
         name: 'amount',
         type: 'uint256',
       },
-      {
-        internalType: 'bytes',
-        name: 'data',
-        type: 'bytes',
-      },
     ],
-    name: 'send',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'symbol',
-    outputs: [
-      {
-        internalType: 'string',
-        name: '',
-        type: 'string',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'totalSupply',
+    name: 'withdraw',
     outputs: [
       {
         internalType: 'uint256',
@@ -405,7 +332,7 @@ const _abi = [
         type: 'uint256',
       },
     ],
-    stateMutability: 'view',
+    stateMutability: 'nonpayable',
     type: 'function',
   },
 ]
