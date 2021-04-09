@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "../libraries/ClonableBeaconProxy.sol";
+import "../libraries/TokenAddressHandler.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
@@ -35,15 +36,13 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "./IEthERC20Bridge.sol";
 
-contract EthERC20Bridge is IEthERC20Bridge {
+contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     using SafeERC20 for IERC20;
 
     address internal constant USED_ADDRESS = address(0x01);
 
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) public redirectedExits;
-
-    mapping(address => address) public customL2Tokens;
 
     address private l2TemplateERC20;
     bytes32 private cloneableProxyHash;
@@ -92,11 +91,11 @@ contract EthERC20Bridge is IEthERC20Bridge {
         address l1CustomTokenAddress = msg.sender;
         // Token must be registering for the first time, or retrying the same address
         require(
-            customL2Tokens[l1CustomTokenAddress] == address(0) ||
-                customL2Tokens[l1CustomTokenAddress] == l2CustomTokenAddress,
+            !TokenAddressHandler.isCustomToken(l1CustomTokenAddress) ||
+                TokenAddressHandler.customL2Token[l1CustomTokenAddress] == l2CustomTokenAddress,
             "Cannot register a different custom token address"
         );
-        customL2Tokens[l1CustomTokenAddress] = l2CustomTokenAddress;
+        TokenAddressHandler.customL2Token[l1CustomTokenAddress] = l2CustomTokenAddress;
 
         bytes memory data =
             abi.encodeWithSelector(
@@ -241,7 +240,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory deployData = "";
 
         // if no deploy done and no custom L2 token set
-        if (!hasTriedDeploy[erc20] && customL2Tokens[erc20] == address(0)) {
+        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
             // TODO: use OZ's ERC20Metadata once available
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
             deployData = abi.encode(
@@ -273,13 +272,13 @@ contract EthERC20Bridge is IEthERC20Bridge {
         return keccak256(abi.encodePacked(exitNum, user, erc20, amount));
     }
 
-    function calculateL2TokenAddress(address erc20) public view override returns (address) {
-        address customTokenAddr = customL2Tokens[erc20];
-        if (customTokenAddr != address(0)) {
-            return customTokenAddr;
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC20));
-            return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
-        }
+    function calculateL2TokenAddress(address l1Token) public view override returns (address) {
+        return
+            TokenAddressHandler.calculateL2TokenAddress(
+                l1Token,
+                l2TemplateERC20,
+                l2ArbTokenBridgeAddress,
+                cloneableProxyHash
+            );
     }
 }
