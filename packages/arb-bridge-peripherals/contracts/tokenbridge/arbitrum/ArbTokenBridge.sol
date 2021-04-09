@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./StandardArbERC20.sol";
 import "../libraries/ClonableBeaconProxy.sol";
+import "../libraries/TokenAddressHandler.sol";
 import "../ethereum/IEthERC20Bridge.sol";
 
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -33,11 +34,8 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../libraries/IERC1363.sol";
 
-contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
+contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     using Address for address;
-
-    /// @notice This mapping is from L1 address to L2 address
-    mapping(address => address) public customToken;
 
     uint256 exitNum;
 
@@ -45,9 +43,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     address private deployBeacon;
 
     address public templateERC20;
-    // TODO: delete __placeholder__
-    // Can't delete now as it will break the storage layout of the proxy contract
-    address public __placeholder__;
     address public l1Pair;
 
     // amount of arbgas necessary to send user tokens in case
@@ -101,25 +96,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         );
     }
 
-    function handleCallHookData(
-        address tokenAddress,
-        uint256 amount,
-        address sender,
-        address dest,
-        bytes memory callHookData
-    ) internal {
-        IArbToken token = IArbToken(tokenAddress);
-        bool success;
-        try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
-            success = true;
-        } catch {
-            // if reverted, then credit sender's account
-            token.bridgeMint(sender, amount);
-            success = false;
-        }
-        emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
-    }
-
     function mintFromL1(
         address l1ERC20,
         address sender,
@@ -128,32 +104,71 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         bytes calldata deployData,
         bytes calldata callHookData
     ) external override onlyEthPair {
-        address customTokenAddr = customToken[l1ERC20];
-        bool isCustom = customTokenAddr != address(0);
-
-        address expectedAddress = isCustom ? customTokenAddr : _calculateL2TokenAddress(l1ERC20);
+        address expectedAddress = calculateL2TokenAddress(l1ERC20);
 
         if (!expectedAddress.isContract()) {
-            if (deployData.length > 0 && !isCustom) {
+            if (deployData.length > 0) {
                 address deployedToken = deployToken(l1ERC20, deployData);
                 assert(deployedToken == expectedAddress);
             } else {
-                // withdraw funds to user as no deployData and no contract deployed
-                // The L1 contract shouldn't let this happen!
-                // if it does happen, withdraw to sender
-                _withdraw(l1ERC20, sender, amount);
-                return;
+                if (TokenAddressHandler.isCustomToken(l1ERC20)) {
+                    // address handler expects a custom, but nothing deployed
+                    // no custom token deployed, expectedAddress is a temporary erc20
+                    expectedAddress = calculateL2ERC20TokenAddress(l1ERC20);
+                    if (!expectedAddress.isContract()) {
+                        // deploy erc20 temporarily, but users can migrate to custom implementation once deployed
+                        bytes memory deployData =
+                            abi.encode(
+                                abi.encode("Temporary Migrateable Token"),
+                                abi.encode("TMT"),
+                                abi.encode(uint8(18))
+                            );
+                        address deployedAddress = deployToken(l1ERC20, deployData);
+                        assert(deployedAddress == expectedAddress);
+                    }
+                } else {
+                    // withdraw funds to user as no deployData and no contract deployed
+                    // The L1 contract shouldn't let this happen!
+                    // if it does happen, withdraw to sender
+                    _withdraw(l1ERC20, sender, amount);
+                    return;
+                }
             }
         }
         // ignores deployData if token already deployed
 
+        IArbToken token = IArbToken(expectedAddress);
         if (callHookData.length > 0) {
-            handleCallHookData(expectedAddress, amount, sender, dest, callHookData);
+            bool success;
+            try ArbTokenBridge(this).mintAndCall(token, amount, sender, dest, callHookData) {
+                success = true;
+            } catch {
+                // if reverted, then credit sender's account
+                try token.bridgeMint(sender, amount) {} catch {
+                    // if external bridgeMint fails, withdraw user funds and return
+                    _withdraw(l1ERC20, sender, amount);
+                    return;
+                }
+                success = false;
+            }
+            // if success tokens got minted to dest, else to sender
+            emit TokenMinted(
+                l1ERC20,
+                expectedAddress,
+                sender,
+                success ? dest : sender,
+                amount,
+                true
+            );
+            emit MintAndCallTriggered(success, sender, dest, amount, callHookData);
         } else {
-            IArbToken(expectedAddress).bridgeMint(dest, amount);
+            try token.bridgeMint(dest, amount) {} catch {
+                // if external bridgeMint fails, withdraw user funds and return
+                _withdraw(l1ERC20, sender, amount);
+                return;
+            }
+            emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, false);
         }
-
-        emit TokenMinted(l1ERC20, expectedAddress, sender, dest, amount, callHookData.length > 0);
     }
 
     function deployToken(address l1ERC20, bytes memory deployData) internal returns (address) {
@@ -176,20 +191,9 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         override
         onlyEthPair
     {
-        if (l2Address.isContract()) {
-            // This assumed token contract is initialized and ready to be used.
-            customToken[l1Address] = l2Address;
-            emit CustomTokenRegistered(l1Address, l2Address);
-        } else {
-            // deploy erc20 temporarily, but users can migrate to custom implementation once deployed
-            bytes memory deployData =
-                abi.encode(
-                    abi.encode("Temporary Migrateable Token"),
-                    abi.encode("TMT"),
-                    abi.encode(uint8(18))
-                );
-            deployToken(l1Address, deployData);
-        }
+        // This assumed token contract is initialized and ready to be used.
+        TokenAddressHandler.customL2Token[l1Address] = l2Address;
+        emit CustomTokenRegistered(l1Address, l2Address);
     }
 
     function withdraw(
@@ -197,12 +201,14 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
         address destination,
         uint256 amount
     ) external override returns (uint256) {
-        address expectedSender =
-            customToken[l1ERC20] != address(0)
-                ? customToken[l1ERC20]
-                : _calculateL2TokenAddress(l1ERC20);
+        address expectedSender = calculateL2TokenAddress(l1ERC20);
 
-        require(msg.sender == expectedSender, "Withdraw can only be triggered by expected sender");
+        // users can withdraw if its a standard erc20 token deployed by the bridge
+        // TODO: what happens if this was a rebasing stablecoin and user was supposed to hold less at time of withdrawal?
+        require(
+            msg.sender == expectedSender || msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
+            "Withdraw can only be triggered by expected sender"
+        );
         return _withdraw(l1ERC20, destination, amount);
     }
 
@@ -231,32 +237,44 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge {
     // users can call this method to migrate to the custom version
     function migrate(
         address l1ERC20,
-        address target,
         address account,
         uint256 amount
     ) external override {
-        address customTokenAddr = customToken[l1ERC20];
-        address l2StandardToken = _calculateL2TokenAddress(l1ERC20);
-        require(customTokenAddr != address(0), "Needs to have custom token implementation");
-        require(msg.sender == l2StandardToken, "Migration should be called by token contract");
+        require(
+            TokenAddressHandler.isCustomToken(l1ERC20),
+            "Needs to have custom token implementation"
+        );
+        require(
+            msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
+            "Migration should be called by erc20 token contract"
+        );
+
+        address l2CustomTokenAddress = TokenAddressHandler.customL2Token[l1ERC20];
+        require(l2CustomTokenAddress.isContract(), "L2 custom token must already be deployed");
 
         // this assumes the l2StandardToken has burnt the user funds
-        IArbCustomToken(customTokenAddr).bridgeMint(account, amount);
-        emit TokenMigrated(msg.sender, target, account, amount);
+        IArbCustomToken(l2CustomTokenAddress).bridgeMint(account, amount);
+        emit TokenMigrated(l1ERC20, account, amount);
     }
 
     function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
-        return _calculateL2TokenAddress(l1ERC20);
+        return
+            TokenAddressHandler.calculateL2TokenAddress(
+                l1ERC20,
+                templateERC20,
+                address(this),
+                cloneableProxyHash
+            );
     }
 
-    function _calculateL2TokenAddress(address l1ERC20) internal view returns (address) {
-        address customTokenAddr = customToken[l1ERC20];
-        if (customTokenAddr != address(0)) {
-            return customTokenAddr;
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(l1ERC20, templateERC20));
-            return Create2.computeAddress(salt, cloneableProxyHash);
-        }
+    function calculateL2ERC20TokenAddress(address l1ERC20) public view returns (address) {
+        return
+            TokenAddressHandler.calculateL2ERC20TokenAddress(
+                l1ERC20,
+                templateERC20,
+                address(this),
+                cloneableProxyHash
+            );
     }
 
     function getBeacon() external view override returns (address) {

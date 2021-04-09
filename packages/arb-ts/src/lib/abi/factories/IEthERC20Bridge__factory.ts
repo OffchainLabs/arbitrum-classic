@@ -99,6 +99,80 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'initialDestination',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'destination',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'erc20',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'exitNum',
+        type: 'uint256',
+      },
+    ],
+    name: 'WithdrawExecuted',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'user',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'liquidityProvider',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'erc20',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'exitNum',
+        type: 'uint256',
+      },
+    ],
+    name: 'WithdrawRedirected',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -180,6 +254,11 @@ const _abi = [
       },
       {
         internalType: 'address',
+        name: 'initialDestination',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
         name: 'erc20',
         type: 'address',
       },
@@ -191,6 +270,11 @@ const _abi = [
       {
         internalType: 'uint256',
         name: 'exitNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxFee',
         type: 'uint256',
       },
     ],
@@ -271,7 +355,7 @@ const _abi = [
       },
       {
         internalType: 'address',
-        name: 'destination',
+        name: 'initialDestination',
         type: 'address',
       },
       {

@@ -20,6 +20,8 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "../libraries/ClonableBeaconProxy.sol";
+import "../libraries/TokenAddressHandler.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
@@ -34,7 +36,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "./IEthERC20Bridge.sol";
 
-contract EthERC20Bridge is IEthERC20Bridge {
+contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     using SafeERC20 for IERC20;
 
     address internal constant USED_ADDRESS = address(0x01);
@@ -42,11 +44,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
     // exitNum => exitDataHash => LP
     mapping(bytes32 => address) public redirectedExits;
 
-    mapping(address => address) public customL2Tokens;
-
-    // TODO: delete __placeholder__
-    // Can't delete now as it will break the storage layout of the proxy contract
-    address private __placeholder__;
     address private l2TemplateERC20;
     bytes32 private cloneableProxyHash;
 
@@ -94,11 +91,11 @@ contract EthERC20Bridge is IEthERC20Bridge {
         address l1CustomTokenAddress = msg.sender;
         // Token must be registering for the first time, or retrying the same address
         require(
-            customL2Tokens[l1CustomTokenAddress] == address(0) ||
-                customL2Tokens[l1CustomTokenAddress] == l2CustomTokenAddress,
+            !TokenAddressHandler.isCustomToken(l1CustomTokenAddress) ||
+                TokenAddressHandler.customL2Token[l1CustomTokenAddress] == l2CustomTokenAddress,
             "Cannot register a different custom token address"
         );
-        customL2Tokens[l1CustomTokenAddress] = l2CustomTokenAddress;
+        TokenAddressHandler.customL2Token[l1CustomTokenAddress] = l2CustomTokenAddress;
 
         bytes memory data =
             abi.encodeWithSelector(
@@ -124,41 +121,57 @@ contract EthERC20Bridge is IEthERC20Bridge {
     function fastWithdrawalFromL2(
         address liquidityProvider,
         bytes memory liquidityProof,
+        address initialDestination,
         address erc20,
         uint256 amount,
-        uint256 exitNum
-    ) public override {
-        IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
-        address msgSender = outbox.l2ToL1Sender();
+        uint256 exitNum,
+        uint256 maxFee
+    ) external override {
+        require(
+            initialDestination == msg.sender,
+            "You must own the exit to trigger a fast withdrawal"
+        );
+        bytes32 withdrawData = encodeWithdrawal(exitNum, initialDestination, erc20, amount);
 
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, msgSender, erc20, amount));
-        require(redirectedExits[withdrawData] == USED_ADDRESS, "ALREADY_EXITED");
+        require(redirectedExits[withdrawData] != USED_ADDRESS, "ALREADY_EXITED");
         redirectedExits[withdrawData] = liquidityProvider;
 
+        uint256 balancePrior = IERC20(erc20).balanceOf(initialDestination);
+
+        // Liquidity provider is responsible for validating if this is a valid exit
         IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            msgSender,
+            initialDestination,
             erc20,
             amount,
             exitNum,
             liquidityProof
         );
+
+        uint256 balancePost = IERC20(erc20).balanceOf(initialDestination);
+
+        // User must be sent at least (amount - maxFee) or execution reverts
+        require(
+            SafeMath.sub(balancePost, balancePrior) >= SafeMath.sub(amount, maxFee),
+            "User did not get credited with enough tokens"
+        );
+
+        emit WithdrawRedirected(initialDestination, liquidityProvider, erc20, amount, exitNum);
     }
 
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
-        address destination,
+        address initialDestination,
         uint256 amount
     ) external override onlyL2Address {
-        bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, destination, erc20, amount));
+        bytes32 withdrawData = encodeWithdrawal(exitNum, initialDestination, erc20, amount);
         address exitAddress = redirectedExits[withdrawData];
         redirectedExits[withdrawData] = USED_ADDRESS;
+        address dest = exitAddress != address(0) ? exitAddress : initialDestination;
         // Unsafe external calls must occur below checks and effects
-        if (exitAddress != address(0)) {
-            IERC20(erc20).safeTransfer(exitAddress, amount);
-        } else {
-            IERC20(erc20).safeTransfer(destination, amount);
-        }
+        IERC20(erc20).safeTransfer(dest, amount);
+
+        emit WithdrawExecuted(initialDestination, dest, erc20, amount, exitNum);
     }
 
     function callStatic(address targetContract, bytes4 targetFunction)
@@ -187,20 +200,20 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory callHookData
     ) internal returns (uint256) {
         IERC20(erc20).safeTransferFrom(sender, l2ArbTokenBridgeAddress, amount);
-        uint256 seqNum = 0;
-        {
-            bytes memory data =
-                abi.encodeWithSelector(
-                    IArbTokenBridge.mintFromL1.selector,
-                    erc20,
-                    sender,
-                    destination,
-                    amount,
-                    deployData,
-                    callHookData
-                );
 
-            seqNum = inbox.createRetryableTicket{ value: msg.value }(
+        bytes memory data =
+            abi.encodeWithSelector(
+                IArbTokenBridge.mintFromL1.selector,
+                erc20,
+                sender,
+                destination,
+                amount,
+                deployData,
+                callHookData
+            );
+
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
                 l2ArbTokenBridgeAddress,
                 0,
                 retryableParams.maxSubmissionCost,
@@ -210,7 +223,6 @@ contract EthERC20Bridge is IEthERC20Bridge {
                 retryableParams.gasPriceBid,
                 data
             );
-        }
 
         emit DepositToken(destination, sender, seqNum, amount, erc20);
         return seqNum;
@@ -228,7 +240,7 @@ contract EthERC20Bridge is IEthERC20Bridge {
         bytes memory deployData = "";
 
         // if no deploy done and no custom L2 token set
-        if (!hasTriedDeploy[erc20] && customL2Tokens[erc20] == address(0)) {
+        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
             // TODO: use OZ's ERC20Metadata once available
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
             deployData = abi.encode(
@@ -251,13 +263,22 @@ contract EthERC20Bridge is IEthERC20Bridge {
             );
     }
 
-    function calculateL2TokenAddress(address erc20) public view override returns (address) {
-        address customTokenAddr = customL2Tokens[erc20];
-        if (customTokenAddr != address(0)) {
-            return customTokenAddr;
-        } else {
-            bytes32 salt = keccak256(abi.encodePacked(erc20, l2TemplateERC20));
-            return Create2.computeAddress(salt, cloneableProxyHash, l2ArbTokenBridgeAddress);
-        }
+    function encodeWithdrawal(
+        uint256 exitNum,
+        address user,
+        address erc20,
+        uint256 amount
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(exitNum, user, erc20, amount));
+    }
+
+    function calculateL2TokenAddress(address l1Token) public view override returns (address) {
+        return
+            TokenAddressHandler.calculateL2TokenAddress(
+                l1Token,
+                l2TemplateERC20,
+                l2ArbTokenBridgeAddress,
+                cloneableProxyHash
+            );
     }
 }
