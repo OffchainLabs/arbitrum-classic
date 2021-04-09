@@ -8,11 +8,6 @@
 #include <wasm.h>
 #include <wasmtime.h>
 
-struct WasmEnvData {
-    uint64_t buffer_len;
-    Buffer buffer;
-};
-
 wasm_trap_t* cb_get_length(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t* results) {
@@ -93,7 +88,7 @@ void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
 }
 
 RunWasm::RunWasm() {
-    printf("Initializing...\n");
+    printf("Initializing... ????\n");
     wasm_engine_t* engine = wasm_engine_new();
     assert(engine != NULL);
     printf("Initialized...%x \n", engine);
@@ -125,7 +120,7 @@ RunWasm::RunWasm() {
         exit_with_error(error, NULL);
     }
 
-    WasmEnvData* env = new WasmEnvData();
+    WasmEnvData* env = &this->data;
 
     // Create external functions
     printf("Creating get len callback...\n");
@@ -157,7 +152,7 @@ RunWasm::RunWasm() {
     wasm_functype_delete(callback_type_setbuf);
 
     printf("Instantiating module...\n");
-    wasm_trap_t* trap = NULL;
+
     wasm_instance_t* instance = NULL;
     wasm_extern_t* imports[] = {
         wasm_func_as_extern(callback_func1),
@@ -167,7 +162,7 @@ RunWasm::RunWasm() {
     };
     wasm_extern_vec_t imports_vec = WASM_ARRAY_VEC(imports);
     error =
-        wasmtime_instance_new(store, module, &imports_vec, &instance, &trap);
+        wasmtime_instance_new(store, module, &imports_vec, &instance, &this->trap);
     if (instance == NULL)
         exit_with_error(error, trap);
 
@@ -175,8 +170,9 @@ RunWasm::RunWasm() {
     printf("Extracting export...\n");
     wasm_extern_vec_t externs;
     wasm_instance_exports(instance, &externs);
-    wasm_func_t* run = wasm_extern_as_func(externs.data[0]);
+    run = wasm_extern_as_func(externs.data[0]);
 
+/*
     printf("Calling export...\n");
     wasm_val_t arg_params[1];
     arg_params[0].kind = WASM_I64;
@@ -195,8 +191,38 @@ RunWasm::RunWasm() {
     error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
     if (error != NULL || trap != NULL)
         exit_with_error(error, trap);
+*/
 }
+
+std::pair<Buffer, uint64_t> RunWasm::run_wasm(Buffer buf, uint64_t len) {
+    data.buffer = buf;
+    data.buffer_len = len;
+    printf("Calling export...\n");
+    wasm_val_t arg_params[1];
+    arg_params[0].kind = WASM_I64;
+    arg_params[0].of.i64 = 123;
+    wasm_val_vec_t args_vec;
+    wasm_val_vec_new(&args_vec, 1, arg_params);
+    printf("Calling export... 1\n");
+
+    wasm_val_t res_params[1];
+    wasm_val_vec_t results_vec;
+    res_params[0].kind = WASM_I32;
+    res_params[0].of.i64 = 123;
+    wasm_val_vec_new(&results_vec, 1, res_params);
+    printf("Calling export... 2\n");
+
+    wasmtime_error_t* error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
+    if (error != NULL || trap != NULL)
+        exit_with_error(error, trap);
+    printf("Success?\n");
+    return {data.buffer, data.buffer_len};
+
+}
+
 
 void run_wasm_test() {
     RunWasm runner;
+    auto a = runner.run_wasm(Buffer(), 123);
+    printf("waht? %x\n", a.first.get(0));
 }

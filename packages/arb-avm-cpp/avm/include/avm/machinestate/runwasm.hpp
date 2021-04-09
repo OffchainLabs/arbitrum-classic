@@ -17,8 +17,21 @@
 #ifndef runwasm_hpp
 #define runwasm_hpp
 
+#include <wasm.h>
+
+struct WasmEnvData {
+    uint64_t buffer_len;
+    Buffer buffer;
+};
+
 struct RunWasm {
+    WasmEnvData data;
+    wasm_func_t* run;
+    wasm_trap_t* trap = NULL;
     RunWasm();
+
+    std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len);
+
 };
 
 void run_wasm_test();
