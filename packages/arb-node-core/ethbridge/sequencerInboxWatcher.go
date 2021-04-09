@@ -39,6 +39,7 @@ var sequencerBridgeABI abi.ABI
 var sequencerBatchDeliveredID ethcommon.Hash
 var sequencerBatchDeliveredFromOriginID ethcommon.Hash
 var delayedInboxForcedID ethcommon.Hash
+var addSequencerL2BatchFromOriginABI abi.Method
 
 func init() {
 	parsedBridgeABI, err := abi.JSON(strings.NewReader(ethbridgecontracts.SequencerInboxABI))
@@ -48,6 +49,7 @@ func init() {
 	sequencerBatchDeliveredID = parsedBridgeABI.Events["SequencerBatchDelivered"].ID
 	sequencerBatchDeliveredFromOriginID = parsedBridgeABI.Events["SequencerBatchDeliveredFromOrigin"].ID
 	delayedInboxForcedID = parsedBridgeABI.Events["DelayedInboxForced"].ID
+	addSequencerL2BatchFromOriginABI = parsedBridgeABI.Methods["addSequencerL2BatchFromOrigin"]
 	sequencerBridgeABI = parsedBridgeABI
 }
 
@@ -206,14 +208,15 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 }
 
 type sequencerBatchOriginRef struct {
-	blockHash   ethcommon.Hash
-	txIndex     uint
+	tx          *types.Transaction
 	beforeCount *big.Int
 	beforeAcc   common.Hash
 	afterCount  *big.Int
 	afterAcc    common.Hash
 	delayedAcc  common.Hash
 	chainTime   inbox.ChainTime
+	sequencer   common.Address
+	gasPrice    *big.Int
 }
 
 func (b sequencerBatchOriginRef) GetBeforeCount() *big.Int {
@@ -290,13 +293,14 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				return nil, errors.WithStack(err)
 			}
 			refs = append(refs, sequencerBatchOriginRef{
-				blockHash:  log.BlockHash,
-				txIndex:    log.TxIndex,
+				tx:         txData,
 				beforeAcc:  parsed.BeforeAcc,
 				afterCount: parsed.NewMessageCount,
 				afterAcc:   parsed.AfterAcc,
 				delayedAcc: parsed.DelayedAcc,
+				sequencer:  sequencer,
 				chainTime:  chainTime,
+				gasPrice:   gasPrice,
 			})
 		} else if log.Topics[0] == delayedInboxForcedID {
 			parsed, err := r.con.ParseDelayedInboxForced(log)
@@ -325,6 +329,25 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 	if batch, ok := genericRef.(SequencerBatch); ok {
 		return batch, nil
 	}
-	_ = genericRef.(sequencerBatchOriginRef)
-	panic("TODO: ResolveBatchRef sequencerBatchOriginRef")
+	ref := genericRef.(sequencerBatchOriginRef)
+	args := make(map[string]interface{})
+	err := addSequencerL2BatchFromOriginABI.Inputs.UnpackIntoMap(args, ref.tx.Data()[4:])
+	if err != nil {
+		return SequencerBatch{}, err
+	}
+	return SequencerBatch{
+		transactionsData:         args["transactions"].([]byte),
+		transactionLengths:       args["lengths"].([]*big.Int),
+		L1BlockNumber:            args["l1BlockNumber"].(*big.Int),
+		Timestamp:                args["timestamp"].(*big.Int),
+		TotalDelayedMessagesRead: args["_totalDelayedMessagesRead"].(*big.Int),
+		BeforeCount:              ref.beforeCount,
+		BeforeAcc:                ref.beforeAcc,
+		AfterCount:               ref.afterCount,
+		AfterAcc:                 ref.afterAcc,
+		DelayedAcc:               ref.delayedAcc,
+		Sequencer:                ref.sequencer,
+		ChainTime:                ref.chainTime,
+		GasPrice:                 ref.gasPrice,
+	}, nil
 }
