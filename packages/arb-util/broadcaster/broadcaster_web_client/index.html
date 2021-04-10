@@ -1,0 +1,138 @@
+<html>
+  <head>
+    <title>Arbitrum Sequencer Web Socket Client</title>
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background-color: black;
+        color: white;
+        padding: 20px;
+      }
+      li {
+        list-style: none;
+      }
+      .messageWindow {
+        width: 800px;
+        height: 400px;
+        border: 1px solid white;
+        border-radius: 4px;
+        padding: 10px;
+        background-color: white;
+        color: black;
+        overflow-y: scroll;
+        font-family: 'Courier New', Courier, monospace;
+      }
+      .controls {
+        margin: 10px;
+        width: 800px;
+        min-height: 40px;
+      }
+      .connectButton {
+        float: right;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Arbitrum Sequencer Web Socket Client</h1>
+      <div class="controls">
+        <button v-on:click="toggleConnect" class="connectButton">
+          {{ connectButtonLabel }}
+        </button>
+
+        <span v-if="isConnected" class="sendMessageForm">
+          <input v-model="sendText" />
+          <button v-on:click="sendMessage">send message</button>
+        </span>
+
+        <button v-if="messages.length > 0" v-on:click="clearMessages">
+          clear messages
+        </button>
+      </div>
+
+      <div ref="messageWindow" class="messageWindow">
+        <ul>
+          <li
+            v-for="message in messages"
+            v-bind:todo="message"
+            v-bind:key="message.id"
+          >
+            {{message.receivedAt}} - {{message.text}}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    const app = new Vue({
+      el: '#app',
+      data: {
+        messages: [],
+        connectButtonLabel: 'Connect!',
+        socket: null,
+        isConnected: false,
+        sendText: '',
+        connecting: false,
+        messageSeq: 0,
+      },
+      methods: {
+        addMessage(messageText) {
+          const message = {
+            text: messageText,
+            id: this.messages.length + 1,
+            receivedAt: new Date().toISOString(),
+          }
+          this.messages.push(message)
+        },
+        toggleConnect() {
+          if (!this.isConnected) {
+            this.connecting = true
+            this.socket = new WebSocket('ws://localhost:6174')
+
+            this.socket.onopen = event => {
+              this.socket.send(
+                JSON.stringify({
+                  id: this.messageSeq++,
+                  method: 'sequence',
+                  params: { lastKnownSequence: 'ASDEWQRTY' },
+                })
+              )
+              this.isConnected = true
+              this.connectButtonLabel = 'Disconnect!'
+              this.connecting = false
+            }
+
+            this.socket.onmessage = event => {
+              this.addMessage(event.data)
+              const messageWindow = this.$refs.messageWindow
+              messageWindow.scrollTop = messageWindow.scrollHeight
+            }
+
+            this.socket.onerror = event => {
+              if (this.connecting) {
+                this.addMessage('connection error')
+                this.isConnected = false
+                this.connecting = false
+              }
+              this.isConnected = false
+            }
+          } else {
+            this.socket.close()
+            this.isConnected = false
+            this.connectButtonLabel = 'Connect!'
+          }
+        },
+
+        sendMessage() {
+          this.socket.send(this.sendText)
+        },
+
+        clearMessages() {
+          this.messages = []
+        },
+      },
+    })
+  </script>
+</html>
