@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"math/big"
 	"testing"
 
@@ -25,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
@@ -45,17 +45,6 @@ func initMsg(options []message.ChainConfigOption) message.Init {
 		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
 	return message.NewInitMessage(params, owner, options)
-}
-
-func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
-	return message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: sequenceNum,
-		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
-		Payment:     amount,
-		Data:        arbos.WithdrawEthData(dest),
-	}
 }
 
 func makeSimpleConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
@@ -211,7 +200,8 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 		seq := new(big.Int).Add(lastMessage.InboxSeqNum, big.NewInt(1))
 		msg := message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, seq, big.NewInt(0), lastMessage.ChainTime)
 		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, true, nil, true, common.Hash{}, common.Hash{})
-		snap = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
+		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
+		test.FailIfError(t, err)
 	}
 	return assertion.Logs, assertion.Sends, snap, assertion
 }

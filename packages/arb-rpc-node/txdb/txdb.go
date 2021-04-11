@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -65,7 +65,7 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	callMut sync.Mutex
+	snapshotCache *lru.Cache
 }
 
 func New(
@@ -75,10 +75,15 @@ func New(
 	chain common.Address,
 	updateFrequency time.Duration,
 ) (*TxDB, error) {
+	snapshotCache, err := lru.New(100)
+	if err != nil {
+		return nil, err
+	}
 	db := &TxDB{
-		Lookup: arbCore,
-		as:     as,
-		chain:  chain,
+		Lookup:        arbCore,
+		as:            as,
+		chain:         chain,
+		snapshotCache: snapshotCache,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
@@ -463,6 +468,10 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
+	cachedSnap, found := db.snapshotCache.Get(info.Header.Number.Uint64())
+	if found {
+		return cachedSnap.(*snapshot.Snapshot), nil
+	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
@@ -471,7 +480,11 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}
-	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	snap, err := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	if err != nil {
+		return nil, err
+	}
+	db.snapshotCache.Add(info.Header.Number.Uint64(), snap)
 	return snap, nil
 }
 
