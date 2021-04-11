@@ -186,11 +186,10 @@ func main() {
 
 	var inboxReader *staker.InboxReader
 	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
+		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address, healthChan)
 		if err == nil {
 			break
 		}
-		inboxReader.HealthChan = healthChan
 		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).
