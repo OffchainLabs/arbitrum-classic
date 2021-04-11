@@ -18,6 +18,7 @@ package dev
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
@@ -25,6 +26,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -33,6 +35,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -123,16 +126,21 @@ func TestRetryableRedeem(t *testing.T) {
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
-	//dest, _, _, err := arbostestcontracts.DeployTransfer(otherAuth, client)
-	//test.FailIfError(t, err)
+	transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
+	if err != nil {
+		panic(err)
+	}
 
-	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
-	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-
-	txReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
+	dest, _, _, err := arbostestcontracts.DeployTransfer(otherAuth, client)
 	test.FailIfError(t, err)
 
-	if txReceipt == nil || txReceipt.Status != 1 {
+	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), common.NewAddressFromEth(beneficiaryAuth.From))
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+
+	redeemReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if redeemReceipt == nil || redeemReceipt.Status != 1 {
 		t.Fatal("retryable tx failed")
 	}
 
@@ -143,7 +151,7 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("shouldn't have receipt yet")
 	}
 
-	creationBlock, err := backend.db.GetBlockWithHash(common.NewHashFromEth(txReceipt.BlockHash))
+	creationBlock, err := backend.db.GetBlockWithHash(common.NewHashFromEth(redeemReceipt.BlockHash))
 	test.FailIfError(t, err)
 
 	lifetime, err := retryable.GetLifetime(&bind.CallOpts{})
@@ -187,22 +195,37 @@ func TestRetryableRedeem(t *testing.T) {
 	tx, err := retryable.Redeem(otherAuth, ticketId)
 	test.FailIfError(t, err)
 
-	txReceipt, err = client.TransactionReceipt(context.Background(), tx.Hash())
+	redeemReceipt, err = client.TransactionReceipt(context.Background(), tx.Hash())
 	test.FailIfError(t, err)
 
-	if txReceipt == nil || txReceipt.Status != 1 {
-		t.Fatal("cancel tx failed")
+	if redeemReceipt == nil || redeemReceipt.Status != 1 {
+		t.Fatal("redeem tx failed")
 	}
 
-	if len(txReceipt.Logs) != 1 {
-		t.Fatal("wrong log count")
+	if len(redeemReceipt.Logs) == 0 {
+		t.Fatal("should have at least one log")
 	}
 
-	if txReceipt.Logs[0].Topics[0] != arbos.RetryRedeemedEvent.ID {
+	if redeemReceipt.Logs[len(redeemReceipt.Logs)-1].Topics[0] != arbos.RetryRedeemedEvent.ID {
 		t.Fatal("wrong log topic")
 	}
 
+	finalReceipt, err = client.TransactionReceipt(context.Background(), ticketId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if finalReceipt == nil || finalReceipt.Status != 1 {
+		t.Fatal("final tx failed")
+	}
+
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, big.NewInt(0), retryableTx.MaxSubmissionCost, retryableTx.Value)
+
+	txLogs := redeemReceipt.Logs[:len(redeemReceipt.Logs)-1]
+	if len(txLogs) != 1 {
+		t.Fatal("wrong log count", len(txLogs))
+	}
+	if txLogs[0].Topics[0] != transferABI.Events["TestEvent"].ID {
+		t.Fatal("wrong event topic")
+	}
 }
 
 func TestRetryableCancel(t *testing.T) {
