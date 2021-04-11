@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -14,14 +15,16 @@ import (
 
 //Configuration struct
 type configStruct struct {
-	mu                         sync.Mutex
-	pollingRate                time.Duration
-	loopDelayTimer             time.Duration
-	healthcheckRPC             string
-	openethereumHealthcheckRPC string
-	primaryHealthcheckRPC      string
-	successCode                int
-	blockDifferenceTolerance   int64
+	mu                             sync.Mutex
+	pollingRate                    time.Duration
+	loopDelayTimer                 time.Duration
+	healthcheckRPC                 string
+	openethereumHealthcheckRPC     string
+	openethereumHealthcheckRPCPort string
+	primaryHealthcheckRPC          string
+	primaryHealthcheckRPCPort      string
+	successCode                    int
+	blockDifferenceTolerance       int64
 }
 
 //Log structure for passing messages on healthChan to logger
@@ -62,10 +65,10 @@ func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct
 	asyncData := asyncDataStruct{}
 
 	//Check the healthcheck endpoint for OpenEthereum
-	asyncData.checkOpenethereum = checkEndpoint(config, &config.openethereumHealthcheckRPC)
+	asyncData.checkOpenethereum = checkEndpoint(config, &config.openethereumHealthcheckRPC, &config.openethereumHealthcheckRPCPort)
 
 	//Check the primary endpoint
-	asyncData.checkPrimary = checkEndpoint(config, &config.primaryHealthcheckRPC)
+	asyncData.checkPrimary = checkEndpoint(config, &config.primaryHealthcheckRPC, &config.primaryHealthcheckRPCPort)
 
 	//Check how many blocks the inboxReader is behind
 	asyncData.inboxReaderStatus = checkInboxReader(config, state)
@@ -96,10 +99,24 @@ func updateConfig(config *configStruct, logMessage Log) {
 	defer config.mu.Unlock()
 	//Load the configuration message into the config struct
 	if logMessage.Var == "openethereumHealthcheckRPC" {
-		config.openethereumHealthcheckRPC = logMessage.ValStr
+		u, err := url.Parse(logMessage.ValStr)
+		if err != nil {
+			return
+		}
+		config.openethereumHealthcheckRPC = u.Hostname()
+	}
+	if logMessage.Var == "openethereumHealthcheckRPCPort" {
+		config.openethereumHealthcheckRPCPort = logMessage.ValStr
 	}
 	if logMessage.Var == "primaryHealthcheckRPC" {
-		config.primaryHealthcheckRPC = logMessage.ValStr
+		u, err := url.Parse(logMessage.ValStr)
+		if err != nil {
+			return
+		}
+		config.primaryHealthcheckRPC = u.Hostname()
+	}
+	if logMessage.Var == "primaryHealthcheckRPCPort" {
+		config.primaryHealthcheckRPCPort = logMessage.ValStr
 	}
 }
 
@@ -127,7 +144,11 @@ func newConfig() *configStruct {
 	const defaultBlockDifferenceTolerance = 2
 	const defaultPollingRate = 10 * time.Second
 	const loopDelayTimer = 1 * time.Second
+	const defaultHealthCheckPort = "8080"
+
 	config.healthcheckRPC = "0.0.0.0:8080"
+	config.openethereumHealthcheckRPCPort = defaultHealthCheckPort
+	config.primaryHealthcheckRPCPort = defaultHealthCheckPort
 	config.pollingRate = defaultPollingRate
 	config.loopDelayTimer = loopDelayTimer
 	config.openethereumHealthcheckRPC = ""
@@ -138,18 +159,19 @@ func newConfig() *configStruct {
 	return &config
 }
 
-func checkEndpoint(config *configStruct, endpoint *string) healthcheck.Check {
+func checkEndpoint(config *configStruct, endpoint *string, port *string) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
 		config.mu.Lock()
 		endpointStr := *endpoint
+		portStr := *port
 		config.mu.Unlock()
 		if endpointStr == "" {
 			return nil
 		}
 
 		//Retrieve status code from healthcheck endpoint
-		res, err := http.Get(endpointStr + "/ready")
+		res, err := http.Get("http://" + endpointStr + ":" + portStr + "/ready")
 
 		//Check the response code to determine if OpenEthereum is reeady
 		if err != nil {
