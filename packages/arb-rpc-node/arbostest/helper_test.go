@@ -73,6 +73,20 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) mess
 	}
 }
 
+func makeEthDeposit(dest common.Address, amount *big.Int) message.EthDepositTx {
+	return message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: dest,
+				Payment:     amount,
+				Data:        nil,
+			},
+		}),
+	}
+}
+
 func checkConstructorResult(t *testing.T, res *evm.TxResult, correctAddress common.Address) {
 	t.Helper()
 	succeededTxCheck(t, res)

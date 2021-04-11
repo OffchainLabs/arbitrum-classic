@@ -29,7 +29,6 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
-	EthType           inbox.Type = 0
 	L2Type            inbox.Type = 3
 	InitType          inbox.Type = 4
 	EthDepositTxType  inbox.Type = 7
@@ -65,8 +64,6 @@ func NewRandomInboxMessage(msg Message) inbox.InboxMessage {
 
 func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 	switch kind {
-	case EthType:
-		return NewEthFromData(data), nil
 	case L2Type:
 		return L2Message{Data: data}, nil
 	case InitType:
