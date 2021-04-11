@@ -36,15 +36,22 @@ type Snapshot struct {
 	time            inbox.ChainTime
 	nextInboxSeqNum *big.Int
 	chainId         *big.Int
+	arbosVersion    uint64
 }
 
-func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, lastInboxSeq *big.Int) *Snapshot {
-	return &Snapshot{
+func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, lastInboxSeq *big.Int) (*Snapshot, error) {
+	snap := &Snapshot{
 		mach:            mach,
 		time:            time,
 		nextInboxSeqNum: new(big.Int).Add(lastInboxSeq, big.NewInt(1)),
 		chainId:         chainId,
 	}
+	ver, err := snap.ArbOSVersion()
+	if err != nil {
+		return nil, err
+	}
+	snap.arbosVersion = ver.Uint64()
+	return snap, nil
 }
 
 // AddMessage can only be called if the snapshot is uniquely owned
@@ -87,13 +94,31 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 }
 
 func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.Address) (*evm.TxResult, error) {
-	gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, message.NewCompressedECDSAFromEth(tx))
-	if err != nil {
-		return nil, err
+	if s.arbosVersion < 3 {
+
+		var dest common.Address
+		if tx.To() != nil {
+			copy(dest[:], tx.To().Bytes())
+		}
+		msg := message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      new(big.Int).SetUint64(tx.Gas()),
+				GasPriceBid: tx.GasPrice(),
+				DestAddress: dest,
+				Payment:     tx.Value(),
+				Data:        tx.Data(),
+			},
+		}
+		return s.Call(msg, sender)
+	} else {
+		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, message.NewCompressedECDSAFromEth(tx))
+		if err != nil {
+			return nil, err
+		}
+		targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+		targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
+		return s.TryTx(gasEstimationMessage, sender, targetHash)
 	}
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
-	targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
-	return s.TryTx(gasEstimationMessage, sender, targetHash)
 }
 
 func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, error) {
@@ -168,6 +193,17 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 		return nil, err
 	}
 	return arbos.ParseGetStorageAtResult(res)
+}
+
+func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
+	res, err := s.BasicCall(arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	if err != nil {
+		return nil, err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil, err
+	}
+	return arbos.ParseArbOSVersionResult(res)
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
