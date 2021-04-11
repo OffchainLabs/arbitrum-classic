@@ -41,6 +41,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -69,6 +70,16 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
 
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+
+	go func() {
+		err := nodehealth.NodeHealthCheck(healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
+
 	if len(os.Args) < 2 {
 		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] [strategy] " + cmdhelp.WalletArgsString
 		logger.Fatal().Msg(usageStr)
@@ -92,6 +103,8 @@ func main() {
 	}
 
 	folder := os.Args[1]
+
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: os.Args[2]}
 
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
@@ -224,7 +237,7 @@ func main() {
 		logger.Fatal().Str("chain", hex.EncodeToString(chainMachineHash[:])).Str("arbCore", hex.EncodeToString(initialMachineHash[:])).Msg("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash")
 	}
 
-	reader, err := staker.NewInboxReader(ctx, bridge, arbCore)
+	reader, err := staker.NewInboxReader(ctx, bridge, arbCore, healthChan)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to create inbox reader")
 	}

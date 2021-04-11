@@ -91,7 +91,8 @@ func startUpTest(config *configTestStruct) error {
 
 func aSyncTest(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Test Removing Primary aSync")
-	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8092"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPCPort", ValStr: "8089"}
 	const smallBigInt = 10
 	blockTest := big.NewInt(10)
 	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: new(big.Int).Set(blockTest)}
@@ -100,6 +101,7 @@ func aSyncTest(healthChan chan Log, config *configTestStruct) error {
 
 	//Test server response
 	res, err := http.Get(config.nodehealthAddress + config.readinessEndpoint)
+
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -116,7 +118,8 @@ func aSyncTest(healthChan chan Log, config *configTestStruct) error {
 
 func openEthereumFailure(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Failing OpenEthereum Node Test")
-	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPCPort", ValStr: "8088"}
+
 	time.Sleep(config.timeDelayTests)
 	//Test server response
 	res, err := http.Get(config.nodehealthAddress + "/ready")
@@ -136,8 +139,10 @@ func openEthereumFailure(healthChan chan Log, config *configTestStruct) error {
 
 func addPrimaryWhileRunning(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Adding Primary Late Test")
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
-	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPCPort", ValStr: "8089"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:9010"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: "8089"}
+
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
@@ -150,7 +155,8 @@ func addPrimaryWhileRunning(healthChan chan Log, config *configTestStruct) error
 		fmt.Println(config.failMessage)
 		return errors.New("Failed adding primary while running test - exiting")
 	}
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: "8088"}
+
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
@@ -172,7 +178,7 @@ func addPrimaryWhileRunning(healthChan chan Log, config *configTestStruct) error
 
 func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Test InboxReader blockStatus")
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: "8089"}
 	time.Sleep(config.timeDelayTests)
 	const largeBigInt = 20
 	testBigInt := big.NewInt(largeBigInt)
