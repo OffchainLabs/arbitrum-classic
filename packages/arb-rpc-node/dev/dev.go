@@ -267,6 +267,10 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	return nil
 }
 
+func (b *Backend) Aggregator() *common.Address {
+	return &b.aggregator
+}
+
 func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (common.Hash, error) {
 	b.Lock()
 	defer b.Unlock()

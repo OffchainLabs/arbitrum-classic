@@ -103,6 +103,10 @@ func TestFees(t *testing.T) {
 	_, err = arbOwner.SetFeesEnabled(auth, true)
 	test.FailIfError(t, err)
 
+	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+		t.Fatal(err)
+	}
+
 	for i := 0; i < 5; i++ {
 		_, err = arbOwner.GiveOwnership(auth, auth.From)
 		test.FailIfError(t, err)
