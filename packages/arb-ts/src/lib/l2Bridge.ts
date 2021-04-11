@@ -133,7 +133,7 @@ export class L2Bridge {
     const walletAddress = await this.getWalletAddress()
 
     // handle custom L2 token:
-    const customTokenAddress = await this.arbTokenBridge.customToken(
+    const customTokenAddress = await this.arbTokenBridge.customL2Token(
       erc20L1Address
     )
     if (customTokenAddress !== ethers.constants.AddressZero) {

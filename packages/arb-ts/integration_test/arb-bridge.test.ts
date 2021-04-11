@@ -371,7 +371,7 @@ describe('CustomToken', () => {
       expect(retriableReceipt.status).to.equal(1)
 
       wait()
-      const l2AddressHopefully = await bridge.arbTokenBridge.customToken(
+      const l2AddressHopefully = await bridge.arbTokenBridge.customL2Token(
         l1CustomToken.address
       )
       expect(l2AddressHopefully).to.equal(l2CustomToken.address)
@@ -388,7 +388,7 @@ describe('CustomToken', () => {
         l2TestWallet
       )
 
-      const l2CustonTokenAddressInEthBridge = await bridge.ethERC20Bridge.customL2Tokens(
+      const l2CustonTokenAddressInEthBridge = await bridge.ethERC20Bridge.customL2Token(
         existantCustomTokenL1
       )
 
@@ -494,7 +494,7 @@ describe('CustomToken: no-L2-yet-fallback case', () => {
       prettyLog('deploying a new custom token')
 
       const customTokenFactory = await new TestCustomTokenL1__factory(
-        preFundedWallet
+        l1TestWallet
       )
       l1CustomToken = await customTokenFactory.deploy(
         bridge.ethERC20Bridge.address
@@ -551,19 +551,18 @@ describe('CustomToken: no-L2-yet-fallback case', () => {
     }
   )
 
-  it('did not register at rando address, instead deployed a TMT', async () => {
-    const nullAddressHopefully = await bridge.arbTokenBridge.customToken(
+  it('did not register at rando address', async () => {
+    const customTokenAddr = await bridge.arbTokenBridge.customL2Token(
       l1CustomToken.address
     )
-    expect(nullAddressHopefully).to.equal(AddressZero)
+    const customTokenCode = await bridge.l2Provider.getCode(customTokenAddr)
+    // no custom token deployed
+    expect(customTokenCode).to.equal('0x')
 
     const erc20L2Address = await bridge.getERC20L2Address(l1CustomToken.address)
-    const arbERC20 = StandardArbERC20__factory.connect(
-      erc20L2Address,
-      arbProvider
-    )
-    const symbol = await arbERC20.symbol()
-    expect(symbol).to.equal('TMT')
+
+    const prevErc20Code = await bridge.l2Provider.getCode(erc20L2Address)
+    expect(prevErc20Code).to.equal('0x')
   })
 
   it('deposit into TMT works', async () => {
@@ -592,6 +591,28 @@ describe('CustomToken: no-L2-yet-fallback case', () => {
     )
 
     expect(depositRec.status).to.equal(1)
+
+    expect(retriableReceipt.status).to.equal(1)
+
+    const erc20L2Address = await bridge.arbTokenBridge.calculateL2ERC20TokenAddress(
+      l1CustomToken.address
+    )
+
+    const post = await bridge.l2Provider.getCode(erc20L2Address)
+    expect(post).not.to.equal('0x')
+
+    const arbERC20 = StandardArbERC20__factory.connect(
+      erc20L2Address,
+      arbProvider
+    )
+    const symbol = await arbERC20.symbol()
+    expect(symbol).to.equal('TMT')
+
+    const newCustomTokenBal = await arbERC20.balanceOf(l1TestWallet.address)
+
+    expect(newCustomTokenBal.eq(tokenDepositAmmount)).to.be.true
+    // user should be able to withdraw
+    // or migrate to custom token once deployed
   })
 })
 

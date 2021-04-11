@@ -36,7 +36,7 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     'initialize(string,string,uint8)': FunctionFragment
     'isMaster()': FunctionFragment
     'l1Address()': FunctionFragment
-    'migrate(uint256,address)': FunctionFragment
+    'migrate(address,uint256)': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
@@ -93,7 +93,7 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'migrate',
-    values: [BigNumberish, string]
+    values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
   encodeFunctionData(functionFragment: 'nonces', values: [string]): string
@@ -340,14 +340,14 @@ export class StandardArbERC20 extends Contract {
     'l1Address()'(overrides?: CallOverrides): Promise<[string]>
 
     migrate(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'migrate(uint256,address)'(
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -596,14 +596,14 @@ export class StandardArbERC20 extends Contract {
   'l1Address()'(overrides?: CallOverrides): Promise<string>
 
   migrate(
+    destination: string,
     amount: BigNumberish,
-    target: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'migrate(uint256,address)'(
+  'migrate(address,uint256)'(
+    destination: string,
     amount: BigNumberish,
-    target: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -852,14 +852,14 @@ export class StandardArbERC20 extends Contract {
     'l1Address()'(overrides?: CallOverrides): Promise<string>
 
     migrate(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'migrate(uint256,address)'(
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1119,14 +1119,14 @@ export class StandardArbERC20 extends Contract {
     'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
 
     migrate(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'migrate(uint256,address)'(
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -1381,14 +1381,14 @@ export class StandardArbERC20 extends Contract {
     'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     migrate(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'migrate(uint256,address)'(
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
-      target: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
