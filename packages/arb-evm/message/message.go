@@ -29,11 +29,11 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "message").Logger()
 
 const (
-	EthType          inbox.Type = 0
-	L2Type           inbox.Type = 3
-	InitType         inbox.Type = 4
-	EthDepositTxType inbox.Type = 7
-	RetryableType    inbox.Type = 9
+	L2Type            inbox.Type = 3
+	InitType          inbox.Type = 4
+	EthDepositTxType  inbox.Type = 7
+	RetryableType     inbox.Type = 9
+	GasEstimationType inbox.Type = 10
 )
 
 type Message interface {
@@ -64,8 +64,6 @@ func NewRandomInboxMessage(msg Message) inbox.InboxMessage {
 
 func NestedMessage(data []byte, kind inbox.Type) (Message, error) {
 	switch kind {
-	case EthType:
-		return NewEthFromData(data), nil
 	case L2Type:
 		return L2Message{Data: data}, nil
 	case InitType:
@@ -85,4 +83,36 @@ func CalculateRequestId(chainId *big.Int, msgCount *big.Int) common.Hash {
 
 func RetryableId(requestId common.Hash) common.Hash {
 	return hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+}
+
+type GasEstimationMessage struct {
+	Aggregator common.Address
+	TxData     []byte
+}
+
+func NewGasEstimationMessage(aggregator common.Address, tx CompressedECDSATransaction) (GasEstimationMessage, error) {
+	batch, err := NewTransactionBatchFromMessages([]AbstractL2Message{tx})
+	if err != nil {
+		return GasEstimationMessage{}, err
+	}
+	batchData, err := batch.AsData()
+	if err != nil {
+		return GasEstimationMessage{}, err
+	}
+	return GasEstimationMessage{
+		Aggregator: aggregator,
+		TxData:     batchData,
+	}, nil
+}
+
+func (t GasEstimationMessage) AsData() []byte {
+	ret := make([]byte, 0)
+	ret = append(ret, 3)
+	ret = append(ret, addressData(t.Aggregator)...)
+	ret = append(ret, t.TxData...)
+	return ret
+}
+
+func (t GasEstimationMessage) Type() inbox.Type {
+	return GasEstimationType
 }

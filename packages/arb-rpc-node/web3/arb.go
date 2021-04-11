@@ -1,7 +1,5 @@
-// SPDX-License-Identifier: Apache-2.0
-
 /*
- * Copyright 2012, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +14,24 @@
  * limitations under the License.
  */
 
-pragma solidity >=0.4.21 <0.7.0;
+package web3
 
-contract GasUsed {
-    uint256 a;
-    uint256 b;
+import (
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+)
 
-    constructor(bool shouldRevert) public payable {
-        require(!shouldRevert, "Shouldn't have asked to revert");
-    }
+type Arb struct {
+	srv *aggregator.Server
+}
 
-    function noop() external {}
-
-    function sstore() external {
-        a++;
-    }
-
-    function fail() external {
-        b++;
-        revert("tx failed");
-    }
+func (a *Arb) GetAggregator() *batcher.AggregatorInfo {
+	var ret *ethcommon.Address
+	agg := a.srv.Aggregator()
+	if agg != nil {
+		tmp := agg.ToEthAddress()
+		ret = &tmp
+	}
+	return &batcher.AggregatorInfo{Address: ret}
 }

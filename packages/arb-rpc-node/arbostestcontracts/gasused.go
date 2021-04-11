@@ -27,25 +27,26 @@ var (
 )
 
 // GasUsedABI is the input ABI used to generate the binding from.
-const GasUsedABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"noop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sstore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const GasUsedABI = "[{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"shouldRevert\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"fail\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"noop\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sstore\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // GasUsedFuncSigs maps the 4-byte function signature to its string representation.
 var GasUsedFuncSigs = map[string]string{
+	"a9cc4718": "fail()",
 	"5dfc2e4a": "noop()",
 	"703c2d1a": "sstore()",
 }
 
 // GasUsedBin is the compiled bytecode used for deploying new contracts.
-var GasUsedBin = "0x608060405260888060116000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80635dfc2e4a146037578063703c2d1a14603f575b600080fd5b603d6045565b005b603d6047565b565b60008054600101905556fea26469706673582212206628eca57b00072886181879d8295f7ebc92273f6ea85fff7a57866db315be7864736f6c634300060c0033"
+var GasUsedBin = "0x60806040526040516101633803806101638339818101604052602081101561002657600080fd5b5051801561007b576040805162461bcd60e51b815260206004820152601e60248201527f53686f756c646e277420686176652061736b656420746f207265766572740000604482015290519081900360640190fd5b5060d98061008a6000396000f3fe6080604052348015600f57600080fd5b5060043610603c5760003560e01c80635dfc2e4a146041578063703c2d1a146049578063a9cc471814604f575b600080fd5b60476055565b005b60476057565b60476062565b565b600080546001019055565b60018054810190556040805162461bcd60e51b81526020600482015260096024820152681d1e0819985a5b195960ba1b604482015290519081900360640190fdfea26469706673582212201277d08f46fceea88142fe53a937b6f37fde255d70801b6e979a512375ffa74264736f6c634300060c0033"
 
 // DeployGasUsed deploys a new Ethereum contract, binding an instance of GasUsed to it.
-func DeployGasUsed(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *GasUsed, error) {
+func DeployGasUsed(auth *bind.TransactOpts, backend bind.ContractBackend, shouldRevert bool) (common.Address, *types.Transaction, *GasUsed, error) {
 	parsed, err := abi.JSON(strings.NewReader(GasUsedABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(GasUsedBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(GasUsedBin), backend, shouldRevert)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -192,6 +193,27 @@ func (_GasUsed *GasUsedTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.
 // Transact invokes the (paid) contract method with params as input values.
 func (_GasUsed *GasUsedTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _GasUsed.Contract.contract.Transact(opts, method, params...)
+}
+
+// Fail is a paid mutator transaction binding the contract method 0xa9cc4718.
+//
+// Solidity: function fail() returns()
+func (_GasUsed *GasUsedTransactor) Fail(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _GasUsed.contract.Transact(opts, "fail")
+}
+
+// Fail is a paid mutator transaction binding the contract method 0xa9cc4718.
+//
+// Solidity: function fail() returns()
+func (_GasUsed *GasUsedSession) Fail() (*types.Transaction, error) {
+	return _GasUsed.Contract.Fail(&_GasUsed.TransactOpts)
+}
+
+// Fail is a paid mutator transaction binding the contract method 0xa9cc4718.
+//
+// Solidity: function fail() returns()
+func (_GasUsed *GasUsedTransactorSession) Fail() (*types.Transaction, error) {
+	return _GasUsed.Contract.Fail(&_GasUsed.TransactOpts)
 }
 
 // Noop is a paid mutator transaction binding the contract method 0x5dfc2e4a.

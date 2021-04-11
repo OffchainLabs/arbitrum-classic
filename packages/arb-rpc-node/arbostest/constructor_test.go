@@ -107,20 +107,20 @@ func TestContructorExistingBalance(t *testing.T) {
 	}
 
 	messages := []message.Message{
-		message.Eth{Value: big.NewInt(100), Dest: connAddress1},
-		message.Eth{Value: big.NewInt(100), Dest: create2Address},
+		makeEthDeposit(connAddress1, big.NewInt(100)),
+		makeEthDeposit(create2Address, big.NewInt(100)),
 		message.NewSafeL2Message(makeSimpleConstructorTx(constructorData, big.NewInt(0))),
 		message.NewSafeL2Message(makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(1))),
 		message.NewSafeL2Message(tx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 3, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
 	results := processTxResults(t, logs)
 
-	checkConstructorResult(t, results[0], connAddress1)
-	checkConstructorResult(t, results[1], connAddress2)
-	succeededTxCheck(t, results[2])
-	if !bytes.Equal(results[2].ReturnData[12:], create2Address.Bytes()) {
-		t.Fatal("incorrect create2 address which should have been", hexutil.Encode(results[2].ReturnData[12:]))
+	checkConstructorResult(t, results[2], connAddress1)
+	checkConstructorResult(t, results[3], connAddress2)
+	succeededTxCheck(t, results[4])
+	if !bytes.Equal(results[4].ReturnData[12:], create2Address.Bytes()) {
+		t.Fatal("incorrect create2 address which should have been", hexutil.Encode(results[4].ReturnData[12:]))
 	}
 }

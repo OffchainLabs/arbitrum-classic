@@ -22,8 +22,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/ethclient"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -75,11 +73,11 @@ func LaunchNode(
 	var batch batcher.TransactionBatcher
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
-		forwardClient, err := ethclient.DialContext(ctx, batcherMode.NodeURL)
+		var err error
+		batch, err = batcher.NewForwarder(ctx, batcherMode.NodeURL)
 		if err != nil {
 			return err
 		}
-		batch = batcher.NewForwarder(forwardClient)
 	case StatelessBatcherMode:
 		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
 		if err != nil {

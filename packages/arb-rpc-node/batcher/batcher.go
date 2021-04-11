@@ -54,6 +54,7 @@ const (
 
 type l2TxSender interface {
 	SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error)
+	Sender() common.Address
 }
 
 type batch interface {
@@ -76,6 +77,8 @@ type TransactionBatcher interface {
 
 	// Return nil if no pending snapshot is available
 	PendingSnapshot() (*snapshot.Snapshot, error)
+
+	Aggregator() *common.Address
 }
 
 type pendingSentBatch struct {
@@ -85,6 +88,7 @@ type pendingSentBatch struct {
 
 type Batcher struct {
 	signer types.Signer
+	sender common.Address
 
 	sync.Mutex
 
@@ -146,6 +150,7 @@ func newBatcher(
 ) *Batcher {
 	server := &Batcher{
 		signer:             types.NewEIP155Signer(chainId),
+		sender:             globalInbox.Sender(),
 		queuedTxes:         newTxQueues(),
 		pendingBatch:       pendingBatch,
 		pendingSentBatches: list.New(),
@@ -342,4 +347,8 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return m.newTxFeed.Subscribe(ch)
+}
+
+func (m *Batcher) Aggregator() *common.Address {
+	return &m.sender
 }

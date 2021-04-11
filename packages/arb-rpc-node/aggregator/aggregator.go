@@ -37,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
@@ -45,11 +44,10 @@ import (
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain      common.Address
-	batch      batcher.TransactionBatcher
-	db         *txdb.TxDB
-	maxCallGas *big.Int
-	scope      event.SubscriptionScope
+	chain common.Address
+	batch batcher.TransactionBatcher
+	db    *txdb.TxDB
+	scope event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
@@ -59,10 +57,9 @@ func NewServer(
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain:      rollupAddress,
-		batch:      batch,
-		db:         db,
-		maxCallGas: big.NewInt(1000000000),
+		chain: rollupAddress,
+		batch: batch,
+		db:    db,
 	}
 }
 
@@ -147,30 +144,6 @@ func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64
 	return evmRes, nil
 }
 
-func (m *Server) AdjustGas(msg message.ContractTransaction) message.ContractTransaction {
-	if msg.MaxGas.Cmp(big.NewInt(0)) == 0 || msg.MaxGas.Cmp(m.maxCallGas) > 0 {
-		msg.MaxGas = m.maxCallGas
-	}
-	return msg
-}
-
-// Call takes a request from a Client to process in a temporary context
-// and return the result
-func (m *Server) Call(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
-	msg = m.AdjustGas(msg)
-	snap, err := m.db.LatestSnapshot()
-	if err != nil {
-		return nil, err
-	}
-	return snap.Call(msg, common.NewAddressFromEth(sender))
-}
-
-// PendingCall takes a request from a Client to process in a temporary context
-// and return the result
-func (m *Server) PendingCall(msg message.ContractTransaction, sender ethcommon.Address) (*evm.TxResult, error) {
-	return m.Call(msg, sender)
-}
-
 func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
 	return m.db.GetSnapshot(blockHeight)
 }
@@ -188,6 +161,10 @@ func (m *Server) PendingSnapshot() (*snapshot.Snapshot, error) {
 		return m.LatestSnapshot()
 	}
 	return pending, nil
+}
+
+func (m *Server) Aggregator() *common.Address {
+	return m.batch.Aggregator()
 }
 
 func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {

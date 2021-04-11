@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/rs/zerolog"
@@ -76,6 +77,7 @@ func main() {
 	saveMessages := fs.String("save", "", "save messages")
 	walletcount := fs.Int("walletcount", 10, "number of wallets to fund")
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
+	arbosPath := fs.String("arbos", arbos.Path(), "ArbOS version")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -117,7 +119,18 @@ func main() {
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	monitor, backend, db, rollupAddress := dev.NewDevNode(tmpDir, config)
+
+	accounts := make([]accounts2.Account, 0)
+	for i := 0; i < *walletcount; i++ {
+		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
+		account, err := wallet.Derive(path, false)
+		if err != nil {
+			logger.Fatal().Err(err).Send()
+		}
+		accounts = append(accounts, account)
+	}
+
+	monitor, backend, db, rollupAddress := dev.NewDevNode(tmpDir, *arbosPath, config, common.NewAddressFromEth(accounts[0].Address), nil)
 
 	cancel := func() {
 		if !canceled {
@@ -132,13 +145,7 @@ func main() {
 
 	defer cancel()
 
-	accounts := make([]accounts2.Account, 0)
-	for i := 0; i < *walletcount; i++ {
-		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
-		account, err := wallet.Derive(path, false)
-		if err != nil {
-			logger.Fatal().Err(err).Send()
-		}
+	for _, account := range accounts {
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{
 				BasicTx: message.BasicTx{
@@ -153,7 +160,6 @@ func main() {
 		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 			logger.Fatal().Err(err).Send()
 		}
-		accounts = append(accounts, account)
 	}
 
 	fmt.Println("Arbitrum Dev Chain")

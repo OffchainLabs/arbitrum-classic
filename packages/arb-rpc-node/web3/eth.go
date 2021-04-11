@@ -18,6 +18,7 @@ package web3
 
 import (
 	"context"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -44,13 +45,20 @@ var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
 type Server struct {
 	srv         *aggregator.Server
 	ganacheMode bool
+	maxCallGas  uint64
+	aggregator  *arbcommon.Address
 }
 
 func NewServer(
 	srv *aggregator.Server,
 	ganacheMode bool,
 ) *Server {
-	return &Server{srv: srv, ganacheMode: ganacheMode}
+	return &Server{
+		srv:         srv,
+		ganacheMode: ganacheMode,
+		maxCallGas:  1000000000,
+		aggregator:  srv.Aggregator(),
+	}
 }
 
 func (s *Server) ChainId() hexutil.Uint64 {
@@ -237,7 +245,14 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 		return HandleNodeInterfaceCall(s.srv, data)
 	}
 
-	res, err := s.executeCall(callArgs, blockNum)
+	snap, err := s.getSnapshot(blockNum)
+	if err != nil {
+		return nil, err
+	}
+	from, msg := buildCallMsg(callArgs, s.maxCallGas)
+
+	res, err := snap.Call(msg, from)
+	res, err = handleCallResult(res, err, blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +269,17 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		return hexutil.Uint64(21000), nil
 	}
 	blockNum := rpc.PendingBlockNumber
-	res, err := s.executeCall(args, &blockNum)
+	snap, err := s.getSnapshot(&blockNum)
+	if err != nil {
+		return 0, err
+	}
+	from, tx := buildTransaction(args, s.maxCallGas)
+	var agg arbcommon.Address
+	if s.aggregator != nil {
+		agg = *s.aggregator
+	}
+	res, err := snap.EstimateGas(tx, agg, from)
+	res, err = handleCallResult(res, err, &blockNum)
 	if err != nil {
 		logging := log.Warn()
 		if args.Gas != nil {
@@ -281,7 +306,14 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.ResultCode != evm.ReturnCode {
 		return 0, HandleCallError(res, s.ganacheMode)
 	}
-	return hexutil.Uint64(res.GasUsed.Uint64() + 1000000), nil
+
+	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
+		return hexutil.Uint64(res.GasUsed.Uint64() + 1000), nil
+	} else {
+		gasAmount := new(big.Int).Div(res.FeeStats.Paid.Total(), res.FeeStats.Price.L2Computation)
+		fmt.Println("Gas", gasAmount)
+		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
+	}
 }
 
 func (s *Server) GetBlockByHash(blockHashRaw hexutil.Bytes, includeTxData bool) (*GetBlockResult, error) {
@@ -536,7 +568,7 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 	}
 }
 
-func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransaction) {
+func buildTransaction(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
 	var from arbcommon.Address
 	if args.From != nil {
 		from = arbcommon.NewAddressFromEth(*args.From)
@@ -544,6 +576,9 @@ func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransacti
 	gas := uint64(0)
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
+	}
+	if gas == 0 || gas > maxGas {
+		gas = maxGas
 	}
 	gasPrice := big.NewInt(0)
 	if args.GasPrice != nil {
@@ -558,35 +593,34 @@ func buildCallMsg(args CallTxArgs) (arbcommon.Address, message.ContractTransacti
 		data = *args.Data
 	}
 
+	return from, types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		GasPrice: gasPrice,
+		Gas:      gas,
+		To:       args.To,
+		Value:    value,
+		Data:     data,
+	})
+}
+
+func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.ContractTransaction) {
+	from, tx := buildTransaction(args, maxGas)
 	var dest arbcommon.Address
-	if args.To != nil {
-		dest = arbcommon.NewAddressFromEth(*args.To)
+	if tx.To() != nil {
+		dest = arbcommon.NewAddressFromEth(*tx.To())
 	}
 	return from, message.ContractTransaction{
 		BasicTx: message.BasicTx{
-			MaxGas:      new(big.Int).SetUint64(gas),
-			GasPriceBid: gasPrice,
+			MaxGas:      new(big.Int).SetUint64(tx.Gas()),
+			GasPriceBid: tx.GasPrice(),
 			DestAddress: dest,
-			Payment:     value,
-			Data:        data,
+			Payment:     tx.Value(),
+			Data:        tx.Data(),
 		},
 	}
 }
 
-func (s *Server) executeCall(args CallTxArgs, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
-	snap, err := s.getSnapshot(blockNum)
-	if err != nil {
-		return nil, err
-	}
-	from, msg := buildCallMsg(args)
-	msg = s.srv.AdjustGas(msg)
-	log.Debug().
-		Uint64("gaslimit", msg.MaxGas.Uint64()).
-		Uint64("gasPriceBid", msg.GasPriceBid.Uint64()).
-		Str("sender", from.Hex()).
-		Str("dest", msg.DestAddress.Hex()).
-		Msg("executing call")
-	res, err := snap.Call(msg, from)
+func handleCallResult(res *evm.TxResult, err error, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
 	if err != nil {
 		logMsg := logger.Warn().Err(err)
 		if blockNum != nil {
