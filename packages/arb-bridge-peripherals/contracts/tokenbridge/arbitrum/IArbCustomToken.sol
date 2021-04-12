@@ -16,8 +16,14 @@
  * limitations under the License.
  */
 
+/**
+ * @title Minimum expected interface for L2 custom token (see TestArbCustomToken.sol for an example implementation). Note that you'll *probably* also want a withdraw function, but it isn't strictly required.
+ */
 pragma solidity ^0.6.11;
 
 interface IArbCustomToken {
+    /**
+     * @notice should increase custom token supply by amount, and should (probably) only be callable by the L1 bridge.
+     */
     function bridgeMint(address account, uint256 amount) external;
 }

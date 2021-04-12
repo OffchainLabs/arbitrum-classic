@@ -24,6 +24,9 @@ import "./IArbToken.sol";
 import "./ArbTokenBridge.sol";
 import "../libraries/BytesParser.sol";
 
+/**
+ * @title Standard (i.e., non-custom) contract deployed by ArbTokenBridge.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
+ */
 contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
     ArbTokenBridge public bridge;
     address public l1Address;
@@ -50,15 +53,30 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
         return true;
     }
 
+    /**
+     * @notice Mint tokens on L2. Callable path is EthErc20Bridge.depositToken (includes L1 escrow) which triggers ArbTokenBridge.mintFromL1 which calls this
+     * @param account recipient of tokens
+     * @param amount amount of tokens minted
+     */
     function bridgeMint(address account, uint256 amount) external override onlyBridge {
         _mint(account, amount);
     }
 
+    /**
+     * @notice Initiates a token withdrawal
+     * @param destination destination address
+     * @param amount amount of tokens withdrawn
+     */
     function withdraw(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
         bridge.withdraw(l1Address, destination, amount);
     }
 
+    /**
+     * @notice Migrate tokens from to a custom token contract; this should only happen/matter if a standard ERC20 is deployed for an L1 custom contract before the L2 custom contract gets registered
+     * @param destination destination address
+     * @param amount amount of tokens withdrawn
+     */
     function migrate(address destination, uint256 amount) external {
         _burn(msg.sender, amount);
         bridge.migrate(l1Address, destination, amount);

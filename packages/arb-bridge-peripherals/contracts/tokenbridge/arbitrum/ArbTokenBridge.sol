@@ -49,8 +49,10 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     // of the "onTokenTransfer" call consumes all available gas
     uint256 internal constant arbgasReserveIfCallRevert = 250000;
 
+    /**
+     @notice This ensures that a method can only be called from the L1 pair of this contract
+     */
     modifier onlyEthPair {
-        // This ensures that this method can only be called from the L1 pair of this contract
         require(msg.sender == l1Pair, "ONLY_ETH_PAIR");
         _;
     }
@@ -96,6 +98,17 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         );
     }
 
+    /**
+    * @notice Mint on L2 upon L1 deposit; callable only by EthERC20Bridge.depositToken.
+    * If token not yet deployed and symbol/name/decimal data is included, deploys StandardArbERC20
+    * If minting a custom token that hasn't yet been deployed/registered (!) deploys a temporary StandardArbERC20 that can later be migrated to custom token
+    @param l1ERC20 L1 address of ERC20
+    @param sender sender 
+    @param dest destination / recipient 
+    @param amount token amount
+    @param deployData symbol/name/decimal for initial deploy
+    @param callHookData optional data for external call upon minting
+     */
     function mintFromL1(
         address l1ERC20,
         address sender,
@@ -186,6 +199,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         return createdContract;
     }
 
+    /**
+    * @notice Sets the L1 / L2 custom token pairing; called from the L1 via EthErc20Bridge.registerCustomL2Token
+    * @param l1Address Address of L1 custom token implementation
+    * @param l2Address Address of L2 custom token implementation
+
+     */
     function customTokenRegistered(address l1Address, address l2Address)
         external
         override
@@ -196,6 +215,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         emit CustomTokenRegistered(l1Address, l2Address);
     }
 
+    /**
+    @notice send a withdraw message to the L1 outbox; callable only by StandardArbERC20.withdraw or WhateverCustomToken.whateverWithdrawMethod
+    * @param l1ERC20 L1 address of custom ERC20
+    * @param destination token holder
+    * @param amount token amount 
+     */
     function withdraw(
         address l1ERC20,
         address destination,
@@ -233,8 +258,13 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         return id;
     }
 
-    // If a token is bridged before a custom implementation is set
-    // users can call this method to migrate to the custom version
+    /**  
+    * @notice If a token is bridged as a StandardArbERC20 before a custom implementation is set,
+     users can call this method via StandardArbERC20.migrate to migrate to the custom version
+    * @param l1ERC20 L1 address of custom ERC20
+    * @param account token holder
+    * @param amount token amount 
+    */
     function migrate(
         address l1ERC20,
         address account,
