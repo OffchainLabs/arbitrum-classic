@@ -596,7 +596,7 @@ export class ArbTokenBridge extends Contract {
     ): EventFilter
 
     WithdrawToken(
-      id: null,
+      withdrawalId: null,
       l1Address: string | null,
       amount: null,
       destination: string | null,

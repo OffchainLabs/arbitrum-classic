@@ -44,7 +44,7 @@ interface IEthERC20Bridge {
         address sender,
         uint256 indexed seqNum,
         uint256 value,
-        address tokenAddress
+        address indexed tokenAddress
     );
 
     function hasTriedDeploy(address erc20) external view returns (bool);
