@@ -17,9 +17,7 @@
 package dev
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -66,8 +64,8 @@ func TestUpgrade(t *testing.T) {
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbos.Path(), config, common.NewAddressFromEth(auth.From), nil)
+	arbosFile := filepath.Join(arbos.Dir(), "arbos_before.mexe")
+	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
 	defer monitor.Close()
 	defer db.Close()
 
@@ -130,40 +128,54 @@ func TestUpgrade(t *testing.T) {
 	_, err = arbOwner.StartCodeUpload(auth)
 	test.FailIfError(t, err)
 
-	for _, upgradeChunk := range chunks {
+	for i, upgradeChunk := range chunks {
+		t.Log("Upgrade chunk", i)
 		_, err = arbOwner.ContinueCodeUpload(auth, hexutil.MustDecode(upgradeChunk))
 		test.FailIfError(t, err)
 	}
 
-	auth.Value = big.NewInt(5)
-	tx, err := arbSys.WithdrawEth(auth, auth.From)
+	auth.GasLimit = 10000000
+	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth)
 	test.FailIfError(t, err)
-	auth.Value = big.NewInt(0)
 
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	_, err = arbOwner.StartCodeUpload(auth)
 	test.FailIfError(t, err)
-	if len(receipt.Logs) != 1 {
-		t.Fatal("unexpected log count")
+
+	for i, upgradeChunk := range chunks {
+		t.Log("Upgrade chunk", i)
+		_, err = arbOwner.ContinueCodeUpload(auth, hexutil.MustDecode(upgradeChunk))
+		test.FailIfError(t, err)
 	}
-	sendLog := receipt.Logs[0]
-	if sendLog.Topics[0] != arbos.L2ToL1TransactionID {
-		t.Fatal("unexpected topic", sendLog.Topics[0], arbos.L2ToL1TransactionID)
-	}
-	parsedEv, err := arbSys.ParseL2ToL1Transaction(*sendLog)
-	test.FailIfError(t, err)
-
-	nodeInterface, err := arboscontracts.NewNodeInterface(arbos.ARB_NODE_INTERFACE_ADDRESS, client)
-	test.FailIfError(t, err)
-
-	data, err := nodeInterface.LookupMessageBatchProof(&bind.CallOpts{}, parsedEv.BatchNumber, parsedEv.IndexInBatch.Uint64())
-	test.FailIfError(t, err)
-	fmt.Println("PROOF", data.Proof)
-
-	t.Log(data.Path)
 
 	auth.GasLimit = 10000000
 	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth)
 	test.FailIfError(t, err)
+
+	//auth.Value = big.NewInt(5)
+	//tx, err := arbSys.WithdrawEth(auth, auth.From)
+	//test.FailIfError(t, err)
+	//auth.Value = big.NewInt(0)
+	//
+	//receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	//test.FailIfError(t, err)
+	//if len(receipt.Logs) != 1 {
+	//	t.Fatal("unexpected log count")
+	//}
+	//sendLog := receipt.Logs[0]
+	//if sendLog.Topics[0] != arbos.L2ToL1TransactionID {
+	//	t.Fatal("unexpected topic", sendLog.Topics[0], arbos.L2ToL1TransactionID)
+	//}
+	//parsedEv, err := arbSys.ParseL2ToL1Transaction(*sendLog)
+	//test.FailIfError(t, err)
+	//
+	//nodeInterface, err := arboscontracts.NewNodeInterface(arbos.ARB_NODE_INTERFACE_ADDRESS, client)
+	//test.FailIfError(t, err)
+	//
+	//data, err := nodeInterface.LookupMessageBatchProof(&bind.CallOpts{}, parsedEv.BatchNumber, parsedEv.IndexInBatch.Uint64())
+	//test.FailIfError(t, err)
+	//fmt.Println("PROOF", data.Proof)
+	//
+	//t.Log(data.Path)
 
 	_, err = simpleCon.Exists(auth)
 	test.FailIfError(t, err)
@@ -172,4 +184,7 @@ func TestUpgrade(t *testing.T) {
 	test.FailIfError(t, err)
 
 	t.Log("New Version:", newVersion)
+	if newVersion.Cmp(oldVersion) <= 0 {
+		t.Error("didn't change to new version")
+	}
 }
