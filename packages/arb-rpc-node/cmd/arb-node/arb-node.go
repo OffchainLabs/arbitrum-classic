@@ -134,8 +134,10 @@ func main() {
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
-	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: rollupArgs.EthURL}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: *forwardTxURL}
+	if *forwardTxURL != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
+	}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {

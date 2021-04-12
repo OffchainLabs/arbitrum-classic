@@ -3,11 +3,12 @@ package nodehealth
 import (
 	"errors"
 	"fmt"
-	"github.com/heptiolabs/healthcheck"
 	"math/big"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/heptiolabs/healthcheck"
 )
 
 type configTestStruct struct {
