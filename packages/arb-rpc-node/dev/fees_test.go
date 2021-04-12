@@ -148,6 +148,7 @@ func TestFees(t *testing.T) {
 	test.FailIfError(t, err)
 
 	checkFees(t, backend, tx)
+
 }
 
 func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) {
