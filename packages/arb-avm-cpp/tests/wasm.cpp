@@ -13,7 +13,7 @@
 TEST_CASE("Wasm") {
     SECTION("Code to hash") {
 
-        run_wasm_test();
+        auto res = run_wasm(Buffer(), 123);
 
         /*
 

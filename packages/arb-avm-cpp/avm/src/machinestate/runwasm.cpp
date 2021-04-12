@@ -172,57 +172,33 @@ RunWasm::RunWasm() {
     wasm_instance_exports(instance, &externs);
     run = wasm_extern_as_func(externs.data[0]);
 
-/*
-    printf("Calling export...\n");
-    wasm_val_t arg_params[1];
-    arg_params[0].kind = WASM_I64;
-    arg_params[0].of.i64 = 123;
-    wasm_val_vec_t args_vec;
-    wasm_val_vec_new(&args_vec, 1, arg_params);
-    printf("Calling export... 1\n");
-
-    wasm_val_t res_params[1];
-    wasm_val_vec_t results_vec;
-    res_params[0].kind = WASM_I32;
-    res_params[0].of.i64 = 123;
-    wasm_val_vec_new(&results_vec, 1, res_params);
-    printf("Calling export... 2\n");
-
-    error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
-    if (error != NULL || trap != NULL)
-        exit_with_error(error, trap);
-*/
 }
 
 std::pair<Buffer, uint64_t> RunWasm::run_wasm(Buffer buf, uint64_t len) {
     data.buffer = buf;
     data.buffer_len = len;
-    printf("Calling export...\n");
     wasm_val_t arg_params[1];
     arg_params[0].kind = WASM_I64;
     arg_params[0].of.i64 = 123;
     wasm_val_vec_t args_vec;
     wasm_val_vec_new(&args_vec, 1, arg_params);
-    printf("Calling export... 1\n");
 
     wasm_val_t res_params[1];
     wasm_val_vec_t results_vec;
     res_params[0].kind = WASM_I32;
     res_params[0].of.i64 = 123;
     wasm_val_vec_new(&results_vec, 1, res_params);
-    printf("Calling export... 2\n");
 
     wasmtime_error_t* error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
     if (error != NULL || trap != NULL)
         exit_with_error(error, trap);
-    printf("Success?\n");
     return {data.buffer, data.buffer_len};
 
 }
 
+RunWasm runner;
 
-void run_wasm_test() {
-    RunWasm runner;
+std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len) {
     auto a = runner.run_wasm(Buffer(), 123);
-    printf("waht? %x\n", a.first.get(0));
+    return a;
 }
