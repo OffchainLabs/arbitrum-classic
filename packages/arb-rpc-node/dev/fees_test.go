@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"context"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -107,9 +108,12 @@ func TestFees(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	totalPaid := big.NewInt(0)
 	for i := 0; i < 5; i++ {
-		_, err = arbOwner.GiveOwnership(auth, auth.From)
+		tx, err := arbOwner.GiveOwnership(auth, auth.From)
 		test.FailIfError(t, err)
+		paid := checkFees(t, backend, tx)
+		totalPaid = totalPaid.Add(totalPaid, paid)
 	}
 
 	networkDest, congestionDest, err := arbOwner.GetFeeRecipients(&bind.CallOpts{})
@@ -147,12 +151,27 @@ func TestFees(t *testing.T) {
 	_, tx, _, err := arbostestcontracts.DeploySimple(auth, client)
 	test.FailIfError(t, err)
 
-	checkFees(t, backend, tx)
+	paid := checkFees(t, backend, tx)
+	totalPaid = totalPaid.Add(totalPaid, paid)
 
+	netFeeBal, err := client.BalanceAt(context.Background(), netFeeRecipient.ToEthAddress(), nil)
+	test.FailIfError(t, err)
+
+	aggBal, err := client.BalanceAt(context.Background(), aggInit.Aggregator.ToEthAddress(), nil)
+	test.FailIfError(t, err)
+
+	totalReceived := new(big.Int).Add(netFeeBal, aggBal)
+	if totalReceived.Cmp(totalPaid) != 0 {
+		t.Error("amount paid different than amount received")
+	}
+
+	t.Log("Paid", totalPaid)
+	t.Log("Net bal", netFeeBal)
+	t.Log("Agg bal", aggBal)
 }
 
-func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) {
+func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
-	t.Log(arbRes.FeeStats)
+	return arbRes.FeeStats.Paid.Total()
 }
