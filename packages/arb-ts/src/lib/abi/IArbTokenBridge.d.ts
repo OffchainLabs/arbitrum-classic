@@ -341,7 +341,7 @@ export class IArbTokenBridge extends Contract {
     ): EventFilter
 
     WithdrawToken(
-      id: null,
+      withdrawalId: null,
       l1Address: string | null,
       amount: null,
       destination: string | null,
