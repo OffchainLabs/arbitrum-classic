@@ -640,7 +640,7 @@ export class EthERC20Bridge extends Contract {
       sender: null,
       seqNum: BigNumberish | null,
       value: null,
-      tokenAddress: null
+      tokenAddress: string | null
     ): EventFilter
 
     WithdrawExecuted(

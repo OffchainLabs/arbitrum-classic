@@ -89,7 +89,7 @@ const _abi = [
         type: 'uint256',
       },
       {
-        indexed: false,
+        indexed: true,
         internalType: 'address',
         name: 'tokenAddress',
         type: 'address',
