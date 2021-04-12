@@ -82,7 +82,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if ir.healthChan != nil {
+	if ir.healthChan != nil && from != nil {
 		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(from)}
 	}
 	reorging := false
@@ -99,14 +99,17 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			return err
 		}
 
-		if ir.healthChan != nil {
+		if ir.healthChan != nil && currentHeight != nil {
 			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
 		}
 
 		for {
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
+				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
+				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: true}
 				arbCorePosition := ir.db.MachineMessagesRead()
-				if ir.healthChan != nil {
+				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
+				if ir.healthChan != nil && arbCorePosition != nil {
 					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: new(big.Int).Set(arbCorePosition)}
 				}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
@@ -136,7 +139,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					ir.caughtUpTarget = dbMessageCount
 				}
 			}
-			if ir.healthChan != nil {
+			if ir.healthChan != nil && ir.caughtUpTarget != nil {
 				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
 			}
 			if len(newMessages) < 40 {
