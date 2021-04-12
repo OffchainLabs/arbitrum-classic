@@ -51,7 +51,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
 
     modifier onlyEthPair {
         // This ensures that this method can only be called from the L1 pair of this contract
-        require(tx.origin == l1Pair, "ONLY_ETH_PAIR");
+        require(msg.sender == l1Pair, "ONLY_ETH_PAIR");
         _;
     }
 

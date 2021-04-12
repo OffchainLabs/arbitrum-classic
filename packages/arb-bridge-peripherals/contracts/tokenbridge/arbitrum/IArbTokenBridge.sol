@@ -30,7 +30,7 @@ interface IArbTokenBridge {
     );
 
     event WithdrawToken(
-        uint256 id,
+        uint256 withdrawalId,
         address indexed l1Address,
         uint256 amount,
         address indexed destination,
