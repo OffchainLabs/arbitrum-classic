@@ -85,7 +85,7 @@ For most users we recommend that you run Arbitrum through our easy docker setup.
 #### MacOS
 
 ```bash
-brew install autoconf automake boost cmake gmp go libtool rocksdb
+brew install autoconf automake boost cmake gmp go libtool rocksdb openssl
 ```
 
 #### Ubuntu 18.04
