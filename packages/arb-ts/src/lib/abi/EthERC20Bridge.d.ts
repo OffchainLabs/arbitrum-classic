@@ -29,7 +29,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)': FunctionFragment
     'hasTriedDeploy(address)': FunctionFragment
     'inbox()': FunctionFragment
-    'initialize(address,address,uint256,uint256,uint256,address,address)': FunctionFragment
+    'initialize(address,address,address)': FunctionFragment
     'isCustomToken(address)': FunctionFragment
     'l2ArbTokenBridgeAddress()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
@@ -76,15 +76,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      string,
-      string
-    ]
+    values: [string, string, string]
   ): string
   encodeFunctionData(
     functionFragment: 'isCustomToken',
@@ -250,21 +242,13 @@ export class EthERC20Bridge extends Contract {
 
     initialize(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
+    'initialize(address,address,address)'(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: PayableOverrides
@@ -403,21 +387,13 @@ export class EthERC20Bridge extends Contract {
 
   initialize(
     _inbox: string,
-    _l2Deployer: string,
-    _maxSubmissionCost: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPrice: BigNumberish,
     _l2TemplateERC20: string,
     _l2ArbTokenBridgeAddress: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'initialize(address,address,uint256,uint256,uint256,address,address)'(
+  'initialize(address,address,address)'(
     _inbox: string,
-    _l2Deployer: string,
-    _maxSubmissionCost: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPrice: BigNumberish,
     _l2TemplateERC20: string,
     _l2ArbTokenBridgeAddress: string,
     overrides?: PayableOverrides
@@ -550,21 +526,13 @@ export class EthERC20Bridge extends Contract {
 
     initialize(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
+    'initialize(address,address,address)'(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: CallOverrides
@@ -735,21 +703,13 @@ export class EthERC20Bridge extends Contract {
 
     initialize(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
+    'initialize(address,address,address)'(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: PayableOverrides
@@ -895,21 +855,13 @@ export class EthERC20Bridge extends Contract {
 
     initialize(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address,uint256,uint256,uint256,address,address)'(
+    'initialize(address,address,address)'(
       _inbox: string,
-      _l2Deployer: string,
-      _maxSubmissionCost: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPrice: BigNumberish,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
       overrides?: PayableOverrides
