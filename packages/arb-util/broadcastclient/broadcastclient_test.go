@@ -87,6 +87,7 @@ func TestBroadcaster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
 	tmb := NewTestMessageBroadcaster(10, 100)
@@ -101,7 +102,6 @@ func TestBroadcaster(t *testing.T) {
 	tmb.startWorker()
 	wg.Wait()
 	tmb.stopWorker()
-	b.Stop()
 }
 
 func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
