@@ -58,7 +58,7 @@
             v-bind:todo="message"
             v-bind:key="message.id"
           >
-            {{message.receivedAt}} - {{message.text}}
+            {{message.receivedAt}} - {{message.seqnum}}
           </li>
         </ul>
       </div>
@@ -80,7 +80,7 @@
       methods: {
         addMessage(messageText) {
           const message = {
-            text: messageText,
+            seqnum: messageText,
             id: this.messages.length + 1,
             receivedAt: new Date().toISOString(),
           }
@@ -89,16 +89,16 @@
         toggleConnect() {
           if (!this.isConnected) {
             this.connecting = true
-            this.socket = new WebSocket('ws://localhost:6174')
+            this.socket = new WebSocket('ws://localhost::9642')
 
             this.socket.onopen = event => {
-              this.socket.send(
-                JSON.stringify({
-                  id: this.messageSeq++,
-                  method: 'sequence',
-                  params: { lastKnownSequence: 'ASDEWQRTY' },
-                })
-              )
+              // this.socket.send(
+              //   JSON.stringify({
+              //     id: this.messageSeq++,
+              //     method: 'sequence',
+              //     params: { lastKnownSequence: 'ASDEWQRTY' },
+              //   })
+              // )
               this.isConnected = true
               this.connectButtonLabel = 'Disconnect!'
               this.connecting = false
