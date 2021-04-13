@@ -54,7 +54,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
     }
 
     /**
-     * @notice Mint tokens on L2. Callable path is EthErc20Bridge.depositToken (includes L1 escrow) which triggers ArbTokenBridge.mintFromL1 which calls this
+     * @notice Mint tokens on L2. Callable path is EthErc20Bridge.depositToken (which handles L1 escrow), which triggers ArbTokenBridge.mintFromL1, which calls this
      * @param account recipient of tokens
      * @param amount amount of tokens minted
      */

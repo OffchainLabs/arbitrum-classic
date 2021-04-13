@@ -39,9 +39,7 @@ import "./IEthERC20Bridge.sol";
 /**
  * @title Layer 1 contract for bridging ERC20s and custom fungible tokens
  * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ulimately) finalizes withdrawals.
- * @dev All messages to layer 2 use createRetryableTicket. Custom tokens that are sufficiently "weird," (i.e., dynamic supply cap, say) should use their own, custom bridge.
- *
- *
+ * @dev All messages to layer 2 use createRetryableTicket. Custom tokens that are sufficiently "weird," (i.e., dynamic supply adjustment, say) should use their own, custom bridge.
  */
 contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     using SafeERC20 for IERC20;

@@ -101,12 +101,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     /**
     * @notice Mint on L2 upon L1 deposit; callable only by EthERC20Bridge.depositToken.
     * If token not yet deployed and symbol/name/decimal data is included, deploys StandardArbERC20
-    * If minting a custom token that hasn't yet been deployed/registered (!) deploys a temporary StandardArbERC20 that can later be migrated to custom token
+    * If minting a custom token whose L2 counterpart hasn't yet been deployed/registered (!) deploys a temporary StandardArbERC20 that can later be migrated to custom token. 
     @param l1ERC20 L1 address of ERC20
     @param sender sender 
     @param dest destination / recipient 
     @param amount token amount
-    @param deployData symbol/name/decimal for initial deploy
+    @param deployData encoded symbol/name/decimal data for initial deploy
     @param callHookData optional data for external call upon minting
      */
     function mintFromL1(
@@ -216,10 +216,10 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     }
 
     /**
-    @notice send a withdraw message to the L1 outbox; callable only by StandardArbERC20.withdraw or WhateverCustomToken.whateverWithdrawMethod
-    * @param l1ERC20 L1 address of custom ERC20
-    * @param destination token holder
-    * @param amount token amount 
+     * @notice send a withdraw message to the L1 outbox; callable only by StandardArbERC20.withdraw or WhateverCustomToken.whateverWithdrawMethod
+     * @param l1ERC20 L1 address of custom ERC20
+     * @param destination token holder
+     * @param amount token amount
      */
     function withdraw(
         address l1ERC20,
