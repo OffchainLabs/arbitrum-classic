@@ -8,11 +8,11 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 // ClientManager manages client connections
@@ -57,13 +57,6 @@ func (cm *ClientManager) Register(conn net.Conn) *ClientConnection {
 	}
 	cm.mu.Unlock()
 
-	err := clientConnection.writeNotice("Connected To Arbitrum Sequencer", Object{
-		"name": clientConnection.name,
-	})
-	if err != nil {
-		logger.Warn().Err(err).Str("connection_name", nameConn(conn)).Msg("write notice error")
-	}
-
 	return clientConnection
 }
 
@@ -75,14 +68,26 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 }
 
 // Broadcast sends message to all alive clients.
-func (cm *ClientManager) Broadcast(method string, params Object) error {
+func (cm *ClientManager) Broadcast(messages []*inbox.InboxMessage) error {
 	var buf bytes.Buffer
 
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(w)
 
-	r := Request{Method: method, Params: params}
-	if err := encoder.Encode(r); err != nil {
+	var broadcastMessages []*BroadcastInboxMessage
+
+	// copy data from the Inbox messages to our outbound format
+	// for now only broadcast the sequence number
+	for i := range messages {
+		message := messages[i]
+		ibMsg := BroadcastInboxMessage{}
+		ibMsg.InboxSeqNum = message.InboxSeqNum
+		broadcastMessages = append(broadcastMessages, &ibMsg)
+	}
+	bm := BroadcastMessage{}
+	bm.Messages = broadcastMessages
+
+	if err := encoder.Encode(bm); err != nil {
 		return err
 	}
 	if err := w.Flush(); err != nil {
@@ -134,8 +139,4 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 	cm.clientList = without
 
 	return true
-}
-
-func timestamp() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
 }
