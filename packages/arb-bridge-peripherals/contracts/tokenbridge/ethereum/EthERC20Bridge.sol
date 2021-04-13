@@ -38,8 +38,9 @@ import "./IEthERC20Bridge.sol";
 
 /**
  * @title Layer 1 contract for bridging ERC20s and custom fungible tokens
- * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and ulimately completes withdrawals.
- * @dev All messages to layer 2 use createRetryableTicket. qqnote about "custom tokens"
+ * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ulimately) finalizes withdrawals.
+ * @dev All messages to layer 2 use createRetryableTicket. Custom tokens that are sufficiently "weird," (i.e., dynamic supply cap, say) should use their own, custom bridge.
+ *
  *
  */
 contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
@@ -69,7 +70,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     /**
      * @notice Initialize L1 bridge
      * @param _inbox Address of Arbitrum chain's L1 Inbox.sol contract
-     * @param _l2TemplateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address. (QQ)
+     * @param _l2TemplateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
      * @param _l2ArbTokenBridgeAddress Address of L2 side of token bridge (ArbTokenBridge.sol)
      */
     function initialize(
@@ -89,10 +90,10 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
      * @notice Called by a custom token on L1 to register with an previously-deployed custom token on L2. L1 contrqct should conform to ICustomToken.sol; L2 contract should conform to IArbCustomToken.sol.
      * @dev The L2 side hasn't yet been deployed, a safe, temporary fallback scenario will take place (see ArbTokenBridge.customTokenRegistered). But please, save yourself and the trouble, and just deploy the L2 contract first.
      * @param l2CustomTokenAddress  L2 address of previously deployed custom token contract
-     * @param maxSubmissionCost TODO
-     * @param maxGas  TODO
-     * @param gasPriceBid  TODO
-     * @param refundAddress  TODO
+     * @param maxSubmissionCost see RetryableTxParams
+     * @param maxGas  see RetryableTxParams
+     * @param gasPriceBid  see RetryableTxParams
+     * @param refundAddress  Address to refund overbid for maxSubmissionCost and/or maxGas*gasPriceBid execution
      */
     function registerCustomL2Token(
         address l2CustomTokenAddress,
@@ -131,7 +132,18 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return seqNum;
     }
 
-    // TODO
+    /**
+     @notice Attempts to receive liquidity from a pending withdrawal via an atomic swap; assumes an IExitLiquidityProvider is deployed at address liquidityProvider. 
+     * This method verifies the result (i.e., that the withdrawer's balance is appropriately updated), 
+     * and is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity
+    * @param liquidityProvider address of an IExitLiquidityProvider
+    * @param liquidityProof "proofs" depends on the particular requirements of IExitLiquidityProvider.requestLiquidity
+    * @param initialDestination address of initiator of initial withdrawal 
+    * @param erc20 L1 token address 
+    * @param amount token amount (should match amount in previously-initiated withdrawal)
+    * @param exitNum Counter of previously-initiated withdrawal
+    * @param maxFee max mount of erd20 token user will pay for fast exit
+     */
     function fastWithdrawalFromL2(
         address liquidityProvider,
         bytes memory liquidityProof,
@@ -205,7 +217,13 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return res;
     }
 
-    // hacky struct to avoid stack size limit
+    /** 
+    @notice struct to avoid stack size limit; covers params for createRetryableTicket. Description of maxSubmissionCost, maxGas, and gasPriceBid here applies everywhere those param names appear 
+    * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+    * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+    * @param gasPriceBid Gas price for L2 executionHash
+    * @dev if gasPriceBid * maxGas > 0, L2 a retriable ticket "redemption" is immediately attempted
+    */
     struct RetryableTxParams {
         uint256 maxSubmissionCost;
         uint256 maxGas;
@@ -255,9 +273,9 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
      * @param erc20 L1 address of ERC20
      * @param destination Recipient address
      * @param amount Token Amount
-     * @param maxSubmissionCost TODO
-     * @param maxGas TODO
-     * @param gasPriceBid TODO
+     * @param maxSubmissionCost see RetryableTxParams
+     * @param maxGas see RetryableTxParams
+     * @param gasPriceBid see RetryableTxParams
      */
     function deposit(
         address erc20,
