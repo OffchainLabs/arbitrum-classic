@@ -8,6 +8,7 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/rs/zerolog/log"
 
 	_ "net/http/pprof"
@@ -17,7 +18,6 @@ var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 type Settings struct {
 	Addr      string
-	Debug     string
 	Workers   int
 	Queue     int
 	IoTimeout time.Duration
@@ -46,38 +46,30 @@ func (b *Broadcaster) Start() error {
 	if b.broadcasterStarted {
 		return nil
 	}
-	// Initialize netpoll instance. We will use it to be noticed about incoming
-	// events from listener of client connections.
-	poller, err := netpoll.New(nil)
-	b.poller = &poller
+
+	connectionPoller, err := netpoll.New(nil)
+	b.poller = &connectionPoller
 	if err != nil {
-		logger.Error().Err(err).Msg("unable to initialize netpoll")
+		logger.Error().Err(err).Msg("unable to initialize netpoll for monitoring client connection events")
 		return err
 	}
 
 	var (
 		// Make pool of X size, Y sized work queue and one pre-spawned
 		// goroutine.
-		pool                   = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
-		clientManager          = NewClientManager(pool)
-		testMessageBroadcaster = NewTestMessageBroadcaster()
+		pool          = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
+		clientManager = NewClientManager(pool)
 	)
 
-	b.clientManager = clientManager // maintain the pointer in this instance.
+	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 
-	////// TESTING
-	// set the clientManager for testing here...
-	testMessageBroadcaster.setClientManager(clientManager)
-
-	// handle is a new incoming connection handler.
+	// handle incoming connection requests.
 	// It upgrades TCP connection to WebSocket, registers netpoll listener on
 	// it and stores it as a Client connection in ClientManager instance.
 	//
-	// We will call it below within accept() loop.
+	// Called below in accept() loop.
 	handle := func(conn net.Conn) {
 
-		// NOTE: we wrap conn here to show that ws could work with any kind of
-		// io.ReadWriter.
 		safeConn := deadliner{conn, b.settings.IoTimeout}
 
 		// Zero-copy upgrade to WebSocket connection.
@@ -93,53 +85,44 @@ func (b *Broadcaster) Start() error {
 		// Register incoming client in clientManager.
 		client := clientManager.Register(safeConn)
 
-		// Create netpoll event descriptor for conn.
-		// We want to handle only read events of it.
+		// Create netpoll event descriptor to handle only read events.
 		desc := netpoll.Must(netpoll.HandleRead(conn))
 
-		//testMessageBroadcaster.startWorker()
-
 		// Subscribe to events about conn.
-		err = poller.Start(desc, func(ev netpoll.Event) {
+		err = connectionPoller.Start(desc, func(ev netpoll.Event) {
 			if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
-				// When ReadHup or Hup received, this mean that client has
-				// closed at least write end of the connection or connections
-				// itself. So we want to stop receive events about such conn
-				// and remove it from the clientManager registry.
-				err = poller.Stop(desc)
+				// ReadHup or Hup received, means the client has close the connection
+				// remove it from the clientManager registry.
+				err = connectionPoller.Stop(desc)
 				if err != nil {
 					logger.Warn().Err(err).Msg("error stopping poller")
 				}
 				clientManager.Remove(client)
 				return
 			}
-			// Here we can read some new message from connection.
-			// We can not read it right here in callback, because then we will
-			// block the poller's inner loop.
-			// We do not want to spawn a new goroutine to read single message.
-			// But we want to reuse previously spawned goroutine.
+
+			// receive client messages, close on error
 			pool.Schedule(func() {
 				if err := client.Receive(); err != nil {
-					// When receive failed, we can only disconnect broken
-					// connection and stop to receive events about it.
-					_ = poller.Stop(desc)
+					_ = connectionPoller.Stop(desc)
 					clientManager.Remove(client)
 				}
 			})
 		})
+
 		if err != nil {
-			logger.Warn().Err(err).Msg("error starting poller")
+			logger.Warn().Err(err).Msg("error starting client connection poller")
 		}
 	}
 
-	// Create incoming connections listener.
+	// Create tcp server for relay connections
 	ln, err := net.Listen("tcp", b.settings.Addr)
 	if err != nil {
 		logger.Error().Err(err).Msg("error calling net.Listen")
 		return err
 	}
 
-	logger.Info().Msgf("websocket is listening on %s", ln.Addr().String())
+	logger.Info().Msgf("arbitrum websocket broadcast server is listening on %s", ln.Addr().String())
 
 	// Create netpoll descriptor for the listener.
 	// We use OneShot here to manually resume events stream when we want to.
@@ -153,7 +136,7 @@ func (b *Broadcaster) Start() error {
 	accept := make(chan error, 1)
 
 	// Subscribe to events about listener.
-	err = poller.Start(acceptDesc, func(e netpoll.Event) {
+	err = connectionPoller.Start(acceptDesc, func(e netpoll.Event) {
 		// We do not want to accept incoming connection when goroutine pool is
 		// busy. So if there are no free goroutines during 1ms we want to
 		// cooldown the server and do not receive connection for some short
@@ -187,7 +170,7 @@ func (b *Broadcaster) Start() error {
 			time.Sleep(delay)
 		}
 
-		err = poller.Resume(acceptDesc)
+		err = connectionPoller.Resume(acceptDesc)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error in poller.Start")
 		}
@@ -199,6 +182,10 @@ func (b *Broadcaster) Start() error {
 	b.broadcasterStarted = true
 
 	return nil
+}
+
+func (b *Broadcaster) Broadcast(messages []*inbox.InboxMessage) error {
+	return b.clientManager.Broadcast(messages)
 }
 
 func (b *Broadcaster) Stop() {
