@@ -3,9 +3,9 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
-	"math/rand"
 	"net"
 	"sync"
 	"testing"
@@ -31,12 +31,18 @@ func TestBroadcaster(t *testing.T) {
 	defer b.Stop()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 10000; i++ {
 		wg.Add(1)
 		go broadcastWait(t, i, &wg)
 	}
-	ib := inbox.InboxMessage{}
-	ib.InboxSeqNum = big.NewInt(42)
+	ib := inbox.InboxMessage{
+		Kind: 1,
+		Sender: common.HexToAddress("0x12345678123456781234567812345678"),
+		InboxSeqNum: big.NewInt(42),
+		GasPrice: big.NewInt(43),
+		Data: []byte{4, 2},
+		ChainTime: inbox.NewRandomChainTime(),
+	}
 
 	messages := []*inbox.InboxMessage{
 		&ib,
@@ -71,14 +77,6 @@ func broadcastWait(t *testing.T, i int, wg *sync.WaitGroup) {
 	}(conn)
 
 	t.Logf("%d connected\n", i)
-	requestBody := Request{rand.Intn(100), "ping", nil}
-	msg, _ := json.Marshal(requestBody)
-
-	err = wsutil.WriteClientMessage(conn, ws.OpText, msg)
-	if err != nil {
-		t.Errorf("%d can not send: %v\n", i, err)
-		return
-	}
 
 	msg, op, err := wsutil.ReadServerData(conn)
 	if err != nil {
