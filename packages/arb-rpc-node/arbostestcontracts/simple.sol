@@ -19,11 +19,16 @@
 pragma solidity >=0.4.21 <0.7.0;
 
 contract Simple {
+    uint256 x;
+    event TestEvent(uint256 value);
+
     receive() external payable {
         require(false, "no deposits");
     }
 
-    function exists() external returns (uint256) {
+    function exists() external payable returns (uint256) {
+        x = 5;
+        emit TestEvent(15);
         return 10;
     }
 

@@ -18,9 +18,17 @@ package dev
 
 import (
 	"context"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"strings"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -32,11 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"strings"
-	"testing"
 )
 
 func setupTest(t *testing.T, tmpDir string) (
@@ -88,7 +91,7 @@ func setupTest(t *testing.T, tmpDir string) (
 	return sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc
 }
 
-func setupTicket(t *testing.T, backend *Backend, sender, destination, beneficiary common.Address) (message.RetryableTx, common.Hash) {
+func setupTicket(t *testing.T, backend *Backend, sender, destination common.Address, data []byte, beneficiary common.Address) (message.RetryableTx, common.Hash) {
 	retryableTx := message.RetryableTx{
 		Destination:       destination,
 		Value:             big.NewInt(20),
@@ -98,7 +101,7 @@ func setupTicket(t *testing.T, backend *Backend, sender, destination, beneficiar
 		Beneficiary:       beneficiary,
 		MaxGas:            big.NewInt(0),
 		GasPriceBid:       big.NewInt(0),
-		Data:              nil,
+		Data:              data,
 	}
 
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
@@ -126,15 +129,15 @@ func TestRetryableRedeem(t *testing.T) {
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
-	transferABI, err := abi.JSON(strings.NewReader(arbostestcontracts.TransferABI))
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	if err != nil {
 		panic(err)
 	}
 
-	dest, _, _, err := arbostestcontracts.DeployTransfer(otherAuth, client)
+	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
 	test.FailIfError(t, err)
 
-	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), common.NewAddressFromEth(beneficiaryAuth.From))
+	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), simpleABI.Methods["exists"].ID, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	redeemReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
@@ -217,13 +220,38 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("final tx failed")
 	}
 
+	redeemRequest, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	test.FailIfError(t, err)
+
+	if len(redeemRequest.ReturnData) != 0 {
+		t.Error("expected redeem to have no return data")
+	}
+
+	finalRequest, err := backend.db.GetRequest(ticketId)
+	test.FailIfError(t, err)
+
+	if len(finalRequest.ReturnData) != 32 {
+		t.Error("expected final tx to have 32 bytes of return data but got", len(finalRequest.ReturnData))
+	} else {
+		ret := new(big.Int).SetBytes(finalRequest.ReturnData)
+		if ret.Cmp(big.NewInt(10)) != 0 {
+			t.Error("incorrect return data")
+		}
+	}
+
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, big.NewInt(0), retryableTx.MaxSubmissionCost, retryableTx.Value)
 
-	txLogs := redeemReceipt.Logs[:len(redeemReceipt.Logs)-1]
+	var txLogs []*types.Log
+	if arbosVersion < 6 {
+		txLogs = redeemReceipt.Logs[:len(redeemReceipt.Logs)-1]
+	} else {
+		txLogs = finalReceipt.Logs
+	}
+
 	if len(txLogs) != 1 {
 		t.Fatal("wrong log count", len(txLogs))
 	}
-	if txLogs[0].Topics[0] != transferABI.Events["TestEvent"].ID {
+	if txLogs[0].Topics[0] != simpleABI.Events["TestEvent"].ID {
 		t.Fatal("wrong event topic")
 	}
 }
@@ -241,7 +269,7 @@ func TestRetryableCancel(t *testing.T) {
 
 	sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
-	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
@@ -293,7 +321,7 @@ func TestRetryableTimeout(t *testing.T) {
 
 	sender, beneficiaryAuth, _, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
-	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
