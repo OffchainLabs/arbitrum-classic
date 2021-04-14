@@ -27,8 +27,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "../libraries/BytesParser.sol";
 
+import "./IArbStandardToken.sol";
 import "./IArbToken.sol";
-import "./IArbCustomToken.sol";
 import "./IArbTokenBridge.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
@@ -204,11 +204,10 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
      * @param deployData encoded symbol/name/decimal data for initial deploy
      */
     function deployToken(address l1ERC20, bytes memory deployData) internal returns (address) {
-        bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
+        bytes32 salt = TokenAddressHandler.getCreate2Salt(l1ERC20, templateERC20);
         address createdContract = address(new ClonableBeaconProxy{ salt: salt }());
 
-        bool initSuccess = IArbToken(createdContract).bridgeInit(l1ERC20, deployData);
-        assert(initSuccess);
+        IArbStandardToken(createdContract).bridgeInit(l1ERC20, deployData);
 
         emit TokenCreated(l1ERC20, createdContract);
         return createdContract;
@@ -240,17 +239,21 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
      */
     function withdraw(
         address l1ERC20,
+        address sender,
         address destination,
         uint256 amount
     ) external override returns (uint256) {
         address expectedSender = calculateL2TokenAddress(l1ERC20);
 
-        // users can withdraw if its a standard erc20 token deployed by the bridge
-        // TODO: what happens if this was a rebasing stablecoin and user was supposed to hold less at time of withdrawal?
-        require(
-            msg.sender == expectedSender || msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
-            "Withdraw can only be triggered by expected sender"
-        );
+        if (!expectedSender.isContract()) {
+            // if this is a TMT or a standard token deployed by the bridge before the custom token got registered
+            expectedSender = calculateL2ERC20TokenAddress(l1ERC20);
+            assert(expectedSender.isContract());
+        }
+
+        require(msg.sender == expectedSender, "Withdraw can only be triggered by expected sender");
+
+        IArbToken(expectedSender).bridgeBurn(sender, amount);
         return _withdraw(l1ERC20, destination, amount);
     }
 
@@ -287,13 +290,15 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     /**
      * @notice If a token is bridged as a StandardArbERC20 before a custom implementation is set,
      * users can call this method via StandardArbERC20.migrate to migrate to the custom version
-     * @param l1ERC20 L1 address of custom ERC20
-     * @param account the account to be credited with the tokens
+     * @param l1ERC20 L1 address of ERC20
+     * @param sender the account that called the migration
+     * @param destination the account to be credited with the tokens
      * @param amount token amount to be migrated
      */
     function migrate(
         address l1ERC20,
-        address account,
+        address sender,
+        address destination,
         uint256 amount
     ) external override {
         require(
@@ -304,13 +309,16 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
             "Migration should be called by erc20 token contract"
         );
+        // burn the tokens sent from the standard implementation
+        IArbToken(msg.sender).bridgeBurn(sender, amount);
 
-        address l2CustomTokenAddress = TokenAddressHandler.customL2Token[l1ERC20];
+        // validate custom contract is correctly setup
+        address l2CustomTokenAddress = calculateL2TokenAddress(l1ERC20);
         require(l2CustomTokenAddress.isContract(), "L2 custom token must already be deployed");
 
-        // this assumes the l2StandardToken has burnt the user funds
-        IArbCustomToken(l2CustomTokenAddress).bridgeMint(account, amount);
-        emit TokenMigrated(l1ERC20, account, amount);
+        // mint tokens of custom implementation
+        IArbToken(l2CustomTokenAddress).bridgeMint(destination, amount);
+        emit TokenMigrated(l1ERC20, destination, amount);
     }
 
     /**

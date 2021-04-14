@@ -20,14 +20,14 @@ pragma solidity ^0.6.11;
 
 import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
-import "./IArbToken.sol";
+import "./IArbStandardToken.sol";
 import "./ArbTokenBridge.sol";
 import "../libraries/BytesParser.sol";
 
 /**
  * @title Standard (i.e., non-custom) contract deployed by ArbTokenBridge.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
  */
-contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
+contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
     ArbTokenBridge public bridge;
     address public l1Address;
 
@@ -36,7 +36,13 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
         _;
     }
 
-    function bridgeInit(address _l1Address, bytes memory _data) external override returns (bool) {
+    /**
+     * @notice initialize the token
+     * @dev the L2 bridge assumes this does not fail or revert
+     * @param _l1Address L1 address of ERC20
+     * @param _data encoded symbol/name/decimal data for initial deploy
+     */
+    function bridgeInit(address _l1Address, bytes memory _data) external override {
         require(address(l1Address) == address(0), "Already inited");
         bridge = ArbTokenBridge(msg.sender);
         l1Address = _l1Address;
@@ -50,7 +56,6 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
             BytesParserWithDefault.toString(symbol, ""),
             BytesParserWithDefault.toUint8(decimals, 18)
         );
-        return true;
     }
 
     /**
@@ -63,22 +68,30 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
     }
 
     /**
+     * @notice Burn tokens on L2.
+     * @dev only the token bridge can call this
+     * @param account owner of tokens
+     * @param amount amount of tokens burnt
+     */
+    function bridgeBurn(address account, uint256 amount) external override onlyBridge {
+        _burn(account, amount);
+    }
+
+    /**
      * @notice Initiates a token withdrawal
-     * @param destination destination address
+     * @param account destination address
      * @param amount amount of tokens withdrawn
      */
-    function withdraw(address destination, uint256 amount) external {
-        _burn(msg.sender, amount);
-        bridge.withdraw(l1Address, destination, amount);
+    function withdraw(address account, uint256 amount) external override {
+        bridge.withdraw(l1Address, msg.sender, account, amount);
     }
 
     /**
      * @notice Migrate tokens from to a custom token contract; this should only happen/matter if a standard ERC20 is deployed for an L1 custom contract before the L2 custom contract gets registered
-     * @param destination destination address
+     * @param account destination address
      * @param amount amount of tokens withdrawn
      */
-    function migrate(address destination, uint256 amount) external {
-        _burn(msg.sender, amount);
-        bridge.migrate(l1Address, destination, amount);
+    function migrate(address account, uint256 amount) external override {
+        bridge.migrate(l1Address, msg.sender, account, amount);
     }
 }
