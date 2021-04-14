@@ -26,6 +26,7 @@ import "./Messages.sol";
 
 contract SequencerInbox is ISequencerInbox {
     uint8 internal constant L2_MSG = 3;
+    uint8 internal constant END_OF_BLOCK = 6;
 
     bytes32[] public override inboxAccs;
     uint256 public override messageCount;
@@ -37,10 +38,6 @@ contract SequencerInbox is ISequencerInbox {
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
-    // Validated in constructor
-    bytes32 internal constant END_OF_BLOCK_MESSAGE_HASH =
-        0xe7a397496222d62de84457e9850e00d34ba37e557130feada7d6ea6fa6a21467;
-
     constructor(
         IBridge _delayedInbox,
         address _sequencer,
@@ -51,11 +48,6 @@ contract SequencerInbox is ISequencerInbox {
         sequencer = _sequencer;
         maxDelayBlocks = _maxDelayBlocks;
         maxDelaySeconds = _maxDelaySeconds;
-        require(
-            END_OF_BLOCK_MESSAGE_HASH ==
-                Messages.messageHash(6, address(0), 0, 0, 0, 0, bytes32(0)),
-            "WRONG_HASH_CONST"
-        );
     }
 
     function getLastDelayedAcc() internal view returns (bytes32) {
@@ -207,9 +199,9 @@ contract SequencerInbox is ISequencerInbox {
         uint256 offset = 0;
         for (uint256 i = 0; i < lengths.length; i++) {
             if (lengths[i] == 0) {
-                acc = keccak256(
-                    abi.encodePacked("Sequencer message:", acc, count, END_OF_BLOCK_MESSAGE_HASH)
-                );
+                bytes32 messageHash =
+                    Messages.messageHash(END_OF_BLOCK, address(0), 0, 0, count, 0, bytes32(0));
+                acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, messageHash));
                 count++;
             } else {
                 bytes32 messageDataHash =
@@ -265,10 +257,10 @@ contract SequencerInbox is ISequencerInbox {
                 )
             );
             count += _totalDelayedMessagesRead - totalDelayedMessagesRead;
-            acc = keccak256(
-                abi.encodePacked("Sequencer message:", acc, count, END_OF_BLOCK_MESSAGE_HASH)
-            );
-            count += 1;
+            bytes32 endMessageHash =
+                Messages.messageHash(END_OF_BLOCK, address(0), 0, 0, count, 0, bytes32(0));
+            acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, endMessageHash));
+            count++;
             totalDelayedMessagesRead = _totalDelayedMessagesRead;
         }
         return (delayedAcc, acc, count);

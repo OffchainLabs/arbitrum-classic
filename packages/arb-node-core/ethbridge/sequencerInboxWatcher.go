@@ -137,15 +137,33 @@ func (b SequencerBatch) GetAfterAcc() common.Hash {
 	return b.AfterAcc
 }
 
+func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
+	return inbox.InboxMessage{
+		Kind:        6,
+		Sender:      common.Address{},
+		InboxSeqNum: seqNum,
+		GasPrice:    big.NewInt(0),
+		Data:        []byte{},
+		ChainTime: inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		},
+	}
+}
+
 func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 	count := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
 	delayedCount := new(big.Int).Sub(count, big.NewInt(int64(len(b.transactionLengths))))
-	hasDelayed := delayedCount.Cmp(big.NewInt(0)) > 0
-	itemCount := len(b.transactionLengths)
-	if hasDelayed {
-		itemCount++
+	if delayedCount.Cmp(big.NewInt(0)) > 0 {
+		// Subtract out the end of block message, which isn't really delayed
+		delayedCount.Sub(delayedCount, big.NewInt(1))
 	}
-	ret := make([]inbox.SequencerBatchItem, 0, itemCount)
+	hasDelayed := delayedCount.Cmp(big.NewInt(0)) > 0
+	startDelayedCount := b.TotalDelayedMessagesRead
+	if hasDelayed {
+		startDelayedCount = new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
+	}
+	ret := make([]inbox.SequencerBatchItem, 0, len(b.transactionLengths)+2)
 	lastAcc := b.BeforeAcc
 	nextSeqNum := new(big.Int).Set(b.BeforeCount)
 	dataOffset := 0
@@ -154,17 +172,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 		var message inbox.InboxMessage
 		length := int(b.transactionLengths[i].Int64())
 		if length == 0 {
-			message = inbox.InboxMessage{
-				Kind:        6,
-				Sender:      common.Address{},
-				InboxSeqNum: big.NewInt(0),
-				GasPrice:    big.NewInt(0),
-				Data:        []byte{},
-				ChainTime: inbox.ChainTime{
-					BlockNum:  common.NewTimeBlocksInt(0),
-					Timestamp: big.NewInt(0),
-				},
-			}
+			message = newEndOfBlockMessage(nextSeqNum)
 		} else {
 			message = inbox.InboxMessage{
 				Kind:        3,
@@ -179,26 +187,34 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 		item := inbox.SequencerBatchItem{
 			LastSeqNum:        nextSeqNum,
 			Accumulator:       common.Hash{},
-			TotalDelayedCount: b.TotalDelayedMessagesRead,
+			TotalDelayedCount: startDelayedCount,
 			SequencerMessage:  message.ToBytes(),
 		}
-		item.RecomputeAccumulator(lastAcc, b.TotalDelayedMessagesRead, b.DelayedAcc)
+		item.RecomputeAccumulator(lastAcc, startDelayedCount, common.Hash{})
 		lastAcc = item.Accumulator
 		nextSeqNum.Add(nextSeqNum, big.NewInt(1))
 		ret = append(ret, item)
 	}
 	if hasDelayed {
 		// Create batch item to read delayed messages
-		lastSeqNum := new(big.Int).Sub(b.AfterCount, big.NewInt(1))
+		lastSeqNum := new(big.Int).Sub(b.AfterCount, big.NewInt(2))
 		item := inbox.SequencerBatchItem{
 			LastSeqNum:        lastSeqNum,
 			Accumulator:       common.Hash{},
 			TotalDelayedCount: b.TotalDelayedMessagesRead,
 			SequencerMessage:  []byte{},
 		}
-		beforeDelayedCount := new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
-		item.RecomputeAccumulator(lastAcc, beforeDelayedCount, b.DelayedAcc)
+		item.RecomputeAccumulator(lastAcc, startDelayedCount, b.DelayedAcc)
 		ret = append(ret, item)
+
+		endSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
+		item2 := inbox.SequencerBatchItem{
+			LastSeqNum:        endSeqNum,
+			Accumulator:       common.Hash{},
+			TotalDelayedCount: b.TotalDelayedMessagesRead,
+			SequencerMessage:  newEndOfBlockMessage(endSeqNum).ToBytes(),
+		}
+		item2.RecomputeAccumulator(item.Accumulator, b.TotalDelayedMessagesRead, b.DelayedAcc)
 	}
 	return ret
 }

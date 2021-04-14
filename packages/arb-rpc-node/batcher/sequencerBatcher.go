@@ -299,6 +299,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		l1BlockNumber = chainTime.BlockNum.AsInt()
 		l1Timestamp = chainTime.Timestamp
 	}
+	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
 	b.sequencerInbox.AddSequencerL2BatchFromOrigin(b.auth, transactionsData, transactionsLengths, l1BlockNumber, l1Timestamp, totalDelayedMessagesRead, lastAcc)
 	return nil
 }
