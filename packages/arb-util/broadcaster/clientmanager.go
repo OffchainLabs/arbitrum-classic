@@ -78,8 +78,7 @@ func (cm *ClientManager) Broadcast(messages []*inbox.InboxMessage) error {
 
 	// copy data from the Inbox messages to our outbound format
 	// for now only broadcast the sequence number
-	for i := range messages {
-		message := messages[i]
+	for _, message := range messages {
 		ibMsg := BroadcastInboxMessage{}
 		ibMsg.InboxSeqNum = message.InboxSeqNum
 		broadcastMessages = append(broadcastMessages, &ibMsg)

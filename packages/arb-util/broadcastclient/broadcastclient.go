@@ -71,10 +71,10 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 func (bc *BroadcastClient) Connect() (<-chan BroadcastMessages, error) {
 	messageReceiver := make(chan BroadcastMessages)
 
-	logger.Info().Msgf("Connecting to arbitrum inbox message broadcaster: %v", bc.websocketUrl)
+	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
 	if err != nil {
-		logger.Error().Msgf("Broadcast Client unable to connect: %v\n", err)
+		logger.Error().Err(err).Msg("broadcast client unable to connect")
 		return nil, err
 	} else {
 		logger.Info().Msg("Connected")
@@ -82,7 +82,7 @@ func (bc *BroadcastClient) Connect() (<-chan BroadcastMessages, error) {
 
 	poller, err := netpoll.New(nil)
 	if err != nil {
-		logger.Error().Msgf("Error starting net poller %v\n", err)
+		logger.Error().Err(err).Msg("error starting net poller")
 	}
 
 	// Get netpoll descriptor with EventRead|EventEdgeTriggered.
@@ -92,31 +92,40 @@ func (bc *BroadcastClient) Connect() (<-chan BroadcastMessages, error) {
 	bc.poller = poller
 	bc.conn = conn
 
-	poller.Start(desc, func(ev netpoll.Event) {
-		if ev&netpoll.EventReadHup != 0 {
-			logger.Info().Msgf("received hang up")
-			poller.Stop(desc)
-			conn.Close()
+	err = poller.Start(desc, func(ev netpoll.Event) {
+		if ev & netpoll.EventReadHup != 0 {
+			logger.Info().Msg("received hang up")
+			_ = poller.Stop(desc)
+			_ = conn.Close()
 			return
+		}
+
+		if ev != 0 {
+			logger.Info().Int("event", int(ev)).Msg("non-zero netpoll event")
 		}
 
 		msg, op, err := wsutil.ReadServerData(conn)
 		if err != nil {
-			logger.Error().Msgf("can not receive: %v, %v", op, err)
-			poller.Stop(desc)
-			conn.Close()
+			logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
+			_ = poller.Stop(desc)
+			_ = conn.Close()
 			return
-		} else {
-			res := BroadcastMessages{}
-			json.Unmarshal([]byte(msg), &res)
-			messageReceiver <- res
 		}
+
+		res := BroadcastMessages{}
+		err = json.Unmarshal(msg, &res)
+		if err != nil {
+			logger.Error().Err(err).Msg("error unmarshalling message")
+			return
+		}
+
+		messageReceiver <- res
 	})
 
 	return messageReceiver, nil
 }
 
 func (bc *BroadcastClient) Close() {
-	bc.poller.Stop(&bc.desc)
-	bc.conn.Close()
+	_ = bc.poller.Stop(&bc.desc)
+	_ = bc.conn.Close()
 }
