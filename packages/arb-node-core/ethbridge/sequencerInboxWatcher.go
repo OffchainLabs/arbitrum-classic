@@ -191,7 +191,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 		}
 		item.RecomputeAccumulator(lastAcc, startDelayedCount, common.Hash{})
 		lastAcc = item.Accumulator
-		nextSeqNum.Add(nextSeqNum, big.NewInt(1))
+		nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
 		ret = append(ret, item)
 	}
 
