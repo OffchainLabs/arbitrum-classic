@@ -114,7 +114,7 @@ func (mg *MessageGenerator) stopWorker() {
 
 func TestBroadCastClient(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9642",
+		Addr:      ":9643",
 		Workers:   128,
 		Queue:     1,
 		IoTimeout: 2 * time.Second,
@@ -144,7 +144,7 @@ func TestBroadCastClient(t *testing.T) {
 }
 
 func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9642/", nil)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9643/", nil)
 	defer wg.Done()
 	messageCount := 0
 

@@ -101,7 +101,6 @@ func (b *Broadcaster) Start() error {
 				// remove it from the clientManager registry.
 				logger.Info().Str("connection_name", nameConn(safeConn)).Msg("Hup received")
 				_ = b.poller.Stop(desc)
-				_ = desc.Close()
 				clientManager.Remove(client)
 				return
 			}
