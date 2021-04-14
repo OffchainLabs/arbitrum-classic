@@ -36,12 +36,17 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "./IEthERC20Bridge.sol";
 
+/**
+ * @title Layer 1 contract for bridging ERC20s and custom fungible tokens
+ * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ulimately) finalizes withdrawals.
+ * @dev Custom tokens that are sufficiently "weird," (i.e., dynamic supply adjustment, say) should use their own, custom bridge.
+ * All messages to layer 2 use the inbox's createRetryableTicket method.
+ */
 contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     using SafeERC20 for IERC20;
 
     address internal constant USED_ADDRESS = address(0x01);
 
-    // exitNum => exitDataHash => LP
     mapping(bytes32 => address) public redirectedExits;
 
     address private l2TemplateERC20;
@@ -50,22 +55,26 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     address public l2ArbTokenBridgeAddress;
     IInbox public inbox;
 
-    // assumes only ERC20 tokens are deployed.
     // can only deposit after a deploy attempt
     mapping(address => bool) public override hasTriedDeploy;
 
+    /**
+     * @notice This ensures that a method can only be called from the L2 pair of this contract
+     */
     modifier onlyL2Address {
         IOutbox outbox = IOutbox(inbox.bridge().activeOutbox());
         require(l2ArbTokenBridgeAddress == outbox.l2ToL1Sender(), "Not from l2 buddy");
         _;
     }
 
+    /**
+     * @notice Initialize L1 bridge
+     * @param _inbox Address of Arbitrum chain's L1 Inbox.sol contract used to submit transactions to the L2
+     * @param _l2TemplateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
+     * @param _l2ArbTokenBridgeAddress Address of L2 side of token bridge (ArbTokenBridge.sol)
+     */
     function initialize(
         address _inbox,
-        address _l2Deployer,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPrice,
         address _l2TemplateERC20,
         address _l2ArbTokenBridgeAddress
     ) external payable {
@@ -78,8 +87,15 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     }
 
     /**
-     * @notice Update the L1 custom token registry directly and L2 side via  a retryable ticket
-     * @dev
+     * @notice Called by a custom token on L1 to register with a previously deployed custom token on L2.
+     * The L1 contract should conform to ICustomToken.sol; L2 contract should conform to IArbCustomToken.sol.
+     * @dev If the L2 side hasn't yet been deployed, a safe, temporary fallback scenario will take place
+     * (see ArbTokenBridge.customTokenRegistered). But please, save yourself and the trouble, and just deploy the L2 contract first.
+     * @param l2CustomTokenAddress  L2 address of previously deployed custom token contract
+     * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param gasPriceBid Gas price for L2 execution
+     * @param refundAddress  Address to refund overbid for maxSubmissionCost and/or maxGas*gasPriceBid execution
      */
     function registerCustomL2Token(
         address l2CustomTokenAddress,
@@ -118,6 +134,18 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return seqNum;
     }
 
+    /**
+     * @notice Allows a user to redirect their right to claim a withdrawal to a liquidityProvider, in exchange for a fee.
+     * @dev This method expects the liquidityProvider to verify the liquidityProof, but it ensures the withdrawer's balance
+     * is appropriately updated. It is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity.
+     * @param liquidityProvider address of an IExitLiquidityProvider
+     * @param liquidityProof encoded data required by the liquidityProvider in order to validate a fast withdrawal.
+     * @param initialDestination address the L2 withdrawal call initially set as the destination.
+     * @param erc20 L1 token address
+     * @param amount token amount (should match amount in previously-initiated withdrawal)
+     * @param exitNum Sequentially increasing exit counter determined by the L2 bridge
+     * @param maxFee max mount of erc20 token user will pay for fast exit
+     */
     function fastWithdrawalFromL2(
         address liquidityProvider,
         bytes memory liquidityProof,
@@ -158,6 +186,13 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         emit WithdrawRedirected(initialDestination, liquidityProvider, erc20, amount, exitNum);
     }
 
+    /**
+     * @notice Finalizes a withdraw via Outbox message; callable only by ArbTokenBridge._withdraw
+     * @param exitNum Sequentially increasing exit counter determined by the L2 bridge
+     * @param erc20 L1 address of token being withdrawn from
+     * @param initialDestination address the L2 withdrawal call initially set as the destination.
+     * @param amount Token amount being withdrawn
+     */
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
@@ -174,8 +209,15 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         emit WithdrawExecuted(initialDestination, dest, erc20, amount, exitNum);
     }
 
+    /**
+     * @notice utility function used to perform external read-only calls.
+     * @dev the result is returned even if the call failed, the L2 is expected to
+     * identify and deal with this.
+     * @return result bytes, even if the call failed.
+     */
     function callStatic(address targetContract, bytes4 targetFunction)
         internal
+        view
         returns (bytes memory)
     {
         (bool success, bytes memory res) =
@@ -183,13 +225,31 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return res;
     }
 
-    // hacky struct to avoid stack size limit
+    /**
+     * @notice necessary params for inbox's createRetryableTicket.
+     * @dev if gasPriceBid * maxGas > 0, in the L2 a retriable ticket is created and immediately redeemed.
+     * This struct is used to avoid stack size limit;
+     * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param gasPriceBid Gas price for L2 execution
+     */
     struct RetryableTxParams {
         uint256 maxSubmissionCost;
         uint256 maxGas;
         uint256 gasPriceBid;
     }
 
+    /**
+     * @notice internal function used to escrow tokens, then trigger their minting in the L2
+     * @param erc20 L1 token address
+     * @param sender account that initiated the deposit in the L1
+     * @param destination account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param amount token amount to be minted to the user
+     * @param retryableParams params for inbox's createRetryableTicket
+     * @param deployData encoded symbol/name/decimal data for initial deploy
+     * @param callHookData optional data for external call upon minting
+     * @return ticket ID used to redeem the retryable transaction in the L2
+     */
     function depositToken(
         address erc20,
         address sender,
@@ -228,6 +288,17 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return seqNum;
     }
 
+    /**
+     * @notice Deposit standard or custom ERC20 token. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy.
+     * @param erc20 L1 address of ERC20
+     * @param destination account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param amount Token Amount
+     * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param gasPriceBid Gas price for L2 execution
+     * @param callHookData optional data for external call upon minting
+     * @return ticket ID used to redeem the retryable transaction in the L2
+     */
     function deposit(
         address erc20,
         address destination,
@@ -263,19 +334,34 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
             );
     }
 
+    /**
+     * @notice Output unique identifier for a token withdrawal. Used for tracking fast exits.
+     * @param exitNum Sequentially increasing exit counter
+     * @param initialDestination address for tokens before/unless otherwise redirected  (via, i.e., a fast-withdrawal)
+     * @param erc20 L1 address of token being withdrawn
+     * @param amount amount of token being withdrawn
+     * @return bytes hash uniquely identifying withdrawal
+     */
     function encodeWithdrawal(
         uint256 exitNum,
-        address user,
+        address initialDestination,
         address erc20,
         uint256 amount
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(exitNum, user, erc20, amount));
+        return keccak256(abi.encodePacked(exitNum, initialDestination, erc20, amount));
     }
 
-    function calculateL2TokenAddress(address l1Token) public view override returns (address) {
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev this always returns the same as the L@ oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param erc20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
+    function calculateL2TokenAddress(address erc20) public view override returns (address) {
         return
             TokenAddressHandler.calculateL2TokenAddress(
-                l1Token,
+                erc20,
                 l2TemplateERC20,
                 l2ArbTokenBridgeAddress,
                 cloneableProxyHash

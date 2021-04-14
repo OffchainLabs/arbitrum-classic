@@ -5,14 +5,14 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { IArbToken } from '../IArbToken'
+import type { IArbStandardToken } from '../IArbStandardToken'
 
-export class IArbToken__factory {
+export class IArbStandardToken__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IArbToken {
-    return new Contract(address, _abi, signerOrProvider) as IArbToken
+  ): IArbStandardToken {
+    return new Contract(address, _abi, signerOrProvider) as IArbStandardToken
   }
 }
 
@@ -39,6 +39,24 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
+        name: '_l1Address',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'bridgeInit',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
         name: 'account',
         type: 'address',
       },
@@ -49,6 +67,24 @@ const _abi = [
       },
     ],
     name: 'bridgeMint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'destination',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'migrate',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

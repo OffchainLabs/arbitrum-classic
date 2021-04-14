@@ -46,10 +46,6 @@ describe('Bridge peripherals layer 1', () => {
 
     await testBridge.initialize(
       inbox,
-      l2Deployer,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice,
       l2Template20,
       l2Address
     )

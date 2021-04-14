@@ -20,10 +20,12 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface IArbTokenInterface extends ethers.utils.Interface {
+interface IArbStandardTokenInterface extends ethers.utils.Interface {
   functions: {
     'bridgeBurn(address,uint256)': FunctionFragment
+    'bridgeInit(address,bytes)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
+    'migrate(address,uint256)': FunctionFragment
     'withdraw(address,uint256)': FunctionFragment
   }
 
@@ -32,7 +34,15 @@ interface IArbTokenInterface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'bridgeInit',
+    values: [string, BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'bridgeMint',
+    values: [string, BigNumberish]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'migrate',
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
@@ -41,13 +51,15 @@ interface IArbTokenInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridgeInit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {}
 }
 
-export class IArbToken extends Contract {
+export class IArbStandardToken extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -58,7 +70,7 @@ export class IArbToken extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: IArbTokenInterface
+  interface: IArbStandardTokenInterface
 
   functions: {
     bridgeBurn(
@@ -73,6 +85,18 @@ export class IArbToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -81,6 +105,18 @@ export class IArbToken extends Contract {
 
     'bridgeMint(address,uint256)'(
       account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    migrate(
+      destination: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -110,6 +146,18 @@ export class IArbToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  bridgeInit(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'bridgeInit(address,bytes)'(
+    _l1Address: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   bridgeMint(
     account: string,
     amount: BigNumberish,
@@ -118,6 +166,18 @@ export class IArbToken extends Contract {
 
   'bridgeMint(address,uint256)'(
     account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  migrate(
+    destination: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'migrate(address,uint256)'(
+    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -147,6 +207,18 @@ export class IArbToken extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -155,6 +227,18 @@ export class IArbToken extends Contract {
 
     'bridgeMint(address,uint256)'(
       account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    migrate(
+      destination: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -187,6 +271,18 @@ export class IArbToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -195,6 +291,18 @@ export class IArbToken extends Contract {
 
     'bridgeMint(address,uint256)'(
       account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    migrate(
+      destination: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -225,6 +333,18 @@ export class IArbToken extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    bridgeInit(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'bridgeInit(address,bytes)'(
+      _l1Address: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -233,6 +353,18 @@ export class IArbToken extends Contract {
 
     'bridgeMint(address,uint256)'(
       account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    migrate(
+      destination: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'migrate(address,uint256)'(
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
