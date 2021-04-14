@@ -164,8 +164,10 @@ func main() {
 		time.Sleep(time.Second * 5)
 	}
 
-	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: rollupArgs.EthURL}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: *forwardTxURL}
+	if *forwardTxURL != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
+	}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {

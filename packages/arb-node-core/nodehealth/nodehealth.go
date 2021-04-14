@@ -38,10 +38,12 @@ type Log struct {
 
 	ValStr    string
 	ValBigInt *big.Int
+	ValBool   bool
 	ValTime   time.Duration
 }
 
 type inboxReaderState struct {
+	loadingDatabase    bool
 	getNextBlockToRead *big.Int
 	currentHeight      *big.Int
 	arbCorePosition    *big.Int
@@ -79,18 +81,22 @@ func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct
 func updateInboxReader(state *healthState, logMessage Log) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
+
 	//Load the log into the correct struct field inside the state array
+	if logMessage.Var == "loadingDatabase" {
+		state.inboxReader.loadingDatabase = logMessage.ValBool
+	}
 	if logMessage.Var == "getNextBlockToRead" {
-		state.inboxReader.getNextBlockToRead = logMessage.ValBigInt
+		state.inboxReader.getNextBlockToRead.Set(logMessage.ValBigInt)
 	}
 	if logMessage.Var == "currentHeight" {
-		state.inboxReader.currentHeight = logMessage.ValBigInt
+		state.inboxReader.currentHeight.Set(logMessage.ValBigInt)
 	}
 	if logMessage.Var == "arbCorePosition" {
-		state.inboxReader.arbCorePosition = logMessage.ValBigInt
+		state.inboxReader.arbCorePosition.Set(logMessage.ValBigInt)
 	}
 	if logMessage.Var == "caughtUpTarget" {
-		state.inboxReader.caughtUpTarget = logMessage.ValBigInt
+		state.inboxReader.caughtUpTarget.Set(logMessage.ValBigInt)
 	}
 }
 
@@ -159,6 +165,18 @@ func newConfig() *configStruct {
 	return &config
 }
 
+func newHealthState() *healthState {
+	state := healthState{}
+
+	state.inboxReader.loadingDatabase = true
+	state.inboxReader.currentHeight = new(big.Int)
+	state.inboxReader.caughtUpTarget = new(big.Int)
+	state.inboxReader.arbCorePosition = new(big.Int)
+	state.inboxReader.getNextBlockToRead = new(big.Int)
+
+	return &state
+}
+
 func checkEndpoint(config *configStruct, endpoint *string, port *string) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
@@ -191,19 +209,18 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 		//Lock config mutex for read operation
 		state.mu.Lock()
 		defer state.mu.Unlock()
+
+		if state.inboxReader.loadingDatabase == true {
+			return errors.New("Loading database snapshot")
+		}
+
 		//Calculate out the block difference
-		if state.inboxReader.caughtUpTarget == nil {
-			return errors.New("InboxReader caughtUpTarget not available yet")
-		}
-		if state.inboxReader.currentHeight == nil {
-			return errors.New("InboxReader currentHeight not available yet")
-		}
-		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.currentHeight)
+		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.arbCorePosition)
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
 		//Compare the tolerance using CmpAbs, fail if > then tolerance
 		if blockDifference.CmpAbs(tolerance) > 0 {
-			return errors.New("InboxReader catching up")
+			return errors.New("InboxReader catching up block " + state.inboxReader.arbCorePosition.String() + " of " + state.inboxReader.caughtUpTarget.String())
 		}
 		return nil
 	}, config.pollingRate)
@@ -272,14 +289,14 @@ func startHealthCheck(config *configStruct, state *healthState) error {
 // NodeHealthCheck Create a node healthcheck that listens on the given channel
 func NodeHealthCheck(logMsgChan <-chan Log) error {
 	//Create the configuration struct
-	state := healthState{}
+	state := newHealthState()
 
 	//Load the default configuration
 	config := newConfig()
 
-	go logger(config, &state, logMsgChan)
+	go logger(config, state, logMsgChan)
 
-	err := startHealthCheck(config, &state)
+	err := startHealthCheck(config, state)
 
 	return err
 }
