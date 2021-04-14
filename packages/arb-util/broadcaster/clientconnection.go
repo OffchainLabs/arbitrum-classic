@@ -24,7 +24,7 @@ type ClientConnection struct {
 func (cc *ClientConnection) Receive() error {
 	req, err := cc.readRequest()
 	if err != nil {
-		cc.conn.Close()
+		_ = cc.conn.Close()
 		return err
 	}
 	if req == nil {

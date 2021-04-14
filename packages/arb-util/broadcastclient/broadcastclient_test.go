@@ -22,7 +22,7 @@ func reverseSlice(data interface{}) {
 		panic(errors.New("data must be a slice type"))
 	}
 	valueLen := value.Len()
-	for i := 0; i <= int((valueLen-1)/2); i++ {
+	for i := 0; i <= (valueLen-1)/2; i++ {
 		reverseIndex := valueLen - 1 - i
 		tmp := value.Index(reverseIndex).Interface()
 		value.Index(reverseIndex).Set(value.Index(i))
@@ -76,33 +76,33 @@ func NewMessageGenerator(count int, ms int) *MessageGenerator {
 }
 
 // give it a client manager to broadcast on.
-func (gm *MessageGenerator) setBroadcaster(broadcaster *broadcaster.Broadcaster) {
-	gm.broadcaster = broadcaster
+func (mg *MessageGenerator) setBroadcaster(broadcaster *broadcaster.Broadcaster) {
+	mg.broadcaster = broadcaster
 }
 
-func (gm *MessageGenerator) startWorker() {
-	gm.startWorkerMutex.Lock()
-	defer gm.startWorkerMutex.Unlock()
-	if gm.workerStarted {
+func (mg *MessageGenerator) startWorker() {
+	mg.startWorkerMutex.Lock()
+	defer mg.startWorkerMutex.Unlock()
+	if mg.workerStarted {
 		return
 	}
 
-	ticker := time.NewTicker(gm.intervalDuration)
+	ticker := time.NewTicker(mg.intervalDuration)
 	messageCount := 0
 	newBroadcastMessage := sequencedMessages()
 	go func() {
-		for _ = range ticker.C {
-			gm.broadcaster.Broadcast(newBroadcastMessage())
+		for range ticker.C {
+			_ = mg.broadcaster.Broadcast(newBroadcastMessage())
 			messageCount++
-			if messageCount == gm.count {
+			if messageCount == mg.count {
 				ticker.Stop()
 				return
 			}
 		}
 	}()
 
-	gm.messageBroadcasterWorker = ticker
-	gm.workerStarted = true
+	mg.messageBroadcasterWorker = ticker
+	mg.workerStarted = true
 }
 
 func (mg *MessageGenerator) stopWorker() {
@@ -112,7 +112,7 @@ func (mg *MessageGenerator) stopWorker() {
 	}
 }
 
-func TestBroadcaster(t *testing.T) {
+func TestBroadCastClient(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9642",
 		Workers:   128,
