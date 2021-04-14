@@ -18,9 +18,15 @@ package dev
 
 import (
 	"context"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -30,10 +36,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"testing"
 )
 
 func TestFees(t *testing.T) {
@@ -179,7 +181,7 @@ func TestFees(t *testing.T) {
 		t.Error("amount paid different than amount received")
 	}
 
-	if arbosVersion < 4 {
+	if arbosVersion <= 4 {
 		if aggBal.Cmp(big.NewInt(0)) <= 0 {
 			t.Error("aggregator should have nonzero balance")
 		}
