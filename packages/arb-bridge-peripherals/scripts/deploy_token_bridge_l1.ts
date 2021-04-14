@@ -13,11 +13,9 @@ import { spawnSync } from 'child_process'
 const main = async () => {
   const accounts = await ethers.getSigners()
 
-  const inboxAddress =
-    process.env.INBOX_ADDRESS || '0xD71d47AD1b63981E9dB8e4A78C0b30170da8a601'
+  const inboxAddress = process.env.INBOX_ADDRESS
 
-  if (inboxAddress === '' || inboxAddress === undefined)
-    throw new Error('Please set inbox address! INBOX_ADDRESS')
+  if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
 
@@ -119,6 +117,7 @@ const main = async () => {
     ...deployments,
     ethERC20Bridge: ethERC20BridgeProxy.address,
     arbTokenBridge: arbTokenBridgeProxy.address,
+    inbox: inboxAddress,
   })
   const deployFilePath = './deployment.json'
   console.log(`Writing to JSON at ${deployFilePath}`)
