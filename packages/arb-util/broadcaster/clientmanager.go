@@ -74,7 +74,7 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Unlock()
 }
 
-// This clears out everything prior
+// SyncSequence clears out everything prior
 func (cm *ClientManager) SyncSequence(fromSequenceNumber *big.Int) {
 	broadcastMessages := make([]*BroadcastInboxMessage, 0)
 	for i := range cm.broadcastMessages {
@@ -102,7 +102,7 @@ func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []by
 
 	broadcastMessages = append(broadcastMessages, &ibMsg)
 
-	// also add this to our global list, broadcasted to clients when connecting
+	// also add this to our global list for broadcasting to clients when connecting
 	cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
 
 	bm := BroadcastMessage{}
