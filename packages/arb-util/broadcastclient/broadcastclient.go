@@ -22,29 +22,12 @@ import (
 	"math/big"
 	"net"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/rs/zerolog/log"
 )
-
-type Request struct {
-	ID     int                    `json:"id"`
-	Method string                 `json:"method"`
-	Params map[string]interface{} `json:"params"`
-}
-type BroadcastMessage struct {
-	// Kind        Type           `json:"kind"`
-	Sender      common.Address `json:"sender"`
-	InboxSeqNum *big.Int       `json:"seqnum"`
-	GasPrice    *big.Int       `json:"gasprice"`
-	Data        []byte         `json:"data"`
-}
-
-type BroadcastMessages struct {
-	Messages []BroadcastMessage `json:"messages"`
-}
 
 type BroadcastClient struct {
 	websocketUrl    string
@@ -68,8 +51,8 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	return bc
 }
 
-func (bc *BroadcastClient) Connect() (<-chan BroadcastMessages, error) {
-	messageReceiver := make(chan BroadcastMessages)
+func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error) {
+	messageReceiver := make(chan broadcaster.BroadcastMessage)
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
@@ -93,7 +76,7 @@ func (bc *BroadcastClient) Connect() (<-chan BroadcastMessages, error) {
 	bc.conn = conn
 
 	err = poller.Start(desc, func(ev netpoll.Event) {
-		if ev & netpoll.EventReadHup != 0 {
+		if ev&netpoll.EventReadHup != 0 {
 			logger.Info().Msg("received hang up")
 			_ = poller.Stop(desc)
 			_ = conn.Close()
@@ -112,7 +95,7 @@ func (bc *BroadcastClient) Connect() (<-chan BroadcastMessages, error) {
 			return
 		}
 
-		res := BroadcastMessages{}
+		res := broadcaster.BroadcastMessage{}
 		err = json.Unmarshal(msg, &res)
 		if err != nil {
 			logger.Error().Err(err).Msg("error unmarshalling message")

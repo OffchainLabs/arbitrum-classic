@@ -94,7 +94,7 @@ func TestBroadcaster(t *testing.T) {
 	tmb.setBroadcaster(b)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1; i++ {
 		wg.Add(1)
 		go makeBroadcastClient(t, 10, &wg)
 	}
