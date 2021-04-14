@@ -56,7 +56,7 @@ func (b *Broadcaster) Start() error {
 
 	// Make pool of X size, Y sized work queue and one pre-spawned
 	// goroutine.
-	var pool          = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
+	var pool = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
 	var clientManager = NewClientManager(pool)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
