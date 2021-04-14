@@ -28,10 +28,10 @@ type Error struct {
 // these represent the fields from the Inbox message that we will broadcast
 // for now we're just broadcasting the sequence number
 type BroadcastInboxMessage struct {
-	InboxSeqNum *big.Int `json:"seqnum"`
-	// Sender      common.Address `json:"sender"`
-	// GasPrice    *big.Int       `json:"gasprice"`
-	// Data        []byte         `json:"data"`
+	BeforeAccumulator *big.Int `json:"beforeAccumulator"`
+	InboxMessage      []byte   `json:"inboxMessage"`
+	Signature         *big.Int `json:"signature"`
+	SeqNum            *big.Int `json:"seqnum"`
 }
 type BroadcastMessage struct {
 	Messages []*BroadcastInboxMessage `json:"messages"`
