@@ -1660,48 +1660,60 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 start -= 1;
                 checking_prev = true;
             }
-            rocksdb::Slice lower_bound;
+            rocksdb::Slice start_slice;
             {
                 auto ptr =
                     reinterpret_cast<const char*>(tmp.data() + tmp.size());
                 marshal_uint256_t(start, tmp);
-                lower_bound = {ptr, 32};
+                start_slice = {ptr, 32};
             }
-            auto seq_batch_it = tx.sequencerBatchItemGetIterator(&lower_bound);
-            seq_batch_it->Seek(lower_bound);
+            auto seq_batch_it = tx.sequencerBatchItemGetIterator();
+
+            if (checking_prev) {
+                seq_batch_it->SeekForPrev(start_slice);
+                if (!seq_batch_it->status().ok()) {
+                    return seq_batch_it->status();
+                } else if (!seq_batch_it->Valid()) {
+                    throw std::runtime_error(
+                        "Previous sequencer batch item not found");
+                }
+
+                auto key_ptr = reinterpret_cast<const unsigned char*>(
+                    seq_batch_it->key().data());
+                auto value_ptr = reinterpret_cast<const unsigned char*>(
+                    seq_batch_it->value().data());
+                auto value_end_ptr = value_ptr + seq_batch_it->value().size();
+                auto db_item = deserializeSequencerBatchItem(
+                    extractUint256(key_ptr), value_ptr, value_end_ptr);
+
+                if (db_item.accumulator != data.previous_batch_acc) {
+                    throw std::runtime_error("prev_batch_acc didn't match");
+                }
+                prev_item = db_item;
+                seq_batch_it->Next();
+            } else {
+                seq_batch_it->Seek(start_slice);
+            }
+
             for (auto& item_and_bytes : seq_batch_items) {
-                auto& item = item_and_bytes.first;
                 if (!seq_batch_it->Valid()) {
                     if (!seq_batch_it->status().ok()) {
                         return seq_batch_it->status();
                     }
                     break;
                 }
+
+                auto& item = item_and_bytes.first;
                 auto value_ptr = reinterpret_cast<const unsigned char*>(
                     seq_batch_it->value().data());
                 auto accumulator =
                     deserializeSequencerBatchItemAccumulator(value_ptr);
-                if (checking_prev) {
-                    if (accumulator != data.previous_batch_acc) {
-                        throw std::runtime_error("prev_batch_acc didn't match");
-                    }
-                    checking_prev = false;
-                    prev_item = item;
-                    continue;
-                }
+
                 if (accumulator != item.accumulator) {
-                    if (duplicate_seq_batch_items == 0 &&
-                        item.last_sequence_number != 0) {
-                        throw std::runtime_error(
-                            "Attempted to add invalid sequencer batch items");
-                    }
-                    if (duplicate_seq_batch_items > 0) {
-                        auto last_valid_seq_num =
-                            seq_batch_items[duplicate_seq_batch_items - 1]
-                                .first.last_sequence_number;
-                        reorging_to_count = last_valid_seq_num + 1;
-                    } else {
+                    if (item.last_sequence_number == 0) {
                         reorging_to_count = 0;
+                    } else {
+                        reorging_to_count = prev_item.last_sequence_number + 1;
                     }
 
                     // Ideally we would use DeleteRange here, but as far as I
@@ -1757,17 +1769,17 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 marshal_uint256_t(start, tmp);
                 lower_bound = {ptr, 32};
             }
-            auto seq_batch_it = tx.delayedMessageGetIterator(&lower_bound);
-            seq_batch_it->Seek(lower_bound);
+            auto delayed_it = tx.delayedMessageGetIterator(&lower_bound);
+            delayed_it->Seek(lower_bound);
             uint256_t prev_acc = 0;
             auto inserting = false;
             for (auto& item : delayed_messages) {
                 auto& message = item.first;
                 auto& value_slice = item.second;
 
-                if (!inserting && !seq_batch_it->Valid()) {
-                    if (!seq_batch_it->status().ok()) {
-                        return seq_batch_it->status();
+                if (!inserting && !delayed_it->Valid()) {
+                    if (!delayed_it->status().ok()) {
+                        return delayed_it->status();
                     }
                     if (checking_prev) {
                         throw std::runtime_error(
@@ -1778,18 +1790,24 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
 
                 if (!inserting) {
                     auto value_ptr = reinterpret_cast<const unsigned char*>(
-                        seq_batch_it->value().data());
+                        delayed_it->value().data());
                     auto db_accumulator =
                         deserializeDelayedMessageAccumulator(value_ptr);
 
                     if (checking_prev) {
                         prev_acc = db_accumulator;
                         checking_prev = false;
-                        continue;
+
+                        delayed_it->Next();
+                        value_ptr = reinterpret_cast<const unsigned char*>(
+                            delayed_it->value().data());
+                        db_accumulator =
+                            deserializeDelayedMessageAccumulator(value_ptr);
                     }
 
                     if (message.delayed_accumulator == db_accumulator) {
-                        seq_batch_it->Next();
+                        prev_acc = db_accumulator;
+                        delayed_it->Next();
                     } else {
                         if (message.delayed_sequence_number <
                             delayed_msg_seq_res.data) {
@@ -1799,15 +1817,15 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                         }
                         // Ideally we would use DeleteRange here, but as far as
                         // I can tell it isn't supported on transactions.
-                        while (seq_batch_it->Valid()) {
+                        while (delayed_it->Valid()) {
                             auto status =
-                                tx.delayedMessageDelete(seq_batch_it->key());
+                                tx.delayedMessageDelete(delayed_it->key());
                             if (!status.ok()) {
                                 return status;
                             }
-                            seq_batch_it->Next();
-                            if (!seq_batch_it->status().ok()) {
-                                return seq_batch_it->status();
+                            delayed_it->Next();
+                            if (!delayed_it->status().ok()) {
+                                return delayed_it->status();
                             }
                         }
                         inserting = true;

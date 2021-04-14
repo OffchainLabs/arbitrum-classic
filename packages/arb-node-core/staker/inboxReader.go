@@ -143,7 +143,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					batchAccs = append(batchAccs, sequencerBatches[0].GetBeforeAcc())
 				}
 				for _, batch := range sequencerBatches {
-					if batch.GetBeforeAcc() != batchAccs[len(batchAccs)-1] {
+					if len(batchAccs) > 0 && batch.GetBeforeAcc() != batchAccs[len(batchAccs)-1] {
 						return errors.New("Mismatching batch accumulators; reorg?")
 					}
 					afterCount := batch.GetAfterCount()
@@ -218,11 +218,18 @@ func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
 	if messageCount.Cmp(big.NewInt(0)) == 0 {
 		return ir.firstMessageBlock, nil
 	}
-	msg, err := core.GetSingleMessage(ir.db, new(big.Int).Sub(messageCount, big.NewInt(1)))
-	if err != nil {
-		return nil, err
+	seqNum := messageCount
+	zeroTime := common.NewTimeBlocksInt(0)
+	for {
+		seqNum.Sub(seqNum, big.NewInt(1))
+		msg, err := core.GetSingleMessage(ir.db, seqNum)
+		if err != nil {
+			return nil, err
+		}
+		if msg.ChainTime.BlockNum.Cmp(zeroTime) != 0 {
+			return msg.ChainTime.BlockNum.AsInt(), nil
+		}
 	}
-	return msg.ChainTime.BlockNum.AsInt(), nil
 }
 
 func (ir *InboxReader) getPrevBlockForReorg(from *big.Int) (*big.Int, error) {

@@ -155,15 +155,14 @@ func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
 func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 	count := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
 	delayedCount := new(big.Int).Sub(count, big.NewInt(int64(len(b.transactionLengths))))
-	if delayedCount.Cmp(big.NewInt(0)) > 0 {
-		// Subtract out the end of block message, which isn't really delayed
-		delayedCount.Sub(delayedCount, big.NewInt(1))
-	}
 	hasDelayed := delayedCount.Cmp(big.NewInt(0)) > 0
 	startDelayedCount := b.TotalDelayedMessagesRead
 	if hasDelayed {
+		// Subtract out the end of block message, which isn't really delayed
+		delayedCount.Sub(delayedCount, big.NewInt(1))
 		startDelayedCount = new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
 	}
+
 	ret := make([]inbox.SequencerBatchItem, 0, len(b.transactionLengths)+2)
 	lastAcc := b.BeforeAcc
 	nextSeqNum := new(big.Int).Set(b.BeforeCount)
@@ -196,6 +195,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 		nextSeqNum.Add(nextSeqNum, big.NewInt(1))
 		ret = append(ret, item)
 	}
+
 	if hasDelayed {
 		// Create batch item to read delayed messages
 		lastSeqNum := new(big.Int).Sub(b.AfterCount, big.NewInt(2))
@@ -216,7 +216,9 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 			SequencerMessage:  newEndOfBlockMessage(endSeqNum).ToBytes(),
 		}
 		item2.RecomputeAccumulator(item.Accumulator, b.TotalDelayedMessagesRead, b.DelayedAcc)
+		ret = append(ret, item2)
 	}
+
 	return ret
 }
 
@@ -306,14 +308,15 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				return nil, errors.WithStack(err)
 			}
 			refs = append(refs, sequencerBatchOriginRef{
-				tx:         txData,
-				beforeAcc:  parsed.BeforeAcc,
-				afterCount: parsed.NewMessageCount,
-				afterAcc:   parsed.AfterAcc,
-				delayedAcc: parsed.DelayedAcc,
-				sequencer:  sequencer,
-				chainTime:  chainTime,
-				gasPrice:   gasPrice,
+				tx:          txData,
+				beforeCount: parsed.FirstMessageNum,
+				beforeAcc:   parsed.BeforeAcc,
+				afterCount:  parsed.NewMessageCount,
+				afterAcc:    parsed.AfterAcc,
+				delayedAcc:  parsed.DelayedAcc,
+				sequencer:   sequencer,
+				chainTime:   chainTime,
+				gasPrice:    gasPrice,
 			})
 		} else if log.Topics[0] == delayedInboxForcedID {
 			parsed, err := r.con.ParseDelayedInboxForced(log)

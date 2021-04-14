@@ -36,7 +36,6 @@ const (
 	MessagesEmpty MessageStatus = iota
 	MessagesReady
 	MessagesSuccess
-	MessagesNeedOlder
 	MessagesError
 )
 
@@ -91,9 +90,6 @@ func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, se
 	}
 	if status == MessagesSuccess {
 		return true, nil
-	}
-	if status == MessagesNeedOlder {
-		return false, nil
 	}
 	return false, errors.New("Unexpected status")
 }

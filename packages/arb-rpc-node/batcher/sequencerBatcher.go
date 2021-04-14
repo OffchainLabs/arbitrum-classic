@@ -129,14 +129,14 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	}
 	var prevAcc common.Hash
 	if msgCount.Cmp(big.NewInt(0)) > 0 {
-		prevAcc, err = b.db.GetInboxAcc(msgCount)
+		prevAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
 		if err != nil {
 			return err
 		}
 	}
 	totalDelayedCount, err := b.db.GetTotalDelayedMessagesSequenced()
 	if totalDelayedCount.Cmp(big.NewInt(0)) == 0 {
-		return errors.New("Chain not yet initialized")
+		return errors.New("chain not yet initialized")
 	}
 
 	batch, err := message.NewTransactionBatchFromMessages(l2BatchContents)
@@ -144,12 +144,13 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		return err
 	}
 	l2Message := message.NewSafeL2Message(batch)
-	message := message.NewInboxMessage(l2Message, common.NewAddressFromEth(b.sequencer), new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime)
+	seqMsg := message.NewInboxMessage(l2Message, common.NewAddressFromEth(b.sequencer), new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime)
 
+	newBlockSeqNum := new(big.Int).Add(msgCount, big.NewInt(1))
 	newBlockMessage := inbox.InboxMessage{
-		Kind:        6,
+		Kind:        message.EndOfBlockType,
 		Sender:      common.Address{},
-		InboxSeqNum: big.NewInt(0),
+		InboxSeqNum: newBlockSeqNum,
 		GasPrice:    big.NewInt(0),
 		Data:        []byte{},
 		ChainTime: inbox.ChainTime{
@@ -162,24 +163,24 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		LastSeqNum:        msgCount,
 		Accumulator:       common.Hash{},
 		TotalDelayedCount: totalDelayedCount,
-		SequencerMessage:  message.ToBytes(),
+		SequencerMessage:  seqMsg.ToBytes(),
 	}
 	txBatchItem.RecomputeAccumulator(prevAcc, totalDelayedCount, common.Hash{})
 	newBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        new(big.Int).Add(msgCount, big.NewInt(1)),
+		LastSeqNum:        newBlockSeqNum,
 		Accumulator:       common.Hash{},
 		TotalDelayedCount: totalDelayedCount,
 		SequencerMessage:  newBlockMessage.ToBytes(),
 	}
 	newBlockBatchItem.RecomputeAccumulator(txBatchItem.Accumulator, totalDelayedCount, common.Hash{})
-	seqBatchItems := []inbox.SequencerBatchItem{txBatchItem, newBlockBatchItem}
 
+	seqBatchItems := []inbox.SequencerBatchItem{txBatchItem, newBlockBatchItem}
 	success, err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
 	if !success {
-		return errors.New("Failed to deliver messages")
+		return errors.New("failed to deliver messages")
 	}
 
 	// TODO check if transaction was valid and if not roll it back
