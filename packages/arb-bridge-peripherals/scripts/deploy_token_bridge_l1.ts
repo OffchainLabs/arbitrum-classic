@@ -104,10 +104,6 @@ const main = async () => {
 
   const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
     inboxAddress,
-    deployments.buddyDeployer,
-    maxSubmissionCost,
-    maxGas,
-    gasPrice,
     deployments.standardArbERC20,
     arbTokenBridgeProxy.address
   )
