@@ -19,20 +19,25 @@ package rpc
 import (
 	"context"
 	"crypto/ecdsa"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
 type BatcherMode interface {
@@ -58,6 +63,15 @@ type StatelessBatcherMode struct {
 }
 
 func (b StatelessBatcherMode) isBatcherMode() {}
+
+type SequencerBatcherMode struct {
+	Auth                       *bind.TransactOpts
+	Core                       core.ArbCore
+	InboxReader                *staker.InboxReader
+	DelayedMessagesTargetDelay *big.Int
+}
+
+func (b SequencerBatcherMode) isBatcherMode() {}
 
 func LaunchNode(
 	ctx context.Context,
@@ -97,6 +111,26 @@ func LaunchNode(
 		if err != nil {
 			return err
 		}
+	case SequencerBatcherMode:
+		rollup, err := ethbridgecontracts.NewRollup(rollupAddress.ToEthAddress(), client)
+		if err != nil {
+			return err
+		}
+		callOpts := &bind.CallOpts{Context: ctx}
+		seqInboxAddr, err := rollup.SequencerBridge(callOpts)
+		if err != nil {
+			return err
+		}
+		seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr, client)
+		if err != nil {
+			return err
+		}
+		batch, err = batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth)
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New("unexpected batcher type")
 	}
 
 	return LaunchNodeAdvanced(

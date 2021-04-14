@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	golog "log"
+	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -71,7 +72,9 @@ func main() {
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
+	sequencerMode := fs.Bool("sequencer", false, "act as sequencer")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
+	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -120,6 +123,33 @@ func main() {
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
+	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
+	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
+
+	monitor, err := staker.NewMonitor(dbPath, contractFile)
+	if err != nil {
+		logger.Fatal().Err(err).Msg("error opening monitor")
+	}
+	defer monitor.Close()
+
+	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	if err != nil {
+		logger.Fatal().Err(err).Send()
+	}
+
+	var inboxReader *staker.InboxReader
+	for {
+		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
+		if err == nil {
+			break
+		}
+		logger.Warn().Err(err).
+			Str("url", rollupArgs.EthURL).
+			Str("rollup", rollupArgs.Address.Hex()).
+			Msg("failed to start inbox reader, waiting and retrying")
+		time.Sleep(time.Second * 5)
+	}
+
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
 		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
@@ -146,38 +176,18 @@ func main() {
 			logger.Fatal().Err(err).Msg("error waiting for balance")
 		}
 
-		if *keepPendingState {
+		if *sequencerMode {
+			batcherMode = rpc.SequencerBatcherMode{
+				Auth:                       auth,
+				Core:                       monitor.Core,
+				InboxReader:                inboxReader,
+				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
+			}
+		} else if *keepPendingState {
 			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		} else {
 			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		}
-	}
-
-	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
-	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
-
-	monitor, err := staker.NewMonitor(dbPath, contractFile)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
-	}
-	defer monitor.Close()
-
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
-
-	var inboxReader *staker.InboxReader
-	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
-		if err == nil {
-			break
-		}
-		logger.Warn().Err(err).
-			Str("url", rollupArgs.EthURL).
-			Str("rollup", rollupArgs.Address.Hex()).
-			Msg("failed to start inbox reader, waiting and retrying")
-		time.Sleep(time.Second * 5)
 	}
 
 	if *waitToCatchUp {

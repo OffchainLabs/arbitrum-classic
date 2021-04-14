@@ -51,7 +51,6 @@ contract BridgeCreator {
                 sequencerDelayBlocks,
                 sequencerDelaySeconds
             );
-        // TODO initialize sequencerInbox
         Inbox inbox = new Inbox(IBridge(delayedBridge));
         RollupEventBridge rollupEventBridge = new RollupEventBridge(address(delayedBridge), rollup);
         delayedBridge.setInbox(address(inbox), true);
