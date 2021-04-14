@@ -17,32 +17,12 @@
 package inbox
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
-
-func bytesToValues(val []byte) []value.Value {
-	var ints []value.Value
-	for i := 0; i < len(val); i += 32 {
-		remaining := len(val) - i
-		if remaining < 32 {
-			data := [32]byte{}
-			copy(data[:], val[i:])
-			ints = append(
-				ints,
-				value.NewIntValue(new(big.Int).SetBytes(data[:])),
-			)
-		} else {
-			ints = append(
-				ints,
-				value.NewIntValue(new(big.Int).SetBytes(val[i:i+32])),
-			)
-		}
-	}
-	return ints
-}
 
 var errTupleSize2 = errors.New("expected 2-tuple value")
 
@@ -112,10 +92,4 @@ func ListToStackValue(vals []value.Value) *value.TupleValue {
 		ret = value.NewTuple2(val, ret)
 	}
 	return ret
-}
-
-func BytesToByteStack(val []byte) *value.TupleValue {
-	chunks := bytesToValues(val)
-	ret := ListToStackValue(chunks)
-	return value.NewTuple2(value.NewInt64Value(int64(len(val))), ret)
 }

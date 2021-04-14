@@ -17,12 +17,13 @@
 package arbostest
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"math/big"
-	"testing"
 )
 
 func TestOwner(t *testing.T) {
@@ -58,39 +59,19 @@ func TestOwner(t *testing.T) {
 		Data:        arbos.StartArbOSUpgradeData(),
 	}
 
-	tx4 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(2),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        arbos.ContinueArbOSUpgradeData([]byte{}),
-	}
-
-	tx5 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(3),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        arbos.FinishArbOSUpgradeData(),
-	}
+	// Actual upgrade tested in dev/upgrade_test.go
 
 	messages := []inbox.InboxMessage{
 		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(3), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, messages, 5, 0)
+	logs, _, _, _ := runAssertion(t, messages, len(messages)-1, 0)
 	results := processTxResults(t, logs)
 	// Transfer from non-owner fails
 	revertedTxCheck(t, results[0])
 	succeededTxCheck(t, results[1])
 	succeededTxCheck(t, results[2])
-	succeededTxCheck(t, results[3])
-	revertedTxCheck(t, results[4])
 }

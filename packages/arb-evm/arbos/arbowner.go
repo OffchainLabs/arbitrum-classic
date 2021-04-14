@@ -17,10 +17,12 @@
 package arbos
 
 import (
+	"strings"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"strings"
 )
 
 var (
@@ -28,6 +30,7 @@ var (
 	startArbOSUpgradeABI     abi.Method
 	continueArbOSUpgradeABI  abi.Method
 	finishArbOSUpgradeABI    abi.Method
+	getUploadedCodeHashABI   abi.Method
 	setFeesEnabledABI        abi.Method
 	setFairGasPriceSenderABI abi.Method
 )
@@ -42,6 +45,7 @@ func init() {
 	startArbOSUpgradeABI = arbowner.Methods["startCodeUpload"]
 	continueArbOSUpgradeABI = arbowner.Methods["continueCodeUpload"]
 	finishArbOSUpgradeABI = arbowner.Methods["finishCodeUploadAsArbosUpgrade"]
+	getUploadedCodeHashABI = arbowner.Methods["getUploadedCodeHash"]
 	setFeesEnabledABI = arbowner.Methods["setFeesEnabled"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 }
@@ -58,8 +62,12 @@ func ContinueArbOSUpgradeData(data []byte) []byte {
 	return makeFuncData(continueArbOSUpgradeABI, data)
 }
 
-func FinishArbOSUpgradeData() []byte {
-	return makeFuncData(finishArbOSUpgradeABI)
+func FinishArbOSUpgradeData(targetCodeHash [32]byte) []byte {
+	return makeFuncData(finishArbOSUpgradeABI, targetCodeHash)
+}
+
+func GetUploadedCodeHash() []byte {
+	return makeFuncData(getUploadedCodeHashABI)
 }
 
 func SetFairGasPriceSender(sender common.Address) []byte {
