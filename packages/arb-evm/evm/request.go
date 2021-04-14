@@ -24,10 +24,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
 )
 
 func NewValueFromOptional(val value.Value) (value.Value, error) {
@@ -44,6 +45,9 @@ func NewValueFromOptional(val value.Value) (value.Value, error) {
 		return nil, errors.New("hasValue must be an int")
 	}
 	if hasValueInt.BigInt().Uint64() == 0 {
+		if tup.Len() != 1 {
+			return nil, errors.New("empty optional should be length 1")
+		}
 		return nil, nil
 	}
 	if hasValueInt.BigInt().Uint64() != 1 {
