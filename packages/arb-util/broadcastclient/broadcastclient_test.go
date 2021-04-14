@@ -11,8 +11,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-// This sends out test broadcast messages
-type TestMessageBroadcaster struct {
+// This sends out generated test broadcast messages
+type MessageGenerator struct {
 	broadcaster              *broadcaster.Broadcaster
 	startWorkerMutex         *sync.Mutex
 	messageBroadcasterWorker *time.Ticker
@@ -21,29 +21,29 @@ type TestMessageBroadcaster struct {
 	workerStarted            bool
 }
 
-// create a new test message broadcaster
-func NewTestMessageBroadcaster(count int, ms int) *TestMessageBroadcaster {
-	tmb := &TestMessageBroadcaster{}
-	tmb.startWorkerMutex = &sync.Mutex{}
-	tmb.intervalDuration = time.Duration(ms) * time.Millisecond
-	tmb.workerStarted = false
-	tmb.count = count
-	return tmb
+// create a new test message generator
+func NewMessageGenerator(count int, ms int) *MessageGenerator {
+	gm := &MessageGenerator{}
+	gm.startWorkerMutex = &sync.Mutex{}
+	gm.intervalDuration = time.Duration(ms) * time.Millisecond
+	gm.workerStarted = false
+	gm.count = count
+	return gm
 }
 
 // give it a client manager to broadcast on.
-func (tmb *TestMessageBroadcaster) setBroadcaster(broadcaster *broadcaster.Broadcaster) {
-	tmb.broadcaster = broadcaster
+func (gm *MessageGenerator) setBroadcaster(broadcaster *broadcaster.Broadcaster) {
+	gm.broadcaster = broadcaster
 }
 
-func (tmb *TestMessageBroadcaster) startWorker() {
-	tmb.startWorkerMutex.Lock()
-	defer tmb.startWorkerMutex.Unlock()
-	if tmb.workerStarted {
+func (gm *MessageGenerator) startWorker() {
+	gm.startWorkerMutex.Lock()
+	defer gm.startWorkerMutex.Unlock()
+	if gm.workerStarted {
 		return
 	}
 
-	ticker := time.NewTicker(tmb.intervalDuration)
+	ticker := time.NewTicker(gm.intervalDuration)
 	messageCount := 0
 	go func() {
 		for t := range ticker.C {
@@ -53,23 +53,23 @@ func (tmb *TestMessageBroadcaster) startWorker() {
 			messages := []*inbox.InboxMessage{
 				&ib,
 			}
-			tmb.broadcaster.Broadcast(messages)
+			gm.broadcaster.Broadcast(messages)
 			messageCount++
-			if messageCount == tmb.count {
+			if messageCount == gm.count {
 				ticker.Stop()
 				return
 			}
 		}
 	}()
 
-	tmb.messageBroadcasterWorker = ticker
-	tmb.workerStarted = true
+	gm.messageBroadcasterWorker = ticker
+	gm.workerStarted = true
 }
 
-func (tmb *TestMessageBroadcaster) stopWorker() {
-	if tmb.messageBroadcasterWorker != nil {
-		tmb.messageBroadcasterWorker.Stop()
-		tmb.workerStarted = false
+func (mg *MessageGenerator) stopWorker() {
+	if mg.messageBroadcasterWorker != nil {
+		mg.messageBroadcasterWorker.Stop()
+		mg.workerStarted = false
 	}
 }
 
@@ -90,14 +90,14 @@ func TestBroadcaster(t *testing.T) {
 	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
-	tmb := NewTestMessageBroadcaster(10, 100)
+	tmb := NewMessageGenerator(10, 100)
 	tmb.setBroadcaster(b)
 
 	var wg sync.WaitGroup
-	// for i := 0; i < 2; i++ {
-	wg.Add(1)
-	go makeBroadcastClient(t, 10, &wg)
-	// }
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go makeBroadcastClient(t, 10, &wg)
+	}
 
 	tmb.startWorker()
 	wg.Wait()

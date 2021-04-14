@@ -83,6 +83,7 @@ func (cm *ClientManager) Broadcast(messages []*inbox.InboxMessage) error {
 		ibMsg.InboxSeqNum = message.InboxSeqNum
 		broadcastMessages = append(broadcastMessages, &ibMsg)
 	}
+
 	bm := BroadcastMessage{}
 	bm.Messages = broadcastMessages
 
