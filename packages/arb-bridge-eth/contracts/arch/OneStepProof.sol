@@ -482,6 +482,9 @@ contract OneStepProof is OneStepProofCommon {
             (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
             // Start the proof at an arbitrary previous accumulator, as we validate the end accumulator.
             acc = keccak256(abi.encodePacked("Sequencer message:", acc, inboxSeqNum, messageHash));
+
+            require(inboxSeqNum == context.totalMessagesRead, "WRONG_SEQUENCER_MSG_SEQ_NUM");
+            inboxSeqNum++;
         } else {
             // Delayed messages are always at the start of a batch, so we can fetch the previous accumulator.
             bytes32 prevBatchAcc = 0;
@@ -521,6 +524,7 @@ contract OneStepProof is OneStepProofCommon {
             // Note that messageHash is no longer accurate after this point, as this modifies the message.
             inboxSeqNum = inboxSeqNum - delayedStart + firstSequencerSeqNum;
             tupData[4] = Value.newInt(inboxSeqNum);
+            require(inboxSeqNum == context.totalMessagesRead, "WRONG_DELAYED_MSG_SEQ_NUM");
 
             acc = keccak256(
                 abi.encodePacked(
@@ -532,24 +536,48 @@ contract OneStepProof is OneStepProofCommon {
                     delayedEndAcc
                 )
             );
+            inboxSeqNum = firstSequencerSeqNum + (delayedEnd - delayedStart);
         }
-
-        // Validate that this is the right message.
-        // We do this check now as the sequence number for delayed messages has been transformed.
-        require(inboxSeqNum == context.totalMessagesRead, "WRONG_MSG_SEQ_NUM");
 
         // Get to the end of the batch by hashing in arbitrary future sequencer messages.
         uint256 remainingSeqMessages;
         (context.offset, remainingSeqMessages) = Marshaling.deserializeInt(proof, context.offset);
         for (uint256 i = 0; i < remainingSeqMessages; i++) {
-            bytes32 newerMessageHash;
-            (context.offset, newerMessageHash) = Marshaling.deserializeBytes32(
-                proof,
-                context.offset
-            );
-            acc = keccak256(
-                abi.encodePacked("Sequencer message:", acc, inboxSeqNum + 1 + i, newerMessageHash)
-            );
+            isDelayed = uint8(proof[context.offset]);
+            require(isDelayed == 0 || isDelayed == 1, "REM_IS_DELAYED_VAL");
+            context.offset++;
+            if (isDelayed == 0) {
+                bytes32 newerMessageHash;
+                (context.offset, newerMessageHash) = Marshaling.deserializeBytes32(
+                    proof,
+                    context.offset
+                );
+                acc = keccak256(
+                    abi.encodePacked("Sequencer message:", acc, inboxSeqNum, newerMessageHash)
+                );
+                inboxSeqNum++;
+            } else {
+                uint256 delayedStart;
+                uint256 delayedEnd;
+                bytes32 delayedEndAcc;
+                (context.offset, delayedStart) = Marshaling.deserializeInt(proof, context.offset);
+                (context.offset, delayedEnd) = Marshaling.deserializeInt(proof, context.offset);
+                (context.offset, delayedEndAcc) = Marshaling.deserializeBytes32(
+                    proof,
+                    context.offset
+                );
+                acc = keccak256(
+                    abi.encodePacked(
+                        "Delayed messages:",
+                        acc,
+                        inboxSeqNum,
+                        delayedStart,
+                        delayedEnd,
+                        delayedEndAcc
+                    )
+                );
+                inboxSeqNum += delayedEnd - delayedStart;
+            }
         }
 
         require(acc == context.sequencerBridge.inboxAccs(seqBatchNum), "WRONG_BATCH_ACC");

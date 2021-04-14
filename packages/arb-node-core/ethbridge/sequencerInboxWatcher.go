@@ -147,21 +147,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 	}
 	ret := make([]inbox.SequencerBatchItem, 0, itemCount)
 	lastAcc := b.BeforeAcc
-	nextSeqNum := new(big.Int).Add(b.BeforeCount, delayedCount)
-	if hasDelayed {
-		// Create batch item to read delayed messages
-		lastSeqNum := new(big.Int).Sub(nextSeqNum, big.NewInt(1))
-		item := inbox.SequencerBatchItem{
-			LastSeqNum:        lastSeqNum,
-			Accumulator:       common.Hash{},
-			TotalDelayedCount: b.TotalDelayedMessagesRead,
-			SequencerMessage:  []byte{},
-		}
-		beforeDelayedCount := new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
-		item.RecomputeAccumulator(lastAcc, beforeDelayedCount, b.DelayedAcc)
-		lastAcc = item.Accumulator
-		ret = append(ret, item)
-	}
+	nextSeqNum := new(big.Int).Set(b.BeforeCount)
 	dataOffset := 0
 	for i := 0; i < len(b.transactionLengths); i++ {
 		// Sequencer batch items
@@ -201,8 +187,18 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 		nextSeqNum.Add(nextSeqNum, big.NewInt(1))
 		ret = append(ret, item)
 	}
-	if nextSeqNum.Cmp(b.AfterCount) != 0 {
-		panic("Computed wrong sequence number")
+	if hasDelayed {
+		// Create batch item to read delayed messages
+		lastSeqNum := new(big.Int).Sub(b.AfterCount, big.NewInt(1))
+		item := inbox.SequencerBatchItem{
+			LastSeqNum:        lastSeqNum,
+			Accumulator:       common.Hash{},
+			TotalDelayedCount: b.TotalDelayedMessagesRead,
+			SequencerMessage:  []byte{},
+		}
+		beforeDelayedCount := new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
+		item.RecomputeAccumulator(lastAcc, beforeDelayedCount, b.DelayedAcc)
+		ret = append(ret, item)
 	}
 	return ret
 }

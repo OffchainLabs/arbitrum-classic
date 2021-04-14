@@ -65,6 +65,26 @@ func (i SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelaye
 	return nil
 }
 
+func NewSequencerBatchItemFromData(data []byte) (SequencerBatchItem, error) {
+	if len(data) < 128 {
+		return SequencerBatchItem{}, errors.New("Not enough data for sequencer batch item")
+	}
+	item := SequencerBatchItem{}
+
+	item.LastSeqNum = new(big.Int).SetBytes(data[:32])
+	data = data[32:]
+
+	copy(item.Accumulator.Bytes(), data[:32])
+	data = data[32:]
+
+	item.TotalDelayedCount = new(big.Int).SetBytes(data[:32])
+	data = data[32:]
+
+	item.SequencerMessage = data
+
+	return item, nil
+}
+
 func (i SequencerBatchItem) ToBytesWithSeqNum() []byte {
 	var data []byte
 	data = append(data, math.U256Bytes(i.LastSeqNum)...)

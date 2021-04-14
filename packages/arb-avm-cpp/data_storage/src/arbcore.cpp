@@ -630,16 +630,23 @@ void ArbCore::operator()() {
         }
         if (message_data_status == MESSAGES_READY) {
             // Reorg might occur while adding messages
-            auto add_status = addMessages(message_data, cache);
-            if (!add_status.ok()) {
-                core_error_string = add_status.ToString();
+            try {
+                auto add_status = addMessages(message_data, cache);
+                if (!add_status.ok()) {
+                    core_error_string = add_status.ToString();
+                    message_data_status = MESSAGES_ERROR;
+                    std::cerr
+                        << "ArbCore addMessages error: " << core_error_string
+                        << "\n";
+                } else {
+                    machine_idle = false;
+                    message_data_status = MESSAGES_SUCCESS;
+                }
+            } catch (const std::exception& e) {
+                core_error_string = e.what();
                 message_data_status = MESSAGES_ERROR;
-                std::cerr << "ArbCore inbox processed stopped with error: "
-                          << core_error_string << "\n";
-                break;
-            } else {
-                machine_idle = false;
-                message_data_status = MESSAGES_SUCCESS;
+                std::cerr << "ArbCore addMessages error: " << core_error_string
+                          << "\n";
             }
         }
 
@@ -916,6 +923,31 @@ rocksdb::Status ArbCore::saveSends(
     return updateSendInsertedCount(tx, send_count);
 }
 
+ValueResult<std::vector<std::vector<unsigned char>>>
+ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
+    ReadSnapshotTransaction tx(data_storage);
+
+    std::vector<unsigned char> first_key_vec;
+    marshal_uint256_t(index, first_key_vec);
+    auto first_key_slice = vecToSlice(first_key_vec);
+    auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
+
+    std::vector<std::vector<unsigned char>> ret;
+    while (it->Valid() && ret.size() < count) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto value_ptr =
+            reinterpret_cast<const unsigned char*>(it->value().data());
+
+        std::vector<unsigned char> bytes(key_ptr, key_ptr + it->key().size());
+        bytes.insert(bytes.end(), value_ptr, value_ptr + it->value().size());
+        ret.push_back(bytes);
+
+        it->Next();
+    }
+
+    return {it->status(), ret};
+}
+
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t index,
     uint256_t count) const {
@@ -1147,6 +1179,12 @@ ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
 ValueResult<uint256_t> ArbCore::getDelayedInboxAcc(uint256_t index) {
     ReadTransaction tx(data_storage);
 
+    return getDelayedInboxAccImpl(tx, index);
+}
+
+ValueResult<uint256_t> ArbCore::getDelayedInboxAccImpl(
+    const ReadTransaction& tx,
+    uint256_t index) {
     std::vector<unsigned char> key_vec;
     marshal_uint256_t(index, key_vec);
     auto key_slice = vecToSlice(key_vec);
@@ -1559,6 +1597,12 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     }
 }
 
+ValueResult<uint256_t> ArbCore::totalDelayedMessagesSequenced() const {
+    ReadTransaction tx(data_storage);
+
+    return totalDelayedMessagesSequencedImpl(tx);
+}
+
 ValueResult<uint256_t> ArbCore::totalDelayedMessagesSequencedImpl(
     const ReadTransaction& tx) const {
     auto it = tx.sequencerBatchItemGetIterator();
@@ -1601,6 +1645,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
     }
 
     std::optional<uint256_t> reorging_to_count;
+    SequencerBatchItem prev_item;
     {
         std::vector<unsigned char> tmp;
         tmp.reserve(32);
@@ -1609,6 +1654,11 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
 
         if (seq_batch_items.size() > 0) {
             uint256_t start = seq_batch_items[0].first.last_sequence_number;
+            bool checking_prev = false;
+            if (start > 0) {
+                start -= 1;
+                checking_prev = true;
+            }
             rocksdb::Slice lower_bound;
             {
                 auto ptr =
@@ -1630,6 +1680,14 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                     seq_batch_it->value().data());
                 auto accumulator =
                     deserializeSequencerBatchItemAccumulator(value_ptr);
+                if (checking_prev) {
+                    if (accumulator != data.previous_batch_acc) {
+                        throw std::runtime_error("prev_batch_acc didn't match");
+                    }
+                    checking_prev = false;
+                    prev_item = item;
+                    continue;
+                }
                 if (accumulator != item.accumulator) {
                     if (duplicate_seq_batch_items == 0 &&
                         item.last_sequence_number != 0) {
@@ -1660,6 +1718,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                     }
                     break;
                 }
+                prev_item = item;
                 duplicate_seq_batch_items++;
                 seq_batch_it->Next();
             }
@@ -1751,10 +1810,36 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
         for (size_t i = duplicate_seq_batch_items; i < seq_batch_items.size();
              i++) {
             auto& item_and_slice = seq_batch_items[i];
-            // TODO validate accumulator
+            auto& item = item_and_slice.first;
+            uint256_t delayed_acc;
+            if (item.total_delayed_count > prev_item.total_delayed_count) {
+                if (item.sequencer_message) {
+                    throw std::runtime_error(
+                        "Attempted to add sequencer batch item with both "
+                        "sequencer message and delayed messages");
+                }
+                auto res = getDelayedInboxAccImpl(tx, item.total_delayed_count);
+                if (!res.status.ok()) {
+                    return res.status;
+                }
+                delayed_acc = res.data;
+            } else if (item.total_delayed_count <
+                       prev_item.total_delayed_count) {
+                throw std::runtime_error(
+                    "Attempted to add sequencer batch item that decreases "
+                    "total messages read");
+            }
+            auto expected_acc = item.computeAccumulator(
+                prev_item.accumulator, prev_item.total_delayed_count,
+                delayed_acc);
+            if (item.accumulator != expected_acc) {
+                throw std::runtime_error(
+                    "Sequencer batch item accumulator didn't match recomputed "
+                    "value");
+            }
+            prev_item = item;
             std::vector<unsigned char> key_vec;
-            marshal_uint256_t(item_and_slice.first.last_sequence_number,
-                              key_vec);
+            marshal_uint256_t(item.last_sequence_number, key_vec);
             auto status = tx.sequencerBatchItemPut(vecToSlice(key_vec),
                                                    item_and_slice.second);
             if (!status.ok()) {

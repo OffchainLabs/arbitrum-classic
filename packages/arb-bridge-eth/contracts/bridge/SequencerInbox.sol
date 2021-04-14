@@ -69,8 +69,7 @@ contract SequencerInbox is ISequencerInbox {
     function forceInclusion(
         uint256 _totalDelayedMessagesRead,
         uint8 kind,
-        uint256 l1BlockNumber,
-        uint256 l1Timestamp,
+        uint256[2] calldata l1BlockAndTimestamp,
         uint256 inboxSeqNum,
         uint256 gasPriceL1,
         address sender,
@@ -82,14 +81,14 @@ contract SequencerInbox is ISequencerInbox {
                 Messages.messageHash(
                     kind,
                     sender,
-                    l1BlockNumber,
-                    l1Timestamp,
+                    l1BlockAndTimestamp[0],
+                    l1BlockAndTimestamp[1],
                     inboxSeqNum,
                     gasPriceL1,
                     messageDataHash
                 );
-            require(l1BlockNumber + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
-            require(l1Timestamp + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
+            require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
+            require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
             bytes32 prevDelayedAcc = 0;
             if (_totalDelayedMessagesRead > 1) {
@@ -103,16 +102,21 @@ contract SequencerInbox is ISequencerInbox {
         }
 
         uint256 startNum = messageCount;
-        (bytes32 beforeSeqAcc, bytes32 acc, uint256 count) =
-            includeDelayedMessages(_totalDelayedMessagesRead);
+        bytes32 beforeAcc = 0;
+        if (inboxAccs.length > 0) {
+            beforeAcc = inboxAccs[inboxAccs.length - 1];
+        }
+
+        (bytes32 delayedAcc, bytes32 acc, uint256 count) =
+            includeDelayedMessages(beforeAcc, startNum, _totalDelayedMessagesRead);
         inboxAccs.push(acc);
         messageCount = count;
         emit DelayedInboxForced(
             startNum,
-            beforeSeqAcc,
+            beforeAcc,
             count,
             _totalDelayedMessagesRead,
-            [acc, getLastDelayedAcc()]
+            [acc, delayedAcc]
         );
     }
 
@@ -121,25 +125,27 @@ contract SequencerInbox is ISequencerInbox {
         uint256[] calldata lengths,
         uint256 l1BlockNumber,
         uint256 timestamp,
-        uint256 _totalDelayedMessagesRead
+        uint256 _totalDelayedMessagesRead,
+        bytes32 afterAcc
     ) external {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 startNum = messageCount;
-        (bytes32 beforeAcc, bytes32 afterAcc) =
+        (bytes32 beforeAcc, bytes32 delayedAcc) =
             addSequencerL2BatchImpl(
                 transactions,
                 lengths,
                 l1BlockNumber,
                 timestamp,
-                _totalDelayedMessagesRead
+                _totalDelayedMessagesRead,
+                afterAcc
             );
         emit SequencerBatchDeliveredFromOrigin(
             startNum,
             beforeAcc,
             messageCount,
             afterAcc,
-            getLastDelayedAcc()
+            delayedAcc
         );
     }
 
@@ -148,16 +154,18 @@ contract SequencerInbox is ISequencerInbox {
         uint256[] calldata lengths,
         uint256 l1BlockNumber,
         uint256 timestamp,
-        uint256 _totalDelayedMessagesRead
+        uint256 _totalDelayedMessagesRead,
+        bytes32 afterAcc
     ) external {
         uint256 startNum = messageCount;
-        (bytes32 beforeAcc, bytes32 afterAcc) =
+        (bytes32 beforeAcc, bytes32 delayedAcc) =
             addSequencerL2BatchImpl(
                 transactions,
                 lengths,
                 l1BlockNumber,
                 timestamp,
-                _totalDelayedMessagesRead
+                _totalDelayedMessagesRead,
+                afterAcc
             );
         emit SequencerBatchDelivered(
             startNum,
@@ -169,7 +177,7 @@ contract SequencerInbox is ISequencerInbox {
             l1BlockNumber,
             timestamp,
             _totalDelayedMessagesRead,
-            getLastDelayedAcc()
+            delayedAcc
         );
     }
 
@@ -178,18 +186,23 @@ contract SequencerInbox is ISequencerInbox {
         uint256[] calldata lengths,
         uint256 l1BlockNumber,
         uint256 timestamp,
-        uint256 _totalDelayedMessagesRead
-    ) private returns (bytes32, bytes32) {
+        uint256 _totalDelayedMessagesRead,
+        bytes32 afterAcc
+    ) private returns (bytes32 beforeAcc, bytes32 delayedAcc) {
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
         require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
         require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
         require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
         require(timestamp <= block.timestamp, "TIME_TOO_NEW");
         require(_totalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
+        require(_totalDelayedMessagesRead >= 1, "MUST_DELAYED_INIT");
 
-        (bytes32 beforeAcc, bytes32 acc, uint256 count) =
-            includeDelayedMessages(_totalDelayedMessagesRead);
+        if (inboxAccs.length > 0) {
+            beforeAcc = inboxAccs[inboxAccs.length - 1];
+        }
 
+        uint256 count = messageCount;
+        bytes32 acc = beforeAcc;
         uint256 offset = 0;
         for (uint256 i = 0; i < lengths.length; i++) {
             if (lengths[i] == 0) {
@@ -219,10 +232,16 @@ contract SequencerInbox is ISequencerInbox {
         inboxAccs.push(acc);
         messageCount = count;
 
-        return (beforeAcc, acc);
+        (delayedAcc, acc, count) = includeDelayedMessages(acc, count, _totalDelayedMessagesRead);
+
+        require(acc == afterAcc, "AFTER_ACC");
     }
 
-    function includeDelayedMessages(uint256 _totalDelayedMessagesRead)
+    function includeDelayedMessages(
+        bytes32 acc,
+        uint256 count,
+        uint256 _totalDelayedMessagesRead
+    )
         private
         returns (
             bytes32,
@@ -230,14 +249,10 @@ contract SequencerInbox is ISequencerInbox {
             uint256
         )
     {
-        bytes32 beforeAcc = 0;
-        if (inboxAccs.length > 0) {
-            beforeAcc = inboxAccs[inboxAccs.length - 1];
-        }
-        bytes32 acc = beforeAcc;
-        uint256 count = messageCount;
+        bytes32 delayedAcc;
         if (_totalDelayedMessagesRead > totalDelayedMessagesRead) {
             require(_totalDelayedMessagesRead <= delayedInbox.messageCount(), "DELAYED_TOO_FAR");
+            delayedAcc = delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1);
             acc = keccak256(
                 abi.encodePacked(
                     "Delayed messages:",
@@ -245,7 +260,7 @@ contract SequencerInbox is ISequencerInbox {
                     count,
                     totalDelayedMessagesRead,
                     _totalDelayedMessagesRead,
-                    delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1)
+                    delayedAcc
                 )
             );
             count += _totalDelayedMessagesRead - totalDelayedMessagesRead;
@@ -255,7 +270,7 @@ contract SequencerInbox is ISequencerInbox {
             count += 1;
             totalDelayedMessagesRead = _totalDelayedMessagesRead;
         }
-        return (beforeAcc, acc, count);
+        return (delayedAcc, acc, count);
     }
 
     function proveSeqBatchMsgCount(

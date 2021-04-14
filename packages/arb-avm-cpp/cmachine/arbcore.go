@@ -140,6 +140,15 @@ func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
+func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
+	result := C.arbCoreGetTotalDelayedMessagesSequenced(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)
@@ -194,6 +203,28 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	}
 
 	return messages, nil
+}
+
+func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int, count *big.Int) ([]inbox.SequencerBatchItem, error) {
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
+
+	result := C.arbCoreGetSequencerBatchItems(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
+	if result.found == 0 {
+		return nil, errors.New("failed to get messages")
+	}
+
+	data := receiveByteSliceArray(result.array)
+	items := make([]inbox.SequencerBatchItem, len(data))
+	for i, slice := range data {
+		var err error
+		items[i], err = inbox.NewSequencerBatchItemFromData(slice)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return items, nil
 }
 
 func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {

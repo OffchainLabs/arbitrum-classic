@@ -3,6 +3,7 @@ package staker
 import (
 	"context"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -19,13 +20,16 @@ type InboxReader struct {
 	db                core.ArbCore
 	firstMessageBlock *big.Int
 	caughtUp          bool
-	caughtUpChan      chan bool
 	caughtUpTarget    *big.Int
 
 	// Only in main thread
 	running    bool
 	cancelFunc context.CancelFunc
 	completed  chan bool
+
+	// Thread safe
+	caughtUpChan         chan bool
+	MessageDeliveryMutex sync.Mutex
 }
 
 func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher, sequencerInbox *ethbridge.SequencerInboxWatcher, db core.ArbCore) (*InboxReader, error) {
@@ -250,6 +254,8 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		}
 		delayedMessages = append(delayedMessages, msg)
 	}
+	ir.MessageDeliveryMutex.Lock()
+	defer ir.MessageDeliveryMutex.Unlock()
 	ok := ir.db.DeliverMessages(sequencerBatchRefs[0].GetBeforeAcc(), seqBatchItems, delayedMessages, nil)
 	if !ok {
 		return errors.New("Failed to deliver messages to ArbCore")

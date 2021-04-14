@@ -266,6 +266,7 @@ class ArbCore {
     ValueResult<uint256_t> logInsertedCount() const;
     ValueResult<uint256_t> sendInsertedCount() const;
     ValueResult<uint256_t> messageEntryInsertedCount() const;
+    ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
                                             ValueCache& valueCache);
@@ -276,8 +277,13 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::vector<std::vector<unsigned char>>> getSequencerBatchItems(
+        uint256_t index,
+        uint256_t count) const;
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<uint256_t> getDelayedInboxAcc(uint256_t index);
+    ValueResult<uint256_t> getDelayedInboxAccImpl(const ReadTransaction& tx,
+                                                  uint256_t index);
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
         uint256_t index2);

@@ -161,6 +161,19 @@ Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr) {
     }
 }
 
+Uint256Result arbCoreGetTotalDelayedMessagesSequenced(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto count_result = arb_core->totalDelayedMessagesSequenced();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr) {
@@ -168,6 +181,24 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
         auto messages = static_cast<const ArbCore*>(arbcore_ptr)
                             ->getMessages(receiveUint256(start_index_ptr),
                                           receiveUint256(count_ptr));
+        if (!messages.status.ok()) {
+            return {{}, false};
+        }
+
+        return {returnCharVectorVector(messages.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
+ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
+                                                   const void* start_index_ptr,
+                                                   const void* count_ptr) {
+    try {
+        auto messages =
+            static_cast<const ArbCore*>(arbcore_ptr)
+                ->getSequencerBatchItems(receiveUint256(start_index_ptr),
+                                         receiveUint256(count_ptr));
         if (!messages.status.ok()) {
             return {{}, false};
         }
