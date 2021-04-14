@@ -44,6 +44,9 @@ task('create-chain', 'Creates a rollup chain').setAction(
       ethers.utils.parseEther('.1'),
       ethers.constants.AddressZero,
       await deployer.getAddress(),
+      '0x9c00AE85e15eBCc158879c43236DA6c89302b475',
+      60,
+      300,
       '0x'
     )
     const receipt = await tx.wait()
