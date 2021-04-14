@@ -292,6 +292,9 @@ class ArbCore {
     ValueResult<size_t> countMatchingBatchAccs(
         std::vector<std::pair<uint256_t, uint256_t>> seq_nums_and_accs) const;
 
+    ValueResult<uint256_t> getDelayedMessagesToSequence(
+        uint256_t max_block_number) const;
+
    private:
     ValueResult<std::vector<RawMessageInfo>> getMessagesImpl(
         const ReadConsistentTransaction& tx,
@@ -319,6 +322,8 @@ class ArbCore {
     rocksdb::Status updateSendProcessedCount(ReadWriteTransaction& tx,
                                              rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryInsertedCountImpl(
+        const ReadTransaction& tx) const;
+    ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
     ValueResult<uint256_t> totalDelayedMessagesSequencedImpl(
         const ReadTransaction& tx) const;

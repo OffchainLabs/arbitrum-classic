@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -46,7 +45,7 @@ type SequencerBatcher struct {
 	sequencerInbox             *ethbridgecontracts.SequencerInbox
 	auth                       *ethbridge.TransactAuth
 
-	sequencer       ethcommon.Address
+	sequencer       common.Address
 	txQueue         chan *types.Transaction
 	newTxFeed       event.Feed
 	latestChainTime inbox.ChainTime
@@ -69,6 +68,7 @@ func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *stak
 	if err != nil {
 		return nil, err
 	}
+
 	sequencer, err := sequencerInbox.Sequencer(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return nil, err
@@ -77,15 +77,20 @@ func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *stak
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	if err != nil {
+		return nil, err
+	}
+
 	batcher := &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
 		client:                     client,
 		delayedMessagesTargetDelay: delayedMessagesTargetDelay,
 		sequencerInbox:             sequencerInbox,
-		auth:                       ethbridge.NewTransactAuth(auth),
+		auth:                       transactAuth,
 
-		sequencer:       sequencer,
+		sequencer:       common.NewAddressFromEth(sequencer),
 		txQueue:         make(chan *types.Transaction, 10),
 		newTxFeed:       event.Feed{},
 		latestChainTime: chainTime,
@@ -144,7 +149,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		return err
 	}
 	l2Message := message.NewSafeL2Message(batch)
-	seqMsg := message.NewInboxMessage(l2Message, common.NewAddressFromEth(b.sequencer), new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime)
+	seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime)
 
 	newBlockSeqNum := new(big.Int).Add(msgCount, big.NewInt(1))
 	newBlockMessage := inbox.InboxMessage{
@@ -193,6 +198,10 @@ func (b *SequencerBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return nil, nil
 }
 
+func (b *SequencerBatcher) Aggregator() *common.Address {
+	return &b.sequencer
+}
+
 func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime) (*big.Int, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
@@ -204,8 +213,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	if err != nil {
 		return nil, err
 	}
-	//newDelayedCount, err := b.db.GetDelayedMessagesToSequence(new(big.Int).Sub(chainTime.BlockNum.AsInt(), b.delayedMessagesTargetDelay))
-	newDelayedCount := big.NewInt(1) // TODO
+	newDelayedCount, err := b.db.GetDelayedMessagesToSequence(new(big.Int).Sub(chainTime.BlockNum.AsInt(), b.delayedMessagesTargetDelay))
 	if err != nil {
 		return nil, err
 	}

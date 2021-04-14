@@ -56,6 +56,14 @@ void* arbCoreMachineMessagesRead(CArbCore* arbcore_ptr) {
     return returnUint256(arb_core->machineMessagesRead());
 }
 
+Uint256Result arbCoreGetDelayedMessagesToSequence(
+    CArbCore* arbcore_ptr,
+    const void* max_block_number) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    return returnUint256Result(arb_core->getDelayedMessagesToSequence(
+        receiveUint256(max_block_number)));
+}
+
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,

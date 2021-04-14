@@ -149,6 +149,16 @@ func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
+func (ac *ArbCore) GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error) {
+	maxBlockData := math.U256Bytes(maxBlock)
+	result := C.arbCoreGetDelayedMessagesToSequence(ac.c, unsafeDataPointer(maxBlockData))
+	if result.found == 0 {
+		return nil, errors.New("failed to load delayed messages to sequence")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) GetSends(startIndex *big.Int, count *big.Int) ([][]byte, error) {
 	startIndexData := math.U256Bytes(startIndex)
 	countData := math.U256Bytes(count)

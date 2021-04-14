@@ -85,7 +85,11 @@ MachineMessage extractMachineMessageImpl(
     const std::vector<unsigned char>::const_iterator end);
 // An efficient version of extractInboxMessage that ignores everything except
 // the block number
-uint256_t extractInboxMessageBlockNumber(
-    const std::vector<unsigned char>& stored_state);
+template <typename Iterator>
+uint256_t extractInboxMessageBlockNumber(Iterator& iter) {
+    iter++;      // skip kind
+    iter += 20;  // skip sender
+    return extractUint256(iter);
+}
 
 #endif /* data_storage_inboxmessage_hpp */

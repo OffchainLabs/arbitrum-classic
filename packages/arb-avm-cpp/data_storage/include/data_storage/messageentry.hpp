@@ -84,6 +84,12 @@ uint256_t deserializeDelayedMessageAccumulator(Iterator& current_iter) {
     return extractUint256(current_iter);
 }
 
+template <typename Iterator>
+uint256_t deserializeDelayedMessageBlockNumber(Iterator& current_iter) {
+    current_iter += 32;
+    return extractInboxMessageBlockNumber(current_iter);
+}
+
 std::vector<unsigned char> serializeDelayedMessage(const DelayedMessage& item);
 
 #endif /* data_storage_messageentry_hpp */

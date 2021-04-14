@@ -1272,6 +1272,45 @@ ValueResult<size_t> ArbCore::countMatchingBatchAccs(
     return {rocksdb::Status::OK(), matching};
 }
 
+ValueResult<uint256_t> ArbCore::getDelayedMessagesToSequence(
+    uint256_t max_block_number) const {
+    ReadSnapshotTransaction tx(data_storage);
+
+    auto total_delayed_seq_res = totalDelayedMessagesSequencedImpl(tx);
+    if (!total_delayed_seq_res.status.ok()) {
+        return {total_delayed_seq_res.status, 0};
+    }
+
+    auto total_delayed_res = delayedMessageEntryInsertedCountImpl(tx);
+    if (!total_delayed_res.status.ok()) {
+        return {total_delayed_res.status, 0};
+    }
+
+    // Perform a binary search to find the last matching delayed message
+    // After the search, low should be just after the last matching message
+    auto low = total_delayed_seq_res.data;
+    auto high = total_delayed_res.data;
+    while (low != high) {
+        auto mid = (low + high) / 2;
+        std::vector<unsigned char> mid_vec;
+        marshal_uint256_t(mid, mid_vec);
+        auto mid_res = tx.delayedMessageGetVector(vecToSlice(mid_vec));
+        if (!mid_res.status.ok()) {
+            return {mid_res.status, 0};
+        }
+        auto mid_data_it = mid_res.data.begin();
+        auto mid_block = deserializeDelayedMessageAccumulator(mid_data_it);
+
+        if (mid_block > max_block_number) {
+            high = mid;
+        } else {
+            low = mid + 1;
+        }
+    }
+
+    return {rocksdb::Status::OK(), low};
+}
+
 std::unique_ptr<Machine> ArbCore::getLastMachine() {
     std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
     return std::make_unique<Machine>(*last_machine);
@@ -1599,6 +1638,19 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     const ReadTransaction& tx) const {
     auto it = tx.sequencerBatchItemGetIterator();
+    it->SeekToLast();
+    if (it->Valid()) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto seq_num = extractUint256(key_ptr);
+        return {rocksdb::Status::OK(), seq_num + 1};
+    } else {
+        return {it->status(), 0};
+    }
+}
+
+ValueResult<uint256_t> ArbCore::delayedMessageEntryInsertedCountImpl(
+    const ReadTransaction& tx) const {
+    auto it = tx.delayedMessageGetIterator();
     it->SeekToLast();
     if (it->Valid()) {
         auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());

@@ -69,6 +69,8 @@ int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
                            void* ret1,
                            void* ret2);
 int arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr, ByteSlice data);
+Uint256Result arbCoreGetDelayedMessagesToSequence(CArbCore* arbcore_ptr,
+                                                  const void* max_block_number);
 
 Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
                                            const void* index_ptr);

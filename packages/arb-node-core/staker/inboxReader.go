@@ -191,7 +191,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					}
 				}
 			}
-			if ir.healthChan != nil {
+			if ir.healthChan != nil && ir.caughtUpTarget != nil {
 				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
 			}
 			if len(sequencerBatches) < 5 {
