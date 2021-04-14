@@ -142,6 +142,7 @@ func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
 		Kind:        message.EndOfBlockType,
 		Sender:      common.Address{},
 		InboxSeqNum: seqNum,
+		GasPrice:    big.NewInt(0),
 		Data:        []byte{},
 		ChainTime: inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
@@ -176,6 +177,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 				Kind:        3,
 				Sender:      b.Sequencer,
 				InboxSeqNum: nextSeqNum,
+				GasPrice:    big.NewInt(0),
 				Data:        b.transactionsData[dataOffset:(dataOffset + length)],
 				ChainTime:   b.ChainTime,
 			}
