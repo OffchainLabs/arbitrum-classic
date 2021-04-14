@@ -17,7 +17,8 @@
  */
 
 /**
- * @title Minimum expected interface for L2 custom token (see TestArbCustomToken.sol for an example implementation). Note that you'll *probably* also want a withdraw function, but it isn't strictly required.
+ * @title Minimum expected interface for L2 token that interacts with the L2 token bridge (this is the interface necessary
+ * for a custom token that interacts with the bridge, see TestArbCustomToken.sol for an example implementation).
  */
 pragma solidity ^0.6.11;
 
