@@ -17,9 +17,16 @@
 package dev
 
 import (
+	"context"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -29,10 +36,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"testing"
 )
 
 func TestFees(t *testing.T) {
@@ -48,6 +51,10 @@ func TestFees(t *testing.T) {
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)
+
+	privkey2, err := crypto.GenerateKey()
+	test.FailIfError(t, err)
+	aggAuth := bind.NewKeyedTransactor(privkey2)
 
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(10),
@@ -69,7 +76,7 @@ func TestFees(t *testing.T) {
 		CongestionFeeRecipient: congestionFeeRecipient,
 	}
 
-	aggInit := message.DefaultAggConfig{Aggregator: common.RandAddress()}
+	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(aggAuth.From)}
 	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.NewAddressFromEth(auth.From), []message.ChainConfigOption{feeConfigInit, aggInit})
 	defer monitor.Close()
 	defer db.Close()
@@ -96,6 +103,12 @@ func TestFees(t *testing.T) {
 	test.FailIfError(t, err)
 	arbGasInfo, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, client)
 	test.FailIfError(t, err)
+	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	feeCollector := common.RandAddress()
+
+	_, feeCollectorErr := arbAggregator.SetFeeCollector(aggAuth, aggInit.Aggregator.ToEthAddress(), feeCollector.ToEthAddress())
 
 	_, err = arbOwner.SetFairGasPriceSender(auth, aggInit.Aggregator.ToEthAddress())
 	test.FailIfError(t, err)
@@ -107,9 +120,12 @@ func TestFees(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	totalPaid := big.NewInt(0)
 	for i := 0; i < 5; i++ {
-		_, err = arbOwner.GiveOwnership(auth, auth.From)
+		tx, err := arbOwner.GiveOwnership(auth, auth.From)
 		test.FailIfError(t, err)
+		paid := checkFees(t, backend, tx)
+		totalPaid = totalPaid.Add(totalPaid, paid)
 	}
 
 	networkDest, congestionDest, err := arbOwner.GetFeeRecipients(&bind.CallOpts{})
@@ -147,11 +163,48 @@ func TestFees(t *testing.T) {
 	_, tx, _, err := arbostestcontracts.DeploySimple(auth, client)
 	test.FailIfError(t, err)
 
-	checkFees(t, backend, tx)
+	paid := checkFees(t, backend, tx)
+	totalPaid = totalPaid.Add(totalPaid, paid)
+
+	netFeeBal, err := client.BalanceAt(context.Background(), netFeeRecipient.ToEthAddress(), nil)
+	test.FailIfError(t, err)
+
+	aggBal, err := client.BalanceAt(context.Background(), aggInit.Aggregator.ToEthAddress(), nil)
+	test.FailIfError(t, err)
+
+	feeCollectorBal, err := client.BalanceAt(context.Background(), feeCollector.ToEthAddress(), nil)
+	test.FailIfError(t, err)
+
+	totalReceived := new(big.Int).Add(netFeeBal, aggBal)
+	totalReceived = totalReceived.Add(totalReceived, feeCollectorBal)
+	if totalReceived.Cmp(totalPaid) != 0 {
+		t.Error("amount paid different than amount received")
+	}
+
+	if arbosVersion <= 4 {
+		if aggBal.Cmp(big.NewInt(0)) <= 0 {
+			t.Error("aggregator should have nonzero balance")
+		}
+		if feeCollectorBal.Cmp(big.NewInt(0)) != 0 {
+			t.Error("fee collector should have 0 balance")
+		}
+	} else {
+		test.FailIfError(t, feeCollectorErr)
+		if aggBal.Cmp(big.NewInt(0)) != 0 {
+			t.Error("aggregator should have 0 balance")
+		}
+		if feeCollectorBal.Cmp(big.NewInt(0)) <= 0 {
+			t.Error("fee collector should have nonzero balance")
+		}
+	}
+	t.Log("Paid", totalPaid)
+	t.Log("Net bal", netFeeBal)
+	t.Log("Agg bal", aggBal)
+	t.Log("Fee col bal", feeCollectorBal)
 }
 
-func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) {
+func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
-	t.Log(arbRes.FeeStats)
+	return arbRes.FeeStats.Paid.Total()
 }
