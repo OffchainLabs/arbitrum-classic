@@ -196,6 +196,7 @@ contract SequencerInbox is ISequencerInbox {
         require(timestamp <= block.timestamp, "TIME_TOO_NEW");
         require(_totalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         require(_totalDelayedMessagesRead >= 1, "MUST_DELAYED_INIT");
+        require(totalDelayedMessagesRead >= 1 || lengths.length == 0, "MUST_DELAYED_INIT_START");
 
         if (inboxAccs.length > 0) {
             beforeAcc = inboxAccs[inboxAccs.length - 1];
