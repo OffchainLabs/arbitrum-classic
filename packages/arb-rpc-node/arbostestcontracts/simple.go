@@ -27,7 +27,7 @@ var (
 )
 
 // SimpleABI is the input ABI used to generate the binding from.
-const SimpleABI = "[{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
+const SimpleABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
 // SimpleFuncSigs maps the 4-byte function signature to its string representation.
 var SimpleFuncSigs = map[string]string{
@@ -39,7 +39,7 @@ var SimpleFuncSigs = map[string]string{
 }
 
 // SimpleBin is the compiled bytecode used for deploying new contracts.
-var SimpleBin = "0x608060405234801561001057600080fd5b506101de806100206000396000f3fe60806040526004361061004e5760003560e01c8063267c4ae4146100955780633bccbbc9146100bc5780639436bc1f146100d15780639b7c9da3146100e6578063ae0aba8c1461011057610090565b36610090576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100a157600080fd5b506100aa610118565b60408051918252519081900360200190f35b3480156100c857600080fd5b5061008e61011d565b3480156100dd57600080fd5b5061008e61015b565b3480156100f257600080fd5b5061008e6004803603602081101561010957600080fd5b503561015d565b61008e61015b565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d806000811461019d576040519150601f19603f3d011682016040523d82523d6000602084013e6101a2565b606091505b5050505056fea26469706673582212203fd4cf537d89fe44d609541d3dbe6ab55cb6cf4366dbdd2c259902863f9d8c0d64736f6c634300060c0033"
+var SimpleBin = "0x608060405234801561001057600080fd5b5061020d806100206000396000f3fe60806040526004361061004e5760003560e01c8063267c4ae4146100955780633bccbbc9146100af5780639436bc1f146100c45780639b7c9da3146100d9578063ae0aba8c1461010357610090565b36610090576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b61009d61010b565b60408051918252519081900360200190f35b3480156100bb57600080fd5b5061008e61014c565b3480156100d057600080fd5b5061008e61018a565b3480156100e557600080fd5b5061008e600480360360208110156100fc57600080fd5b503561018c565b61008e61018a565b6005600090815560408051600f815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d80600081146101cc576040519150601f19603f3d011682016040523d82523d6000602084013e6101d1565b606091505b5050505056fea26469706673582212205926cd2115885e181645f8e0392de30d851f2ec19a11cc92c584326351ba7fdb64736f6c634300060c0033"
 
 // DeploySimple deploys a new Ethereum contract, binding an instance of Simple to it.
 func DeploySimple(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Simple, error) {
@@ -220,21 +220,21 @@ func (_Simple *SimpleTransactorSession) AcceptPayment() (*types.Transaction, err
 
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
-// Solidity: function exists() returns(uint256)
+// Solidity: function exists() payable returns(uint256)
 func (_Simple *SimpleTransactor) Exists(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _Simple.contract.Transact(opts, "exists")
 }
 
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
-// Solidity: function exists() returns(uint256)
+// Solidity: function exists() payable returns(uint256)
 func (_Simple *SimpleSession) Exists() (*types.Transaction, error) {
 	return _Simple.Contract.Exists(&_Simple.TransactOpts)
 }
 
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
-// Solidity: function exists() returns(uint256)
+// Solidity: function exists() payable returns(uint256)
 func (_Simple *SimpleTransactorSession) Exists() (*types.Transaction, error) {
 	return _Simple.Contract.Exists(&_Simple.TransactOpts)
 }
@@ -321,4 +321,138 @@ func (_Simple *SimpleSession) Receive() (*types.Transaction, error) {
 // Solidity: receive() payable returns()
 func (_Simple *SimpleTransactorSession) Receive() (*types.Transaction, error) {
 	return _Simple.Contract.Receive(&_Simple.TransactOpts)
+}
+
+// SimpleTestEventIterator is returned from FilterTestEvent and is used to iterate over the raw logs and unpacked data for TestEvent events raised by the Simple contract.
+type SimpleTestEventIterator struct {
+	Event *SimpleTestEvent // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *SimpleTestEventIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(SimpleTestEvent)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(SimpleTestEvent)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *SimpleTestEventIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *SimpleTestEventIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// SimpleTestEvent represents a TestEvent event raised by the Simple contract.
+type SimpleTestEvent struct {
+	Value *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterTestEvent is a free log retrieval operation binding the contract event 0x1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414.
+//
+// Solidity: event TestEvent(uint256 value)
+func (_Simple *SimpleFilterer) FilterTestEvent(opts *bind.FilterOpts) (*SimpleTestEventIterator, error) {
+
+	logs, sub, err := _Simple.contract.FilterLogs(opts, "TestEvent")
+	if err != nil {
+		return nil, err
+	}
+	return &SimpleTestEventIterator{contract: _Simple.contract, event: "TestEvent", logs: logs, sub: sub}, nil
+}
+
+// WatchTestEvent is a free log subscription operation binding the contract event 0x1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414.
+//
+// Solidity: event TestEvent(uint256 value)
+func (_Simple *SimpleFilterer) WatchTestEvent(opts *bind.WatchOpts, sink chan<- *SimpleTestEvent) (event.Subscription, error) {
+
+	logs, sub, err := _Simple.contract.WatchLogs(opts, "TestEvent")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(SimpleTestEvent)
+				if err := _Simple.contract.UnpackLog(event, "TestEvent", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTestEvent is a log parse operation binding the contract event 0x1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414.
+//
+// Solidity: event TestEvent(uint256 value)
+func (_Simple *SimpleFilterer) ParseTestEvent(log types.Log) (*SimpleTestEvent, error) {
+	event := new(SimpleTestEvent)
+	if err := _Simple.contract.UnpackLog(event, "TestEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
