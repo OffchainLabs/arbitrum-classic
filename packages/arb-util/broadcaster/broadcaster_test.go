@@ -3,17 +3,60 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"errors"
 	"math/big"
 	"net"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 )
+
+// This is used to reverse the slice for the sequence number field
+// so that it will be in correct byte order when creating a new big.Int out of it
+func reverseSlice(data interface{}) {
+	value := reflect.ValueOf(data)
+	if value.Kind() != reflect.Slice {
+		panic(errors.New("data must be a slice type"))
+	}
+	valueLen := value.Len()
+	for i := 0; i <= int((valueLen-1)/2); i++ {
+		reverseIndex := valueLen - 1 - i
+		tmp := value.Index(reverseIndex).Interface()
+		value.Index(reverseIndex).Set(value.Index(i))
+		value.Index(i).Set(reflect.ValueOf(tmp))
+	}
+}
+
+func setSequenceNumber(data []byte, sequenceNumber *big.Int) []byte {
+	seqNumOffset := 85
+	seqNumEnd := 117
+	prefixData := data[:seqNumOffset]
+	postfixData := data[seqNumEnd:]
+	sequenceNumberBytes := sequenceNumber.Bytes()
+	sequenceNumberByteField := make([]byte, 32)
+	copy(sequenceNumberByteField, sequenceNumberBytes)
+	reverseSlice(sequenceNumberByteField)
+	sequenceNumberWithPrefix := append(prefixData, sequenceNumberByteField...)
+	completeDataWithSequenceNumberSet := append(sequenceNumberWithPrefix, postfixData...)
+	return completeDataWithSequenceNumberSet
+}
+
+func sequencedMessages() func() (*big.Int, []byte, *big.Int) {
+	sequenceNumber := big.NewInt(41)
+	return func() (*big.Int, []byte, *big.Int) {
+		sequenceNumber = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
+		inboxMessage := setSequenceNumber(common.RandBytes(200), sequenceNumber)
+		beforeAccumulator := common.RandBigInt()
+		signature := common.RandBigInt()
+		return beforeAccumulator, inboxMessage, signature
+	}
+}
 
 func TestBroadcaster(t *testing.T) {
 	broadcasterSettings := Settings{
@@ -31,28 +74,19 @@ func TestBroadcaster(t *testing.T) {
 	defer b.Stop()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go broadcastWait(t, i, &wg)
 	}
-	ib := inbox.InboxMessage{
-		Kind: 1,
-		Sender: common.HexToAddress("0x12345678123456781234567812345678"),
-		InboxSeqNum: big.NewInt(42),
-		GasPrice: big.NewInt(43),
-		Data: []byte{4, 2},
-		ChainTime: inbox.NewRandomChainTime(),
-	}
 
-	messages := []*inbox.InboxMessage{
-		&ib,
-	}
-	err = b.Broadcast(messages)
+	newBroadcastMessage := sequencedMessages()
+
+	err = b.Broadcast(newBroadcastMessage())
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(2 * time.Second)
-	err = b.Broadcast(messages)
+	err = b.Broadcast(newBroadcastMessage())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +123,6 @@ func broadcastWait(t *testing.T, i int, wg *sync.WaitGroup) {
 			t.Errorf("Unable to marshal message: %v\n", err)
 			return
 		}
-		// println(res.ID)
 		t.Logf("%d receive: %v，type: %v\n", i, res, op)
 	}
 
