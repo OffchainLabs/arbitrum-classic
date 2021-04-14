@@ -131,6 +131,7 @@ func TestUpgrade(t *testing.T) {
 		chunks[len(chunks)-1] += insn
 	}
 
+	auth.GasLimit = 10000000000
 	_, err = arbOwner.StartCodeUpload(auth)
 	test.FailIfError(t, err)
 
@@ -149,6 +150,7 @@ func TestUpgrade(t *testing.T) {
 
 	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth, codeHash)
 	test.FailIfError(t, err)
+	auth.GasLimit = 0
 
 	_, err = simpleCon.Exists(auth)
 	test.FailIfError(t, err)
