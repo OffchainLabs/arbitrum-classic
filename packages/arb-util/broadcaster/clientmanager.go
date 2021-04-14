@@ -3,6 +3,7 @@ package broadcaster
 import (
 	"bytes"
 	"encoding/json"
+	"math/big"
 	"math/rand"
 	"net"
 	"sort"
@@ -17,13 +18,13 @@ import (
 
 // ClientManager manages client connections
 type ClientManager struct {
-	mu         sync.RWMutex
-	seq        uint
-	clientList []*ClientConnection
-	clientMap  map[string]*ClientConnection
-
-	pool *gopool.Pool
-	out  chan []byte
+	mu                sync.RWMutex
+	seq               uint
+	clientList        []*ClientConnection
+	clientMap         map[string]*ClientConnection
+	broadcastMessages []*BroadcastInboxMessage
+	pool              *gopool.Pool
+	out               chan []byte
 }
 
 func NewClientManager(pool *gopool.Pool) *ClientManager {
@@ -67,8 +68,19 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Unlock()
 }
 
-// Broadcast sends message to all alive clients.
-func (cm *ClientManager) Broadcast(messages []*inbox.InboxMessage) error {
+// This clears out everything prior
+func (cm *ClientManager) SyncSequence(fromSequenceNumber *big.Int) {
+	broadcastMessages := make([]*BroadcastInboxMessage, 0)
+	for i := range cm.broadcastMessages {
+		if cm.broadcastMessages[i].SeqNum.CmpAbs(fromSequenceNumber) > 0 {
+			broadcastMessages = append(broadcastMessages, cm.broadcastMessages[i])
+		}
+	}
+	cm.broadcastMessages = broadcastMessages
+}
+
+// Broadcast sends message to all clients.
+func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []byte, signature *big.Int) error {
 	var buf bytes.Buffer
 
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
@@ -76,13 +88,16 @@ func (cm *ClientManager) Broadcast(messages []*inbox.InboxMessage) error {
 
 	var broadcastMessages []*BroadcastInboxMessage
 
-	// copy data from the Inbox messages to our outbound format
-	// for now only broadcast the sequence number
-	for _, message := range messages {
-		ibMsg := BroadcastInboxMessage{}
-		ibMsg.InboxSeqNum = message.InboxSeqNum
-		broadcastMessages = append(broadcastMessages, &ibMsg)
-	}
+	ibMsg := BroadcastInboxMessage{}
+	ibMsg.BeforeAccumulator = beforeAccumulator
+	ibMsg.InboxMessage = inboxMessage
+	ibMsg.Signature = signature
+	ibMsg.SeqNum = inbox.GetSequenceNumber(inboxMessage)
+
+	broadcastMessages = append(broadcastMessages, &ibMsg)
+
+	// also add this to our global list, broadcasted to clients when connecting
+	cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
 
 	bm := BroadcastMessage{}
 	bm.Messages = broadcastMessages
