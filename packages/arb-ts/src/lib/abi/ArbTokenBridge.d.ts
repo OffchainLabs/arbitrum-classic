@@ -30,11 +30,11 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'initialize(address,address)': FunctionFragment
     'isCustomToken(address)': FunctionFragment
     'l1Pair()': FunctionFragment
-    'migrate(address,address,uint256)': FunctionFragment
+    'migrate(address,address,address,uint256)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'mintFromL1(address,address,address,uint256,bytes,bytes)': FunctionFragment
     'templateERC20()': FunctionFragment
-    'withdraw(address,address,uint256)': FunctionFragment
+    'withdraw(address,address,address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -65,7 +65,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'l1Pair', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'migrate',
-    values: [string, string, BigNumberish]
+    values: [string, string, string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'mintAndCall',
@@ -81,7 +81,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'withdraw',
-    values: [string, string, BigNumberish]
+    values: [string, string, string, BigNumberish]
   ): string
 
   decodeFunctionResult(
@@ -218,14 +218,16 @@ export class ArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'migrate(address,address,uint256)'(
+    'migrate(address,address,address,uint256)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -274,13 +276,15 @@ export class ArbTokenBridge extends Contract {
 
     withdraw(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'withdraw(address,address,uint256)'(
+    'withdraw(address,address,address,uint256)'(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -355,14 +359,16 @@ export class ArbTokenBridge extends Contract {
 
   migrate(
     l1ERC20: string,
-    account: string,
+    sender: string,
+    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'migrate(address,address,uint256)'(
+  'migrate(address,address,address,uint256)'(
     l1ERC20: string,
-    account: string,
+    sender: string,
+    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -411,13 +417,15 @@ export class ArbTokenBridge extends Contract {
 
   withdraw(
     l1ERC20: string,
+    sender: string,
     destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'withdraw(address,address,uint256)'(
+  'withdraw(address,address,address,uint256)'(
     l1ERC20: string,
+    sender: string,
     destination: string,
     amount: BigNumberish,
     overrides?: Overrides
@@ -492,14 +500,16 @@ export class ArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'migrate(address,address,uint256)'(
+    'migrate(address,address,address,uint256)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
@@ -548,13 +558,15 @@ export class ArbTokenBridge extends Contract {
 
     withdraw(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'withdraw(address,address,uint256)'(
+    'withdraw(address,address,address,uint256)'(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: CallOverrides
@@ -676,14 +688,16 @@ export class ArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'migrate(address,address,uint256)'(
+    'migrate(address,address,address,uint256)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -732,13 +746,15 @@ export class ArbTokenBridge extends Contract {
 
     withdraw(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'withdraw(address,address,uint256)'(
+    'withdraw(address,address,address,uint256)'(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -820,14 +836,16 @@ export class ArbTokenBridge extends Contract {
 
     migrate(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'migrate(address,address,uint256)'(
+    'migrate(address,address,address,uint256)'(
       l1ERC20: string,
-      account: string,
+      sender: string,
+      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -876,13 +894,15 @@ export class ArbTokenBridge extends Contract {
 
     withdraw(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'withdraw(address,address,uint256)'(
+    'withdraw(address,address,address,uint256)'(
       l1ERC20: string,
+      sender: string,
       destination: string,
       amount: BigNumberish,
       overrides?: Overrides

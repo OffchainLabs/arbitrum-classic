@@ -16,10 +16,25 @@
  * limitations under the License.
  */
 
+/**
+ * @title Minimum expected interface for L2 token that interacts with the L2 token bridge (this is the interface necessary
+ * for a custom token that interacts with the bridge, see TestArbCustomToken.sol for an example implementation).
+ */
 pragma solidity ^0.6.11;
 
 interface IArbToken {
+    /**
+     * @notice should increase token supply by amount, and should (probably) only be callable by the L1 bridge.
+     */
     function bridgeMint(address account, uint256 amount) external;
 
-    function bridgeInit(address _l1Address, bytes memory _data) external returns (bool);
+    /**
+     * @notice should decrease token supply by amount, and should (probably) only be callable by the L1 bridge.
+     */
+    function bridgeBurn(address account, uint256 amount) external;
+
+    /**
+     * @notice withdraw user tokens from L2 to the L1
+     */
+    function withdraw(address account, uint256 amount) external;
 }

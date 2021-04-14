@@ -28,6 +28,7 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     'approveAndCall(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
     'bridge()': FunctionFragment
+    'bridgeBurn(address,uint256)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
@@ -66,6 +67,10 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'bridgeBurn',
+    values: [string, BigNumberish]
+  ): string
   encodeFunctionData(
     functionFragment: 'bridgeMint',
     values: [string, BigNumberish]
@@ -144,6 +149,7 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
   decodeFunctionResult(
@@ -258,6 +264,18 @@ export class TestArbCustomToken extends Contract {
     bridge(overrides?: CallOverrides): Promise<[string]>
 
     'bridge()'(overrides?: CallOverrides): Promise<[string]>
+
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     bridgeMint(
       account: string,
@@ -493,6 +511,18 @@ export class TestArbCustomToken extends Contract {
 
   'bridge()'(overrides?: CallOverrides): Promise<string>
 
+  bridgeBurn(
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'bridgeBurn(address,uint256)'(
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   bridgeMint(
     account: string,
     amount: BigNumberish,
@@ -724,6 +754,18 @@ export class TestArbCustomToken extends Contract {
     bridge(overrides?: CallOverrides): Promise<string>
 
     'bridge()'(overrides?: CallOverrides): Promise<string>
+
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     bridgeMint(
       account: string,
@@ -968,6 +1010,18 @@ export class TestArbCustomToken extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     bridgeMint(
       account: string,
       amount: BigNumberish,
@@ -1205,6 +1259,18 @@ export class TestArbCustomToken extends Contract {
     bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
 
     bridgeMint(
       account: string,

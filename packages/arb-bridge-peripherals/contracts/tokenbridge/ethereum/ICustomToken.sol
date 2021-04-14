@@ -18,7 +18,13 @@
 
 pragma solidity ^0.6.11;
 
+/**
+ * @title Minimum expected interface for L1 custom token (see TestCustomTokenL1.sol for an example implementation)
+ */
 interface ICustomToken {
+    /**
+     * @notice Should make an external call to EthERC20Bridge.registerCustomL2Token
+     */
     function registerTokenOnL2(
         address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
