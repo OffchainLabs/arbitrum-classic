@@ -24,6 +24,10 @@ func NewBufferFromReader(rd io.Reader) (*Buffer, error) {
 	return &Buffer{data: data}, nil
 }
 
+func NewBuffer(data []byte) *Buffer {
+	return &Buffer{data: data}
+}
+
 func (b *Buffer) TypeCode() uint8 {
 	return TypeCodeBuffer
 }

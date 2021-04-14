@@ -27,16 +27,17 @@ var (
 )
 
 // ArbOwnerABI is the input ABI used to generate the binding from.
-const ArbOwnerABI = "[{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeRecipients\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"netFeeRecipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"congestionFeeRecipient\",\"type\":\"address\"}],\"name\":\"setFeeRecipients\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setFeesEnabled\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"speedLimitPerBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPoolMax\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxTxGasLimit\",\"type\":\"uint256\"}],\"name\":\"setGasAccountingParams\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"blocksPerSend\",\"type\":\"uint256\"}],\"name\":\"setSecondsPerSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbOwnerABI = "[{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"requiredCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeRecipients\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"netFeeRecipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"congestionFeeRecipient\",\"type\":\"address\"}],\"name\":\"setFeeRecipients\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setFeesEnabled\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"speedLimitPerBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPoolMax\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxTxGasLimit\",\"type\":\"uint256\"}],\"name\":\"setGasAccountingParams\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"blocksPerSend\",\"type\":\"uint256\"}],\"name\":\"setSecondsPerSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbOwnerFuncSigs maps the 4-byte function signature to its string representation.
 var ArbOwnerFuncSigs = map[string]string{
 	"c3bf429d": "addToReserveFunds()",
 	"f589445c": "bindAddressToPluggable(address,uint256)",
 	"56331f75": "continueCodeUpload(bytes)",
-	"fbb53a17": "finishCodeUploadAsArbosUpgrade()",
+	"10e7af17": "finishCodeUploadAsArbosUpgrade(bytes32)",
 	"f4f4e136": "finishCodeUploadAsPluggable(uint256,bool)",
 	"08df6923": "getFeeRecipients()",
+	"c060180d": "getUploadedCodeHash()",
 	"e3a0a148": "giveOwnership(address)",
 	"ba7f4cc6": "setFairGasPriceSender(address)",
 	"c6cabb40": "setFeeRecipients(address,address)",
@@ -220,6 +221,37 @@ func (_ArbOwner *ArbOwnerCallerSession) GetFeeRecipients() (common.Address, comm
 	return _ArbOwner.Contract.GetFeeRecipients(&_ArbOwner.CallOpts)
 }
 
+// GetUploadedCodeHash is a free data retrieval call binding the contract method 0xc060180d.
+//
+// Solidity: function getUploadedCodeHash() view returns(bytes32)
+func (_ArbOwner *ArbOwnerCaller) GetUploadedCodeHash(opts *bind.CallOpts) ([32]byte, error) {
+	var out []interface{}
+	err := _ArbOwner.contract.Call(opts, &out, "getUploadedCodeHash")
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// GetUploadedCodeHash is a free data retrieval call binding the contract method 0xc060180d.
+//
+// Solidity: function getUploadedCodeHash() view returns(bytes32)
+func (_ArbOwner *ArbOwnerSession) GetUploadedCodeHash() ([32]byte, error) {
+	return _ArbOwner.Contract.GetUploadedCodeHash(&_ArbOwner.CallOpts)
+}
+
+// GetUploadedCodeHash is a free data retrieval call binding the contract method 0xc060180d.
+//
+// Solidity: function getUploadedCodeHash() view returns(bytes32)
+func (_ArbOwner *ArbOwnerCallerSession) GetUploadedCodeHash() ([32]byte, error) {
+	return _ArbOwner.Contract.GetUploadedCodeHash(&_ArbOwner.CallOpts)
+}
+
 // AddToReserveFunds is a paid mutator transaction binding the contract method 0xc3bf429d.
 //
 // Solidity: function addToReserveFunds() payable returns()
@@ -283,25 +315,25 @@ func (_ArbOwner *ArbOwnerTransactorSession) ContinueCodeUpload(marshalledCode []
 	return _ArbOwner.Contract.ContinueCodeUpload(&_ArbOwner.TransactOpts, marshalledCode)
 }
 
-// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0xfbb53a17.
+// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0x10e7af17.
 //
-// Solidity: function finishCodeUploadAsArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerTransactor) FinishCodeUploadAsArbosUpgrade(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ArbOwner.contract.Transact(opts, "finishCodeUploadAsArbosUpgrade")
+// Solidity: function finishCodeUploadAsArbosUpgrade(bytes32 requiredCodeHash) returns()
+func (_ArbOwner *ArbOwnerTransactor) FinishCodeUploadAsArbosUpgrade(opts *bind.TransactOpts, requiredCodeHash [32]byte) (*types.Transaction, error) {
+	return _ArbOwner.contract.Transact(opts, "finishCodeUploadAsArbosUpgrade", requiredCodeHash)
 }
 
-// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0xfbb53a17.
+// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0x10e7af17.
 //
-// Solidity: function finishCodeUploadAsArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerSession) FinishCodeUploadAsArbosUpgrade() (*types.Transaction, error) {
-	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts)
+// Solidity: function finishCodeUploadAsArbosUpgrade(bytes32 requiredCodeHash) returns()
+func (_ArbOwner *ArbOwnerSession) FinishCodeUploadAsArbosUpgrade(requiredCodeHash [32]byte) (*types.Transaction, error) {
+	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts, requiredCodeHash)
 }
 
-// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0xfbb53a17.
+// FinishCodeUploadAsArbosUpgrade is a paid mutator transaction binding the contract method 0x10e7af17.
 //
-// Solidity: function finishCodeUploadAsArbosUpgrade() returns()
-func (_ArbOwner *ArbOwnerTransactorSession) FinishCodeUploadAsArbosUpgrade() (*types.Transaction, error) {
-	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts)
+// Solidity: function finishCodeUploadAsArbosUpgrade(bytes32 requiredCodeHash) returns()
+func (_ArbOwner *ArbOwnerTransactorSession) FinishCodeUploadAsArbosUpgrade(requiredCodeHash [32]byte) (*types.Transaction, error) {
+	return _ArbOwner.Contract.FinishCodeUploadAsArbosUpgrade(&_ArbOwner.TransactOpts, requiredCodeHash)
 }
 
 // FinishCodeUploadAsPluggable is a paid mutator transaction binding the contract method 0xf4f4e136.
