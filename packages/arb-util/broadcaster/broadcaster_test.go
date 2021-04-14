@@ -25,7 +25,7 @@ func reverseSlice(data interface{}) {
 		panic(errors.New("data must be a slice type"))
 	}
 	valueLen := value.Len()
-	for i := 0; i <= int((valueLen-1)/2); i++ {
+	for i := 0; i <= (valueLen-1)/2; i++ {
 		reverseIndex := valueLen - 1 - i
 		tmp := value.Index(reverseIndex).Interface()
 		value.Index(reverseIndex).Set(value.Index(i))
@@ -35,7 +35,7 @@ func reverseSlice(data interface{}) {
 
 func setSequenceNumber(data []byte, sequenceNumber *big.Int) []byte {
 	seqNumOffset := 85
-	seqNumEnd := 117
+	seqNumEnd := seqNumOffset + 32
 	prefixData := data[:seqNumOffset]
 	postfixData := data[seqNumEnd:]
 	sequenceNumberBytes := sequenceNumber.Bytes()
@@ -118,7 +118,7 @@ func broadcastWait(t *testing.T, i int, wg *sync.WaitGroup) {
 		return
 	} else {
 		res := Response{}
-		err = json.Unmarshal([]byte(msg), &res)
+		err = json.Unmarshal(msg, &res)
 		if err != nil {
 			t.Errorf("Unable to marshal message: %v\n", err)
 			return
