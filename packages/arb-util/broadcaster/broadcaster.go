@@ -66,9 +66,9 @@ func (b *Broadcaster) Start() error {
 	// it and stores it as a Client connection in ClientManager instance.
 	//
 	// Called below in accept() loop.
-	handle := func(unsafeConn net.Conn) {
+	handle := func(conn net.Conn) {
 
-		safeConn := deadliner{unsafeConn, b.settings.IoTimeout}
+		safeConn := deadliner{conn, b.settings.IoTimeout}
 
 		// Zero-copy upgrade to WebSocket connection.
 		hs, err := ws.Upgrade(safeConn)
@@ -78,15 +78,21 @@ func (b *Broadcaster) Start() error {
 			return
 		}
 
-		logger.Info().Msgf("%s: established websocket connection: %+v", nameConn(safeConn), hs)
+		logger.
+			Info().
+			Str("connection-name", nameConn(safeConn)).
+			Msgf("established websocket connection: %+v", hs)
 
 		// Register incoming client in clientManager.
 		client := clientManager.Register(safeConn)
 
-		// TODO: Does safeConn need to be used here?
-		//		- yep... panic otherwise
 		// Create netpoll event descriptor to handle only read events.
-		desc := netpoll.Must(netpoll.HandleRead(unsafeConn))
+		desc, err := netpoll.HandleRead(conn)
+		if err != nil {
+			logger.Warn().Err(err).Str("connection_name", nameConn(conn)).Msg("error in HandleRead")
+			_ = conn.Close()
+			return
+		}
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {
@@ -101,7 +107,11 @@ func (b *Broadcaster) Start() error {
 			}
 
 			if ev > 1 {
-				logger.Info().Str("connection_name", nameConn(safeConn)).Int("event", int(ev)).Msg("event greater than 1 received")
+				logger.
+					Info().
+					Str("connection_name", nameConn(safeConn)).
+					Int("event", int(ev)).
+					Msg("event greater than 1 received")
 			}
 
 			// receive client messages, close on error
@@ -128,13 +138,15 @@ func (b *Broadcaster) Start() error {
 		return err
 	}
 
-	logger.Info().Msgf("arbitrum websocket broadcast server is listening on %s", ln.Addr().String())
+	logger.Info().Str("address", ln.Addr().String()).Msg("arbitrum websocket broadcast server is listening")
 
 	// Create netpoll descriptor for the listener.
 	// We use OneShot here to manually resume events stream when we want to.
-	acceptDesc := netpoll.Must(netpoll.HandleListener(
-		ln, netpoll.EventRead|netpoll.EventOneShot,
-	))
+	acceptDesc, err := netpoll.HandleListener(ln, netpoll.EventRead|netpoll.EventOneShot)
+	if err != nil {
+		logger.Error().Err(err).Msg("error calling HandleListener")
+		return err
+	}
 	b.acceptDesc = acceptDesc
 
 	// accept is a channel to signal about next incoming connection Accept()
@@ -161,16 +173,14 @@ func (b *Broadcaster) Start() error {
 			err = <-accept
 		}
 		if err != nil {
-			if err != gopool.ErrScheduleTimeout {
-				goto cooldown
-			}
-			if ne, ok := err.(net.Error); ok && ne.Temporary() {
-				goto cooldown
+			if err == gopool.ErrScheduleTimeout {
+				netError, ok := err.(net.Error)
+				if !ok || !netError.Temporary() {
+					logger.Fatal().Err(err).Msg("error in poller.Start")
+				}
 			}
 
-			logger.Fatal().Err(err).Msg("error in poller.Start")
-
-		cooldown:
+			// cooldown
 			delay := 5 * time.Millisecond
 			logger.Info().Msgf("accept error: %v; retrying in %s", err, delay)
 			time.Sleep(delay)
@@ -195,8 +205,15 @@ func (b *Broadcaster) Broadcast(beforeAccumulator *big.Int, inboxMessage []byte,
 }
 
 func (b *Broadcaster) Stop() {
-	_ = b.poller.Stop(b.acceptDesc)
-	_ = b.acceptDesc.Close()
+	err := b.poller.Stop(b.acceptDesc)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error in poller.Stop")
+	}
+
+	err = b.acceptDesc.Close()
+	if err != nil {
+		logger.Warn().Err(err).Msg("error in acceptDesc.Stop")
+	}
 }
 
 func nameConn(conn net.Conn) string {
