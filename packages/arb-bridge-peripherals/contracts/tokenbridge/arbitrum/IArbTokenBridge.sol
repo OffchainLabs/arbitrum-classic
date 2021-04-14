@@ -75,7 +75,8 @@ interface IArbTokenBridge {
     /// @dev If a token is bridged before a custom implementation is set users can call this method to migrate to the custom version
     function migrate(
         address l1ERC20,
-        address account,
+        address sender,
+        address destination,
         uint256 amount
     ) external;
 
@@ -84,6 +85,7 @@ interface IArbTokenBridge {
     /// @return unique withdrawal identifier needed to execute the withdrawal in the L1
     function withdraw(
         address l1ERC20,
+        address sender,
         address destination,
         uint256 amount
     ) external returns (uint256);

@@ -355,13 +355,13 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
      * @notice Calculate the address used when bridging an ERC20 token
      * @dev this always returns the same as the L@ oracle, but may be out of date.
      * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
+     * @param erc20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
-    function calculateL2TokenAddress(address l1Token) public view override returns (address) {
+    function calculateL2TokenAddress(address erc20) public view override returns (address) {
         return
             TokenAddressHandler.calculateL2TokenAddress(
-                l1Token,
+                erc20,
                 l2TemplateERC20,
                 l2ArbTokenBridgeAddress,
                 cloneableProxyHash
