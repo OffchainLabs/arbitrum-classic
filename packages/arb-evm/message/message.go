@@ -17,11 +17,12 @@
 package message
 
 import (
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -32,6 +33,7 @@ const (
 	EthType          inbox.Type = 0
 	L2Type           inbox.Type = 3
 	InitType         inbox.Type = 4
+	EndOfBlockType   inbox.Type = 6
 	EthDepositTxType inbox.Type = 7
 	RetryableType    inbox.Type = 9
 )

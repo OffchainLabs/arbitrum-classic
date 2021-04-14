@@ -256,7 +256,14 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 	}
 	ir.MessageDeliveryMutex.Lock()
 	defer ir.MessageDeliveryMutex.Unlock()
-	ok := ir.db.DeliverMessages(sequencerBatchRefs[0].GetBeforeAcc(), seqBatchItems, delayedMessages, nil)
+	var beforeAcc common.Hash
+	if len(sequencerBatchRefs) > 0 {
+		beforeAcc = sequencerBatchRefs[0].GetBeforeAcc()
+	}
+	ok, err := core.DeliverMessagesAndWait(ir.db, beforeAcc, seqBatchItems, delayedMessages, nil)
+	if err != nil {
+		return err
+	}
 	if !ok {
 		return errors.New("Failed to deliver messages to ArbCore")
 	}

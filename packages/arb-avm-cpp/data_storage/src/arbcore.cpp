@@ -925,12 +925,13 @@ rocksdb::Status ArbCore::saveSends(
 
 ValueResult<std::vector<std::vector<unsigned char>>>
 ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
-    ReadSnapshotTransaction tx(data_storage);
+    ReadTransaction tx(data_storage);
 
     std::vector<unsigned char> first_key_vec;
     marshal_uint256_t(index, first_key_vec);
     auto first_key_slice = vecToSlice(first_key_vec);
     auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
+    it->Seek(first_key_slice);
 
     std::vector<std::vector<unsigned char>> ret;
     while (it->Valid() && ret.size() < count) {
@@ -1744,6 +1745,11 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 return delayed_msg_seq_res.status;
             }
             uint256_t start = delayed_messages[0].first.delayed_sequence_number;
+            bool checking_prev = false;
+            if (start > 0) {
+                start -= 1;
+                checking_prev = true;
+            }
             rocksdb::Slice lower_bound;
             {
                 auto ptr =
@@ -1753,22 +1759,35 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             }
             auto seq_batch_it = tx.delayedMessageGetIterator(&lower_bound);
             seq_batch_it->Seek(lower_bound);
+            uint256_t prev_acc = 0;
             auto inserting = false;
             for (auto& item : delayed_messages) {
                 auto& message = item.first;
                 auto& value_slice = item.second;
 
-                if (!inserting) {
-                    if (!seq_batch_it->Valid()) {
-                        if (!seq_batch_it->status().ok()) {
-                            return seq_batch_it->status();
-                        }
-                        inserting = true;
+                if (!inserting && !seq_batch_it->Valid()) {
+                    if (!seq_batch_it->status().ok()) {
+                        return seq_batch_it->status();
                     }
+                    if (checking_prev) {
+                        throw std::runtime_error(
+                            "Previous delayed message not found");
+                    }
+                    inserting = true;
+                }
+
+                if (!inserting) {
                     auto value_ptr = reinterpret_cast<const unsigned char*>(
                         seq_batch_it->value().data());
                     auto db_accumulator =
                         deserializeDelayedMessageAccumulator(value_ptr);
+
+                    if (checking_prev) {
+                        prev_acc = db_accumulator;
+                        checking_prev = false;
+                        continue;
+                    }
+
                     if (message.delayed_accumulator == db_accumulator) {
                         seq_batch_it->Next();
                     } else {
@@ -1796,7 +1815,13 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 }
 
                 if (inserting) {
-                    // TODO validate accumulator
+                    auto expected_acc = hash_inbox(prev_acc, message.message);
+                    if (expected_acc != message.delayed_accumulator) {
+                        throw std::runtime_error(
+                            "Unexpected delayed accumulator");
+                    }
+                    prev_acc = message.delayed_accumulator;
+
                     std::vector<unsigned char> key_vec;
                     marshal_uint256_t(message.delayed_sequence_number, key_vec);
                     auto key_slice = vecToSlice(key_vec);
@@ -1818,7 +1843,8 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                         "Attempted to add sequencer batch item with both "
                         "sequencer message and delayed messages");
                 }
-                auto res = getDelayedInboxAccImpl(tx, item.total_delayed_count);
+                auto res =
+                    getDelayedInboxAccImpl(tx, item.total_delayed_count - 1);
                 if (!res.status.ok()) {
                     return res.status;
                 }

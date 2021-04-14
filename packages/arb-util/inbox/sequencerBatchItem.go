@@ -32,7 +32,7 @@ type SequencerBatchItem struct {
 	SequencerMessage  []byte
 }
 
-func (i SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) error {
+func (i *SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) error {
 	var data []byte
 	delayedCmp := i.TotalDelayedCount.Cmp(prevDelayedCount)
 	if delayedCmp > 0 {
@@ -43,8 +43,8 @@ func (i SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelaye
 		data = append(data, prevAcc.Bytes()...)
 		firstSeqNum := big.NewInt(1)
 		firstSeqNum = firstSeqNum.Add(firstSeqNum, i.LastSeqNum)
-		firstSeqNum = firstSeqNum.Add(firstSeqNum, i.TotalDelayedCount)
-		firstSeqNum = firstSeqNum.Sub(firstSeqNum, prevDelayedCount)
+		firstSeqNum = firstSeqNum.Add(firstSeqNum, prevDelayedCount)
+		firstSeqNum = firstSeqNum.Sub(firstSeqNum, i.TotalDelayedCount)
 		data = append(data, math.U256Bytes(firstSeqNum)...)
 		data = append(data, math.U256Bytes(prevDelayedCount)...)
 		data = append(data, math.U256Bytes(i.TotalDelayedCount)...)
@@ -66,7 +66,7 @@ func (i SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelaye
 }
 
 func NewSequencerBatchItemFromData(data []byte) (SequencerBatchItem, error) {
-	if len(data) < 128 {
+	if len(data) < 32*3 {
 		return SequencerBatchItem{}, errors.New("Not enough data for sequencer batch item")
 	}
 	item := SequencerBatchItem{}
@@ -74,7 +74,7 @@ func NewSequencerBatchItemFromData(data []byte) (SequencerBatchItem, error) {
 	item.LastSeqNum = new(big.Int).SetBytes(data[:32])
 	data = data[32:]
 
-	copy(item.Accumulator.Bytes(), data[:32])
+	copy(item.Accumulator[:], data[:32])
 	data = data[32:]
 
 	item.TotalDelayedCount = new(big.Int).SetBytes(data[:32])

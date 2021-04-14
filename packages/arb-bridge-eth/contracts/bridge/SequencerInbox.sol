@@ -199,8 +199,17 @@ contract SequencerInbox is ISequencerInbox {
         uint256 offset = 0;
         for (uint256 i = 0; i < lengths.length; i++) {
             if (lengths[i] == 0) {
+                bytes memory emptyBytes;
                 bytes32 messageHash =
-                    Messages.messageHash(END_OF_BLOCK, address(0), 0, 0, count, 0, bytes32(0));
+                    Messages.messageHash(
+                        END_OF_BLOCK,
+                        address(0),
+                        0,
+                        0,
+                        count,
+                        0,
+                        keccak256(emptyBytes)
+                    );
                 acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, messageHash));
                 count++;
             } else {
@@ -221,11 +230,11 @@ contract SequencerInbox is ISequencerInbox {
                 count++;
             }
         }
+        (delayedAcc, acc, count) = includeDelayedMessages(acc, count, _totalDelayedMessagesRead);
+
         require(count > messageCount, "EMPTY_BATCH");
         inboxAccs.push(acc);
         messageCount = count;
-
-        (delayedAcc, acc, count) = includeDelayedMessages(acc, count, _totalDelayedMessagesRead);
 
         require(acc == afterAcc, "AFTER_ACC");
     }
@@ -257,8 +266,17 @@ contract SequencerInbox is ISequencerInbox {
                 )
             );
             count += _totalDelayedMessagesRead - totalDelayedMessagesRead;
+            bytes memory emptyBytes;
             bytes32 endMessageHash =
-                Messages.messageHash(END_OF_BLOCK, address(0), 0, 0, count, 0, bytes32(0));
+                Messages.messageHash(
+                    END_OF_BLOCK,
+                    address(0),
+                    0,
+                    0,
+                    count,
+                    0,
+                    keccak256(emptyBytes)
+                );
             acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, endMessageHash));
             count++;
             totalDelayedMessagesRead = _totalDelayedMessagesRead;

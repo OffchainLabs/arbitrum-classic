@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
@@ -139,7 +140,7 @@ func (b SequencerBatch) GetAfterAcc() common.Hash {
 
 func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
 	return inbox.InboxMessage{
-		Kind:        6,
+		Kind:        message.EndOfBlockType,
 		Sender:      common.Address{},
 		InboxSeqNum: seqNum,
 		GasPrice:    big.NewInt(0),

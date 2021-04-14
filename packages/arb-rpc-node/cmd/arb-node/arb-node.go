@@ -160,10 +160,13 @@ func main() {
 			logger.Fatal().Err(err).Msg("Error running GetKeystore")
 		}
 
-		if *inboxAddressStr == "" {
-			logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder mode")
+		var inboxAddress common.Address
+		if !*sequencerMode {
+			if *inboxAddressStr == "" {
+				logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder or sequencer mode")
+			}
+			inboxAddress = common.HexToAddress(*inboxAddressStr)
 		}
-		inboxAddress := common.HexToAddress(*inboxAddressStr)
 
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
 
