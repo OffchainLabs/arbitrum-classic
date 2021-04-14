@@ -1,15 +1,59 @@
 package broadcastclient
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
+
+// This is used to reverse the slice for the sequence number field
+// so that it will be in correct byte order when creating a new big.Int out of it
+func reverseSlice(data interface{}) {
+	value := reflect.ValueOf(data)
+	if value.Kind() != reflect.Slice {
+		panic(errors.New("data must be a slice type"))
+	}
+	valueLen := value.Len()
+	for i := 0; i <= int((valueLen-1)/2); i++ {
+		reverseIndex := valueLen - 1 - i
+		tmp := value.Index(reverseIndex).Interface()
+		value.Index(reverseIndex).Set(value.Index(i))
+		value.Index(i).Set(reflect.ValueOf(tmp))
+	}
+}
+
+func setSequenceNumber(data []byte, sequenceNumber *big.Int) []byte {
+	seqNumOffset := 85
+	seqNumEnd := 117
+	prefixData := data[:seqNumOffset]
+	postfixData := data[seqNumEnd:]
+	sequenceNumberBytes := sequenceNumber.Bytes()
+	sequenceNumberByteField := make([]byte, 32)
+	copy(sequenceNumberByteField, sequenceNumberBytes)
+	reverseSlice(sequenceNumberByteField)
+	sequenceNumberWithPrefix := append(prefixData, sequenceNumberByteField...)
+	completeDataWithSequenceNumberSet := append(sequenceNumberWithPrefix, postfixData...)
+	return completeDataWithSequenceNumberSet
+}
+
+func sequencedMessages() func() (*big.Int, []byte, *big.Int) {
+	sequenceNumber := big.NewInt(41)
+	return func() (*big.Int, []byte, *big.Int) {
+		sequenceNumber = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
+		inboxMessage := setSequenceNumber(common.RandBytes(200), sequenceNumber)
+		beforeAccumulator := common.RandBigInt()
+		signature := common.RandBigInt()
+		return beforeAccumulator, inboxMessage, signature
+	}
+}
 
 // This sends out generated test broadcast messages
 type MessageGenerator struct {
@@ -45,15 +89,10 @@ func (gm *MessageGenerator) startWorker() {
 
 	ticker := time.NewTicker(gm.intervalDuration)
 	messageCount := 0
+	newBroadcastMessage := sequencedMessages()
 	go func() {
-		for t := range ticker.C {
-			ib := inbox.InboxMessage{}
-			ib.InboxSeqNum = big.NewInt(t.UnixNano())
-
-			messages := []*inbox.InboxMessage{
-				&ib,
-			}
-			gm.broadcaster.Broadcast(messages)
+		for _ = range ticker.C {
+			gm.broadcaster.Broadcast(newBroadcastMessage())
 			messageCount++
 			if messageCount == gm.count {
 				ticker.Stop()
@@ -119,7 +158,7 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 		select {
 		case receivedMsgs := <-messages:
 			for i := range receivedMsgs.Messages {
-				fmt.Printf("Received Message, Sequence Number: %v\n", &receivedMsgs.Messages[i].InboxSeqNum)
+				fmt.Printf("Received Message, Sequence Number: %v\n", inbox.GetSequenceNumber(receivedMsgs.Messages[i].InboxMessage))
 				messageCount++
 				if messageCount == expectedCount {
 					broadcastClient.Close()

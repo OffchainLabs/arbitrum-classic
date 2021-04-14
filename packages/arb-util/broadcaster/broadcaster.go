@@ -1,6 +1,7 @@
 package broadcaster
 
 import (
+	"math/big"
 	"net"
 	"sync"
 	"time"
@@ -8,7 +9,6 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/rs/zerolog/log"
 
 	_ "net/http/pprof"
@@ -84,6 +84,7 @@ func (b *Broadcaster) Start() error {
 		client := clientManager.Register(safeConn)
 
 		// TODO: Does safeConn need to be used here?
+		//		- yep... panic otherwise
 		// Create netpoll event descriptor to handle only read events.
 		desc := netpoll.Must(netpoll.HandleRead(unsafeConn))
 
@@ -189,8 +190,8 @@ func (b *Broadcaster) Start() error {
 	return nil
 }
 
-func (b *Broadcaster) Broadcast(messages []*inbox.InboxMessage) error {
-	return b.clientManager.Broadcast(messages)
+func (b *Broadcaster) Broadcast(beforeAccumulator *big.Int, inboxMessage []byte, signature *big.Int) error {
+	return b.clientManager.Broadcast(beforeAccumulator, inboxMessage, signature)
 }
 
 func (b *Broadcaster) Stop() {
