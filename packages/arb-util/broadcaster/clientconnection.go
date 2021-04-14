@@ -56,6 +56,20 @@ func (cc *ClientConnection) readRequest() (*Request, error) {
 	return req, nil
 }
 
+func (cc *ClientConnection) write(x interface{}) error {
+	w := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(w)
+
+	cc.io.Lock()
+	defer cc.io.Unlock()
+
+	if err := encoder.Encode(x); err != nil {
+		return err
+	}
+
+	return w.Flush()
+}
+
 func (cc *ClientConnection) writeRaw(p []byte) error {
 	cc.io.Lock()
 	defer cc.io.Unlock()
