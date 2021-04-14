@@ -169,12 +169,12 @@ export class EthERC20Bridge extends Contract {
 
   functions: {
     calculateL2TokenAddress(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<[string]>
 
     'calculateL2TokenAddress(address)'(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<[string]>
 
@@ -314,12 +314,12 @@ export class EthERC20Bridge extends Contract {
   }
 
   calculateL2TokenAddress(
-    l1Token: string,
+    erc20: string,
     overrides?: CallOverrides
   ): Promise<string>
 
   'calculateL2TokenAddress(address)'(
-    l1Token: string,
+    erc20: string,
     overrides?: CallOverrides
   ): Promise<string>
 
@@ -453,12 +453,12 @@ export class EthERC20Bridge extends Contract {
 
   callStatic: {
     calculateL2TokenAddress(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<string>
 
     'calculateL2TokenAddress(address)'(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<string>
 
@@ -630,12 +630,12 @@ export class EthERC20Bridge extends Contract {
 
   estimateGas: {
     calculateL2TokenAddress(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     'calculateL2TokenAddress(address)'(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -776,12 +776,12 @@ export class EthERC20Bridge extends Contract {
 
   populateTransaction: {
     calculateL2TokenAddress(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'calculateL2TokenAddress(address)'(
-      l1Token: string,
+      erc20: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
