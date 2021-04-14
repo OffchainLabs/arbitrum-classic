@@ -227,18 +227,6 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Error("expected redeem to have no return data")
 	}
 
-	finalRequest, err := backend.db.GetRequest(ticketId)
-	test.FailIfError(t, err)
-
-	if len(finalRequest.ReturnData) != 32 {
-		t.Error("expected final tx to have 32 bytes of return data but got", len(finalRequest.ReturnData))
-	} else {
-		ret := new(big.Int).SetBytes(finalRequest.ReturnData)
-		if ret.Cmp(big.NewInt(10)) != 0 {
-			t.Error("incorrect return data")
-		}
-	}
-
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, big.NewInt(0), retryableTx.MaxSubmissionCost, retryableTx.Value)
 
 	var txLogs []*types.Log
@@ -246,8 +234,19 @@ func TestRetryableRedeem(t *testing.T) {
 		txLogs = redeemReceipt.Logs[:len(redeemReceipt.Logs)-1]
 	} else {
 		txLogs = finalReceipt.Logs
-	}
 
+		finalRequest, err := backend.db.GetRequest(ticketId)
+		test.FailIfError(t, err)
+
+		if len(finalRequest.ReturnData) != 32 {
+			t.Error("expected final tx to have 32 bytes of return data but got", len(finalRequest.ReturnData))
+		} else {
+			ret := new(big.Int).SetBytes(finalRequest.ReturnData)
+			if ret.Cmp(big.NewInt(10)) != 0 {
+				t.Error("incorrect return data")
+			}
+		}
+	}
 	if len(txLogs) != 1 {
 		t.Fatal("wrong log count", len(txLogs))
 	}
