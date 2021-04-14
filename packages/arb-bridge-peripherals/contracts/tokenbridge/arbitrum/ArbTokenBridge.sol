@@ -27,8 +27,8 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "../libraries/BytesParser.sol";
 
+import "./IArbStandardToken.sol";
 import "./IArbToken.sol";
-import "./IArbCustomToken.sol";
 import "./IArbTokenBridge.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
@@ -40,7 +40,6 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     uint256 exitNum;
 
     bytes32 private cloneableProxyHash;
-    address private deployBeacon;
 
     address public templateERC20;
     address public l1Pair;
@@ -50,13 +49,18 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     uint256 internal constant arbgasReserveIfCallRevert = 250000;
 
     /**
-     @notice This ensures that a method can only be called from the L1 pair of this contract
+     * @notice This ensures that a method can only be called from the L1 pair of this contract
      */
     modifier onlyEthPair {
         require(msg.sender == l1Pair, "ONLY_ETH_PAIR");
         _;
     }
 
+    /**
+     * @notice Initialize L2 bridge
+     * @param _l1Pair Address of L1 side of token bridge (EthERC20Bridge.sol)
+     * @param _templateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
+     */
     function initialize(address _l1Pair, address _templateERC20) external {
         require(address(l1Pair) == address(0), "already init");
         require(_l1Pair != address(0), "L1 pair can't be address 0");
@@ -67,6 +71,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
     }
 
+    /**
+     * @notice this function can only be callable by the bridge itself
+     * @dev This method is inspired by EIP 677/1363 for calls to be executed after minting.
+     * A reserve amount of gas is always kept in case this call reverts or uses up all gas.
+     * The reserve is the amount of gas needed to catch the revert and do the necessary alternative logic.
+     */
     function mintAndCall(
         IArbToken token,
         uint256 amount,
@@ -99,15 +109,17 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     }
 
     /**
-    * @notice Mint on L2 upon L1 deposit; callable only by EthERC20Bridge.depositToken.
-    * If token not yet deployed and symbol/name/decimal data is included, deploys StandardArbERC20
-    * If minting a custom token whose L2 counterpart hasn't yet been deployed/registered (!) deploys a temporary StandardArbERC20 that can later be migrated to custom token. 
-    @param l1ERC20 L1 address of ERC20
-    @param sender sender 
-    @param dest destination / recipient 
-    @param amount token amount
-    @param deployData encoded symbol/name/decimal data for initial deploy
-    @param callHookData optional data for external call upon minting
+     * @notice Mint on L2 upon L1 deposit.
+     * If token not yet deployed and symbol/name/decimal data is included, deploys StandardArbERC20
+     * If minting a custom token whose L2 counterpart hasn't yet been deployed/registered (!) deploys a temporary StandardArbERC20 that can later be migrated to custom token.
+     * @dev Callable only by the EthERC20Bridge.depositToken function. For initial deployments of a token the L1 EthERC20Bridge
+     * is expected to include the deployData. If not a L1 withdrawal is automatically triggered for the user
+     * @param l1ERC20 L1 address of ERC20
+     * @param sender account that initiated the deposit in the L1
+     * @param dest account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param amount token amount to be minted to the user
+     * @param deployData encoded symbol/name/decimal data for initial deploy
+     * @param callHookData optional data for external call upon minting
      */
     function mintFromL1(
         address l1ERC20,
@@ -184,26 +196,29 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         }
     }
 
+    /**
+     * @notice internal utility function used to deploy ERC20 tokens with the beacon proxy pattern.
+     * @dev the transparent proxy implementation by OpenZeppelin can't be used if we want to be able to
+     * upgrade the token logic.
+     * @param l1ERC20 L1 address of ERC20
+     * @param deployData encoded symbol/name/decimal data for initial deploy
+     */
     function deployToken(address l1ERC20, bytes memory deployData) internal returns (address) {
-        address beacon = templateERC20;
-
-        deployBeacon = beacon;
-        bytes32 salt = keccak256(abi.encodePacked(l1ERC20, beacon));
+        bytes32 salt = TokenAddressHandler.getCreate2Salt(l1ERC20, templateERC20);
         address createdContract = address(new ClonableBeaconProxy{ salt: salt }());
-        deployBeacon = address(0);
 
-        bool initSuccess = IArbToken(createdContract).bridgeInit(l1ERC20, deployData);
-        assert(initSuccess);
+        IArbStandardToken(createdContract).bridgeInit(l1ERC20, deployData);
 
         emit TokenCreated(l1ERC20, createdContract);
         return createdContract;
     }
 
     /**
-    * @notice Sets the L1 / L2 custom token pairing; called from the L1 via EthErc20Bridge.registerCustomL2Token
-    * @param l1Address Address of L1 custom token implementation
-    * @param l2Address Address of L2 custom token implementation
-
+     * @notice Sets the L1 / L2 custom token pairing; called from the L1 via EthErc20Bridge.registerCustomL2Token
+     * @dev this doesn't check if the L2 token is actually deployed - this way the L1 and L2 address oracles are
+     * always consistent. The necessary existence checks are done before interacting with the tokens.
+     * @param l1Address Address of L1 custom token implementation
+     * @param l2Address Address of L2 custom token implementation
      */
     function customTokenRegistered(address l1Address, address l2Address)
         external
@@ -216,27 +231,41 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     }
 
     /**
-     * @notice send a withdraw message to the L1 outbox; callable only by StandardArbERC20.withdraw or WhateverCustomToken.whateverWithdrawMethod
-     * @param l1ERC20 L1 address of custom ERC20
-     * @param destination token holder
-     * @param amount token amount
+     * @notice send a withdraw message to the L1 outbox
+     * @dev this call is initiated by the token, ie StandardArbERC20.withdraw or WhateverCustomToken.whateverWithdrawMethod
+     * @param l1ERC20 L1 address of ERC20
+     * @param destination the account to be credited with the tokens
+     * @param amount token amount to be withdrawn
      */
     function withdraw(
         address l1ERC20,
+        address sender,
         address destination,
         uint256 amount
     ) external override returns (uint256) {
         address expectedSender = calculateL2TokenAddress(l1ERC20);
 
-        // users can withdraw if its a standard erc20 token deployed by the bridge
-        // TODO: what happens if this was a rebasing stablecoin and user was supposed to hold less at time of withdrawal?
-        require(
-            msg.sender == expectedSender || msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
-            "Withdraw can only be triggered by expected sender"
-        );
+        if (!expectedSender.isContract()) {
+            // if this is a TMT or a standard token deployed by the bridge before the custom token got registered
+            expectedSender = calculateL2ERC20TokenAddress(l1ERC20);
+            assert(expectedSender.isContract());
+        }
+
+        require(msg.sender == expectedSender, "Withdraw can only be triggered by expected sender");
+
+        IArbToken(expectedSender).bridgeBurn(sender, amount);
         return _withdraw(l1ERC20, destination, amount);
     }
 
+    /**
+     * @notice internal utility function that encodes and calls a L2 to L1 withdrawal transaction
+     * @dev this executes the withdrawal without validating the inputs.
+     * It is expected that the input is validated before calling this function.
+     * @param l1ERC20 L1 address of ERC20
+     * @param destination the account to be credited with the tokens
+     * @param amount token amount to be withdrawn
+     * @return identifier used to trigger the transaction in the L1.
+     */
     function _withdraw(
         address l1ERC20,
         address destination,
@@ -258,16 +287,18 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         return id;
     }
 
-    /**  
-    * @notice If a token is bridged as a StandardArbERC20 before a custom implementation is set,
-     users can call this method via StandardArbERC20.migrate to migrate to the custom version
-    * @param l1ERC20 L1 address of custom ERC20
-    * @param account token holder
-    * @param amount token amount 
-    */
+    /**
+     * @notice If a token is bridged as a StandardArbERC20 before a custom implementation is set,
+     * users can call this method via StandardArbERC20.migrate to migrate to the custom version
+     * @param l1ERC20 L1 address of ERC20
+     * @param sender the account that called the migration
+     * @param destination the account to be credited with the tokens
+     * @param amount token amount to be migrated
+     */
     function migrate(
         address l1ERC20,
-        address account,
+        address sender,
+        address destination,
         uint256 amount
     ) external override {
         require(
@@ -278,15 +309,25 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             msg.sender == calculateL2ERC20TokenAddress(l1ERC20),
             "Migration should be called by erc20 token contract"
         );
+        // burn the tokens sent from the standard implementation
+        IArbToken(msg.sender).bridgeBurn(sender, amount);
 
-        address l2CustomTokenAddress = TokenAddressHandler.customL2Token[l1ERC20];
+        // validate custom contract is correctly setup
+        address l2CustomTokenAddress = calculateL2TokenAddress(l1ERC20);
         require(l2CustomTokenAddress.isContract(), "L2 custom token must already be deployed");
 
-        // this assumes the l2StandardToken has burnt the user funds
-        IArbCustomToken(l2CustomTokenAddress).bridgeMint(account, amount);
-        emit TokenMigrated(l1ERC20, account, amount);
+        // mint tokens of custom implementation
+        IArbToken(l2CustomTokenAddress).bridgeMint(destination, amount);
+        emit TokenMigrated(l1ERC20, destination, amount);
     }
 
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
     function calculateL2TokenAddress(address l1ERC20) public view override returns (address) {
         return
             TokenAddressHandler.calculateL2TokenAddress(
@@ -297,6 +338,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             );
     }
 
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev If there is a custom token registered with the bridge, this address won't be used.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of ERC20 tokens deployed by this bridge
+     */
     function calculateL2ERC20TokenAddress(address l1ERC20) public view returns (address) {
         return
             TokenAddressHandler.calculateL2ERC20TokenAddress(
@@ -307,7 +354,12 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
             );
     }
 
+    /**
+     * @notice utility function used in ClonableBeaconProxy.
+     * @dev this method makes it possible to use ClonableBeaconProxy.creationCode without encoding constructor parameters
+     * @return the token logic to be used in a proxy contract.
+     */
     function getBeacon() external view override returns (address) {
-        return deployBeacon;
+        return templateERC20;
     }
 }
