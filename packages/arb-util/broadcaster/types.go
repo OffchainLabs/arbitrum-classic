@@ -25,8 +25,6 @@ type Error struct {
 	Error Object `json:"error"`
 }
 
-// these represent the fields from the Inbox message that we will broadcast
-// for now we're just broadcasting the sequence number
 type BroadcastInboxMessage struct {
 	BeforeAccumulator *big.Int `json:"beforeAccumulator"`
 	InboxMessage      []byte   `json:"inboxMessage"`
