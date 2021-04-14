@@ -87,7 +87,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         sequencerBridge = ISequencerInbox(connectedContracts[2]);
         outbox = IOutbox(connectedContracts[3]);
         delayedBridge.setOutbox(connectedContracts[3], true);
-        rollupEventBridge = RollupEventBridge(connectedContracts[3]);
+        rollupEventBridge = RollupEventBridge(connectedContracts[4]);
         delayedBridge.setInbox(connectedContracts[4], true);
 
         rollupEventBridge.rollupInitialized(
