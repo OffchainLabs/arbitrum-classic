@@ -119,7 +119,6 @@ type SequencerBatch struct {
 	DelayedAcc               common.Hash
 	ChainTime                inbox.ChainTime
 	Sequencer                common.Address
-	GasPrice                 *big.Int
 }
 
 func (b SequencerBatch) GetBeforeCount() *big.Int {
@@ -143,7 +142,6 @@ func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
 		Kind:        message.EndOfBlockType,
 		Sender:      common.Address{},
 		InboxSeqNum: seqNum,
-		GasPrice:    big.NewInt(0),
 		Data:        []byte{},
 		ChainTime: inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
@@ -178,7 +176,6 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 				Kind:        3,
 				Sender:      b.Sequencer,
 				InboxSeqNum: nextSeqNum,
-				GasPrice:    b.GasPrice,
 				Data:        b.transactionsData[dataOffset:(dataOffset + length)],
 				ChainTime:   b.ChainTime,
 			}
@@ -223,7 +220,8 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 }
 
 type sequencerBatchOriginRef struct {
-	tx          *types.Transaction
+	blockHash   ethcommon.Hash
+	txIndex     uint
 	beforeCount *big.Int
 	beforeAcc   common.Hash
 	afterCount  *big.Int
@@ -231,7 +229,6 @@ type sequencerBatchOriginRef struct {
 	delayedAcc  common.Hash
 	chainTime   inbox.ChainTime
 	sequencer   common.Address
-	gasPrice    *big.Int
 }
 
 func (b sequencerBatchOriginRef) GetBeforeCount() *big.Int {
@@ -276,12 +273,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			Timestamp: blockTime,
 		}
 
-		txData, err := r.client.TransactionInBlock(ctx, log.BlockHash, log.TxIndex)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		gasPrice := txData.GasPrice()
-
 		if log.Topics[0] == sequencerBatchDeliveredID {
 			parsed, err := r.con.ParseSequencerBatchDelivered(log)
 			if err != nil {
@@ -300,7 +291,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				DelayedAcc:               parsed.DelayedAcc,
 				Sequencer:                sequencer,
 				ChainTime:                chainTime,
-				GasPrice:                 gasPrice,
 			})
 		} else if log.Topics[0] == sequencerBatchDeliveredFromOriginID {
 			parsed, err := r.con.ParseSequencerBatchDeliveredFromOrigin(log)
@@ -308,7 +298,8 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				return nil, errors.WithStack(err)
 			}
 			refs = append(refs, sequencerBatchOriginRef{
-				tx:          txData,
+				blockHash:   log.BlockHash,
+				txIndex:     log.TxIndex,
 				beforeCount: parsed.FirstMessageNum,
 				beforeAcc:   parsed.BeforeAcc,
 				afterCount:  parsed.NewMessageCount,
@@ -316,7 +307,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				delayedAcc:  parsed.DelayedAcc,
 				sequencer:   sequencer,
 				chainTime:   chainTime,
-				gasPrice:    gasPrice,
 			})
 		} else if log.Topics[0] == delayedInboxForcedID {
 			parsed, err := r.con.ParseDelayedInboxForced(log)
@@ -332,7 +322,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				DelayedAcc:               parsed.AfterAccAndDelayed[1],
 				Sequencer:                sequencer,
 				ChainTime:                chainTime,
-				GasPrice:                 gasPrice,
 			})
 		} else {
 			return nil, errors.Errorf("Unexpected log topic %v", log.Topics[0].String())
@@ -346,11 +335,18 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		return batch, nil
 	}
 	ref := genericRef.(sequencerBatchOriginRef)
+
+	tx, err := r.client.TransactionInBlock(ctx, ref.blockHash, ref.txIndex)
+	if err != nil {
+		return SequencerBatch{}, errors.WithStack(err)
+	}
+
 	args := make(map[string]interface{})
-	err := addSequencerL2BatchFromOriginABI.Inputs.UnpackIntoMap(args, ref.tx.Data()[4:])
+	err = addSequencerL2BatchFromOriginABI.Inputs.UnpackIntoMap(args, tx.Data()[4:])
 	if err != nil {
 		return SequencerBatch{}, err
 	}
+
 	return SequencerBatch{
 		transactionsData:         args["transactions"].([]byte),
 		transactionLengths:       args["lengths"].([]*big.Int),
@@ -364,6 +360,5 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		DelayedAcc:               ref.delayedAcc,
 		Sequencer:                ref.sequencer,
 		ChainTime:                ref.chainTime,
-		GasPrice:                 ref.gasPrice,
 	}, nil
 }

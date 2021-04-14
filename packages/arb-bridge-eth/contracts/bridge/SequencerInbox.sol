@@ -222,7 +222,7 @@ contract SequencerInbox is ISequencerInbox {
                         l1BlockNumber,
                         timestamp, // solhint-disable-line not-rely-on-time
                         count,
-                        tx.gasprice,
+                        0,
                         messageDataHash
                     );
                 acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, messageHash));

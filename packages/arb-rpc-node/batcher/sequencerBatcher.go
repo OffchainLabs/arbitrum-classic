@@ -299,7 +299,9 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		if startDelayedMessagesRead == nil {
 			startDelayedMessagesRead = item.TotalDelayedCount
 		} else if totalDelayedMessagesRead == nil {
-			totalDelayedMessagesRead = item.TotalDelayedCount
+			if item.TotalDelayedCount.Cmp(startDelayedMessagesRead) > 0 {
+				totalDelayedMessagesRead = item.TotalDelayedCount
+			}
 		} else if totalDelayedMessagesRead.Cmp(item.TotalDelayedCount) != 0 {
 			break
 		}
