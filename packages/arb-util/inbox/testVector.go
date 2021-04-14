@@ -2,10 +2,12 @@ package inbox
 
 import (
 	"encoding/json"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type JSONValue struct {
@@ -103,7 +105,7 @@ func valueToJSON(val value.Value) (JSONValue, error) {
 		}
 		return JSONValue{Tuple: &vals}, nil
 	case *value.Buffer:
-		encoded := hexutil.Encode(val.Data())
+		encoded := hexutil.Encode(val.Data())[2:]
 		return JSONValue{Buffer: &encoded}, nil
 	default:
 		return JSONValue{}, errors.New("unsupported type")
