@@ -45,9 +45,9 @@ func NewValueFromOptional(val value.Value) (value.Value, error) {
 		return nil, errors.New("hasValue must be an int")
 	}
 	if hasValueInt.BigInt().Uint64() == 0 {
-		//if tup.Len() != 1 {
-		//	return nil, errors.New("empty optional should be length 1")
-		//}
+		if tup.Len() != 1 {
+			return nil, errors.New("empty optional should be length 1")
+		}
 		return nil, nil
 	}
 	if hasValueInt.BigInt().Uint64() != 1 {
