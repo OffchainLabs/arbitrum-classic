@@ -16,19 +16,25 @@
  * limitations under the License.
  */
 
+/**
+ * @title Minimum expected interface for L2 token that interacts with the L2 token bridge (this is the interface necessary
+ * for a custom token that interacts with the bridge, see TestArbCustomToken.sol for an example implementation).
+ */
 pragma solidity ^0.6.11;
 
 interface IArbToken {
-    function initialize(
-        address _bridge,
-        address _l1Address,
-        uint8 _decimals
-    ) external;
+    /**
+     * @notice should increase token supply by amount, and should (probably) only be callable by the L1 bridge.
+     */
+    function bridgeMint(address account, uint256 amount) external;
 
-    function bridgeMint(address account, uint256 amount, bytes memory data) external;
+    /**
+     * @notice should decrease token supply by amount, and should (probably) only be callable by the L1 bridge.
+     */
+    function bridgeBurn(address account, uint256 amount) external;
 
-    function withdraw(address destination, uint256 amount) external;
-
-    /// @dev This function is optional. If it's not enabled, this data won't be updatable based on its paired L1 contract
-    function updateInfo(string calldata newName, string calldata newSymbol, uint8 newDecimals) external;
+    /**
+     * @notice withdraw user tokens from L2 to the L1
+     */
+    function withdraw(address account, uint256 amount) external;
 }

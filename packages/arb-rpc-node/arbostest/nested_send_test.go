@@ -51,15 +51,15 @@ func TestFailedNestedSend(t *testing.T) {
 	}
 
 	messages := []message.Message{
-		message.Eth{Dest: sender, Value: big.NewInt(1000)},
+		makeEthDeposit(sender, big.NewInt(1000)),
 		message.NewSafeL2Message(tx),
 		message.NewSafeL2Message(sendTx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 2, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
 	results := processTxResults(t, logs)
-	checkConstructorResult(t, results[0], connAddress1)
-	revertedTxCheck(t, results[1])
+	checkConstructorResult(t, results[1], connAddress1)
+	revertedTxCheck(t, results[2])
 }
 
 func TestRevertedNestedCall(t *testing.T) {

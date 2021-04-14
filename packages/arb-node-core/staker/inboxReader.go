@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -21,6 +22,7 @@ type InboxReader struct {
 	firstMessageBlock *big.Int
 	caughtUp          bool
 	caughtUpTarget    *big.Int
+	healthChan        chan nodehealth.Log
 
 	// Only in main thread
 	running    bool
@@ -32,7 +34,7 @@ type InboxReader struct {
 	MessageDeliveryMutex sync.Mutex
 }
 
-func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher, sequencerInbox *ethbridge.SequencerInboxWatcher, db core.ArbCore) (*InboxReader, error) {
+func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher, sequencerInbox *ethbridge.SequencerInboxWatcher, db core.ArbCore, healthChan chan nodehealth.Log) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
 		return nil, err
@@ -44,6 +46,7 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
+		healthChan:        healthChan,
 	}, nil
 }
 
@@ -86,6 +89,9 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if ir.healthChan != nil {
+		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(from)}
+	}
 	reorging := false
 	blocksToFetch := uint64(100)
 	for {
@@ -99,9 +105,17 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
+		if ir.healthChan != nil {
+			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
+		}
+
 		for {
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
 				arbCorePosition := ir.db.MachineMessagesRead()
+				if ir.healthChan != nil {
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: new(big.Int).Set(arbCorePosition)}
+				}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
 					ir.caughtUp = true
 					ir.caughtUpChan <- true
@@ -176,6 +190,9 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 						reorging = true
 					}
 				}
+			}
+			if ir.healthChan != nil {
+				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
 			}
 			if len(sequencerBatches) < 5 {
 				blocksToFetch += 20

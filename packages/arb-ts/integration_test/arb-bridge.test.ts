@@ -8,17 +8,20 @@ import {
 import { expect } from 'chai'
 import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
-import { TestERC777__factory } from '../src/lib/abi/factories/TestERC777__factory'
+import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
+import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
+
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
-import { StandardArbERC777__factory } from '../src/lib/abi/factories/StandardArbERC777__factory'
 import { StandardArbERC20 } from '../src/lib/abi/StandardArbERC20'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
 
 import { EthERC20Bridge } from '../src/lib/abi/EthERC20Bridge'
 import yargs from 'yargs/yargs'
 import chalk from 'chalk'
+import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
+import { TestArbCustomToken } from '../src/lib/abi/TestArbCustomToken'
 
-console.log()
+const { Zero, AddressZero } = constants
 console.log(chalk.green(`Starting Token Bridge Integrations Tests!`))
 console.log()
 
@@ -49,7 +52,7 @@ const network = ((_network?: string | number) => {
     prettyLog('Using network ' + _network)
     return _network.toString()
   }
-})(argv.network as string | number | undefined)
+})(argv.network as string | number | undefined) as 'kovan4' | 'devnet'
 
 if (network === 'kovan4' && !process.env.INFURA_KEY) {
   warn('To use kovan, set env var INFURA_KEY')
@@ -65,8 +68,18 @@ const {
   arbTokenBridgeAddress,
   l1gasPrice,
   existantTestERC20,
+  existantCustomTokenL1,
+  existantCustomTokenL2,
   defaultWait,
-} = config.kovan4
+} = config[network]
+
+if (
+  [existantCustomTokenL1, existantCustomTokenL2].filter((x: any) => x)
+    .length === 1
+) {
+  warn('Include either both a predeployed / custom  token L1 and L2 or neither')
+  process.exit()
+}
 
 const ethProvider = new providers.JsonRpcProvider(ethRPC)
 const arbProvider = new providers.JsonRpcProvider(arbRPC)
@@ -83,12 +96,6 @@ const wait = (ms = 0) => {
 
 const depositAmount = '0.01'
 let erc20Address = existantTestERC20
-if (erc20Address) {
-  prettyLog('Using token already deployed at l1 address: ' + erc20Address)
-} else {
-  prettyLog(`No L1 token address provided; we'll do it live!`)
-}
-
 prettyLog('Using preFundedWallet: ' + preFundedWallet.address)
 prettyLog('Randomly generated test wallet: ' + l1TestWallet.address)
 
@@ -99,7 +106,7 @@ const bridge = new Bridge(
   l2TestWallet
 )
 
-describe('before', () => {
+before('setup', () => {
   it("'prefunded wallet' is indeed prefunded", async () => {
     const balance = await preFundedWallet.getBalance()
     const hasBalance = balance.gt(utils.parseEther(depositAmount))
@@ -127,11 +134,11 @@ describe('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
 
-  it('has expected initial values', async () => {
+  before('has expected initial values', async () => {
     testWalletL1EthBalance = await bridge.getAndUpdateL1EthBalance()
     testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
     expect(testWalletL1EthBalance.eq(parseEther(depositAmount))).to.be.true
-    expect(testWalletL2EthBalance.eq(constants.Zero)).to.be.true
+    expect(testWalletL2EthBalance.eq(Zero)).to.be.true
   })
 
   const ethToL2DepositAmount = parseEther('0.0001')
@@ -157,12 +164,6 @@ describe('Ether', () => {
       await bridge.getWithdrawalsInL2Transaction(withdrawEthRec)
     )[0]
     expect(withdrawEventData).to.exist
-
-    // const { indexInBatch, batchNumber } = withdrawEventData
-    // console.warn('indexInBatch, batchNumber ', indexInBatch, batchNumber)
-    // await wait()
-    // const proof = await bridge.tryGetProof(batchNumber, indexInBatch)
-    // expect(proof).to.exist
   })
 
   it('balance deducted after withdraw eth', async () => {
@@ -173,23 +174,27 @@ describe('Ether', () => {
   })
 })
 const tokenDepositAmmount = BigNumber.from(50)
+const tokenWithdrawAmount = BigNumber.from(2)
 
 const tokenDepositAmountE18 = utils.parseUnits('50', 18)
 const tokenWithdrawAmountE18 = utils.parseUnits('2', 18)
 
 describe('ERC20', () => {
-  it('create/ensure l1 erc20 w initial supply', async () => {
+  before('create/ensure l1 erc20 w initial supply', async () => {
     wait(10000)
     const testTokenFactory = await new TestERC20__factory(preFundedWallet)
     const testToken = await (async () => {
       if (erc20Address) {
-        prettyLog('Connecting to pre-deployed erc20')
+        prettyLog('Using token already deployed at l1 address: ' + erc20Address)
         return testTokenFactory.attach(erc20Address)
       } else {
-        prettyLog('Deploying new erc20:')
+        prettyLog(
+          `No L1 standard ERC20 token address provided; we'll do it live!`
+        )
         const res = await testTokenFactory.deploy()
+        const rec = await res.deployTransaction.wait()
+        expect(rec.status).to.equal(1)
         prettyLog('New token deployed at ' + res.address)
-
         return res
       }
     })()
@@ -220,7 +225,7 @@ describe('ERC20', () => {
   })
 
   it('initial erc20 deposit txns — L1 and L2 — both succeed', async () => {
-    const despositRes = await bridge.depositAsERC20(
+    const despositRes = await bridge.deposit(
       erc20Address,
       tokenDepositAmmount,
       BigNumber.from(10000000000000),
@@ -233,7 +238,7 @@ describe('ERC20', () => {
     await wait()
 
     const tokenDepositData = (
-      await bridge.getDepositTokenEventData(depositRec, 'ERC20')
+      await bridge.getDepositTokenEventData(depositRec)
     )[0] as DepositTokenEventResult
     const seqNum = tokenDepositData.seqNum
 
@@ -271,92 +276,15 @@ describe('ERC20', () => {
     expect(balance.eq(tokenDepositAmmount)).to.be.true
   })
 
-  it('L1 and L2 implementations of calculateL2ERC777Address match', async () => {
+  it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
     // this uses the ArbTokenBridge impmentation
     const erc20L2AddressAsPerL2 = await bridge.getERC20L2Address(erc20Address)
-    const erc20L2AddressAsPerL1 = await bridge.ethERC20Bridge.calculateL2ERC20Address(
+    const erc20L2AddressAsPerL1 = await bridge.ethERC20Bridge.calculateL2TokenAddress(
       erc20Address
     )
     prettyLog('Token L2 Address: ' + erc20L2AddressAsPerL1)
     expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
-
-  it('Update token info', async () => {
-    const l1Data = await bridge.getAndUpdateL1TokenData(erc20Address)
-    const l1Contract =
-      l1Data && l1Data.ERC20 && (l1Data.ERC20.contract as TestERC20)
-
-    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
-    const l2Contract =
-      l2Data && l2Data.ERC20 && (l2Data.ERC20.contract as StandardArbERC20)
-    expect(l2Contract).to.exist
-    expect(l1Contract).to.exist
-    if (l1Contract === undefined) {
-      throw new Error('No L1 contact(?)')
-    }
-    if (l2Contract === undefined) {
-      throw new Error('No L2 contract(?)')
-    }
-
-    const l1Symbol = await l1Contract.symbol()
-    const l1Name = await l1Contract.name()
-    const l1Decimals = await l1Contract.decimals()
-
-    let l2Symbol = await l2Contract.symbol()
-    let l2Name = await l2Contract.name()
-    let l2Decimals = await l2Contract.decimals()
-    prettyLog(`L1 — Symbol: ${l1Symbol} Name: ${l1Name} ${l1Decimals}`)
-    prettyLog(
-      `Before update — L2 info: Symbol: ${l2Symbol} Name: ${l2Name} ${l2Decimals}`
-    )
-    if (l1Symbol === l2Symbol) {
-      prettyLog(`Token "${l1Symbol}" info already updated, so be it`)
-    } else {
-      prettyLog(`Token info for "${l1Symbol}" not yet updated! Updating now:`)
-
-      const res = await bridge.ethERC20Bridge.updateTokenInfo(
-        erc20Address,
-        0,
-        BigNumber.from(0),
-        BigNumber.from(10000000000000),
-        BigNumber.from(0)
-      )
-      const rec = await res.wait()
-      expect(rec.status).to.equal(1)
-
-      const eventData = (await bridge.getUpdateTokenInfoEventResult(rec))[0]
-
-      expect(eventData).to.exist
-      const { seqNum } = eventData
-      const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
-        seqNum
-      )
-
-      const retriableReceipt = await arbProvider.waitForTransaction(
-        l2RetriableHash
-      )
-      expect(retriableReceipt.status).to.equal(1)
-      const l2eventData = (
-        await BridgeHelper.getUpdateTokenInfoEventResultL2(
-          retriableReceipt,
-          bridge.arbTokenBridge.address
-        )
-      )[0]
-      expect(l2eventData).to.exist
-
-      l2Symbol = await l2Contract.symbol()
-      l2Name = await l2Contract.name()
-      l2Decimals = await l2Contract.decimals()
-      prettyLog(
-        `After update: L2 symbol: ${l2Symbol} L2 name: ${l2Name} L2 decimals ${l2Decimals}`
-      )
-      expect(l2Symbol).to.equal(l1Symbol)
-      expect(l2Name).to.equal(l1Name)
-      expect(l2Decimals).to.equal(l1Decimals)
-    }
-  })
-
-  const tokenWithdrawAmount = BigNumber.from(2)
 
   it('withdraw erc20 succeeds and emits event data', async () => {
     const withdrawRes = await bridge.withdrawERC20(
@@ -370,10 +298,6 @@ describe('ERC20', () => {
     )[0]
 
     expect(withdrawEventData).to.exist
-    // const { indexInBatch, batchNumber } = withdrawEventData
-    // await wait()
-    // const proof = await bridge.tryGetProof(batchNumber, indexInBatch)
-    // expect(proof).to.exist
   })
 
   it('balance properly deducted after erc20 withdraw', async () => {
@@ -385,31 +309,276 @@ describe('ERC20', () => {
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmmount)
     ).to.be.true
   })
-  // it('withdraw events queries works as expected',async ()=>{
-  //   const l1EventData = await bridge.getL2ToL1EventData(l1TestWallet.address)
-  //   const withdrawTokenData = await bridge.getTokenWithdrawEventData(
-  //     l1TestWallet.address
-  //   )
-  //   console.log(l1EventData.length, withdrawTokenData.length)
-  //   expect(l1EventData.length).to.equal(withdrawTokenData.length)
-  // })
 })
 
-describe.skip('ERC777', () => {
-  it('initial ERC777 deposit works', async () => {
-    const despositRes = await bridge.depositAsERC777(
-      erc20Address,
+describe('CustomToken', () => {
+  let l1CustomToken: TestCustomTokenL1
+  let l2CustomToken: TestArbCustomToken
+
+  before('sets up a new custom token, L1 and L2', async () => {
+    if (!existantCustomTokenL1 && !existantCustomTokenL2) {
+      prettyLog("No custom token addresses given; we'll do it live!")
+      const customTokenFactory = await new TestCustomTokenL1__factory(
+        preFundedWallet
+      )
+      l1CustomToken = await customTokenFactory.deploy(
+        bridge.ethERC20Bridge.address
+      )
+      let rec = await l1CustomToken.deployTransaction.wait()
+      expect(rec.status).to.equal(1)
+      prettyLog('Deployed a new customL1 Token at ' + l1CustomToken.address)
+
+      const customL2TokenFactory = await new TestArbCustomToken__factory(
+        l2TestWallet
+      )
+      l2CustomToken = await customL2TokenFactory.deploy(
+        bridge.arbTokenBridge.address,
+        l1CustomToken.address
+      )
+      rec = await l2CustomToken.deployTransaction.wait()
+      expect(rec.status).to.equal(1)
+      prettyLog('Deployed a new custom L2 token at ' + l2CustomToken.address)
+
+      const registerRes = await l1CustomToken.registerTokenOnL2(
+        l2CustomToken.address,
+        Zero,
+        BigNumber.from(10000000000000),
+        Zero,
+        l1TestWallet.address
+      )
+      const registerRec = await registerRes.wait()
+      expect(registerRec.status).to.equal(1)
+
+      const eventData = (
+        await BridgeHelper.getActivateCustomTokenEventResult(
+          registerRec,
+          bridge.ethERC20Bridge.address
+        )
+      )[0]
+
+      expect(eventData).to.exist
+
+      const { seqNum } = eventData
+
+      const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
+        seqNum
+      )
+
+      const retriableReceipt = await arbProvider.waitForTransaction(
+        l2RetriableHash
+      )
+
+      expect(retriableReceipt.status).to.equal(1)
+
+      wait()
+      const l2AddressHopefully = await bridge.arbTokenBridge.customL2Token(
+        l1CustomToken.address
+      )
+      expect(l2AddressHopefully).to.equal(l2CustomToken.address)
+    } else {
+      prettyLog(
+        "Connecting to pre-deployed custom tokens and ensuring they're property registered:"
+      )
+      l1CustomToken = TestCustomTokenL1__factory.connect(
+        existantCustomTokenL1,
+        preFundedWallet
+      )
+      l2CustomToken = TestArbCustomToken__factory.connect(
+        existantCustomTokenL2,
+        l2TestWallet
+      )
+
+      const l2CustonTokenAddressInEthBridge = await bridge.ethERC20Bridge.customL2Token(
+        existantCustomTokenL1
+      )
+
+      expect(l2CustonTokenAddressInEthBridge).to.equal(existantCustomTokenL2)
+      prettyLog(
+        `Connected to pre-deployed, pre-registered custom token addresses. L1:${l1CustomToken.address} L2: ${l2CustomToken.address}`
+      )
+    }
+  })
+
+  it('setup: mint some custom token and send to test address', async () => {
+    const mintRes = await l1CustomToken.mint()
+    const mintRec = await mintRes.wait()
+    const bal = await l1CustomToken.balanceOf(preFundedWallet.address)
+    expect(bal.gt(BigNumber.from(40000000))).to.be.true
+
+    erc20Address = l1CustomToken.address
+    const res = await l1CustomToken.transfer(
+      l1TestWallet.address,
+      BigNumber.from(200)
+    )
+    const rec = await res.wait()
+    const data = await bridge.getAndUpdateL1TokenData(erc20Address)
+    const testWalletBal = data.ERC20 && data.ERC20.balance
+    expect(testWalletBal && testWalletBal.eq(BigNumber.from(200))).to.be.true
+  })
+
+  it('approve token for bridge contract', async () => {
+    const approveRes = await bridge.approveToken(l1CustomToken.address)
+    const approveRec = await approveRes.wait()
+    expect(approveRec.status).to.equal(1)
+
+    const data = await bridge.getAndUpdateL1TokenData(l1CustomToken.address)
+    const allowed = data.ERC20 && data.ERC20.allowed
+    expect(allowed).to.be.true
+  })
+  it('deposits custom token', async () => {
+    const despositRes = await bridge.deposit(
+      l1CustomToken.address,
+      tokenDepositAmmount,
+      BigNumber.from(10000000000000),
+      BigNumber.from(0),
+      '',
+      { gasLimit: 210000, gasPrice: l1gasPrice }
+    )
+
+    const depositRec = await despositRes.wait()
+    expect(depositRec.status).to.equal(1)
+    await wait(10000)
+
+    const tokenDepositData = (
+      await bridge.getDepositTokenEventData(depositRec)
+    )[0] as DepositTokenEventResult
+
+    const seqNum = tokenDepositData.seqNum
+
+    const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
+      seqNum
+    )
+
+    const retriableReceipt = await arbProvider.waitForTransaction(
+      l2RetriableHash
+    )
+
+    expect(retriableReceipt.status).to.equal(1)
+  })
+
+  it('wallet has expected balance after custom token deposit', async () => {
+    const data = await bridge.getAndUpdateL2TokenData(l1CustomToken.address)
+    const customTokenData = data && data.CUSTOM
+    expect(customTokenData && customTokenData.balance.eq(tokenDepositAmmount))
+  })
+
+  it('withdraw custom token succeeds and emits event data', async () => {
+    const withdrawRes = await l2CustomToken.withdraw(
+      l1TestWallet.address,
+      tokenWithdrawAmount
+    )
+    const withdrawRec = await withdrawRes.wait()
+    expect(withdrawRec.status).to.equal(1)
+    const withdrawEventData = (
+      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
+    )[0]
+    expect(withdrawEventData).to.exist
+  })
+
+  it('balance properly deducted after custom withdraw', async () => {
+    await wait()
+    const l2Data = await bridge.getAndUpdateL2TokenData(l1CustomToken.address)
+    const testWalletL2Balance = l2Data && l2Data.CUSTOM && l2Data.CUSTOM.balance
+    expect(
+      testWalletL2Balance &&
+        testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmmount)
+    ).to.be.true
+  })
+})
+
+describe('CustomToken: no-L2-yet-fallback case', () => {
+  let l1CustomToken: TestCustomTokenL1
+  before(
+    'deploys a new custom token, mints, approves, and registered the L2 side as some rando-address',
+    async () => {
+      prettyLog('deploying a new custom token')
+
+      const customTokenFactory = await new TestCustomTokenL1__factory(
+        l1TestWallet
+      )
+      l1CustomToken = await customTokenFactory.deploy(
+        bridge.ethERC20Bridge.address
+      )
+      const rec = await l1CustomToken.deployTransaction.wait()
+      expect(rec.status).to.equal(1)
+      prettyLog('Deployed a new customL1 Token at ' + l1CustomToken.address)
+
+      const approveRes = await bridge.approveToken(l1CustomToken.address)
+      const approveRec = await approveRes.wait()
+      expect(approveRec.status).to.equal(1)
+
+      const data = await bridge.getAndUpdateL1TokenData(l1CustomToken.address)
+      const allowed = data.ERC20 && data.ERC20.allowed
+      expect(allowed).to.be.true
+
+      const mintRes = await l1CustomToken.mint()
+      const mintRec = await mintRes.wait()
+
+      const randoAddress = Wallet.createRandom().address
+
+      const registerRes = await l1CustomToken.registerTokenOnL2(
+        randoAddress,
+        Zero,
+        BigNumber.from(10000000000000),
+        Zero,
+        l1TestWallet.address
+      )
+      const registerRec = await registerRes.wait()
+      expect(registerRec.status).to.equal(1)
+
+      const eventData = (
+        await BridgeHelper.getActivateCustomTokenEventResult(
+          registerRec,
+          bridge.ethERC20Bridge.address
+        )
+      )[0]
+
+      expect(eventData).to.exist
+
+      const { seqNum } = eventData
+
+      const l2RetriableHash = await bridge.calculateL2RetryableTransactionHash(
+        seqNum
+      )
+
+      const retriableReceipt = await arbProvider.waitForTransaction(
+        l2RetriableHash
+      )
+
+      expect(retriableReceipt.status).to.equal(1)
+
+      wait()
+    }
+  )
+
+  it('did not register at rando address', async () => {
+    const customTokenAddr = await bridge.arbTokenBridge.customL2Token(
+      l1CustomToken.address
+    )
+    const customTokenCode = await bridge.l2Provider.getCode(customTokenAddr)
+    // no custom token deployed
+    expect(customTokenCode).to.equal('0x')
+
+    const erc20L2Address = await bridge.getERC20L2Address(l1CustomToken.address)
+
+    const prevErc20Code = await bridge.l2Provider.getCode(erc20L2Address)
+    expect(prevErc20Code).to.equal('0x')
+  })
+
+  it('deposit into TMT works', async () => {
+    const despositRes = await bridge.deposit(
+      l1CustomToken.address,
       tokenDepositAmmount,
       BigNumber.from(10000000000000),
       BigNumber.from(0),
       undefined,
       { gasLimit: 210000, gasPrice: l1gasPrice }
     )
-
     const depositRec = await despositRes.wait()
+    await wait()
 
     const tokenDepositData = (
-      await bridge.getDepositTokenEventData(depositRec, 'ERC777')
+      await bridge.getDepositTokenEventData(depositRec)
     )[0] as DepositTokenEventResult
     const seqNum = tokenDepositData.seqNum
 
@@ -420,50 +589,35 @@ describe.skip('ERC777', () => {
     const retriableReceipt = await arbProvider.waitForTransaction(
       l2RetriableHash
     )
+
     expect(depositRec.status).to.equal(1)
+
     expect(retriableReceipt.status).to.equal(1)
 
-    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
+    const erc20L2Address = await bridge.arbTokenBridge.calculateL2ERC20TokenAddress(
+      l1CustomToken.address
+    )
 
-    const testWalletL2Balance = l2Data && l2Data.ERC777 && l2Data.ERC777.balance
-    expect(testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmountE18))
-      .to.be.true
-  })
+    const post = await bridge.l2Provider.getCode(erc20L2Address)
+    expect(post).not.to.equal('0x')
 
-  it('erc777 is properly deployed in L2', async () => {
-    const erc777L2Address = await bridge.getERC777L2Address(erc20Address)
-
-    const arbERC777 = StandardArbERC777__factory.connect(
-      erc777L2Address,
+    const arbERC20 = StandardArbERC20__factory.connect(
+      erc20L2Address,
       arbProvider
     )
-    const l2Code = await arbProvider.getCode(erc777L2Address)
-    expect(l2Code.length > 2).to.be.true
-    const balance = await arbERC777.balanceOf(l1TestWallet.address)
-    expect(balance.eq(tokenDepositAmountE18)).to.be.true
+    const symbol = await arbERC20.symbol()
+    expect(symbol).to.equal('TMT')
+
+    const newCustomTokenBal = await arbERC20.balanceOf(l1TestWallet.address)
+
+    expect(newCustomTokenBal.eq(tokenDepositAmmount)).to.be.true
+    // user should be able to withdraw
+    // or migrate to custom token once deployed
   })
+})
 
-  it('withdraw erc77', async () => {
-    const withdrawRes = await bridge.withdrawERC777(
-      erc20Address,
-      tokenWithdrawAmountE18
-    )
-    const withdrawRec = await withdrawRes.wait()
-    expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = (
-      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
-    )[0]
-
-    expect(withdrawEventData).to.exist
-    await wait()
-
-    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
-    const testWalletL2Balance = l2Data && l2Data.ERC777 && l2Data.ERC777.balance
-    expect(
-      testWalletL2Balance &&
-        testWalletL2Balance
-          .add(tokenWithdrawAmountE18)
-          .eq(tokenDepositAmountE18)
-    ).to.be.true
+describe.skip('scrap paper', async () => {
+  it('', () => {
+    console.log('just for scraps')
   })
 })

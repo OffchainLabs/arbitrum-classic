@@ -81,6 +81,11 @@ func (m *Machine) Hash() (ret common.Hash, err error) {
 	return
 }
 
+func (m *Machine) CodePointHash() (ret common.Hash) {
+	C.machineCodePointHash(m.c, unsafe.Pointer(&ret[0]))
+	return
+}
+
 func (m *Machine) Clone() machine.Machine {
 	cMachine := C.machineClone(m.c)
 	ret := &Machine{cMachine}

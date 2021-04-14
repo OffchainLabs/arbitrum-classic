@@ -18,11 +18,7 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import {
-  TransactionOverrides,
-  BridgeHelper,
-  UpdateTokenEventResult,
-} from './bridge_helpers'
+import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
 
 const { Zero } = constants
 
@@ -91,7 +87,7 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public async depositAsERC20(
+  public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
     maxGas: BigNumber,
@@ -101,7 +97,7 @@ export class Bridge extends L2Bridge {
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
-    return this.l1Bridge.depositAsERC20(
+    return this.l1Bridge.deposit(
       erc20L1Address,
       amount,
       maxSubmissionPrice,
@@ -111,27 +107,7 @@ export class Bridge extends L2Bridge {
       overrides
     )
   }
-  public async depositAsERC777(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
-    overrides?: TransactionOverrides
-  ) {
-    // TODO: this will need to (somehow) input the calldata size
-    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
 
-    return this.l1Bridge.depositAsERC777(
-      erc20L1Address,
-      amount,
-      maxSubmissionPrice,
-      maxGas,
-      gasPriceBid,
-      destinationAddress,
-      overrides
-    )
-  }
   public getAndUpdateL1TokenData(erc20l1Address: string) {
     return this.l1Bridge.getAndUpdateL1TokenData(erc20l1Address)
   }
@@ -192,18 +168,15 @@ export class Bridge extends L2Bridge {
   ) {
     return BridgeHelper.getWithdrawalsInL2Transaction(
       l2Transaction,
-      this.l2Provider,
-      ARB_SYS_ADDRESS
+      this.l2Provider
     )
   }
 
   public getDepositTokenEventData(
-    l1Transaction: ethers.providers.TransactionReceipt,
-    tokenType: 'ERC20' | 'ERC777' = 'ERC20'
+    l1Transaction: ethers.providers.TransactionReceipt
   ) {
     return BridgeHelper.getDepositTokenEventData(
       l1Transaction,
-      tokenType,
       this.arbTokenBridge.address
     )
   }
@@ -293,15 +266,6 @@ export class Bridge extends L2Bridge {
     return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
   }
 
-  public getUpdateTokenInfoEventResult = (
-    l1Transaction: ethers.providers.TransactionReceipt
-  ): Promise<Array<UpdateTokenEventResult>> => {
-    return BridgeHelper.getUpdateTokenInfoEventResult(
-      l1Transaction,
-      this.arbTokenBridge.address
-    )
-  }
-
   public async getTokenWithdrawEventData(destinationAddress: string) {
     return BridgeHelper.getTokenWithdrawEventData(
       destinationAddress,
@@ -311,10 +275,6 @@ export class Bridge extends L2Bridge {
   }
 
   public async getL2ToL1EventData(destinationAddress: string) {
-    return BridgeHelper.getL2ToL1EventData(
-      destinationAddress,
-      this.l2Provider,
-      ARB_SYS_ADDRESS
-    )
+    return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
   }
 }

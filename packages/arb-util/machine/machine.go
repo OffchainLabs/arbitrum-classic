@@ -33,6 +33,8 @@ const (
 
 type Machine interface {
 	Hash() (common.Hash, error)
+	CodePointHash() common.Hash
+
 	Clone() Machine
 
 	CurrentStatus() Status

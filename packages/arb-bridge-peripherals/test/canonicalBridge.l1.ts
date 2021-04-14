@@ -30,7 +30,6 @@ describe('Bridge peripherals layer 1', () => {
   const maxSubmissionCost = 0
   const maxGas = 1000000000
   const gasPrice = 0
-  const l2Template777 = '0x0000000000000000000000000000000000000777'
   const l2Template20 = '0x0000000000000000000000000000000000000020'
   const l2Address = '0x1100000000000000000000000000000000000011'
 
@@ -47,11 +46,6 @@ describe('Bridge peripherals layer 1', () => {
 
     await testBridge.initialize(
       inbox,
-      l2Deployer,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice,
-      l2Template777,
       l2Template20,
       l2Address
     )
@@ -69,7 +63,7 @@ describe('Bridge peripherals layer 1', () => {
     assert.equal(true, false, 'Not implemented')
   })
 
-  it('should updateTokenInfo 18 decimals', async function () {
+  it.skip('should updateTokenInfo 18 decimals', async function () {
     // deploy erc20 with 18 decimals
     const Token = await ethers.getContractFactory('StandardArbERC20')
     const token = await Token.deploy()
@@ -130,7 +124,7 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it('should updateTokenInfo 6 decimals as uint8', async function () {
+  it.skip('should updateTokenInfo 6 decimals as uint8', async function () {
     // deploy erc20 with 18 decimals
     const Token = await ethers.getContractFactory('StandardArbERC20')
     const token = await Token.deploy()
@@ -191,7 +185,7 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it('should updateTokenInfo 6 decimals set as uint 256 and name as bytes32', async function () {
+  it.skip('should updateTokenInfo 6 decimals set as uint 256 and name as bytes32', async function () {
     const Token = await ethers.getContractFactory('TesterERC20Token')
     // this adds padding at the end, not the start!
     const name = ethers.utils.formatBytes32String("0x617262697472756d")
@@ -248,7 +242,7 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it('should updateTokenInfo even with token that has no metadata', async function () {
+  it.skip('should updateTokenInfo even with token that has no metadata', async function () {
     const Token = await ethers.getContractFactory('TesterERC20TokenNoMetadata')
     const token = await Token.deploy()
 

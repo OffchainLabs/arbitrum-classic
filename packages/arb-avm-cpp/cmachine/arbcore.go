@@ -309,6 +309,17 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	return cursor.updateValues()
 }
 
+func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
+	cMachine := C.arbCoreGetLastMachine(ac.c)
+	if cMachine == nil {
+		return nil, errors.Errorf("error getting last machine")
+	}
+	ret := &Machine{cMachine}
+
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
+}
+
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {

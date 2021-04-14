@@ -37,14 +37,21 @@ type mock struct {
 	t            *testing.T
 	sentL1Txes   map[common.Hash]bool
 	seenTxesChan chan<- message.CompressedECDSATransaction
+	sender       common.Address
 }
 
 func newMock(t *testing.T, seenTxesChan chan<- message.CompressedECDSATransaction, txes []*types.Transaction) *mock {
+	sender := common.RandAddress()
 	return &mock{
 		t:            t,
+		sender:       sender,
 		sentL1Txes:   make(map[common.Hash]bool),
 		seenTxesChan: seenTxesChan,
 	}
+}
+
+func (m *mock) Sender() common.Address {
+	return m.sender
 }
 
 func (m *mock) SendL2MessageFromOrigin(_ context.Context, data []byte) (common.Hash, error) {

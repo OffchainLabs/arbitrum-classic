@@ -153,6 +153,8 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     machine = std::make_unique<MachineThread>(
         MachineState{code, executable.static_val});
 
+    last_machine = std::make_unique<Machine>(*machine);
+
     ReadWriteTransaction tx(data_storage);
     // Need to initialize database from scratch
 
@@ -430,10 +432,10 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
 
     machine = getMachineUsingStateKeys<MachineThread>(tx, checkpoint, cache);
 
-    // Update last machine output
+    // Update last machine
     {
-        std::unique_lock<std::shared_mutex> guard(last_machine_output_mutex);
-        last_machine_output = machine->machine_state.output;
+        std::unique_lock<std::shared_mutex> guard(last_machine_mutex);
+        last_machine = std::make_unique<Machine>(*machine);
     }
 
     return tx.commit();
@@ -665,9 +667,8 @@ void ArbCore::operator()() {
 
             // Save last machine output
             {
-                std::unique_lock<std::shared_mutex> guard(
-                    last_machine_output_mutex);
-                last_machine_output = machine->machine_state.output;
+                std::unique_lock<std::shared_mutex> guard(last_machine_mutex);
+                last_machine = std::make_unique<Machine>(*machine);
             }
 
             // Save logs and sends
@@ -1271,9 +1272,19 @@ ValueResult<size_t> ArbCore::countMatchingBatchAccs(
     return {rocksdb::Status::OK(), matching};
 }
 
+std::unique_ptr<Machine> ArbCore::getLastMachine() {
+    std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
+    return std::make_unique<Machine>(*last_machine);
+}
+
 uint256_t ArbCore::machineMessagesRead() {
-    std::shared_lock<std::shared_mutex> guard(last_machine_output_mutex);
-    return last_machine_output.fully_processed_inbox.count;
+    std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
+    assert(last_machine);
+    if (last_machine) {
+        return last_machine->machine_state.output.fully_processed_inbox.count;
+    } else {
+        return 0;
+    }
 }
 
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(

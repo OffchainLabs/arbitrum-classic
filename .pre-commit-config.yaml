@@ -9,8 +9,8 @@ repos:
     hooks:
       - id: black
         language_version: python3
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v1.2.3
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.9.0
     hooks:
       - id: flake8
   - repo: git://github.com/doublify/pre-commit-clang-format
@@ -26,7 +26,7 @@ repos:
     hooks:
       - id: prettier
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: 'v7.3.1' # Use the sha / tag you want to point at
+    rev: 'v7.24.0' # Use the sha / tag you want to point at
     hooks:
       - id: eslint
         args: [--fix]

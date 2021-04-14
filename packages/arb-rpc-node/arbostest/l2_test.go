@@ -36,10 +36,7 @@ import (
 )
 
 func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.AbstractL2Message) ([]message.AbstractL2Message, *snapshot.Snapshot) {
-	ethDeposit := message.Eth{
-		Dest:  sender,
-		Value: big.NewInt(100),
-	}
+	ethDeposit := makeEthDeposit(sender, big.NewInt(100))
 
 	createTx := message.Transaction{
 		MaxGas:      big.NewInt(1000000),
@@ -67,24 +64,24 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 	l2Message2, err := message.NewL2Message(msg2)
 	failIfError(t, err)
 
-	messages := makeSimpleInbox([]message.Message{
+	messages := []message.Message{
 		ethDeposit,
 		message.NewSafeL2Message(createTx),
 		message.NewSafeL2Message(createTx2),
 		l2Message,
 		l2Message2,
-	})
+	}
 
-	logs, _, snap, _ := runAssertion(t, messages, 4, 0)
+	logs, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
 
-	checkConstructorResult(t, results[0], connAddress1)
-	checkConstructorResult(t, results[1], connAddress2)
+	checkConstructorResult(t, results[1], connAddress1)
+	checkConstructorResult(t, results[2], connAddress2)
 
 	msgs := make([]message.AbstractL2Message, 0)
-	for i, result := range results[2:] {
+	for i, result := range results[3:] {
 		if result.IncomingRequest.Sender != sender {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
@@ -245,10 +242,7 @@ func TestContractTx(t *testing.T) {
 }
 
 func TestUnsignedTx(t *testing.T) {
-	ethDeposit := message.Eth{
-		Dest:  sender,
-		Value: big.NewInt(1000),
-	}
+	ethDeposit := makeEthDeposit(sender, big.NewInt(1000))
 
 	tx1 := message.Transaction{
 		MaxGas:      big.NewInt(10000000),
@@ -268,16 +262,16 @@ func TestUnsignedTx(t *testing.T) {
 		Data:        []byte{},
 	}
 
-	messages := makeSimpleInbox([]message.Message{
+	messages := []message.Message{
 		ethDeposit,
 		message.NewSafeL2Message(tx1),
 		message.NewSafeL2Message(tx2),
-	})
+	}
 
-	logs, _, _, _ := runAssertion(t, messages, 2, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
-	for i, result := range results {
+	for i, result := range results[1:] {
 		if result.IncomingRequest.Sender != sender {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, sender)
 		}
@@ -347,17 +341,14 @@ func TestBatch(t *testing.T) {
 	var messages []message.Message
 	for _, pk := range pks {
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
-		messages = append(messages, message.Eth{
-			Dest:  addr,
-			Value: big.NewInt(1000),
-		})
+		messages = append(messages, makeEthDeposit(addr, big.NewInt(1000)))
 	}
 	messages = append(messages, message.NewSafeL2Message(msg))
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages)+len(txes)-1, 0)
 	results := processTxResults(t, logs)
 
-	for i, result := range results {
+	for i, result := range results[len(messages)-1:] {
 		if result.IncomingRequest.Sender != senders[i] {
 			t.Error("l2message had incorrect sender", result.IncomingRequest.Sender, senders[i])
 		}
@@ -445,10 +436,7 @@ func TestCompressedECDSATx(t *testing.T) {
 	messages := make([]message.Message, 0)
 	messages = append(
 		messages,
-		message.Eth{
-			Dest:  addr,
-			Value: big.NewInt(1000),
-		},
+		makeEthDeposit(addr, big.NewInt(1000)),
 	)
 
 	for _, tx := range txes {
@@ -460,8 +448,8 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(txes), 0)
-	verifyTxLogs(t, signer, txes, logs)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	verifyTxLogs(t, signer, txes, logs[1:])
 }
 
 func TestCall(t *testing.T) {

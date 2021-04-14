@@ -49,8 +49,8 @@ project (arb-avm-cpp)
 include(CTest)
 
 set(AVM_VERSION_MAJOR 0)
-set(AVM_VERSION_MINOR 7)
-set(AVM_VERSION_PATCH 3)
+set(AVM_VERSION_MINOR 8)
+set(AVM_VERSION_PATCH 0)
 
 set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_PATCH})
 
@@ -61,6 +61,25 @@ option(AVM_BUILD_TESTING "Build tests" ON)
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
+
+# On macOS, search Homebrew for keg-only versions of OpenSSL
+if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
+    execute_process(
+        COMMAND brew --prefix OpenSSL 
+        RESULT_VARIABLE BREW_OPENSSL
+        OUTPUT_VARIABLE BREW_OPENSSL_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if (BREW_OPENSSL EQUAL 0 AND EXISTS "${BREW_OPENSSL_PREFIX}")
+        message(STATUS "Found OpenSSL keg installed by Homebrew at ${BREW_OPENSSL_PREFIX}")
+        set(OPENSSL_ROOT_DIR "${BREW_OPENSSL_PREFIX}/")
+        set(OPENSSL_INCLUDE_DIR "${BREW_OPENSSL_PREFIX}/include")
+        set(OPENSSL_LIBRARIES "${BREW_OPENSSL_PREFIX}/lib")
+        set(OPENSSL_CRYPTO_LIBRARY "${BREW_OPENSSL_PREFIX}/lib/libcrypto.dylib")
+        set(OPENSSL_SSL_LIBRARY (ADVANCED) "${BREW_OPENSSL_PREFIX}/lib/libssl.dylib")
+    endif()
+endif()
+
 find_package(Boost 1.65 COMPONENTS filesystem system REQUIRED)
 if(NOT TARGET Boost::boost)
     add_library(Boost::boost IMPORTED INTERFACE)

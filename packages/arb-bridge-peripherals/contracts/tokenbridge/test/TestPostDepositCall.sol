@@ -19,34 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "../arbitrum/ArbTokenBridge.sol";
+import "../libraries/IERC1363.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-// import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-
-// contract TestPostDepositCall {
-//     EthERC20Bridge tokenBridge;
-//     IInbox inbox;
-
-//     constructor(address _tokenBridge, address erc20Template, address erc777Template, address _inbox) {
-//         tokenBridge = EthErc20Bridge(_tokenBridge, erc20Template, erc777Template);
-//         inbox = IInbox(_inbox);
-//     }
-
-//     function depositAndCall(
-//         address erc20,
-//         address destination,
-//         uint256 amount,
-//         uint256 maxGas,
-//         uint256 gasPriceBid,
-//         address l2CallDestination,
-//         bytes memory data
-//     ) external payable {
-//         tokenBridge.depositAsERC20(erc20, destination, amount, maxGas, gasPriceBid);
-//         inbox.sendContractTransaction(maxGas, gasPriceBid, l2CallDestination, 0, data);
-//     }
-// }
-
-contract L2Called is ITransferReceiver {
+contract L2Called is IERC1363Receiver {
     event Called(uint256 num);
 
     constructor() public {}
@@ -56,20 +32,25 @@ contract L2Called is ITransferReceiver {
         emit Called(num);
     }
 
-    function onTokenTransfer(
-        address user,
+    function onTransferReceived(
+        address operator,
+        address sender,
         uint256 amount,
         bytes calldata data
-    ) external override returns (bool) {
+    ) external override returns (bytes4) {
         uint256 num = abi.decode(data, (uint256));
 
         if (num == 5) {
             postDepositHook(num);
-            return true;
+            return IERC1363Receiver.onTransferReceived.selector;
         } else if (num == 7) {
             revert();
+        } else if (num == 9) {
+            // this should use all gas
+            while (gasleft() > 0) {}
+            return IERC1363Receiver.onTransferReceived.selector;
         } else {
-            return false;
+            return bytes4(0x00);
         }
     }
 }

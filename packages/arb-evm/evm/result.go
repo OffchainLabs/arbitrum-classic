@@ -33,15 +33,17 @@ import (
 type ResultType int
 
 const (
-	ReturnCode               ResultType = 0
-	RevertCode               ResultType = 1
-	CongestionCode           ResultType = 2
-	InsufficientGasFundsCode ResultType = 3
-	InsufficientTxFundsCode  ResultType = 4
-	BadSequenceCode          ResultType = 5
-	InvalidMessageFormatCode ResultType = 6
-	ContractAlreadyExists    ResultType = 7
-	UnknownErrorCode         ResultType = 255
+	ReturnCode                ResultType = 0
+	RevertCode                ResultType = 1
+	CongestionCode            ResultType = 2
+	InsufficientGasFundsCode  ResultType = 3
+	InsufficientTxFundsCode   ResultType = 4
+	BadSequenceCode           ResultType = 5
+	InvalidMessageFormatCode  ResultType = 6
+	ContractAlreadyExists     ResultType = 7
+	ExceededTxGasLimit        ResultType = 8
+	InsufficientGasForBaseFee ResultType = 9
+	UnknownErrorCode          ResultType = 255
 )
 
 type Result interface {
@@ -97,7 +99,7 @@ func CompareResults(res1 *TxResult, res2 *TxResult) []string {
 
 func (r *TxResult) String() string {
 	return fmt.Sprintf(
-		"TxResult(%v, %v, %v, %v, %v, %v)",
+		"TxResult(request=%v, resultCode=%v, returnData=%v, evmLogs=%v, gasUsed=%v, gasPrice=%v)",
 		r.IncomingRequest,
 		r.ResultCode,
 		hexutil.Encode(r.ReturnData),
@@ -169,6 +171,13 @@ type FeeSet struct {
 	L2Computation *big.Int
 }
 
+func (fs *FeeSet) Total() *big.Int {
+	total := new(big.Int).Add(fs.L1Transaction, fs.L1Calldata)
+	total = total.Add(total, fs.L2Storage)
+	total = total.Add(total, fs.L2Computation)
+	return total
+}
+
 func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() != 4 {
@@ -209,6 +218,10 @@ type FeeStats struct {
 	UnitsUsed  *FeeSet
 	Paid       *FeeSet
 	Aggregator *common.Address
+}
+
+func (fs *FeeStats) String() string {
+	return fmt.Sprintf("FeeStats{Prices=%v, Units=%v, Paid=%v, Aggregator=%v}", fs.Price, fs.UnitsUsed, fs.Paid, fs.Aggregator)
 }
 
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {

@@ -34,6 +34,7 @@ var (
 	txCountABI      abi.Method
 	withdrawEthABI  abi.Method
 	getStorageAtABI abi.Method
+	arbOSVersionABI abi.Method
 
 	ethWithdrawal ethcommon.Hash
 
@@ -51,6 +52,7 @@ func init() {
 	txCountABI = arbsys.Methods["getTransactionCount"]
 	withdrawEthABI = arbsys.Methods["withdrawEth"]
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
+	arbOSVersionABI = arbsys.Methods["arbOSVersion"]
 
 	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
 	L2ToL1TransactionID = arbsys.Events["L2ToL1Transaction"].ID
@@ -103,6 +105,22 @@ func StorageAtData(address common.Address, index *big.Int) []byte {
 
 func ParseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
 	vals, err := getStorageAtABI.Outputs.UnpackValues(res.ReturnData)
+	if err != nil {
+		return nil, err
+	}
+	val, ok := vals[0].(*big.Int)
+	if !ok {
+		return nil, errors.New("unexpected tx result")
+	}
+	return val, nil
+}
+
+func ArbOSVersionData() []byte {
+	return makeFuncData(arbOSVersionABI)
+}
+
+func ParseArbOSVersionResult(res *evm.TxResult) (*big.Int, error) {
+	vals, err := arbOSVersionABI.Outputs.UnpackValues(res.ReturnData)
 	if err != nil {
 		return nil, err
 	}

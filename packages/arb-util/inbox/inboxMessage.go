@@ -19,11 +19,12 @@ package inbox
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+	"math/rand"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
-	"math/big"
-	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -194,7 +195,8 @@ func (im InboxMessage) AsValue() value.Value {
 		NewIntFromAddress(im.Sender),
 		value.NewIntValue(im.InboxSeqNum),
 		value.NewIntValue(im.GasPrice),
-		BytesToByteStack(im.Data),
+		value.NewInt64Value(int64(len(im.Data))),
+		value.NewBuffer(im.Data),
 	})
 	return tup
 }

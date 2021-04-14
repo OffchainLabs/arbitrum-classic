@@ -142,6 +142,10 @@ func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth
 	}, nil
 }
 
+func (s *StandardInbox) Sender() common.Address {
+	return common.NewAddressFromEth(s.auth.auth.From)
+}
+
 func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error) {
 	tx, err := s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return s.con.SendL2MessageFromOrigin(auth, data)
