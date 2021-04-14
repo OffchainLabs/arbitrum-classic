@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -43,6 +44,8 @@ func TestContructor(t *testing.T) {
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
 	failIfError(t, err)
 
+	targetAddress := crypto.CreateAddress(crypto.PubkeyToAddress(pks[0].PublicKey), 0)
+
 	ctx := context.Background()
 	if err := client.SendTransaction(ctx, signedTx); err != nil {
 		t.Fatal(err)
@@ -50,6 +53,10 @@ func TestContructor(t *testing.T) {
 	client.Commit()
 	ethReceipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 	failIfError(t, err)
+
+	if ethReceipt.ContractAddress != targetAddress {
+		t.Error("ethereum contract address incorrect")
+	}
 
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
@@ -77,7 +84,7 @@ func TestContructor(t *testing.T) {
 		return
 	}
 
-	arbAddress := common.NewAddressFromEth(ethReceipt.ContractAddress)
+	arbAddress := common.NewAddressFromEth(targetAddress)
 	checkConstructorResult(t, res, arbAddress)
 
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)

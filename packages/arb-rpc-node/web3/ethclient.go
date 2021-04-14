@@ -28,6 +28,19 @@ func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
 	}
 }
 
+func (c *EthClient) BalanceAt(_ context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	var blockNum *int64
+	if blockNumber != nil {
+		tmp := blockNumber.Int64()
+		blockNum = &tmp
+	}
+	bal, err := c.srv.GetBalance(&account, (*rpc.BlockNumber)(blockNum))
+	if err != nil {
+		return nil, err
+	}
+	return bal.ToInt(), nil
+}
+
 func (c *EthClient) CodeAt(_ context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
 	var blockNum *int64
 	if blockNumber != nil {
