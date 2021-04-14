@@ -135,16 +135,16 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     }
 
     /**
-     @notice Attempts to receive liquidity from a pending withdrawal via an atomic swap; assumes an IExitLiquidityProvider is deployed at address liquidityProvider. 
-     * This method verifies the result (i.e., that the withdrawer's balance is appropriately updated), 
-     * and is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity
-    * @param liquidityProvider address of an IExitLiquidityProvider
-    * @param liquidityProof "proofs" depends on the particular requirements of IExitLiquidityProvider.requestLiquidity
-    * @param initialDestination address of initiator of initial withdrawal 
-    * @param erc20 L1 token address 
-    * @param amount token amount (should match amount in previously-initiated withdrawal)
-    * @param exitNum Counter of previously-initiated withdrawal
-    * @param maxFee max mount of erd20 token user will pay for fast exit
+     * @notice Allows a user to redirect their right to claim a withdrawal to a liquidityProvider, in exchange for a fee.
+     * @dev This method expects the liquidityProvider to verify the liquidityProof, but it ensures the withdrawer's balance
+     * is appropriately updated. It is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity.
+     * @param liquidityProvider address of an IExitLiquidityProvider
+     * @param liquidityProof encoded data required by the liquidityProvider in order to validate a fast withdrawal.
+     * @param initialDestination address the L2 withdrawal call initially set as the destination.
+     * @param erc20 L1 token address
+     * @param amount token amount (should match amount in previously-initiated withdrawal)
+     * @param exitNum Sequentially increasing exit counter determined by the L2 bridge
+     * @param maxFee max mount of erc20 token user will pay for fast exit
      */
     function fastWithdrawalFromL2(
         address liquidityProvider,
@@ -188,9 +188,9 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
 
     /**
      * @notice Finalizes a withdraw via Outbox message; callable only by ArbTokenBridge._withdraw
-     * @param exitNum Sequentially increasing exit counter
+     * @param exitNum Sequentially increasing exit counter determined by the L2 bridge
      * @param erc20 L1 address of token being withdrawn from
-     * @param initialDestination Destination address for tokens before/unless otherwise redirected  (via, i.e., a fast-withdrawal)
+     * @param initialDestination address the L2 withdrawal call initially set as the destination.
      * @param amount Token amount being withdrawn
      */
     function withdrawFromL2(
