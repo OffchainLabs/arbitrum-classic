@@ -69,7 +69,7 @@ func TestFees(t *testing.T) {
 	feeConfigInit := message.FeeConfig{
 		SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
 		L1GasPerL2Tx:           big.NewInt(3700),
-		L1GasPerL2Calldata:     big.NewInt(16),
+		L1GasPerL2Calldata:     big.NewInt(1),
 		L1GasPerStorage:        big.NewInt(2000),
 		ArbGasDivisor:          big.NewInt(10000),
 		NetFeeRecipient:        netFeeRecipient,

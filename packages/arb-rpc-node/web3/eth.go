@@ -18,10 +18,12 @@ package web3
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"math/big"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -55,7 +57,7 @@ func NewServer(
 	return &Server{
 		srv:         srv,
 		ganacheMode: ganacheMode,
-		maxCallGas:  1000000000,
+		maxCallGas:  1<<31 - 1,
 		aggregator:  srv.Aggregator(),
 	}
 }
