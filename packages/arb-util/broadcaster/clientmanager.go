@@ -56,11 +56,13 @@ func (cm *ClientManager) Register(conn net.Conn) *ClientConnection {
 		cm.clientList = append(cm.clientList, clientConnection)
 		cm.clientMap[clientConnection.name] = clientConnection
 
-		// send the newly connected client all the messages we've got...
-		bm := BroadcastMessage{}
-		bm.Messages = cm.broadcastMessages
+		if len(cm.broadcastMessages) > 0 {
+			// send the newly connected client all the messages we've got...
+			bm := BroadcastMessage{}
+			bm.Messages = cm.broadcastMessages
 
-		_ = clientConnection.write(bm)
+			_ = clientConnection.write(bm)
+		}
 
 		cm.seq++
 	}
