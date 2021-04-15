@@ -137,19 +137,22 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 		t.Errorf("Can not receive: %v\n", err)
 		return
 	} else {
-
-		res := PongResponse{}
+		res := BroadcastMessage{}
 		err = json.Unmarshal(msg, &res)
 		if err != nil {
 			t.Errorf("Error unmarshalling message: %s\n", err)
 			return
 		}
 
-		if len(res.Time) == 0 {
+		if len(res.PongResponse) == 0 {
 			t.Errorf("Should have received a ping response: %s\n", err)
 		}
 		t.Logf("Receive: %v，type: %v\n", res, op)
 	}
 
 	time.Sleep(1 * time.Second)
+}
+
+func TestBroadcasterRemovesOldSequences(t *testing.T) {
+
 }

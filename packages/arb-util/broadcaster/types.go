@@ -11,6 +11,9 @@ type Request struct {
 	Method string `json:"method"`
 	Params Object `json:"params"`
 }
+
+// I think that instead of a separate PongResponse, we just send the cached messages?
+// Or maybe it should be something like a ping message
 type PongResponse struct {
 	Time string `json:"time"`
 }
@@ -22,5 +25,6 @@ type BroadcastInboxMessage struct {
 	SeqNum            *big.Int `json:"seqnum"`
 }
 type BroadcastMessage struct {
-	Messages []*BroadcastInboxMessage `json:"messages"`
+	Messages     []*BroadcastInboxMessage `json:"messages"`
+	PongResponse string                   `json:"time"`
 }
