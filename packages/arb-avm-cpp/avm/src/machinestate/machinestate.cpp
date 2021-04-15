@@ -419,7 +419,7 @@ value make_table(std::vector<value> tab) {
 }
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf) {
-    std::ifstream labels_input_stream("/home/sami/arb-os/labels.json");
+    std::ifstream labels_input_stream("/home/sami/arb-os/wasm-labels.json");
     if (!labels_input_stream.is_open()) {
         throw std::runtime_error("doesn't exist");
     }
@@ -717,7 +717,7 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
-    // std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
+    std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];

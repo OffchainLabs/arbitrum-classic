@@ -43,7 +43,8 @@ uint256_t int_value_from_json(const nlohmann::json& value_json) {
 
 Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
     if (!buffer_json.is_string()) {
-        throw std::runtime_error("buffer must be hex");
+        return Buffer();
+        // throw std::runtime_error("buffer must be hex");
     }
     auto hexstr = buffer_json.get<std::string>();
     std::vector<uint8_t> bytes;

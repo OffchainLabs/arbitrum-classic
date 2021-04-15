@@ -12,15 +12,9 @@
 
 TEST_CASE("Wasm") {
     SECTION("Code to hash") {
-
-        auto res = run_wasm(Buffer(), 123);
-
         /*
 
-        auto storage = ArbStorage("/home/sami/tmpstorage");
-        auto state = makeWasmMachine(123, Buffer());
-        storage.initialize(state);
-        */
+        auto res = run_wasm(Buffer(), 123);
 
         auto storage = ArbStorage("/home/sami/tmpstorage");
         // auto state = makeWasmMachine(123, Buffer());
@@ -34,8 +28,12 @@ TEST_CASE("Wasm") {
         std::cerr << "Status: " << cursor.status.code() << "\n";
         std::cerr << "gas used: " << cursor.data->getOutput().arb_gas_used << "\n";
         std::cerr << "steps: " << cursor.data->getOutput().total_steps << "\n";
+*/
 
-        /*
+        auto storage = ArbStorage("/home/sami/tmpstorage");
+        auto state = makeWasmMachine(123, Buffer());
+        storage.initialize(state);
+
 
         std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
 
@@ -47,7 +45,6 @@ TEST_CASE("Wasm") {
         state.marshalWasmProof(proof);
         std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
-        */
     }
 
 }

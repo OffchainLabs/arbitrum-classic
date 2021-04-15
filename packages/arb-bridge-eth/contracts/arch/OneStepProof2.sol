@@ -600,8 +600,8 @@ contract OneStepProof2 is OneStepProofCommon {
 
     }
 
-    bytes32 constant wasmProgram = 0x3faaa61a216d4b286ad04c6c179bde264331a165ed061bd99b2be8ff9691278b;
-    bytes32 constant wasmProgramLink = 0x78d9c98562fac06b16d0d6d31d456999104010688631d7d3d0a15e569122d37a;
+    bytes32 constant wasmProgram = 0x4932d554b80820e294814bd0674558bd57fa55b750456622dc6e1793390c01ec;
+    bytes32 constant wasmProgramLink = 0x71b400febf23e3973c60191ccf470be8c754bb923d10851420f550782a6b72c4;
     uint256 constant wasmProgramLinkSize = 37449;
     bytes32 constant errHandlerHash = 0xb4c00615f95dc249934075fcc669947596baf6e070ac80a59f79dae98aa932f0;
 
