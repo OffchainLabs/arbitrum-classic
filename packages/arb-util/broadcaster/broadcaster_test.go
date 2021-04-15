@@ -89,7 +89,7 @@ func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 
 func TestBroadcasterRespondsToPing(t *testing.T) {
 	broadcasterSettings := Settings{
-		Addr:      ":9642",
+		Addr:      ":9643",
 		Workers:   128,
 		Queue:     1,
 		IoTimeout: 2 * time.Second,
@@ -102,7 +102,7 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	}
 	defer b.Stop()
 
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
+	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9643/")
 	if err != nil {
 		t.Fatalf("Can not connect: %v\n", err)
 	}
