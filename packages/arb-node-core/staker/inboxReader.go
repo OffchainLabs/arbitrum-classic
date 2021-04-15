@@ -270,7 +270,11 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		if err != nil {
 			return err
 		}
-		seqBatchItems = append(seqBatchItems, batch.GetItems()...)
+		items, err := batch.GetItems()
+		if err != nil {
+			return err
+		}
+		seqBatchItems = append(seqBatchItems, items...)
 	}
 	delayedMessages := make([]inbox.DelayedMessage, 0, len(deliveredDelayedMessages))
 	for _, deliveredMsg := range deliveredDelayedMessages {

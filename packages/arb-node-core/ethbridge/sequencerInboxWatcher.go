@@ -109,8 +109,6 @@ func (r *SequencerInboxWatcher) LookupBatchesInRange(ctx context.Context, from, 
 type SequencerBatch struct {
 	transactionsData         []byte
 	transactionLengths       []*big.Int
-	L1BlockNumber            *big.Int
-	Timestamp                *big.Int
 	TotalDelayedMessagesRead *big.Int
 	BeforeCount              *big.Int
 	BeforeAcc                common.Hash
@@ -151,7 +149,7 @@ func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
 	}
 }
 
-func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
+func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	count := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
 	delayedCount := new(big.Int).Sub(count, big.NewInt(int64(len(b.transactionLengths))))
 	hasDelayed := delayedCount.Cmp(big.NewInt(0)) > 0
@@ -168,13 +166,13 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 	dataOffset := 0
 	for i := 0; i < len(b.transactionLengths); i++ {
 		// Sequencer batch items
-		var message inbox.InboxMessage
+		var seqMsg inbox.InboxMessage
 		length := int(b.transactionLengths[i].Int64())
 		if length == 0 {
-			message = newEndOfBlockMessage(nextSeqNum)
+			seqMsg = newEndOfBlockMessage(nextSeqNum)
 		} else {
-			message = inbox.InboxMessage{
-				Kind:        3,
+			seqMsg = inbox.InboxMessage{
+				Kind:        message.L2Type,
 				Sender:      b.Sequencer,
 				InboxSeqNum: nextSeqNum,
 				GasPrice:    big.NewInt(0),
@@ -187,7 +185,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 			LastSeqNum:        nextSeqNum,
 			Accumulator:       common.Hash{},
 			TotalDelayedCount: startDelayedCount,
-			SequencerMessage:  message.ToBytes(),
+			SequencerMessage:  seqMsg.ToBytes(),
 		}
 		item.RecomputeAccumulator(lastAcc, startDelayedCount, common.Hash{})
 		lastAcc = item.Accumulator
@@ -205,6 +203,7 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 			SequencerMessage:  []byte{},
 		}
 		item.RecomputeAccumulator(lastAcc, startDelayedCount, b.DelayedAcc)
+		lastAcc = item.Accumulator
 		ret = append(ret, item)
 
 		endSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
@@ -214,11 +213,16 @@ func (b SequencerBatch) GetItems() []inbox.SequencerBatchItem {
 			TotalDelayedCount: b.TotalDelayedMessagesRead,
 			SequencerMessage:  newEndOfBlockMessage(endSeqNum).ToBytes(),
 		}
-		item2.RecomputeAccumulator(item.Accumulator, b.TotalDelayedMessagesRead, b.DelayedAcc)
+		item2.RecomputeAccumulator(lastAcc, b.TotalDelayedMessagesRead, b.DelayedAcc)
+		lastAcc = item2.Accumulator
 		ret = append(ret, item2)
 	}
 
-	return ret
+	if !lastAcc.Equals(b.AfterAcc) {
+		return nil, errors.New("computed unexpected batch end accumulator")
+	}
+
+	return ret, nil
 }
 
 type sequencerBatchOriginRef struct {
@@ -229,7 +233,6 @@ type sequencerBatchOriginRef struct {
 	afterCount  *big.Int
 	afterAcc    common.Hash
 	delayedAcc  common.Hash
-	chainTime   inbox.ChainTime
 	sequencer   common.Address
 }
 
@@ -258,33 +261,17 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 		return nil, err
 	}
 	sequencer := common.NewAddressFromEth(sequencerEthAddr)
-	blockTimes := make(map[ethcommon.Hash]*big.Int)
 	refs := make([]SequencerBatchRef, 0, len(logs))
 	for _, log := range logs {
-		blockTime, ok := blockTimes[log.BlockHash]
-		if !ok {
-			header, err := r.client.HeaderByHash(ctx, log.BlockHash)
-			if err != nil {
-				return nil, errors.WithStack(err)
-			}
-			blockTime = new(big.Int).SetUint64(header.Time)
-			blockTimes[log.BlockHash] = blockTime
-		}
-		chainTime := inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocks(new(big.Int).SetUint64(log.BlockNumber)),
-			Timestamp: blockTime,
-		}
-
 		if log.Topics[0] == sequencerBatchDeliveredID {
 			parsed, err := r.con.ParseSequencerBatchDelivered(log)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
+
 			refs = append(refs, SequencerBatch{
 				transactionsData:         parsed.Transactions,
 				transactionLengths:       parsed.Lengths,
-				L1BlockNumber:            parsed.L1BlockNumber,
-				Timestamp:                parsed.Timestamp,
 				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
 				BeforeCount:              parsed.FirstMessageNum,
 				BeforeAcc:                parsed.BeforeAcc,
@@ -292,7 +279,10 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				AfterAcc:                 parsed.AfterAcc,
 				DelayedAcc:               parsed.DelayedAcc,
 				Sequencer:                sequencer,
-				ChainTime:                chainTime,
+				ChainTime: inbox.ChainTime{
+					BlockNum:  common.NewTimeBlocks(parsed.L1BlockNumber),
+					Timestamp: parsed.Timestamp,
+				},
 			})
 		} else if log.Topics[0] == sequencerBatchDeliveredFromOriginID {
 			parsed, err := r.con.ParseSequencerBatchDeliveredFromOrigin(log)
@@ -308,7 +298,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				afterAcc:    parsed.AfterAcc,
 				delayedAcc:  parsed.DelayedAcc,
 				sequencer:   sequencer,
-				chainTime:   chainTime,
 			})
 		} else if log.Topics[0] == delayedInboxForcedID {
 			parsed, err := r.con.ParseDelayedInboxForced(log)
@@ -323,7 +312,8 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				AfterAcc:                 parsed.AfterAccAndDelayed[0],
 				DelayedAcc:               parsed.AfterAccAndDelayed[1],
 				Sequencer:                sequencer,
-				ChainTime:                chainTime,
+				// intentionally nil block number and timestamp fields that will error on access
+				ChainTime: inbox.ChainTime{},
 			})
 		} else {
 			return nil, errors.Errorf("Unexpected log topic %v", log.Topics[0].String())
@@ -352,8 +342,6 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 	return SequencerBatch{
 		transactionsData:         args["transactions"].([]byte),
 		transactionLengths:       args["lengths"].([]*big.Int),
-		L1BlockNumber:            args["l1BlockNumber"].(*big.Int),
-		Timestamp:                args["timestamp"].(*big.Int),
 		TotalDelayedMessagesRead: args["_totalDelayedMessagesRead"].(*big.Int),
 		BeforeCount:              ref.beforeCount,
 		BeforeAcc:                ref.beforeAcc,
@@ -361,6 +349,9 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		AfterAcc:                 ref.afterAcc,
 		DelayedAcc:               ref.delayedAcc,
 		Sequencer:                ref.sequencer,
-		ChainTime:                ref.chainTime,
+		ChainTime: inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(args["l1BlockNumber"].(*big.Int)),
+			Timestamp: args["timestamp"].(*big.Int),
+		},
 	}, nil
 }

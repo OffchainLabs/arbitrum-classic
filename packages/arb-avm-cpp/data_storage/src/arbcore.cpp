@@ -1913,6 +1913,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 }
             }
         }
+
         for (size_t i = duplicate_seq_batch_items; i < seq_batch_items.size();
              i++) {
             auto& item_and_slice = seq_batch_items[i];

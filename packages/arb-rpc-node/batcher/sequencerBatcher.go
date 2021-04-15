@@ -217,10 +217,6 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	if err != nil {
 		return nil, err
 	}
-	if newDelayedCount.Cmp(big.NewInt(0)) == 0 {
-		// Immediately sequence the init message, even if it technically isn't confirmed yet
-		newDelayedCount = big.NewInt(1)
-	}
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
 		return msgCount, nil
 	}
@@ -411,7 +407,7 @@ func (b *SequencerBatcher) chainManager(ctx context.Context) {
 			} else {
 				logger.Error().Err(err).Msg("Error creating batch")
 			}
-			time.Sleep(time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
