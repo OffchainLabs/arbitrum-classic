@@ -25,10 +25,13 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
-task('create-chain', 'Creates a rollup chain').setAction(
-  async (taskArguments, hre) => {
+task('create-chain', 'Creates a rollup chain')
+  .addParam('sequencer', "The sequencer's address")
+  .setAction(async (taskArguments, hre) => {
     const machineHash = fs.readFileSync('../MACHINEHASH').toString()
-    console.log(`Creating chain for machine with hash ${machineHash}`)
+    console.log(
+      `Creating chain for machine with hash ${machineHash} for sequencer ${taskArguments.sequencer}`
+    )
     const { deployments, ethers } = hre
     const [deployer] = await ethers.getSigners()
     const rollupCreatorDep = await deployments.get('RollupCreator')
@@ -44,7 +47,7 @@ task('create-chain', 'Creates a rollup chain').setAction(
       ethers.utils.parseEther('.1'),
       ethers.constants.AddressZero,
       await deployer.getAddress(),
-      '0x9c00AE85e15eBCc158879c43236DA6c89302b475',
+      taskArguments.sequencer,
       300,
       1500,
       '0x'
@@ -54,8 +57,7 @@ task('create-chain', 'Creates a rollup chain').setAction(
       receipt.logs[receipt.logs.length - 1]
     )
     console.log(ev)
-  }
-)
+  })
 
 task('deposit', 'Deposit coins into ethbridge')
   .addPositionalParam('inboxAddress', "The rollup chain's address")
