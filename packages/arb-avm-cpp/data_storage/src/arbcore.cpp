@@ -1716,6 +1716,30 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
         ReadWriteTransaction tx(data_storage);
         size_t duplicate_seq_batch_items = 0;
 
+        if (data.reorg_batch_items) {
+            tmp.clear();
+            marshal_uint256_t(*data.reorg_batch_items, tmp);
+            rocksdb::Slice start_slice = vecToSlice(tmp);
+
+            auto seq_batch_it = tx.sequencerBatchItemGetIterator(&start_slice);
+            seq_batch_it->Seek(start_slice);
+            bool deleted_any = false;
+            while (seq_batch_it->Valid()) {
+                auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
+                if (!status.ok()) {
+                    return status;
+                }
+                deleted_any = true;
+                seq_batch_it->Next();
+            }
+            if (!seq_batch_it->status().ok()) {
+                return seq_batch_it->status();
+            }
+            if (deleted_any) {
+                reorging_to_count = *data.reorg_batch_items;
+            }
+        }
+
         if (seq_batch_items.size() > 0) {
             uint256_t start = seq_batch_items[0].first.last_sequence_number;
             bool checking_prev = false;
@@ -1723,13 +1747,9 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 start -= 1;
                 checking_prev = true;
             }
-            rocksdb::Slice start_slice;
-            {
-                auto ptr =
-                    reinterpret_cast<const char*>(tmp.data() + tmp.size());
-                marshal_uint256_t(start, tmp);
-                start_slice = {ptr, 32};
-            }
+            tmp.clear();
+            marshal_uint256_t(start, tmp);
+            rocksdb::Slice start_slice = vecToSlice(tmp);
             auto seq_batch_it = tx.sequencerBatchItemGetIterator();
 
             if (checking_prev) {
@@ -1798,20 +1818,6 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 duplicate_seq_batch_items++;
                 seq_batch_it->Next();
             }
-        } else if (data.reorg_batch_items) {
-            auto seq_batch_it = tx.sequencerBatchItemGetIterator();
-            seq_batch_it->SeekToLast();
-            for (uint256_t i = 0;
-                 i < *data.reorg_batch_items && seq_batch_it->Valid(); i += 1) {
-                auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
-                if (!status.ok()) {
-                    return status;
-                }
-                seq_batch_it->Prev();
-            }
-            if (!seq_batch_it->status().ok()) {
-                return seq_batch_it->status();
-            }
         }
 
         if (delayed_messages.size() > 0) {
@@ -1825,13 +1831,10 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 start -= 1;
                 checking_prev = true;
             }
-            rocksdb::Slice lower_bound;
-            {
-                auto ptr =
-                    reinterpret_cast<const char*>(tmp.data() + tmp.size());
-                marshal_uint256_t(start, tmp);
-                lower_bound = {ptr, 32};
-            }
+            tmp.clear();
+            marshal_uint256_t(start, tmp);
+            rocksdb::Slice lower_bound = vecToSlice(tmp);
+
             auto delayed_it = tx.delayedMessageGetIterator(&lower_bound);
             delayed_it->Seek(lower_bound);
             uint256_t prev_acc = 0;
