@@ -2,6 +2,7 @@ package broadcastclient
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func TestBroadCastClient(t *testing.T) {
+func TestBroadCastClientConnectsAndReceivesSequences(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9643",
 		Workers:   128,
@@ -31,7 +32,7 @@ func TestBroadCastClient(t *testing.T) {
 	tmb.SetBroadcaster(b)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 2; i++ {
 		wg.Add(1)
 		go makeBroadcastClient(t, 10, &wg)
 	}
@@ -64,6 +65,42 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 				}
 			}
 		}
+	}
+
+}
+
+func TestBroadCastClientPings(t *testing.T) {
+	broadcasterSettings := broadcaster.Settings{
+		Addr:      ":9643",
+		Workers:   128,
+		Queue:     1,
+		IoTimeout: 2 * time.Second,
+	}
+
+	b := broadcaster.NewBroadcaster(broadcasterSettings)
+
+	err := b.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Stop()
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9643/", nil)
+
+	// connect returns
+	messages, err := broadcastClient.Connect()
+	if err != nil {
+		t.Errorf("Can not connect: %v\n", err)
+	}
+
+	broadcastClient.Ping()
+
+	select {
+	case receivedMsgs := <-messages:
+		if !strings.Contains(receivedMsgs.PongResponse, "pong") {
+			t.Error("Pong missing pong")
+		}
+	case <-time.After(3 * time.Second):
+		t.Error("Timed out waiting for pong")
 	}
 
 }
