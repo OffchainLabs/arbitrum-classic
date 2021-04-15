@@ -3,62 +3,16 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"math/big"
 	"net"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 )
 
-// This is used to reverse the slice for the sequence number field
-// so that it will be in correct byte order when creating a new big.Int out of it
-func reverseSlice(data interface{}) {
-	value := reflect.ValueOf(data)
-	if value.Kind() != reflect.Slice {
-		panic(errors.New("data must be a slice type"))
-	}
-	valueLen := value.Len()
-	for i := 0; i <= (valueLen-1)/2; i++ {
-		reverseIndex := valueLen - 1 - i
-		tmp := value.Index(reverseIndex).Interface()
-		value.Index(reverseIndex).Set(value.Index(i))
-		value.Index(i).Set(reflect.ValueOf(tmp))
-	}
-}
-
-func setSequenceNumber(data []byte, sequenceNumber *big.Int) []byte {
-	seqNumOffset := 85
-	seqNumEnd := seqNumOffset + 32
-	prefixData := data[:seqNumOffset]
-	postfixData := data[seqNumEnd:]
-	sequenceNumberBytes := sequenceNumber.Bytes()
-	sequenceNumberByteField := make([]byte, 32)
-	copy(sequenceNumberByteField, sequenceNumberBytes)
-	reverseSlice(sequenceNumberByteField)
-	sequenceNumberWithPrefix := append(prefixData, sequenceNumberByteField...)
-	completeDataWithSequenceNumberSet := append(sequenceNumberWithPrefix, postfixData...)
-	return completeDataWithSequenceNumberSet
-}
-
-func sequencedMessages() func() (*big.Int, []byte, *big.Int) {
-	sequenceNumber := big.NewInt(41)
-	return func() (*big.Int, []byte, *big.Int) {
-		sequenceNumber = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
-		inboxMessage := setSequenceNumber(common.RandBytes(200), sequenceNumber)
-		beforeAccumulator := common.RandBigInt()
-		signature := common.RandBigInt()
-		return beforeAccumulator, inboxMessage, signature
-	}
-}
-
-func TestBroadcaster(t *testing.T) {
+func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	broadcasterSettings := Settings{
 		Addr:      ":9642",
 		Workers:   128,
@@ -73,13 +27,7 @@ func TestBroadcaster(t *testing.T) {
 	}
 	defer b.Stop()
 
-	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go broadcastWait(t, i, &wg)
-	}
-
-	newBroadcastMessage := sequencedMessages()
+	newBroadcastMessage := SequencedMessages()
 
 	err = b.Broadcast(newBroadcastMessage())
 	if err != nil {
@@ -90,12 +38,19 @@ func TestBroadcaster(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go connectAndGetCachedMessages(t, i, &wg)
+	}
+
 	wg.Wait()
 }
 
-func broadcastWait(t *testing.T, i int, wg *sync.WaitGroup) {
+func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 	defer wg.Done()
-
+	messagesReceived := 0
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
 	if err != nil {
 		t.Fatalf("%d can not connect: %v\n", i, err)
@@ -117,14 +72,84 @@ func broadcastWait(t *testing.T, i int, wg *sync.WaitGroup) {
 		t.Errorf("%d can not receive: %v\n", i, err)
 		return
 	} else {
-		res := Response{}
+		res := BroadcastMessage{}
 		err = json.Unmarshal(msg, &res)
 		if err != nil {
-			t.Errorf("Unable to marshal message: %v\n", err)
+			t.Errorf("%d error unmarshalling message: %s\n", i, err)
 			return
 		}
+		messagesReceived = len(res.Messages)
 		t.Logf("%d receive: %v，type: %v\n", i, res, op)
 	}
 
-	time.Sleep(3 * time.Second)
+	if messagesReceived != 2 {
+		t.Errorf("%d Should have received two cached messages: %s\n", i, err)
+	}
+}
+
+func TestBroadcasterRespondsToPing(t *testing.T) {
+	broadcasterSettings := Settings{
+		Addr:      ":9642",
+		Workers:   128,
+		Queue:     1,
+		IoTimeout: 2 * time.Second,
+	}
+	b := NewBroadcaster(broadcasterSettings)
+
+	err := b.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Stop()
+
+	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
+	if err != nil {
+		t.Fatalf("Can not connect: %v\n", err)
+	}
+
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			t.Errorf("Can not close: %v\n", err)
+		} else {
+			t.Log("%Closed\n")
+		}
+	}(conn)
+
+	t.Logf("Connected")
+
+	req := Request{}
+	req.ID = 1
+	req.Method = "ping"
+	msg, err := json.Marshal(req)
+	if err != nil {
+		t.Errorf("Can not Marshal ping request: %v\n", err)
+	}
+
+	err = wsutil.WriteClientMessage(conn, ws.OpText, msg)
+	if err != nil {
+		t.Errorf("Can not send: %v\n", err)
+		return
+	}
+
+	msg, op, err := wsutil.ReadServerData(conn)
+	if err != nil {
+		t.Errorf("Can not receive: %v\n", err)
+		return
+	} else {
+
+		res := PongResponse{}
+		err = json.Unmarshal(msg, &res)
+		if err != nil {
+			t.Errorf("Error unmarshalling message: %s\n", err)
+			return
+		}
+
+		if len(res.Time) == 0 {
+			t.Errorf("Should have received a ping response: %s\n", err)
+		}
+		t.Logf("Receive: %v，type: %v\n", res, op)
+	}
+
+	time.Sleep(1 * time.Second)
 }
