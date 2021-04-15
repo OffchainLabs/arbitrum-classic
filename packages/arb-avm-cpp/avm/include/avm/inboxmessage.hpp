@@ -83,13 +83,17 @@ InboxMessage extractInboxMessageImpl(
 MachineMessage extractMachineMessageImpl(
     std::vector<unsigned char>::const_iterator current_iter,
     const std::vector<unsigned char>::const_iterator end);
+
 // An efficient version of extractInboxMessage that ignores everything except
 // the block number
 template <typename Iterator>
 uint256_t extractInboxMessageBlockNumber(Iterator& iter) {
     iter++;      // skip kind
     iter += 20;  // skip sender
-    return extractUint256(iter);
+    auto ptr = reinterpret_cast<const char*>(&*iter);
+    auto int_val = deserializeUint256t(ptr);
+    iter += 32;
+    return int_val;
 }
 
 #endif /* data_storage_inboxmessage_hpp */

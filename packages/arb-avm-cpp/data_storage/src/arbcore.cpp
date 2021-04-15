@@ -1299,7 +1299,7 @@ ValueResult<uint256_t> ArbCore::getDelayedMessagesToSequence(
             return {mid_res.status, 0};
         }
         auto mid_data_it = mid_res.data.begin();
-        auto mid_block = deserializeDelayedMessageAccumulator(mid_data_it);
+        auto mid_block = deserializeDelayedMessageBlockNumber(mid_data_it);
 
         if (mid_block > max_block_number) {
             high = mid;
