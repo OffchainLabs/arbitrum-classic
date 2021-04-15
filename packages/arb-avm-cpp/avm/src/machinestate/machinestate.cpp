@@ -509,7 +509,7 @@ uint256_t runWasmMachine(MachineState &machine_state) {
             break;
         }
     }    
-    return start_gas - machine_state.arb_gas_remaining;
+    return start_gas - machine_state.arb_gas_remaining ;
 }
 
 void MachineState::marshalWasmProof(OneStepProof &proof) const {
@@ -717,7 +717,7 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
-    std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
+    // std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
