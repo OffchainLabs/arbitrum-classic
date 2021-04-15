@@ -72,9 +72,9 @@ func (cc *ClientConnection) writePong() error {
 
 	cc.io.Lock()
 	defer cc.io.Unlock()
-	pong := PongResponse{}
-	pong.Time = fmt.Sprintf("pong %v", time.Now().UTC())
-	if err := encoder.Encode(pong); err != nil {
+	bm := BroadcastMessage{}
+	bm.PongResponse = fmt.Sprintf("pong %v", time.Now().UTC())
+	if err := encoder.Encode(bm); err != nil {
 		return err
 	}
 
