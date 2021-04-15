@@ -19,7 +19,7 @@ IGNORED_ROLLUP=$PREFIX/rollup/IInbox.sol:IInbox,$PREFIX/rollup/INodeFactory.sol:
 #IGNORED=$IGNORED_LIB,$IGNORED_ARCH,$IGNORED_CHALLENGE,$IGNORED_INBOX,$IGNORED_ROLLUP
 #IGNORED_WITH_CHALLENGES=$IGNORED,$CHAL_PREFIX/Challenge.sol:Challenge,$CHAL_PREFIX/BisectionChallenge.sol:BisectionChallenge
 MESSAGES=$PREFIX/bridge/Messages.sol:Messages
-BRIDGE_LIBS=$PREFIX/bridge/interfaces/IBridge.sol:IBridge,$PREFIX/bridge/interfaces/IOutbox.sol:IOutbox,$PREFIX/bridge/interfaces/IMessageProvider.sol:IMessageProvider,$MESSAGES
+BRIDGE_LIBS=$PREFIX/bridge/interfaces/IBridge.sol:IBridge,$PREFIX/bridge/interfaces/ISequencerInbox.sol:ISequencerInbox,$PREFIX/bridge/interfaces/IOutbox.sol:IOutbox,$PREFIX/bridge/interfaces/IMessageProvider.sol:IMessageProvider,$MESSAGES
 
 ROLLUP_LIB=$PREFIX/rollup/RollupLib.sol:RollupLib
 ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup

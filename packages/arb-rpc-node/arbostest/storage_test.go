@@ -56,7 +56,7 @@ func TestGetStorageAt(t *testing.T) {
 	}
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(getStorageAtTx), common.Address{}, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), big.NewInt(0), chainTime),

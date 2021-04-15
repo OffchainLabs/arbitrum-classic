@@ -201,7 +201,8 @@ func (im InboxMessage) AsValue() value.Value {
 		NewIntFromAddress(im.Sender),
 		value.NewIntValue(im.InboxSeqNum),
 		value.NewIntValue(im.GasPrice),
-		BytesToByteStack(im.Data),
+		value.NewInt64Value(int64(len(im.Data))),
+		value.NewBuffer(im.Data),
 	})
 	return tup
 }

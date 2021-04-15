@@ -62,7 +62,6 @@ void generateTestMachine(std::unique_ptr<Machine>& mach) {
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     MachineExecutionConfig execConfig;
     execConfig.max_gas = gas_count_target;
-    execConfig.next_block_height = 7;
     mach.machine_state.context = AssertionContext(execConfig);
     auto assertion = mach.run();
     REQUIRE(assertion.gasCount <= gas_count_target);
@@ -107,7 +106,6 @@ TEST_CASE("Code serialization") {
         auto mach2 = *mach;
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
-        execConfig.next_block_height = 8;
         mach2.machine_state.context = AssertionContext(execConfig);
         mach2.run();
         auto save_ret = saveMachine(*tx, *mach);

@@ -82,29 +82,34 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgMessageCount *big.Int) bool {
-	rawInboxData := encodeInboxMessages(messages)
-	byteSlices := encodeByteSliceList(rawInboxData)
+func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
+}
 
-	var cReorgMessageCount unsafe.Pointer
-	if reorgMessageCount != nil {
-		reorgMessageCount := math.U256Bytes(reorgMessageCount)
-		cReorgMessageCount = unsafeDataPointer(reorgMessageCount)
+func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeDelayedMessages(delayedMessages))
+}
+
+func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
+	var bytes [][]byte
+	for _, num := range nums {
+		bytes = append(bytes, math.U256Bytes(num))
+	}
+	return bytesArrayToByteSliceArray(bytes)
+}
+
+func (ac *ArbCore) DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
+	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
+	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
+	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
+
+	var cReorgSeqBatchItemCount unsafe.Pointer
+	if reorgSeqBatchItemCount != nil {
+		reorgSeqBatchItemCount := math.U256Bytes(reorgSeqBatchItemCount)
+		cReorgSeqBatchItemCount = unsafeDataPointer(reorgSeqBatchItemCount)
 	}
 
-	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
-	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
-	for i, data := range byteSlices {
-		sliceArray[i] = data
-	}
-	defer C.free(sliceArrayData)
-	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-	cLastBlockComplete := 0
-	if lastBlockComplete {
-		cLastBlockComplete = 1
-	}
-
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete), cReorgMessageCount)
+	status := C.arbCoreDeliverMessages(ac.c, previousSeqBatchAccPtr, seqBatchItemsSlice, delayedMessagesSlice, cReorgSeqBatchItemCount)
 	return status == 1
 }
 
@@ -130,6 +135,25 @@ func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
 	result := C.arbCoreGetMessageCount(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
+	result := C.arbCoreGetTotalDelayedMessagesSequenced(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error) {
+	maxBlockData := math.U256Bytes(maxBlock)
+	result := C.arbCoreGetDelayedMessagesToSequence(ac.c, unsafeDataPointer(maxBlockData))
+	if result.found == 0 {
+		return nil, errors.New("failed to load delayed messages to sequence")
 	}
 
 	return receiveBigInt(result.value), nil
@@ -191,12 +215,45 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	return messages, nil
 }
 
+func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int, count *big.Int) ([]inbox.SequencerBatchItem, error) {
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
+
+	result := C.arbCoreGetSequencerBatchItems(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
+	if result.found == 0 {
+		return nil, errors.New("failed to get messages")
+	}
+
+	data := receiveByteSliceArray(result.array)
+	items := make([]inbox.SequencerBatchItem, len(data))
+	for i, slice := range data {
+		var err error
+		items[i], err = inbox.NewSequencerBatchItemFromData(slice)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return items, nil
+}
+
 func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 	startIndexData := math.U256Bytes(index)
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
 		err = errors.Errorf("failed to get inbox acc for %v", index)
+	}
+
+	return
+}
+
+func (ac *ArbCore) GetDelayedInboxAcc(index *big.Int) (ret common.Hash, err error) {
+	startIndexData := math.U256Bytes(index)
+
+	status := C.arbCoreGetDelayedInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
+	if status == 0 {
+		err = errors.Errorf("failed to get delayed inbox acc for %v", index)
 	}
 
 	return
@@ -209,6 +266,23 @@ func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 commo
 	status := C.arbCoreGetInboxAccPair(ac.c, unsafeDataPointer(startIndex1Data), unsafeDataPointer(startIndex2Data), unsafe.Pointer(&ret1[0]), unsafe.Pointer(&ret2[0]))
 	if status == 0 {
 		err = errors.New("failed to get inbox acc")
+	}
+
+	return
+}
+
+func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error) {
+	if len(lastSeqNums) != len(accs) {
+		return -1, errors.New("mismatching lengths when counting matching batches")
+	}
+	bytes := make([]byte, 0, len(lastSeqNums)*64)
+	for i := 0; i < len(lastSeqNums); i++ {
+		bytes = append(bytes, math.U256Bytes(lastSeqNums[i])...)
+		bytes = append(bytes, accs[i].Bytes()...)
+	}
+	ret = int(C.arbCoreCountMatchingBatchAccs(ac.c, toByteSliceView(bytes)))
+	if ret < 0 {
+		err = errors.New("failed to get matching batch accs")
 	}
 
 	return

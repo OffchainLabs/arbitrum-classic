@@ -1,5 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0
-
 /*
  * Copyright 2020, Offchain Labs, Inc.
  *
@@ -16,8 +14,24 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.6.11;
+package web3
 
-interface IArbCustomToken {
-    function bridgeMint(address account, uint256 amount) external;
+import (
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+)
+
+type Arb struct {
+	srv *aggregator.Server
+}
+
+func (a *Arb) GetAggregator() *batcher.AggregatorInfo {
+	var ret *ethcommon.Address
+	agg := a.srv.Aggregator()
+	if agg != nil {
+		tmp := agg.ToEthAddress()
+		ret = &tmp
+	}
+	return &batcher.AggregatorInfo{Address: ret}
 }

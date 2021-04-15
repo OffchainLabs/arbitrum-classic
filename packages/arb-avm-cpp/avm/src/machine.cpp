@@ -48,13 +48,19 @@ void MachineExecutionConfig::setInboxMessagesFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes) {
     inbox_messages.clear();
     inbox_messages.reserve(bytes.size());
-    convertInboxMessagesFromBytes(bytes, inbox_messages);
+    for (const auto& data : bytes) {
+        auto message = extractMachineMessageImpl(data.begin(), data.end());
+        inbox_messages.emplace_back(message);
+    }
 }
 
 void MachineExecutionConfig::setSideloadsFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes) {
     sideloads.clear();
-    convertInboxMessagesFromBytes(bytes, sideloads);
+    for (const auto& data : bytes) {
+        auto message = extractInboxMessage(data);
+        sideloads.emplace_back(message);
+    }
 }
 
 Assertion Machine::run() {

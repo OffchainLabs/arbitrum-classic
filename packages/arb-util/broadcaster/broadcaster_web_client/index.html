@@ -92,13 +92,6 @@
             this.socket = new WebSocket('ws://localhost::9642')
 
             this.socket.onopen = event => {
-              // this.socket.send(
-              //   JSON.stringify({
-              //     id: this.messageSeq++,
-              //     method: 'sequence',
-              //     params: { lastKnownSequence: 'ASDEWQRTY' },
-              //   })
-              // )
               this.isConnected = true
               this.connectButtonLabel = 'Disconnect!'
               this.connecting = false

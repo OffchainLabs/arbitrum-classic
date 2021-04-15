@@ -66,10 +66,15 @@ func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error
 	poller, err := netpoll.New(nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error starting net poller")
+		return nil, err
 	}
 
 	// Get netpoll descriptor with EventRead|EventEdgeTriggered.
-	desc := netpoll.Must(netpoll.HandleRead(conn))
+	desc, err := netpoll.HandleRead(conn)
+	if err != nil {
+		logger.Error().Err(err).Msg("error getting netpoll descriptor")
+		return nil, err
+	}
 
 	bc.desc = *desc
 	bc.poller = poller

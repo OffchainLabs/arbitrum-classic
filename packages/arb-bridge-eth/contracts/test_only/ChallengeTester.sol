@@ -45,7 +45,8 @@ contract ChallengeTester {
         address payable challenger,
         uint256 asserterTimeLeft,
         uint256 challengerTimeLeft,
-        IBridge bridge
+        ISequencerInbox sequencerBridge,
+        IBridge delayedBridge
     ) public {
         challenge = challengeFactory.createChallenge(
             address(this),
@@ -55,7 +56,8 @@ contract ChallengeTester {
             challenger,
             asserterTimeLeft,
             challengerTimeLeft,
-            bridge
+            sequencerBridge,
+            delayedBridge
         );
     }
 }

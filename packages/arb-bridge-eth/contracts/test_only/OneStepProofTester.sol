@@ -25,14 +25,16 @@ contract OneStepProofTester {
 
     function executeStepTest(
         address executor,
+        ISequencerInbox sequencerBridge,
         IBridge bridge,
         uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external {
+        address[2] memory bridges = [address(sequencerBridge), address(bridge)];
         (uint64 gas, uint256 totalMessagesRead, bytes32[4] memory fields) =
-            IOneStepProof(executor).executeStep(bridge, initialMessagesRead, accs, proof, bproof);
+            IOneStepProof(executor).executeStep(bridges, initialMessagesRead, accs, proof, bproof);
         emit OneStepProofResult(gas, totalMessagesRead, fields);
     }
 }

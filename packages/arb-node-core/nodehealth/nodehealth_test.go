@@ -3,11 +3,12 @@ package nodehealth
 import (
 	"errors"
 	"fmt"
-	"github.com/heptiolabs/healthcheck"
 	"math/big"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/heptiolabs/healthcheck"
 )
 
 type configTestStruct struct {
@@ -91,15 +92,18 @@ func startUpTest(config *configTestStruct) error {
 
 func aSyncTest(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Test Removing Primary aSync")
-	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8092"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPCPort", ValStr: "8089"}
+	healthChan <- Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
 	const smallBigInt = 10
 	blockTest := big.NewInt(10)
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: new(big.Int).Set(blockTest)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "arbCorePosition", ValBigInt: new(big.Int).Set(blockTest)}
 	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(blockTest)}
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
-	res, err := http.Get(config.nodehealthAddress + config.readinessEndpoint)
+	res, err := http.Get(config.nodehealthAddress + config.readinessEndpoint + "?full=1")
+
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -116,7 +120,8 @@ func aSyncTest(healthChan chan Log, config *configTestStruct) error {
 
 func openEthereumFailure(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Failing OpenEthereum Node Test")
-	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPCPort", ValStr: "8088"}
+
 	time.Sleep(config.timeDelayTests)
 	//Test server response
 	res, err := http.Get(config.nodehealthAddress + "/ready")
@@ -136,8 +141,10 @@ func openEthereumFailure(healthChan chan Log, config *configTestStruct) error {
 
 func addPrimaryWhileRunning(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Adding Primary Late Test")
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
-	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	healthChan <- Log{Config: true, Var: "openethereumHealthcheckRPCPort", ValStr: "8089"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:9010"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: "8089"}
+
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
@@ -150,7 +157,8 @@ func addPrimaryWhileRunning(healthChan chan Log, config *configTestStruct) error
 		fmt.Println(config.failMessage)
 		return errors.New("Failed adding primary while running test - exiting")
 	}
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8088"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: "8088"}
+
 	time.Sleep(config.timeDelayTests)
 
 	//Test server response
@@ -172,7 +180,7 @@ func addPrimaryWhileRunning(healthChan chan Log, config *configTestStruct) error
 
 func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 	fmt.Println("Test InboxReader blockStatus")
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8089"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: "8089"}
 	time.Sleep(config.timeDelayTests)
 	const largeBigInt = 20
 	testBigInt := big.NewInt(largeBigInt)
@@ -195,7 +203,7 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 
 	const smallBigInt = 10
 	blockTest := big.NewInt(smallBigInt)
-	healthChan <- Log{Comp: config.inboxReaderName, Var: "currentHeight", ValBigInt: new(big.Int).Set(blockTest)}
+	healthChan <- Log{Comp: config.inboxReaderName, Var: "arbCorePosition", ValBigInt: new(big.Int).Set(blockTest)}
 	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(testBigInt)}
 	time.Sleep(config.timeDelayTests)
 

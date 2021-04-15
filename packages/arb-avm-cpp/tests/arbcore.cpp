@@ -29,16 +29,16 @@
 
 void runCheckArbCore(
     std::shared_ptr<ArbCore>& arbCore,
-    const std::vector<std::vector<unsigned char>>& raw_messages,
+    const std::vector<std::vector<unsigned char>>& raw_seq_batch_items,
     uint256_t prev_inbox_acc,
     uint256_t target_message_count,
     int send_count,
-    int log_count,
-    bool last_message) {
+    int log_count) {
     auto initial_count_res = arbCore->messageEntryInsertedCount();
     REQUIRE(initial_count_res.status.ok());
 
-    REQUIRE(arbCore->deliverMessages(raw_messages, prev_inbox_acc, last_message,
+    REQUIRE(arbCore->deliverMessages(prev_inbox_acc, raw_seq_batch_items,
+                                     std::vector<std::vector<unsigned char>>(),
                                      std::nullopt));
 
     ArbCore::message_status_enum status;
@@ -123,16 +123,20 @@ TEST_CASE("ArbCore tests") {
             inbox_messages.push_back(InboxMessage::fromTuple(msg));
         }
 
-        std::vector<std::vector<unsigned char>> raw_messages;
-        raw_messages.reserve(inbox_messages.size());
-        for (const auto& msg : inbox_messages) {
-            raw_messages.push_back(msg.serialize());
-        }
-
-        for (size_t k = 0; k < raw_messages.size(); ++k) {
-            auto msg = extractInboxMessage(raw_messages[k]);
+        std::vector<std::vector<unsigned char>> raw_seq_batch_items;
+        raw_seq_batch_items.reserve(inbox_messages.size());
+        uint256_t last_item_acc = 0;
+        for (size_t k = 0; k < inbox_messages.size(); k++) {
+            auto& msg = inbox_messages[k];
             auto msg_tup = msg.toTuple();
             REQUIRE(hash(msg_tup) == hash(inbox_message_tuples[k]));
+
+            SequencerBatchItem batch_item = {
+                std::get<uint256_t>(msg_tup.get_element(4)), 0, 0,
+                msg.serialize()};
+            batch_item.accumulator =
+                batch_item.computeAccumulator(last_item_acc, 0, 0);
+            last_item_acc = batch_item.accumulator;
         }
 
         auto logs_json = j.at("logs");
@@ -147,8 +151,8 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        runCheckArbCore(arbCore, raw_messages, 0, raw_messages.size(),
-                        sends.size(), logs.size(), false);
+        runCheckArbCore(arbCore, raw_seq_batch_items, 0,
+                        raw_seq_batch_items.size(), sends.size(), logs.size());
 
         auto logsRes = arbCore->getLogs(0, logs.size(), value_cache);
         REQUIRE(logsRes.status.ok());
@@ -256,12 +260,12 @@ TEST_CASE("ArbCore inbox") {
 
     uint256_t inbox_acc = 0;
     for (int i = 0; i < 5; i++) {
-        std::vector<std::vector<unsigned char>> raw_messages;
+        std::vector<std::vector<unsigned char>> raw_seq_batch_items;
         auto message = InboxMessage(0, {}, i, 0, i, 0, {});
-        raw_messages.push_back(message.serialize());
+        raw_seq_batch_items.push_back(message.serialize());
         INFO("RUN " << i);
-        runCheckArbCore(arbCore, raw_messages, inbox_acc, i + 1, 0, i + 1,
-                        true);
+        runCheckArbCore(arbCore, raw_seq_batch_items, inbox_acc, i + 1, 0,
+                        i + 1);
         inbox_acc = hash_inbox(inbox_acc, message.serialize());
     }
     auto tx = storage.makeReadTransaction();

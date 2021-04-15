@@ -2,8 +2,10 @@ package broadcaster
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -28,7 +30,15 @@ func (cc *ClientConnection) Receive() error {
 		return err
 	}
 	if req == nil {
+		// Handled some control message.
 		return nil
+	}
+	switch req.Method {
+	case "ping":
+		return cc.writePong()
+		// return cc.writeResultTo(req, Object{
+		// 	"pong": time.Now().UTC(),
+		// })
 	}
 	return nil
 }
@@ -54,6 +64,22 @@ func (cc *ClientConnection) readRequest() (*Request, error) {
 	}
 
 	return req, nil
+}
+
+func (cc *ClientConnection) writePong() error {
+	w := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(w)
+
+	cc.io.Lock()
+	defer cc.io.Unlock()
+	pong := PongResponse{}
+	pong.Time = fmt.Sprintf("pong %v", time.Now().UTC())
+	if err := encoder.Encode(pong); err != nil {
+		return err
+	}
+
+	return w.Flush()
+
 }
 
 func (cc *ClientConnection) write(x interface{}) error {

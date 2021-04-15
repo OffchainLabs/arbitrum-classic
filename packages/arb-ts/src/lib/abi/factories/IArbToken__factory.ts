@@ -21,23 +21,17 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: '_l1Address',
+        name: 'account',
         type: 'address',
       },
       {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
       },
     ],
-    name: 'bridgeInit',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
+    name: 'bridgeBurn',
+    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },
@@ -55,6 +49,24 @@ const _abi = [
       },
     ],
     name: 'bridgeMint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'withdraw',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

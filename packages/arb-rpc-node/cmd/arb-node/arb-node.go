@@ -20,6 +20,7 @@ import (
 	"context"
 	"flag"
 	golog "log"
+	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -80,7 +81,9 @@ func main() {
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
+	sequencerMode := fs.Bool("sequencer", false, "act as sequencer")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
+	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -134,42 +137,6 @@ func main() {
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
-	healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: rollupArgs.EthURL}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: *forwardTxURL}
-
-	var batcherMode rpc.BatcherMode
-	if *forwardTxURL != "" {
-		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
-	} else {
-		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Error running GetKeystore")
-		}
-
-		if *inboxAddressStr == "" {
-			logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder mode")
-		}
-		inboxAddress := common.HexToAddress(*inboxAddressStr)
-
-		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
-
-		if err := ethbridge.WaitForBalance(
-			ctx,
-			ethclint,
-			common.Address{},
-			common.NewAddressFromEth(auth.From),
-		); err != nil {
-			logger.Fatal().Err(err).Msg("error waiting for balance")
-		}
-
-		if *keepPendingState {
-			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
-		} else {
-			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
-		}
-	}
-
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
@@ -186,16 +153,63 @@ func main() {
 
 	var inboxReader *staker.InboxReader
 	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
+		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address, healthChan)
 		if err == nil {
 			break
 		}
-		inboxReader.HealthChan = healthChan
 		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
 		time.Sleep(time.Second * 5)
+	}
+
+	if *forwardTxURL != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
+	}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
+
+	var batcherMode rpc.BatcherMode
+	if *forwardTxURL != "" {
+		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
+	} else {
+		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Error running GetKeystore")
+		}
+
+		var inboxAddress common.Address
+		if !*sequencerMode {
+			if *inboxAddressStr == "" {
+				logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder or sequencer mode")
+			}
+			inboxAddress = common.HexToAddress(*inboxAddressStr)
+		}
+
+		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
+
+		if err := ethbridge.WaitForBalance(
+			ctx,
+			ethclint,
+			common.Address{},
+			common.NewAddressFromEth(auth.From),
+		); err != nil {
+			logger.Fatal().Err(err).Msg("error waiting for balance")
+		}
+
+		if *sequencerMode {
+			batcherMode = rpc.SequencerBatcherMode{
+				Auth:                       auth,
+				Core:                       monitor.Core,
+				InboxReader:                inboxReader,
+				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
+			}
+		} else if *keepPendingState {
+			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+		} else {
+			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+		}
 	}
 
 	if *waitToCatchUp {

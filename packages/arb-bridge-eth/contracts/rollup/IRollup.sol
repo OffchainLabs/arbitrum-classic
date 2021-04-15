@@ -27,7 +27,7 @@ interface IRollup {
         bytes32 nodeHash,
         bytes32 executionHash,
         uint256 inboxMaxCount,
-        bytes32 afterInboxAcc,
+        bytes32 afterInboxBatchAcc,
         bytes32[3][2] assertionBytes32Fields,
         uint256[4][2] assertionIntFields
     );
@@ -58,7 +58,7 @@ interface IRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[6] calldata connectedContracts
+        address[7] calldata connectedContracts
     ) external;
 
     function completeChallenge(address winningStaker, address losingStaker) external;

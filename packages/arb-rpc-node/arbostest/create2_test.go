@@ -92,7 +92,7 @@ func TestCreate2(t *testing.T) {
 
 	sender := common.NewAddressFromEth(auth.From)
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(simpleConstructorTx), sender, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(create2Tx), sender, big.NewInt(3), big.NewInt(0), chainTime),

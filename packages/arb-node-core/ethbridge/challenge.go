@@ -128,8 +128,7 @@ func (c *Challenge) OneStepProveExecution(
 		challengedSegment.Length,
 		prevCutHashes[segmentToChallenge+1],
 		beforeCut.TotalMessagesRead,
-		beforeCut.SendAcc,
-		beforeCut.LogAcc,
+		[2][32]byte{beforeCut.SendAcc, beforeCut.LogAcc},
 		[3]*big.Int{
 			beforeCut.TotalGasConsumed,
 			beforeCut.TotalSendCount,

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -14,14 +15,16 @@ import (
 
 //Configuration struct
 type configStruct struct {
-	mu                         sync.Mutex
-	pollingRate                time.Duration
-	loopDelayTimer             time.Duration
-	healthcheckRPC             string
-	openethereumHealthcheckRPC string
-	primaryHealthcheckRPC      string
-	successCode                int
-	blockDifferenceTolerance   int64
+	mu                             sync.Mutex
+	pollingRate                    time.Duration
+	loopDelayTimer                 time.Duration
+	healthcheckRPC                 string
+	openethereumHealthcheckRPC     string
+	openethereumHealthcheckRPCPort string
+	primaryHealthcheckRPC          string
+	primaryHealthcheckRPCPort      string
+	successCode                    int
+	blockDifferenceTolerance       int64
 }
 
 //Log structure for passing messages on healthChan to logger
@@ -35,10 +38,12 @@ type Log struct {
 
 	ValStr    string
 	ValBigInt *big.Int
+	ValBool   bool
 	ValTime   time.Duration
 }
 
 type inboxReaderState struct {
+	loadingDatabase    bool
 	getNextBlockToRead *big.Int
 	currentHeight      *big.Int
 	arbCorePosition    *big.Int
@@ -62,10 +67,10 @@ func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct
 	asyncData := asyncDataStruct{}
 
 	//Check the healthcheck endpoint for OpenEthereum
-	asyncData.checkOpenethereum = checkEndpoint(config, &config.openethereumHealthcheckRPC)
+	asyncData.checkOpenethereum = checkEndpoint(config, &config.openethereumHealthcheckRPC, &config.openethereumHealthcheckRPCPort)
 
 	//Check the primary endpoint
-	asyncData.checkPrimary = checkEndpoint(config, &config.primaryHealthcheckRPC)
+	asyncData.checkPrimary = checkEndpoint(config, &config.primaryHealthcheckRPC, &config.primaryHealthcheckRPCPort)
 
 	//Check how many blocks the inboxReader is behind
 	asyncData.inboxReaderStatus = checkInboxReader(config, state)
@@ -76,18 +81,22 @@ func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct
 func updateInboxReader(state *healthState, logMessage Log) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
+
 	//Load the log into the correct struct field inside the state array
+	if logMessage.Var == "loadingDatabase" {
+		state.inboxReader.loadingDatabase = logMessage.ValBool
+	}
 	if logMessage.Var == "getNextBlockToRead" {
-		state.inboxReader.getNextBlockToRead = logMessage.ValBigInt
+		state.inboxReader.getNextBlockToRead.Set(logMessage.ValBigInt)
 	}
 	if logMessage.Var == "currentHeight" {
-		state.inboxReader.currentHeight = logMessage.ValBigInt
+		state.inboxReader.currentHeight.Set(logMessage.ValBigInt)
 	}
 	if logMessage.Var == "arbCorePosition" {
-		state.inboxReader.arbCorePosition = logMessage.ValBigInt
+		state.inboxReader.arbCorePosition.Set(logMessage.ValBigInt)
 	}
 	if logMessage.Var == "caughtUpTarget" {
-		state.inboxReader.caughtUpTarget = logMessage.ValBigInt
+		state.inboxReader.caughtUpTarget.Set(logMessage.ValBigInt)
 	}
 }
 
@@ -96,10 +105,24 @@ func updateConfig(config *configStruct, logMessage Log) {
 	defer config.mu.Unlock()
 	//Load the configuration message into the config struct
 	if logMessage.Var == "openethereumHealthcheckRPC" {
-		config.openethereumHealthcheckRPC = logMessage.ValStr
+		u, err := url.Parse(logMessage.ValStr)
+		if err != nil {
+			return
+		}
+		config.openethereumHealthcheckRPC = u.Hostname()
+	}
+	if logMessage.Var == "openethereumHealthcheckRPCPort" {
+		config.openethereumHealthcheckRPCPort = logMessage.ValStr
 	}
 	if logMessage.Var == "primaryHealthcheckRPC" {
-		config.primaryHealthcheckRPC = logMessage.ValStr
+		u, err := url.Parse(logMessage.ValStr)
+		if err != nil {
+			return
+		}
+		config.primaryHealthcheckRPC = u.Hostname()
+	}
+	if logMessage.Var == "primaryHealthcheckRPCPort" {
+		config.primaryHealthcheckRPCPort = logMessage.ValStr
 	}
 }
 
@@ -127,7 +150,11 @@ func newConfig() *configStruct {
 	const defaultBlockDifferenceTolerance = 2
 	const defaultPollingRate = 10 * time.Second
 	const loopDelayTimer = 1 * time.Second
+	const defaultHealthCheckPort = "8080"
+
 	config.healthcheckRPC = "0.0.0.0:8080"
+	config.openethereumHealthcheckRPCPort = defaultHealthCheckPort
+	config.primaryHealthcheckRPCPort = defaultHealthCheckPort
 	config.pollingRate = defaultPollingRate
 	config.loopDelayTimer = loopDelayTimer
 	config.openethereumHealthcheckRPC = ""
@@ -138,18 +165,31 @@ func newConfig() *configStruct {
 	return &config
 }
 
-func checkEndpoint(config *configStruct, endpoint *string) healthcheck.Check {
+func newHealthState() *healthState {
+	state := healthState{}
+
+	state.inboxReader.loadingDatabase = true
+	state.inboxReader.currentHeight = new(big.Int)
+	state.inboxReader.caughtUpTarget = new(big.Int)
+	state.inboxReader.arbCorePosition = new(big.Int)
+	state.inboxReader.getNextBlockToRead = new(big.Int)
+
+	return &state
+}
+
+func checkEndpoint(config *configStruct, endpoint *string, port *string) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
 		config.mu.Lock()
 		endpointStr := *endpoint
+		portStr := *port
 		config.mu.Unlock()
 		if endpointStr == "" {
 			return nil
 		}
 
 		//Retrieve status code from healthcheck endpoint
-		res, err := http.Get(endpointStr + "/ready")
+		res, err := http.Get("http://" + endpointStr + ":" + portStr + "/ready")
 
 		//Check the response code to determine if OpenEthereum is reeady
 		if err != nil {
@@ -169,19 +209,18 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 		//Lock config mutex for read operation
 		state.mu.Lock()
 		defer state.mu.Unlock()
+
+		if state.inboxReader.loadingDatabase == true {
+			return errors.New("Loading database snapshot")
+		}
+
 		//Calculate out the block difference
-		if state.inboxReader.caughtUpTarget == nil {
-			return errors.New("InboxReader caughtUpTarget not available yet")
-		}
-		if state.inboxReader.currentHeight == nil {
-			return errors.New("InboxReader currentHeight not available yet")
-		}
-		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.currentHeight)
+		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.arbCorePosition)
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
 		//Compare the tolerance using CmpAbs, fail if > then tolerance
 		if blockDifference.CmpAbs(tolerance) > 0 {
-			return errors.New("InboxReader catching up")
+			return errors.New("InboxReader catching up block " + state.inboxReader.arbCorePosition.String() + " of " + state.inboxReader.caughtUpTarget.String())
 		}
 		return nil
 	}, config.pollingRate)
@@ -250,14 +289,14 @@ func startHealthCheck(config *configStruct, state *healthState) error {
 // NodeHealthCheck Create a node healthcheck that listens on the given channel
 func NodeHealthCheck(logMsgChan <-chan Log) error {
 	//Create the configuration struct
-	state := healthState{}
+	state := newHealthState()
 
 	//Load the default configuration
 	config := newConfig()
 
-	go logger(config, &state, logMsgChan)
+	go logger(config, state, logMsgChan)
 
-	err := startHealthCheck(config, &state)
+	err := startHealthCheck(config, state)
 
 	return err
 }

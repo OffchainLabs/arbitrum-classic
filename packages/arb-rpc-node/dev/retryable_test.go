@@ -1,23 +1,45 @@
+/*
+* Copyright 2021, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package dev
 
 import (
 	"context"
+	"io/ioutil"
+	"math/big"
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"io/ioutil"
-	"math/big"
-	"os"
-	"testing"
 )
 
 func setupTest(t *testing.T, tmpDir string) (
@@ -36,7 +58,8 @@ func setupTest(t *testing.T, tmpDir string) (
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, config)
+
+	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
 	closeFunc := func() {
 		db.Close()
 		monitor.Close()
@@ -68,7 +91,7 @@ func setupTest(t *testing.T, tmpDir string) (
 	return sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc
 }
 
-func setupTicket(t *testing.T, backend *Backend, sender, destination, beneficiary common.Address) (message.RetryableTx, common.Hash) {
+func setupTicket(t *testing.T, backend *Backend, sender, destination common.Address, data []byte, beneficiary common.Address) (message.RetryableTx, common.Hash) {
 	retryableTx := message.RetryableTx{
 		Destination:       destination,
 		Value:             big.NewInt(20),
@@ -78,7 +101,7 @@ func setupTicket(t *testing.T, backend *Backend, sender, destination, beneficiar
 		Beneficiary:       beneficiary,
 		MaxGas:            big.NewInt(0),
 		GasPriceBid:       big.NewInt(0),
-		Data:              nil,
+		Data:              data,
 	}
 
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
@@ -106,16 +129,21 @@ func TestRetryableRedeem(t *testing.T) {
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
-	//dest, _, _, err := arbostestcontracts.DeployTransfer(otherAuth, client)
-	//test.FailIfError(t, err)
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	if err != nil {
+		panic(err)
+	}
 
-	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
-	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
-
-	txReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
+	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
 	test.FailIfError(t, err)
 
-	if txReceipt == nil || txReceipt.Status != 1 {
+	retryableTx, requestId := setupTicket(t, backend, sender, common.NewAddressFromEth(dest), simpleABI.Methods["exists"].ID, common.NewAddressFromEth(beneficiaryAuth.From))
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+
+	redeemReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if redeemReceipt == nil || redeemReceipt.Status != 1 {
 		t.Fatal("retryable tx failed")
 	}
 
@@ -126,7 +154,7 @@ func TestRetryableRedeem(t *testing.T) {
 		t.Fatal("shouldn't have receipt yet")
 	}
 
-	creationBlock, err := backend.db.GetBlockWithHash(common.NewHashFromEth(txReceipt.BlockHash))
+	creationBlock, err := backend.db.GetBlockWithHash(common.NewHashFromEth(redeemReceipt.BlockHash))
 	test.FailIfError(t, err)
 
 	lifetime, err := retryable.GetLifetime(&bind.CallOpts{})
@@ -170,22 +198,61 @@ func TestRetryableRedeem(t *testing.T) {
 	tx, err := retryable.Redeem(otherAuth, ticketId)
 	test.FailIfError(t, err)
 
-	txReceipt, err = client.TransactionReceipt(context.Background(), tx.Hash())
+	redeemReceipt, err = client.TransactionReceipt(context.Background(), tx.Hash())
 	test.FailIfError(t, err)
 
-	if txReceipt == nil || txReceipt.Status != 1 {
-		t.Fatal("cancel tx failed")
+	if redeemReceipt == nil || redeemReceipt.Status != 1 {
+		t.Fatal("redeem tx failed")
 	}
 
-	if len(txReceipt.Logs) != 1 {
-		t.Fatal("wrong log count")
+	if len(redeemReceipt.Logs) == 0 {
+		t.Fatal("should have at least one log")
 	}
 
-	if txReceipt.Logs[0].Topics[0] != arbos.RetryRedeemedEvent.ID {
+	if redeemReceipt.Logs[len(redeemReceipt.Logs)-1].Topics[0] != arbos.RetryRedeemedEvent.ID {
 		t.Fatal("wrong log topic")
 	}
 
+	finalReceipt, err = client.TransactionReceipt(context.Background(), ticketId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if finalReceipt == nil || finalReceipt.Status != 1 {
+		t.Fatal("final tx failed")
+	}
+
+	redeemRequest, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	test.FailIfError(t, err)
+
+	if len(redeemRequest.ReturnData) != 0 {
+		t.Error("expected redeem to have no return data")
+	}
+
 	balanceCheck(t, srv, sender, retryableTx, correctSenderBalance, big.NewInt(0), retryableTx.MaxSubmissionCost, retryableTx.Value)
+
+	var txLogs []*types.Log
+	if arbosVersion < 6 {
+		txLogs = redeemReceipt.Logs[:len(redeemReceipt.Logs)-1]
+	} else {
+		txLogs = finalReceipt.Logs
+
+		finalRequest, err := backend.db.GetRequest(ticketId)
+		test.FailIfError(t, err)
+
+		if len(finalRequest.ReturnData) != 32 {
+			t.Error("expected final tx to have 32 bytes of return data but got", len(finalRequest.ReturnData))
+		} else {
+			ret := new(big.Int).SetBytes(finalRequest.ReturnData)
+			if ret.Cmp(big.NewInt(10)) != 0 {
+				t.Error("incorrect return data")
+			}
+		}
+	}
+	if len(txLogs) != 1 {
+		t.Fatal("wrong log count", len(txLogs))
+	}
+	if txLogs[0].Topics[0] != simpleABI.Events["TestEvent"].ID {
+		t.Fatal("wrong event topic")
+	}
 }
 
 func TestRetryableCancel(t *testing.T) {
@@ -201,7 +268,7 @@ func TestRetryableCancel(t *testing.T) {
 
 	sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
-	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
@@ -253,7 +320,7 @@ func TestRetryableTimeout(t *testing.T) {
 
 	sender, beneficiaryAuth, _, rollupAddress, db, backend, closeFunc := setupTest(t, tmpDir)
 	defer closeFunc()
-	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), common.NewAddressFromEth(beneficiaryAuth.From))
+	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)

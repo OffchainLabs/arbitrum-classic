@@ -21,7 +21,9 @@ pragma solidity ^0.6.11;
 import "../bridge/Bridge.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
+import "../bridge/SequencerInbox.sol";
 import "./RollupEventBridge.sol";
+import "./BridgeCreator.sol";
 
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
@@ -36,15 +38,18 @@ import "../libraries/ICloneable.sol";
 contract RollupCreatorNoProxy is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress);
 
+    BridgeCreator bridgeCreator;
     ICloneable rollupTemplate;
     address challengeFactory;
     address nodeFactory;
 
     function setTemplates(
+        BridgeCreator _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
         address _nodeFactory
     ) external onlyOwner {
+        bridgeCreator = _bridgeCreator;
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
@@ -58,6 +63,9 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
         uint256 _baseStake,
         address _stakeToken,
         address _owner,
+        address _sequencer,
+        uint256 _sequencerDelayBlocks,
+        uint256 _sequencerDelaySeconds,
         bytes calldata _extraConfig
     ) external returns (IRollup) {
         return
@@ -70,6 +78,9 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
                     _baseStake,
                     _stakeToken,
                     _owner,
+                    _sequencer,
+                    _sequencerDelayBlocks,
+                    _sequencerDelaySeconds,
                     _extraConfig
                 )
             );
@@ -77,7 +88,8 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
 
     struct CreateRollupFrame {
         ProxyAdmin admin;
-        Bridge bridge;
+        Bridge delayedBridge;
+        SequencerInbox sequencerInbox;
         Inbox inbox;
         RollupEventBridge rollupEventBridge;
         Outbox outbox;
@@ -87,14 +99,19 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
     function createRollupNoProxy(RollupLib.Config memory config) private returns (IRollup) {
         CreateRollupFrame memory frame;
         frame.rollup = createClone(rollupTemplate);
+        (
+            frame.delayedBridge,
+            frame.sequencerInbox,
+            frame.inbox,
+            frame.rollupEventBridge,
+            frame.outbox
+        ) = bridgeCreator.createBridge(
+            frame.rollup,
+            config.sequencer,
+            config.sequencerDelayBlocks,
+            config.sequencerDelaySeconds
+        );
 
-        frame.bridge = new Bridge();
-        frame.inbox = new Inbox(IBridge(frame.bridge));
-        frame.rollupEventBridge = new RollupEventBridge(address(frame.bridge), frame.rollup);
-        frame.bridge.setInbox(address(frame.inbox), true);
-        frame.outbox = new Outbox(frame.rollup, IBridge(frame.bridge));
-
-        frame.bridge.transferOwnership(frame.rollup);
         IRollup(frame.rollup).initialize(
             config.machineHash,
             config.confirmPeriodBlocks,
@@ -106,7 +123,8 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
             config.extraConfig,
             [
                 address(0),
-                address(frame.bridge),
+                address(frame.delayedBridge),
+                address(frame.sequencerInbox),
                 address(frame.outbox),
                 address(frame.rollupEventBridge),
                 challengeFactory,

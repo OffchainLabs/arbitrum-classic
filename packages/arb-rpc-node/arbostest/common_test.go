@@ -16,7 +16,15 @@
 
 package arbostest
 
-import "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+import (
+	"encoding/json"
+	"flag"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"io/ioutil"
+	"os"
+	"testing"
+)
 
 var (
 	owner        = common.HexToAddress("0xcd3CFd7829e7d49e1847eA37fc4057537ee5e72f")
@@ -25,3 +33,37 @@ var (
 	connAddress1 = common.HexToAddress("0x2aad3e8302f74e0818b7bcd10c2c050526707755")
 	connAddress2 = common.HexToAddress("0x016cb751543d1cca5dd02976ac8dbdc0ecaacafd")
 )
+
+var arbosfile *string
+var arbosVersion int
+
+type ArbOSExec struct {
+	Version *int `json:"arbos_version"`
+}
+
+func TestMain(m *testing.M) {
+	arbosfile = flag.String("arbos", arbos.Path(), "version of arbos to run tests against")
+	flag.Parse()
+
+	fileData, err := ioutil.ReadFile(*arbosfile)
+	if err != nil {
+		panic(err)
+	}
+	var arbosExec ArbOSExec
+	if err := json.Unmarshal(fileData, &arbosExec); err != nil {
+		panic(err)
+	}
+	if arbosExec.Version != nil {
+		arbosVersion = *arbosExec.Version
+	} else {
+		arbosVersion = 1
+	}
+	os.Exit(m.Run())
+}
+
+func skipBelowVersion(t *testing.T, ver int) {
+	t.Helper()
+	if arbosVersion < ver {
+		t.Skipf("Skipping test because version %v too below supported version %v", arbosVersion, ver)
+	}
+}

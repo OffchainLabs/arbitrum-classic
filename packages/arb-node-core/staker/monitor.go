@@ -25,6 +25,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -64,7 +65,7 @@ func (m *Monitor) Close() {
 	m.Storage.CloseArbStorage()
 }
 
-func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAddress common.Address) (*InboxReader, error) {
+func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAddress common.Address, healthChan chan nodehealth.Log) (*InboxReader, error) {
 	ethClient, err := ethutils.NewRPCEthClient(ethurl)
 	if err != nil {
 		return nil, err
@@ -73,15 +74,23 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAdd
 	if err != nil {
 		return nil, err
 	}
-	bridgeAddress, err := rollup.Bridge(context.Background())
+	delayedBridgeAddress, err := rollup.DelayedBridge(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	bridgeWatcher, err := ethbridge.NewBridgeWatcher(bridgeAddress.ToEthAddress(), ethClient)
+	delayedBridgeWatcher, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), ethClient)
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, bridgeWatcher, m.Core)
+	sequencerAddress, err := rollup.SequencerBridge(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddress.ToEthAddress(), ethClient)
+	if err != nil {
+		return nil, err
+	}
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan)
 	if err != nil {
 		return nil, err
 	}

@@ -113,6 +113,8 @@ func (r *Rollup) StakeOnNewNode(
 	prevProposedBlock *big.Int,
 	prevInboxMaxCount *big.Int,
 ) error {
+	seqBatchProof := []byte{}
+	return errors.New("TODO: implement sequencer batch proof")
 	_, err := r.builderCon.StakeOnNewNode(
 		authWithContext(ctx, r.builderAuth),
 		nodeHash,
@@ -120,6 +122,7 @@ func (r *Rollup) StakeOnNewNode(
 		assertion.IntFields(),
 		prevProposedBlock,
 		prevInboxMaxCount,
+		seqBatchProof,
 	)
 	return errors.WithStack(err)
 }

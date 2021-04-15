@@ -16,12 +16,11 @@
 
 #include <data_storage/datastorage.hpp>
 
-#include "value/utils.hpp"
-
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <string>
 
@@ -101,7 +100,11 @@ DataStorage::DataStorage(const std::string& db_path) {
                                           small_cf_options};
     column_descriptors[STATE_COLUMN] = {"states", small_cf_options};
     column_descriptors[CHECKPOINT_COLUMN] = {"checkpoints", small_cf_options};
-    column_descriptors[MESSAGEENTRY_COLUMN] = {"messageentries", cf_options};
+    column_descriptors[DELAYEDMESSAGE_COLUMN] = {"delayedmessages", cf_options};
+    column_descriptors[SEQUENCERBATCHITEM_COLUMN] = {"sequencerbatchitems",
+                                                     cf_options};
+    column_descriptors[SEQUENCERBATCH_COLUMN] = {"sequencerbatches",
+                                                 cf_options};
     column_descriptors[LOG_COLUMN] = {"logs", cf_options};
     column_descriptors[SEND_COLUMN] = {"sends", cf_options};
     column_descriptors[SIDELOAD_COLUMN] = {"sideloads", small_cf_options};

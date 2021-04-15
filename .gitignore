@@ -22,6 +22,8 @@ gasReporterOutput.json
 rollups
 /packages/arb-node-core/arb-validator
 /packages/arb-rpc-node/arb-node
+/packages/arb-rpc-node/cmd/arb-dev-node/arb-dev-node
+/packages/arb-rpc-node/cmd/arb-dev-node/arbitrum*
 
 # Logs
 logs

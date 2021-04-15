@@ -39,7 +39,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        ISequencerInbox _sequencerBridge,
+        IBridge _delayedBridge
     ) external override returns (address) {
         address clone = createClone(challengeTemplate);
         IChallenge(clone).initializeChallenge(
@@ -51,7 +52,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _challenger,
             _asserterTimeLeft,
             _challengerTimeLeft,
-            _bridge
+            _sequencerBridge,
+            _delayedBridge
         );
         return address(clone);
     }

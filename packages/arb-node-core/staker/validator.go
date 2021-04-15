@@ -19,7 +19,7 @@ import (
 
 type Validator struct {
 	rollup         *ethbridge.Rollup
-	bridge         *ethbridge.BridgeWatcher
+	bridge         *ethbridge.DelayedBridgeWatcher
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
 	lookup         core.ArbCoreLookup
@@ -42,11 +42,12 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	bridgeAddress, err := rollup.Bridge(ctx)
+	panic("TODO: redo inbox reader")
+	bridgeAddress, err := rollup.DelayedBridge(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	bridge, err := ethbridge.NewBridgeWatcher(bridgeAddress.ToEthAddress(), client)
+	bridge, err := ethbridge.NewDelayedBridgeWatcher(bridgeAddress.ToEthAddress(), client)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +245,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			break
 		}
 		if correctNode == nil {
-			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, nd.AfterInboxAcc)
+			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, nd.AfterInboxBatchAcc)
 			if err != nil {
 				return nil, false, err
 			}

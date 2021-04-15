@@ -19,10 +19,12 @@
 pragma solidity ^0.6.11;
 
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 interface IOneStepProof {
+    // Bridges is sequencer bridge then delayed bridge
     function executeStep(
-        IBridge bridge,
+        address[2] calldata bridges,
         uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
@@ -32,12 +34,12 @@ interface IOneStepProof {
         view
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256 afterMessagesRead,
             bytes32[4] memory fields
         );
 
     function executeStepDebug(
-        IBridge bridge,
+        address[2] calldata bridges,
         uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,

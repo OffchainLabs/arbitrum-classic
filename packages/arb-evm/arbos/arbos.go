@@ -22,10 +22,14 @@ var ARB_RETRYABLE_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000
 var ARB_NODE_INTERFACE_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000000000000000C8")
 
 func Path() string {
+	return filepath.Join(Dir(), "arbos.mexe")
+}
+
+func Dir() string {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		logger.Fatal().Msg("Failed to get arbos path")
 	}
 
-	return filepath.Join(filepath.Dir(filename), "../../arb-os/arb_os/arbos.mexe")
+	return filepath.Join(filepath.Dir(filename), "../../arb-os/arb_os")
 }

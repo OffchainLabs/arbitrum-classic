@@ -37,7 +37,7 @@ func NewStaker(
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
-) (*Staker, *ethbridge.BridgeWatcher, error) {
+) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
 		return nil, nil, err

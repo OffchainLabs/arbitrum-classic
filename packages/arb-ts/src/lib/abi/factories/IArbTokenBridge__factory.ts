@@ -166,7 +166,7 @@ const _abi = [
       {
         indexed: false,
         internalType: 'uint256',
-        name: 'id',
+        name: 'withdrawalId',
         type: 'uint256',
       },
       {
@@ -243,7 +243,12 @@ const _abi = [
       },
       {
         internalType: 'address',
-        name: 'account',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'destination',
         type: 'address',
       },
       {
@@ -300,6 +305,11 @@ const _abi = [
       {
         internalType: 'address',
         name: 'l1ERC20',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'sender',
         type: 'address',
       },
       {

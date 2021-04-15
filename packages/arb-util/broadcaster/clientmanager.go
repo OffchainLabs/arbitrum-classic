@@ -46,23 +46,26 @@ func (cm *ClientManager) Register(conn net.Conn) *ClientConnection {
 		conn:          conn,
 	}
 
-	cm.mu.Lock()
 	{
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+
 		clientConnection.id = cm.seq
 		clientConnection.name = conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10))
 
 		cm.clientList = append(cm.clientList, clientConnection)
 		cm.clientMap[clientConnection.name] = clientConnection
 
-		// send the newly connected client all the messages we've got...
-		bm := BroadcastMessage{}
-		bm.Messages = cm.broadcastMessages
+		if len(cm.broadcastMessages) > 0 {
+			// send the newly connected client all the messages we've got...
+			bm := BroadcastMessage{}
+			bm.Messages = cm.broadcastMessages
 
-		_ = clientConnection.write(bm)
+			_ = clientConnection.write(bm)
+		}
 
 		cm.seq++
 	}
-	cm.mu.Unlock()
 
 	return clientConnection
 }
@@ -74,7 +77,7 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Unlock()
 }
 
-// This clears out everything prior
+// SyncSequence clears out everything prior
 func (cm *ClientManager) SyncSequence(fromSequenceNumber *big.Int) {
 	broadcastMessages := make([]*BroadcastInboxMessage, 0)
 	for i := range cm.broadcastMessages {
@@ -102,8 +105,12 @@ func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []by
 
 	broadcastMessages = append(broadcastMessages, &ibMsg)
 
-	// also add this to our global list, broadcasted to clients when connecting
-	cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+	// also add this to our global list for broadcasting to clients when connecting
+	{
+		cm.mu.Lock()
+		defer cm.mu.Unlock()
+		cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+	}
 
 	bm := BroadcastMessage{}
 	bm.Messages = broadcastMessages
@@ -123,6 +130,8 @@ func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []by
 // writer writes broadcast messages from cm.out channel.
 func (cm *ClientManager) writer() {
 	for bts := range cm.out {
+		// For closure
+		bts := bts
 		cm.mu.RLock()
 		cl := cm.clientList
 		cm.mu.RUnlock()

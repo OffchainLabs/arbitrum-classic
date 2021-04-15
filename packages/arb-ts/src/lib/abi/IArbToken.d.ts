@@ -22,21 +22,27 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface IArbTokenInterface extends ethers.utils.Interface {
   functions: {
-    'bridgeInit(address,bytes)': FunctionFragment
+    'bridgeBurn(address,uint256)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
+    'withdraw(address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
-    functionFragment: 'bridgeInit',
-    values: [string, BytesLike]
+    functionFragment: 'bridgeBurn',
+    values: [string, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'bridgeMint',
     values: [string, BigNumberish]
   ): string
+  encodeFunctionData(
+    functionFragment: 'withdraw',
+    values: [string, BigNumberish]
+  ): string
 
-  decodeFunctionResult(functionFragment: 'bridgeInit', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {}
 }
@@ -55,15 +61,15 @@ export class IArbToken extends Contract {
   interface: IArbTokenInterface
 
   functions: {
-    bridgeInit(
-      _l1Address: string,
-      _data: BytesLike,
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'bridgeInit(address,bytes)'(
-      _l1Address: string,
-      _data: BytesLike,
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -78,17 +84,29 @@ export class IArbToken extends Contract {
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'withdraw(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
   }
 
-  bridgeInit(
-    _l1Address: string,
-    _data: BytesLike,
+  bridgeBurn(
+    account: string,
+    amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'bridgeInit(address,bytes)'(
-    _l1Address: string,
-    _data: BytesLike,
+  'bridgeBurn(address,uint256)'(
+    account: string,
+    amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -104,18 +122,30 @@ export class IArbToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  callStatic: {
-    bridgeInit(
-      _l1Address: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<boolean>
+  withdraw(
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
-    'bridgeInit(address,bytes)'(
-      _l1Address: string,
-      _data: BytesLike,
+  'withdraw(address,uint256)'(
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  callStatic: {
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<boolean>
+    ): Promise<void>
+
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     bridgeMint(
       account: string,
@@ -124,6 +154,18 @@ export class IArbToken extends Contract {
     ): Promise<void>
 
     'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'withdraw(address,uint256)'(
       account: string,
       amount: BigNumberish,
       overrides?: CallOverrides
@@ -133,15 +175,15 @@ export class IArbToken extends Contract {
   filters: {}
 
   estimateGas: {
-    bridgeInit(
-      _l1Address: string,
-      _data: BytesLike,
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'bridgeInit(address,bytes)'(
-      _l1Address: string,
-      _data: BytesLike,
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -152,6 +194,18 @@ export class IArbToken extends Contract {
     ): Promise<BigNumber>
 
     'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'withdraw(address,uint256)'(
       account: string,
       amount: BigNumberish,
       overrides?: Overrides
@@ -159,15 +213,15 @@ export class IArbToken extends Contract {
   }
 
   populateTransaction: {
-    bridgeInit(
-      _l1Address: string,
-      _data: BytesLike,
+    bridgeBurn(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'bridgeInit(address,bytes)'(
-      _l1Address: string,
-      _data: BytesLike,
+    'bridgeBurn(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -178,6 +232,18 @@ export class IArbToken extends Contract {
     ): Promise<PopulatedTransaction>
 
     'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    withdraw(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'withdraw(address,uint256)'(
       account: string,
       amount: BigNumberish,
       overrides?: Overrides

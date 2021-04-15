@@ -17,10 +17,11 @@
 package core
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 	"math/big"
 	"sync"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -35,6 +36,10 @@ type ArbOutputLookup interface {
 
 	GetMessageCount() (*big.Int, error)
 	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
+
+	GetSequencerBatchItems(startIndex, count *big.Int) ([]inbox.SequencerBatchItem, error)
+
+	GetTotalDelayedMessagesSequenced() (*big.Int, error)
 
 	GetMachineForSideload(uint64) (machine.Machine, error)
 }

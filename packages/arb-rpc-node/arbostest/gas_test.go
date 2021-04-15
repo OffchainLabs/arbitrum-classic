@@ -18,6 +18,7 @@ package arbostest
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
@@ -27,13 +28,15 @@ import (
 )
 
 func TestGas(t *testing.T) {
+	conData := hexutil.MustDecode(arbostestcontracts.GasUsedBin)
+	conData = append(conData, math.U256Bytes(big.NewInt(0))...)
 	constructorTx := message.Transaction{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{0},
 		Payment:     big.NewInt(0),
-		Data:        hexutil.MustDecode(arbostestcontracts.GasUsedBin),
+		Data:        conData,
 	}
 
 	noopEOACallTx := message.Transaction{
@@ -72,25 +75,25 @@ func TestGas(t *testing.T) {
 		Data:        hexutil.MustDecode("0x703c2d1a"),
 	}
 
-	inboxMessages := makeSimpleInbox([]message.Message{
-		message.Eth{Dest: sender, Value: big.NewInt(10000)},
+	messages := []message.Message{
+		makeEthDeposit(sender, big.NewInt(10000)),
 		message.NewSafeL2Message(constructorTx),
 		message.NewSafeL2Message(noopEOACallTx),
 		message.NewSafeL2Message(noopFuncCallTx),
 		message.NewSafeL2Message(storeFuncCallTx),
 		message.NewSafeL2Message(store2FuncCallTx),
-	})
+	}
 
-	logs, _, _, _ := runAssertion(t, inboxMessages, len(inboxMessages)-2, 0)
+	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
 
-	checkConstructorResult(t, results[0], connAddress1)
-	validGasCheck(t, results[1])
+	checkConstructorResult(t, results[1], connAddress1)
 	validGasCheck(t, results[2])
 	validGasCheck(t, results[3])
 	validGasCheck(t, results[4])
+	validGasCheck(t, results[5])
 }
 
 func validGasCheck(t *testing.T, res *evm.TxResult) *big.Int {

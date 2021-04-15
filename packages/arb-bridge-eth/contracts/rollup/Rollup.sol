@@ -50,7 +50,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     address public stakeToken;
 
     // Bridge is an IInbox and IOutbox
-    IBridge public bridge;
+    IBridge public delayedBridge;
+    ISequencerInbox public sequencerBridge;
     IOutbox public outbox;
     RollupEventBridge public rollupEventBridge;
     IChallengeFactory public challengeFactory;
@@ -77,16 +78,17 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[6] calldata connectedContracts
+        address[7] calldata connectedContracts
     ) external override {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
         require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
 
-        bridge = IBridge(connectedContracts[1]);
-        outbox = IOutbox(connectedContracts[2]);
-        bridge.setOutbox(connectedContracts[2], true);
-        rollupEventBridge = RollupEventBridge(connectedContracts[3]);
-        bridge.setInbox(connectedContracts[3], true);
+        delayedBridge = IBridge(connectedContracts[1]);
+        sequencerBridge = ISequencerInbox(connectedContracts[2]);
+        outbox = IOutbox(connectedContracts[3]);
+        delayedBridge.setOutbox(connectedContracts[3], true);
+        rollupEventBridge = RollupEventBridge(connectedContracts[4]);
+        delayedBridge.setInbox(connectedContracts[4], true);
 
         rollupEventBridge.rollupInitialized(
             _confirmPeriodBlocks,
@@ -98,8 +100,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             _extraConfig
         );
 
-        challengeFactory = IChallengeFactory(connectedContracts[4]);
-        nodeFactory = INodeFactory(connectedContracts[5]);
+        challengeFactory = IChallengeFactory(connectedContracts[5]);
+        nodeFactory = INodeFactory(connectedContracts[6]);
 
         INode node = createInitialNode(_machineHash);
         initializeCore(node);
@@ -148,7 +150,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function setOutbox(IOutbox _outbox) external onlyOwner {
         outbox = _outbox;
-        bridge.setOutbox(address(_outbox), true);
+        delayedBridge.setOutbox(address(_outbox), true);
     }
 
     /**
@@ -157,7 +159,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function removeOldOutbox(address _outbox) external onlyOwner {
         require(_outbox != address(outbox), "CUR_OUTBOX");
-        bridge.setOutbox(_outbox, false);
+        delayedBridge.setOutbox(_outbox, false);
     }
 
     /**
@@ -166,7 +168,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      * @param _enabled New status of inbox
      */
     function setInbox(address _inbox, bool _enabled) external onlyOwner {
-        bridge.setInbox(address(_inbox), _enabled);
+        delayedBridge.setInbox(address(_inbox), _enabled);
     }
 
     /**
@@ -419,6 +421,14 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
+    struct StakeOnNewNodeFrame {
+        bytes32 sequencerBatchAcc;
+        uint256 currentInboxSize;
+        INode node;
+        bytes32 executionHash;
+        INode prevNode;
+    }
+
     /**
      * @notice Move stake onto a new node
      * @param expectedNodeHash The hash of the node being created (protects against reorgs)
@@ -430,15 +440,15 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         bytes32[3][2] calldata assertionBytes32Fields,
         uint256[4][2] calldata assertionIntFields,
         uint256 beforeProposedBlock,
-        uint256 beforeInboxMaxCount
+        uint256 beforeInboxMaxCount,
+        bytes calldata sequencerBatchProof
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        uint256 inboxMaxCount = bridge.messageCount();
-        bytes32 afterInboxAcc = 0;
-        INode node;
-        bytes32 executionHash;
         INode prevNode = getNode(latestStakedNode(msg.sender));
+        StakeOnNewNodeFrame memory frame;
+        frame.currentInboxSize = sequencerBridge.messageCount();
+        frame.prevNode = getNode(latestStakedNode(msg.sender));
         {
             uint256 nodeNum = latestNodeCreated() + 1;
             RollupLib.Assertion memory assertion =
@@ -447,13 +457,18 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     assertionIntFields,
                     beforeProposedBlock,
                     beforeInboxMaxCount,
-                    inboxMaxCount
+                    frame.currentInboxSize
                 );
-            executionHash = RollupLib.executionHash(assertion);
+            frame.executionHash = RollupLib.executionHash(assertion);
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
+                RollupLib.stateHash(assertion.beforeState) == frame.prevNode.stateHash(),
                 "PREV_STATE_HASH"
+            );
+
+            frame.sequencerBatchAcc = sequencerBridge.proveBatchContainsSequenceNumber(
+                sequencerBatchProof,
+                assertion.afterState.inboxCount
             );
 
             uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
@@ -480,7 +495,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 // Set deadline rounding up to the nearest block
                 uint256 checkTime =
                     gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
-                deadlineBlock = max(block.number.add(confirmPeriodBlocks), prevNode.deadlineBlock())
+                deadlineBlock = max(
+                    block.number.add(confirmPeriodBlocks),
+                    frame.prevNode.deadlineBlock()
+                )
                     .add(checkTime);
             }
 
@@ -492,15 +510,12 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             );
 
             // Ensure that the assertion doesn't read past the end of the current inbox
-            require(assertion.afterState.inboxCount <= inboxMaxCount, "INBOX_PAST_END");
-            if (assertion.afterState.inboxCount > 0) {
-                afterInboxAcc = bridge.inboxAccs(assertion.afterState.inboxCount - 1);
-            }
+            require(assertion.afterState.inboxCount <= frame.currentInboxSize, "INBOX_PAST_END");
 
-            node = INode(
+            frame.node = INode(
                 nodeFactory.createNode(
                     RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, executionHash, block.number),
+                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
                     RollupLib.confirmHash(assertion),
                     latestStakedNode(msg.sender),
                     deadlineBlock
@@ -510,28 +525,32 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         {
             bytes32 lastHash;
-            uint256 latestSibling = prevNode.latestChildNumber();
-            bool hasSibling = latestSibling > 0;
+            bool hasSibling = prevNode.latestChildNumber() > 0;
             if (hasSibling) {
                 lastHash = getNodeHash(prevNode.latestChildNumber());
             } else {
-                lastHash = getNodeHash(node.prev());
+                lastHash = getNodeHash(frame.node.prev());
             }
             bytes32 nodeHash =
-                RollupLib.nodeHash(hasSibling, lastHash, executionHash, afterInboxAcc);
+                RollupLib.nodeHash(
+                    hasSibling,
+                    lastHash,
+                    frame.executionHash,
+                    frame.sequencerBatchAcc
+                );
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
-            nodeCreated(node, nodeHash);
+            nodeCreated(frame.node, nodeHash);
             prevNode.childCreated(latestNodeCreated());
         }
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit NodeCreated(
             latestNodeCreated(),
-            getNodeHash(node.prev()),
-            getNodeHash(latestNodeCreated()),
-            executionHash,
-            inboxMaxCount,
-            afterInboxAcc,
+            getNodeHash(frame.node.prev()),
+            expectedNodeHash,
+            frame.executionHash,
+            frame.currentInboxSize,
+            frame.sequencerBatchAcc,
             assertionBytes32Fields,
             assertionIntFields
         );
@@ -643,7 +662,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 stakers[1],
                 commonEndTime.sub(proposedTimes[0]),
                 commonEndTime.sub(proposedTimes[1]),
-                bridge
+                sequencerBridge,
+                delayedBridge
             );
 
         challengeStarted(stakers[0], stakers[1], challengeAddress);

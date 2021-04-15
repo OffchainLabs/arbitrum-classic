@@ -423,6 +423,7 @@ contract OneStepProof is OneStepProofCommon {
         bytes memory proof = context.proof;
 
         bytes32 messageHash;
+        uint256 inboxSeqNum;
         Value.Data[] memory tupData = new Value.Data[](8);
 
         {
@@ -431,7 +432,6 @@ contract OneStepProof is OneStepProofCommon {
             context.offset++;
             uint256 l1BlockNumber;
             uint256 l1Timestamp;
-            uint256 inboxSeqNum;
             uint256 gasPriceL1;
             address sender = proof.toAddress(context.offset);
             context.offset += 20;
@@ -449,6 +449,7 @@ contract OneStepProof is OneStepProofCommon {
             assembly {
                 messageDataHash := keccak256(add(add(proof, 32), offset), messageDataLength)
             }
+            context.offset += messageDataLength;
 
             messageHash = Messages.messageHash(
                 kind,
@@ -470,42 +471,124 @@ contract OneStepProof is OneStepProofCommon {
             tupData[7] = Value.newHashedValue(messageBufHash, 1);
         }
 
-        bytes32 prevAcc = 0;
-        if (context.totalMessagesRead > 0) {
-            prevAcc = context.bridge.inboxAccs(context.totalMessagesRead - 1);
+        uint256 seqBatchNum;
+        (context.offset, seqBatchNum) = Marshaling.deserializeInt(proof, context.offset);
+        uint8 isDelayed = uint8(proof[context.offset]);
+        context.offset++;
+        require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED_VAL");
+
+        bytes32 acc;
+        if (isDelayed == 0) {
+            (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
+            // Start the proof at an arbitrary previous accumulator, as we validate the end accumulator.
+            acc = keccak256(abi.encodePacked("Sequencer message:", acc, inboxSeqNum, messageHash));
+
+            require(inboxSeqNum == context.totalMessagesRead, "WRONG_SEQUENCER_MSG_SEQ_NUM");
+            inboxSeqNum++;
+        } else {
+            // Delayed messages are always at the start of a batch, so we can fetch the previous accumulator.
+            bytes32 prevBatchAcc = 0;
+            if (seqBatchNum > 0) {
+                prevBatchAcc = context.sequencerBridge.inboxAccs(seqBatchNum - 1);
+            }
+
+            // Read in delayed batch info from the proof. These fields are all part of the accumulator hash.
+            uint256 firstSequencerSeqNum;
+            uint256 delayedStart;
+            uint256 delayedEnd;
+            bytes32 delayedEndAcc;
+            (context.offset, firstSequencerSeqNum) = Marshaling.deserializeInt(
+                proof,
+                context.offset
+            );
+            (context.offset, delayedStart) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, delayedEnd) = Marshaling.deserializeInt(proof, context.offset);
+            (context.offset, delayedEndAcc) = Marshaling.deserializeBytes32(proof, context.offset);
+
+            // Validate the delayed message is included in this sequencer batch.
+            require(inboxSeqNum >= delayedStart, "DELAYED_START");
+            require(inboxSeqNum < delayedEnd, "DELAYED_END");
+
+            // Validate the delayed message is in the delayed inbox.
+            bytes32 prevDelayedAcc;
+            if (inboxSeqNum > 0) {
+                prevDelayedAcc = context.delayedBridge.inboxAccs(inboxSeqNum - 1);
+            }
+            require(
+                Messages.addMessageToInbox(prevDelayedAcc, messageHash) ==
+                    context.delayedBridge.inboxAccs(inboxSeqNum),
+                "DELAYED_ACC"
+            );
+
+            // Transform the delayed sequence number into the sequencer sequence number.
+            // Note that messageHash is no longer accurate after this point, as this modifies the message.
+            inboxSeqNum = inboxSeqNum - delayedStart + firstSequencerSeqNum;
+            tupData[4] = Value.newInt(inboxSeqNum);
+            require(inboxSeqNum == context.totalMessagesRead, "WRONG_DELAYED_MSG_SEQ_NUM");
+
+            acc = keccak256(
+                abi.encodePacked(
+                    "Delayed messages:",
+                    prevBatchAcc,
+                    firstSequencerSeqNum,
+                    delayedStart,
+                    delayedEnd,
+                    delayedEndAcc
+                )
+            );
+            inboxSeqNum = firstSequencerSeqNum + (delayedEnd - delayedStart);
         }
 
-        require(
-            Messages.addMessageToInbox(prevAcc, messageHash) ==
-                context.bridge.inboxAccs(context.totalMessagesRead),
-            "WRONG_MESSAGE"
-        );
+        // Get to the end of the batch by hashing in arbitrary future sequencer messages.
+        uint256 remainingSeqMessages;
+        (context.offset, remainingSeqMessages) = Marshaling.deserializeInt(proof, context.offset);
+        for (uint256 i = 0; i < remainingSeqMessages; i++) {
+            isDelayed = uint8(proof[context.offset]);
+            require(isDelayed == 0 || isDelayed == 1, "REM_IS_DELAYED_VAL");
+            context.offset++;
+            if (isDelayed == 0) {
+                bytes32 newerMessageHash;
+                (context.offset, newerMessageHash) = Marshaling.deserializeBytes32(
+                    proof,
+                    context.offset
+                );
+                acc = keccak256(
+                    abi.encodePacked("Sequencer message:", acc, inboxSeqNum, newerMessageHash)
+                );
+                inboxSeqNum++;
+            } else {
+                uint256 delayedStart;
+                uint256 delayedEnd;
+                bytes32 delayedEndAcc;
+                (context.offset, delayedStart) = Marshaling.deserializeInt(proof, context.offset);
+                (context.offset, delayedEnd) = Marshaling.deserializeInt(proof, context.offset);
+                (context.offset, delayedEndAcc) = Marshaling.deserializeBytes32(
+                    proof,
+                    context.offset
+                );
+                acc = keccak256(
+                    abi.encodePacked(
+                        "Delayed messages:",
+                        acc,
+                        inboxSeqNum,
+                        delayedStart,
+                        delayedEnd,
+                        delayedEndAcc
+                    )
+                );
+                inboxSeqNum += delayedEnd - delayedStart;
+            }
+        }
+
+        require(acc == context.sequencerBridge.inboxAccs(seqBatchNum), "WRONG_BATCH_ACC");
 
         context.totalMessagesRead++;
 
         return Value.newTuple(tupData);
     }
 
-    function executeInboxPeekInsn(AssertionContext memory context) internal view {
-        Value.Data memory val = popVal(context.stack);
-        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
-            context.afterMachine.pendingMessage = incrementInbox(context);
-        }
-        // The pending message must be a tuple of size at least 2
-        pushVal(
-            context.stack,
-            Value.newBoolean(context.afterMachine.pendingMessage.tupleVal[1].hash() == val.hash())
-        );
-    }
-
     function executeInboxInsn(AssertionContext memory context) internal view {
-        if (context.afterMachine.pendingMessage.hash() != Value.newEmptyTuple().hash()) {
-            // The pending message field is already full
-            pushVal(context.stack, context.afterMachine.pendingMessage);
-            context.afterMachine.pendingMessage = Value.newEmptyTuple();
-        } else {
-            pushVal(context.stack, incrementInbox(context));
-        }
+        pushVal(context.stack, incrementInbox(context));
     }
 
     function executeSetGasInsn(AssertionContext memory context) internal pure {
@@ -818,8 +901,6 @@ contract OneStepProof is OneStepProofCommon {
             return (0, 0, 100, executeNopInsn);
         } else if (opCode == OP_LOG) {
             return (1, 0, 100, executeLogInsn);
-        } else if (opCode == OP_INBOX_PEEK) {
-            return (1, 0, 40, executeInboxPeekInsn);
         } else if (opCode == OP_INBOX) {
             return (0, 0, 40, executeInboxInsn);
         } else if (opCode == OP_ERROR) {

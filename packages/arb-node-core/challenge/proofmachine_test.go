@@ -105,7 +105,6 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			1,
 			true,
 			messages,
-			false,
 			nil,
 			false,
 			common.NewHashFromEth(beforeCut.SendAcc),

@@ -6,6 +6,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments
   const [deployer] = await ethers.getSigners()
 
+  const bridgeCreator = await deployments.get('BridgeCreator')
   const rollup = await deployments.get('Rollup')
   const challengeFactory = await deployments.get('ChallengeFactory')
   const nodeFactory = await deployments.get('NodeFactory')
@@ -18,6 +19,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const RollupCreator = await ethers.getContractFactory('RollupCreator')
   const rollupCreator = RollupCreator.attach(dep.address).connect(deployer)
   await rollupCreator.setTemplates(
+    bridgeCreator.address,
     rollup.address,
     challengeFactory.address,
     nodeFactory.address
@@ -26,4 +28,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
 module.exports = func
 module.exports.tags = ['RollupCreator']
-module.exports.dependencies = ['Rollup', 'ChallengeFactory', 'NodeFactory']
+module.exports.dependencies = [
+  'Rollup',
+  'ChallengeFactory',
+  'NodeFactory',
+  'BridgeCreator',
+]

@@ -43,10 +43,12 @@ TEST_CASE("ARBOS test vectors") {
             nlohmann::json j;
             i >> j;
 
-            std::vector<InboxMessage> messages;
+            std::vector<MachineMessage> messages;
             for (auto& json_message : j.at("inbox")) {
-                messages.push_back(InboxMessage::fromTuple(
-                    std::get<Tuple>(simple_value_from_json(json_message))));
+                messages.emplace_back(
+                    InboxMessage::fromTuple(
+                        std::get<Tuple>(simple_value_from_json(json_message))),
+                    0);
             }
 
             auto logs_json = j.at("logs");
