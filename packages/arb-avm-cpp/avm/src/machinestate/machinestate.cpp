@@ -509,7 +509,7 @@ uint256_t runWasmMachine(MachineState &machine_state) {
             break;
         }
     }    
-    return start_gas - machine_state.arb_gas_remaining ;
+    return start_gas - machine_state.arb_gas_remaining - 10;
 }
 
 void MachineState::marshalWasmProof(OneStepProof &proof) const {
