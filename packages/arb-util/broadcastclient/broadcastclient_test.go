@@ -13,7 +13,7 @@ import (
 
 func TestBroadCastClientConnectsAndReceivesSequences(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9643",
+		Addr:      ":9742",
 		Workers:   128,
 		Queue:     1,
 		IoTimeout: 2 * time.Second,
@@ -43,7 +43,7 @@ func TestBroadCastClientConnectsAndReceivesSequences(t *testing.T) {
 }
 
 func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9643/", nil)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9742/", nil)
 	defer wg.Done()
 	messageCount := 0
 
@@ -71,7 +71,7 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 
 func TestBroadCastClientPings(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9643",
+		Addr:      ":9743",
 		Workers:   128,
 		Queue:     1,
 		IoTimeout: 2 * time.Second,
@@ -84,7 +84,7 @@ func TestBroadCastClientPings(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer b.Stop()
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9643/", nil)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
 
 	// connect returns
 	messages, err := broadcastClient.Connect()
