@@ -113,6 +113,23 @@ func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error
 	return messageReceiver, nil
 }
 
+func (bc *BroadcastClient) Ping() {
+	req := broadcaster.Request{}
+	req.ID = 1
+	req.Method = "ping"
+	msg, err := json.Marshal(req)
+	if err != nil {
+		logger.Error().Err(err).Msg("Can not Marshal ping request")
+	}
+
+	err = wsutil.WriteClientMessage(bc.conn, ws.OpText, msg)
+	if err != nil {
+		logger.Error().Err(err).Msg("Can not send ping request")
+		return
+	}
+
+}
+
 func (bc *BroadcastClient) Close() {
 	_ = bc.poller.Stop(&bc.desc)
 	_ = bc.conn.Close()
