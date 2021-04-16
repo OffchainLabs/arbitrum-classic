@@ -78,7 +78,7 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 }
 
 // SyncSequence clears out everything prior
-func (cm *ClientManager) SyncSequence(fromSequenceNumber *big.Int) {
+func (cm *ClientManager) syncSequence(fromSequenceNumber *big.Int) {
 	broadcastMessages := make([]*BroadcastInboxMessage, 0)
 	for i := range cm.broadcastMessages {
 		if cm.broadcastMessages[i].SeqNum.CmpAbs(fromSequenceNumber) > 0 {
