@@ -77,8 +77,12 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Unlock()
 }
 
+// ** Need to add a Mutex in here
 // SyncSequence clears out everything prior
 func (cm *ClientManager) syncSequence(fromSequenceNumber *big.Int) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
 	broadcastMessages := make([]*BroadcastInboxMessage, 0)
 	for i := range cm.broadcastMessages {
 		if cm.broadcastMessages[i].SeqNum.CmpAbs(fromSequenceNumber) > 0 {
