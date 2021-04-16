@@ -67,3 +67,34 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	}
 
 }
+
+func TestBroadCastClientPings(t *testing.T) {
+	broadcasterSettings := broadcaster.Settings{
+		Addr:      ":9743",
+		Workers:   128,
+		Queue:     1,
+		IoTimeout: 2 * time.Second,
+	}
+
+	b := broadcaster.NewBroadcaster(broadcasterSettings)
+
+	err := b.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Stop()
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
+
+	// connect returns
+	_, err = broadcastClient.Connect()
+	if err != nil {
+		t.Errorf("Can not connect: %v\n", err)
+	}
+	pong := make(chan string, 1)
+	broadcastClient.Ping(pong)
+	p := <-pong
+	if p != "pong" {
+		t.Error("No response from ping")
+	}
+
+}
