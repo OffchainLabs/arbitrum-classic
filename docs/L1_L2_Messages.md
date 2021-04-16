@@ -12,7 +12,7 @@ The Arbitrum protocol offers trustless message passing between the layer 1 and l
 
 Arbitrum offers several ways for an Ethereum transaction to send a message to Arbitrum ([see "L2 Messages"](Data_Formats.md)); however, the generally recommended method to use for direct L1 to L2 communication is via retryable tickets.
 
-The idea is the following: a layer 1 transaction includes ABI encoded data of a message to be executed on Arbitrum, along with some Ether to be used as ArbGas for its execution. The message gets inserted into the Arbitrum chain's inbox, where it will be executed like any other L2 message. In the uncommon / less happy case in which it reverts, the transaction gets put into an L2 "retry buffer." This means that for a period of time (likely on the scale of the chain's dispute window, so roughly one week), anybody can attempt to "redeem" the the L2 transaction ticket by re-executing it.
+The idea is the following: a layer 1 transaction is put in the Inbox with instructions to submit a transaction to L2 (including calldata, callvalue, and gas info) in such a way that if it doesn't execute successfully, it gets put into an L2 "retry buffer." This means that for a period of time (likely on the scale of the chain's dispute window, so roughly one week), anybody can attempt to "redeem" the the L2 transaction ticket by re-executing it.
 
 The rationale here is to account for cases like the following: say we want a transaction that lets a user deposit a token onto Arbitrum; this will entail escrowing some tokens in a contract on L1, and sending a message to mint the same amount of tokens on L2. Suppose that the L1 transaction succeeds but the L2 message reverts due to insufficient gas. In a naive implementation, this would be a serious problem — the user has simply transferred tokens a contract and received nothing on L2; those tokens are stuck in the contract indefinitely. With retryable tickets, however, the user (or some other benevolent bystander) has a week to simply re-execute the L2 message with sufficient gas.
 
@@ -148,7 +148,7 @@ The lifecycle of sending a message from layer 2 to layer 1 can be broken down in
 
 **1. Publish L2 to L1 transaction (Arbitrum transaction)**
 
-A client initiates the process by publishing a message via `ArbSys.sendTxToL1` (see [ArbSys](Arbsys.md), and see [ArbTokenBridge.\_withdraw](https://github.com/OffchainLabs/arbitrum/blob/5bd9a456a780582715a62affd887d35e2eb138b0/packages/arb-bridge-peripherals/contracts/tokenbridge/arbitrum/ArbTokenBridge.sol#L256) for example usage.
+A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1` (see [ArbSys](Arbsys.md), and see [ArbTokenBridge.\_withdraw](https://github.com/OffchainLabs/arbitrum/blob/5bd9a456a780582715a62affd887d35e2eb138b0/packages/arb-bridge-peripherals/contracts/tokenbridge/arbitrum/ArbTokenBridge.sol#L256) for example usage.
 
 **2. Outbox entry gets created**
 
@@ -156,7 +156,7 @@ After the Arbitrum chain advances some set amount of time, ArbOS gathers all out
 
 **3. Client gets Merkle proof of outgoing message**
 
-After the Outbox entry is published on chain, the user (or anybody) can compute the Merkle proof of inclusion of their outgoing message. They do this by calling `NodeInterface.lookupMessageBatchProof`:
+After the Outbox entry is published on the L1 chain, the user (or anybody) can compute the Merkle proof of inclusion of their outgoing message. They do this by calling `NodeInterface.lookupMessageBatchProof`:
 
 ```sol
 interface NodeInterface {
@@ -196,7 +196,7 @@ interface NodeInterface {
 
 **4. The user executes the L1 message (Ethereum Transaction)**
 
-Anytime after the dispute window passes, a user can execute the L1 message by calling Outbox.executeTransaction:
+Anytime after the dispute window passes, any user can execute the L1 message by calling Outbox.executeTransaction; if it reverts, it can be re-executed any number of times and with no upper time-bound:
 
 ```sol
  /**
