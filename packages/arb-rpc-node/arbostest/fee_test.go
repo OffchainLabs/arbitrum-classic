@@ -352,7 +352,7 @@ func TestFees(t *testing.T) {
 		}
 		for _, tx := range ethTxes {
 			compressed := message.NewCompressedECDSAFromEth(tx)
-			compressed.GasLimit = big.NewInt(1000000000)
+			compressed.GasLimit = big.NewInt(1<<29 - 1)
 			msg, err := message.NewGasEstimationMessage(aggregator, compressed)
 			test.FailIfError(t, err)
 			estimateFeeIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)

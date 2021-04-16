@@ -87,7 +87,7 @@ func TestFees(t *testing.T) {
 				MaxGas:      big.NewInt(1000000),
 				GasPriceBid: big.NewInt(0),
 				DestAddress: common.NewAddressFromEth(auth.From),
-				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(22), nil),
+				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(15), nil),
 				Data:        nil,
 			},
 		}),
