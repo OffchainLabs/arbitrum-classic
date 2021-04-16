@@ -113,6 +113,23 @@ func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error
 	return messageReceiver, nil
 }
 
+func (bc *BroadcastClient) Ping(pong chan string) {
+
+	bc.conn.Write(ws.CompiledPing)
+
+	h, _, err := wsutil.NextReader(bc.conn, ws.StateClientSide)
+	if err == nil {
+		switch h.OpCode {
+		case ws.OpPong:
+			logger.Info().Msg("pong")
+			pong <- "pong"
+		default:
+			logger.Error().Err(err).Msgf("Received uknown OpCode from server after ping: %v", h.OpCode)
+		}
+	}
+
+}
+
 func (bc *BroadcastClient) Close() {
 	_ = bc.poller.Stop(&bc.desc)
 	_ = bc.conn.Close()
