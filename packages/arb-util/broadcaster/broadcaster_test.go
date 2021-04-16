@@ -3,6 +3,7 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
+	"math/big"
 	"net"
 	"sync"
 	"testing"
@@ -46,6 +47,16 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	}
 
 	wg.Wait()
+
+	b.SyncSequence(big.NewInt(42))  // first message is 42, remove it
+	if b.messageCacheCount() != 1 { // should have left the second message
+		t.Error("Failed to clear cached inbox message")
+	}
+
+	b.SyncSequence(big.NewInt(100)) // second message is 43, remove it, and then some
+	if b.messageCacheCount() != 0 { // should have emptied.
+		t.Error("Failed to clear cached inbox message")
+	}
 }
 
 func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
@@ -53,7 +64,8 @@ func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 	messagesReceived := 0
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
 	if err != nil {
-		t.Fatalf("%d can not connect: %v\n", i, err)
+		t.Errorf("%d can not connect: %v\n", i, err)
+		return
 	}
 
 	defer func(conn net.Conn) {
@@ -118,41 +130,19 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 
 	t.Logf("Connected")
 
-	req := Request{}
-	req.ID = 1
-	req.Method = "ping"
-	msg, err := json.Marshal(req)
-	if err != nil {
-		t.Errorf("Can not Marshal ping request: %v\n", err)
-	}
+	conn.Write(ws.CompiledPing)
 
-	err = wsutil.WriteClientMessage(conn, ws.OpText, msg)
-	if err != nil {
-		t.Errorf("Can not send: %v\n", err)
-		return
-	}
+	time.Sleep(1 * time.Second)
 
-	msg, op, err := wsutil.ReadServerData(conn)
-	if err != nil {
-		t.Errorf("Can not receive: %v\n", err)
-		return
-	} else {
-		res := BroadcastMessage{}
-		err = json.Unmarshal(msg, &res)
-		if err != nil {
-			t.Errorf("Error unmarshalling message: %s\n", err)
-			return
-		}
-
-		if len(res.PongResponse) == 0 {
-			t.Errorf("Should have received a ping response: %s\n", err)
-		}
-		t.Logf("Receive: %v，type: %v\n", res, op)
+	h, _, _ := wsutil.NextReader(conn, ws.StateClientSide)
+	switch h.OpCode {
+	case ws.OpPing:
+		t.Errorf("Received ping but should have be a pong")
+	case ws.OpPong:
+		t.Log("Received pong!")
+	default:
+		t.Errorf("Received uknown OpCode from server after ping: %v", h.OpCode)
 	}
 
 	time.Sleep(1 * time.Second)
-}
-
-func TestBroadcasterRemovesOldSequences(t *testing.T) {
-
 }

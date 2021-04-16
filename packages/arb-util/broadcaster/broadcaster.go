@@ -203,6 +203,15 @@ func (b *Broadcaster) Broadcast(beforeAccumulator *big.Int, inboxMessage []byte,
 	return b.clientManager.Broadcast(beforeAccumulator, inboxMessage, signature)
 }
 
+func (b *Broadcaster) SyncSequence(fromSequenceNumber *big.Int) {
+	b.clientManager.syncSequence(fromSequenceNumber)
+}
+
+func (b *Broadcaster) messageCacheCount() int {
+	count := len(b.clientManager.broadcastMessages)
+	return count
+}
+
 func (b *Broadcaster) Stop() {
 	err := b.poller.Stop(b.acceptDesc)
 	if err != nil {
