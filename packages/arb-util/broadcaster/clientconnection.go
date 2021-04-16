@@ -2,10 +2,8 @@ package broadcaster
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"sync"
-	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -24,62 +22,30 @@ type ClientConnection struct {
 // Receive reads next message from client's underlying connection.
 // It blocks until full message received.
 func (cc *ClientConnection) Receive() error {
-	req, err := cc.readRequest()
+	err := cc.readRequest()
 	if err != nil {
 		_ = cc.conn.Close()
 		return err
-	}
-	if req == nil {
-		// Handled some control message.
-		return nil
-	}
-	switch req.Method {
-	case "ping":
-		return cc.writePong()
-		// return cc.writeResultTo(req, Object{
-		// 	"pong": time.Now().UTC(),
-		// })
 	}
 	return nil
 }
 
 // readRequests reads json-rpc request from connection.
-// It takes io mutex.
-func (cc *ClientConnection) readRequest() (*Request, error) {
+func (cc *ClientConnection) readRequest() error {
 	cc.io.Lock()
 	defer cc.io.Unlock()
 
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
-	if err != nil {
-		return nil, err
-	}
-	if h.OpCode.IsControl() {
-		return nil, wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
-	}
-
-	req := &Request{}
-	decoder := json.NewDecoder(r)
-	if err := decoder.Decode(req); err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-func (cc *ClientConnection) writePong() error {
-	w := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(w)
-
-	cc.io.Lock()
-	defer cc.io.Unlock()
-	bm := BroadcastMessage{}
-	bm.PongResponse = fmt.Sprintf("pong %v", time.Now().UTC())
-	if err := encoder.Encode(bm); err != nil {
+	if err != nil && !h.OpCode.IsControl() {
 		return err
 	}
 
-	return w.Flush()
+	// this handles any ping requests
+	if h.OpCode.IsControl() {
+		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
+	}
 
+	return nil
 }
 
 func (cc *ClientConnection) write(x interface{}) error {
