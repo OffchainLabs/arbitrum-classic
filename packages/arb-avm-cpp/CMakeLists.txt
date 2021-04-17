@@ -62,6 +62,12 @@ find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JEMALLOC jemalloc)
+
+pkg_search_module(JEMALLOC REQUIRED jemalloc)
+include_directories(${JEMALLOC_INCLUDE_DIRS})
+
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     execute_process(

@@ -63,6 +63,7 @@ PRIVATE
 	nlohmann_json::nlohmann_json
     Boost::filesystem
     Boost::system
+	${JEMALLOC_LIBRARIES}
 )
 
 include(CTest)

@@ -53,6 +53,6 @@ target_include_directories(cavm PUBLIC
 target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
 # target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic -Weverything -Wno-c++98-compat -Wno-padded)
 
-target_link_libraries(cavm PUBLIC data_storage avm)
+target_link_libraries(cavm PUBLIC data_storage avm ${JEMALLOC_LIBRARIES})
 
 source_group(cavm FILES ${LIB_HEADERS} ${LIB_SOURCES})

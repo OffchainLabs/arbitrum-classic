@@ -84,6 +84,7 @@ PUBLIC
         ${GMP_LIBRARY}
         ${GMPXX_LIBRARY}
         ${LIBATOMIC_LIBRARY}
+        ${JEMALLOC_LIBRARIES}
 PRIVATE
         Boost::boost
 )

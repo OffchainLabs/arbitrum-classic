@@ -18,7 +18,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
+#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl -ljemalloc
 #cgo linux LDFLAGS: -latomic
 #include "../cavm/caggregator.h"
 #include <stdio.h>
