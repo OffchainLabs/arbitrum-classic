@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/heptiolabs/healthcheck"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //Configuration struct
@@ -55,9 +55,7 @@ type configStruct struct {
 	//Debug variable to print the responses from the OpenEthereum API
 	printRequests bool
 	//Debug variable to print the status of the configuration load
-	printConfigMsg                  bool
-	openEthereumInternalCheckEnable bool
-	openEthereumCheckSet            bool
+	printConfigMsg bool
 }
 
 // Default configuration values for the healthcheck server
@@ -80,8 +78,6 @@ func newConfig() *configStruct {
 	const blockUpdateTimeout = 45 * time.Second
 	const printRequests = false
 	const printConfigMsg = false
-	const openEthereumInternalCheckEnable = false
-	const openEthereumCheckSet = false
 
 	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
 	config.prometheusRegistry = prometheus.NewRegistry()
@@ -103,8 +99,6 @@ func newConfig() *configStruct {
 	config.blockUpdateTimeout = blockUpdateTimeout
 	config.printRequests = printRequests
 	config.printConfigMsg = printConfigMsg
-	config.openEthereumInternalCheckEnable = openEthereumInternalCheckEnable
-	config.openEthereumCheckSet = openEthereumCheckSet
 
 	return &config
 }
@@ -157,7 +151,7 @@ type asyncDataStruct struct {
 func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct {
 	asyncData := asyncDataStruct{}
 
-	if config.openEthereumInternalCheckEnable {
+	if config.openethereumAPI != "" {
 		//Request eth_syncing status from OpenEthereum
 		asyncData.ethSyncCheck = ethSyncCheck(config, &asyncData)
 
@@ -320,6 +314,7 @@ func updateConfig(config *configStruct, logMessage Log) {
 			return
 		}
 		config.openethereumHealthcheckRPC = u.Hostname()
+		fmt.Println(config.openethereumHealthcheckRPC)
 	}
 	if logMessage.Var == "openethereumHealthcheckRPCPort" {
 		config.openethereumHealthcheckRPCPort = logMessage.ValStr
@@ -331,7 +326,7 @@ func updateConfig(config *configStruct, logMessage Log) {
 		}
 		config.primaryHealthcheckRPC = u.Hostname()
 	}
-	if logMessage.Var == "healcheckRPC" {
+	if logMessage.Var == "healthcheckRPC" {
 		config.healthcheckRPC = logMessage.ValStr
 	}
 	if logMessage.Var == "primaryHealthcheckRPCPort" {
@@ -352,9 +347,8 @@ func updateConfig(config *configStruct, logMessage Log) {
 	if logMessage.Var == "printConfigMsg" {
 		config.printConfigMsg = logMessage.ValBool
 	}
-	if logMessage.Var == "openEthereumInternalCheckEnable" {
-		config.openEthereumInternalCheckEnable = logMessage.ValBool
-		config.openEthereumCheckSet = true
+	if logMessage.Var == "openEthereumAPI" {
+		config.openethereumAPI = logMessage.ValStr
 	}
 }
 
@@ -623,9 +617,6 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 //Define which healthchecks to use for the readiness API and expose the readiness API
 func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpMux *http.ServeMux, aSyncData *asyncDataStruct) {
 	//Add healthchecks to the readiness check
-	health.AddReadinessCheck(
-		"openethereum-status",
-		aSyncData.checkOpenethereum)
 
 	health.AddReadinessCheck(
 		"primary-status",
@@ -637,11 +628,10 @@ func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpM
 
 	//OpenEthereum healthchecks
 	//Add healthchecks to the readiness check
-	if config.openEthereumInternalCheckEnable {
+	if config.openethereumAPI != "" {
 		health.AddReadinessCheck(
 			"openethereum-api-status",
 			aSyncData.tcpDialCheck)
-
 		health.AddReadinessCheck(
 			"openethereum-sync-response-status",
 			aSyncData.ethSyncCheck)
@@ -661,6 +651,10 @@ func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpM
 		health.AddReadinessCheck(
 			"openethereum-block-refresh-status",
 			aSyncData.blockRefreshCheck)
+	} else {
+		health.AddReadinessCheck(
+			"openethereum-status",
+			aSyncData.checkOpenethereum)
 	}
 
 	//Create an endpoint to serve the readiness check
@@ -670,8 +664,15 @@ func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpM
 func waitConfig(config *configStruct) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
-	for config.openethereumHealthcheckRPC == "" || config.openEthereumCheckSet == false || config.healthcheckRPC == "" {
+	for {
+		fmt.Println("waiting" + config.openethereumHealthcheckRPC + config.healthcheckRPC + config.openethereumAPI)
+		if config.healthcheckRPC != "" {
+			if config.openethereumAPI != "" || config.openethereumHealthcheckRPC != "" {
+				return
+			}
+		}
 		config.mu.Unlock()
+
 		time.Sleep(config.loopDelayTimer)
 		config.mu.Lock()
 	}

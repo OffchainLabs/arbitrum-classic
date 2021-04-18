@@ -232,8 +232,8 @@ func TestNodeHealth(t *testing.T) {
 
 	healthChan := make(chan Log, config.largeBufferSize)
 	go NodeHealthCheck(healthChan)
-	healthChan <- Log{Config: true, Var: "healcheckRPC", ValStr: "0.0.0.0:8080"}
-	healthChan <- Log{Config: true, Var: "openEthereumInternalCheckEnable", ValStr: "https://eth-kovan.alchemyapi.io/v2/yvzMZUhX0jmdpRfqrUEGwh--U59mJNhf"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
+	//healthChan <- Log{Config: true, Var: "openEthereumAPI", ValStr: "https://eth-kovan.alchemyapi.io/v2/yvzMZUhX0jmdpRfqrUEGwh--U59mJNhf"}
 	//Test startup configuration delay
 	err := startUpTest(&config)
 	if err != nil {
