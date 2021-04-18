@@ -191,6 +191,8 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 
 	//Test server response
 	res, err := http.Get(config.nodehealthAddress + config.readinessEndpoint)
+	fmt.Println(res)
+	fmt.Println("1")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -206,9 +208,14 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 	healthChan <- Log{Comp: config.inboxReaderName, Var: "arbCorePosition", ValBigInt: new(big.Int).Set(blockTest)}
 	healthChan <- Log{Comp: config.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(testBigInt)}
 	time.Sleep(config.timeDelayTests)
+	time.Sleep(config.timeDelayTests)
 
 	//Test server response
 	res, err = http.Get(config.nodehealthAddress + config.readinessEndpoint)
+
+	fmt.Println(res)
+	fmt.Println("2")
+
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -233,8 +240,9 @@ func TestNodeHealth(t *testing.T) {
 	healthChan := make(chan Log, config.largeBufferSize)
 	go NodeHealthCheck(healthChan)
 	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
-	//healthChan <- Log{Config: true, Var: "openEthereumAPI", ValStr: "https://eth-kovan.alchemyapi.io/v2/yvzMZUhX0jmdpRfqrUEGwh--U59mJNhf"}
+	healthChan <- Log{Config: true, Var: "openEthereumAPI", ValStr: "https://eth-kovan.alchemyapi.io/v2/yvzMZUhX0jmdpRfqrUEGwh--U59mJNhf"}
 	//Test startup configuration delay
+	time.Sleep(200 * time.Second)
 	err := startUpTest(&config)
 	if err != nil {
 		t.Fatal(err)
