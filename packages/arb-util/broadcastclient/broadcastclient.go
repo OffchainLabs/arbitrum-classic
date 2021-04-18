@@ -110,7 +110,7 @@ func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error
 		messageReceiver <- res
 	})
 
-	return messageReceiver, nil
+	return messageReceiver, err
 }
 
 func (bc *BroadcastClient) Ping(pong chan string) {
