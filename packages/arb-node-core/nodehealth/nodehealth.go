@@ -22,7 +22,9 @@ import (
 //Configuration struct
 type configStruct struct {
 	//Mutex for config struct
-	mu sync.Mutex
+	mu                   sync.Mutex
+	prometheusHistograms map[string]*prometheus.HistogramVec
+	prometheusRegistry   *prometheus.Registry
 
 	//Aggregator Healthcheck Config
 	//Rate to poll the remote APIs at
@@ -80,6 +82,9 @@ func newConfig() *configStruct {
 	const printConfigMsg = false
 	const openEthereumInternalCheckEnable = false
 	const openEthereumCheckSet = false
+
+	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
+	config.prometheusRegistry = prometheus.NewRegistry()
 
 	config.healthcheckRPC = healthcheckRPC
 	config.openethereumHealthcheckRPCPort = defaultHealthCheckPort
@@ -231,14 +236,16 @@ type OpenEthereumPeerNetwork struct {
 
 //Log structure for passing messages on healthChan to logger
 type Log struct {
-	Err    error
-	Sev    string
-	Var    string
-	Comp   string
-	Debug  bool
-	Config bool
+	Err     error
+	Sev     string
+	Var     string
+	Comp    string
+	Debug   bool
+	Config  bool
+	Metrics bool
 
 	ValStr    string
+	ValInt    int64
 	ValBigInt *big.Int
 	ValBool   bool
 	ValTime   time.Duration
@@ -248,8 +255,10 @@ func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 	for {
 		//Read log structure from channel
 		logMessage := <-logMsgChan
-		//Check if a configuration message has been sent
-		if logMessage.Config {
+		//Check messsage type
+		if logMessage.Metrics {
+			metricsHandler(config, logMessage)
+		} else if logMessage.Config {
 			updateConfig(config, logMessage)
 		} else {
 			//Check if the InboxReader is sending logs
@@ -258,6 +267,25 @@ func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 			}
 		}
 	}
+}
+
+func LogTime(comp string, function string, start time.Time, healthChan chan Log) {
+	healthChan <- Log{Metrics: true, Comp: comp, Var: function, ValTime: time.Since(start)}
+}
+
+func metricsHandler(config *configStruct, logMessage Log) {
+	_, ok := config.prometheusHistograms[logMessage.Comp]
+	if !ok {
+		config.prometheusHistograms[logMessage.Comp] = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: "kovan4-0",
+			Name:      logMessage.Comp,
+			Help:      logMessage.Comp + " latency distributions.",
+			Buckets:   prometheus.ExponentialBuckets(1, 10, 4),
+		}, []string{logMessage.Comp})
+
+		config.prometheusRegistry.MustRegister(config.prometheusHistograms[logMessage.Comp])
+	}
+	config.prometheusHistograms[logMessage.Comp].WithLabelValues(logMessage.Var).Observe(float64(logMessage.ValTime.Milliseconds()))
 }
 
 func updateInboxReader(state *healthState, logMessage Log) {
@@ -303,8 +331,30 @@ func updateConfig(config *configStruct, logMessage Log) {
 		}
 		config.primaryHealthcheckRPC = u.Hostname()
 	}
+	if logMessage.Var == "healcheckRPC" {
+		config.healthcheckRPC = logMessage.ValStr
+	}
 	if logMessage.Var == "primaryHealthcheckRPCPort" {
 		config.primaryHealthcheckRPCPort = logMessage.ValStr
+	}
+	if logMessage.Var == "blockDifferenceTolerance" {
+		config.blockDifferenceTolerance = logMessage.ValInt
+	}
+	if logMessage.Var == "peerMinimum" {
+		config.peerMinimum = int(logMessage.ValInt)
+	}
+	if logMessage.Var == "blockUpdateTimeout" {
+		config.blockUpdateTimeout = logMessage.ValTime
+	}
+	if logMessage.Var == "printRequests" {
+		config.printRequests = logMessage.ValBool
+	}
+	if logMessage.Var == "printConfigMsg" {
+		config.printConfigMsg = logMessage.ValBool
+	}
+	if logMessage.Var == "openEthereumInternalCheckEnable" {
+		config.openEthereumInternalCheckEnable = logMessage.ValBool
+		config.openEthereumCheckSet = true
 	}
 }
 
@@ -314,7 +364,7 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 		var jsonRequest = []byte(`{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}`)
 
 		//Generate POST request to OpenEthereum
-		req, err := http.NewRequest("POST", "http://"+config.openethereumAPI,
+		req, err := http.NewRequest("POST", config.openethereumAPI,
 			bytes.NewBuffer(jsonRequest))
 		if err != nil {
 			panic(err)
@@ -368,7 +418,7 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 		var jsonRequest = []byte(`{"method":"parity_netPeers","params":[],"id":1,"jsonrpc":"2.0"}`)
 
 		//Generate POST request to OpenEthereum
-		req, err := http.NewRequest("POST", "http://"+config.openethereumAPI,
+		req, err := http.NewRequest("POST", config.openethereumAPI,
 			bytes.NewBuffer(jsonRequest))
 		if err != nil {
 			panic(err)
@@ -620,7 +670,7 @@ func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpM
 func waitConfig(config *configStruct) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
-	for config.openethereumHealthcheckRPC == "" {
+	for config.openethereumHealthcheckRPC == "" || config.openEthereumCheckSet == false || config.healthcheckRPC == "" {
 		config.mu.Unlock()
 		time.Sleep(config.loopDelayTimer)
 		config.mu.Lock()
@@ -632,8 +682,7 @@ func startHealthCheck(config *configStruct, state *healthState) error {
 	//Allocate storage for the aSync calls
 
 	//Create the main healthcheck handler
-	prometheusRegistry := prometheus.NewRegistry()
-	health := healthcheck.NewMetricsHandler(prometheusRegistry, "healthcheck")
+	health := healthcheck.NewMetricsHandler(config.prometheusRegistry, "healthcheck")
 	//Create an HTTP server mux to serve the endpoints
 	httpMux := http.NewServeMux()
 
@@ -650,7 +699,9 @@ func startHealthCheck(config *configStruct, state *healthState) error {
 
 	//Create an endpoint to serve the prometheus endpoint
 	httpMux.Handle("/metrics", promhttp.HandlerFor(
-		prometheusRegistry, promhttp.HandlerOpts{}))
+		config.prometheusRegistry,
+		promhttp.HandlerOpts{},
+	))
 
 	//Create the HTTP server and start a watchdog to monitor its return codes
 	err := http.ListenAndServe(config.healthcheckRPC, httpMux)
