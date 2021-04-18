@@ -19,15 +19,17 @@ package evm
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
-	"math/big"
 )
 
 type ResultType int
@@ -43,6 +45,7 @@ const (
 	ContractAlreadyExists     ResultType = 7
 	ExceededTxGasLimit        ResultType = 8
 	InsufficientGasForBaseFee ResultType = 9
+	MinArbGasForContractTx    ResultType = 10
 	UnknownErrorCode          ResultType = 255
 )
 
