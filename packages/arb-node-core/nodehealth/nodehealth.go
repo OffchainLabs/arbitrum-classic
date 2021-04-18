@@ -94,7 +94,7 @@ func newConfig() *configStruct {
 
 	config.openethereumAPI = ""
 	config.requestTimeout = requestTimeout
-	config.blockDifferenceTolerance = blockSyncDifference
+	config.blockSyncDifference = blockSyncDifference
 	config.peerMinimum = peerMinimum
 	config.blockUpdateTimeout = blockUpdateTimeout
 	config.printRequests = printRequests
@@ -332,8 +332,8 @@ func updateConfig(config *configStruct, logMessage Log) {
 	if logMessage.Var == "primaryHealthcheckRPCPort" {
 		config.primaryHealthcheckRPCPort = logMessage.ValStr
 	}
-	if logMessage.Var == "blockDifferenceTolerance" {
-		config.blockDifferenceTolerance = logMessage.ValInt
+	if logMessage.Var == "blockSyncDifference" {
+		config.blockSyncDifference = logMessage.ValInt
 	}
 	if logMessage.Var == "peerMinimum" {
 		config.peerMinimum = int(logMessage.ValInt)
@@ -369,6 +369,7 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 
 		//Perform POST request
 		resp, err := client.Do(req)
+		fmt.Println(resp)
 		if err != nil {
 			aSyncData.ethSyncResp.respBody = "failed"
 			return (err)
@@ -378,9 +379,9 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 		//Decode reponse into a string for ease of use
 		body, err := ioutil.ReadAll(resp.Body)
 		aSyncData.ethSyncResp.respBody = string(body)
-
+		fmt.Println(aSyncData.ethSyncResp.respBody)
 		//Check if OpenEthereum is not currently syncing
-		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result":false`) {
+		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
 		}
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
@@ -434,7 +435,10 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 		body, err := ioutil.ReadAll(resp.Body)
 		aSyncData.parityNetPeersResp.respBody = string(
 			body)
-
+		fmt.Println(aSyncData.parityNetPeersResp.respBody)
+		if strings.Contains(aSyncData.parityNetPeersResp.respBody, "Unsupported method") {
+			return nil
+		}
 		//Parse the response into a struct
 		err = json.Unmarshal(body, &aSyncData.parityNetPeersResp)
 		if err != nil {
@@ -455,8 +459,11 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 
 func openEthereumPeerCount(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
+		if strings.Contains(aSyncData.parityNetPeersResp.respBody, "Unsupported method") {
+			return nil
+		}
 		//Check if GET request to OpenEthereum failed
-		if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
+		if strings.Contains(aSyncData.parityNetPeersResp.respBody, `failed`) {
 			err := fmt.Errorf("GET request failed")
 			return err
 		}
@@ -476,7 +483,7 @@ func openEthereumBlockUpdateCheck(config *configStruct, aSyncData *asyncDataStru
 		//Pause to allow request to be captured
 		time.Sleep(2 * time.Second)
 		//Check if OpenEthereum is not currently syncing
-		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result":false`) {
+		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
 		}
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
@@ -538,7 +545,7 @@ func openEthereumBlockDifference(aSyncData *asyncDataStruct) (int64, error) {
 func openEthereumBlockSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Check if OpenEthereum is not currently syncing
-		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result":false`) {
+		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
 		}
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
