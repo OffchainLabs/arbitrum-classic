@@ -57,13 +57,13 @@ set_source_files_properties( buffer.cpp PROPERTIES COMPILE_FLAGS "-Wconversion -
 target_link_libraries(
 	avm_tests
 PRIVATE
+	${JEMALLOC_LIBRARIES}
     cavm
 	avm
 	Catch2::Catch2
 	nlohmann_json::nlohmann_json
     Boost::filesystem
     Boost::system
-	${JEMALLOC_LIBRARIES}
 )
 
 include(CTest)

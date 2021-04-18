@@ -17,7 +17,7 @@
 package cmachine
 
 /*
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl -ljemalloc
+#cgo LDFLAGS: -L. -ljemalloc -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
 #include "../cavm/ctypes.h"
 #include <stdlib.h>
 */

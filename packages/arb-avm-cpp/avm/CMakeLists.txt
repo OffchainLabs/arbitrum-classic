@@ -74,6 +74,7 @@ find_package(GMPXX REQUIRED)
 target_link_libraries(
         avm
 PUBLIC
+        ${JEMALLOC_LIBRARIES}
         avm_values
         data_storage
         RocksDB::RocksDB
@@ -84,7 +85,6 @@ PUBLIC
         ${GMP_LIBRARY}
         ${GMPXX_LIBRARY}
         ${LIBATOMIC_LIBRARY}
-        ${JEMALLOC_LIBRARIES}
 PRIVATE
         Boost::boost
 )

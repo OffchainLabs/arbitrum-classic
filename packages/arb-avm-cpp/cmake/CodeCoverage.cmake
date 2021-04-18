@@ -219,7 +219,7 @@ function(target_code_coverage TARGET_NAME)
     elseif(CMAKE_COMPILER_IS_GNUCXX)
       target_compile_options(${TARGET_NAME}
                              PRIVATE -fprofile-arcs -ftest-coverage)
-      target_link_libraries(${TARGET_NAME} PRIVATE gcov ${JEMALLOC_LIBRARIES})
+      target_link_libraries(${TARGET_NAME} PRIVATE ${JEMALLOC_LIBRARIES} gcov)
     endif()
 
     # Targets
