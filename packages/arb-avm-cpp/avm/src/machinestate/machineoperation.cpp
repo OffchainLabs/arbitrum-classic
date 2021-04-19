@@ -404,7 +404,9 @@ struct ValueTypeVisitor {
     ValueTypes operator()(const uint256_t&) const { return NUM; }
     ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
     ValueTypes operator()(const Tuple&) const { return TUPLE; }
-    ValueTypes operator()(const HashPreImage&) const { return TUPLE; }
+    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
+        return TUPLE;
+    }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
 };
 
