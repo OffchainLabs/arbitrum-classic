@@ -65,17 +65,18 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
+	ctx := context.Background()
+
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.NodeHealthCheck(healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
 	}()
 
-	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)

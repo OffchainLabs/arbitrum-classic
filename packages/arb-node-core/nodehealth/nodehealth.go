@@ -2,6 +2,7 @@ package nodehealth
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -257,8 +258,14 @@ func newHealthState() *healthState {
 }
 
 //Async logger to dequeue messages from channel buffer and load them into the state structs
-func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
+func logger(ctx context.Context, config *configStruct, state *healthState, logMsgChan <-chan Log) {
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		//Read log structure from channel
 		logMessage := <-logMsgChan
 
@@ -771,7 +778,7 @@ func waitConfig(config *configStruct) {
 }
 
 //Start the healthcheck for OpenEthereum
-func startHealthCheck(config *configStruct, state *healthState) error {
+func startHealthCheck(ctx context.Context, config *configStruct, state *healthState) error {
 	//Create the main healthcheck handler
 	health := healthcheck.NewMetricsHandler(config.prometheusRegistry, "healthcheck")
 
@@ -796,13 +803,35 @@ func startHealthCheck(config *configStruct, state *healthState) error {
 		promhttp.HandlerOpts{},
 	))
 
-	//Create the HTTP server and start a watchdog to monitor its return codes
-	err := http.ListenAndServe(config.healthcheckRPC, httpMux)
-	return err
+	//Create the HTTP server
+	httpServer := &http.Server{
+		Addr:        config.healthcheckRPC,
+		Handler:     httpMux,
+		BaseContext: func(_ net.Listener) context.Context { return ctx },
+	}
+
+	//Start serving requests
+	go func() {
+		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			return
+		}
+	}()
+
+	//Gracefully shut down the server if the context is Done
+	<-ctx.Done()
+
+	gracefulCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelShutdown()
+
+	if err := httpServer.Shutdown(gracefulCtx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NodeHealthCheck Create a node healthcheck that listens on the given channel
-func NodeHealthCheck(logMsgChan <-chan Log) error {
+func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log) error {
 	//Create the configuration struct
 	state := newHealthState()
 
@@ -810,10 +839,10 @@ func NodeHealthCheck(logMsgChan <-chan Log) error {
 	config := newConfig()
 
 	//Start the channel logger
-	go logger(config, state, logMsgChan)
+	go logger(ctx, config, state, logMsgChan)
 
 	//Start the node healthcheck
-	err := startHealthCheck(config, state)
+	err := startHealthCheck(ctx, config, state)
 
 	return err
 }

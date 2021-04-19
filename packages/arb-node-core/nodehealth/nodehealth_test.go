@@ -1,6 +1,7 @@
 package nodehealth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
@@ -227,13 +228,14 @@ func inboxReaderTest(healthChan chan Log, config *configTestStruct) error {
 func TestNodeHealth(t *testing.T) {
 	config := configTestStruct{}
 	config.newTestConfig()
+	ctx := context.Background()
 
 	//Generate sample servers for testing
 	go startTestingServerFail()
 	go startTestingServerPass()
 
 	healthChan := make(chan Log, config.largeBufferSize)
-	go NodeHealthCheck(healthChan)
+	go StartNodeHealthCheck(ctx, healthChan)
 	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
 	//healthChan <- Log{Config: true, Var: "openEthereumAPI", ValStr: "https://eth-kovan.alchemyapi.io/v2/yvzMZUhX0jmdpRfqrUEGwh--U59mJNhf"}
 	//Test startup configuration delay
