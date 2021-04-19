@@ -25,8 +25,16 @@ import (
 type configStruct struct {
 	//Mutex for config struct
 	mu sync.Mutex
+
 	//Address to bind healthcheck to
 	healthcheckRPC string
+	//Disable the entire healthcheck
+	disableHealthcheck bool
+	//Disable checking the primary aggregator
+	disablePrimaryCheck bool
+	//Disable checking the OpenEthereum node
+	disableOpenEthereumCheck bool
+
 	//Map to dynamically allocate Prometheus Histograms
 	prometheusHistograms map[string]*prometheus.HistogramVec
 	//Prometheus registry to register histograms on
@@ -165,6 +173,9 @@ func newConfig() *configStruct {
 	config := configStruct{}
 	//Global configuration
 	const healthcheckRPC = ""
+	const disableHealthcheck = false
+	const disablePrimaryCheck = false
+	const disableOpenEthereumCheck = false
 
 	//Node health configuration
 	const defaultSuccessCode = 200
@@ -186,6 +197,10 @@ func newConfig() *configStruct {
 	config.prometheusRegistry = prometheus.NewRegistry()
 
 	config.healthcheckRPC = healthcheckRPC
+	config.disableHealthcheck = disableHealthcheck
+	config.disablePrimaryCheck = disablePrimaryCheck
+	config.disableOpenEthereumCheck = disableOpenEthereumCheck
+
 	config.openethereumHealthcheckRPCPort = defaultHealthCheckPort
 	config.primaryHealthcheckRPCPort = defaultHealthCheckPort
 	config.pollingRate = defaultPollingRate
@@ -377,6 +392,15 @@ func updateConfig(config *configStruct, logMessage Log) {
 	}
 	if logMessage.Var == "openEthereumAPI" {
 		config.openethereumAPI = logMessage.ValStr
+	}
+	if logMessage.Var == "disableHealthcheck" {
+		config.disableHealthcheck = true
+	}
+	if logMessage.Var == "disablePrimaryCheck" {
+		config.disablePrimaryCheck = true
+	}
+	if logMessage.Var == "disableOpenEthereumCheck" {
+		config.disableOpenEthereumCheck = true
 	}
 }
 
@@ -711,43 +735,49 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 //Define which healthchecks to use for the readiness API and expose the readiness API
 func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpMux *http.ServeMux, asyncData *asyncDataStruct) {
 	//Add healthchecks to the readiness check
-	health.AddReadinessCheck(
-		"primary-status",
-		asyncData.healthchecks["checkPrimary"])
+
+	//Add primary healthcheck if it is not disabled
+	if !config.disablePrimaryCheck {
+		health.AddReadinessCheck(
+			"primary-status",
+			asyncData.healthchecks["checkPrimary"])
+	}
 
 	health.AddReadinessCheck(
 		"inbox-reader-status",
 		asyncData.healthchecks["inboxReaderStatus"])
 
 	//OpenEthereum healthchecks
-	//Add healthchecks to the readiness check
-	if config.openethereumAPI != "" {
-		health.AddReadinessCheck(
-			"openethereum-api-status",
-			asyncData.healthchecks["tcpDialCheck"])
-		health.AddReadinessCheck(
-			"openethereum-sync-response-status",
-			asyncData.healthchecks["ethSyncCheck"])
+	//Add healthchecks to the readiness check if they are not disabled
+	if !config.disableOpenEthereumCheck {
+		if config.openethereumAPI != "" {
+			health.AddReadinessCheck(
+				"openethereum-api-status",
+				asyncData.healthchecks["tcpDialCheck"])
+			health.AddReadinessCheck(
+				"openethereum-sync-response-status",
+				asyncData.healthchecks["ethSyncCheck"])
 
-		health.AddReadinessCheck(
-			"openethereum-netpeers-response-status",
-			asyncData.healthchecks["parityNetPeersCheck"])
+			health.AddReadinessCheck(
+				"openethereum-netpeers-response-status",
+				asyncData.healthchecks["parityNetPeersCheck"])
 
-		health.AddReadinessCheck(
-			"openethereum-sync-status",
-			asyncData.healthchecks["blockSyncCheck"])
+			health.AddReadinessCheck(
+				"openethereum-sync-status",
+				asyncData.healthchecks["blockSyncCheck"])
 
-		health.AddReadinessCheck(
-			"openethereum-peer-status",
-			asyncData.healthchecks["minimumPeersCheck"])
+			health.AddReadinessCheck(
+				"openethereum-peer-status",
+				asyncData.healthchecks["minimumPeersCheck"])
 
-		health.AddReadinessCheck(
-			"openethereum-block-refresh-status",
-			asyncData.healthchecks["blockRefreshCheck"])
-	} else {
-		health.AddReadinessCheck(
-			"openethereum-status",
-			asyncData.healthchecks["checkOpenethereum"])
+			health.AddReadinessCheck(
+				"openethereum-block-refresh-status",
+				asyncData.healthchecks["blockRefreshCheck"])
+		} else {
+			health.AddReadinessCheck(
+				"openethereum-status",
+				asyncData.healthchecks["checkOpenethereum"])
+		}
 	}
 
 	//Create an endpoint to serve the readiness check
@@ -777,7 +807,7 @@ func waitConfig(config *configStruct) {
 	}
 }
 
-//Start the healthcheck for OpenEthereum
+//Start the healthcheck
 func startHealthCheck(ctx context.Context, config *configStruct, state *healthState) error {
 	//Create the main healthcheck handler
 	health := healthcheck.NewMetricsHandler(config.prometheusRegistry, "healthcheck")
@@ -787,6 +817,11 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 
 	//Wait for the configuration to be loaded
 	waitConfig(config)
+
+	//Exit if the healthcheck is disabled while leaving the logger running to prevent blocking calls
+	if config.disableHealthcheck {
+		return nil
+	}
 
 	//Schedule the async calls
 	asyncUpstream := newAsyncUpstream(state, config)
