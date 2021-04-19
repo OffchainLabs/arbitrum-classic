@@ -198,27 +198,32 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
-func runSimpleAssertion(t *testing.T, messages []message.Message) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
+func runSimpleAssertion(t *testing.T, messages []message.Message) ([]value.Value, [][]byte, *snapshot.Snapshot) {
 	t.Helper()
 	return runAssertion(t, makeSimpleInbox(t, messages), len(messages), 0)
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot) {
 	t.Helper()
 	logs, sends, snap, assertion := runAssertionWithoutPrint(t, inboxMessages, logCount, sendCount)
 	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.Logs, assertion.Sends)
 	failIfError(t, err)
 	t.Log(string(testCase))
-	return logs, sends, snap, assertion
+	return logs, sends, snap
 }
 
 func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
 	t.Helper()
+	if inboxMessages[0].Kind != message.InitType {
+		t.Fatal("inbox must start with init message")
+	}
 	cmach, err := cmachine.New(*arbosfile)
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
 
-	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, inboxMessages, false)
+	_, _, _, err = mach.ExecuteAssertion(10000000000, false, inboxMessages[:1], false)
+	failIfError(t, err)
+	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, inboxMessages[1:], false)
 	failIfError(t, err)
 
 	if logCount != math.MaxInt32 && len(assertion.Logs) != logCount {

@@ -17,12 +17,17 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
 )
 
 func TestInit(t *testing.T) {
-	_, _, _, assertion := runAssertion(t, []inbox.InboxMessage{}, 0, 0)
+	cmach, err := cmachine.New(*arbosfile)
+	failIfError(t, err)
+	mach := arbosmachine.New(cmach)
+	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, nil, false)
 
 	t.Log("Startup used", assertion.NumGas, "gas")
 }

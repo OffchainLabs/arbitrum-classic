@@ -64,7 +64,7 @@ func TestGetStorageAt(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, inboxMessages, 3, 0)
+	logs, _, _ := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
 
 	constructorRes := results[0]

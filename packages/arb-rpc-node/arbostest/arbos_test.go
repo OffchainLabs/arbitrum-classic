@@ -75,7 +75,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	}
 
-	logs, _, snap, _ := runSimpleAssertion(t, messages)
+	logs, _, snap := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[1], connAddress1)
@@ -111,7 +111,7 @@ func TestDeposit(t *testing.T) {
 		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap, _ := runSimpleAssertion(t, messages)
+	_, _, snap := runSimpleAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
@@ -247,7 +247,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, len(resultTypes), sendCount)
+	avmLogs, sends, _ := runAssertion(t, messages, len(resultTypes), sendCount)
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
