@@ -27,6 +27,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path"
 	"time"
 
@@ -70,11 +71,20 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		cancelFunc()
+	}()
+
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.NodeHealthCheck(healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -184,8 +194,6 @@ func main() {
 	} else {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
-
-	ctx := context.Background()
 
 	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"))
 	if err != nil {

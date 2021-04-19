@@ -183,7 +183,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
-		nodehealth.NodeHealthCheck(healthChan)
+		nodehealth.StartNodeHealthCheck(ctx, healthChan)
 	}()
 
 	reader, err := NewInboxReader(ctx, bridge, core, healthChan)
