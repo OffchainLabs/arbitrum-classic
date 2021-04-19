@@ -83,6 +83,17 @@ func main() {
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
+	//Healthcheck Config
+	disableHealthcheck := fs.Bool("disable-healthcheck", false, "disable the healthcheck server")
+	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
+	disableOpenEthereumCheck := fs.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
+	healthcheckRPC := fs.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+
+	healthChan <- nodehealth.Log{Config: true, Var: "disableHealthcheck", ValBool: *disableHealthcheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
+
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
 		10,
