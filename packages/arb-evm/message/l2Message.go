@@ -20,10 +20,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"

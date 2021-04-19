@@ -249,3 +249,15 @@ func (im InboxMessage) ToBytes() []byte {
 	data = append(data, im.Data...)
 	return data
 }
+
+type MachineMessage struct {
+	Accumulator common.Hash
+	Message     InboxMessage
+}
+
+func (m MachineMessage) ToBytes() []byte {
+	var data []byte
+	data = append(data, m.Accumulator[:]...)
+	data = append(data, m.Message.ToBytes()...)
+	return data
+}

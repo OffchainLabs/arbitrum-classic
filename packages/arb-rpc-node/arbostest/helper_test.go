@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -199,7 +200,16 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 	if len(inboxMessages) > 0 {
 		lastMessage := inboxMessages[len(inboxMessages)-1]
 		seq := new(big.Int).Add(lastMessage.InboxSeqNum, big.NewInt(1))
-		msg := message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, seq, big.NewInt(0), lastMessage.ChainTime)
+		msg := message.NewInboxMessage(
+			message.EndBlockMessage{},
+			common.Address{},
+			seq,
+			big.NewInt(0),
+			inbox.ChainTime{
+				BlockNum:  common.NewTimeBlocksInt(0),
+				Timestamp: big.NewInt(0),
+			},
+		)
 		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, nil, true, common.Hash{}, common.Hash{})
 		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
 		test.FailIfError(t, err)

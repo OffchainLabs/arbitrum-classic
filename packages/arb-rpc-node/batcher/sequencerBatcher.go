@@ -25,6 +25,8 @@ import (
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -34,7 +36,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/pkg/errors"
 )
 
 type SequencerBatcher struct {
@@ -152,17 +153,16 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime)
 
 	newBlockSeqNum := new(big.Int).Add(msgCount, big.NewInt(1))
-	newBlockMessage := inbox.InboxMessage{
-		Kind:        message.EndOfBlockType,
-		Sender:      common.Address{},
-		InboxSeqNum: newBlockSeqNum,
-		GasPrice:    big.NewInt(0),
-		Data:        []byte{},
-		ChainTime: inbox.ChainTime{
+	newBlockMessage := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		newBlockSeqNum,
+		big.NewInt(0),
+		inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),
 		},
-	}
+	)
 
 	txBatchItem := inbox.SequencerBatchItem{
 		LastSeqNum:        msgCount,
@@ -248,17 +248,17 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	}
 
 	endOfBlockSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
-	endOfBlockMessage := inbox.InboxMessage{
-		Kind:        message.EndOfBlockType,
-		Sender:      common.Address{},
-		InboxSeqNum: endOfBlockSeqNum,
-		GasPrice:    big.NewInt(0),
-		Data:        []byte{},
-		ChainTime: inbox.ChainTime{
+
+	endOfBlockMessage := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		endOfBlockSeqNum,
+		big.NewInt(0),
+		inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),
 		},
-	}
+	)
 	endBlockBatchItem := inbox.SequencerBatchItem{
 		LastSeqNum:        endOfBlockSeqNum,
 		Accumulator:       common.Hash{},

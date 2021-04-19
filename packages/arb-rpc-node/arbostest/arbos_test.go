@@ -17,13 +17,15 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
@@ -114,21 +116,14 @@ func TestDeposit(t *testing.T) {
 }
 
 func TestBlocks(t *testing.T) {
-	messages := make([]inbox.InboxMessage, 0)
+	ib := &InboxBuilder{}
 	startTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(1),
 		Timestamp: big.NewInt(1),
 	}
 
-	messages = append(
-		messages,
-		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), startTime),
-	)
-
-	messages = append(
-		messages,
-		message.NewInboxMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), big.NewInt(0), startTime),
-	)
+	ib.AddMessage(initMsg(nil), chain, big.NewInt(0), startTime)
+	ib.AddMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), startTime)
 
 	halfSendCount := int64(5)
 
@@ -162,26 +157,8 @@ func TestBlocks(t *testing.T) {
 			Payment:     big.NewInt(i*2 + 1),
 			Data:        arbos.WithdrawEthData(common.RandAddress()),
 		}
-		messages = append(
-			messages,
-			message.NewInboxMessage(
-				message.NewSafeL2Message(tx),
-				sender,
-				big.NewInt(i*2+2),
-				big.NewInt(0),
-				blockTimes[i+1],
-			),
-		)
-		messages = append(
-			messages,
-			message.NewInboxMessage(
-				message.NewSafeL2Message(tx2),
-				sender,
-				big.NewInt(i*2+2),
-				big.NewInt(0),
-				blockTimes[i+1],
-			),
-		)
+		ib.AddMessage(message.NewSafeL2Message(tx), sender, big.NewInt(0), blockTimes[i+1])
+		ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), blockTimes[i+1])
 	}
 
 	type TargetBlockInfo struct {
@@ -245,14 +222,8 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, len(resultTypes), sendCount)
-	results := make([]evm.Result, 0)
-	for _, avmLog := range avmLogs {
-		res, err := evm.NewResultFromValue(avmLog)
-		failIfError(t, err)
-		results = append(results, res)
-	}
-
+	avmLogs, sends, _, _ := runAssertionWithoutPrint(t, ib.Messages, len(resultTypes), 2)
+	results := processResults(t, avmLogs)
 	for i, res := range results {
 		switch res := res.(type) {
 		case *evm.TxResult:

@@ -201,13 +201,13 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
 
-	msgData := inboxMessagesToByteSliceArray(messages)
+	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
 	defer C.free(msgData.slices)
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
-	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
+	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
 	defer C.free(sideloadsData.slices)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 

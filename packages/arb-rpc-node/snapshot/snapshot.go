@@ -18,8 +18,11 @@ package snapshot
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -28,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 )
 
 type Snapshot struct {
@@ -218,7 +220,9 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash)
 
 	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
-		fmt.Println("bad mach", mach)
+		fmt.Println("Running message didn't produce log")
+		fmt.Println("Gas used", assertion.NumGas)
+		fmt.Println("mach state after", mach)
 		return nil, errors.New("no logs produced by tx")
 	}
 

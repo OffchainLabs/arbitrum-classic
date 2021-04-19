@@ -19,10 +19,11 @@ package message
 import (
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -117,4 +118,15 @@ func (t GasEstimationMessage) AsData() []byte {
 
 func (t GasEstimationMessage) Type() inbox.Type {
 	return GasEstimationType
+}
+
+type EndBlockMessage struct {
+}
+
+func (t EndBlockMessage) Type() inbox.Type {
+	return EndOfBlockType
+}
+
+func (t EndBlockMessage) AsData() []byte {
+	return nil
 }

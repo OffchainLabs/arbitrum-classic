@@ -28,12 +28,13 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/zerolog/log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/rs/zerolog/log"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "test").Logger()
@@ -66,7 +67,7 @@ func FailIfError(t *testing.T, err error) {
 	}
 }
 
-func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
+func PrepareArbCore(t *testing.T, messages []inbox.DelayedMessage) (core.ArbCore, func()) {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	FailIfError(t, err)
 	storage, err := cmachine.NewArbStorage(tmpDir)
@@ -97,7 +98,7 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, 
 	}
 
 	if len(messages) > 0 {
-		_, err = core.DeliverMessagesAndWait(arbCore, messages, common.Hash{}, false)
+		_, err = core.DeliverMessagesAndWait(arbCore, common.Hash{}, nil, messages, nil)
 		FailIfError(t, err)
 	}
 	for {

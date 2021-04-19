@@ -30,10 +30,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/pkg/errors"
 )
 
 var sequencerBridgeABI abi.ABI
@@ -136,17 +137,16 @@ func (b SequencerBatch) GetAfterAcc() common.Hash {
 }
 
 func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
-	return inbox.InboxMessage{
-		Kind:        message.EndOfBlockType,
-		Sender:      common.Address{},
-		InboxSeqNum: seqNum,
-		GasPrice:    big.NewInt(0),
-		Data:        []byte{},
-		ChainTime: inbox.ChainTime{
+	return message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		seqNum,
+		big.NewInt(0),
+		inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
 			Timestamp: big.NewInt(0),
 		},
-	}
+	)
 }
 
 func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
