@@ -156,7 +156,7 @@ std::vector<value> serializeValue(
     }
     return ret;
 }
-std::vector<value> serializeValue(const HashPreImage&,
+std::vector<value> serializeValue(const std::shared_ptr<HashPreImage>&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
