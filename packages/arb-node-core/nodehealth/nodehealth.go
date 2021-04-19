@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,24 +20,34 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-//Configuration struct
+//Nodehealth configuration struct
 type configStruct struct {
 	//Mutex for config struct
-	mu                   sync.Mutex
+	mu sync.Mutex
+	//Address to bind healthcheck to
+	healthcheckRPC string
+	//Map to dynamically allocate Prometheus Histograms
 	prometheusHistograms map[string]*prometheus.HistogramVec
-	prometheusRegistry   *prometheus.Registry
+	//Prometheus registry to register histograms on
+	prometheusRegistry *prometheus.Registry
 
 	//Aggregator Healthcheck Config
 	//Rate to poll the remote APIs at
-	pollingRate                    time.Duration
-	loopDelayTimer                 time.Duration
-	healthcheckRPC                 string
-	openethereumHealthcheckRPC     string
+	pollingRate time.Duration
+	//Rate to recheck whether configuration variables are set
+	loopDelayTimer time.Duration
+	//Address the OpenEthereum healthcheck server is running on if internal OE check isn't used
+	openethereumHealthcheckRPC string
+	//Port the OpenEthereum healthcheck server is running on
 	openethereumHealthcheckRPCPort string
-	primaryHealthcheckRPC          string
-	primaryHealthcheckRPCPort      string
-	successCode                    int
-	blockDifferenceTolerance       int64
+	//Address the primary node healthcheck is running at if used
+	primaryHealthcheckRPC string
+	//Port the primary node healthcheck server is running on
+	primaryHealthcheckRPCPort string
+	//HTTP code the healthcheck is set to return to indicate success
+	successCode int
+	//Blocks between arbCorePosition and caughtUpTarget to consider acceptable
+	blockDifferenceTolerance int64
 
 	//OpenEthereum Healthcheck Config
 	//Address to the OpenEthereum API
@@ -58,132 +69,33 @@ type configStruct struct {
 	printConfigMsg bool
 }
 
-// Default configuration values for the healthcheck server
-func newConfig() *configStruct {
-	config := configStruct{}
-	//Global configuration
-	const healthcheckRPC = ""
-
-	//Node health configuration
-	const defaultSuccessCode = 200
-	const defaultBlockDifferenceTolerance = 2
-	const defaultPollingRate = 10 * time.Second
-	const loopDelayTimer = 1 * time.Second
-	const defaultHealthCheckPort = "8080"
-
-	//OpenEthereum health configuration
-	const requestTimeout = 10 * time.Second
-	const blockSyncDifference = 10
-	const peerMinimum = 1
-	const blockUpdateTimeout = 45 * time.Second
-	const printRequests = false
-	const printConfigMsg = false
-
-	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
-	config.prometheusRegistry = prometheus.NewRegistry()
-
-	config.healthcheckRPC = healthcheckRPC
-	config.openethereumHealthcheckRPCPort = defaultHealthCheckPort
-	config.primaryHealthcheckRPCPort = defaultHealthCheckPort
-	config.pollingRate = defaultPollingRate
-	config.loopDelayTimer = loopDelayTimer
-	config.openethereumHealthcheckRPC = ""
-	config.primaryHealthcheckRPC = ""
-	config.successCode = defaultSuccessCode
-	config.blockDifferenceTolerance = defaultBlockDifferenceTolerance
-
-	config.openethereumAPI = ""
-	config.requestTimeout = requestTimeout
-	config.blockSyncDifference = blockSyncDifference
-	config.peerMinimum = peerMinimum
-	config.blockUpdateTimeout = blockUpdateTimeout
-	config.printRequests = printRequests
-	config.printConfigMsg = printConfigMsg
-
-	return &config
-}
-
+//Struct for storing the state of a node's different components
 type healthState struct {
-	mu          sync.Mutex
+	mu sync.Mutex
+	//InboxReader state struct
 	inboxReader inboxReaderState
 }
 
+//Struct for storing inboxReader's current state
 type inboxReaderState struct {
-	loadingDatabase    bool
+	//Boolean to indicate whether we are waiting for the database to load
+	loadingDatabase bool
+
+	//InboxReader variables used to determine where we are in the sync process
 	getNextBlockToRead *big.Int
 	currentHeight      *big.Int
 	arbCorePosition    *big.Int
 	caughtUpTarget     *big.Int
 }
 
-func newHealthState() *healthState {
-	state := healthState{}
-
-	state.inboxReader.loadingDatabase = true
-	state.inboxReader.currentHeight = new(big.Int)
-	state.inboxReader.caughtUpTarget = new(big.Int)
-	state.inboxReader.arbCorePosition = new(big.Int)
-	state.inboxReader.getNextBlockToRead = new(big.Int)
-
-	return &state
-}
-
+//Struct for storing the asynchronous healthcheck calls
 type asyncDataStruct struct {
-	//Healthchecks to allow the status to be shared between handlers
-	checkOpenethereum healthcheck.Check
-	checkPrimary      healthcheck.Check
-	inboxReaderStatus healthcheck.Check
+	//Map to dynamically allocate new healthchecks
+	healthchecks map[string]healthcheck.Check
 
 	//Response structs to process the OpenEthereum responses
 	ethSyncResp        OpenEthereumResponse
 	parityNetPeersResp OpenEthereumResponse
-
-	//Healthchecks to allow the status to be shared between handlers
-	ethSyncCheck        healthcheck.Check
-	parityNetPeersCheck healthcheck.Check
-	tcpDialCheck        healthcheck.Check
-	blockRefreshCheck   healthcheck.Check
-	minimumPeersCheck   healthcheck.Check
-	blockSyncCheck      healthcheck.Check
-}
-
-//Perform all upstream checks at a set time interval in an asynchronous manner
-func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct {
-	asyncData := asyncDataStruct{}
-
-	if config.openethereumAPI != "" {
-		//Request eth_syncing status from OpenEthereum
-		asyncData.ethSyncCheck = ethSyncCheck(config, &asyncData)
-
-		//Request eth_syncing status from OpenEthereum
-		asyncData.parityNetPeersCheck = netPeersCheck(config, &asyncData)
-
-		//Check OpenEthereum has more than peerMinimum peers currently connected to it
-		asyncData.minimumPeersCheck = openEthereumPeerCount(config, &asyncData)
-
-		//Check OpenEthereum is refreshing its currentBlock quicker than the blockUpdateTimeout
-		asyncData.blockRefreshCheck = openEthereumBlockUpdateCheck(config, &asyncData)
-
-		//Check if OpenEthereum is within blockSyncDifference from the estimated block
-		asyncData.blockSyncCheck = openEthereumBlockSyncCheck(config, &asyncData)
-
-		//Check if the OpenEthereum API is accepting pings
-		asyncData.tcpDialCheck = healthcheck.Async(
-			healthcheck.TCPDialCheck(config.openethereumAPI,
-				config.requestTimeout), config.pollingRate)
-
-	} else {
-		//Check the healthcheck endpoint for OpenEthereum
-		asyncData.checkOpenethereum = checkEndpoint(config, &config.openethereumHealthcheckRPC, &config.openethereumHealthcheckRPCPort)
-	}
-
-	//Check the primary endpoint
-	asyncData.checkPrimary = checkEndpoint(config, &config.primaryHealthcheckRPC, &config.primaryHealthcheckRPCPort)
-
-	//Check how many blocks the inboxReader is behind
-	asyncData.inboxReaderStatus = checkInboxReader(config, state)
-
-	return &asyncData
 }
 
 //OpenEthereum response struct for json parsing
@@ -230,6 +142,7 @@ type OpenEthereumPeerNetwork struct {
 
 //Log structure for passing messages on healthChan to logger
 type Log struct {
+	//Different message types we could be sent
 	Err     error
 	Sev     string
 	Var     string
@@ -238,6 +151,7 @@ type Log struct {
 	Config  bool
 	Metrics bool
 
+	//Potential variable types a client could want to log to reduce casting
 	ValStr    string
 	ValInt    int64
 	ValBigInt *big.Int
@@ -245,10 +159,109 @@ type Log struct {
 	ValTime   time.Duration
 }
 
+// Default configuration values for the healthcheck server
+func newConfig() *configStruct {
+	config := configStruct{}
+	//Global configuration
+	const healthcheckRPC = ""
+
+	//Node health configuration
+	const defaultSuccessCode = 200
+	const defaultBlockDifferenceTolerance = 2
+	const defaultPollingRate = 10 * time.Second
+	const loopDelayTimer = 1 * time.Second
+	const defaultHealthCheckPort = "8080"
+
+	//OpenEthereum health configuration
+	const requestTimeout = 10 * time.Second
+	const blockSyncDifference = 10
+	const peerMinimum = 1
+	const blockUpdateTimeout = 45 * time.Second
+	const printRequests = false
+	const printConfigMsg = false
+
+	//Load configuration into struct
+	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
+	config.prometheusRegistry = prometheus.NewRegistry()
+
+	config.healthcheckRPC = healthcheckRPC
+	config.openethereumHealthcheckRPCPort = defaultHealthCheckPort
+	config.primaryHealthcheckRPCPort = defaultHealthCheckPort
+	config.pollingRate = defaultPollingRate
+	config.loopDelayTimer = loopDelayTimer
+	config.openethereumHealthcheckRPC = ""
+	config.primaryHealthcheckRPC = ""
+	config.successCode = defaultSuccessCode
+	config.blockDifferenceTolerance = defaultBlockDifferenceTolerance
+
+	config.openethereumAPI = ""
+	config.requestTimeout = requestTimeout
+	config.blockSyncDifference = blockSyncDifference
+	config.peerMinimum = peerMinimum
+	config.blockUpdateTimeout = blockUpdateTimeout
+	config.printRequests = printRequests
+	config.printConfigMsg = printConfigMsg
+
+	return &config
+}
+
+//Initialize all upstream checks to run at a set time interval in an asynchronous manner
+func newAsyncUpstream(state *healthState, config *configStruct) *asyncDataStruct {
+	asyncData := asyncDataStruct{}
+	//Allocate memory for healthcheck map
+	asyncData.healthchecks = make(map[string]healthcheck.Check)
+	if config.openethereumAPI != "" {
+		//Request eth_syncing status from OpenEthereum
+		asyncData.healthchecks["ethSyncCheck"] = ethSyncCheck(config, &asyncData)
+
+		//Request eth_syncing status from OpenEthereum
+		asyncData.healthchecks["parityNetPeersCheck"] = netPeersCheck(config, &asyncData)
+
+		//Check OpenEthereum has more than peerMinimum peers currently connected to it
+		asyncData.healthchecks["minimumPeersCheck"] = openEthereumPeerCount(config, &asyncData)
+
+		//Check OpenEthereum is refreshing its currentBlock quicker than the blockUpdateTimeout
+		asyncData.healthchecks["blockRefreshCheck"] = openEthereumBlockUpdateCheck(config, &asyncData)
+
+		//Check if OpenEthereum is within blockSyncDifference from the estimated block
+		asyncData.healthchecks["blockSyncCheck"] = openEthereumBlockSyncCheck(config, &asyncData)
+
+		//Check if the OpenEthereum API is accepting pings
+		asyncData.healthchecks["tcpDialCheck"] = openEthereumTCPDialCheck(config, &asyncData)
+
+	} else {
+		//Check the healthcheck endpoint for OpenEthereum
+		asyncData.healthchecks["checkOpenethereum"] = checkEndpoint(config, &config.openethereumHealthcheckRPC, &config.openethereumHealthcheckRPCPort)
+	}
+
+	//Check the primary endpoint
+	asyncData.healthchecks["checkPrimary"] = checkEndpoint(config, &config.primaryHealthcheckRPC, &config.primaryHealthcheckRPCPort)
+
+	//Check how many blocks the inboxReader is behind
+	asyncData.healthchecks["inboxReaderStatus"] = checkInboxReader(config, state)
+
+	return &asyncData
+}
+
+//Initialize health state storage
+func newHealthState() *healthState {
+	state := healthState{}
+
+	state.inboxReader.loadingDatabase = true
+	state.inboxReader.currentHeight = new(big.Int)
+	state.inboxReader.caughtUpTarget = new(big.Int)
+	state.inboxReader.arbCorePosition = new(big.Int)
+	state.inboxReader.getNextBlockToRead = new(big.Int)
+
+	return &state
+}
+
+//Async logger to dequeue messages from channel buffer and load them into the state structs
 func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 	for {
 		//Read log structure from channel
 		logMessage := <-logMsgChan
+
 		//Check messsage type
 		if logMessage.Metrics {
 			metricsHandler(config, logMessage)
@@ -263,13 +276,17 @@ func logger(config *configStruct, state *healthState, logMsgChan <-chan Log) {
 	}
 }
 
+//Send a function's runtime over the health channel
 func LogTime(comp string, function string, start time.Time, healthChan chan Log) {
 	healthChan <- Log{Metrics: true, Comp: comp, Var: function, ValTime: time.Since(start)}
 }
 
+//Create a histogram for a functions runtime and add it to the registry
 func metricsHandler(config *configStruct, logMessage Log) {
+	//Check if the prometheus histogram already exists
 	_, ok := config.prometheusHistograms[logMessage.Comp]
 	if !ok {
+		//Initialize a histogram for the function if it doesn't exist
 		config.prometheusHistograms[logMessage.Comp] = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: "kovan4-0",
 			Name:      logMessage.Comp,
@@ -277,11 +294,15 @@ func metricsHandler(config *configStruct, logMessage Log) {
 			Buckets:   prometheus.ExponentialBuckets(1, 10, 4),
 		}, []string{logMessage.Comp})
 
+		//Register the histogram with the prometheus registry
 		config.prometheusRegistry.MustRegister(config.prometheusHistograms[logMessage.Comp])
 	}
+
+	//Observe the function's runtime using the function name as the label
 	config.prometheusHistograms[logMessage.Comp].WithLabelValues(logMessage.Var).Observe(float64(logMessage.ValTime.Milliseconds()))
 }
 
+//Update the inboxReader state struct using a value from the health channel
 func updateInboxReader(state *healthState, logMessage Log) {
 	state.mu.Lock()
 	defer state.mu.Unlock()
@@ -304,6 +325,7 @@ func updateInboxReader(state *healthState, logMessage Log) {
 	}
 }
 
+//Update the configurations truct using a value from the health channel
 func updateConfig(config *configStruct, logMessage Log) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
@@ -314,7 +336,6 @@ func updateConfig(config *configStruct, logMessage Log) {
 			return
 		}
 		config.openethereumHealthcheckRPC = u.Hostname()
-		fmt.Println(config.openethereumHealthcheckRPC)
 	}
 	if logMessage.Var == "openethereumHealthcheckRPCPort" {
 		config.openethereumHealthcheckRPCPort = logMessage.ValStr
@@ -352,34 +373,89 @@ func updateConfig(config *configStruct, logMessage Log) {
 	}
 }
 
+//Resolve the IP of the OpenEthereum node and check if it can be dialed
+func openEthereumTCPDialCheck(config *configStruct, asyncData *asyncDataStruct) healthcheck.Check {
+	check := healthcheck.Async(func() error {
+		//Parse the URL to extract the hostname and port
+		u, err := url.Parse(config.openethereumAPI)
+		if err != nil {
+			return err
+		}
+
+		//Lookup the IP address of the hostname
+		ipAddr, err := net.LookupIP(u.Hostname())
+		if err != nil {
+			return err
+		}
+
+		//Extract the port from the URL
+		port := u.Port()
+
+		//Default to port 80 if no port is provided
+		if port == "" {
+			port = "80"
+		}
+
+		//Set a timeout on the TCP dialer
+		d := net.Dialer{Timeout: config.requestTimeout}
+
+		//Dial the IP address
+		conn, err := d.Dial("tcp", ipAddr[0].String()+":"+port)
+		if err != nil {
+			return err
+		}
+
+		//Close the connection before returning
+		conn.Close()
+		return nil
+	}, config.pollingRate)
+	return check
+}
+
+//Send the call defined in jsonRequest to the OpenEthereum server
+func openEthereumCall(config *configStruct, jsonRequest []byte) ([]byte, error) {
+	//Generate POST request to OpenEthereum
+	req, err := http.NewRequest("POST", config.openethereumAPI,
+		bytes.NewBuffer(jsonRequest))
+	if err != nil {
+		panic(err)
+	}
+
+	//Set request headers to identify the healthcheck
+	req.Header.Set("X-Custom-Header", "openethereum-healthcheck-client")
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+
+	//Perform POST request
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	//Close the connection after the response
+	defer resp.Body.Close()
+
+	//Decode reponse into a string for ease of use
+	body, err := ioutil.ReadAll(resp.Body)
+	return body, err
+}
+
+//Request the eth_syncing status from the OpenEthereum server and parse it into a state array
 func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//OpenEthereum API call to send
 		var jsonRequest = []byte(`{"method":"eth_syncing","params":[],"id":1,"jsonrpc":"2.0"}`)
 
-		//Generate POST request to OpenEthereum
-		req, err := http.NewRequest("POST", config.openethereumAPI,
-			bytes.NewBuffer(jsonRequest))
-		if err != nil {
-			panic(err)
-		}
-		req.Header.Set("X-Custom-Header", "openethereum-healthcheck-client")
-		req.Header.Set("Content-Type", "application/json")
-		client := &http.Client{}
-
-		//Perform POST request
-		resp, err := client.Do(req)
-		fmt.Println(resp)
+		//Send the call to OpenEthereum
+		respBody, err := openEthereumCall(config, jsonRequest)
 		if err != nil {
 			aSyncData.ethSyncResp.respBody = "failed"
 			return (err)
 		}
-		defer resp.Body.Close()
 
-		//Decode reponse into a string for ease of use
-		body, err := ioutil.ReadAll(resp.Body)
-		aSyncData.ethSyncResp.respBody = string(body)
-		fmt.Println(aSyncData.ethSyncResp.respBody)
+		//Convert the response from a byte slice to a string
+		aSyncData.ethSyncResp.respBody = string(respBody)
+
 		//Check if OpenEthereum is not currently syncing
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
@@ -390,16 +466,9 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 		}
 
 		//If OpenEthereum is currently syncing, parse the response
-		err = json.Unmarshal(body, &aSyncData.ethSyncResp)
+		err = json.Unmarshal(respBody, &aSyncData.ethSyncResp)
 		if err != nil {
 			return (err)
-		}
-
-		//Debug statement to print the response status, header, and body
-		if config.printRequests == true {
-			fmt.Println("response Status:", resp.Status)
-			fmt.Println("response Headers:", resp.Header)
-			fmt.Println("response Body:", aSyncData.ethSyncResp.respBody)
 		}
 
 		return err
@@ -407,49 +476,32 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 	return check
 }
 
+//Request the netPeers status from the OpenEthereum server and parse it into a state array
 func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//OpenEthereum API call to send
 		var jsonRequest = []byte(`{"method":"parity_netPeers","params":[],"id":1,"jsonrpc":"2.0"}`)
 
-		//Generate POST request to OpenEthereum
-		req, err := http.NewRequest("POST", config.openethereumAPI,
-			bytes.NewBuffer(jsonRequest))
+		//Send the call to OpenEthereum
+		respBody, err := openEthereumCall(config, jsonRequest)
 		if err != nil {
-			panic(err)
-		}
-		req.Header.Set("X-Custom-Header",
-			"openethereum-healthcheck-client")
-		req.Header.Set("Content-Type", "application/json")
-		client := &http.Client{}
-
-		//Perform POST request
-		resp, err := client.Do(req)
-		if err != nil {
-			aSyncData.parityNetPeersResp.respBody = "failed"
+			aSyncData.ethSyncResp.respBody = "failed"
 			return (err)
 		}
-		defer resp.Body.Close()
 
-		//Decode reponse into a string for ease of use
-		body, err := ioutil.ReadAll(resp.Body)
-		aSyncData.parityNetPeersResp.respBody = string(
-			body)
-		fmt.Println(aSyncData.parityNetPeersResp.respBody)
+		//Convert the response from a byte slice to a string
+		aSyncData.parityNetPeersResp.respBody = string(respBody)
+
+		//Check if the netPeers response is unsupported by the OpenEthereum node
 		if strings.Contains(aSyncData.parityNetPeersResp.respBody, "Unsupported method") {
+			aSyncData.ethSyncResp.respBody = "failed"
 			return nil
 		}
+
 		//Parse the response into a struct
-		err = json.Unmarshal(body, &aSyncData.parityNetPeersResp)
+		err = json.Unmarshal(respBody, &aSyncData.parityNetPeersResp)
 		if err != nil {
 			return (err)
-		}
-
-		//Debug statement to print the response status, header, and body
-		if config.printRequests == true {
-			fmt.Println("response Status:", resp.Status)
-			fmt.Println("response Headers:", resp.Header)
-			fmt.Println("response Body:", aSyncData.parityNetPeersResp.respBody)
 		}
 
 		return err
@@ -457,35 +509,44 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 	return check
 }
 
+//Check that OpenEthereum has more than minimumPeers currently connected to it
 func openEthereumPeerCount(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
+		//Check if the netPeers response is unsupported by the OpenEthereum node
 		if strings.Contains(aSyncData.parityNetPeersResp.respBody, "Unsupported method") {
 			return nil
 		}
+
 		//Check if GET request to OpenEthereum failed
 		if strings.Contains(aSyncData.parityNetPeersResp.respBody, `failed`) {
 			err := fmt.Errorf("GET request failed")
 			return err
 		}
+
 		//Compare currently connected peers to config struct
 		if aSyncData.parityNetPeersResp.Result.Connected < config.peerMinimum {
 			err := fmt.Errorf("minimumPeers :%d",
 				aSyncData.parityNetPeersResp.Result.Connected)
 			return err
 		}
+
 		return nil
 	}, config.pollingRate)
 	return check
 }
 
+//Check that the block OpenEthereum is on is updating at a rate faster then config.blockUpdateTimeout
 func openEthereumBlockUpdateCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Pause to allow request to be captured
 		time.Sleep(2 * time.Second)
+
 		//Check if OpenEthereum is not currently syncing
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
 		}
+
+		//Check if the call to OpenEthereum failed
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
 			err := fmt.Errorf("GET request failed")
 			return err
@@ -507,16 +568,20 @@ func openEthereumBlockUpdateCheck(config *configStruct, aSyncData *asyncDataStru
 				return err
 			}
 		}
+
 		return nil
 	}, 2*config.blockUpdateTimeout)
 	return check
 }
 
+//Helper function for openEthereumBlockUpdateCheck to calculate the block difference in OpenEthereum's response
 func openEthereumBlockDifference(aSyncData *asyncDataStruct) (int64, error) {
 	//Check if OpenEthereum is not currently syncing
 	if strings.Contains(aSyncData.ethSyncResp.respBody, `"result":false`) {
 		return 0, nil
 	}
+
+	//Check if the GET request to OpenEthereum failed
 	if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
 		err := fmt.Errorf("GET request failed")
 		return 0, err
@@ -542,12 +607,15 @@ func openEthereumBlockDifference(aSyncData *asyncDataStruct) (int64, error) {
 	return blockDifference, nil
 }
 
+//Check the current OpenEthereum block versus the expected block it should be at
 func openEthereumBlockSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Check if OpenEthereum is not currently syncing
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
 		}
+
+		//Check if the GET request failed
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `failed`) {
 			err := fmt.Errorf("GET request failed")
 			return err
@@ -571,13 +639,20 @@ func openEthereumBlockSyncCheck(config *configStruct, aSyncData *asyncDataStruct
 	return check
 }
 
+//Asynchronously check a healthcheck endpoint to determine its status
 func checkEndpoint(config *configStruct, endpoint *string, port *string) healthcheck.Check {
 	check := healthcheck.Async(func() error {
 		//Lock config mutex for read operation
 		config.mu.Lock()
+
+		//Copy the endpoint and port the mutex can be released
 		endpointStr := *endpoint
 		portStr := *port
+
+		//Release the config mutex
 		config.mu.Unlock()
+
+		//Check if the health endpoint has been configured
 		if endpointStr == "" {
 			return nil
 		}
@@ -585,7 +660,7 @@ func checkEndpoint(config *configStruct, endpoint *string, port *string) healthc
 		//Retrieve status code from healthcheck endpoint
 		res, err := http.Get("http://" + endpointStr + ":" + portStr + "/ready")
 
-		//Check the response code to determine if OpenEthereum is reeady
+		//Check the response code to determine if OpenEthereum is ready
 		if err != nil {
 			return err
 		}
@@ -593,107 +668,117 @@ func checkEndpoint(config *configStruct, endpoint *string, port *string) healthc
 			//The server is returning an unexpected status code
 			return errors.New("OpenEthereum not ready")
 		}
+
 		return nil
 	}, config.pollingRate)
 	return check
 }
 
+//Check whether the InboxReader's arbCorePosition is caught up to the target within a tolerance
 func checkInboxReader(config *configStruct, state *healthState) healthcheck.Check {
 	check := healthcheck.Async(func() error {
-		//Lock config mutex for read operation
 		state.mu.Lock()
 		defer state.mu.Unlock()
 
+		//Check if the database is still loading
 		if state.inboxReader.loadingDatabase == true {
 			return errors.New("Loading database snapshot")
 		}
 
 		//Calculate out the block difference
 		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.arbCorePosition)
+
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
+
 		//Compare the tolerance using CmpAbs, fail if > then tolerance
 		if blockDifference.CmpAbs(tolerance) > 0 {
 			return errors.New("InboxReader catching up block " + state.inboxReader.arbCorePosition.String() + " of " + state.inboxReader.caughtUpTarget.String())
 		}
+
 		return nil
 	}, config.pollingRate)
 	return check
 }
 
 //Define which healthchecks to use for the readiness API and expose the readiness API
-func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpMux *http.ServeMux, aSyncData *asyncDataStruct) {
+func nodeReadinessChecks(health healthcheck.Handler, config *configStruct, httpMux *http.ServeMux, asyncData *asyncDataStruct) {
 	//Add healthchecks to the readiness check
-
 	health.AddReadinessCheck(
 		"primary-status",
-		aSyncData.checkPrimary)
+		asyncData.healthchecks["checkPrimary"])
 
 	health.AddReadinessCheck(
 		"inbox-reader-status",
-		aSyncData.inboxReaderStatus)
+		asyncData.healthchecks["inboxReaderStatus"])
 
 	//OpenEthereum healthchecks
 	//Add healthchecks to the readiness check
 	if config.openethereumAPI != "" {
 		health.AddReadinessCheck(
 			"openethereum-api-status",
-			aSyncData.tcpDialCheck)
+			asyncData.healthchecks["tcpDialCheck"])
 		health.AddReadinessCheck(
 			"openethereum-sync-response-status",
-			aSyncData.ethSyncCheck)
+			asyncData.healthchecks["ethSyncCheck"])
 
 		health.AddReadinessCheck(
 			"openethereum-netpeers-response-status",
-			aSyncData.parityNetPeersCheck)
+			asyncData.healthchecks["parityNetPeersCheck"])
 
 		health.AddReadinessCheck(
 			"openethereum-sync-status",
-			aSyncData.blockSyncCheck)
+			asyncData.healthchecks["blockSyncCheck"])
 
 		health.AddReadinessCheck(
 			"openethereum-peer-status",
-			aSyncData.minimumPeersCheck)
+			asyncData.healthchecks["minimumPeersCheck"])
 
 		health.AddReadinessCheck(
 			"openethereum-block-refresh-status",
-			aSyncData.blockRefreshCheck)
+			asyncData.healthchecks["blockRefreshCheck"])
 	} else {
 		health.AddReadinessCheck(
 			"openethereum-status",
-			aSyncData.checkOpenethereum)
+			asyncData.healthchecks["checkOpenethereum"])
 	}
 
 	//Create an endpoint to serve the readiness check
 	httpMux.HandleFunc("/ready", health.ReadyEndpoint)
 }
 
+//Wait for critical configuration variables to be loaded before continuing
 func waitConfig(config *configStruct) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
+
+	//Loop while the configuration variables are not set
 	for {
-		fmt.Println("waiting" + config.openethereumHealthcheckRPC + config.healthcheckRPC + config.openethereumAPI)
 		if config.healthcheckRPC != "" {
 			if config.openethereumAPI != "" || config.openethereumHealthcheckRPC != "" {
 				return
 			}
 		}
+		//Prevent the lock from being held over the sleep
 		config.mu.Unlock()
 
+		//Sleep loopDelayTimer duration to reduce load
 		time.Sleep(config.loopDelayTimer)
+
+		//Lock the configuration for the read operation
 		config.mu.Lock()
 	}
 }
 
 //Start the healthcheck for OpenEthereum
 func startHealthCheck(config *configStruct, state *healthState) error {
-	//Allocate storage for the aSync calls
-
 	//Create the main healthcheck handler
 	health := healthcheck.NewMetricsHandler(config.prometheusRegistry, "healthcheck")
+
 	//Create an HTTP server mux to serve the endpoints
 	httpMux := http.NewServeMux()
 
+	//Wait for the configuration to be loaded
 	waitConfig(config)
 
 	//Schedule the async calls
@@ -724,8 +809,10 @@ func NodeHealthCheck(logMsgChan <-chan Log) error {
 	//Load the default configuration
 	config := newConfig()
 
+	//Start the channel logger
 	go logger(config, state, logMsgChan)
 
+	//Start the node healthcheck
 	err := startHealthCheck(config, state)
 
 	return err
