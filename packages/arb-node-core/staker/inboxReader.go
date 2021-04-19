@@ -14,15 +14,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+type SequencerFeedItem struct {
+	BatchItem inbox.SequencerBatchItem
+	PrevAcc   common.Hash
+}
+
 type InboxReader struct {
 	// Only in run thread
-	delayedBridge     *ethbridge.DelayedBridgeWatcher
-	sequencerInbox    *ethbridge.SequencerInboxWatcher
-	db                core.ArbCore
-	firstMessageBlock *big.Int
-	caughtUp          bool
-	caughtUpTarget    *big.Int
-	healthChan        chan nodehealth.Log
+	delayedBridge      *ethbridge.DelayedBridgeWatcher
+	sequencerInbox     *ethbridge.SequencerInboxWatcher
+	db                 core.ArbCore
+	firstMessageBlock  *big.Int
+	caughtUp           bool
+	caughtUpTarget     *big.Int
+	healthChan         chan nodehealth.Log
+	lastAcc            common.Hash
+	sequencerFeedQueue []SequencerFeedItem
 
 	// Only in main thread
 	running    bool
@@ -32,6 +39,7 @@ type InboxReader struct {
 	// Thread safe
 	caughtUpChan         chan bool
 	MessageDeliveryMutex sync.Mutex
+	SequencerFeed        chan SequencerFeedItem
 }
 
 func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher, sequencerInbox *ethbridge.SequencerInboxWatcher, db core.ArbCore, healthChan chan nodehealth.Log) (*InboxReader, error) {
@@ -47,6 +55,7 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher,
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
 		healthChan:        healthChan,
+		SequencerFeed:     make(chan SequencerFeedItem, 128),
 	}, nil
 }
 
@@ -225,6 +234,34 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				}
 				from = from.Add(to, big.NewInt(1))
 			}
+		FeedReadLoop:
+			for {
+				select {
+				case feedItem := <-ir.SequencerFeed:
+					if len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[0].BatchItem.Accumulator != feedItem.PrevAcc {
+						ir.sequencerFeedQueue = []SequencerFeedItem{}
+					}
+					ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, feedItem)
+				default:
+					break FeedReadLoop
+				}
+			}
+			if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
+				queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
+				for _, item := range ir.sequencerFeedQueue {
+					queueItems = append(queueItems, item.BatchItem)
+				}
+				prevAcc := ir.sequencerFeedQueue[0].PrevAcc
+				ir.sequencerFeedQueue = []SequencerFeedItem{}
+				ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return errors.New("Failed to deliver sequencer feed messages to ArbCore")
+				}
+				ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
+			}
 		}
 		<-time.After(time.Second * 1)
 	}
@@ -237,6 +274,23 @@ func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
 	}
 	if messageCount.Cmp(big.NewInt(0)) == 0 {
 		return ir.firstMessageBlock, nil
+	}
+	var acc common.Hash
+	if messageCount.Cmp(big.NewInt(0)) > 0 {
+		acc, err = ir.db.GetInboxAcc(new(big.Int).Sub(messageCount, big.NewInt(1)))
+		if err != nil {
+			return nil, err
+		}
+		ir.lastAcc = acc
+	}
+	for i, queueItem := range ir.sequencerFeedQueue {
+		if queueItem.BatchItem.LastSeqNum.Cmp(messageCount) >= 0 {
+			break
+		}
+		if queueItem.BatchItem.Accumulator.Equals(acc) {
+			ir.sequencerFeedQueue = ir.sequencerFeedQueue[(i + 1):]
+			break
+		}
 	}
 	seqNum := messageCount
 	zeroTime := common.NewTimeBlocksInt(0)
@@ -297,6 +351,21 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 	}
 	if !ok {
 		return errors.New("Failed to deliver messages to ArbCore")
+	}
+	for _, item := range seqBatchItems {
+		if len(ir.sequencerFeedQueue) == 0 {
+			break
+		}
+		firstQueueItem := ir.sequencerFeedQueue[0].BatchItem
+		if item.LastSeqNum.Cmp(firstQueueItem.LastSeqNum) > 0 {
+			break
+		}
+		if item.Accumulator.Equals(firstQueueItem.Accumulator) {
+			ir.sequencerFeedQueue = ir.sequencerFeedQueue[1:]
+		}
+	}
+	if len(seqBatchItems) > 0 {
+		ir.lastAcc = seqBatchItems[len(seqBatchItems)-1].Accumulator
 	}
 	return nil
 }
