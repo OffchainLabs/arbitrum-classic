@@ -55,14 +55,14 @@ T parseBuffer(const char* buf, int& len) {
     len++;
     buf += 1;
     if (depth == 0) {
-        len += Buffer::leaf_size;
+        len += RawBuffer::leaf_size;
         const unsigned char* data = reinterpret_cast<const unsigned char*>(buf);
-        Buffer::LeafData leaf;
-        std::copy(data, data + Buffer::leaf_size, leaf.begin());
+        RawBuffer::LeafData leaf;
+        std::copy(data, data + RawBuffer::leaf_size, leaf.begin());
         return Buffer{leaf};
     }
     auto res = std::vector<uint256_t>();
-    for (uint64_t i = 0; i < Buffer::children_size; i++) {
+    for (uint64_t i = 0; i < RawBuffer::children_size; i++) {
         uint256_t hash = deserializeUint256t(buf);
         res.push_back(hash);
         len += 32;
@@ -339,11 +339,10 @@ GetResults processFirstVal(const ReadTransaction&,
 Buffer processBuffer(const ReadTransaction& tx,
                      const ParsedBuffer& val,
                      ValueCache& val_cache) {
-    std::vector<std::shared_ptr<Buffer>> vec;
+    std::vector<Buffer> vec;
     for (const auto& node_hash : val.nodes) {
         if (auto cached_val = val_cache.loadIfExists(node_hash)) {
-            vec.push_back(
-                std::make_shared<Buffer>(std::get<Buffer>(cached_val.value())));
+            vec.push_back(std::get<Buffer>(cached_val.value()));
             continue;
         }
         auto val_hash = ValueHash{node_hash};
@@ -361,12 +360,12 @@ Buffer processBuffer(const ReadTransaction& tx,
             Buffer buf = std::get<Buffer>(record);
             // Check that it has correct height
             val_cache.maybeSave(buf);
-            vec.push_back(std::make_shared<Buffer>(buf));
+            vec.push_back(buf);
         } else if (std::holds_alternative<ParsedBuffer>(record)) {
             Buffer buf =
                 processBuffer(tx, std::get<ParsedBuffer>(record), val_cache);
             val_cache.maybeSave(buf);
-            vec.push_back(std::make_shared<Buffer>(buf));
+            vec.push_back(buf);
         } else {
             std::cerr << "Error loading buffer from record" << std::endl;
             return Buffer();
