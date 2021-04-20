@@ -235,36 +235,42 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				}
 				from = from.Add(to, big.NewInt(1))
 			}
-		FeedReadLoop:
-			for {
-				select {
-				case feedItem := <-ir.SequencerFeed:
-					if len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[0].BatchItem.Accumulator != feedItem.PrevAcc {
-						ir.sequencerFeedQueue = []SequencerFeedItem{}
-					}
-					ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, feedItem)
-				default:
-					break FeedReadLoop
+		}
+		readFromFeed := false
+	FeedReadLoop:
+		for {
+			select {
+			case feedItem := <-ir.SequencerFeed:
+				readFromFeed = true
+				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != feedItem.PrevAcc
+				feedCaughtUp := feedItem.PrevAcc == ir.lastAcc
+				if feedReorg || feedCaughtUp {
+					ir.sequencerFeedQueue = []SequencerFeedItem{}
 				}
-			}
-			if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
-				queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
-				for _, item := range ir.sequencerFeedQueue {
-					queueItems = append(queueItems, item.BatchItem)
-				}
-				prevAcc := ir.sequencerFeedQueue[0].PrevAcc
-				ir.sequencerFeedQueue = []SequencerFeedItem{}
-				ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
-				if err != nil {
-					return err
-				}
-				if !ok {
-					return errors.New("Failed to deliver sequencer feed messages to ArbCore")
-				}
-				ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
+				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, feedItem)
+			default:
+				break FeedReadLoop
 			}
 		}
-		<-time.After(time.Second * 1)
+		if !readFromFeed {
+			time.Sleep(time.Second)
+		}
+		if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
+			queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
+			for _, item := range ir.sequencerFeedQueue {
+				queueItems = append(queueItems, item.BatchItem)
+			}
+			prevAcc := ir.sequencerFeedQueue[0].PrevAcc
+			ir.sequencerFeedQueue = []SequencerFeedItem{}
+			ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return errors.New("Failed to deliver sequencer feed messages to ArbCore")
+			}
+			ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
+		}
 	}
 }
 
