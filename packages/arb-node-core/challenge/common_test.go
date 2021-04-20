@@ -160,10 +160,10 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 			Height:     common.NewTimeBlocks(common.RandBigInt()),
 			HeaderHash: common.RandHash(),
 		},
-		Assertion:     assertion,
-		InboxMaxCount: inboxMaxCount,
-		NodeHash:      common.RandHash(),
-		AfterInboxAcc: [32]byte{},
+		Assertion:          assertion,
+		InboxMaxCount:      inboxMaxCount,
+		NodeHash:           common.RandHash(),
+		AfterInboxBatchAcc: [32]byte{},
 	}, nil
 }
 
@@ -188,7 +188,13 @@ func initializeChallengeTest(
 	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
 
-	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(deployer, client)
+	delayedBridge, _, _, err := ethbridgecontracts.DeployBridge(deployer, client)
+	test.FailIfError(t, err)
+
+	sequencer := ethcommon.Address{}
+	maxDelayBlocks := big.NewInt(60)
+	maxDelaySeconds := big.NewInt(900)
+	sequencerBridge, _, _, err := ethbridgecontracts.DeploySequencerInbox(deployer, client, delayedBridge, sequencer, maxDelayBlocks, maxDelaySeconds)
 	test.FailIfError(t, err)
 
 	asserterWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(asserter, client)
@@ -214,7 +220,8 @@ func initializeChallengeTest(
 		challengerWallet.Address().ToEthAddress(),
 		asserterTime,
 		challengerTime,
-		bridgeAddr,
+		sequencerBridge,
+		delayedBridge,
 	)
 	test.FailIfError(t, err)
 	client.Commit()

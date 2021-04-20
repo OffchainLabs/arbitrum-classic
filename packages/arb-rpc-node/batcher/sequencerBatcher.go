@@ -31,7 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -40,7 +40,7 @@ import (
 
 type SequencerBatcher struct {
 	db                         core.ArbCore
-	inboxReader                *staker.InboxReader
+	inboxReader                *monitor.InboxReader
 	client                     ethutils.EthClient
 	delayedMessagesTargetDelay *big.Int
 	sequencerInbox             *ethbridgecontracts.SequencerInbox
@@ -64,7 +64,7 @@ func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTi
 	return chainTime, nil
 }
 
-func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *staker.InboxReader, client ethutils.EthClient, delayedMessagesTargetDelay *big.Int, sequencerInbox *ethbridgecontracts.SequencerInbox, auth *bind.TransactOpts) (*SequencerBatcher, error) {
+func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *monitor.InboxReader, client ethutils.EthClient, delayedMessagesTargetDelay *big.Int, sequencerInbox *ethbridgecontracts.SequencerInbox, auth *bind.TransactOpts) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
 		return nil, err

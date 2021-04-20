@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package staker
+package monitor
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
+var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
 
 type Monitor struct {
 	Storage machine.ArbStorage
@@ -65,11 +65,7 @@ func (m *Monitor) Close() {
 	m.Storage.CloseArbStorage()
 }
 
-func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAddress common.Address, healthChan chan nodehealth.Log) (*InboxReader, error) {
-	ethClient, err := ethutils.NewRPCEthClient(ethurl)
-	if err != nil {
-		return nil, err
-	}
+func (m *Monitor) StartInboxReader(ctx context.Context, ethClient ethutils.EthClient, rollupAddress common.Address, healthChan chan nodehealth.Log) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), ethClient)
 	if err != nil {
 		return nil, err

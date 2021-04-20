@@ -29,7 +29,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
@@ -66,7 +66,7 @@ func (b StatelessBatcherMode) isBatcherMode() {}
 type SequencerBatcherMode struct {
 	Auth                       *bind.TransactOpts
 	Core                       core.ArbCore
-	InboxReader                *staker.InboxReader
+	InboxReader                *monitor.InboxReader
 	DelayedMessagesTargetDelay *big.Int
 }
 

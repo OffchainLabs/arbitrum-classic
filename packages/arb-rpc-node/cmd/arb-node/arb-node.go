@@ -27,12 +27,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -140,23 +140,27 @@ func main() {
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
-	monitor, err := staker.NewMonitor(dbPath, contractFile)
+	mon, err := monitor.NewMonitor(dbPath, contractFile)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
+		logger.Fatal().Err(err).Msg("error opening mon")
 	}
-	defer monitor.Close()
+	defer mon.Close()
 
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	db, err := txdb.New(context.Background(), mon.Core, mon.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
 	if err != nil {
 		logger.Fatal().Err(err).Send()
 	}
 
-	var inboxReader *staker.InboxReader
+	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address, healthChan)
+		ethClient, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 		if err == nil {
-			break
+			inboxReader, err = mon.StartInboxReader(context.Background(), ethClient, rollupArgs.Address, healthChan)
+			if err == nil {
+				break
+			}
 		}
+
 		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).
@@ -201,7 +205,7 @@ func main() {
 		if *sequencerMode {
 			batcherMode = rpc.SequencerBatcherMode{
 				Auth:                       auth,
-				Core:                       monitor.Core,
+				Core:                       mon.Core,
 				InboxReader:                inboxReader,
 				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
 			}
