@@ -6,13 +6,13 @@ sidebar_label: Frontend Integration
 
 Arbitrum comes with tools to make front-end integration as seamless as possible for Ethereum web developers.
 
-Arbitrum nodes support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API); thus, popular Ethereum libraries for interacting with the Ethereum chain can be used for Arbitrum interactions with little to no modifications.
+Arbitrum nodes support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API); thus, popular Ethereum libraries for interacting with the Ethereum chain can be used for Arbitrum interactions with little-to-no modifications.
 
 For Ethereum/Arbitrum "bridge" functionality — methods that involve communicating between the L1 Ethereum chain and the L2 Arbitrum chain (i.e., depositing and withdrawing assets), we provide our own libraries for convenience.
 
 ## Arbitrum Integration
 
-#### Ethers.js (recommended)
+#### Ethers.js
 
 Ethers-js can be used to interact with an Arbitrum chain exactly as one would use it to interact with Ethereum ([see docs](https://docs.ethers.io/v5/)); simply instantiate a provider connected to an Arbitrum node.
 
@@ -39,9 +39,8 @@ Likewise, a Web3 provider can be instantiated directly via an Arbitrum node url:
 https://web3js.readthedocs.io/en/v1.2.11/index.html
 
 ```ts
-import * as Web3 from "web3";
-var arbWeb3Provider = new Web3('http://ArbNodeUrl.com);
-
+import * as Web3 from 'web3'
+var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 ```
 
 ## Arbitrum / Ethereum Bridge
