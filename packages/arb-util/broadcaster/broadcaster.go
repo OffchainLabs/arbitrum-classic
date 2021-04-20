@@ -10,8 +10,6 @@ import (
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
 	"github.com/rs/zerolog/log"
-
-	_ "net/http/pprof"
 )
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()

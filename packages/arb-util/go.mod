@@ -14,3 +14,11 @@ require (
 	github.com/rs/zerolog v1.21.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
+
+replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
+
+replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-core
+
+replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
+
+replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
