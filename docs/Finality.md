@@ -46,6 +46,11 @@ The weakest form of evidence for a pending transaction is that someone you trust
 If they aren't staked on that future, they will not directly be penalized if they're lying, except possibly their reputation.
 But if you strongly trust them, that might be enough.
 
+### Finality in Sequencer Mode
+
+For an Arbitrum chain in Sequencer mode, a Sequencer can provide fast, semi-trusted off-chain confirmations to users. Even a malicious Sequencer will _not_ be able to get away with an invalid state update (just like any other validator); a Sequencer can, however, fail to include a transaction after if it was promised, or reorder transactions over a short window of time. Cryptoeconomic penalties for Sequencer misbehavior can be enforced (i.e., a Sequencer posts a bond that gets slashed if it violates its promises), but these security mechanisms run orthogonal to those of Arbitrum itself.
+
+Once the Sequencer publishes a user's transaction on chain, the transactions is secured by the Arbitrum protocol, and a client accepts confirmation according to one the three models outlined above. See [Sequencer Mode](Inside_Arbitrum.md) for more info.
 
 ## Withdrawals
 
