@@ -26,10 +26,12 @@ type configStruct struct {
 	//Mutex for config struct
 	mu sync.Mutex
 
+	//Initialize healthcheck execution when true
+	init bool
 	//Address to bind healthcheck to
 	healthcheckRPC string
-	//Disable the entire healthcheck
-	disableHealthcheck bool
+	//Disable the healthcheck metrics
+	healthcheckMetrics bool
 	//Disable checking the primary aggregator
 	disablePrimaryCheck bool
 	//Disable checking the OpenEthereum node
@@ -171,9 +173,11 @@ type Log struct {
 // Default configuration values for the healthcheck server
 func newConfig() *configStruct {
 	config := configStruct{}
+	const init = false
+
 	//Global configuration
 	const healthcheckRPC = ""
-	const disableHealthcheck = false
+	const healthcheckMetrics = false
 	const disablePrimaryCheck = false
 	const disableOpenEthereumCheck = false
 
@@ -196,8 +200,9 @@ func newConfig() *configStruct {
 	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
 	config.prometheusRegistry = prometheus.NewRegistry()
 
+	config.init = init
 	config.healthcheckRPC = healthcheckRPC
-	config.disableHealthcheck = disableHealthcheck
+	config.healthcheckMetrics = healthcheckMetrics
 	config.disablePrimaryCheck = disablePrimaryCheck
 	config.disableOpenEthereumCheck = disableOpenEthereumCheck
 
@@ -298,6 +303,10 @@ func logger(ctx context.Context, config *configStruct, state *healthState, logMs
 	}
 }
 
+func Init(healthChan chan Log) {
+	healthChan <- Log{Config: true, Var: "init"}
+}
+
 //Send a function's runtime over the health channel
 func LogTime(comp string, function string, start time.Time, healthChan chan Log) {
 	healthChan <- Log{Metrics: true, Comp: comp, Var: function, ValTime: time.Since(start)}
@@ -351,6 +360,9 @@ func updateInboxReader(state *healthState, logMessage Log) {
 func updateConfig(config *configStruct, logMessage Log) {
 	config.mu.Lock()
 	defer config.mu.Unlock()
+	if logMessage.Var == "init" {
+		config.init = true
+	}
 	//Load the configuration message into the config struct
 	if logMessage.Var == "openethereumHealthcheckRPC" {
 		u, err := url.Parse(logMessage.ValStr)
@@ -393,8 +405,8 @@ func updateConfig(config *configStruct, logMessage Log) {
 	if logMessage.Var == "openEthereumAPI" {
 		config.openethereumAPI = logMessage.ValStr
 	}
-	if logMessage.Var == "disableHealthcheck" {
-		config.disableHealthcheck = true
+	if logMessage.Var == "healthcheckMetrics" {
+		config.healthcheckMetrics = true
 	}
 	if logMessage.Var == "disablePrimaryCheck" {
 		config.disablePrimaryCheck = true
@@ -791,7 +803,7 @@ func waitConfig(config *configStruct) {
 
 	//Loop while the configuration variables are not set
 	for {
-		if config.healthcheckRPC != "" {
+		if config.init == true {
 			if config.openethereumAPI != "" || config.openethereumHealthcheckRPC != "" {
 				return
 			}
@@ -819,7 +831,7 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 	waitConfig(config)
 
 	//Exit if the healthcheck is disabled while leaving the logger running to prevent blocking calls
-	if config.disableHealthcheck {
+	if config.healthcheckRPC == "" {
 		return nil
 	}
 
