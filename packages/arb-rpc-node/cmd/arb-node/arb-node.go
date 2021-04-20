@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	golog "log"
 	"math/big"
 	"net/http"
@@ -183,12 +184,14 @@ func startup() error {
 		time.Sleep(time.Second * 5)
 	}
 
+	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
 		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
 		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
 	} else {
-		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
+		var auth *bind.TransactOpts
+		auth, dataSigner, err = cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
 		if err != nil {
 			return errors.Wrap(err, "error running GetKeystore")
 		}
@@ -236,7 +239,7 @@ func startup() error {
 		inboxReader.WaitToCatchUp()
 	}
 
-	batch, err := rpc.SetupBatcher(ctx, ethclint, rollupArgs.Address, db, time.Duration(*maxBatchTime)*time.Second, batcherMode)
+	batch, err := rpc.SetupBatcher(ctx, ethclint, rollupArgs.Address, db, time.Duration(*maxBatchTime)*time.Second, batcherMode, dataSigner)
 	if err != nil {
 		return err
 	}

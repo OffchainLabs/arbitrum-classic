@@ -77,6 +77,7 @@ func SetupBatcher(
 	db *txdb.TxDB,
 	maxBatchTime time.Duration,
 	batcherMode BatcherMode,
+	dataSigner func([]byte) ([]byte, error),
 ) (batcher.TransactionBatcher, error) {
 	l2ChainID := message.ChainAddressToID(rollupAddress)
 	switch batcherMode := batcherMode.(type) {
@@ -116,7 +117,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth)
+		return batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth, dataSigner)
 	default:
 		return nil, errors.New("unexpected batcher type")
 	}
