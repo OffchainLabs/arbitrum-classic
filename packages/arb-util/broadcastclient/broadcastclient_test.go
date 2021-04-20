@@ -10,7 +10,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func TestBroadCastClientConnectsAndReceivesSequences(t *testing.T) {
+func TestBroadcastClientConnectsAndReceivesSequences(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9742",
 		Workers:   128,
@@ -68,7 +68,7 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 
 }
 
-func TestBroadCastClientPings(t *testing.T) {
+func TestBroadcastClientPings(t *testing.T) {
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9743",
 		Workers:   128,
@@ -96,5 +96,57 @@ func TestBroadCastClientPings(t *testing.T) {
 	if p != "pong" {
 		t.Error("No response from ping")
 	}
+}
 
+func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
+	broadcasterSettings := broadcaster.Settings{
+		Addr:      ":9743",
+		Workers:   128,
+		Queue:     1,
+		IoTimeout: 2 * time.Second,
+	}
+
+	b := broadcaster.NewBroadcaster(broadcasterSettings)
+
+	err := b.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
+
+	// connect returns
+	_, err = broadcastClient.Connect()
+	if err != nil {
+		t.Errorf("Can not connect: %v\n", err)
+	}
+
+	b.Stop()
+
+	time.Sleep(1000 * time.Millisecond)
+
+	pong := make(chan string, 1)
+	broadcastClient.Ping(pong)
+	p := <-pong
+	if p == "pong" {
+		t.Error("Should not have received a response")
+	}
+
+	err = b.Start()
+	if err != nil {
+		t.Fatal("error restarting broadcaster")
+	}
+
+	time.Sleep(1000 * time.Millisecond)
+
+	pong2 := make(chan string, 1)
+	broadcastClient.Ping(pong2)
+	p = <-pong2
+	if p != "pong" {
+		t.Error("No response from ping")
+	}
+
+	if broadcastClient.RetryCount <= 0 {
+		t.Error("Should have had some retry counts")
+	}
 }

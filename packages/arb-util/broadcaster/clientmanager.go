@@ -13,6 +13,7 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/mailru/easygo/netpoll"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -24,11 +25,13 @@ type ClientManager struct {
 	clientMap         map[string]*ClientConnection
 	broadcastMessages []*BroadcastInboxMessage
 	pool              *gopool.Pool
+	poller            netpoll.Poller
 	out               chan []byte
 }
 
-func NewClientManager(pool *gopool.Pool) *ClientManager {
+func NewClientManager(pool *gopool.Pool, poller netpoll.Poller) *ClientManager {
 	clientManager := &ClientManager{
+		poller:    poller,
 		pool:      pool,
 		clientMap: make(map[string]*ClientConnection),
 		out:       make(chan []byte, 1),
@@ -40,10 +43,11 @@ func NewClientManager(pool *gopool.Pool) *ClientManager {
 }
 
 // Register registers new connection as a Client.
-func (cm *ClientManager) Register(conn net.Conn) *ClientConnection {
+func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConnection {
 	clientConnection := &ClientConnection{
 		clientManager: cm,
 		conn:          conn,
+		desc:          desc,
 	}
 
 	{
@@ -70,9 +74,25 @@ func (cm *ClientManager) Register(conn net.Conn) *ClientConnection {
 	return clientConnection
 }
 
+// Removes all clients.
+func (cm *ClientManager) RemoveAll() {
+	cm.mu.Lock()
+	// the remove() affects the client list held by the instance
+	clientList := make([]*ClientConnection, len(cm.clientList))
+	for i := range cm.clientList {
+		clientList[i] = cm.clientList[i]
+	}
+	for i := range clientList {
+		cm.remove(clientList[i])
+	}
+
+	cm.mu.Unlock()
+}
+
 // Remove removes client from stream.
 func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Lock()
+
 	cm.remove(clientConnection)
 	cm.mu.Unlock()
 }
@@ -152,10 +172,18 @@ func (cm *ClientManager) writer() {
 	}
 }
 
-// mutex must be held.
+// mutex must be held before calling
 func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 	if _, has := cm.clientMap[clientConnection.name]; !has {
 		return false
+	}
+
+	// doing this causes a hang.
+	// cm.poller.Stop(clientConnection.desc)
+
+	err := clientConnection.conn.Close()
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to close client connection")
 	}
 
 	delete(cm.clientMap, clientConnection.name)
@@ -163,6 +191,7 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 	i := sort.Search(len(cm.clientList), func(i int) bool {
 		return cm.clientList[i].id >= clientConnection.id
 	})
+
 	if i >= len(cm.clientList) {
 		panic("stream: inconsistent state")
 	}

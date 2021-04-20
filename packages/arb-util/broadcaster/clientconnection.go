@@ -7,12 +7,14 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/mailru/easygo/netpoll"
 )
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
 	io   sync.Mutex
 	conn io.ReadWriteCloser
+	desc *netpoll.Desc
 
 	id            uint
 	name          string

@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"net"
+	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -35,6 +36,8 @@ type BroadcastClient struct {
 	conn            net.Conn
 	desc            netpoll.Desc
 	poller          netpoll.Poller
+	RetryCount      int
+	retrying        bool
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
@@ -53,6 +56,10 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 
 func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastMessage)
+	return bc.connect(messageReceiver)
+}
+
+func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastMessage) (<-chan broadcaster.BroadcastMessage, error) {
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
@@ -85,6 +92,7 @@ func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error
 			logger.Info().Msg("received hang up")
 			_ = poller.Stop(desc)
 			_ = conn.Close()
+			bc.RetryConnect(messageReceiver)
 			return
 		}
 
@@ -126,8 +134,28 @@ func (bc *BroadcastClient) Ping(pong chan string) {
 		default:
 			logger.Error().Err(err).Msgf("Received uknown OpCode from server after ping: %v", h.OpCode)
 		}
+	} else {
+		pong <- err.Error()
 	}
 
+}
+
+func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastMessage) {
+	MaxWaitMs := 15000
+	waitMs := 500
+	bc.retrying = true
+	for {
+		bc.RetryCount++
+		_, err := bc.connect(messageReceiver)
+		if err == nil {
+			bc.retrying = false
+			return
+		}
+		time.Sleep(time.Duration(waitMs) * time.Millisecond)
+		if waitMs < MaxWaitMs {
+			waitMs += 500
+		}
+	}
 }
 
 func (bc *BroadcastClient) Close() {
