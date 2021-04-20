@@ -406,13 +406,13 @@ func updateConfig(config *configStruct, logMessage Log) {
 		config.openethereumAPI = logMessage.ValStr
 	}
 	if logMessage.Var == "healthcheckMetrics" {
-		config.healthcheckMetrics = true
+		config.healthcheckMetrics = logMessage.ValBool
 	}
 	if logMessage.Var == "disablePrimaryCheck" {
-		config.disablePrimaryCheck = true
+		config.disablePrimaryCheck = logMessage.ValBool
 	}
 	if logMessage.Var == "disableOpenEthereumCheck" {
-		config.disableOpenEthereumCheck = true
+		config.disableOpenEthereumCheck = logMessage.ValBool
 	}
 }
 
@@ -731,6 +731,11 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 		//Calculate out the block difference
 		blockDifference := new(big.Int).Sub(state.inboxReader.caughtUpTarget, state.inboxReader.arbCorePosition)
 
+		//Patch bug where caughtUpTarget exceeds arbCorePosition due to a primary failure
+		if blockDifference.Sign() == -1 {
+			return nil
+		}
+
 		//Set the tolerance we are willing to accept
 		tolerance := big.NewInt(config.blockDifferenceTolerance)
 
@@ -803,8 +808,9 @@ func waitConfig(config *configStruct) {
 
 	//Loop while the configuration variables are not set
 	for {
-		if config.init == true {
-			if config.openethereumAPI != "" || config.openethereumHealthcheckRPC != "" {
+		if config.init {
+			if config.disableOpenEthereumCheck || config.healthcheckRPC == "" ||
+				config.openethereumAPI != "" || config.openethereumHealthcheckRPC != "" {
 				return
 			}
 		}
@@ -832,6 +838,7 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 
 	//Exit if the healthcheck is disabled while leaving the logger running to prevent blocking calls
 	if config.healthcheckRPC == "" {
+		<-ctx.Done()
 		return nil
 	}
 
@@ -845,10 +852,12 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 	nodeReadinessChecks(health, config, httpMux, asyncUpstream)
 
 	//Create an endpoint to serve the prometheus endpoint
-	httpMux.Handle("/metrics", promhttp.HandlerFor(
-		config.prometheusRegistry,
-		promhttp.HandlerOpts{},
-	))
+	if config.healthcheckMetrics {
+		httpMux.Handle("/metrics", promhttp.HandlerFor(
+			config.prometheusRegistry,
+			promhttp.HandlerOpts{},
+		))
+	}
 
 	//Create the HTTP server
 	httpServer := &http.Server{
