@@ -147,7 +147,7 @@ func startup() error {
 
 	rollupAddr := ethcommon.HexToAddress(os.Args[3])
 	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
-	auth, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
+	auth, _, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}

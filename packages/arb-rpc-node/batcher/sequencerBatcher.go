@@ -19,6 +19,7 @@ package batcher
 import (
 	"context"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"time"
 
@@ -48,6 +49,8 @@ type SequencerBatcher struct {
 	auth                       *ethbridge.TransactAuth
 	chainTimeCheckInterval     time.Duration
 	logBatchGasCosts           bool
+	feedBroadcaster            *broadcaster.Broadcaster
+	dataSigner                 func([]byte) ([]byte, error)
 
 	sequencer       common.Address
 	signer          types.Signer
@@ -77,6 +80,7 @@ func NewSequencerBatcher(
 	delayedMessagesTargetDelay *big.Int,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
+    dataSigner func([]byte) ([]byte, error),
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -96,6 +100,19 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
+	broadcasterSettings := broadcaster.Settings{
+		Addr:      ":9642",
+		Workers:   128,
+		Queue:     1,
+		IoTimeout: 2 * time.Second,
+	}
+	feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
+	err = feedBroadcaster.Start()
+	if err != nil {
+		logger.Warn().Err(err).Msg("error starting feed broadcaster")
+		return nil, err
+	}
+
 	return &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
@@ -104,6 +121,8 @@ func NewSequencerBatcher(
 		sequencerInbox:             sequencerInbox,
 		auth:                       transactAuth,
 		chainTimeCheckInterval:     time.Second,
+		feedBroadcaster:            feedBroadcaster,
+		dataSigner:                 dataSigner,
 
 		sequencer:       common.NewAddressFromEth(sequencer),
 		signer:          types.NewEIP155Signer(chainId),
@@ -191,6 +210,15 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	}
 	if !success {
 		return errors.New("failed to deliver messages")
+	}
+
+	signature, err := b.dataSigner(txBatchItem.Accumulator.Bytes())
+	if err != nil {
+		return err
+	}
+	err = b.feedBroadcaster.Broadcast(new(big.Int).SetBytes(prevAcc.Bytes()), seqBatchItems[0].ToBytesWithSeqNum(), new(big.Int).SetBytes(signature))
+	if err != nil {
+		return err
 	}
 
 	// TODO check if transaction was valid and if not roll it back
@@ -398,6 +426,8 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 func (b *SequencerBatcher) Start(ctx context.Context) {
 	logger.Log().Msg("Starting sequencer batch submission thread")
 	firstBoot := true
+	defer b.feedBroadcaster.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():

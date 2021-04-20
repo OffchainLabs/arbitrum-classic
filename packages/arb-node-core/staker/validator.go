@@ -41,6 +41,7 @@ func NewValidator(
 		return nil, err
 	}
 	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), client, builder)
+	_ = rollup
 	if err != nil {
 		return nil, err
 	}
