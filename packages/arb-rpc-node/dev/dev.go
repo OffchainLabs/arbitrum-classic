@@ -34,7 +34,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
@@ -46,10 +46,10 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
+func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*monitor.Monitor, *Backend, *txdb.TxDB, common.Address) {
 	rollupAddress := common.RandAddress()
 
-	monitor, err := staker.NewMonitor(dir, arbosPath)
+	monitor, err := monitor.NewMonitor(dir, arbosPath)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("error opening monitor")
 	}

@@ -41,6 +41,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -196,11 +197,11 @@ func main() {
 	}()
 	dbPath := path.Join(folder, "arbStorage")
 	arbosPath := path.Join(folder, "arbos.mexe")
-	monitor, err := staker.NewMonitor(dbPath, arbosPath)
+	mon, err := monitor.NewMonitor(dbPath, arbosPath)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
+		logger.Fatal().Err(err).Msg("error opening mon")
 	}
-	defer monitor.Close()
+	defer mon.Close()
 
 	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	if err != nil {
@@ -211,7 +212,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("Error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, monitor.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), strategy)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error setting up staker")
 	}
@@ -220,7 +221,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error checking initial chain state")
 	}
-	initialExecutionCursor, err := monitor.Core.GetExecutionCursor(big.NewInt(0))
+	initialExecutionCursor, err := mon.Core.GetExecutionCursor(big.NewInt(0))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error loading initial ArbCore machine")
 	}
@@ -232,7 +233,7 @@ func main() {
 		logger.Fatal().Str("chain", hex.EncodeToString(chainMachineHash[:])).Str("arbCore", hex.EncodeToString(initialMachineHash[:])).Msg("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash")
 	}
 
-	reader, err := monitor.StartInboxReader(ctx, ethUrl, common.NewAddressFromEth(rollupAddr), healthChan)
+	reader, err := mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to create inbox reader")
 	}

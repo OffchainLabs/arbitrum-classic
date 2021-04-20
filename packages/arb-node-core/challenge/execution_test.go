@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -12,9 +13,9 @@ import (
 )
 
 func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
-	arbCore, shutdown := test.PrepareArbCore(t, messages)
+	mon, shutdown := monitor.PrepareArbCore(t, messages)
 	defer shutdown()
-	faultyCore := NewFaultyCore(arbCore, faultConfig)
+	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
 	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
 	if err != nil {
@@ -27,7 +28,7 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 		challengedNode,
 		time,
 		time,
-		arbCore,
+		mon.Core,
 		faultyCore,
 		asserterMayFail,
 	)
@@ -80,24 +81,24 @@ func TestChallengeToUnreachable(t *testing.T) {
 }
 
 func calculateGasToFirstInbox(t *testing.T) *big.Int {
-	arbCore, shutdown := test.PrepareArbCore(t, nil)
+	mon, shutdown := monitor.PrepareArbCore(t, nil)
 	defer shutdown()
-	cursor, err := arbCore.GetExecutionCursor(big.NewInt(100000000))
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
 	test.FailIfError(t, err)
 	return cursor.TotalGasConsumed()
 }
 
 func TestChallengeToUnreachableSmall(t *testing.T) {
 	messages := []inbox.InboxMessage{makeInitMsg()}
-	arbCore, shutdown := test.PrepareArbCore(t, messages)
+	mon, shutdown := monitor.PrepareArbCore(t, messages)
 	defer shutdown()
-	cursor, err := arbCore.GetExecutionCursor(big.NewInt(1 << 30))
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)
 	startGas := cursor.TotalGasConsumed()
 	endGas := new(big.Int).Add(startGas, big.NewInt(1))
 
 	faultConfig := FaultConfig{StallMachineAt: startGas}
-	faultyCore := NewFaultyCore(arbCore, faultConfig)
+	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
 	challengedNode, _ := initializeChallengeData(t, faultyCore, startGas, endGas)
 
@@ -107,7 +108,7 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 		challengedNode,
 		time,
 		time,
-		arbCore,
+		mon.Core,
 		faultyCore,
 		true,
 	)

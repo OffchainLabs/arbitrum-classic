@@ -18,23 +18,14 @@ package test
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "test").Logger()
@@ -65,51 +56,4 @@ func FailIfError(t *testing.T, err error) {
 	if err != nil {
 		t.Fatal(err)
 	}
-}
-
-func PrepareArbCore(t *testing.T, messages []inbox.DelayedMessage) (core.ArbCore, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
-	FailIfError(t, err)
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	if err != nil {
-		os.RemoveAll(tmpDir)
-	}
-	FailIfError(t, err)
-	shutdown := func() {
-		storage.CloseArbStorage()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}
-	returning := false
-	defer (func() {
-		if !returning {
-			shutdown()
-		}
-	})()
-
-	err = storage.Initialize(arbos.Path())
-	FailIfError(t, err)
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		t.Fatal("failed to start thread")
-	}
-
-	if len(messages) > 0 {
-		_, err = core.DeliverMessagesAndWait(arbCore, common.Hash{}, nil, messages, nil)
-		FailIfError(t, err)
-	}
-	for {
-		msgCount, err := arbCore.GetMessageCount()
-		FailIfError(t, err)
-		if arbCore.MachineIdle() && msgCount.Cmp(big.NewInt(int64(len(messages)))) >= 0 {
-			break
-		}
-		<-time.After(time.Millisecond * 200)
-	}
-
-	returning = true
-	return arbCore, shutdown
 }
