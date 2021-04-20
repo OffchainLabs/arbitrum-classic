@@ -4,7 +4,19 @@ title: Messaging Between Layers
 sidebar_label: qqq
 ---
 
-The Arbitrum protocol offers trustless message passing between the layer 1 and layer 2 chains. The most common use-case for inter-chain communication is depositing and withdrawing assets; this, however, is only one specific application of generalized cross-chain contract calls that Arbitrum supports. This page covers the generalized protocol; for further explanation, see [Inside Arbitrum: Bridging](https://developer.offchainlabs.com/docs/inside_arbitrum#bridging).
+## Standard Arbitrum Transactions: Calls from clients
+
+Standard, client-generated transaction calls on the Arbitrum chain are sent through the EthBridge using Inbox.sendL2Message:
+
+```solidity
+function sendL2Message(address chain, bytes calldata messageData) external;
+```
+
+Generally calls will come in batches from an aggregator as described in [Transaction Lifecycle](Tx_Lifecycle.md).
+
+However, the Arbitrum protocol also offers ways passing messages between the layer 1 and layer 2 chains.
+
+The most common use-case for direct inter-chain communication is depositing and withdrawing assets; this, however, is only one specific application of generalized cross-chain contract calls that Arbitrum supports. This page covers the generalized protocol; for further explanation, see [Inside Arbitrum: Bridging](https://developer.offchainlabs.com/docs/inside_arbitrum#bridging).
 
 ## Ethereum to Arbitrum: Retryable Tickets
 
