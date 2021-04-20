@@ -105,8 +105,8 @@ func main() {
 	folder := os.Args[1]
 
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: os.Args[2]}
-
-	client, err := ethutils.NewRPCEthClient(os.Args[2])
+	ethUrl := os.Args[2]
+	client, err := ethutils.NewRPCEthClient(ethUrl)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error creating Ethereum RPC client")
 	}
@@ -194,18 +194,13 @@ func main() {
 	defer func() {
 		storage.CloseArbStorage()
 	}()
-
+	dbPath := path.Join(folder, "arbStorage")
 	arbosPath := path.Join(folder, "arbos.mexe")
-	err = storage.Initialize(arbosPath)
+	monitor, err := staker.NewMonitor(dbPath, arbosPath)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error initializing ArbStorage")
+		logger.Fatal().Err(err).Msg("error opening monitor")
 	}
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		logger.Fatal().Msg("Error starting ArbCore thread")
-	}
+	defer monitor.Close()
 
 	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	if err != nil {
@@ -216,7 +211,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("Error creating validator wallet")
 	}
 
-	stakerManager, bridge, err := staker.NewStaker(ctx, arbCore, client, val, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	stakerManager, _, err := staker.NewStaker(ctx, monitor.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), strategy)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error setting up staker")
 	}
@@ -225,7 +220,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error checking initial chain state")
 	}
-	initialExecutionCursor, err := arbCore.GetExecutionCursor(big.NewInt(0))
+	initialExecutionCursor, err := monitor.Core.GetExecutionCursor(big.NewInt(0))
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error loading initial ArbCore machine")
 	}
@@ -237,11 +232,11 @@ func main() {
 		logger.Fatal().Str("chain", hex.EncodeToString(chainMachineHash[:])).Str("arbCore", hex.EncodeToString(initialMachineHash[:])).Msg("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash")
 	}
 
-	reader, err := staker.NewInboxReader(ctx, bridge, arbCore, healthChan)
+	reader, err := monitor.StartInboxReader(ctx, ethUrl, common.NewAddressFromEth(rollupAddr), healthChan)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to create inbox reader")
 	}
-	reader.Start(ctx)
+	defer reader.Stop()
 
 	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
 	<-stakerManager.RunInBackground(ctx)
