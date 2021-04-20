@@ -28,6 +28,7 @@ type Broadcaster struct {
 	settings              Settings
 	poller                netpoll.Poller
 	acceptDesc            *netpoll.Desc
+	listener              net.Listener
 }
 
 func NewBroadcaster(settings Settings) *Broadcaster {
@@ -55,7 +56,7 @@ func (b *Broadcaster) Start() error {
 	// Make pool of X size, Y sized work queue and one pre-spawned
 	// goroutine.
 	var pool = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
-	var clientManager = NewClientManager(pool)
+	var clientManager = NewClientManager(pool, b.poller)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 
@@ -81,9 +82,6 @@ func (b *Broadcaster) Start() error {
 			Str("connection-name", nameConn(safeConn)).
 			Msgf("established websocket connection: %+v", hs)
 
-		// Register incoming client in clientManager.
-		client := clientManager.Register(safeConn)
-
 		// Create netpoll event descriptor to handle only read events.
 		desc, err := netpoll.HandleRead(conn)
 		if err != nil {
@@ -91,6 +89,9 @@ func (b *Broadcaster) Start() error {
 			_ = conn.Close()
 			return
 		}
+
+		// Register incoming client in clientManager.
+		client := clientManager.Register(safeConn, desc)
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {
@@ -134,6 +135,8 @@ func (b *Broadcaster) Start() error {
 		logger.Error().Err(err).Msg("error calling net.Listen")
 		return err
 	}
+
+	b.listener = ln
 
 	logger.Info().Str("address", ln.Addr().String()).Msg("arbitrum websocket broadcast server is listening")
 
@@ -211,7 +214,13 @@ func (b *Broadcaster) messageCacheCount() int {
 }
 
 func (b *Broadcaster) Stop() {
-	err := b.poller.Stop(b.acceptDesc)
+	err := b.listener.Close()
+
+	if err != nil {
+		logger.Warn().Err(err).Msg("error in listner.Close.Stop")
+	}
+
+	err = b.poller.Stop(b.acceptDesc)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error in poller.Stop")
 	}
@@ -220,6 +229,9 @@ func (b *Broadcaster) Stop() {
 	if err != nil {
 		logger.Warn().Err(err).Msg("error in acceptDesc.Stop")
 	}
+
+	b.clientManager.RemoveAll()
+	b.broadcasterStarted = false
 }
 
 func nameConn(conn net.Conn) string {
