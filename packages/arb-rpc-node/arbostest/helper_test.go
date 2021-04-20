@@ -17,10 +17,12 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"math/big"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common/math"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -160,6 +162,31 @@ func allResultsSucceeded(t *testing.T, results []*evm.TxResult) {
 		t.Log("Checking result", i)
 		succeededTxCheck(t, res)
 	}
+}
+
+func extractIncomingMessages(t *testing.T, results []*evm.TxResult) []message.Message {
+	t.Helper()
+	var messages []message.Message
+	for _, res := range results {
+		incoming, err := message.NestedMessage(res.IncomingRequest.Data, res.IncomingRequest.Kind)
+		test.FailIfError(t, err)
+		messages = append(messages, incoming)
+	}
+	return messages
+}
+
+func filterL2Messages(t *testing.T, messages []message.Message) []message.AbstractL2Message {
+	var l2Messages []message.AbstractL2Message
+	for _, msg := range messages {
+		nested, ok := msg.(message.L2Message)
+		if !ok {
+			continue
+		}
+		abs, err := nested.AbstractMessage()
+		test.FailIfError(t, err)
+		l2Messages = append(l2Messages, abs)
+	}
+	return l2Messages
 }
 
 func failIfError(t *testing.T, err error) {
