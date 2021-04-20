@@ -98,6 +98,18 @@ func main() {
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
 	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
+
+	//Healthcheck Config
+	disablePrimaryCheck := flagSet.Bool("disable-primary-check", true, "disable checking the health of the primary")
+	disableOpenEthereumCheck := flagSet.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
+	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
+	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
+
 	if err := flagSet.Parse(os.Args[6:]); err != nil {
 		logger.Fatal().Err(err).Msg("failed parsing command line arguments")
 	}
@@ -115,6 +127,7 @@ func main() {
 	folder := os.Args[1]
 
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: os.Args[2]}
+	nodehealth.Init(healthChan)
 
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {

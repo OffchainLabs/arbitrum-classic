@@ -93,7 +93,6 @@ func main() {
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
 	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
-	nodehealth.Init(healthChan)
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -151,6 +150,7 @@ func main() {
 		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
+	nodehealth.Init(healthChan)
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
