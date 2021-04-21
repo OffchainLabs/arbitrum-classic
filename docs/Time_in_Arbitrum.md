@@ -18,7 +18,7 @@ A single Ethereum block could include within it multiple Arbitrum blocks (if, sa
 
 ## Ethereum Block Numbers Within Arbitrum
 
-On a Sequencer chain, accessing block numbers within an Arbitrum smart contract (i.e., `block.number` in Solidity) will return a value _close to_ (but not necessarily exactly) the L1 block number at which the Sequencer received the transaction. On a non-sequencer chain, `block.number` will return the L1 block number at which the transaction was inserted into the L1 inbox.
+On a [Sequencer](Inside_Arbitrum.md#sequencer-mode) chain, accessing block numbers within an Arbitrum smart contract (i.e., `block.number` in Solidity) will return a value _close to_ (but not necessarily exactly) the L1 block number at which the Sequencer received the transaction. On a non-sequencer chain, `block.number` will return the L1 block number at which the transaction was inserted into the L1 inbox.
 
 ```sol
 // some Arbitrum contract:

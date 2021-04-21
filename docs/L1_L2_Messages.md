@@ -154,13 +154,13 @@ L2 to L1 messages work similar to L1 to L2 messages, but in reverse: an L2 trans
 
 A key difference, however, is that in the L2 to L1 direction, a user must wait for the dispute period to pass between publishing their messages and actually executing it on L1; this is a direct consequence of the security model of Optimistic Rollups (see [finalty](Finality.md).) Additionally, unlike retyable tickets, outgoing messages have no upper bounded timeout; once the dispute window passes, they can be executed at any point. No rush.
 
-### L2 to L1 Messages Lifecycle && API
+### L2 to L1 Messages Lifecycle
 
 The lifecycle of sending a message from layer 2 to layer 1 can be broken down into roughly 4 steps, only 2 which (at most!) require the end user to publish transactions.
 
 **1. Publish L2 to L1 transaction (Arbitrum transaction)**
 
-A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1` (see [ArbSys](Arbsys.md), and see [ArbTokenBridge.\_withdraw](https://github.com/OffchainLabs/arbitrum/blob/5bd9a456a780582715a62affd887d35e2eb138b0/packages/arb-bridge-peripherals/contracts/tokenbridge/arbitrum/ArbTokenBridge.sol#L256) for example usage.
+A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1` (see [ArbSys](Arbsys.md), and see [ArbTokenBridge.withdraw](https://github.com/OffchainLabs/arbitrum/blob/5bd9a456a780582715a62affd887d35e2eb138b0/packages/arb-bridge-peripherals/contracts/tokenbridge/arbitrum/ArbTokenBridge.sol#L256) for example usage.
 
 **2. Outbox entry gets created**
 

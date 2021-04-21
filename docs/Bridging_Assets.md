@@ -19,7 +19,7 @@ As far as Ethereum knows, all deposited funds are held by Arbitrum's Bridge cont
 Withdrawing ether can be done using the [ArbSys](ArbSys.md) withdrawEth method:
 
 ```sol
-`ArbSys(100).withdrawEth{ value: 2300000 }(destAddress)`
+ArbSys(100).withdrawEth{ value: 2300000 }(destAddress)
 ```
 
 Upon withdrawing, the Ether balance is burnt on the Arbitrum side, and will later be made available on the Ethereum side.

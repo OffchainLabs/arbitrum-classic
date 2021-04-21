@@ -11,8 +11,8 @@ Any contract running on an Arbitrum Chain can call the chain's ArbSys.
 ArbSys lives at address `0x0000000000000000000000000000000000000064` on every Arbitrum chain.
 To call it, write something like this:
 
-```solidity
-    uint256 txCount = ArbSys(address(100)).getTransactionCount();
+```sol
+uint256 txCount = ArbSys(address(100)).getTransactionCount();
 ```
 
 Here is the interface offered by ArbSys:

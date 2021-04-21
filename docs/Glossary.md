@@ -5,7 +5,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Gloss
 ---
 
 - ArbOS: Layer 2 "operating system" that trustlessly handles system-level operations
-- ArbGas: Unit for pricing execution on Arbitrum; denominated in Ether, Arbitrum's native currency. ArgGas is somewhat analogous to gas on L1 Ethereum, though different factors go into its calculation. [ArbGas and Fees](Inside_Arbitrum.md)
+- ArbGas: Unit for pricing execution on Arbitrum; denominated in Ether, Arbitrum's native currency. ArgGas is somewhat analogous to gas on L1 Ethereum, though different factors go into its calculation. ( See [ArbGas and Fees](Inside_Arbitrum.md#arbgas-and-fees).)
 - Arbitrum Full Node: A party who keeps track of the state of an Arbitrum chain and receives remote procedure calls (RPCs) from clients. Analogous to a non-mining L1 Ethereum node.
 - Aggregator: An Arbitrum Full Node that also receives transactions from users and submits them in batches on their behalf.
 - Assertion: A claim, made by a validator, about what the contracts on a chain will do. An assertion is considered _pending_ until it is confirmed.
