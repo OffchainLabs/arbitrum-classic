@@ -14,9 +14,9 @@ function sendL2Message(address chain, bytes calldata messageData) external;
 
 Generally calls will come in batches from an aggregator as described in [Transaction Lifecycle](Tx_Lifecycle.md).
 
-However, the Arbitrum protocol also offers ways passing messages between the layer 1 and layer 2 chains.
+However, the Arbitrum protocol also offers ways passing of messages between the layer 1 and layer 2 chains.
 
-The most common use-case for direct inter-chain communication is depositing and withdrawing assets; this, however, is only one specific application of generalized cross-chain contract calls that Arbitrum supports. This page covers the generalized protocol; for further explanation, see [Inside Arbitrum: Bridging](https://developer.offchainlabs.com/docs/inside_arbitrum#bridging).
+The most common use-case for direct inter-chain communication is depositing and withdrawing assets; this, however, is only one specific application of generalized cross-chain contract calls that Arbitrum supports. This page covers the generalized protocol; for further explanation, see [Inside Arbitrum: Bridging](Inside_Arbitrum.md#bridging).
 
 ## Ethereum to Arbitrum: Retryable Tickets
 
@@ -140,7 +140,7 @@ interface ArbRetryableTx {
 
 ```
 
-This ArbRetryableTx interface is instantiated and exposed `bridge` class of [arb-ts](qqq.md), i.e.,
+This ArbRetryableTx interface is instantiated and exposed `bridge` class of [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts), i.e.,
 
 ```ts
 myBridge.ArbRetryableTx.redeem('mytxid')
@@ -171,6 +171,12 @@ After the Arbitrum chain advances some set amount of time, ArbOS gathers all out
 After the Outbox entry is published on the L1 chain, the user (or anybody) can compute the Merkle proof of inclusion of their outgoing message. They do this by calling `NodeInterface.lookupMessageBatchProof`:
 
 ```sol
+
+/** @title Interface for providing Outbox proof data
+ *  @notice This contract doesn't exist on-chain. Instead it is a virtual interface accessible at 0x00000000000000000000000000000000000000C8
+ * This is a cute trick to allow an Arbitrum node to provide data without us having to implement an additional RPC )
+ */
+
 interface NodeInterface {
     /**
     * @notice Returns the proof necessary to redeem a message
@@ -238,7 +244,7 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
     )
 ```
 
-Note that convenience methods for the steps outlined here are provided in the [arb-ts](qqq.md) client side library.
+Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) client side library.
 
 For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
 

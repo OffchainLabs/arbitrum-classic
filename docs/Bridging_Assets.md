@@ -151,7 +151,7 @@ Calling `MyCustomL1Token.registerTokenOnL2` should make an external call to `Eth
 
 It should be noted that if no token contract is actually registered at the L2 address given, a temporary standard token contract will be deployed, ensuring any deposits are safely recoverable. However, we highly recommend you simply save yourself such hassle and simply follow the steps outlined here 😉.
 
-Note that [arb-ts](qqq.md) provides client side convenience methods for the functionality listed above, and more.
+Note that [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) provides client side convenience methods for the functionality listed above, and more.
 
 See [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts) for example usage.
 

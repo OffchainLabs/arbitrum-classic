@@ -18,7 +18,7 @@ When withdrawing Ether or an ERC20 token, one can take advantage of the asset's 
 
 To carry out a tradable exit, a user first initializes a withdrawal; a third party — the liquidity provider — can immediately verify that the withdrawal is valid (i.e., that it will finalize _eventually_) by validating the Arbitrum chain. The liquidity provider then offers to buy the exit by paying the user on L1.
 
-Our [token bridge](Bridging_Assets.md) includes an implementation of this technical
+Our [token bridge](Bridging_Assets.md) includes an implementation of this:
 
 ```sol /**
      * @notice Allows a user to redirect their right to claim a withdrawal to a liquidityProvider, in exchange for a fee.

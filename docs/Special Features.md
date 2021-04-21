@@ -57,7 +57,7 @@ interface ArbAddressTable {
 
     /**
     * @notice compress an address and return the result
-    * @param addr address to comppress
+    * @param addr address to compress
     * @return compressed address bytes
     */
     function compress(address addr) external returns(bytes memory);
@@ -73,11 +73,23 @@ Generally speaking, L1 calldata will the primary contributor to gas cost for Arb
 
 One way of doing so broadly applicable to most contracts is to replace a method's parameters with a serialized byte array and have the contract deserialize the data.
 
-[arb-ts](qqq.md) offers convenience methods for this client side serialization (as well as interacting with the Address table).
+[arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) offers convenience methods for this client side serialization (as well as interacting with the Address table).
 
 For example usage, see our Arbiswap Demo:
 
 - [Contract](https://github.com/OffchainLabs/Arbiswap_V2_mono/blob/5b7c38ebbc97bf1784c23526b9b75879cd053cdf/packages/other_contracts/contracts/UniswapV2Router02.sol#L121)
 - [Client Side](https://github.com/OffchainLabs/Arbiswap_V2_mono/blob/5b7c38ebbc97bf1784c23526b9b75879cd053cdf/packages/uniswap-interface/src/hooks/useSwapCallback.ts#L59)
 
+### Precompiles
+
+Arbitrum includes a number of pre-compiled contracts for Arbitrum-specific functionality:
+
+- ArbAddressTable (see above)
+- [ArbSys](ArbSys.md)
+- [ArbRetryableTx](L1_L2_Messages.md)
+- [ArbGasInfo](https://github.com/OffchainLabs/arb-os/blob/develop/contracts/arbos/builtin/ArbGasInfo.sol)
+- [NodeInterface](L1_L2_Messages.md)
+
 ### BLS Signatures
+
+More info coming soon!
