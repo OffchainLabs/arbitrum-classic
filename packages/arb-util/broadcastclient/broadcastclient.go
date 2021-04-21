@@ -20,6 +20,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"net"
 	"time"
@@ -55,12 +58,12 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	return bc
 }
 
-func (bc *BroadcastClient) Connect() (<-chan broadcaster.BroadcastMessage, error) {
-	messageReceiver := make(chan broadcaster.BroadcastMessage)
+func (bc *BroadcastClient) Connect() (chan monitor.SequencerFeedItem, error) {
+	messageReceiver := make(chan monitor.SequencerFeedItem)
 	return bc.connect(messageReceiver)
 }
 
-func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastMessage) (<-chan broadcaster.BroadcastMessage, error) {
+func (bc *BroadcastClient) connect(messageReceiver chan monitor.SequencerFeedItem) (chan monitor.SequencerFeedItem, error) {
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
@@ -116,7 +119,12 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastMes
 			return
 		}
 
-		messageReceiver <- res
+		for _, message := range res.Messages {
+			// TODO: Update broadcastmessage to contain sequencerBatchItem and common.Hash
+			batch := inbox.SequencerBatchItem{}
+			prevAcc := common.HexToHash(message.BeforeAccumulator.Text(16))
+			messageReceiver <- monitor.SequencerFeedItem{BatchItem: batch, PrevAcc: prevAcc}
+		}
 	})
 
 	return messageReceiver, err
@@ -151,7 +159,7 @@ func (bc *BroadcastClient) Ping() (<-chan string, error) {
 	return out, nil
 }
 
-func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastMessage) {
+func (bc *BroadcastClient) RetryConnect(messageReceiver chan monitor.SequencerFeedItem) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true

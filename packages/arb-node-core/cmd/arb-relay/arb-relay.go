@@ -37,18 +37,21 @@ func (ar *ArbRelay) Start() {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
 	}
 
-	go func() {
-		for {
-			select {
-			case receivedMsgs := <-messages:
-				for i := range receivedMsgs.Messages {
-					m := receivedMsgs.Messages[i]
-					ar.broadcaster.Broadcast(m.BeforeAccumulator, m.InboxMessage, m.Signature)
-				}
+	_ = messages
+	/*
+		go func() {
+			for {
+				select {
+				case receivedMsgs := <-messages:
+					for i := range receivedMsgs.Messages {
+						m := receivedMsgs.Messages[i]
+						ar.broadcaster.Broadcast(m.BeforeAccumulator, m.InboxMessage, m.Signature)
+					}
 
+				}
 			}
-		}
-	}()
+		}()
+	*/
 }
 
 func (ar *ArbRelay) Stop() {

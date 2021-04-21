@@ -43,7 +43,14 @@ type InboxReader struct {
 	SequencerFeed        chan SequencerFeedItem
 }
 
-func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher, sequencerInbox *ethbridge.SequencerInboxWatcher, db core.ArbCore, healthChan chan nodehealth.Log) (*InboxReader, error) {
+func NewInboxReader(
+	ctx context.Context,
+	bridge *ethbridge.DelayedBridgeWatcher,
+	sequencerInbox *ethbridge.SequencerInboxWatcher,
+	db core.ArbCore,
+	healthChan chan nodehealth.Log,
+	sequencerFeed chan SequencerFeedItem,
+) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
 		return nil, err
@@ -56,7 +63,7 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.DelayedBridgeWatcher,
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
 		healthChan:        healthChan,
-		SequencerFeed:     make(chan SequencerFeedItem, 128),
+		SequencerFeed:     sequencerFeed,
 	}, nil
 }
 

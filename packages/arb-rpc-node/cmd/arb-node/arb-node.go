@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	golog "log"
 	"math/big"
 	"net/http"
@@ -81,6 +82,12 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
+	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:9742/", nil)
+	sequencerFeed, err := broadcastClient.Connect()
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to start broadcastclient")
+	}
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
@@ -107,7 +114,7 @@ func startup() error {
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
-	err := fs.Parse(os.Args[1:])
+	err = fs.Parse(os.Args[1:])
 	if err != nil {
 		return errors.Wrap(err, "error parsing arguments")
 	}

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 	"time"
 
@@ -212,7 +213,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return errors.New("failed to deliver messages")
 	}
 
-	signature, err := b.dataSigner(txBatchItem.Accumulator.Bytes())
+	signature, err := b.dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(txBatchItem.Accumulator)).Bytes())
 	if err != nil {
 		return err
 	}
@@ -286,12 +287,22 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 		b.latestChainTime.Clone(),
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
-	success, err := core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}, []inbox.DelayedMessage{}, nil)
+	seqBatchItems := []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}
+success, err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return nil, err
 	}
 	if !success {
 		return nil, errors.New("Failed to deliver messages")
+	}
+
+	signature, err := b.dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(batchItem.Accumulator)).Bytes())
+	if err != nil {
+		return nil, err
+	}
+	err = b.feedBroadcaster.Broadcast(new(big.Int).SetBytes(prevAcc.Bytes()), seqBatchItems[0].ToBytesWithSeqNum(), new(big.Int).SetBytes(signature))
+	if err != nil {
+		return nil, err
 	}
 
 	b.latestChainTime = chainTime
