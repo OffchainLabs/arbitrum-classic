@@ -1,5 +1,5 @@
 /*
-* Copyright 2020-2021, Offchain Labs, Inc.
+* Copyright 2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package arbosmachine
 
 import (
-	"github.com/rs/zerolog/log"
+	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
@@ -25,37 +25,33 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Stack().Str("component", "arbosmachine").Logger()
-
-type Machine struct {
+type TestMachine struct {
+	t *testing.T
 	machine.Machine
 }
 
-func New(mach machine.Machine) *Machine {
-	return &Machine{Machine: mach}
+func NewTestMachine(t *testing.T, mach machine.Machine) *TestMachine {
+	return &TestMachine{t: t, Machine: mach}
 }
 
-func (m *Machine) Clone() machine.Machine {
-	return &Machine{Machine: m.Machine.Clone()}
+func (m *TestMachine) Clone() machine.Machine {
+	return &TestMachine{t: m.t, Machine: m.Machine.Clone()}
 }
 
-func (m *Machine) ExecuteAssertion(
+func (m *TestMachine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 	finalMessageOfBlock bool,
-) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
-	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
-	if err != nil {
-		return nil, nil, 0, err
-	}
+) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
 	for _, d := range debugPrints {
 		parsed, err := handleDebugPrint(d)
 		if err != nil {
-			logger.Debug().Str("raw", d.String()).Msg("debugprint")
+			m.t.Log("raw debugprint", d)
 		} else {
-			logger.Debug().EmbedObject(parsed).Msg("debugprint")
+			m.t.Log("debugprint", parsed)
 		}
 	}
-	return assertion, debugPrints, numSteps, nil
+	return assertion, debugPrints, numSteps
 }
