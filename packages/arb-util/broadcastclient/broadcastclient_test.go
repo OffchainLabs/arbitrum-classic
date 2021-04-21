@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func TestBroadcastClientConnectsAndReceivesSequences(t *testing.T) {
@@ -51,19 +50,23 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 		t.Errorf("Can not connect: %v\n", err)
 	}
 
-	for {
-		select {
-		case receivedMsgs := <-messages:
-			for i := range receivedMsgs.Messages {
-				t.Logf("Received Message, Sequence Number: %v\n", inbox.GetSequenceNumber(receivedMsgs.Messages[i].InboxMessage))
-				messageCount++
-				if messageCount == expectedCount {
-					broadcastClient.Close()
-					return
+	_ = messageCount
+	_ = messages
+	/*
+		for {
+			select {
+			case receivedMsgs := <-messages:
+				for i := range receivedMsgs.BatchItem {
+					t.Logf("Received Message, Sequence Number: %v\n", inbox.GetSequenceNumber(receivedMsgs.Messages[i].InboxMessage))
+					messageCount++
+					if messageCount == expectedCount {
+						broadcastClient.Close()
+						return
+					}
 				}
 			}
 		}
-	}
+	*/
 
 }
 

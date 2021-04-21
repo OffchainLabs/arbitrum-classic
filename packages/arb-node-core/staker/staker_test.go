@@ -266,7 +266,10 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		nodehealth.StartNodeHealthCheck(ctx, healthChan)
 	}()
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
+	// Make a dummy feed for now
+	var sequencerFeed chan monitor.SequencerFeedItem
+
+	_, err := mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, sequencerFeed)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {
