@@ -1,7 +1,6 @@
 package broadcastclient
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -56,7 +55,7 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 		select {
 		case receivedMsgs := <-messages:
 			for i := range receivedMsgs.Messages {
-				fmt.Printf("Received Message, Sequence Number: %v\n", inbox.GetSequenceNumber(receivedMsgs.Messages[i].InboxMessage))
+				t.Logf("Received Message, Sequence Number: %v\n", inbox.GetSequenceNumber(receivedMsgs.Messages[i].InboxMessage))
 				messageCount++
 				if messageCount == expectedCount {
 					broadcastClient.Close()
@@ -90,8 +89,10 @@ func TestBroadcastClientPings(t *testing.T) {
 	if err != nil {
 		t.Errorf("Can not connect: %v\n", err)
 	}
-	pong := make(chan string, 1)
-	broadcastClient.Ping(pong)
+	pong, err := broadcastClient.Ping()
+	if err != nil {
+		t.Errorf("Cannot send ping: %v\n", err)
+	}
 	p := <-pong
 	if p != "pong" {
 		t.Error("No response from ping")
@@ -106,9 +107,9 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 		IoTimeout: 2 * time.Second,
 	}
 
-	b := broadcaster.NewBroadcaster(broadcasterSettings)
+	b1 := broadcaster.NewBroadcaster(broadcasterSettings)
 
-	err := b.Start()
+	err := b1.Start()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,26 +122,33 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 		t.Errorf("Can not connect: %v\n", err)
 	}
 
-	b.Stop()
+	b1.Stop()
 
 	time.Sleep(1000 * time.Millisecond)
 
-	pong := make(chan string, 1)
-	broadcastClient.Ping(pong)
+	pong, err := broadcastClient.Ping()
+	if err != nil {
+		t.Fatal("error sending ping")
+	}
+
 	p := <-pong
 	if p == "pong" {
 		t.Error("Should not have received a response")
 	}
 
-	err = b.Start()
+	b2 := broadcaster.NewBroadcaster(broadcasterSettings)
+	err = b2.Start()
 	if err != nil {
 		t.Fatal("error restarting broadcaster")
 	}
 
 	time.Sleep(1000 * time.Millisecond)
 
-	pong2 := make(chan string, 1)
-	broadcastClient.Ping(pong2)
+	pong2, err := broadcastClient.Ping()
+	if err != nil {
+		t.Fatal("error sending ping2")
+	}
+
 	p = <-pong2
 	if p != "pong" {
 		t.Error("No response from ping")
