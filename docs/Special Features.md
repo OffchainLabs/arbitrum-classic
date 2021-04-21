@@ -1,7 +1,7 @@
 ---
 id: Special_Features
 title: Special Features
-sidebar_label: qq
+sidebar_label: Special Features
 ---
 
 ### Address Registry

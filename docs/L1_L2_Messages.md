@@ -1,7 +1,7 @@
 ---
 id: L1_L2_Messages
 title: Messaging Between Layers
-sidebar_label: qqq
+sidebar_label: Messaging Between Layers
 ---
 
 ## Standard Arbitrum Transactions: Calls from clients
