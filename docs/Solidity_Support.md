@@ -16,6 +16,7 @@ Although Arbitrum supports Solidity code, there are differences in the effects o
 - `block.difficulty` returns the constant 2500000000000000
 - `block.gaslimit` returns the block's ArbGas limit
 - `gasleft` returns the amount of ArbGas remaining
+- `block.number` on a non-Sequencer Arbitrum chain, returns the L1 block number at which the transaction was submitted to the inbox; on a Sequencer Arbitrum chain, returns an "estimate" of the L1 block number at which the Sequencer received the transaction (see [Time in Arbitrum](Time_in_Arbitrum.md))
 
 # Time
 
