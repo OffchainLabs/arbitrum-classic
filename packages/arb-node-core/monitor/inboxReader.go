@@ -299,18 +299,11 @@ func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
 			break
 		}
 	}
-	seqNum := messageCount
-	zeroTime := common.NewTimeBlocksInt(0)
-	for {
-		seqNum.Sub(seqNum, big.NewInt(1))
-		msg, err := core.GetSingleMessage(ir.db, seqNum)
-		if err != nil {
-			return nil, err
-		}
-		if msg.ChainTime.BlockNum.Cmp(zeroTime) != 0 {
-			return msg.ChainTime.BlockNum.AsInt(), nil
-		}
+	msg, err := core.GetSingleMessage(ir.db, new(big.Int).Sub(messageCount, big.NewInt(1)))
+	if err != nil {
+		return nil, err
 	}
+	return msg.ChainTime.BlockNum.AsInt(), nil
 }
 
 func (ir *InboxReader) getPrevBlockForReorg(from *big.Int) (*big.Int, error) {

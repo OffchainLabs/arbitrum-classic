@@ -950,6 +950,41 @@ ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
     return {it->status(), ret};
 }
 
+ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
+    uint256_t sequence_number) const {
+    ReadTransaction tx(data_storage);
+
+    std::vector<unsigned char> first_key_vec;
+    marshal_uint256_t(sequence_number, first_key_vec);
+    auto first_key_slice = vecToSlice(first_key_vec);
+    auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
+    it->Seek(first_key_slice);
+
+    std::vector<std::vector<unsigned char>> ret;
+    while (it->Valid()) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto value_ptr =
+            reinterpret_cast<const unsigned char*>(it->value().data());
+        auto value_end_ptr = value_ptr + it->value().size();
+
+        auto seq_batch_item = deserializeSequencerBatchItem(
+            extractUint256(key_ptr), value_ptr, value_end_ptr);
+        if (seq_batch_item.sequencer_message) {
+            auto it = seq_batch_item.sequencer_message->begin();
+            auto block_num = extractInboxMessageBlockNumber(it);
+            return {rocksdb::Status::OK(), block_num};
+        }
+
+        it->Next();
+    }
+
+    if (it->status().ok()) {
+        return {rocksdb::Status::NotFound(), 0};
+    } else {
+        return {it->status(), 0};
+    }
+}
+
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t index,
     uint256_t count) const {

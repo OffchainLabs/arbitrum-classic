@@ -83,6 +83,7 @@ func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.In
 }
 
 type SequencerBatchRef interface {
+	GetBatchIndex() *big.Int
 	GetBeforeCount() *big.Int
 	GetBeforeAcc() common.Hash
 	GetAfterCount() *big.Int
@@ -111,6 +112,7 @@ type SequencerBatch struct {
 	transactionsData         []byte
 	transactionLengths       []*big.Int
 	TotalDelayedMessagesRead *big.Int
+	BatchIndex               *big.Int
 	BeforeCount              *big.Int
 	BeforeAcc                common.Hash
 	AfterCount               *big.Int
@@ -118,6 +120,10 @@ type SequencerBatch struct {
 	DelayedAcc               common.Hash
 	ChainTime                inbox.ChainTime
 	Sequencer                common.Address
+}
+
+func (b SequencerBatch) GetBatchIndex() *big.Int {
+	return b.BatchIndex
 }
 
 func (b SequencerBatch) GetBeforeCount() *big.Int {
@@ -134,19 +140,6 @@ func (b SequencerBatch) GetAfterCount() *big.Int {
 
 func (b SequencerBatch) GetAfterAcc() common.Hash {
 	return b.AfterAcc
-}
-
-func newEndOfBlockMessage(seqNum *big.Int) inbox.InboxMessage {
-	return message.NewInboxMessage(
-		message.EndBlockMessage{},
-		common.Address{},
-		seqNum,
-		big.NewInt(0),
-		inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
-	)
 }
 
 func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
@@ -166,19 +159,18 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	dataOffset := 0
 	for i := 0; i < len(b.transactionLengths); i++ {
 		// Sequencer batch items
-		var seqMsg inbox.InboxMessage
 		length := int(b.transactionLengths[i].Int64())
+		messageKind := message.L2Type
 		if length == 0 {
-			seqMsg = newEndOfBlockMessage(nextSeqNum)
-		} else {
-			seqMsg = inbox.InboxMessage{
-				Kind:        message.L2Type,
-				Sender:      b.Sequencer,
-				InboxSeqNum: nextSeqNum,
-				GasPrice:    big.NewInt(0),
-				Data:        b.transactionsData[dataOffset:(dataOffset + length)],
-				ChainTime:   b.ChainTime,
-			}
+			messageKind = message.EndOfBlockType
+		}
+		seqMsg := inbox.InboxMessage{
+			Kind:        messageKind,
+			Sender:      b.Sequencer,
+			InboxSeqNum: nextSeqNum,
+			GasPrice:    big.NewInt(0),
+			Data:        b.transactionsData[dataOffset:(dataOffset + length)],
+			ChainTime:   b.ChainTime,
 		}
 		dataOffset += length
 		item := inbox.SequencerBatchItem{
@@ -207,11 +199,19 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 		ret = append(ret, item)
 
 		endSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
+		endBlockMessage := inbox.InboxMessage{
+			Kind:        message.EndOfBlockType,
+			Sender:      common.Address{},
+			InboxSeqNum: endSeqNum,
+			GasPrice:    big.NewInt(0),
+			Data:        []byte{},
+			ChainTime:   b.ChainTime,
+		}
 		item2 := inbox.SequencerBatchItem{
 			LastSeqNum:        endSeqNum,
 			Accumulator:       common.Hash{},
 			TotalDelayedCount: b.TotalDelayedMessagesRead,
-			SequencerMessage:  newEndOfBlockMessage(endSeqNum).ToBytes(),
+			SequencerMessage:  endBlockMessage.ToBytes(),
 		}
 		item2.RecomputeAccumulator(lastAcc, b.TotalDelayedMessagesRead, b.DelayedAcc)
 		lastAcc = item2.Accumulator
@@ -228,12 +228,17 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 type sequencerBatchOriginRef struct {
 	blockHash   ethcommon.Hash
 	txIndex     uint
+	batchIndex  *big.Int
 	beforeCount *big.Int
 	beforeAcc   common.Hash
 	afterCount  *big.Int
 	afterAcc    common.Hash
 	delayedAcc  common.Hash
 	sequencer   common.Address
+}
+
+func (b sequencerBatchOriginRef) GetBatchIndex() *big.Int {
+	return b.batchIndex
 }
 
 func (b sequencerBatchOriginRef) GetBeforeCount() *big.Int {
@@ -272,6 +277,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			refs = append(refs, SequencerBatch{
 				transactionsData:         parsed.Transactions,
 				transactionLengths:       parsed.Lengths,
+				BatchIndex:               parsed.SeqBatchIndex,
 				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
 				BeforeCount:              parsed.FirstMessageNum,
 				BeforeAcc:                parsed.BeforeAcc,
@@ -292,6 +298,7 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			refs = append(refs, sequencerBatchOriginRef{
 				blockHash:   log.BlockHash,
 				txIndex:     log.TxIndex,
+				batchIndex:  parsed.SeqBatchIndex,
 				beforeCount: parsed.FirstMessageNum,
 				beforeAcc:   parsed.BeforeAcc,
 				afterCount:  parsed.NewMessageCount,
@@ -304,16 +311,25 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
+			header, err := r.client.HeaderByHash(ctx, log.BlockHash)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			blockTime := new(big.Int).SetUint64(header.Time)
+			txChainTime := inbox.ChainTime{
+				BlockNum:  common.NewTimeBlocksInt(int64(log.BlockNumber)),
+				Timestamp: blockTime,
+			}
 			refs = append(refs, SequencerBatch{
 				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
+				BatchIndex:               parsed.SeqBatchIndex,
 				BeforeCount:              parsed.FirstMessageNum,
 				BeforeAcc:                parsed.BeforeAcc,
 				AfterCount:               parsed.NewMessageCount,
 				AfterAcc:                 parsed.AfterAccAndDelayed[0],
 				DelayedAcc:               parsed.AfterAccAndDelayed[1],
 				Sequencer:                sequencer,
-				// intentionally nil block number and timestamp fields that will error on access
-				ChainTime: inbox.ChainTime{},
+				ChainTime:                txChainTime,
 			})
 		} else {
 			return nil, errors.Errorf("Unexpected log topic %v", log.Topics[0].String())
@@ -354,4 +370,8 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 			Timestamp: args["timestamp"].(*big.Int),
 		},
 	}, nil
+}
+
+func (r *SequencerInboxWatcher) GetMaxDelayBlocks(ctx context.Context) (*big.Int, error) {
+	return r.con.MaxDelayBlocks(&bind.CallOpts{Context: ctx})
 }

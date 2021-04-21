@@ -237,6 +237,17 @@ func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int, count *big.Int) (
 	return items, nil
 }
 
+func (ac *ArbCore) GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error) {
+	indexData := math.U256Bytes(index)
+
+	res := C.arbCoreGetSequencerBlockNumberAt(ac.c, unsafeDataPointer(indexData))
+	if res.found == 0 {
+		return nil, errors.Errorf("failed to get sequencer block number for %v", index)
+	}
+
+	return receiveBigInt(res.value), nil
+}
+
 func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 	startIndexData := math.U256Bytes(index)
 

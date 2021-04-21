@@ -217,6 +217,17 @@ ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
     }
 }
 
+Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
+                                               const void* seq_num_ptr) {
+    try {
+        auto res = static_cast<const ArbCore*>(arbcore_ptr)
+                       ->getSequencerBlockNumberAt(receiveUint256(seq_num_ptr));
+        return returnUint256Result(res);
+    } catch (const std::exception& e) {
+        return {nullptr, false};
+    }
+}
+
 int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
                        const void* index_ptr,
                        void* ret) {

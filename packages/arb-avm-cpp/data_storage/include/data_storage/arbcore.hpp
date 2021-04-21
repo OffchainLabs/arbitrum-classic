@@ -281,6 +281,8 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getSequencerBatchItems(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<uint256_t> getSequencerBlockNumberAt(
+        uint256_t sequence_number) const;
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
     ValueResult<uint256_t> getDelayedInboxAcc(uint256_t index);
     ValueResult<uint256_t> getDelayedInboxAccImpl(const ReadTransaction& tx,

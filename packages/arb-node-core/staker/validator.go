@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -19,7 +20,8 @@ import (
 
 type Validator struct {
 	rollup         *ethbridge.Rollup
-	bridge         *ethbridge.DelayedBridgeWatcher
+	delayedBridge  *ethbridge.DelayedBridgeWatcher
+	sequencerInbox *ethbridge.SequencerInboxWatcher
 	validatorUtils *ethbridge.ValidatorUtils
 	client         ethutils.EthClient
 	lookup         core.ArbCoreLookup
@@ -42,12 +44,19 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	panic("TODO: redo inbox reader")
-	bridgeAddress, err := rollup.DelayedBridge(context.Background())
+	delayedBridgeAddress, err := rollup.DelayedBridge(context.Background())
 	if err != nil {
 		return nil, err
 	}
-	bridge, err := ethbridge.NewDelayedBridgeWatcher(bridgeAddress.ToEthAddress(), client)
+	delayedBridge, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), client)
+	if err != nil {
+		return nil, err
+	}
+	sequencerBridgeAddress, err := rollup.SequencerBridge(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	sequencerInbox, err := ethbridge.NewSequencerInboxWatcher(sequencerBridgeAddress.ToEthAddress(), client)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +70,8 @@ func NewValidator(
 	}
 	return &Validator{
 		rollup:         rollup,
-		bridge:         bridge,
+		delayedBridge:  delayedBridge,
+		sequencerInbox: sequencerInbox,
 		validatorUtils: validatorUtils,
 		client:         client,
 		lookup:         lookup,
@@ -141,10 +151,11 @@ func (v *Validator) isRequiredStakeElevated(ctx context.Context) (bool, error) {
 }
 
 type createNodeAction struct {
-	assertion         *core.Assertion
-	prevProposedBlock *big.Int
-	prevInboxMaxCount *big.Int
-	hash              [32]byte
+	assertion           *core.Assertion
+	prevProposedBlock   *big.Int
+	prevInboxMaxCount   *big.Int
+	hash                [32]byte
+	sequencerBatchProof []byte
 }
 
 type existingNodeAction struct {
@@ -304,14 +315,88 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	}
 	executionHash := assertion.ExecutionHash()
 	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
+
+	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) == 0 {
+		// Can't prove the batch of no messages
+		return nil, wrongNodesExist, nil
+	}
+	var seqBatchProof []byte
+	batch, err := v.lookupBatchContaining(ctx, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+	if err != nil {
+		return nil, false, err
+	}
+	if batch == nil {
+		return nil, false, errors.New("Failed to lookup batch containing message")
+	}
+	seqBatchProof = append(seqBatchProof, batch.GetBatchIndex().Bytes()...)
+	proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
+	if err != nil {
+		return nil, false, err
+	}
+	seqBatchProof = append(seqBatchProof, proofPart...)
+	proofPart, err = v.generateBatchEndProof(batch.GetAfterCount())
+	if err != nil {
+		return nil, false, err
+	}
+	seqBatchProof = append(seqBatchProof, proofPart...)
+
 	action := createNodeAction{
-		assertion:         assertion,
-		hash:              newNodeHash,
-		prevProposedBlock: startState.ProposedBlock,
-		prevInboxMaxCount: startState.InboxMaxCount,
+		assertion:           assertion,
+		hash:                newNodeHash,
+		prevProposedBlock:   startState.ProposedBlock,
+		prevInboxMaxCount:   startState.InboxMaxCount,
+		sequencerBatchProof: seqBatchProof,
 	}
 	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("lastNode", int(lastNum.Int64())).Int("parentNode", int(stakerInfo.LatestStakedNode.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
+}
+
+func (v *Validator) lookupBatchContaining(ctx context.Context, seqNum *big.Int) (ethbridge.SequencerBatchRef, error) {
+	blockNum, err := v.lookup.GetSequencerBlockNumberAt(seqNum)
+	if err != nil {
+		return nil, err
+	}
+	maxDelay, err := v.sequencerInbox.GetMaxDelayBlocks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	fromBlock := new(big.Int).Sub(blockNum, maxDelay)
+	batchRefs, err := v.sequencerInbox.LookupBatchesInRange(ctx, fromBlock, blockNum)
+	if err != nil {
+		return nil, err
+	}
+	var found ethbridge.SequencerBatchRef
+	for _, batchRef := range batchRefs {
+		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
+			found = batchRef
+			break
+		}
+	}
+	return found, nil
+}
+
+func (v *Validator) generateBatchEndProof(count *big.Int) ([]byte, error) {
+	if count.Cmp(big.NewInt(0)) == 0 {
+		return []byte{}, nil
+	}
+	var beforeAcc common.Hash
+	var err error
+	if count.Cmp(big.NewInt(2)) >= 0 {
+		beforeAcc, err = v.lookup.GetInboxAcc(new(big.Int).Sub(count, big.NewInt(2)))
+		if err != nil {
+			return nil, err
+		}
+	}
+	seqNum := new(big.Int).Sub(count, big.NewInt(1))
+	message, err := core.GetSingleMessage(v.lookup, seqNum)
+	if err != nil {
+		return nil, err
+	}
+	var proof []byte
+	proof = append(proof, beforeAcc.Bytes()...)
+	proof = append(proof, math.U256Bytes(seqNum)...)
+	proof = append(proof, message.CommitmentHash().Bytes()...)
+	return proof, nil
 }
 
 func (v *Validator) GetInitialMachineHash(ctx context.Context) ([32]byte, error) {

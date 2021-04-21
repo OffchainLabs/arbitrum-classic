@@ -155,13 +155,10 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	newBlockSeqNum := new(big.Int).Add(msgCount, big.NewInt(1))
 	newBlockMessage := message.NewInboxMessage(
 		message.EndBlockMessage{},
-		common.Address{},
+		b.sequencer,
 		newBlockSeqNum,
 		big.NewInt(0),
-		inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
+		b.latestChainTime,
 	)
 
 	txBatchItem := inbox.SequencerBatchItem{
@@ -254,10 +251,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 		common.Address{},
 		endOfBlockSeqNum,
 		big.NewInt(0),
-		inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
+		b.latestChainTime,
 	)
 	endBlockBatchItem := inbox.SequencerBatchItem{
 		LastSeqNum:        endOfBlockSeqNum,

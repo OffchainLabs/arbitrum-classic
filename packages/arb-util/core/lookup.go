@@ -60,6 +60,7 @@ type ArbCoreLookup interface {
 	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
 	CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error)
 	GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error)
+	GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error)
 
 	MachineMessagesRead() *big.Int
 

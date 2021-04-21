@@ -64,7 +64,7 @@ func NewStaker(
 	return &Staker{
 		Validator: val,
 		strategy:  strategy,
-	}, val.bridge, nil
+	}, val.delayedBridge, nil
 }
 
 func (s *Staker) RunInBackground(ctx context.Context) chan bool {
@@ -260,7 +260,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 		info.CanProgress = false
 		info.LatestStakedNode = nil
 		info.LatestStakedNodeHash = action.hash
-		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
+		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount, action.sequencerBatchProof)
 	case existingNodeAction:
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		info.LatestStakedNode = action.number
