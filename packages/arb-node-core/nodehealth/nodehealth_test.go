@@ -41,7 +41,7 @@ func newTestConfig() *testConfigStruct {
 	const passMessage = "Passed"
 	const startUpSleepTime = 5 * time.Second
 	const timeDelayTests = 11 * time.Second
-	const nodehealthAddress = "http://127.0.0.1:8080"
+	const nodehealthAddress = "http://127.0.0.1:8087"
 	const inboxReaderName = "InboxReader"
 	const failServerPort = "8088"
 	const passServerPort = "8089"
@@ -100,7 +100,7 @@ func setNodeHealthBaseConfig(healthChan chan Log) {
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 }
 
 func healthEndpointStatus(testConfig *testConfigStruct, mode string, healthChan chan Log) error {
@@ -319,7 +319,7 @@ func disablePrimaryCheckTest(testConfig *testConfigStruct, healthChan chan Log) 
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 	setOpenEthereumEndpoint(healthChan)
 	Init(healthChan)
 
@@ -381,7 +381,7 @@ func disableOpenEthereumCheckTest(testConfig *testConfigStruct, healthChan chan 
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 	Init(healthChan)
 
 	err := retrieveVerifyOpenEthereumDisabled(testConfig, healthChan)
@@ -413,7 +413,7 @@ func disableOpenEthereumPrimaryCheckTest(testConfig *testConfigStruct, healthCha
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 	Init(healthChan)
 
 	respMap, err := getHealthcheckStatus(testConfig, healthChan)
@@ -447,7 +447,7 @@ func disableMetricsTest(testConfig *testConfigStruct, healthChan chan Log) error
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 	Init(healthChan)
 
 	if testConfig.verbose {
@@ -498,7 +498,7 @@ func openethereumFailureTest(testConfig *testConfigStruct, healthChan chan Log) 
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 
 	Init(healthChan)
 
@@ -546,7 +546,7 @@ func primaryFailureTest(testConfig *testConfigStruct, healthChan chan Log) error
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 
 	Init(healthChan)
 
@@ -555,7 +555,7 @@ func primaryFailureTest(testConfig *testConfigStruct, healthChan chan Log) error
 	healthChan <- Log{Comp: testConfig.inboxReaderName, Var: "arbCorePosition", ValBigInt: new(big.Int).Set(blockTest)}
 	healthChan <- Log{Comp: testConfig.inboxReaderName, Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(blockTest)}
 
-	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:0000"}
+	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: "http://127.0.0.1:8087"}
 	healthChan <- Log{Config: true, Var: "primaryHealthcheckRPCPort", ValStr: testConfig.passServerPort}
 	time.Sleep(testConfig.timeDelayTests)
 
@@ -594,7 +594,7 @@ func inboxReaderCatchUpTest(testConfig *testConfigStruct, healthChan chan Log) e
 	healthChan <- Log{Config: true, Var: "disablePrimaryCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
 	healthChan <- Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
-	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8080"}
+	healthChan <- Log{Config: true, Var: "healthcheckRPC", ValStr: "127.0.0.1:8087"}
 
 	Init(healthChan)
 
