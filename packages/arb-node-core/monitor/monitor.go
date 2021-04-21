@@ -69,7 +69,13 @@ func (m *Monitor) Close() {
 	m.Storage.CloseArbStorage()
 }
 
-func (m *Monitor) StartInboxReader(ctx context.Context, ethClient ethutils.EthClient, rollupAddress common.Address, healthChan chan nodehealth.Log) (*InboxReader, error) {
+func (m *Monitor) StartInboxReader(
+	ctx context.Context,
+	ethClient ethutils.EthClient,
+	rollupAddress common.Address,
+	healthChan chan nodehealth.Log,
+	sequencerFeed chan SequencerFeedItem,
+) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), ethClient)
 	if err != nil {
 		return nil, err
@@ -90,7 +96,7 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethClient ethutils.EthCl
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan)
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerFeed)
 	if err != nil {
 		return nil, err
 	}
