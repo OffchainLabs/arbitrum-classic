@@ -23,5 +23,6 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Gloss
 - Outbox Entry: A Merkle root of a series of outgoing messages posted over some period of time, stored in the Outbox.
 - Staker: A party who deposits a stake, in Eth, to vouch for a particular node in an Arbitrum Chain. A party who stakes on a false node can expect to lose their stake. An honest staker can recover their stake once the node they are staked on has been confirmed.
 - Sequencer: an entity given rights to reorder transactions in the Inbox over a small window of time, who can thus give clients sub-blocktime soft confirmations.
+- Sequencer Chain: An Arbitrum chain that includes Sequencer support.
 - Validator: A party who makes staked, disputable assertions about the state of the Arbitrum chain; i.e., proposing state updates or passively monitoring other validator’s assertions and disputing them if they’re invalid.
 - Virtual Machine (VM): A program that "runs" on the Arbitrum chain, which tracks the states of all of the contracts on the chain and all of the Eth and tokens deposited into the chain.
