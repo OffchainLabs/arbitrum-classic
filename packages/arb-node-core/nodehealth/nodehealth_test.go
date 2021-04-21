@@ -34,7 +34,7 @@ func newTestConfig() *testConfigStruct {
 
 	//Configuration constants
 	const successfulStatus = 200
-	const verbose = false
+	const verbose = true
 	const bufferSize = 10
 	const readinessEndpoint = "/ready"
 	const failMessage = "Failed"

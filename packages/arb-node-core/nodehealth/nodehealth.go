@@ -101,6 +101,8 @@ type inboxReaderState struct {
 
 //Struct for storing the asynchronous healthcheck calls
 type asyncDataStruct struct {
+	mu sync.Mutex
+
 	//Map to dynamically allocate new healthchecks
 	healthchecks map[string]healthcheck.Check
 
@@ -491,6 +493,10 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 
 		//Send the call to OpenEthereum
 		respBody, err := openEthereumCall(config, jsonRequest)
+
+		aSyncData.mu.Lock()
+		defer aSyncData.mu.Unlock()
+
 		if err != nil {
 			aSyncData.ethSyncResp.respBody = "failed"
 			return (err)
@@ -527,6 +533,10 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 
 		//Send the call to OpenEthereum
 		respBody, err := openEthereumCall(config, jsonRequest)
+
+		aSyncData.mu.Lock()
+		defer aSyncData.mu.Unlock()
+
 		if err != nil {
 			aSyncData.ethSyncResp.respBody = "failed"
 			return (err)
@@ -555,6 +565,8 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 //Check that OpenEthereum has more than minimumPeers currently connected to it
 func openEthereumPeerCount(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
+		aSyncData.mu.Lock()
+		defer aSyncData.mu.Unlock()
 		//Check if the netPeers response is unsupported by the OpenEthereum node
 		if strings.Contains(aSyncData.parityNetPeersResp.respBody, "Unsupported method") {
 			return nil
@@ -581,6 +593,8 @@ func openEthereumPeerCount(config *configStruct, aSyncData *asyncDataStruct) hea
 //Check that the block OpenEthereum is on is updating at a rate faster then config.blockUpdateTimeout
 func openEthereumBlockUpdateCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
+		aSyncData.mu.Lock()
+		defer aSyncData.mu.Unlock()
 		//Pause to allow request to be captured
 		time.Sleep(2 * time.Second)
 
@@ -619,6 +633,8 @@ func openEthereumBlockUpdateCheck(config *configStruct, aSyncData *asyncDataStru
 
 //Helper function for openEthereumBlockUpdateCheck to calculate the block difference in OpenEthereum's response
 func openEthereumBlockDifference(aSyncData *asyncDataStruct) (int64, error) {
+	aSyncData.mu.Lock()
+	defer aSyncData.mu.Unlock()
 	//Check if OpenEthereum is not currently syncing
 	if strings.Contains(aSyncData.ethSyncResp.respBody, `"result":false`) {
 		return 0, nil
@@ -653,6 +669,8 @@ func openEthereumBlockDifference(aSyncData *asyncDataStruct) (int64, error) {
 //Check the current OpenEthereum block versus the expected block it should be at
 func openEthereumBlockSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.Check {
 	check := healthcheck.Async(func() error {
+		aSyncData.mu.Lock()
+		defer aSyncData.mu.Unlock()
 		//Check if OpenEthereum is not currently syncing
 		if strings.Contains(aSyncData.ethSyncResp.respBody, `"result": false`) {
 			return nil
