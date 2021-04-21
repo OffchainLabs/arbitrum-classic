@@ -52,7 +52,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 	var param common.Hash
 	copy(param[12:], connAddress1.Bytes())
 	createTx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.Address{},
@@ -389,7 +389,7 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	signedTx2, err := types.SignTx(tx2, types.HomesteadSigner{}, pk)
 	failIfError(t, err)
 
-	tx3 := types.NewContractCreation(2, big.NewInt(0), 1000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	tx3 := types.NewContractCreation(2, big.NewInt(0), 3000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 	return []*types.Transaction{signedTx, signedTx2, signedTx3}

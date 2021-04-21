@@ -37,10 +37,10 @@ import (
 
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 
-func TestContructor(t *testing.T) {
+func TestConstructor(t *testing.T) {
 	client, pks := test.SimulatedBackend(t)
 
-	tx := types.NewContractCreation(0, big.NewInt(0), 1000000, big.NewInt(0), constructorData)
+	tx := types.NewContractCreation(0, big.NewInt(0), 5000000, big.NewInt(0), constructorData)
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
 	failIfError(t, err)
 
@@ -98,7 +98,7 @@ func TestContructor(t *testing.T) {
 	}
 }
 
-func TestContructorExistingBalance(t *testing.T) {
+func TestConstructorExistingBalance(t *testing.T) {
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	failIfError(t, err)
 
