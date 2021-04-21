@@ -19,6 +19,7 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net"
 	"time"
@@ -121,23 +122,33 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastMes
 	return messageReceiver, err
 }
 
-func (bc *BroadcastClient) Ping(pong chan string) {
+func (bc *BroadcastClient) Ping() (<-chan string, error) {
 
-	bc.conn.Write(ws.CompiledPing)
+	_, err := bc.conn.Write(ws.CompiledPing)
+	if err != nil {
+		return nil, err
+	}
 
-	h, _, err := wsutil.NextReader(bc.conn, ws.StateClientSide)
-	if err == nil {
+	out := make(chan string)
+	go func() {
+		h, _, err := wsutil.NextReader(bc.conn, ws.StateClientSide)
+		if err != nil {
+			out <- err.Error()
+			return
+		}
+
 		switch h.OpCode {
 		case ws.OpPong:
 			logger.Info().Msg("pong")
-			pong <- "pong"
+			out <- "pong"
 		default:
-			logger.Error().Err(err).Msgf("Received uknown OpCode from server after ping: %v", h.OpCode)
+			str := fmt.Sprintf("Received unknown JSON OpCode from server after ping: %v", h.OpCode)
+			logger.Error().Msg(str)
+			out <- str
 		}
-	} else {
-		pong <- err.Error()
-	}
+	}()
 
+	return out, nil
 }
 
 func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastMessage) {
