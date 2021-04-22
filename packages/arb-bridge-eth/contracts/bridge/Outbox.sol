@@ -103,6 +103,19 @@ contract Outbox is CloneFactory, IOutbox {
         }
     }
 
+    /**
+     * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired and
+     * @param outboxIndex Index of OutboxEntry in outboxes array
+     * @param proof Merkle proof of message inclusion in outbox entry
+     * @param index Index of message in outbox entry
+     * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
+     * @param destAddr destination address for L1 contract call
+     * @param l2Block l2 block number at which sendTxToL1 call was made
+     * @param l1Block l1 block number at which sendTxToL1 call was made
+     * @param l2Timestamp l2 Timestamp at which sendTxToL1 call was made
+     * @param amount value in L1 message in wei
+     * @param calldataForL1 abi-encoded L1 message data
+     */
     function executeTransaction(
         uint256 outboxIndex,
         bytes32[] calldata proof,
@@ -115,15 +128,16 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) external {
-        bytes32 userTx = calculateItemHash(
-            l2Sender,
-            destAddr,
-            l2Block,
-            l1Block,
-            l2Timestamp,
-            amount,
-            calldataForL1
-        );
+        bytes32 userTx =
+            calculateItemHash(
+                l2Sender,
+                destAddr,
+                l2Block,
+                l1Block,
+                l2Timestamp,
+                amount,
+                calldataForL1
+            );
 
         spendOutput(outboxIndex, proof, index, userTx);
 
@@ -219,18 +233,19 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) public pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                SendType_sendTxToL1,
-                uint256(uint160(bytes20(l2Sender))),
-                uint256(uint160(bytes20(destAddr))),
-                l2Block,
-                l1Block,
-                l2Timestamp,
-                amount,
-                calldataForL1
-            )
-        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    SendType_sendTxToL1,
+                    uint256(uint160(bytes20(l2Sender))),
+                    uint256(uint160(bytes20(destAddr))),
+                    l2Block,
+                    l1Block,
+                    l2Timestamp,
+                    amount,
+                    calldataForL1
+                )
+            );
     }
 
     function calculateMerkleRoot(
