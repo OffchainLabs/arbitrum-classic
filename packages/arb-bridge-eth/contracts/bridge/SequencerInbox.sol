@@ -314,10 +314,10 @@ contract SequencerInbox is ISequencerInbox {
         external
         view
         override
-        returns (bytes32)
+        returns (uint256, bytes32)
     {
         if (inboxCount == 0) {
-            return 0;
+            return (0, 0);
         }
 
         (uint256 offset, uint256 seqBatchNum) = Marshaling.deserializeInt(proof, 0);
@@ -338,6 +338,6 @@ contract SequencerInbox is ISequencerInbox {
         require(inboxCount > lastBatchCount, "BATCH_START");
         require(inboxCount <= thisBatchCount, "BATCH_END");
 
-        return seqBatchAcc;
+        return (thisBatchCount, seqBatchAcc);
     }
 }

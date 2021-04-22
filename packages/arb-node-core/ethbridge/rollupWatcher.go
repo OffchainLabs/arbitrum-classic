@@ -148,12 +148,13 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 	}
 	return &core.NodeInfo{
-		NodeNum:            parsedLog.NodeNum,
-		BlockProposed:      proposed,
-		Assertion:          core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
-		InboxMaxCount:      parsedLog.InboxMaxCount,
-		AfterInboxBatchAcc: parsedLog.AfterInboxBatchAcc,
-		NodeHash:           parsedLog.NodeHash,
+		NodeNum:                 parsedLog.NodeNum,
+		BlockProposed:           proposed,
+		Assertion:               core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
+		InboxMaxCount:           parsedLog.InboxMaxCount,
+		AfterInboxBatchEndCount: parsedLog.AfterInboxBatchEndCount,
+		AfterInboxBatchAcc:      parsedLog.AfterInboxBatchAcc,
+		NodeHash:                parsedLog.NodeHash,
 	}, nil
 }
 
@@ -186,12 +187,13 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		}
 		lastHash = hashing.SoliditySHA3(lastHashIsSibling[:], lastHash[:], parsedLog.ExecutionHash[:], parsedLog.AfterInboxBatchAcc[:])
 		infos = append(infos, &core.NodeInfo{
-			NodeNum:            parsedLog.NodeNum,
-			BlockProposed:      proposed,
-			Assertion:          core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
-			InboxMaxCount:      parsedLog.InboxMaxCount,
-			AfterInboxBatchAcc: parsedLog.AfterInboxBatchAcc,
-			NodeHash:           lastHash,
+			NodeNum:                 parsedLog.NodeNum,
+			BlockProposed:           proposed,
+			Assertion:               core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
+			InboxMaxCount:           parsedLog.InboxMaxCount,
+			AfterInboxBatchEndCount: parsedLog.AfterInboxBatchEndCount,
+			AfterInboxBatchAcc:      parsedLog.AfterInboxBatchAcc,
+			NodeHash:                lastHash,
 		})
 	}
 	return infos, nil

@@ -27,6 +27,7 @@ interface IRollup {
         bytes32 nodeHash,
         bytes32 executionHash,
         uint256 inboxMaxCount,
+        uint256 afterInboxBatchEndCount,
         bytes32 afterInboxBatchAcc,
         bytes32[3][2] assertionBytes32Fields,
         uint256[4][2] assertionIntFields

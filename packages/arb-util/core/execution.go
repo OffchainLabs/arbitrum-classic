@@ -140,7 +140,6 @@ func IsAssertionValid(assertion *Assertion, execTracker *ExecutionTracker, targe
 			// Error and try again when we have the messages.
 			return false, errors.New("Missing messages to evaluate assertion")
 		}
-		// TODO: we need to look up batch acc pairs, not batch item acc pairs
 		actualEndAcc, expectedEndAcc, err := execTracker.lookup.GetInboxAccPair(localExecutionState.TotalMessagesRead, assertion.After.TotalMessagesRead)
 		if err != nil {
 			return false, err

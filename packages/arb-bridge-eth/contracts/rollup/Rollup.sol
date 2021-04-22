@@ -422,6 +422,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     }
 
     struct StakeOnNewNodeFrame {
+        uint256 sequencerBatchEnd;
         bytes32 sequencerBatchAcc;
         uint256 currentInboxSize;
         INode node;
@@ -466,7 +467,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                 "PREV_STATE_HASH"
             );
 
-            frame.sequencerBatchAcc = sequencerBridge.proveBatchContainsSequenceNumber(
+            (frame.sequencerBatchEnd, frame.sequencerBatchAcc) = sequencerBridge
+                .proveBatchContainsSequenceNumber(
                 sequencerBatchProof,
                 assertion.afterState.inboxCount
             );
@@ -550,6 +552,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             expectedNodeHash,
             frame.executionHash,
             frame.currentInboxSize,
+            frame.sequencerBatchEnd,
             frame.sequencerBatchAcc,
             assertionBytes32Fields,
             assertionIntFields

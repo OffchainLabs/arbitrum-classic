@@ -256,7 +256,22 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			break
 		}
 		if correctNode == nil {
-			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, nd.AfterInboxBatchAcc)
+			var batchItemEndAcc common.Hash
+			if nd.Assertion.After.TotalMessagesRead.Cmp(nd.AfterInboxBatchEndCount) == 0 {
+				batchItemEndAcc = nd.AfterInboxBatchAcc
+			} else if nd.Assertion.After.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
+				var haveBatchEndAcc common.Hash
+				index1 := new(big.Int).Sub(nd.Assertion.After.TotalMessagesRead, big.NewInt(1))
+				index2 := new(big.Int).Sub(nd.AfterInboxBatchEndCount, big.NewInt(1))
+				batchItemEndAcc, haveBatchEndAcc, err = v.lookup.GetInboxAccPair(index1, index2)
+				if err != nil {
+					return nil, false, err
+				}
+				if haveBatchEndAcc != nd.AfterInboxBatchAcc {
+					return nil, false, errors.New("inbox reorg detected by batch end acc mismatch")
+				}
+			}
+			valid, err := core.IsAssertionValid(nd.Assertion, execTracker, batchItemEndAcc)
 			if err != nil {
 				return nil, false, err
 			}
@@ -316,29 +331,27 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	executionHash := assertion.ExecutionHash()
 	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
 
-	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) == 0 {
-		// Can't prove the batch of no messages
-		return nil, wrongNodesExist, nil
-	}
 	var seqBatchProof []byte
-	batch, err := v.lookupBatchContaining(ctx, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
-	if err != nil {
-		return nil, false, err
+	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
+		batch, err := v.lookupBatchContaining(ctx, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		if err != nil {
+			return nil, false, err
+		}
+		if batch == nil {
+			return nil, false, errors.New("Failed to lookup batch containing message")
+		}
+		seqBatchProof = append(seqBatchProof, math.U256Bytes(batch.GetBatchIndex())...)
+		proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
+		if err != nil {
+			return nil, false, err
+		}
+		seqBatchProof = append(seqBatchProof, proofPart...)
+		proofPart, err = v.generateBatchEndProof(batch.GetAfterCount())
+		if err != nil {
+			return nil, false, err
+		}
+		seqBatchProof = append(seqBatchProof, proofPart...)
 	}
-	if batch == nil {
-		return nil, false, errors.New("Failed to lookup batch containing message")
-	}
-	seqBatchProof = append(seqBatchProof, math.U256Bytes(batch.GetBatchIndex())...)
-	proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
-	if err != nil {
-		return nil, false, err
-	}
-	seqBatchProof = append(seqBatchProof, proofPart...)
-	proofPart, err = v.generateBatchEndProof(batch.GetAfterCount())
-	if err != nil {
-		return nil, false, err
-	}
-	seqBatchProof = append(seqBatchProof, proofPart...)
 
 	action := createNodeAction{
 		assertion:           assertion,
@@ -361,6 +374,15 @@ func (v *Validator) lookupBatchContaining(ctx context.Context, seqNum *big.Int) 
 		return nil, err
 	}
 	toBlock := new(big.Int).Add(fromBlock, maxDelay)
+	latestBlock, err := v.client.BlockInfoByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	latestBlockNumber := (*big.Int)(latestBlock.Number)
+	if toBlock.Cmp(latestBlockNumber) > 0 {
+		toBlock = latestBlockNumber
+	}
+
 	batchRefs, err := v.sequencerInbox.LookupBatchesInRange(ctx, fromBlock, toBlock)
 	if err != nil {
 		return nil, err
