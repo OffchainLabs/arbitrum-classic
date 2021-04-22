@@ -328,7 +328,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	if batch == nil {
 		return nil, false, errors.New("Failed to lookup batch containing message")
 	}
-	seqBatchProof = append(seqBatchProof, batch.GetBatchIndex().Bytes()...)
+	seqBatchProof = append(seqBatchProof, math.U256Bytes(batch.GetBatchIndex())...)
 	proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
 	if err != nil {
 		return nil, false, err
@@ -352,7 +352,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 }
 
 func (v *Validator) lookupBatchContaining(ctx context.Context, seqNum *big.Int) (ethbridge.SequencerBatchRef, error) {
-	blockNum, err := v.lookup.GetSequencerBlockNumberAt(seqNum)
+	fromBlock, err := v.lookup.GetSequencerBlockNumberAt(seqNum)
 	if err != nil {
 		return nil, err
 	}
@@ -360,8 +360,8 @@ func (v *Validator) lookupBatchContaining(ctx context.Context, seqNum *big.Int) 
 	if err != nil {
 		return nil, err
 	}
-	fromBlock := new(big.Int).Sub(blockNum, maxDelay)
-	batchRefs, err := v.sequencerInbox.LookupBatchesInRange(ctx, fromBlock, blockNum)
+	toBlock := new(big.Int).Add(fromBlock, maxDelay)
+	batchRefs, err := v.sequencerInbox.LookupBatchesInRange(ctx, fromBlock, toBlock)
 	if err != nil {
 		return nil, err
 	}

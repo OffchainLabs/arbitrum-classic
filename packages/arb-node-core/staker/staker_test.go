@@ -29,6 +29,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -39,6 +40,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 func deployRollup(
@@ -153,7 +155,6 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
 	var owner common.Address
-	var sequencer common.Address
 	sequencerDelayBlocks := big.NewInt(60)
 	sequencerDelaySeconds := big.NewInt(900)
 	var extraConfig []byte
@@ -161,6 +162,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	clnt, pks := test.SimulatedBackend()
 	auth := bind.NewKeyedTransactor(pks[0])
 	auth2 := bind.NewKeyedTransactor(pks[1])
+	seqAuth := bind.NewKeyedTransactor(pks[2])
+	sequencer := common.NewAddressFromEth(seqAuth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
 	rollupAddr := deployRollup(
@@ -206,6 +209,57 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
+
+	seqInboxAddr, err := staker.rollup.SequencerBridge(ctx)
+	test.FailIfError(t, err)
+
+	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
+	test.FailIfError(t, err)
+
+	delayedBridgeAddr, err := staker.rollup.DelayedBridge(ctx)
+	test.FailIfError(t, err)
+
+	delayedBridge, err := ethbridgecontracts.NewBridge(delayedBridgeAddr.ToEthAddress(), client)
+	test.FailIfError(t, err)
+
+	batchItem := inbox.SequencerBatchItem{
+		LastSeqNum:        big.NewInt(0),
+		Accumulator:       common.Hash{},
+		TotalDelayedCount: big.NewInt(1),
+		SequencerMessage:  []byte{},
+	}
+	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{Context: ctx}, big.NewInt(0))
+	test.FailIfError(t, err)
+	err = batchItem.RecomputeAccumulator(common.Hash{}, big.NewInt(0), delayedAcc)
+	test.FailIfError(t, err)
+
+	latestHeader, err := client.HeaderByNumber(ctx, nil)
+	test.FailIfError(t, err)
+	currentBlockNumber := latestHeader.Number
+	currentTimestamp := big.NewInt(int64(latestHeader.Time))
+
+	endOfBlockMessage := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		big.NewInt(1),
+		big.NewInt(0),
+		inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(currentBlockNumber),
+			Timestamp: currentTimestamp,
+		},
+	)
+	endBlockBatchItem := inbox.SequencerBatchItem{
+		LastSeqNum:        big.NewInt(1),
+		Accumulator:       common.Hash{},
+		TotalDelayedCount: big.NewInt(1),
+		SequencerMessage:  endOfBlockMessage.ToBytes(),
+	}
+	err = endBlockBatchItem.RecomputeAccumulator(batchItem.Accumulator, big.NewInt(1), delayedAcc)
+	test.FailIfError(t, err)
+
+	_, err = seqInbox.AddSequencerL2Batch(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
+	test.FailIfError(t, err)
+	client.Commit()
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 

@@ -1522,7 +1522,7 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 auto get_messages_result = readNextMessages(
                     tx, execution_cursor.getOutput().fully_processed_inbox,
                     message_group_size);
-                if (!get_messages_result.status.IsNotFound()) {
+                if (get_messages_result.status.IsNotFound()) {
                     // Reorg occurred, need to recreate machine
                     handle_reorg = true;
                     break;
@@ -1900,10 +1900,17 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                         checking_prev = false;
 
                         delayed_it->Next();
-                        value_ptr = reinterpret_cast<const unsigned char*>(
-                            delayed_it->value().data());
-                        db_accumulator =
-                            deserializeDelayedMessageAccumulator(value_ptr);
+                        if (delayed_it->Valid()) {
+                            value_ptr = reinterpret_cast<const unsigned char*>(
+                                delayed_it->value().data());
+                            db_accumulator =
+                                deserializeDelayedMessageAccumulator(value_ptr);
+                        } else {
+                            if (!delayed_it->status().ok()) {
+                                return delayed_it->status();
+                            }
+                            inserting = true;
+                        }
                     }
 
                     if (message.delayed_accumulator == db_accumulator) {
