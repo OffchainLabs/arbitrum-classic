@@ -65,22 +65,29 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
+	ctx := context.Background()
+
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.NodeHealthCheck(healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
 	}()
 
-	ctx := context.Background()
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
+
+	//Healthcheck Config
+	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
+	disableOpenEthereumCheck := fs.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
+	healthcheckMetrics := fs.Bool("metrics", false, "enable prometheus endpoint")
+	healthcheckRPC := fs.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -134,10 +141,16 @@ func main() {
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
+
 	if *forwardTxURL != "" {
 		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
+	nodehealth.Init(healthChan)
 
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {

@@ -119,9 +119,9 @@ struct Marshaller {
     std::vector<value>& values;
     std::vector<unsigned char>& buf;
 
-    void operator()(const HashPreImage& val) const {
+    void operator()(const std::shared_ptr<HashPreImage>& val) const {
         buf.push_back(HASH_PRE_IMAGE);
-        val.marshal(buf);
+        val->marshal(buf);
     }
 
     void operator()(const Tuple& tup) const {
@@ -169,6 +169,14 @@ void marshalForProof(const HashPreImage& val,
                      const Code&) {
     buf.push_back(HASH_PRE_IMAGE);
     val.marshal(buf);
+}
+
+void marshalForProof(const std::shared_ptr<HashPreImage>& val,
+                     MarshalLevel,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(HASH_PRE_IMAGE);
+    val->marshal(buf);
 }
 
 MarshalLevel childNestLevel(MarshalLevel level) {
@@ -239,8 +247,8 @@ uint256_t hash_value(const value& value) {
 }
 
 struct GetSize {
-    uint256_t operator()(const HashPreImage& val) const {
-        return val.getSize();
+    uint256_t operator()(const std::shared_ptr<HashPreImage>& val) const {
+        return val->getSize();
     }
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
@@ -274,8 +282,8 @@ struct ValuePrinter {
         return &os;
     }
 
-    std::ostream* operator()(const HashPreImage& val) const {
-        os << val;
+    std::ostream* operator()(const std::shared_ptr<HashPreImage>& val) const {
+        os << *val;
         return &os;
     }
 

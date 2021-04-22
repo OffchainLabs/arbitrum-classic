@@ -182,8 +182,14 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
+	nodehealth.Init(healthChan)
+
 	go func() {
-		nodehealth.NodeHealthCheck(healthChan)
+		nodehealth.StartNodeHealthCheck(ctx, healthChan)
 	}()
 
 	reader, err := NewInboxReader(ctx, bridge, core, healthChan)
