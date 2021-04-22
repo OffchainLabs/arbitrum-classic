@@ -21,7 +21,6 @@ export {
 } from './lib/bridge_helpers'
 export { L1Bridge, L1TokenData } from './lib/l1Bridge'
 export { L2Bridge, L2TokenData } from './lib/l2Bridge'
-export { ArbConversion } from './lib/conversion'
 
 export { RollupCreator__factory } from './lib/abi/factories/RollupCreator__factory'
 
