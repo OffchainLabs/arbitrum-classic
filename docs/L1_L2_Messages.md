@@ -14,7 +14,7 @@ function sendL2Message(address chain, bytes calldata messageData) external;
 
 Generally calls will come in batches from an aggregator as described in [Transaction Lifecycle](Tx_Lifecycle.md).
 
-However, the Arbitrum protocol also offers ways passing of messages between the layer 1 and layer 2 chains.
+However, the Arbitrum protocol also offers ways of passing messages between the layer 1 and layer 2 chains.
 
 The most common use-case for direct inter-chain communication is depositing and withdrawing assets; this, however, is only one specific application of generalized cross-chain contract calls that Arbitrum supports. This page covers the generalized protocol; for further explanation, see [Inside Arbitrum: Bridging](Inside_Arbitrum.md#bridging).
 
