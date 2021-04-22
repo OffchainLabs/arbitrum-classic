@@ -55,7 +55,7 @@ uint256_t MachineStateKeys::machineHash() const {
     if (status == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 8> data{};
+    std::array<unsigned char, 32 * 7> data{};
     auto oit = data.begin();
     {
         auto val = ::hash(pc);
@@ -70,6 +70,7 @@ uint256_t MachineStateKeys::machineHash() const {
         auto val = ::hash_value(err_pc);
         oit = to_big_endian(val, oit);
     }
+    assert(oit == data.end());
 
     auto hash_val = ethash::keccak256(data.data(), data.size());
     return intx::be::load<uint256_t>(hash_val);
