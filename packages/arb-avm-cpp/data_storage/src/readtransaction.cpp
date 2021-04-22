@@ -83,13 +83,6 @@ rocksdb::Status ReadTransaction::refCountedGet(const rocksdb::Slice& key,
         key, value);
 }
 
-std::unique_ptr<rocksdb::Iterator> ReadTransaction::defaultGetIterator() const {
-    auto it = transaction->transaction->GetIterator(
-        read_options,
-        transaction->datastorage->column_handles[DataStorage::DEFAULT_COLUMN]);
-    return std::unique_ptr<rocksdb::Iterator>(it);
-}
-
 std::unique_ptr<rocksdb::Iterator> ReadTransaction::stateGetIterator() const {
     auto it = transaction->transaction->GetIterator(
         read_options,

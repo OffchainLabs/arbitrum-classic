@@ -154,3 +154,16 @@ std::unique_ptr<Transaction> Transaction::makeTransaction(
     auto tx = store->beginTransaction();
     return std::make_unique<Transaction>(std::move(store), std::move(tx));
 }
+
+rocksdb::Status DataStorage::clearDBExceptInbox() {
+    for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
+        if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN || i == SEQUENCERBATCHITEM_COLUMN || i == SEQUENCERBATCH_COLUMN) {
+            continue;
+        }
+        auto s = txn_db->DropColumnFamily(column_handles[i]);
+        if (!s.ok()) {
+            return s;
+        }
+    }
+    return rocksdb::Status::OK();
+}
