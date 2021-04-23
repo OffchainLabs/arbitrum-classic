@@ -496,6 +496,7 @@ contract OneStepProof is OneStepProofCommon {
             );
             (context.offset, delayedStart) = Marshaling.deserializeInt(proof, context.offset);
             (context.offset, delayedEnd) = Marshaling.deserializeInt(proof, context.offset);
+            bytes32 delayedEndAcc = context.delayedBridge.inboxAccs(delayedEnd - 1);
 
             // Validate the delayed message is included in this sequencer batch.
             require(inboxSeqNum >= delayedStart, "DELAYED_START");
@@ -525,7 +526,7 @@ contract OneStepProof is OneStepProofCommon {
                     firstSequencerSeqNum,
                     delayedStart,
                     delayedEnd,
-                    context.delayedBridge.inboxAccs(delayedEnd - 1)
+                    delayedEndAcc
                 )
             );
             inboxSeqNum = firstSequencerSeqNum + (delayedEnd - delayedStart);
