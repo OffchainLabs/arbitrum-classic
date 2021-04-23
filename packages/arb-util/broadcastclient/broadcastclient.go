@@ -20,12 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"net"
+	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -35,19 +35,21 @@ import (
 )
 
 type BroadcastClient struct {
-	websocketUrl    string
-	lastInboxSeqNum *big.Int
-	conn            net.Conn
-	desc            netpoll.Desc
-	poller          netpoll.Poller
-	RetryCount      int
-	retrying        bool
+	websocketUrl                 string
+	lastInboxSeqNum              *big.Int
+	conn                         net.Conn
+	desc                         netpoll.Desc
+	poller                       netpoll.Poller
+	startingBroadcastClientMutex *sync.Mutex
+	RetryCount                   int
+	retrying                     bool
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *BroadcastClient {
 	bc := &BroadcastClient{}
+	bc.startingBroadcastClientMutex = &sync.Mutex{}
 	bc.websocketUrl = websocketUrl
 	if lastInboxSeqNum == nil {
 		bc.lastInboxSeqNum = big.NewInt(0)
@@ -64,7 +66,6 @@ func (bc *BroadcastClient) Connect() (chan monitor.SequencerFeedItem, error) {
 }
 
 func (bc *BroadcastClient) connect(messageReceiver chan monitor.SequencerFeedItem) (chan monitor.SequencerFeedItem, error) {
-
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
 	if err != nil {
@@ -120,10 +121,7 @@ func (bc *BroadcastClient) connect(messageReceiver chan monitor.SequencerFeedIte
 		}
 
 		for _, message := range res.Messages {
-			// TODO: Update broadcastmessage to contain sequencerBatchItem and common.Hash
-			batch := inbox.SequencerBatchItem{}
-			prevAcc := common.HexToHash(message.BeforeAccumulator.Text(16))
-			messageReceiver <- monitor.SequencerFeedItem{BatchItem: batch, PrevAcc: prevAcc}
+			messageReceiver <- message.FeedItem
 		}
 	})
 

@@ -2,13 +2,13 @@ package broadcaster
 
 import (
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 )
 
 type BroadcastInboxMessage struct {
-	BeforeAccumulator *big.Int `json:"beforeAccumulator"`
-	InboxMessage      []byte   `json:"inboxMessage"`
-	Signature         *big.Int `json:"signature"`
-	SeqNum            *big.Int `json:"seqnum"`
+	FeedItem  monitor.SequencerFeedItem `json:"feedItem"`
+	Signature *big.Int                  `json:"signature"`
 }
 type BroadcastMessage struct {
 	Messages []*BroadcastInboxMessage `json:"messages"`

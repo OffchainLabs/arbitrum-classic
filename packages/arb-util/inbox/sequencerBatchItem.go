@@ -27,10 +27,10 @@ import (
 )
 
 type SequencerBatchItem struct {
-	LastSeqNum        *big.Int
-	Accumulator       common.Hash
-	TotalDelayedCount *big.Int
-	SequencerMessage  []byte
+	LastSeqNum        *big.Int    `json:"lastSequenceNumber"`
+	Accumulator       common.Hash `json:"accumulator"`
+	TotalDelayedCount *big.Int    `json:"totalDelayedCount"`
+	SequencerMessage  []byte      `json:"sequencerMessage"`
 }
 
 func NewSequencerItem(totalDelayedCount *big.Int, msg InboxMessage, prevAcc common.Hash) SequencerBatchItem {

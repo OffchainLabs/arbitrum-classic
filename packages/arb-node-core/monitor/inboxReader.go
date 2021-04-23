@@ -16,8 +16,8 @@ import (
 )
 
 type SequencerFeedItem struct {
-	BatchItem inbox.SequencerBatchItem
-	PrevAcc   common.Hash
+	BatchItem inbox.SequencerBatchItem `json:"batchItem"`
+	PrevAcc   common.Hash              `json:"prevAcc"`
 }
 
 type InboxReader struct {
