@@ -103,7 +103,7 @@ std::vector<unsigned char> serializeCodeSegment(
     std::vector<unsigned char> serialized_code;
     marshal_uint64_t(snapshot.op_count, serialized_code);
     for (uint64_t i = 0; i < snapshot.op_count; ++i) {
-        auto values = serializeCodePoint((*snapshot.segment)[i],
+        auto values = serializeCodePoint(snapshot.segment->loadCodePoint(i),
                                          serialized_code, segment_counts);
         if (i > existing_cp_count) {
             // Save the immediate values, that weren't already saved for this
@@ -141,7 +141,7 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
     }
 
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
-        const auto& cp = (*snapshot.segment)[i];
+        auto cp = snapshot.segment->loadCodePoint(i);
         if (cp.op.immediate) {
             auto result = saveValueImpl(tx, *cp.op.immediate, segment_counts);
             if (!result.status.ok()) {
@@ -168,23 +168,27 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
     }
 
     auto raw_cps = extractRawCodeSegment(results.stored_value);
-    std::vector<CodePoint> cps;
-    cps.reserve(raw_cps.size());
+    std::vector<Operation> ops;
+    std::vector<uint256_t> next_hashes;
+    ops.reserve(raw_cps.size());
     for (const auto& raw_cp : raw_cps) {
         if (!raw_cp.parsed_immediate) {
-            cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
+            ops.emplace_back(raw_cp.opcode);
         } else {
             auto imm = getValueRecord(tx, *raw_cp.parsed_immediate, segment_ids,
                                       value_cache);
             if (std::holds_alternative<rocksdb::Status>(imm)) {
                 throw std::runtime_error("failed to load immediate value");
             }
-            cps.emplace_back(Operation{raw_cp.opcode,
-                                       std::get<CountedData<value>>(imm).data},
-                             raw_cp.next_hash);
+            ops.emplace_back(raw_cp.opcode,
+                             std::get<CountedData<value>>(imm).data);
+        }
+        if (ops.size() > 1 && ops.size() % 10 == 1) {
+            next_hashes.push_back(raw_cp.next_hash);
         }
     }
-    return std::make_shared<CodeSegment>(segment_id, std::move(cps));
+    return std::make_shared<CodeSegment>(segment_id, std::move(ops),
+                                         std::move(next_hashes));
 }
 
 void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
