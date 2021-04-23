@@ -89,8 +89,8 @@ value value_from_json(const nlohmann::json& full_value_json,
             if (internal_offset != std::numeric_limits<uint64_t>::max()) {
                 pc = op_count - internal_offset;
             }
-            values.push_back(
-                value{CodePointStub({code.segmentID(), pc}, code[pc])});
+            values.push_back(value{
+                CodePointStub({code.segmentID(), pc}, code.loadCodePoint(pc))});
         } else if (value_json.get().contains(BUF_LABEL)) {
             values.emplace_back(
                 Buffer{buffer_value_from_json(value_json.get()[BUF_LABEL])});

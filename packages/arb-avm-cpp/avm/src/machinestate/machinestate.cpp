@@ -230,7 +230,7 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
 }
 
 void MachineState::marshalBufferProof(OneStepProof& proof) const {
-    auto op = loadCurrentInstruction().op;
+    auto& op = loadCurrentOperation();
     auto opcode = op.opcode;
     if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
         opcode != OpCode::SEND) {
@@ -392,8 +392,9 @@ OneStepProof MachineState::marshalForProof() const {
                        auxStackProof.count < auxStackPops.size();
 
     proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
-    proof.standard_proof.push_back(stackProof.count +
-                                   current_op.immediate.has_value());
+    proof.standard_proof.push_back(
+        stackProof.count +
+        static_cast<uint8_t>(static_cast<bool>(current_op.immediate)));
     proof.standard_proof.push_back(auxStackProof.count);
 
     proof.standard_proof.insert(proof.standard_proof.cend(),
@@ -424,8 +425,8 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = loadCurrentInstruction();
-    if (instruction.op.opcode == OpCode::INBOX) {
+    auto& op = loadCurrentOperation();
+    if (op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();
         }
@@ -435,18 +436,24 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
     }
 }
 
-const CodePoint& MachineState::loadCurrentInstruction() const {
+CodePoint MachineState::loadCurrentInstruction() const {
     if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return (*loaded_segment->segment)[pc.pc];
+    return loaded_segment->segment->loadCodePoint(pc.pc);
+}
+
+const Operation& MachineState::loadCurrentOperation() const {
+    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+        loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
+    }
+    return loaded_segment->segment->loadOperation(pc.pc);
 }
 
 uint256_t MachineState::nextGasCost() const {
-    auto& instruction = loadCurrentInstruction();
-    auto base_gas =
-        instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
-    if (instruction.op.opcode == OpCode::ECPAIRING) {
+    auto& op = loadCurrentOperation();
+    auto base_gas = instructionGasCosts()[static_cast<size_t>(op.opcode)];
+    if (op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
     }
     return base_gas;
@@ -461,14 +468,14 @@ BlockReason MachineState::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = loadCurrentInstruction();
+    auto& op = loadCurrentOperation();
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
 
     // Always push the immediate to the stack if we're not blocked
-    if (instruction.op.immediate) {
-        auto imm = *instruction.op.immediate;
+    if (op.immediate) {
+        auto imm = *op.immediate;
         stack.push(std::move(imm));
     }
 
@@ -477,16 +484,12 @@ BlockReason MachineState::runOne() {
     uint64_t start_auxstack_size = auxstack.stacksize();
 
     bool is_valid_instruction =
-        instructionValidity()[static_cast<size_t>(instruction.op.opcode)];
+        instructionValidity()[static_cast<size_t>(op.opcode)];
 
     uint64_t stack_arg_count =
-        is_valid_instruction
-            ? InstructionStackPops.at(instruction.op.opcode).size()
-            : 0;
+        is_valid_instruction ? InstructionStackPops.at(op.opcode).size() : 0;
     uint64_t auxstack_arg_count =
-        is_valid_instruction
-            ? InstructionAuxStackPops.at(instruction.op.opcode).size()
-            : 0;
+        is_valid_instruction ? InstructionAuxStackPops.at(op.opcode).size() : 0;
 
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
@@ -526,7 +529,7 @@ BlockReason MachineState::runOne() {
 
         BlockReason blockReason = NotBlocked();
         try {
-            blockReason = runOp(instruction.op.opcode);
+            blockReason = runOp(op.opcode);
         } catch (const stack_too_small&) {
             // Charge an error instruction instead
             arb_gas_remaining += gas_cost;
@@ -540,7 +543,7 @@ BlockReason MachineState::runOne() {
             // actually blocked
             arb_gas_remaining += gas_cost;
             output.arb_gas_used -= gas_cost;
-            if (instruction.op.immediate) {
+            if (op.immediate) {
                 stack.popClear();
             }
             return blockReason;
@@ -856,7 +859,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";
-    auto& current_code_point = val.code->loadCodePoint(val.pc);
+    auto current_code_point = val.code->loadCodePoint(val.pc);
     os << "operation " << current_code_point.op << "\n";
     os << "codePointHash " << intx::to_string(hash(current_code_point), 16)
        << "\n";
@@ -868,7 +871,7 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
        << "\n";
     os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
     os << "err handler " << val.errpc.pc << "\n";
-    auto& err_code_point = val.code->loadCodePoint(val.errpc.pc);
+    auto err_code_point = val.code->loadCodePoint(val.errpc.pc);
     os << "errHandlerHash " << intx::to_string(hash(err_code_point), 16)
        << "\n";
     return os;
