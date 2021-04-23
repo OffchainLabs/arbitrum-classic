@@ -1,13 +1,11 @@
 import * as ethers from 'ethers'
 import { EventFragment } from '@ethersproject/abi'
-import { ArbConversion, L1Bridge, RollupCreator__factory, Inbox__factory  } from 'arb-ts'
+import { L1Bridge, RollupCreator__factory, Inbox__factory } from 'arb-ts'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
 
 import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
-
-const arbConversion = new ArbConversion()
 
 interface RollupCreatedParams {
   rollupAddress: string
