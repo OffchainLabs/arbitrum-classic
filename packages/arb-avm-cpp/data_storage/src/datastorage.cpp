@@ -117,6 +117,13 @@ DataStorage::DataStorage(const std::string& db_path) {
         throw std::runtime_error(status.ToString());
     }
     assert(status.ok());
+
+    // Compact all family columns on startup
+    auto cr_options = rocksdb::CompactRangeOptions();
+    for (size_t i = 0; i < FAMILY_COLUMN_COUNT; i++) {
+        db->CompactRange(cr_options, column_handles[i], nullptr, nullptr);
+    }
+
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 }
 
