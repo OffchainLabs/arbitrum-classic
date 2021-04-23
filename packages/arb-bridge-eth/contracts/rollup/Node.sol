@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 import "../libraries/Cloneable.sol";
-import "../libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract Node is Cloneable, INode {
     using SafeMath for uint256;
@@ -95,7 +95,7 @@ contract Node is Cloneable, INode {
      * @notice Destroy this node
      */
     function destroy() external override onlyRollup {
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 
     /**
