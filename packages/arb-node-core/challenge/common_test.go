@@ -29,7 +29,7 @@ func executeChallenge(
 ) int {
 	ctx := context.Background()
 
-	client, tester, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime)
+	client, tester, seqInbox, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime)
 
 	asserterBackend, err := ethbridge.NewBuilderBackend(asserterWallet)
 	test.FailIfError(t, err)
@@ -44,8 +44,8 @@ func executeChallenge(
 	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, client)
 	test.FailIfError(t, err)
 
-	challenger := NewChallenger(challengerChallengeCon, correctLookup, challengedNode, challengerWallet.Address())
-	asserter := NewChallenger(asserterChallengeCon, falseLookup, challengedNode, asserterWallet.Address())
+	challenger := NewChallenger(challengerChallengeCon, seqInbox, correctLookup, challengedNode, challengerWallet.Address())
+	asserter := NewChallenger(asserterChallengeCon, seqInbox, falseLookup, challengedNode, asserterWallet.Address())
 
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
@@ -172,7 +172,7 @@ func initializeChallengeTest(
 	nd *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
+) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.SequencerInboxWatcher, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
 	ctx := context.Background()
 	clnt, pks := test.SimulatedBackend()
 	deployer := bind.NewKeyedTransactor(pks[0])
@@ -228,5 +228,8 @@ func initializeChallengeTest(
 	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	return client, tester, asserterWallet, challengerWallet, challengeAddress
+	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerBridge, client)
+	test.FailIfError(t, err)
+
+	return client, tester, sequencerInboxWatcher, asserterWallet, challengerWallet, challengeAddress
 }

@@ -228,6 +228,19 @@ Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
     }
 }
 
+ByteSliceResult arbCoreGenInboxProof(CArbCore* arbcore_ptr,
+                                     const void* seq_num_ptr,
+                                     const void* batch_end_count_ptr) {
+    try {
+        auto res = static_cast<const ArbCore*>(arbcore_ptr)
+                       ->genInboxProof(receiveUint256(seq_num_ptr),
+                                       receiveUint256(batch_end_count_ptr));
+        return returnDataResult(res);
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
                        const void* index_ptr,
                        void* ret) {

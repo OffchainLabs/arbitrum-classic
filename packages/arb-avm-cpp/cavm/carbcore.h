@@ -62,6 +62,10 @@ ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
 Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
                                                const void* seq_num_ptr);
 
+ByteSliceResult arbCoreGenInboxProof(CArbCore* arbcore_ptr,
+                                     const void* seq_num_ptr,
+                                     const void* batch_end_count_ptr);
+
 int arbCoreGetInboxAcc(CArbCore* arbcore_ptr, const void* index_ptr, void* ret);
 int arbCoreGetDelayedInboxAcc(CArbCore* arbcore_ptr,
                               const void* index_ptr,

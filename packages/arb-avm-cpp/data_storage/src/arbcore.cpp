@@ -985,6 +985,93 @@ ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
     }
 }
 
+ValueResult<std::vector<unsigned char>> ArbCore::genInboxProof(
+    uint256_t seq_num,
+    uint256_t batch_end_count) const {
+    ReadSnapshotTransaction tx(data_storage);
+
+    std::vector<unsigned char> proof;
+
+    auto message_res = getMessagesImpl(tx, seq_num, 1, std::nullopt);
+    if (!message_res.status.ok()) {
+        return {message_res.status, std::vector<unsigned char>()};
+    }
+    auto message_data = message_res.data[0].message;
+    proof.insert(proof.end(), message_data.begin(), message_data.end());
+
+    uint256_t start = seq_num;
+    bool recording_prev = false;
+    SequencerBatchItem prev_item;
+    if (start > 0) {
+        start -= 1;
+        recording_prev = true;
+    }
+
+    std::vector<unsigned char> start_vec;
+    marshal_uint256_t(start, start_vec);
+    auto start_slice = vecToSlice(start_vec);
+    auto it = tx.sequencerBatchItemGetIterator();
+    it->SeekForPrev(start_slice);
+
+    bool first_item = true;
+    while (it->Valid()) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto value_ptr =
+            reinterpret_cast<const unsigned char*>(it->value().data());
+        auto value_end_ptr = value_ptr + it->value().size();
+        auto item = deserializeSequencerBatchItem(extractUint256(key_ptr),
+                                                  value_ptr, value_end_ptr);
+
+        if (item.last_sequence_number >= batch_end_count) {
+            // We've somehow skipped past the end of the batch,
+            // meaning we disagree on where it ends (probably a reorg)
+            return {rocksdb::Status::NotFound(), std::vector<unsigned char>()};
+        }
+
+        if (recording_prev) {
+            prev_item = item;
+            it->Next();
+            continue;
+        }
+
+        if (first_item) {
+            first_item = false;
+            bool is_delayed = !item.sequencer_message;
+            proof.push_back(static_cast<uint8_t>(is_delayed));
+            marshal_uint256_t(prev_item.accumulator, proof);
+
+            if (is_delayed) {
+                marshal_uint256_t(prev_item.last_sequence_number + 1, proof);
+                marshal_uint256_t(prev_item.total_delayed_count, proof);
+                marshal_uint256_t(item.total_delayed_count, proof);
+            }
+        } else {
+            if (item.sequencer_message) {
+                marshal_uint256_t(
+                    extractInboxMessage(*item.sequencer_message).hash(), proof);
+            } else {
+                marshal_uint256_t(prev_item.total_delayed_count, proof);
+                marshal_uint256_t(item.total_delayed_count, proof);
+            }
+        }
+
+        if (item.last_sequence_number + 1 == batch_end_count) {
+            proof.push_back(2);
+            return {rocksdb::Status::OK(), proof};
+        }
+
+        prev_item = item;
+        it->Next();
+    }
+
+    if (!it->status().ok()) {
+        return {it->status(), std::vector<unsigned char>()};
+    }
+
+    // We should've found the last item by this point
+    return {rocksdb::Status::NotFound(), std::vector<unsigned char>()};
+}
+
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     uint256_t index,
     uint256_t count) const {

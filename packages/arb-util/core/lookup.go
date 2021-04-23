@@ -61,6 +61,7 @@ type ArbCoreLookup interface {
 	CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error)
 	GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error)
 	GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error)
+	GenInboxProof(seqNum *big.Int, batchEndCount *big.Int) ([]byte, error)
 
 	MachineMessagesRead() *big.Int
 

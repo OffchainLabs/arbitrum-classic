@@ -415,16 +415,6 @@ OneStepProof MachineState::marshalForProof() const {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
     }
-    // Inbox or inbox peek
-    if (current_op.opcode == OpCode::INBOX) {
-        if (context.inboxEmpty()) {
-            throw std::runtime_error("Can't generate proof with empty inbox");
-        }
-        auto message_data = context.peekInbox().message.serializeForProof();
-        proof.standard_proof.insert(proof.standard_proof.end(),
-                                    message_data.begin(), message_data.end());
-        throw std::runtime_error("TODO: sequencer inbox proof");
-    }
     return proof;
 }
 

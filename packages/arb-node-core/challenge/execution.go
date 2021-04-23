@@ -122,6 +122,7 @@ func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion
 func (e *ExecutionImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
+	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	lookup core.ArbCoreLookup,
 	assertion *core.Assertion,
 	prevBisection *core.Bisection,
@@ -139,6 +140,19 @@ func (e *ExecutionImpl) OneStepProof(
 	}
 
 	opcode := proofData[0]
+	if opcode == 0x72 {
+		// INBOX proving
+		seqNum := new(big.Int).Add(previousCut.TotalMessagesRead, big.NewInt(1))
+		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
+		if err != nil {
+			return err
+		}
+		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetAfterCount())
+		if err != nil {
+			return err
+		}
+		proofData = append(proofData, inboxProof...)
+	}
 
 	return challenge.OneStepProveExecution(
 		ctx,

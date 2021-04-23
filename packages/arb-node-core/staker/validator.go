@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -333,7 +334,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	var seqBatchProof []byte
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := v.lookupBatchContaining(ctx, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		batch, err := challenge.LookupBatchContaining(ctx, v.lookup, v.sequencerInbox, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
 		if err != nil {
 			return nil, false, err
 		}
@@ -362,39 +363,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	}
 	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("lastNode", int(lastNum.Int64())).Int("parentNode", int(stakerInfo.LatestStakedNode.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
-}
-
-func (v *Validator) lookupBatchContaining(ctx context.Context, seqNum *big.Int) (ethbridge.SequencerBatchRef, error) {
-	fromBlock, err := v.lookup.GetSequencerBlockNumberAt(seqNum)
-	if err != nil {
-		return nil, err
-	}
-	maxDelay, err := v.sequencerInbox.GetMaxDelayBlocks(ctx)
-	if err != nil {
-		return nil, err
-	}
-	toBlock := new(big.Int).Add(fromBlock, maxDelay)
-	latestBlock, err := v.client.BlockInfoByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	latestBlockNumber := (*big.Int)(latestBlock.Number)
-	if toBlock.Cmp(latestBlockNumber) > 0 {
-		toBlock = latestBlockNumber
-	}
-
-	batchRefs, err := v.sequencerInbox.LookupBatchesInRange(ctx, fromBlock, toBlock)
-	if err != nil {
-		return nil, err
-	}
-	var found ethbridge.SequencerBatchRef
-	for _, batchRef := range batchRefs {
-		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
-			found = batchRef
-			break
-		}
-	}
-	return found, nil
 }
 
 func (v *Validator) generateBatchEndProof(count *big.Int) ([]byte, error) {
