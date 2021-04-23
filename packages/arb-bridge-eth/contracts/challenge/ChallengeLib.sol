@@ -18,7 +18,12 @@
 
 pragma solidity ^0.6.11;
 
+import "../libraries/MerkleLib.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 library ChallengeLib {
+    using SafeMath for uint256;
+
     function firstSegmentSize(uint256 totalCount, uint256 bisectionCount)
         internal
         pure
@@ -72,5 +77,43 @@ library ChallengeLib {
                     _logCount
                 )
             );
+    }
+
+    function updatedBisectionRoot(
+        bytes32[] memory _chainHashes,
+        uint256 _challengedSegmentStart,
+        uint256 _challengedSegmentLength
+    ) internal pure returns (bytes32) {
+        uint256 bisectionCount = _chainHashes.length - 1;
+        bytes32[] memory hashes = new bytes32[](bisectionCount);
+        uint256 chunkSize = ChallengeLib.firstSegmentSize(_challengedSegmentLength, bisectionCount);
+        uint256 segmentStart = _challengedSegmentStart;
+        hashes[0] = ChallengeLib.bisectionChunkHash(
+            segmentStart,
+            chunkSize,
+            _chainHashes[0],
+            _chainHashes[1]
+        );
+        segmentStart = segmentStart.add(chunkSize);
+        chunkSize = ChallengeLib.otherSegmentSize(_challengedSegmentLength, bisectionCount);
+        for (uint256 i = 1; i < bisectionCount; i++) {
+            hashes[i] = ChallengeLib.bisectionChunkHash(
+                segmentStart,
+                chunkSize,
+                _chainHashes[i],
+                _chainHashes[i + 1]
+            );
+            segmentStart = segmentStart.add(chunkSize);
+        }
+        return MerkleLib.generateRoot(hashes);
+    }
+
+    function verifySegmentProof(
+        bytes32 challengeState,
+        bytes32 item,
+        bytes32[] calldata _merkleNodes,
+        uint256 _merkleRoute
+    ) internal pure returns (bool) {
+        return challengeState == MerkleLib.calculateRoot(_merkleNodes, _merkleRoute, item);
     }
 }
