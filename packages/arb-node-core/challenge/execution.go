@@ -91,6 +91,7 @@ func (e *ExecutionImpl) Bisect(
 	inconsistentSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) error {
+	logger.Info().Str("start", inconsistentSegment.Start.String()).Str("end", inconsistentSegment.GetEnd().String()).Msg("Bisecting challenge")
 	return challenge.BisectExecution(
 		ctx,
 		prevBisection,
@@ -140,6 +141,8 @@ func (e *ExecutionImpl) OneStepProof(
 	}
 
 	opcode := proofData[0]
+	logger.Info().Int("opcode", int(opcode)).Str("gas", previousCut.TotalGasConsumed.String()).Msg("Issuing one step proof")
+
 	if opcode == 0x72 {
 		// INBOX proving
 		seqNum := new(big.Int).Add(previousCut.TotalMessagesRead, big.NewInt(1))
@@ -175,6 +178,7 @@ func (e *ExecutionImpl) ProveContinuedExecution(
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 ) error {
+	logger.Info().Str("start", challengedSegment.Start.String()).Str("end", challengedSegment.GetEnd().String()).Msg("Proving continued execution")
 	previousCut, _, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
 	if err != nil {
 		return err

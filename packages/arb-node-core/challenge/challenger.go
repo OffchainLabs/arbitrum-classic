@@ -4,11 +4,15 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "challenge").Logger()
 
 type Challenger struct {
 	challenge      *ethbridge.Challenge
@@ -68,6 +72,7 @@ func handleChallenge(
 	challengeImpl ExecutionImpl,
 	prevBisection *core.Bisection,
 ) error {
+	logger.Debug().Str("start", prevBisection.ChallengedSegment.Start.String()).Str("end", prevBisection.ChallengedSegment.GetEnd().String()).Msg("Examining opponent's bisection")
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
 	divergence, err := challengeImpl.FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
