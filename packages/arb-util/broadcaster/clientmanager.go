@@ -14,7 +14,8 @@ import (
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 // ClientManager manages client connections
@@ -97,23 +98,28 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Unlock()
 }
 
-// ** Need to add a Mutex in here
-// SyncSequence clears out everything prior
-func (cm *ClientManager) syncSequence(fromSequenceNumber *big.Int) {
+// SyncSequence clears out everything prior to finding the matching accumulator
+func (cm *ClientManager) syncMessages(accumulator common.Hash) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
 	broadcastMessages := make([]*BroadcastInboxMessage, 0)
+	accumulatorFound := false
+
 	for i := range cm.broadcastMessages {
-		if cm.broadcastMessages[i].SeqNum.CmpAbs(fromSequenceNumber) > 0 {
+		accum := cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator
+		if accumulatorFound {
 			broadcastMessages = append(broadcastMessages, cm.broadcastMessages[i])
+		} else if accum.Equals(accumulator) {
+			accumulatorFound = true
 		}
 	}
+
 	cm.broadcastMessages = broadcastMessages
 }
 
 // Broadcast sends message to all clients.
-func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []byte, signature *big.Int) error {
+func (cm *ClientManager) Broadcast(prevAcc common.Hash, feedItem monitor.SequencerFeedItem, signature *big.Int) error {
 	var buf bytes.Buffer
 
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
@@ -121,11 +127,10 @@ func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []by
 
 	var broadcastMessages []*BroadcastInboxMessage
 
-	ibMsg := BroadcastInboxMessage{}
-	ibMsg.BeforeAccumulator = beforeAccumulator
-	ibMsg.InboxMessage = inboxMessage
-	ibMsg.Signature = signature
-	ibMsg.SeqNum = inbox.GetSequenceNumber(inboxMessage)
+	ibMsg := BroadcastInboxMessage{
+		FeedItem:  feedItem,
+		Signature: signature,
+	}
 
 	broadcastMessages = append(broadcastMessages, &ibMsg)
 
@@ -133,7 +138,27 @@ func (cm *ClientManager) Broadcast(beforeAccumulator *big.Int, inboxMessage []by
 	{
 		cm.mu.Lock()
 		defer cm.mu.Unlock()
-		cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+
+		if len(cm.broadcastMessages) == 0 {
+			cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == prevAcc {
+			cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+		} else {
+			// We need to do a re-org
+			i := len(cm.broadcastMessages) - 1
+			for ; i >= 0; i-- {
+				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == prevAcc {
+					broadcastMessages := cm.broadcastMessages[:i+1]
+					cm.broadcastMessages = append(broadcastMessages, &ibMsg)
+					break
+				}
+			}
+
+			if i == -1 { // didn't even find the previous accumulator... start from here.
+				cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+			}
+		}
+
 	}
 
 	bm := BroadcastMessage{}

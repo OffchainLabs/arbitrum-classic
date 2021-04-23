@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 // This is used to reverse the slice for the sequence number field
@@ -26,7 +28,7 @@ func reverseSlice(data interface{}) {
 	}
 }
 
-func setSequenceNumber(data []byte, sequenceNumber *big.Int) []byte {
+func setSequenceNumberInData(data []byte, sequenceNumber *big.Int) []byte {
 	seqNumOffset := 85
 	seqNumEnd := seqNumOffset + 32
 	prefixData := data[:seqNumOffset]
@@ -40,14 +42,29 @@ func setSequenceNumber(data []byte, sequenceNumber *big.Int) []byte {
 	return completeDataWithSequenceNumberSet
 }
 
-func SequencedMessages() func() (*big.Int, []byte, *big.Int) {
+// returns a function that when called returns the next random message in the sequence
+func SequencedMessages() func() (common.Hash, monitor.SequencerFeedItem, *big.Int) {
 	sequenceNumber := big.NewInt(41)
-	return func() (*big.Int, []byte, *big.Int) {
+	accumulator := common.RandHash()
+
+	return func() (common.Hash, monitor.SequencerFeedItem, *big.Int) {
+		prevAccumulator := accumulator
 		sequenceNumber = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
-		inboxMessage := setSequenceNumber(common.RandBytes(200), sequenceNumber)
-		beforeAccumulator := common.RandBigInt()
+		batchItem := inbox.SequencerBatchItem{}
+		batchItem.LastSeqNum = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
+		batchItem.Accumulator = common.RandHash()
+		accumulator = batchItem.Accumulator
+		batchItem.TotalDelayedCount = big.NewInt(0)
+		batchItem.SequencerMessage = setSequenceNumberInData(common.RandBytes(200), sequenceNumber)
+
 		signature := common.RandBigInt()
-		return beforeAccumulator, inboxMessage, signature
+
+		feedItem := monitor.SequencerFeedItem{
+			BatchItem: batchItem,
+			PrevAcc:   prevAccumulator,
+		}
+
+		return prevAccumulator, feedItem, signature
 	}
 }
 

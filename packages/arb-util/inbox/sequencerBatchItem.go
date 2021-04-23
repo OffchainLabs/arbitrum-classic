@@ -26,10 +26,10 @@ import (
 )
 
 type SequencerBatchItem struct {
-	LastSeqNum        *big.Int
-	Accumulator       common.Hash
-	TotalDelayedCount *big.Int
-	SequencerMessage  []byte
+	LastSeqNum        *big.Int    `json:"lastSequenceNumber"`
+	Accumulator       common.Hash `json:"accumulator"`
+	TotalDelayedCount *big.Int    `json:"totalDelayedCount"`
+	SequencerMessage  []byte      `json:"sequencerMessage"`
 }
 
 func (i *SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) error {
