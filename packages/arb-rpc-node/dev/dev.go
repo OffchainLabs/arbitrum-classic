@@ -72,15 +72,16 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, params protoc
 
 	l1 := NewL1Emulator()
 	backendCore := NewBackendCore(monitor.Core, signer.ChainID())
-	if _, err := backendCore.addInboxMessage(initMsg, rollupAddress, big.NewInt(0), l1.GenerateBlock()); err != nil {
-		monitor.Close()
-		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error adding init message to inbox")
-	}
 
 	db, errChan, err := txdb.New(ctx, monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
 	if err != nil {
 		monitor.Close()
 		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening txdb")
+	}
+
+	if _, err := backendCore.addInboxMessage(initMsg, rollupAddress, big.NewInt(0), l1.GenerateBlock()); err != nil {
+		monitor.Close()
+		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error adding init message to inbox")
 	}
 
 	cancel := func() {
