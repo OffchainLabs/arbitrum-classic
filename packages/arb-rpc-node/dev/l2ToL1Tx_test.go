@@ -19,10 +19,8 @@ package dev
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
 	"math/big"
 	"math/rand"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -36,23 +34,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 func TestL2ToL1Tx(t *testing.T) {
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error generating temporary directory")
-	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}()
-
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(10),
 		StakeToken:                common.Address{},
@@ -61,11 +48,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	backend, db, rollupAddress, cancelDevNode, err := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
-	test.FailIfError(t, err)
+	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
 	defer cancelDevNode()
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	if err != nil {
