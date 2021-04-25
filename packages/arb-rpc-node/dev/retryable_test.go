@@ -57,7 +57,6 @@ func setupTest(t *testing.T) (
 	}
 
 	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
-	defer cancelDevNode()
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
