@@ -51,6 +51,8 @@ var logger zerolog.Logger
 
 var pprofMux *http.ServeMux
 
+const largeChannelBuffer = 200
+
 func init() {
 	pprofMux = http.DefaultServeMux
 	http.DefaultServeMux = http.NewServeMux()
@@ -74,18 +76,6 @@ func main() {
 }
 
 func startup() error {
-	ctx := context.Background()
-
-	const largeChannelBuffer = 200
-	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
-
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
-
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	rpcVars := utils2.AddRPCFlags(fs)
@@ -147,17 +137,6 @@ func startup() error {
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
-
-	if *forwardTxURL != "" {
-		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
-	}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
-	nodehealth.Init(healthChan)
-
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
 		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
@@ -176,7 +155,7 @@ func startup() error {
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
 
 		if err := ethbridge.WaitForBalance(
-			ctx,
+			context.Background(),
 			ethclint,
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
@@ -204,6 +183,27 @@ func startup() error {
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
+	defer db.Close()
+
+	ctx := context.Background()
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
+
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
+
+	if *forwardTxURL != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
+	}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
+	nodehealth.Init(healthChan)
 
 	var inboxReader *staker.InboxReader
 	for {
