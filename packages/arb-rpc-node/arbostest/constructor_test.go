@@ -38,7 +38,7 @@ import (
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 
 func TestContructor(t *testing.T) {
-	client, pks := test.SimulatedBackend()
+	client, pks := test.SimulatedBackend(t)
 
 	tx := types.NewContractCreation(0, big.NewInt(0), 1000000, big.NewInt(0), constructorData)
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
@@ -61,8 +61,8 @@ func TestContructor(t *testing.T) {
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
 
-	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
-	logs, _, snap, _ := runAssertion(t, inboxMessages, 1, 0)
+	messages := []message.Message{l2Message}
+	logs, _, snap, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	res := results[0]
@@ -121,7 +121,7 @@ func TestContructorExistingBalance(t *testing.T) {
 		message.NewSafeL2Message(tx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[2], connAddress1)

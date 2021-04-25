@@ -18,13 +18,15 @@ package dev
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -45,18 +47,14 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
+func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*Backend, *txdb.TxDB, common.Address, func(), error) {
+	initMsg, err := message.NewInitMessage(params, owner, config)
+	if err != nil {
+		return nil, nil, [20]byte{}, nil, err
+	}
+
 	rollupAddress := common.RandAddress()
-
-	monitor, err := staker.NewMonitor(dir, arbosPath)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
-	}
-
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 
 	aggregator := common.RandAddress()
 	for i := range config {
@@ -67,19 +65,35 @@ func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner
 		}
 	}
 
-	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
+	monitor, err := staker.NewMonitor(dir, arbosPath)
+	if err != nil {
+		return nil, nil, [20]byte{}, nil, errors.Wrap(err, "error opening monitor")
+	}
+
+	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
+	if err != nil {
+		monitor.Close()
+		return nil, nil, [20]byte{}, nil, errors.Wrap(err, "error opening txdb")
+	}
+
+	cancel := func() {
+		db.Close()
+		monitor.Close()
+	}
+
 	l1 := NewL1Emulator()
 	backend, err := NewBackend(monitor.Core, db, l1, signer, aggregator, big.NewInt(10000))
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		cancel()
+		return nil, nil, [20]byte{}, nil, errors.Wrap(err, "error starting backend")
 	}
 
-	initMsg := message.NewInitMessage(params, owner, config)
 	if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
-		logger.Fatal().Err(err).Send()
+		cancel()
+		return nil, nil, [20]byte{}, nil, errors.Wrap(err, "error adding init message to inbox")
 	}
 
-	return monitor, backend, db, rollupAddress
+	return backend, db, rollupAddress, cancel, nil
 }
 
 type EVM struct {
@@ -159,11 +173,11 @@ func (b *Backend) ExportData() ([]byte, error) {
 	b.Lock()
 	messageCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, err
 	}
 	messages, err := b.arbcore.GetMessages(big.NewInt(0), messageCount)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, err
 	}
 	b.Unlock()
 	return inbox.TestVectorJSON(messages, nil, nil)

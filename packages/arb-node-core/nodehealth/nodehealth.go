@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/heptiolabs/healthcheck"
 	"github.com/prometheus/client_golang/prometheus"
@@ -451,8 +452,7 @@ func openEthereumTCPDialCheck(config *configStruct, asyncData *asyncDataStruct) 
 		}
 
 		//Close the connection before returning
-		conn.Close()
-		return nil
+		return conn.Close()
 	}, config.pollingRate)
 	return check
 }
@@ -463,7 +463,7 @@ func openEthereumCall(config *configStruct, jsonRequest []byte) ([]byte, error) 
 	req, err := http.NewRequest("POST", config.openethereumAPI,
 		bytes.NewBuffer(jsonRequest))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	//Set request headers to identify the healthcheck
@@ -477,11 +477,15 @@ func openEthereumCall(config *configStruct, jsonRequest []byte) ([]byte, error) 
 		return nil, err
 	}
 
-	//Close the connection after the response
-	defer resp.Body.Close()
-
 	//Decode reponse into a string for ease of use
 	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	//Close the connection after the response
+	if err := resp.Body.Close(); err != nil {
+		return nil, err
+	}
 	return body, err
 }
 
@@ -499,7 +503,7 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 
 		if err != nil {
 			aSyncData.ethSyncResp.respBody = "failed"
-			return (err)
+			return err
 		}
 
 		//Convert the response from a byte slice to a string
@@ -517,7 +521,7 @@ func ethSyncCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck.
 		//If OpenEthereum is currently syncing, parse the response
 		err = json.Unmarshal(respBody, &aSyncData.ethSyncResp)
 		if err != nil {
-			return (err)
+			return err
 		}
 
 		return err
@@ -539,7 +543,7 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 
 		if err != nil {
 			aSyncData.ethSyncResp.respBody = "failed"
-			return (err)
+			return err
 		}
 
 		//Convert the response from a byte slice to a string
@@ -554,7 +558,7 @@ func netPeersCheck(config *configStruct, aSyncData *asyncDataStruct) healthcheck
 		//Parse the response into a struct
 		err = json.Unmarshal(respBody, &aSyncData.parityNetPeersResp)
 		if err != nil {
-			return (err)
+			return err
 		}
 
 		return err
@@ -743,7 +747,7 @@ func checkInboxReader(config *configStruct, state *healthState) healthcheck.Chec
 
 		//Check if the database is still loading
 		if state.inboxReader.loadingDatabase == true {
-			return errors.New("Loading database snapshot")
+			return errors.New("loading database snapshot")
 		}
 
 		//Calculate out the block difference

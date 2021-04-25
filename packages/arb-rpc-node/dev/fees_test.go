@@ -77,9 +77,9 @@ func TestFees(t *testing.T) {
 	}
 
 	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(aggAuth.From)}
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.NewAddressFromEth(auth.From), []message.ChainConfigOption{feeConfigInit, aggInit})
-	defer monitor.Close()
-	defer db.Close()
+	backend, db, rollupAddress, cancelDevNode, err := NewDevNode(tmpDir, *arbosfile, config, common.NewAddressFromEth(auth.From), []message.ChainConfigOption{feeConfigInit, aggInit})
+	test.FailIfError(t, err)
+	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{

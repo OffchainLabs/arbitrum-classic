@@ -28,25 +28,21 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "test").Logger()
-
-func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]ethcore.GenesisAccount)
 	pks := make([]*ecdsa.PrivateKey, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
-		if err != nil {
-			logger.Fatal().Err(err).Send()
-		}
+		FailIfError(t, err)
 		pks = append(pks, privateKey)
 
 		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = ethcore.GenesisAccount{
@@ -71,13 +67,16 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, 
 	FailIfError(t, err)
 	storage, err := cmachine.NewArbStorage(tmpDir)
 	if err != nil {
-		os.RemoveAll(tmpDir)
+		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
+			t.Error(err)
+			t.Fatal(removeErr)
+		}
+		t.Fatal(err)
 	}
-	FailIfError(t, err)
 	shutdown := func() {
 		storage.CloseArbStorage()
 		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 	}
 	returning := false
@@ -86,8 +85,10 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, 
 			shutdown()
 		}
 	})()
+	arbosPath, err := arbos.Path()
+	FailIfError(t, err)
 
-	err = storage.Initialize(arbos.Path())
+	err = storage.Initialize(arbosPath)
 	FailIfError(t, err)
 
 	arbCore := storage.GetArbCore()

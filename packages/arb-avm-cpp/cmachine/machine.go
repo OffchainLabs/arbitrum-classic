@@ -139,13 +139,16 @@ func (m *Machine) String() string {
 	return C.GoString(cStr)
 }
 
-func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	sendsRaw := receiveByteSlice(assertion.sends)
 	sendAcc := receive32Bytes(assertion.sendAcc)
 	logsRaw := receiveByteSlice(assertion.logs)
 	logAcc := receive32Bytes(assertion.logAcc)
-	debugPrints := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
-	return protocol.NewExecutionAssertion(
+	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	goAssertion, err := protocol.NewExecutionAssertion(
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
@@ -154,7 +157,8 @@ func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssert
 		logsRaw,
 		uint64(assertion.logCount),
 		logAcc,
-	), debugPrints, uint64(assertion.numSteps)
+	)
+	return goAssertion, debugPrints, uint64(assertion.numSteps), err
 }
 
 func (m *Machine) ExecuteAssertion(
@@ -162,7 +166,7 @@ func (m *Machine) ExecuteAssertion(
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 	finalMessageOfBlock bool,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	return m.ExecuteAssertionAdvanced(
 		maxGas,
 		goOverGas,
@@ -195,7 +199,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	stopOnSideload bool,
 	beforeSendAcc common.Hash,
 	beforeLogAcc common.Hash,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	conf := C.machineExecutionConfigCreate()
 
 	goOverGasInt := C.int(0)

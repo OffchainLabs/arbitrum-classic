@@ -18,8 +18,11 @@ package snapshot
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -28,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 )
 
 type Snapshot struct {
@@ -207,7 +209,10 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
-	assertion, _, steps := mach.ExecuteAssertionAdvanced(100000000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	assertion, _, steps, err := mach.ExecuteAssertionAdvanced(100000000000, false, nil, false, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	if err != nil {
+		return nil, err
+	}
 
 	// If the machine wasn't able to run and it reports that it is currently
 	// blocked, return the block reason to give the client more information

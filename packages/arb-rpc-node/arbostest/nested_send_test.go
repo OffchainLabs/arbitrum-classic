@@ -17,14 +17,16 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestFailedNestedSend(t *testing.T) {
@@ -56,7 +58,7 @@ func TestFailedNestedSend(t *testing.T) {
 		message.NewSafeL2Message(sendTx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	checkConstructorResult(t, results[1], connAddress1)
 	revertedTxCheck(t, results[2])
@@ -88,7 +90,7 @@ func TestRevertedNestedCall(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 		message.NewSafeL2Message(tx3),
 	}
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	checkConstructorResult(t, results[0], connAddress1)
 	succeededTxCheck(t, results[1])

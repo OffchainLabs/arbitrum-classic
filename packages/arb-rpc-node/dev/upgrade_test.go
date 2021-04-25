@@ -47,7 +47,10 @@ type upgrade struct {
 func TestUpgrade(t *testing.T) {
 	skipBelowVersion(t, 4)
 
-	upgradedMach, err := cmachine.New(filepath.Join(arbos.Dir(), "arbos-upgrade.mexe"))
+	arbosDir, err := arbos.Dir()
+	test.FailIfError(t, err)
+
+	upgradedMach, err := cmachine.New(filepath.Join(arbosDir, "arbos-upgrade.mexe"))
 	test.FailIfError(t, err)
 	targetHash := upgradedMach.CodePointHash()
 
@@ -70,10 +73,10 @@ func TestUpgrade(t *testing.T) {
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	arbosFile := filepath.Join(arbos.Dir(), "arbos_before.mexe")
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
-	defer monitor.Close()
-	defer db.Close()
+	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
+	backend, db, rollupAddress, cancelDevNode, err := NewDevNode(tmpDir, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
+	test.FailIfError(t, err)
+	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -116,7 +119,7 @@ func TestUpgrade(t *testing.T) {
 	}
 	auth.Value = big.NewInt(0)
 
-	updateBytes, err := ioutil.ReadFile(filepath.Join(arbos.Dir(), "upgrade.json"))
+	updateBytes, err := ioutil.ReadFile(filepath.Join(arbosDir, "upgrade.json"))
 	test.FailIfError(t, err)
 
 	upgrade := upgrade{}

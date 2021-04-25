@@ -19,10 +19,17 @@ package dev
 import (
 	"bytes"
 	"context"
+	"io/ioutil"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -33,11 +40,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"io/ioutil"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
 )
 
 func TestL2ToL1Tx(t *testing.T) {
@@ -59,9 +61,9 @@ func TestL2ToL1Tx(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
-	defer monitor.Close()
-	defer db.Close()
+	backend, db, rollupAddress, cancelDevNode, err := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
+	test.FailIfError(t, err)
+	defer cancelDevNode()
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
@@ -75,7 +77,7 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	auth := bind.NewKeyedTransactor(privkey)
 
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	ethAuth := bind.NewKeyedTransactor(pks[0])
 
 	deposit := message.EthDepositTx{

@@ -51,7 +51,7 @@ func TestRevert(t *testing.T) {
 		message.NewSafeL2Message(revertsTx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 2, 0)
+	logs, _, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
