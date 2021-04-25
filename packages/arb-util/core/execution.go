@@ -112,7 +112,11 @@ func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState,
 	if err != nil {
 		return nil, nil, err
 	}
-	return NewExecutionState(cursor), cursor.TotalSteps(), nil
+	execState, err := NewExecutionState(cursor)
+	if err != nil {
+		return nil, nil, err
+	}
+	return execState, cursor.TotalSteps(), nil
 }
 
 func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error) {

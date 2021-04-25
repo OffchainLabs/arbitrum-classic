@@ -18,9 +18,9 @@ package main
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -31,6 +31,8 @@ import (
 	"path"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -71,6 +73,12 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
 
+	if err := startup(); err != nil {
+		logger.Error().Err(err).Msg("Error running validator")
+	}
+}
+
+func startup() error {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	c := make(chan os.Signal, 1)
@@ -92,7 +100,8 @@ func main() {
 
 	if len(os.Args) < 2 {
 		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] [strategy] " + cmdhelp.WalletArgsString
-		logger.Fatal().Msg(usageStr)
+		fmt.Println(usageStr)
+		return errors.New("invalid arguments")
 	}
 	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
@@ -106,10 +115,10 @@ func main() {
 	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
 
 	if err := flagSet.Parse(os.Args[6:]); err != nil {
-		logger.Fatal().Err(err).Msg("failed parsing command line arguments")
+		return errors.Wrap(err, "failed parsing command line arguments")
 	}
 	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
-		logger.Fatal().Err(err).Send()
+		return err
 	}
 
 	if *enablePProf {
@@ -129,7 +138,7 @@ func main() {
 
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating Ethereum RPC client")
+		return errors.Wrap(err, "error creating Ethereum RPC client")
 	}
 	var l1ChainId *big.Int
 	for {
@@ -147,7 +156,7 @@ func main() {
 	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
 	auth, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error loading wallet keystore")
+		return errors.Wrap(err, "error loading wallet keystore")
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 
@@ -160,7 +169,7 @@ func main() {
 	} else if strategyString == "Defensive" {
 		strategy = staker.DefensiveStrategy
 	} else {
-		logger.Fatal().Msg("Unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
+		return errors.New("unsupported strategy specified. Currently supported: MakeNodes, StakeLatest")
 	}
 
 	chainState := ChainState{}
@@ -168,16 +177,16 @@ func main() {
 	chainStateFile, err := os.Open(chainStatePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			logger.Fatal().Err(err).Msg("Failed to open chainState.json")
+			return errors.Wrap(err, "failed to open chainState.json")
 		}
 	} else {
 		chainStateData, err := ioutil.ReadAll(chainStateFile)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to read chain state")
+			return errors.Wrap(err, "failed to read chain state")
 		}
 		err = json.Unmarshal(chainStateData, &chainState)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to unmarshal chain state")
+			return errors.Wrap(err, "failed to unmarshal chain state")
 		}
 	}
 
@@ -197,10 +206,10 @@ func main() {
 
 		newChainStateData, err := json.Marshal(chainState)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to marshal chain state")
+			return errors.Wrap(err, "failed to marshal chain state")
 		}
 		if err := ioutil.WriteFile(chainStatePath, newChainStateData, 0644); err != nil {
-			logger.Fatal().Err(err).Msg("Failed to write chain state config")
+			return errors.Wrap(err, "failed to write chain state config")
 		}
 	} else {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
@@ -208,7 +217,7 @@ func main() {
 
 	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"))
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating ArbStorage")
+		return errors.Wrap(err, "error creating ArbStorage")
 	}
 	defer func() {
 		storage.CloseArbStorage()
@@ -217,51 +226,52 @@ func main() {
 	arbosPath := path.Join(folder, "arbos.mexe")
 	err = storage.Initialize(arbosPath)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error initializing ArbStorage")
+		return errors.Wrap(err, "error initializing ArbStorage")
 	}
 
 	arbCore := storage.GetArbCore()
 	started := arbCore.StartThread()
 	if !started {
-		logger.Fatal().Msg("Error starting ArbCore thread")
+		return errors.New("error starting ArbCore thread")
 	}
 
 	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating connecting to chain")
+		return errors.Wrap(err, "error creating connecting to chain")
 	}
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating validator wallet")
+		return errors.Wrap(err, "error creating validator wallet")
 	}
 
 	stakerManager, bridge, err := staker.NewStaker(ctx, arbCore, client, val, common.NewAddressFromEth(validatorUtilsAddr), strategy)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error setting up staker")
+		return errors.Wrap(err, "error setting up staker")
 	}
 
 	chainMachineHash, err := stakerManager.GetInitialMachineHash(ctx)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error checking initial chain state")
+		return errors.Wrap(err, "error checking initial chain state")
 	}
 	initialExecutionCursor, err := arbCore.GetExecutionCursor(big.NewInt(0))
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error loading initial ArbCore machine")
+		return errors.Wrap(err, "error loading initial ArbCore machine")
 	}
 	initialMachineHash, err := initialExecutionCursor.MachineHash()
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error getting initial machine hash")
+		return errors.Wrap(err, "error getting initial machine hash")
 	}
 	if initialMachineHash != chainMachineHash {
-		logger.Fatal().Str("chain", hex.EncodeToString(chainMachineHash[:])).Str("arbCore", hex.EncodeToString(initialMachineHash[:])).Msg("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash")
+		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
 	reader, err := staker.NewInboxReader(ctx, bridge, arbCore, healthChan)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to create inbox reader")
+		return errors.Wrap(err, "failed to create inbox reader")
 	}
 	reader.Start(ctx)
 
 	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
 	<-stakerManager.RunInBackground(ctx)
+	return nil
 }

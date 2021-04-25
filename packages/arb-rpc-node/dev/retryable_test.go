@@ -59,11 +59,10 @@ func setupTest(t *testing.T, tmpDir string) (
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
-	closeFunc := func() {
-		db.Close()
-		monitor.Close()
-	}
+	backend, db, rollupAddress, cancelDevNode, err := NewDevNode(tmpDir, *arbosfile, config, common.RandAddress(), nil)
+	test.FailIfError(t, err)
+	defer cancelDevNode()
+
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	otherAuth := bind.NewKeyedTransactor(privkey)
@@ -88,7 +87,7 @@ func setupTest(t *testing.T, tmpDir string) (
 	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
-	return sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, closeFunc
+	return sender, beneficiaryAuth, otherAuth, rollupAddress, db, backend, cancelDevNode
 }
 
 func setupTicket(t *testing.T, backend *Backend, sender, destination common.Address, data []byte, beneficiary common.Address) (message.RetryableTx, common.Hash) {

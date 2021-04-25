@@ -17,13 +17,15 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -142,7 +144,7 @@ func TestDepositEthTx(t *testing.T) {
 		tx4,
 		message.NewSafeL2Message(getBalance5),
 	}
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 10, 0)
+	logs, _, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)

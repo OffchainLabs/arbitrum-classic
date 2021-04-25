@@ -19,12 +19,15 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	golog "log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
@@ -65,6 +68,12 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
+	if err := startup(); err != nil {
+		logger.Error().Err(err).Msg("Error running node")
+	}
+}
+
+func startup() error {
 	ctx := context.Background()
 
 	const largeChannelBuffer = 200
@@ -104,19 +113,16 @@ func main() {
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error parsing arguments")
+		return errors.Wrap(err, "error parsing arguments")
 	}
 
 	if fs.NArg() != 3 {
-		logger.Fatal().Msgf(
-			"usage: arb-node [--maxBatchTime=NumSeconds] %s %s",
-			cmdhelp.WalletArgsString,
-			utils.RollupArgsString,
-		)
+		fmt.Printf("usage: arb-node [--maxBatchTime=NumSeconds] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		return errors.New("invalid arguments")
 	}
 
 	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
-		logger.Fatal().Err(err).Send()
+		return err
 	}
 
 	if *enablePProf {
@@ -130,12 +136,12 @@ func main() {
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error running NewRPcEthClient")
+		return errors.Wrap(err, "error running NewRPcEthClient")
 	}
 
 	l1ChainId, err := ethclint.ChainID(context.Background())
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error getting chain ID")
+		return errors.Wrap(err, "error getting chain ID")
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
@@ -159,11 +165,11 @@ func main() {
 	} else {
 		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Error running GetKeystore")
+			return errors.Wrap(err, "error running GetKeystore")
 		}
 
 		if *inboxAddressStr == "" {
-			logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder mode")
+			return errors.New("must submit inbox address via --inbox if not running in forwarder mode")
 		}
 		inboxAddress := common.HexToAddress(*inboxAddressStr)
 
@@ -175,7 +181,7 @@ func main() {
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
 		); err != nil {
-			logger.Fatal().Err(err).Msg("error waiting for balance")
+			return errors.Wrap(err, "error waiting for balance")
 		}
 
 		if *keepPendingState {
@@ -190,13 +196,13 @@ func main() {
 
 	monitor, err := staker.NewMonitor(dbPath, contractFile)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
+		return errors.Wrap(err, "error opening monitor")
 	}
 	defer monitor.Close()
 
 	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return errors.Wrap(err, "error opening txdb")
 	}
 
 	var inboxReader *staker.InboxReader
@@ -216,7 +222,7 @@ func main() {
 		inboxReader.WaitToCatchUp()
 	}
 
-	if err := rpc.LaunchNode(
+	return rpc.LaunchNode(
 		ctx,
 		ethclint,
 		rollupArgs.Address,
@@ -226,7 +232,5 @@ func main() {
 		rpcVars,
 		time.Duration(*maxBatchTime)*time.Second,
 		batcherMode,
-	); err != nil {
-		logger.Fatal().Err(err).Msg("Error running LaunchNode")
-	}
+	)
 }
