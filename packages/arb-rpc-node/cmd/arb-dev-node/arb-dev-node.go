@@ -17,6 +17,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
@@ -34,7 +35,9 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
@@ -43,7 +46,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
-	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -80,7 +82,6 @@ func main() {
 
 func startup() error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	rpcVars := utils2.AddRPCFlags(fs)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	saveMessages := fs.String("save", "", "save messages")
@@ -147,10 +148,19 @@ func startup() error {
 		arbosPath = &arbosPathStr
 	}
 
-	backend, db, rollupAddress, cancelDevNode, err := dev.NewDevNode(tmpDir, *arbosPath, config, common.NewAddressFromEth(accounts[0].Address), nil)
+	errChan := make(chan error, 10)
+	defer close(errChan)
+
+	ctx := context.Background()
+
+	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(ctx, tmpDir, *arbosPath, config, common.NewAddressFromEth(accounts[0].Address), nil)
 	if err != nil {
 		return err
 	}
+
+	go func() {
+		errChan <- <-devNodeErrChan
+	}()
 
 	cancel := func() {
 		if !canceled {
@@ -208,8 +218,6 @@ func startup() error {
 		privateKeys = append(privateKeys, privKey)
 	}
 
-	errChan := make(chan error, 10)
-
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -232,18 +240,14 @@ func startup() error {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
+	srv := aggregator.NewServer(backend, rollupAddress, db)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	if err != nil {
+		return err
+	}
+
 	go func() {
-		errChan <- rpc.LaunchNodeAdvanced(
-			db,
-			rollupAddress,
-			"8547",
-			"8548",
-			rpcVars,
-			backend,
-			privateKeys,
-			true,
-			plugins,
-		)
+		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
 	}()
 
 	err = <-errChan

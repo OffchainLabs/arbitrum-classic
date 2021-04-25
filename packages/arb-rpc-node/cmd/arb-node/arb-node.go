@@ -31,6 +31,8 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -43,7 +45,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -78,7 +79,6 @@ func main() {
 func startup() error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
-	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
@@ -179,13 +179,8 @@ func startup() error {
 	}
 	defer monitor.Close()
 
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
-	if err != nil {
-		return errors.Wrap(err, "error opening txdb")
-	}
-	defer db.Close()
-
 	ctx := context.Background()
+
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
 		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
@@ -207,7 +202,7 @@ func startup() error {
 
 	var inboxReader *staker.InboxReader
 	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address, healthChan)
+		inboxReader, err = monitor.StartInboxReader(ctx, rollupArgs.EthURL, rollupArgs.Address, healthChan)
 		if err == nil {
 			break
 		}
@@ -218,19 +213,35 @@ func startup() error {
 		time.Sleep(time.Second * 5)
 	}
 
+	db, txDBErrChan, err := txdb.New(ctx, monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	if err != nil {
+		return errors.Wrap(err, "error opening txdb")
+	}
+	defer db.Close()
+
 	if *waitToCatchUp {
 		inboxReader.WaitToCatchUp()
 	}
 
-	return rpc.LaunchNode(
-		ctx,
-		ethclint,
-		rollupArgs.Address,
-		db,
-		"8547",
-		"8548",
-		rpcVars,
-		time.Duration(*maxBatchTime)*time.Second,
-		batcherMode,
-	)
+	batch, err := rpc.SetupBatcher(ctx, ethclint, rollupArgs.Address, db, time.Duration(*maxBatchTime)*time.Second, batcherMode)
+	if err != nil {
+		return err
+	}
+
+	srv := aggregator.NewServer(batch, rollupArgs.Address, db)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	if err != nil {
+		return err
+	}
+	errChan := make(chan error, 1)
+	defer close(errChan)
+	go func() {
+		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+	}()
+	select {
+	case err := <-txDBErrChan:
+		return err
+	case err := <-errChan:
+		return err
+	}
 }

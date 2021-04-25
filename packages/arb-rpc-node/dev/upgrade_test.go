@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -54,14 +52,6 @@ func TestUpgrade(t *testing.T) {
 	test.FailIfError(t, err)
 	targetHash := upgradedMach.CodePointHash()
 
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	test.FailIfError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}()
-
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)
@@ -74,8 +64,7 @@ func TestUpgrade(t *testing.T) {
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
-	backend, db, rollupAddress, cancelDevNode, err := NewDevNode(tmpDir, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
-	test.FailIfError(t, err)
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
 	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
@@ -93,7 +82,6 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
