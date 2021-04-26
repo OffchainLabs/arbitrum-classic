@@ -19,13 +19,10 @@ package batcher
 import (
 	"container/list"
 	"context"
+	"github.com/pkg/errors"
 	"math/big"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/rs/zerolog/log"
 
@@ -40,6 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "batcher").Logger()
@@ -331,7 +329,7 @@ func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Addr
 func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
-		logger.Error().Err(err).Msg("error processing user transaction")
+		logger.Warn().Err(err).Msg("error processing user transaction")
 		return err
 	}
 
