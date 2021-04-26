@@ -319,18 +319,17 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 				return err
 			}
 
-			if seqMsg.Kind == message.L2Type {
-				if l1BlockNumber == nil {
-					l1BlockNumber = seqMsg.ChainTime.BlockNum.AsInt()
-				} else if l1BlockNumber.Cmp(seqMsg.ChainTime.BlockNum.AsInt()) != 0 {
-					break
-				}
-				if l1Timestamp == nil {
-					l1Timestamp = seqMsg.ChainTime.Timestamp
-				} else if l1Timestamp.Cmp(seqMsg.ChainTime.Timestamp) != 0 {
-					break
-				}
-			} else if seqMsg.Kind == message.EndOfBlockType {
+			if l1BlockNumber == nil {
+				l1BlockNumber = seqMsg.ChainTime.BlockNum.AsInt()
+			} else if l1BlockNumber.Cmp(seqMsg.ChainTime.BlockNum.AsInt()) != 0 {
+				break
+			}
+			if l1Timestamp == nil {
+				l1Timestamp = seqMsg.ChainTime.Timestamp
+			} else if l1Timestamp.Cmp(seqMsg.ChainTime.Timestamp) != 0 {
+				break
+			}
+			if seqMsg.Kind == message.EndOfBlockType {
 				if len(seqMsg.Data) != 0 {
 					return errors.New("end of block message has data")
 				}
@@ -359,16 +358,6 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 	}
 	if totalDelayedMessagesRead == nil {
 		totalDelayedMessagesRead = startDelayedMessagesRead
-	}
-	if l1BlockNumber == nil {
-		// This batch consists exclusively of delayed messages,
-		// so the l1 block number is largely irrelevant
-		chainTime, err := getChainTime(ctx, b.client)
-		if err != nil {
-			return err
-		}
-		l1BlockNumber = chainTime.BlockNum.AsInt()
-		l1Timestamp = chainTime.Timestamp
 	}
 
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
