@@ -3,7 +3,6 @@ package staker
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -169,7 +168,11 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	coreMessageCount := v.lookup.MachineMessagesRead()
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
-		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
+		logger.Info().
+			Str("localcount", coreMessageCount.String()).
+			Str("target", startState.TotalMessagesRead.String()).
+			Msg("catching up to chain")
+		return nil, false, nil
 	}
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
