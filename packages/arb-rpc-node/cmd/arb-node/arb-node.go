@@ -24,7 +24,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -238,10 +240,16 @@ func startup() error {
 	go func() {
 		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
 	}()
+
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+
 	select {
 	case err := <-txDBErrChan:
 		return err
 	case err := <-errChan:
 		return err
+	case <-interruptChan:
+		return nil
 	}
 }
