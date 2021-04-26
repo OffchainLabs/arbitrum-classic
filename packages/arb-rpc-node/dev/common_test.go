@@ -81,11 +81,6 @@ func NewTestDevNode(
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	tmpDir, err := ioutil.TempDir(".", "arbitrum")
 	test.FailIfError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
-	}()
 
 	backend, db, rollupAddress, cancelDevNode, txDBErrChan, err := NewDevNode(
 		context.Background(),
