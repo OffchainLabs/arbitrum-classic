@@ -385,8 +385,23 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	}
 }
 
+func calculateGasToFirstInbox(t *testing.T) *big.Int {
+	mon, shutdown := monitor.PrepareArbCore(t, nil)
+	defer shutdown()
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
+	test.FailIfError(t, err)
+	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
+	t.Logf("Found first inbox instruction starting at %v", inboxGas)
+	return inboxGas
+}
+
 func TestChallengeToOSP(t *testing.T) {
 	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), OneStepProof)
+}
+
+func TestChallengeToInboxOSP(t *testing.T) {
+	inboxGas := calculateGasToFirstInbox(t)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, new(big.Int).Add(inboxGas, big.NewInt(10000)), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
