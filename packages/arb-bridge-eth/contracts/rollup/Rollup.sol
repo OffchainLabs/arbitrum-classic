@@ -30,12 +30,14 @@ import "../challenge/IChallengeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
 
 contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
+    using SafeERC20 for IERC20;
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
@@ -376,13 +378,29 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Create a new stake
-     * @param tokenAmount If staking in something other than eth, this is the amount of tokens staked, otherwise 0
      */
-    function newStake(uint256 tokenAmount) external payable whenNotPaused {
+    function newStake() external payable whenNotPaused {
+        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
+        _newStake(msg.value);
+    }
+
+    /**
+     * @notice Create a new stake
+     * @param tokenAmount the amount of tokens staked
+     */
+    function newStake(uint256 tokenAmount) external whenNotPaused {
+        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
+        _newStake(tokenAmount);
+        IERC20(stakeToken).safeTransferFrom(msg.sender, address(this), tokenAmount);
+    }
+
+    /**
+     * @notice Create a new stake
+     * @param depositAmount The amount of either eth or tokens staked
+     */
+    function _newStake(uint256 depositAmount) private whenNotPaused {
         // Verify that sender is not already a staker
         require(!isStaked(msg.sender), "ALREADY_STAKED");
-
-        uint256 depositAmount = receiveStakerFunds(tokenAmount);
         require(depositAmount >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
         createNewStake(msg.sender, depositAmount);
@@ -570,17 +588,33 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     }
 
     /**
+     * @notice Increase the amount staked eth for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     */
+    function addToDeposit(address stakerAddress) external payable whenNotPaused {
+        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
+        _addToDeposit(stakerAddress, msg.value);
+    }
+
+    /**
+     * @notice Increase the amount staked tokens for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     * @param tokenAmount the amount of tokens staked
+     */
+    function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
+        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
+        _addToDeposit(stakerAddress, tokenAmount);
+        IERC20(stakeToken).safeTransferFrom(msg.sender, address(this), tokenAmount);
+    }
+
+    /**
      * @notice Increase the amount staked for the given staker
      * @param stakerAddress Address of the staker whose stake is increased
-     * @param tokenAmount If staking in something other than eth, this is the amount of tokens staked, otherwise 0
+     * @param depositAmount The amount of either eth or tokens deposited
      */
-    function addToDeposit(address stakerAddress, uint256 tokenAmount)
-        external
-        payable
-        whenNotPaused
-    {
+    function _addToDeposit(address stakerAddress, uint256 depositAmount) internal whenNotPaused {
         requireUnchallengedStaker(stakerAddress);
-        increaseStakeBy(stakerAddress, receiveStakerFunds(tokenAmount));
+        increaseStakeBy(stakerAddress, depositAmount);
     }
 
     /**
@@ -826,25 +860,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function requireUnresolved(uint256 nodeNum) public view {
         require(nodeNum >= firstUnresolvedNode(), "ALREADY_DECIDED");
         require(nodeNum <= latestNodeCreated(), "DOESNT_EXIST");
-    }
-
-    /**
-     * @notice Ensure that funds are properly received
-     * @param tokenAmount If staking in something other than eth, this is the amount of tokens to transfer, otherwise 0
-     * @return Amount of funds that have been received by the rollup
-     */
-    function receiveStakerFunds(uint256 tokenAmount) private returns (uint256) {
-        if (stakeToken == address(0)) {
-            require(tokenAmount == 0, "BAD_STK_TYPE");
-            return msg.value;
-        } else {
-            require(msg.value == 0, "BAD_STK_TYPE");
-            require(
-                IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
-                "TRANSFER_FAILED"
-            );
-            return tokenAmount;
-        }
     }
 
     /**
