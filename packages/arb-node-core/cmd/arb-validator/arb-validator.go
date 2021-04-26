@@ -17,7 +17,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -27,9 +26,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"path"
-	"syscall"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -80,14 +77,9 @@ func main() {
 }
 
 func startup() error {
-	ctx, cancelFunc := context.WithCancel(context.Background())
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		cancelFunc()
-	}()
+	defer logger.Log().Msg("Cleanly shutting down validator")
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
@@ -143,7 +135,7 @@ func startup() error {
 	}
 	var l1ChainId *big.Int
 	for {
-		l1ChainId, err = client.ChainID(context.Background())
+		l1ChainId, err = client.ChainID(ctx)
 		if err == nil {
 			break
 		}
@@ -274,12 +266,9 @@ func startup() error {
 
 	defer reader.Stop()
 
-	interruptChan := make(chan os.Signal, 1)
-	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
-
 	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
 	select {
-	case <-interruptChan:
+	case <-cancelChan:
 		return nil
 	case <-stakerManager.RunInBackground(ctx):
 		return nil
