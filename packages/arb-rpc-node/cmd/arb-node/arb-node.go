@@ -17,16 +17,13 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	golog "log"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -78,7 +75,15 @@ func main() {
 	}
 }
 
+type LaunchUtil struct {
+	canceledChan chan bool
+}
+
 func startup() error {
+	defer logger.Log().Msg("Cleanly shutting down node")
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
@@ -131,7 +136,7 @@ func startup() error {
 		return errors.Wrap(err, "error running NewRPcEthClient")
 	}
 
-	l1ChainId, err := ethclint.ChainID(context.Background())
+	l1ChainId, err := ethclint.ChainID(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error getting chain ID")
 	}
@@ -157,7 +162,7 @@ func startup() error {
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
 
 		if err := ethbridge.WaitForBalance(
-			context.Background(),
+			ctx,
 			ethclint,
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
@@ -180,8 +185,6 @@ func startup() error {
 		return errors.Wrap(err, "error opening monitor")
 	}
 	defer monitor.Close()
-
-	ctx := context.Background()
 
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
@@ -241,15 +244,12 @@ func startup() error {
 		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
 	}()
 
-	interruptChan := make(chan os.Signal, 1)
-	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
-
 	select {
 	case err := <-txDBErrChan:
 		return err
 	case err := <-errChan:
 		return err
-	case <-interruptChan:
+	case <-cancelChan:
 		return nil
 	}
 }
