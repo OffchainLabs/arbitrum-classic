@@ -360,7 +360,7 @@ contract RollupCore {
         address stakerAddress,
         uint256 nodeNum,
         uint256 confirmPeriodBlocks
-    ) internal returns (uint256) {
+    ) internal {
         Staker storage staker = _stakerMap[stakerAddress];
         INode node = _nodes[nodeNum];
         uint256 newStakerCount = node.addStaker(stakerAddress);
