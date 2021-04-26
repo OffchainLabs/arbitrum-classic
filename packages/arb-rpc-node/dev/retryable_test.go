@@ -113,9 +113,7 @@ func TestRetryableRedeem(t *testing.T) {
 	test.FailIfError(t, err)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
-	if err != nil {
-		panic(err)
-	}
+	test.FailIfError(t, err)
 
 	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
 	test.FailIfError(t, err)
