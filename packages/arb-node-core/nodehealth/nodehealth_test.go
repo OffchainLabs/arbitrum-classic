@@ -767,4 +767,5 @@ func TestNodeHealth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	cancel()
 }

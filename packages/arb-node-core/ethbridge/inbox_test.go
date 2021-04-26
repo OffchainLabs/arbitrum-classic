@@ -18,18 +18,20 @@ package ethbridge
 
 import (
 	"context"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
-	"testing"
 )
 
 func TestRetryable(t *testing.T) {
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
 	bridgeAddress, _, bridge, err := ethbridgecontracts.DeployBridge(auth, clnt)
 	test.FailIfError(t, err)

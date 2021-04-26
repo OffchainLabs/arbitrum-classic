@@ -19,6 +19,7 @@ package batcher
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -26,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -73,7 +75,7 @@ func NewForwarder(ctx context.Context, url string) (*Forwarder, error) {
 func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
 	nonce, err := b.client.PendingNonceAt(ctx, account.ToEthAddress())
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("Error fetching pending nonce")
+		logger.Error().Stack().Err(err).Msg("Error fetching pending nonce from aggregator")
 		return nil
 	}
 	return &nonce

@@ -352,21 +352,19 @@ func ChainAddressToID(chain common.Address) *big.Int {
 	return new(big.Int).SetBytes(chain[14:])
 }
 
-func NewRandomSignedEthTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) *types.Transaction {
+func NewRandomSignedEthTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) (*types.Transaction, error) {
 	tx := NewRandomTransaction()
 	tx.SequenceNum = new(big.Int).SetUint64(nonce)
 	ethTx := tx.AsEthTx()
-	signedTx, err := types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
-	if err != nil {
-		panic(err)
-	}
-	return signedTx
+	return types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
 }
 
-func NewRandomSignedTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) SignedTransaction {
-	return SignedTransaction{
-		Tx: NewRandomSignedEthTx(chain, privKey, nonce),
+func NewRandomSignedTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) (SignedTransaction, error) {
+	signedTx, err := NewRandomSignedEthTx(chain, privKey, nonce)
+	if err != nil {
+		return SignedTransaction{}, err
 	}
+	return SignedTransaction{Tx: signedTx}, nil
 }
 
 func (t SignedTransaction) String() string {
@@ -585,7 +583,11 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey, initialNonce uint64) (TransactionBatch, error) {
 	messages := make([]AbstractL2Message, 0, txCount)
 	for i := 0; i < txCount; i++ {
-		messages = append(messages, NewRandomSignedTx(chain, privKey, initialNonce))
+		tx, err := NewRandomSignedTx(chain, privKey, initialNonce)
+		if err != nil {
+			return TransactionBatch{}, err
+		}
+		messages = append(messages, tx)
 		initialNonce++
 	}
 	return NewTransactionBatchFromMessages(messages)

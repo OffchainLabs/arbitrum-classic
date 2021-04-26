@@ -39,7 +39,7 @@ import (
 	"testing"
 )
 
-func addInitialization(ib *InboxBuilder, aggregator, netFeeRecipient, congestionFeeRecipient, user common.Address, initialDeposit *big.Int) {
+func addInitialization(t *testing.T, ib *InboxBuilder, aggregator, netFeeRecipient, congestionFeeRecipient, user common.Address, initialDeposit *big.Int) {
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(0),
 		StakeToken:                common.Address{},
@@ -58,7 +58,8 @@ func addInitialization(ib *InboxBuilder, aggregator, netFeeRecipient, congestion
 		CongestionFeeRecipient: congestionFeeRecipient,
 	}
 	aggInit := message.DefaultAggConfig{Aggregator: aggregator}
-	init := message.NewInitMessage(config, owner, []message.ChainConfigOption{feeConfigInit, aggInit})
+	init, err := message.NewInitMessage(config, owner, []message.ChainConfigOption{feeConfigInit, aggInit})
+	test.FailIfError(t, err)
 
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
@@ -142,7 +143,7 @@ func TestFees(t *testing.T) {
 
 	var conDeployedLength int
 	{
-		client, keys := test.SimulatedBackend()
+		client, keys := test.SimulatedBackend(t)
 		auth := bind.NewKeyedTransactor(keys[0])
 		addr, _, _, err := arbostestcontracts.DeployGasUsed(auth, client, false)
 		failIfError(t, err)
@@ -255,7 +256,7 @@ func TestFees(t *testing.T) {
 	t.Log("Congestion recipient", congestionFeeRecipient)
 
 	addInitializationLoc := func(ib *InboxBuilder) {
-		addInitialization(ib, aggregator, netFeeRecipient, congestionFeeRecipient, userAddress, initialDeposit)
+		addInitialization(t, ib, aggregator, netFeeRecipient, congestionFeeRecipient, userAddress, initialDeposit)
 	}
 
 	ethTxes := make([]*types.Transaction, 0)

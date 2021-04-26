@@ -38,7 +38,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func initMsg(options []message.ChainConfigOption) message.Init {
+func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
 	params := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(0),
 		StakeToken:                common.Address{},
@@ -46,7 +46,9 @@ func initMsg(options []message.ChainConfigOption) message.Init {
 		MaxExecutionSteps:         0,
 		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
-	return message.NewInitMessage(params, owner, options)
+	init, err := message.NewInitMessage(params, owner, options)
+	test.FailIfError(t, err)
+	return init
 }
 
 func makeSimpleConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
@@ -196,6 +198,11 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
+func runSimpleAssertion(t *testing.T, messages []message.Message) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
+	t.Helper()
+	return runAssertion(t, makeSimpleInbox(t, messages), len(messages), 0)
+}
+
 func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
 	t.Helper()
 	logs, sends, snap, assertion := runAssertionWithoutPrint(t, inboxMessages, logCount, sendCount)
@@ -211,7 +218,8 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
 
-	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages)
+	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, inboxMessages)
+	failIfError(t, err)
 
 	if logCount != math.MaxInt32 && len(assertion.Logs) != logCount {
 		t.Fatal("unexpected log count ", len(assertion.Logs), "instead of", logCount)
@@ -235,7 +243,8 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 				Timestamp: big.NewInt(0),
 			},
 		)
-		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, nil, true, common.Hash{}, common.Hash{})
+		_, _, _, err = mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, nil, true, common.Hash{}, common.Hash{})
+		test.FailIfError(t, err)
 		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
 		test.FailIfError(t, err)
 	}
@@ -251,14 +260,14 @@ func (ib *InboxBuilder) AddMessage(msg message.Message, sender common.Address, g
 	ib.Messages = append(ib.Messages, newMsg)
 }
 
-func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
+func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMessage {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
 	ib := &InboxBuilder{}
-	ib.AddMessage(initMsg(nil), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
 	for _, msg := range messages {
 		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
 	}

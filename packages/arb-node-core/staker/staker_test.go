@@ -143,7 +143,10 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
-	mach, err := cmachine.New(arbos.Path())
+	arbosPath, err := arbos.Path()
+	test.FailIfError(t, err)
+
+	mach, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
 
 	hash, err := mach.Hash()
@@ -159,7 +162,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	sequencerDelaySeconds := big.NewInt(900)
 	var extraConfig []byte
 
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
 	auth2 := bind.NewKeyedTransactor(pks[1])
 	seqAuth := bind.NewKeyedTransactor(pks[2])
