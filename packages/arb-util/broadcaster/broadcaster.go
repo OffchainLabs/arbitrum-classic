@@ -1,7 +1,7 @@
 package broadcaster
 
 import (
-	"math/big"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"net"
 	"sync"
 	"time"
@@ -9,7 +9,6 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/rs/zerolog/log"
 )
@@ -202,8 +201,8 @@ func (b *Broadcaster) Start() error {
 	return nil
 }
 
-func (b *Broadcaster) Broadcast(prevAcc common.Hash, feedItem monitor.SequencerFeedItem, signature *big.Int) error {
-	return b.clientManager.Broadcast(prevAcc, feedItem, signature)
+func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
+	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
 
 func (b *Broadcaster) SyncMessages(accumulator common.Hash) {

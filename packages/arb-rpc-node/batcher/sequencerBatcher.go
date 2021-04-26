@@ -226,7 +226,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	if err != nil {
 		return err
 	}
-	err = b.feedBroadcaster.Broadcast(new(big.Int).SetBytes(prevAcc.Bytes()), seqBatchItems[0].ToBytesWithSeqNum(), new(big.Int).SetBytes(signature))
+	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems[0], signature)
 	if err != nil {
 		return err
 	}
@@ -323,7 +323,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	if err != nil {
 		return nil, err
 	}
-	err = b.feedBroadcaster.Broadcast(new(big.Int).SetBytes(prevAcc.Bytes()), seqBatchItems[0].ToBytesWithSeqNum(), new(big.Int).SetBytes(signature))
+	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems[0], signature)
 	if err != nil {
 		return nil, err
 	}
