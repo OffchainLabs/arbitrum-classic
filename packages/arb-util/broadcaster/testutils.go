@@ -88,7 +88,7 @@ func NewRandomMessageGenerator(count int, ms int) *RandomMessageGenerator {
 	return gm
 }
 
-// give it a client manager to broadcast on.
+// SetBroadcaster sets a client manager to broadcast on.
 func (mg *RandomMessageGenerator) SetBroadcaster(broadcaster *Broadcaster) {
 	mg.broadcaster = broadcaster
 }
@@ -102,10 +102,18 @@ func (mg *RandomMessageGenerator) StartWorker() {
 
 	ticker := time.NewTicker(mg.intervalDuration)
 	messageCount := 0
-	newBroadcastMessage := SequencedMessages()
 	go func() {
 		for range ticker.C {
-			_ = mg.broadcaster.Broadcast(newBroadcastMessage())
+			_ = mg.broadcaster.Broadcast(
+				common.HexToHash("0x0001"),
+				inbox.SequencerBatchItem{
+					LastSeqNum:        big.NewInt(0),
+					Accumulator:       common.HexToHash("0x01"),
+					TotalDelayedCount: big.NewInt(0),
+					SequencerMessage:  big.NewInt(42).Bytes(),
+				},
+				big.NewInt(0).Bytes(),
+			)
 			messageCount++
 			if messageCount == mg.count {
 				ticker.Stop()

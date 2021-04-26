@@ -3,7 +3,7 @@ package broadcaster
 import (
 	"bytes"
 	"encoding/json"
-	"math/big"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/rand"
 	"net"
 	"sort"
@@ -75,7 +75,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 	return clientConnection
 }
 
-// Removes all clients.
+// RemoveAll removes all clients.
 func (cm *ClientManager) RemoveAll() {
 	cm.mu.Lock()
 	// the remove() affects the client list held by the instance
@@ -119,7 +119,7 @@ func (cm *ClientManager) syncMessages(accumulator common.Hash) {
 }
 
 // Broadcast sends message to all clients.
-func (cm *ClientManager) Broadcast(prevAcc common.Hash, feedItem monitor.SequencerFeedItem, signature *big.Int) error {
+func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	var buf bytes.Buffer
 
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
@@ -127,12 +127,12 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, feedItem monitor.Sequenc
 
 	var broadcastMessages []*BroadcastInboxMessage
 
-	ibMsg := BroadcastInboxMessage{
-		FeedItem:  feedItem,
+	msg := BroadcastInboxMessage{
+		FeedItem:  monitor.SequencerFeedItem{BatchItem: batchItem, PrevAcc: prevAcc},
 		Signature: signature,
 	}
 
-	broadcastMessages = append(broadcastMessages, &ibMsg)
+	broadcastMessages = append(broadcastMessages, &msg)
 
 	// also add this to our global list for broadcasting to clients when connecting
 	{
@@ -140,22 +140,22 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, feedItem monitor.Sequenc
 		defer cm.mu.Unlock()
 
 		if len(cm.broadcastMessages) == 0 {
-			cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
 		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == prevAcc {
-			cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
 		} else {
 			// We need to do a re-org
 			i := len(cm.broadcastMessages) - 1
 			for ; i >= 0; i-- {
 				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == prevAcc {
 					broadcastMessages := cm.broadcastMessages[:i+1]
-					cm.broadcastMessages = append(broadcastMessages, &ibMsg)
+					cm.broadcastMessages = append(broadcastMessages, &msg)
 					break
 				}
 			}
 
 			if i == -1 { // didn't even find the previous accumulator... start from here.
-				cm.broadcastMessages = append(cm.broadcastMessages, &ibMsg)
+				cm.broadcastMessages = append(cm.broadcastMessages, &msg)
 			}
 		}
 

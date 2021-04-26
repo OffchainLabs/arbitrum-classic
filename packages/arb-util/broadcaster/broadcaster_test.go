@@ -31,14 +31,14 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	newBroadcastMessage := SequencedMessages()
 
 	hash1, feedItem1, signature1 := newBroadcastMessage()
-	err = b.Broadcast(hash1, feedItem1, signature1)
+	err = b.Broadcast(hash1, feedItem1.BatchItem, signature1.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(1 * time.Second)
 
 	hash2, feedItem2, signature2 := newBroadcastMessage()
-	err = b.Broadcast(hash2, feedItem2, signature2)
+	err = b.Broadcast(hash2, feedItem2.BatchItem, signature2.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,10 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 
 	t.Logf("Connected")
 
-	conn.Write(ws.CompiledPing)
+	_, err = conn.Write(ws.CompiledPing)
+	if err != nil {
+		t.Fatalf("unable to write: %v\n", err)
+	}
 
 	time.Sleep(1 * time.Second)
 
@@ -169,27 +172,27 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	newBroadcastMessage := SequencedMessages()
 
 	hash1, feedItem1, signature1 := newBroadcastMessage()
-	err = b.Broadcast(hash1, feedItem1, signature1)
+	err = b.Broadcast(hash1, feedItem1.BatchItem, signature1.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(1 * time.Second)
 
 	hash2, feedItem2, signature2 := newBroadcastMessage()
-	err = b.Broadcast(hash2, feedItem2, signature2)
+	err = b.Broadcast(hash2, feedItem2.BatchItem, signature2.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	hash3, feedItem3, signature3 := newBroadcastMessage()
-	err = b.Broadcast(hash3, feedItem3, signature3)
+	err = b.Broadcast(hash3, feedItem3.BatchItem, signature3.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	_, feedItem4, signature4 := newBroadcastMessage()
 	feedItem4.PrevAcc = feedItem1.BatchItem.Accumulator
-	err = b.Broadcast(feedItem4.PrevAcc, feedItem4, signature4)
+	err = b.Broadcast(feedItem4.PrevAcc, feedItem4.BatchItem, signature4.Bytes())
 	if err != nil {
 		t.Fatal(err)
 	}
