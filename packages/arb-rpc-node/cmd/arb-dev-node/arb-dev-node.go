@@ -186,7 +186,7 @@ func startup() error {
 			}),
 		}
 		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
-			logger.Fatal().Err(err).Send()
+			return err
 		}
 	}
 
