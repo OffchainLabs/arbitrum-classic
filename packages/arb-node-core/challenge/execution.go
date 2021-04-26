@@ -145,12 +145,12 @@ func (e *ExecutionImpl) OneStepProof(
 
 	if opcode == 0x72 {
 		// INBOX proving
-		seqNum := new(big.Int).Add(previousCut.TotalMessagesRead, big.NewInt(1))
+		seqNum := previousCut.TotalMessagesRead
 		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
 		if err != nil {
 			return err
 		}
-		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetAfterCount())
+		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
 		if err != nil {
 			return err
 		}

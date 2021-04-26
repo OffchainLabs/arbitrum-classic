@@ -987,17 +987,19 @@ ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
 
 ValueResult<std::vector<unsigned char>> ArbCore::genInboxProof(
     uint256_t seq_num,
+    uint256_t batch_index,
     uint256_t batch_end_count) const {
     ReadSnapshotTransaction tx(data_storage);
-
-    std::vector<unsigned char> proof;
 
     auto message_res = getMessagesImpl(tx, seq_num, 1, std::nullopt);
     if (!message_res.status.ok()) {
         return {message_res.status, std::vector<unsigned char>()};
     }
     auto message_data = message_res.data[0].message;
-    proof.insert(proof.end(), message_data.begin(), message_data.end());
+    auto message = extractInboxMessage(message_data);
+    auto proof = message.serializeForProof();
+
+    marshal_uint256_t(batch_index, proof);
 
     uint256_t start = seq_num;
     bool recording_prev = false;
@@ -1030,6 +1032,7 @@ ValueResult<std::vector<unsigned char>> ArbCore::genInboxProof(
 
         if (recording_prev) {
             prev_item = item;
+            recording_prev = false;
             it->Next();
             continue;
         }
@@ -1041,15 +1044,22 @@ ValueResult<std::vector<unsigned char>> ArbCore::genInboxProof(
             marshal_uint256_t(prev_item.accumulator, proof);
 
             if (is_delayed) {
-                marshal_uint256_t(prev_item.last_sequence_number + 1, proof);
+                if (prev_item.accumulator == 0) {
+                    marshal_uint256_t(0, proof);
+                } else {
+                    marshal_uint256_t(prev_item.last_sequence_number + 1,
+                                      proof);
+                }
                 marshal_uint256_t(prev_item.total_delayed_count, proof);
                 marshal_uint256_t(item.total_delayed_count, proof);
             }
         } else {
             if (item.sequencer_message) {
+                proof.push_back(0);
                 marshal_uint256_t(
                     extractInboxMessage(*item.sequencer_message).hash(), proof);
             } else {
+                proof.push_back(1);
                 marshal_uint256_t(prev_item.total_delayed_count, proof);
                 marshal_uint256_t(item.total_delayed_count, proof);
             }

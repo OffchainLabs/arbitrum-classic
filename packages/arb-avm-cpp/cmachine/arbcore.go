@@ -248,11 +248,12 @@ func (ac *ArbCore) GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error) {
 	return receiveBigInt(res.value), nil
 }
 
-func (ac *ArbCore) GenInboxProof(seqNum *big.Int, batchEndCount *big.Int) ([]byte, error) {
+func (ac *ArbCore) GenInboxProof(seqNum *big.Int, batchIndex *big.Int, batchEndCount *big.Int) ([]byte, error) {
 	seqNumData := math.U256Bytes(seqNum)
 	batchEndCountData := math.U256Bytes(batchEndCount)
+	batchIndexData := math.U256Bytes(batchIndex)
 
-	res := C.arbCoreGenInboxProof(ac.c, unsafeDataPointer(seqNumData), unsafeDataPointer(batchEndCountData))
+	res := C.arbCoreGenInboxProof(ac.c, unsafeDataPointer(seqNumData), unsafeDataPointer(batchIndexData), unsafeDataPointer(batchEndCountData))
 	if res.found == 0 {
 		return nil, errors.Errorf("failed to generate inbox proof for %v", seqNum)
 	}

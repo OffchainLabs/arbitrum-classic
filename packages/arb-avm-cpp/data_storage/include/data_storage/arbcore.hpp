@@ -285,6 +285,7 @@ class ArbCore {
         uint256_t sequence_number) const;
     ValueResult<std::vector<unsigned char>> genInboxProof(
         uint256_t seq_num,
+        uint256_t batch_index,
         uint256_t batch_end_count) const;
 
     ValueResult<uint256_t> getInboxAcc(uint256_t index);

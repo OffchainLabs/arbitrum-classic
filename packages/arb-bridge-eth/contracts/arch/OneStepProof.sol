@@ -503,7 +503,7 @@ contract OneStepProof is OneStepProofCommon {
             require(inboxSeqNum < delayedEnd, "DELAYED_END");
 
             // Validate the delayed message is in the delayed inbox.
-            bytes32 prevDelayedAcc;
+            bytes32 prevDelayedAcc = 0;
             if (inboxSeqNum > 0) {
                 prevDelayedAcc = context.delayedBridge.inboxAccs(inboxSeqNum - 1);
             }
