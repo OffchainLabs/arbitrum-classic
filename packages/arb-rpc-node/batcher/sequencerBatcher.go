@@ -217,7 +217,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	if err != nil {
 		return err
 	}
-	err = b.feedBroadcaster.Broadcast(new(big.Int).SetBytes(prevAcc.Bytes()), seqBatchItems[0].ToBytesWithSeqNum(), new(big.Int).SetBytes(signature))
+	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems[0], signature)
 	if err != nil {
 		return err
 	}
@@ -300,7 +300,7 @@ success, err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbo
 	if err != nil {
 		return nil, err
 	}
-	err = b.feedBroadcaster.Broadcast(new(big.Int).SetBytes(prevAcc.Bytes()), seqBatchItems[0].ToBytesWithSeqNum(), new(big.Int).SetBytes(signature))
+	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems[0], signature)
 	if err != nil {
 		return nil, err
 	}
