@@ -22,8 +22,10 @@ pragma experimental ABIEncoderV2;
 
 import "../rollup/IRollup.sol";
 import "../challenge/IChallenge.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 contract Validator {
+    using Address for address;
     address owner;
 
     constructor() public {
@@ -38,6 +40,7 @@ contract Validator {
         require(msg.sender == owner, "ONLY_OWNER");
         uint256 numTxes = data.length;
         for (uint256 i = 0; i < numTxes; i++) {
+            if (data[i].length > 0) require(destination[i].isContract(), "NO_CODE_AT_ADDR");
             (bool success, ) = address(destination[i]).call{ value: amount[i] }(data[i]);
             if (!success) {
                 assembly {
@@ -56,6 +59,7 @@ contract Validator {
         uint256 amount
     ) external payable {
         require(msg.sender == owner, "ONLY_OWNER");
+        if (data.length > 0) require(destination.isContract(), "NO_CODE_AT_ADDR");
         (bool success, ) = destination.call{ value: amount }(data);
         if (!success) {
             assembly {
