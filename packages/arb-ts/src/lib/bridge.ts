@@ -22,6 +22,9 @@ import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
 
 const { Zero } = constants
 
+/**
+ * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
+ */
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
   walletAddressCache?: string
@@ -32,6 +35,14 @@ export class Bridge extends L2Bridge {
     ethSigner: Signer,
     arbSigner: Signer
   ) {
+    Promise.all([ethSigner.getAddress(), arbSigner.getAddress()]).then(
+      ([ethSignerAddress, arbSignerAddress]) => {
+        if (ethSignerAddress !== arbSignerAddress) {
+          throw new Error('L1 & L2 wallets must be of the same address')
+        }
+      }
+    )
+
     super(arbERC20BridgeAddress, arbSigner)
 
     this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner)
@@ -41,13 +52,17 @@ export class Bridge extends L2Bridge {
     this.getAndUpdateL1EthBalance()
     this.getAndUpdateL2EthBalance()
   }
-
+  /**
+   * Update state of all tracked tokens (balance, allowance), etc. and returns state
+   */
   public async updateAllTokens() {
     const l1Tokens = await this.l1Bridge.updateAllL1Tokens()
     const l2Tokens = await this.updateAllL2Tokens()
     return { l1Tokens, l2Tokens }
   }
-
+  /**
+   * Update target token (balance, allowance), etc. and state
+   */
   public async updateTokenData(erc20l1Address: string) {
     const l1Data = await this.getAndUpdateL1TokenData(erc20l1Address)
     const l2Data = await this.getAndUpdateL2TokenData(erc20l1Address)
@@ -66,6 +81,9 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.ethERC20Bridge
   }
 
+  /**
+   * Set allowance for L1 bridge contract
+   */
   public async approveToken(
     erc20L1Address: string,
     overrides?: TransactionOverrides
@@ -131,7 +149,7 @@ export class Bridge extends L2Bridge {
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
   ) {
-    return BridgeHelper.calculateL2RetryableTransactionHash(
+    return BridgeHelper.calculateL2TransactionHash(
       inboxSequenceNumber,
       l2ChainId || this.l2Provider
     )

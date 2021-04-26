@@ -27,6 +27,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/signal"
 	"path"
 	"time"
 
@@ -71,11 +72,20 @@ func main() {
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		cancelFunc()
+	}()
+
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 
 	go func() {
-		err := nodehealth.NodeHealthCheck(healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -89,6 +99,13 @@ func main() {
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
 	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
+
+	//Healthcheck Config
+	disablePrimaryCheck := flagSet.Bool("disable-primary-check", true, "disable checking the health of the primary")
+	disableOpenEthereumCheck := flagSet.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
+	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
+	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+
 	if err := flagSet.Parse(os.Args[6:]); err != nil {
 		logger.Fatal().Err(err).Msg("failed parsing command line arguments")
 	}
@@ -104,10 +121,14 @@ func main() {
 	}
 
 	folder := os.Args[1]
-
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: os.Args[2]}
-	ethUrl := os.Args[2]
-	client, err := ethutils.NewRPCEthClient(ethUrl)
+	nodehealth.Init(healthChan)
+
+	client, err := ethutils.NewRPCEthClient(os.Args[2])
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Error creating Ethereum RPC client")
 	}
@@ -185,8 +206,6 @@ func main() {
 	} else {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
-
-	ctx := context.Background()
 
 	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"))
 	if err != nil {

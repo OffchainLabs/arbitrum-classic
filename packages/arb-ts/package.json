@@ -27,7 +27,8 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update:abi": "./scripts/update-abi && yarn format",
-    "test:integration": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 300000"
+    "test:integration": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 300000",
+    "generate_docs": "typedoc"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
@@ -51,6 +52,7 @@
     "install-peers-cli": "^2.2.0",
     "mocha": "^7.2.0",
     "nyc": "^15.1.0",
+    "typedoc": "^0.20.35",
     "typescript": "^4.0.2",
     "yargs": "^16.2.0"
   },

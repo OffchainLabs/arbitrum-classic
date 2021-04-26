@@ -32,8 +32,11 @@ class Code;
 struct CodePointStub;
 struct CodePointRef;
 
-using value =
-    std::variant<Tuple, uint256_t, CodePointStub, HashPreImage, Buffer>;
+using value = std::variant<Tuple,
+                           uint256_t,
+                           CodePointStub,
+                           std::shared_ptr<HashPreImage>,
+                           Buffer>;
 
 struct TuplePlaceholder {
     uint8_t values;
