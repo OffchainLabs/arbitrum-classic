@@ -149,7 +149,7 @@ export class Bridge extends L2Bridge {
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
   ) {
-    return BridgeHelper.calculateL2RetryableTransactionHash(
+    return BridgeHelper.calculateL2TransactionHash(
       inboxSequenceNumber,
       l2ChainId || this.l2Provider
     )
