@@ -29,6 +29,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"syscall"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -271,7 +272,16 @@ func startup() error {
 	}
 	reader.Start(ctx)
 
+	defer reader.Stop()
+
+	interruptChan := make(chan os.Signal, 1)
+	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
+
 	logger.Info().Int("strategy", int(strategy)).Msg("Initialized validator")
-	<-stakerManager.RunInBackground(ctx)
-	return nil
+	select {
+	case <-interruptChan:
+		return nil
+	case <-stakerManager.RunInBackground(ctx):
+		return nil
+	}
 }
