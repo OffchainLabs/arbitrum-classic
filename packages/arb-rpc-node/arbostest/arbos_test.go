@@ -17,13 +17,15 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
@@ -73,7 +75,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	}
 
-	logs, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, snap, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[1], connAddress1)
@@ -109,7 +111,7 @@ func TestDeposit(t *testing.T) {
 		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	_, _, snap, _ := runSimpleAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
@@ -122,7 +124,7 @@ func TestBlocks(t *testing.T) {
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), startTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	messages = append(

@@ -18,14 +18,16 @@ package batcher
 
 import (
 	"container/list"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/pkg/errors"
 )
 
 type statefulBatch struct {
@@ -54,17 +56,17 @@ func (p *statefulBatch) newFromExisting() batch {
 	}
 }
 
-func (p *statefulBatch) getTxCount(account common.Address) uint64 {
+func (p *statefulBatch) getTxCount(account common.Address) (uint64, error) {
 	count, ok := p.txCounts[account]
 	if !ok {
 		txCount, err := p.snap.GetTransactionCount(arbcommon.NewAddressFromEth(account))
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		count = txCount.Uint64()
 		p.txCounts[account] = count
 	}
-	return count
+	return count, nil
 }
 
 func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
@@ -72,7 +74,10 @@ func (p *statefulBatch) validateTx(tx *types.Transaction) (txResponse, error) {
 	if err != nil {
 		return REMOVE, errors.New("invalid signature")
 	}
-	nextValidNonce := p.getTxCount(sender)
+	nextValidNonce, err := p.getTxCount(sender)
+	if err != nil {
+		return SKIP, err
+	}
 	if tx.Nonce() > nextValidNonce {
 		return SKIP, errors.WithStack(core.ErrNonceTooHigh)
 	}
