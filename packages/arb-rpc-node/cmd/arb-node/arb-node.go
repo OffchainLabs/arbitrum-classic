@@ -82,12 +82,6 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:9742/", nil)
-	sequencerFeed, err := broadcastClient.Connect()
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to start broadcastclient")
-	}
-
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
@@ -108,11 +102,18 @@ func startup() error {
 	)
 	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
+	sequencerURL := fs.String("sequencer-url", "", "url to get sequencer feed")
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	//go http.ListenAndServe("localhost:6060", nil)
+
+	broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
+	sequencerFeed, err := broadcastClient.Connect()
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to start broadcastclient")
+	}
 
 	err = fs.Parse(os.Args[1:])
 	if err != nil {
@@ -180,7 +181,7 @@ func startup() error {
 
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}
