@@ -66,6 +66,10 @@ func (bc *BroadcastClient) Connect() (chan monitor.SequencerFeedItem, error) {
 }
 
 func (bc *BroadcastClient) connect(messageReceiver chan monitor.SequencerFeedItem) (chan monitor.SequencerFeedItem, error) {
+	if len(bc.websocketUrl) == 0 {
+		// Nothing to do
+		return nil, nil
+	}
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
 	if err != nil {

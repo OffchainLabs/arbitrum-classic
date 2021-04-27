@@ -216,9 +216,8 @@ func (b *Broadcaster) messageCacheCount() int {
 
 func (b *Broadcaster) Stop() {
 	err := b.listener.Close()
-
 	if err != nil {
-		logger.Warn().Err(err).Msg("error in listner.Close.Stop")
+		logger.Warn().Err(err).Msg("error in listener.Close")
 	}
 
 	err = b.poller.Stop(b.acceptDesc)
@@ -228,7 +227,7 @@ func (b *Broadcaster) Stop() {
 
 	err = b.acceptDesc.Close()
 	if err != nil {
-		logger.Warn().Err(err).Msg("error in acceptDesc.Stop")
+		logger.Warn().Err(err).Msg("error in acceptDesc.Close")
 	}
 
 	b.clientManager.RemoveAll()
