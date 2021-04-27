@@ -17,13 +17,14 @@
 package arbosmachine
 
 import (
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 var logger = log.With().Stack().Str("component", "arbosmachine").Logger()
@@ -253,8 +254,11 @@ func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
+) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
+	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	handleDebugPrints(debugPrints)
-	return assertion, debugPrints, numSteps
+	return assertion, debugPrints, numSteps, nil
 }

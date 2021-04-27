@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"math/big"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -33,7 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -47,17 +45,12 @@ type upgrade struct {
 func TestUpgrade(t *testing.T) {
 	skipBelowVersion(t, 4)
 
-	upgradedMach, err := cmachine.New(filepath.Join(arbos.Dir(), "arbos-upgrade.mexe"))
+	arbosDir, err := arbos.Dir()
+	test.FailIfError(t, err)
+
+	upgradedMach, err := cmachine.New(filepath.Join(arbosDir, "arbos-upgrade.mexe"))
 	test.FailIfError(t, err)
 	targetHash := upgradedMach.CodePointHash()
-
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	test.FailIfError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}()
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
@@ -70,10 +63,9 @@ func TestUpgrade(t *testing.T) {
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	arbosFile := filepath.Join(arbos.Dir(), "arbos_before.mexe")
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
-	defer monitor.Close()
-	defer db.Close()
+	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
+	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
+	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -90,7 +82,6 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
@@ -116,7 +107,7 @@ func TestUpgrade(t *testing.T) {
 	}
 	auth.Value = big.NewInt(0)
 
-	updateBytes, err := ioutil.ReadFile(filepath.Join(arbos.Dir(), "upgrade.json"))
+	updateBytes, err := ioutil.ReadFile(filepath.Join(arbosDir, "upgrade.json"))
 	test.FailIfError(t, err)
 
 	upgrade := upgrade{}

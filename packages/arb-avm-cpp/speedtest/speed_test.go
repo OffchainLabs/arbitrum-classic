@@ -71,8 +71,12 @@ func runExecutableFile(b *testing.B, filePath string) {
 	}
 
 	b.ResetTimer()
+
 	// Last parameter returned is number of steps executed
-	_, _, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil)
+	_, _, _, err = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
 }
 
 func nameFromFn(b *testing.B, fn string) string {

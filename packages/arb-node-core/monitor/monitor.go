@@ -36,6 +36,7 @@ var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
 type Monitor struct {
 	Storage machine.ArbStorage
 	Core    core.ArbCore
+	Reader  *InboxReader
 }
 
 func NewMonitor(dbDir string, contractFile string) (*Monitor, error) {
@@ -62,6 +63,9 @@ func NewMonitor(dbDir string, contractFile string) (*Monitor, error) {
 }
 
 func (m *Monitor) Close() {
+	if m.Reader != nil {
+		m.Reader.Stop()
+	}
 	m.Storage.CloseArbStorage()
 }
 
@@ -91,5 +95,6 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethClient ethutils.EthCl
 		return nil, err
 	}
 	reader.Start(ctx)
+	m.Reader = reader
 	return reader, nil
 }

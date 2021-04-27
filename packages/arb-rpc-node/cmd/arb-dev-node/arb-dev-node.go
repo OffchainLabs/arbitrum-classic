@@ -17,15 +17,10 @@
 package main
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/rs/zerolog/pkgerrors"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -34,13 +29,23 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog/pkgerrors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
 	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/miguelmota/go-ethereum-hdwallet"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
-	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -70,14 +75,19 @@ func init() {
 }
 
 func main() {
+	if err := startup(); err != nil {
+		logger.Error().Err(err).Msg("Error running dev node")
+	}
+}
+
+func startup() error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	rpcVars := utils2.AddRPCFlags(fs)
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	saveMessages := fs.String("save", "", "save messages")
 	walletcount := fs.Int("walletcount", 10, "number of wallets to fund")
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
-	arbosPath := fs.String("arbos", arbos.Path(), "ArbOS version")
+	arbosPath := fs.String("arbos", "", "ArbOS version")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -86,7 +96,7 @@ func main() {
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error parsing arguments")
+		return errors.Wrap(err, "error parsing arguments")
 	}
 
 	if *enablePProf {
@@ -98,17 +108,17 @@ func main() {
 
 	tmpDir, err := ioutil.TempDir(".", "arbitrum")
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error generating temporary directory")
+		return errors.Wrap(err, "error generating temporary directory")
 	}
 
 	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return err
 	}
 
 	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
 	if !ok {
-		logger.Fatal().Send()
+		return errors.New("invalid value for deposit amount")
 	}
 	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
@@ -125,24 +135,42 @@ func main() {
 		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
 		account, err := wallet.Derive(path, false)
 		if err != nil {
-			logger.Fatal().Err(err).Send()
+			return err
 		}
 		accounts = append(accounts, account)
 	}
 
-	monitor, backend, db, rollupAddress := dev.NewDevNode(tmpDir, *arbosPath, config, common.NewAddressFromEth(accounts[0].Address), nil)
+	if *arbosPath == "" {
+		arbosPathStr, err := arbos.Path()
+		if err != nil {
+			return err
+		}
+		arbosPath = &arbosPathStr
+	}
+
+	errChan := make(chan error, 10)
+	defer close(errChan)
+
+	ctx := context.Background()
+
+	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(ctx, tmpDir, *arbosPath, config, common.NewAddressFromEth(accounts[0].Address), nil)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		errChan <- <-devNodeErrChan
+	}()
 
 	cancel := func() {
 		if !canceled {
-			db.Close()
-			monitor.Close()
+			cancelDevNode()
 			if err := os.RemoveAll(tmpDir); err != nil {
 				panic(err)
 			}
 			canceled = true
 		}
 	}
-
 	defer cancel()
 
 	for _, account := range accounts {
@@ -158,7 +186,7 @@ func main() {
 			}),
 		}
 		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
-			logger.Fatal().Err(err).Send()
+			return err
 		}
 	}
 
@@ -175,7 +203,7 @@ func main() {
 	for i, account := range accounts {
 		privKey, err := wallet.PrivateKeyHex(account)
 		if err != nil {
-			logger.Fatal().Err(err).Send()
+			return err
 		}
 		fmt.Printf("(%v) 0x%v\n", i, privKey)
 	}
@@ -185,7 +213,7 @@ func main() {
 	for _, account := range accounts {
 		privKey, err := wallet.PrivateKey(account)
 		if err != nil {
-			logger.Fatal().Err(err).Send()
+			return err
 		}
 		privateKeys = append(privateKeys, privKey)
 	}
@@ -194,33 +222,34 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 	go func() {
 		<-c
-		data, err := backend.ExportData()
-		if err != nil {
-			logger.Fatal().Err(err).Send()
-		}
 		if *saveMessages != "" {
+			data, err := backend.ExportData()
+			if err != nil {
+				errChan <- errors.Wrap(err, "error exporting data from backend")
+				return
+			}
+
 			if err := ioutil.WriteFile(*saveMessages, data, 777); err != nil {
-				logger.Fatal().Err(err).Send()
+				errChan <- errors.Wrap(err, "error saving exported data")
+				return
 			}
 		}
-		cancel()
-		os.Exit(0)
+		errChan <- nil
 	}()
 
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	if err := rpc.LaunchNodeAdvanced(
-		db,
-		rollupAddress,
-		"8547",
-		"8548",
-		rpcVars,
-		backend,
-		privateKeys,
-		true,
-		plugins,
-	); err != nil {
-		logger.Fatal().Err(err).Msg("Error running LaunchNode")
+	srv := aggregator.NewServer(backend, rollupAddress, db)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	if err != nil {
+		return err
 	}
+
+	go func() {
+		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+	}()
+
+	err = <-errChan
+	return err
 }

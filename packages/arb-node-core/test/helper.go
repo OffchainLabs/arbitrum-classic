@@ -25,20 +25,15 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "test").Logger()
-
-func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]ethcore.GenesisAccount)
 	pks := make([]*ecdsa.PrivateKey, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
-		if err != nil {
-			logger.Fatal().Err(err).Send()
-		}
+		FailIfError(t, err)
 		pks = append(pks, privateKey)
 
 		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = ethcore.GenesisAccount{

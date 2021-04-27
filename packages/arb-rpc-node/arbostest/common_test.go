@@ -19,11 +19,12 @@ package arbostest
 import (
 	"encoding/json"
 	"flag"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 var (
@@ -42,7 +43,12 @@ type ArbOSExec struct {
 }
 
 func TestMain(m *testing.M) {
-	arbosfile = flag.String("arbos", arbos.Path(), "version of arbos to run tests against")
+	arbosPath, err := arbos.Path()
+	if err != nil {
+		panic(err)
+	}
+
+	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
 	flag.Parse()
 
 	fileData, err := ioutil.ReadFile(*arbosfile)

@@ -75,7 +75,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	}
 
-	logs, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, snap, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[1], connAddress1)
@@ -111,7 +111,7 @@ func TestDeposit(t *testing.T) {
 		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	_, _, snap, _ := runSimpleAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
@@ -122,7 +122,7 @@ func TestBlocks(t *testing.T) {
 		Timestamp: big.NewInt(1),
 	}
 
-	ib.AddMessage(initMsg(nil), chain, big.NewInt(0), startTime)
+	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), startTime)
 	ib.AddMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), startTime)
 
 	halfSendCount := int64(5)

@@ -14,6 +14,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.21.0
+	github.com/tevino/abool v1.2.0
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util

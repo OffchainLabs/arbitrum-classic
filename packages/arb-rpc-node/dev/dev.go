@@ -46,18 +46,14 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*monitor.Monitor, *Backend, *txdb.TxDB, common.Address) {
+func NewDevNode(ctx context.Context, dir string, arbosPath string, params protocol.ChainParams, owner common.Address, config []message.ChainConfigOption) (*Backend, *txdb.TxDB, common.Address, func(), <-chan error, error) {
+	initMsg, err := message.NewInitMessage(params, owner, config)
+	if err != nil {
+		return nil, nil, [20]byte{}, nil, nil, err
+	}
+
 	rollupAddress := common.RandAddress()
-
-	monitor, err := monitor.NewMonitor(dir, arbosPath)
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
-	}
-
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
-	}
+	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
 
 	aggregator := common.RandAddress()
 	for i := range config {
@@ -68,19 +64,33 @@ func NewDevNode(dir string, arbosPath string, params protocol.ChainParams, owner
 		}
 	}
 
-	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
-	l1 := NewL1Emulator()
-	backend, err := NewBackend(monitor.Core, db, l1, signer, aggregator, big.NewInt(10000))
+	mon, err := monitor.NewMonitor(dir, arbosPath)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
-	initMsg := message.NewInitMessage(params, owner, config)
-	if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
-		logger.Fatal().Err(err).Send()
+	l1 := NewL1Emulator()
+	backendCore := NewBackendCore(mon.Core, signer.ChainID())
+
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
+	if err != nil {
+		mon.Close()
+		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
 
-	return monitor, backend, db, rollupAddress
+	if _, err := backendCore.addInboxMessage(initMsg, rollupAddress, big.NewInt(0), l1.GenerateBlock()); err != nil {
+		mon.Close()
+		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error adding init message to inbox")
+	}
+
+	cancel := func() {
+		db.Close()
+		mon.Close()
+	}
+
+	backend := NewBackend(backendCore, db, l1, signer, aggregator, big.NewInt(10000))
+
+	return backend, db, rollupAddress, cancel, errChan, nil
 }
 
 type EVM struct {
@@ -133,9 +143,104 @@ func (s *EVM) IncreaseTime(amount int64) (string, error) {
 	return strconv.FormatInt(amount, 10), err
 }
 
+type BackendCore struct {
+	arbcore core.ArbCore
+	chainID *big.Int
+}
+
+func NewBackendCore(arbcore core.ArbCore, chainID *big.Int) *BackendCore {
+	return &BackendCore{
+		arbcore: arbcore,
+		chainID: chainID,
+	}
+}
+
+func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address, gasPrice *big.Int, block L1BlockInfo) (common.Hash, error) {
+	chainTime := inbox.ChainTime{
+		BlockNum:  block.blockId.Height,
+		Timestamp: block.timestamp,
+	}
+	msgCount, err := b.arbcore.GetMessageCount()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), gasPrice, chainTime)
+
+	requestId := message.CalculateRequestId(b.chainID, msgCount)
+	var prevHash common.Hash
+	if msgCount.Cmp(big.NewInt(0)) > 0 {
+		prevHash, err = b.arbcore.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
+		if err != nil {
+			return common.Hash{}, err
+		}
+	}
+	seqBatchItem := inbox.SequencerBatchItem{
+		LastSeqNum:        msgCount,
+		Accumulator:       common.Hash{},
+		TotalDelayedCount: big.NewInt(0),
+		SequencerMessage:  inboxMessage.ToBytes(),
+	}
+	err = seqBatchItem.RecomputeAccumulator(prevHash, big.NewInt(0), common.Hash{})
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	nextBlockMessage := inbox.InboxMessage{
+		Kind:        6,
+		Sender:      common.Address{},
+		InboxSeqNum: big.NewInt(0),
+		GasPrice:    big.NewInt(0),
+		Data:        []byte{},
+		ChainTime: inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		},
+	}
+	nextBlockBatchItem := inbox.SequencerBatchItem{
+		LastSeqNum:        new(big.Int).Add(msgCount, big.NewInt(1)),
+		Accumulator:       common.Hash{},
+		TotalDelayedCount: big.NewInt(0),
+		SequencerMessage:  nextBlockMessage.ToBytes(),
+	}
+	err = nextBlockBatchItem.RecomputeAccumulator(seqBatchItem.Accumulator, big.NewInt(0), common.Hash{})
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if !successful {
+		return common.Hash{}, errors.New("failed to deliver message")
+	}
+	for {
+		if b.arbcore.MachineIdle() {
+			break
+		}
+		<-time.After(time.Millisecond * 1000)
+	}
+	for {
+		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
+		if err != nil {
+			return common.Hash{}, err
+		}
+		coreLogs, err := b.arbcore.GetLogCount()
+		if err != nil {
+			return common.Hash{}, err
+		}
+		if cursorPos.Cmp(coreLogs) == 0 {
+			break
+		}
+		<-time.After(time.Millisecond * 200)
+	}
+
+	return requestId, nil
+}
+
 type Backend struct {
 	sync.Mutex
-	arbcore    core.ArbCore
+	*BackendCore
 	db         *txdb.TxDB
 	l1Emulator *L1Emulator
 	signer     types.Signer
@@ -145,26 +250,26 @@ type Backend struct {
 	newTxFeed event.Feed
 }
 
-func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) (*Backend, error) {
+func NewBackend(core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
 	return &Backend{
-		arbcore:    arbcore,
-		db:         db,
-		l1Emulator: l1,
-		signer:     signer,
-		aggregator: aggregator,
-		l1GasPrice: l1GasPrice,
-	}, nil
+		BackendCore: core,
+		db:          db,
+		l1Emulator:  l1,
+		signer:      signer,
+		aggregator:  aggregator,
+		l1GasPrice:  l1GasPrice,
+	}
 }
 
 func (b *Backend) ExportData() ([]byte, error) {
 	b.Lock()
 	messageCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, err
 	}
 	messages, err := b.arbcore.GetMessages(big.NewInt(0), messageCount)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, err
 	}
 	b.Unlock()
 	return inbox.TestVectorJSON(messages, nil, nil)
@@ -276,89 +381,6 @@ func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (c
 	b.Lock()
 	defer b.Unlock()
 	return b.addInboxMessage(msg, sender, big.NewInt(0), b.l1Emulator.GenerateBlock())
-}
-
-func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, gasPrice *big.Int, block L1BlockInfo) (common.Hash, error) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  block.blockId.Height,
-		Timestamp: block.timestamp,
-	}
-	msgCount, err := b.arbcore.GetMessageCount()
-	if err != nil {
-		return common.Hash{}, err
-	}
-	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), gasPrice, chainTime)
-
-	requestId := message.CalculateRequestId(b.signer.ChainID(), msgCount)
-	var prevHash common.Hash
-	if msgCount.Cmp(big.NewInt(0)) > 0 {
-		prevHash, err = b.arbcore.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
-		if err != nil {
-			return common.Hash{}, err
-		}
-	}
-	seqBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        msgCount,
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(0),
-		SequencerMessage:  inboxMessage.ToBytes(),
-	}
-	err = seqBatchItem.RecomputeAccumulator(prevHash, big.NewInt(0), common.Hash{})
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	nextBlockMessage := inbox.InboxMessage{
-		Kind:        6,
-		Sender:      common.Address{},
-		InboxSeqNum: big.NewInt(0),
-		GasPrice:    big.NewInt(0),
-		Data:        []byte{},
-		ChainTime: inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocksInt(0),
-			Timestamp: big.NewInt(0),
-		},
-	}
-	nextBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        new(big.Int).Add(msgCount, big.NewInt(1)),
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(0),
-		SequencerMessage:  nextBlockMessage.ToBytes(),
-	}
-	err = nextBlockBatchItem.RecomputeAccumulator(seqBatchItem.Accumulator, big.NewInt(0), common.Hash{})
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	if !successful {
-		return common.Hash{}, errors.New("failed to deliver message")
-	}
-	for {
-		if b.arbcore.MachineIdle() {
-			break
-		}
-		<-time.After(time.Millisecond * 1000)
-	}
-	for {
-		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
-		if err != nil {
-			return common.Hash{}, err
-		}
-		coreLogs, err := b.arbcore.GetLogCount()
-		if err != nil {
-			return common.Hash{}, err
-		}
-		if cursorPos.Cmp(coreLogs) == 0 {
-			break
-		}
-		<-time.After(time.Millisecond * 200)
-	}
-
-	return requestId, nil
 }
 
 func (b *Backend) SubscribeNewTxsEvent(ch chan<- core2.NewTxsEvent) event.Subscription {

@@ -102,7 +102,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 
 		messages := messages[:1]
 
-		a, _, ranSteps := mach.ExecuteAssertionAdvanced(
+		a, _, ranSteps, err := mach.ExecuteAssertionAdvanced(
 			1,
 			true,
 			messages,
@@ -111,6 +111,9 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			common.NewHashFromEth(beforeCut.SendAcc),
 			common.NewHashFromEth(beforeCut.LogAcc),
 		)
+		if err != nil {
+			return nil, nil, err
+		}
 		if ranSteps == 0 {
 			break
 		}
@@ -226,8 +229,9 @@ func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestco
 }
 
 func TestValidateProof(t *testing.T) {
-	testMachines := gotest.OpCodeTestFiles()
-	backend, pks := test.SimulatedBackend()
+	testMachines, err := gotest.OpCodeTestFiles()
+	test.FailIfError(t, err)
+	backend, pks := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
 	sequencer := common.RandAddress().ToEthAddress()

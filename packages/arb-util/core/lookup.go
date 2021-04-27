@@ -202,10 +202,10 @@ type ExecutionState struct {
 	LogAcc            common.Hash
 }
 
-func NewExecutionState(c ExecutionCursor) *ExecutionState {
+func NewExecutionState(c ExecutionCursor) (*ExecutionState, error) {
 	hash, err := c.MachineHash()
 	if err != nil {
-		panic("Unable to compute hash for execution state")
+		return nil, errors.New("unable to compute hash for execution state")
 	}
 	return &ExecutionState{
 		MachineHash:       hash,
@@ -216,7 +216,7 @@ func NewExecutionState(c ExecutionCursor) *ExecutionState {
 		TotalLogCount:     c.TotalLogCount(),
 		SendAcc:           c.SendAcc(),
 		LogAcc:            c.LogAcc(),
-	}
+	}, nil
 }
 
 func (e *ExecutionState) IsPermanentlyBlocked() bool {

@@ -33,7 +33,9 @@ import (
 func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (*Monitor, func()) {
 	tmpDir, err := ioutil.TempDir("", "arbitrum")
 	test.FailIfError(t, err)
-	monitor, err := NewMonitor(tmpDir, arbos.Path())
+	arbosPath, err := arbos.Path()
+	test.FailIfError(t, err)
+	monitor, err := NewMonitor(tmpDir, arbosPath)
 	if err != nil {
 		if err := os.RemoveAll(tmpDir); err != nil {
 			t.Fatal(err)

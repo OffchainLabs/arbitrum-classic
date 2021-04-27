@@ -107,6 +107,7 @@ bool ArbCore::startThread() {
 }
 
 void ArbCore::abortThread() {
+    std::cerr << "Aborting main ArbCore thread" << std::endl;
     if (core_thread) {
         arbcore_abort = true;
         core_thread->join();
@@ -814,6 +815,8 @@ void ArbCore::operator()() {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
+
+    std::cerr << "Exiting main ArbCore thread" << std::endl;
 
     // Error occurred, make sure machine stops cleanly
     machine->abortMachine();

@@ -50,7 +50,7 @@ func TestMinimumGas(t *testing.T) {
 		message.NewSafeL2Message(tx1),
 		message.NewSafeL2Message(tx2),
 	}
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	incoming := extractIncomingMessages(t, results)
 	l2Messages := filterL2Messages(t, incoming)
