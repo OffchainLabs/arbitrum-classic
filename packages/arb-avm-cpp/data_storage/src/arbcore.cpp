@@ -1196,7 +1196,7 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     return {status, std::move(execution_cursor)};
 }
 
-constexpr uint256_t checkpoint_load_gas_cost = 100'000'000;
+constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
 
 rocksdb::Status ArbCore::advanceExecutionCursor(
     ExecutionCursor& execution_cursor,
