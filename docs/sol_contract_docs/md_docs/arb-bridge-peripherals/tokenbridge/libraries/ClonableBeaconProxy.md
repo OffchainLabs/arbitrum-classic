@@ -1,0 +1,3 @@
+---
+title: ClonableBeaconProxy.sol Spec
+---

@@ -294,6 +294,3 @@ packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 # geth setup
 packages/arb-bridge-eth/data/
 packages/arb-bridge-eth/password.txt
-
-# docs
-docs/sol_contract_docs/md_docs/*
