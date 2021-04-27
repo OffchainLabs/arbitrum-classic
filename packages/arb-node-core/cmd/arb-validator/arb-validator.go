@@ -37,7 +37,6 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -207,13 +206,6 @@ func main() {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
-	storage, err := cmachine.NewArbStorage(path.Join(folder, "arbStorage"))
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Error creating ArbStorage")
-	}
-	defer func() {
-		storage.CloseArbStorage()
-	}()
 	dbPath := path.Join(folder, "arbStorage")
 	arbosPath := path.Join(folder, "arbos.mexe")
 	mon, err := monitor.NewMonitor(dbPath, arbosPath)
