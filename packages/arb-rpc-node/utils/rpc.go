@@ -32,14 +32,14 @@ var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 func LaunchRPC(ctx context.Context, handler http.Handler, port string) error {
 	r := mux.NewRouter()
 	r.Handle("/", handler).Methods("GET", "POST", "OPTIONS")
-	return launchServer(ctx, r, port)
+	return launchServer(ctx, r, port, "rpc")
 }
 
 func LaunchWS(ctx context.Context, server *rpc.Server, port string) error {
-	return launchServer(ctx, server.WebsocketHandler([]string{"*"}), port)
+	return launchServer(ctx, server.WebsocketHandler([]string{"*"}), port, "websocket")
 }
 
-func launchServer(ctx context.Context, handler http.Handler, port string) error {
+func launchServer(ctx context.Context, handler http.Handler, port string, serverType string) error {
 	headersOk := handlers.AllowedHeaders(
 		[]string{"X-Requested-With", "Content-Type", "Authorization"},
 	)
@@ -49,7 +49,7 @@ func launchServer(ctx context.Context, handler http.Handler, port string) error 
 	)
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
-	logger.Info().Msg("Launching rpc server over http")
+	logger.Info().Msgf("Launching %s server over http", serverType)
 	server := &http.Server{Addr: ":" + port, Handler: h}
 
 	errChan := make(chan error, 1)
