@@ -264,8 +264,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
         uint256 latest;
         for (latest = latestNodeCreated(); maxItems > 0 && latest > target; latest--) {
-            INode node = getNode(latest);
-            node.destroy();
+            destroyNode(latest);
             maxItems--;
         }
         updateLatestNodeCreated(latest);
@@ -378,6 +377,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Create a new stake
+     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
+     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
      */
     function newStake() external payable whenNotPaused {
         require(stakeToken == address(0), "WRONG_STAKE_TYPE");
@@ -386,6 +387,8 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Create a new stake
+     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
+     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
      * @param tokenAmount the amount of tokens staked
      */
     function newStake(uint256 tokenAmount) external whenNotPaused {
@@ -579,6 +582,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Refund a staker that is currently staked on or before the latest confirmed node
+     * @dev Since a staker is initially placed in the latest confirmed node, if they don't move it
+     * a griefer can remove their stake. It is recomended to batch together the txs to place a stake
+     * and move it to the desired node.
      * @param stakerAddress Address of the staker whose stake is refunded
      */
     function returnOldDeposit(address stakerAddress) external override whenNotPaused {
