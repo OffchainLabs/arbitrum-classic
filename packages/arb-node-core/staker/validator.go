@@ -174,6 +174,23 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			Msg("catching up to chain")
 		return nil, false, nil
 	}
+
+	currentBlock, err := getBlockID(ctx, v.client, nil)
+	if err != nil {
+		return nil, false, err
+	}
+
+	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+
+	timeSinceProposed := new(big.Int).Sub(currentBlock.Height.AsInt(), startState.ProposedBlock)
+	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
+		// Too soon to assert
+		return nil, false, nil
+	}
+
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
 		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
@@ -205,22 +222,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
 
-	currentBlock, err := getBlockID(ctx, v.client, nil)
-	if err != nil {
-		return nil, false, err
-	}
-
-	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
-	if err != nil {
-		return nil, false, err
-	}
-
-	timeSinceProposed := new(big.Int).Sub(currentBlock.Height.AsInt(), startState.ProposedBlock)
-	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
-		// Too soon to assert
-		return nil, false, nil
-	}
-
 	arbGasSpeedLimitPerBlock, err := v.rollup.ArbGasSpeedLimitPerBlock(ctx)
 	if err != nil {
 		return nil, false, err
@@ -234,14 +235,14 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor)
+	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, false)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
 	if len(successorNodes) > 0 {
 		logger.Info().Int("count", len(successorNodes)).Msg("Examining existing potential successors")
 	}
-	for _, nd := range successorNodes {
+	for nodeI, nd := range successorNodes {
 		if correctNode != nil && wrongNodesExist {
 			// We've found everything we could hope to find
 			break
@@ -260,6 +261,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
 				if err != nil {
 					return nil, false, err
+				}
+				if nodeI != len(successorNodes)-1 && stakerInfo.latestExecutionCursor != nil {
+					// We will need to use this execution tracker more, so we need to clone this cursor
+					stakerInfo.latestExecutionCursor = stakerInfo.latestExecutionCursor.Clone()
 				}
 				continue
 			} else {
