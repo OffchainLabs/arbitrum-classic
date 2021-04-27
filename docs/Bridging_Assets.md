@@ -65,7 +65,7 @@ Any ERC20 token on Ethereum can be bridged onto Arbitrum "the standard way" by s
     ) external payable override returns (uint256)
 ```
 
-If no paired-L2 has yet been deployed (i.e., if this is the first deposit), a [StandardArbERC20](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/arbitrum/StandardArbERC20.sol) will be deployed on Arbitrum at a deterministically generated address. StandardArbErc20 implements the ERC20 standard with additional bridging-related methods (i.e., `bridgeMint, withdraw`, etc.) as well as extensions to improve UX (ERC1363 & ERC2612). The L1 contracts name, symbol, and decimals will also be pushed directly into the new StandardArbERC20.
+If no paired-L2 has yet been deployed (i.e., if this is the first deposit), a [StandardArbERC20](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/StandardArbERC20.md) will be deployed on Arbitrum at a deterministically generated address. StandardArbErc20 implements the ERC20 standard with additional bridging-related methods (i.e., `bridgeMint, withdraw`, etc.) as well as extensions to improve UX (ERC1363 & ERC2612). The L1 contracts name, symbol, and decimals will also be pushed directly into the new StandardArbERC20.
 
 To withdraw from a standard ERC20 from Arbitrum , call `SomeStandardArbERC20.withdraw`
 
