@@ -1,10 +1,11 @@
 package broadcaster
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
@@ -205,8 +206,8 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBa
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
 
-func (b *Broadcaster) SyncMessages(accumulator common.Hash) {
-	b.clientManager.syncMessages(accumulator)
+func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
+	b.clientManager.confirmedAccumulator(accumulator)
 }
 
 func (b *Broadcaster) messageCacheCount() int {
