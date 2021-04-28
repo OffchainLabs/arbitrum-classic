@@ -10,6 +10,8 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/mailru/easygo/netpoll"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
@@ -51,15 +53,20 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 
 	wg.Wait()
 
-	b.SyncMessages(feedItem1.BatchItem.Accumulator) // remove the first message we generated
-	if b.messageCacheCount() != 1 {                 // should have left the second message
+	// give the above connections time to reconnect
+	time.Sleep(2 * time.Second)
+
+	// Confirmed Accumulator will also broadcast to the clients.
+	b.ConfirmedAccumulator(feedItem1.BatchItem.Accumulator) // remove the first message we generated
+	if b.messageCacheCount() != 1 {                         // should have left the second message
 		t.Errorf("1. Failed to clear cached inbox message. MessageCacheCount: %v", b.messageCacheCount())
 	}
 
-	b.SyncMessages(feedItem2.BatchItem.Accumulator) // remove the second message we generated
-	if b.messageCacheCount() != 0 {                 // should have emptied.
+	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator) // remove the second message we generated
+	if b.messageCacheCount() != 0 {                         // should have emptied.
 		t.Errorf("2. Failed to clear cached inbox message. MessageCacheCount: %v", b.messageCacheCount())
 	}
+
 }
 
 func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
@@ -100,6 +107,115 @@ func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 	if messagesReceived != 2 {
 		t.Errorf("%d Should have received two cached messages: %s\n", i, err)
 	}
+}
+
+func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
+	broadcasterSettings := Settings{
+		Addr:      ":9642",
+		Workers:   128,
+		Queue:     1,
+		IoTimeout: 2 * time.Second,
+	}
+
+	b := NewBroadcaster(broadcasterSettings)
+
+	err := b.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Stop()
+
+	newBroadcastMessage := SequencedMessages()
+
+	_, feedItem, _ := newBroadcastMessage()
+	time.Sleep(1 * time.Second)
+
+	accumulatorConfirmed := make(chan common.Hash)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go receivedConfirmedAccumulator(t, &wg, accumulatorConfirmed)
+
+	time.Sleep(2 * time.Second)
+
+	// Confirmed Accumulator will also broadcast to the clients.
+	b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
+
+	acc := <-accumulatorConfirmed
+	if acc != feedItem.BatchItem.Accumulator {
+		t.Error("Did not receive expected accumultaor")
+	}
+
+	wg.Wait()
+}
+
+func receivedConfirmedAccumulator(t *testing.T, wg *sync.WaitGroup, accumulatorConfirmed chan common.Hash) {
+
+	confirmedAccumulatorReceived := 0
+	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
+	if err != nil {
+		t.Errorf("Can not connect: %v\n", err)
+		return
+	}
+
+	poller, err := netpoll.New(nil)
+	if err != nil {
+		t.Error("error starting net poller")
+		return
+	}
+
+	desc, err := netpoll.HandleRead(conn)
+	if err != nil {
+		t.Error("error getting netpoll descriptor")
+		return
+	}
+
+	_ = poller.Start(desc, func(ev netpoll.Event) {
+		if ev&netpoll.EventReadHup != 0 {
+			t.Error("received hang up")
+			_ = poller.Stop(desc)
+			_ = conn.Close()
+			wg.Done()
+			return
+		}
+
+		msg, _, err := wsutil.ReadServerData(conn)
+		if err != nil {
+			t.Error("error calling ReadServerData")
+			_ = poller.Stop(desc)
+			_ = conn.Close()
+			wg.Done()
+			return
+		}
+
+		res := BroadcastMessage{}
+		err = json.Unmarshal(msg, &res)
+		if err != nil {
+			logger.Error().Err(err).Msg("error unmarshalling message")
+			_ = poller.Stop(desc)
+			_ = conn.Close()
+			wg.Done()
+
+			return
+		}
+
+		if res.Version != 1 {
+			t.Error("This is not version 1")
+		}
+
+		if res.ConfirmedAccumulator.IsConfirmed {
+			confirmedAccumulatorReceived++
+			accumulatorConfirmed <- res.ConfirmedAccumulator.Accumulator
+		}
+
+		if confirmedAccumulatorReceived == 1 { // this gets called twice from the test
+			_ = poller.Stop(desc)
+			_ = conn.Close()
+			wg.Done()
+			return
+		}
+
+	})
+
 }
 
 func TestBroadcasterRespondsToPing(t *testing.T) {

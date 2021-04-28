@@ -3,12 +3,13 @@ package broadcaster
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/rand"
 	"net"
 	"sort"
 	"strconv"
 	"sync"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
@@ -63,8 +64,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 
 		if len(cm.broadcastMessages) > 0 {
 			// send the newly connected client all the messages we've got...
-			bm := BroadcastMessage{}
-			bm.Messages = cm.broadcastMessages
+			bm := BroadcastMessage{Version: 1, Messages: cm.broadcastMessages}
 
 			_ = clientConnection.write(bm)
 		}
@@ -98,8 +98,8 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Unlock()
 }
 
-// SyncSequence clears out everything prior to finding the matching accumulator
-func (cm *ClientManager) syncMessages(accumulator common.Hash) {
+// ConfirmedAccumulator clears out everything prior to finding the matching accumulator
+func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
@@ -116,6 +116,27 @@ func (cm *ClientManager) syncMessages(accumulator common.Hash) {
 	}
 
 	cm.broadcastMessages = broadcastMessages
+
+	bm := BroadcastMessage{Version: 1}
+	bm.ConfirmedAccumulator = ConfirmedAccumulator{
+		IsConfirmed: true,
+		Accumulator: accumulator,
+	}
+
+	var buf bytes.Buffer
+	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(bm); err != nil {
+		return err
+	}
+
+	if err := w.Flush(); err != nil {
+		return err
+	}
+
+	cm.out <- buf.Bytes()
+
+	return nil
 }
 
 // Broadcast sends message to all clients.
@@ -161,8 +182,7 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 
 	}
 
-	bm := BroadcastMessage{}
-	bm.Messages = broadcastMessages
+	bm := BroadcastMessage{Version: 1, Messages: broadcastMessages}
 
 	if err := encoder.Encode(bm); err != nil {
 		return err
