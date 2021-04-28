@@ -404,6 +404,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function _newStake(uint256 depositAmount) private whenNotPaused {
         // Verify that sender is not already a staker
         require(!isStaked(msg.sender), "ALREADY_STAKED");
+        require(!isZombie(msg.sender), "STAKER_IS_ZOMBIE");
         require(depositAmount >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
         createNewStake(msg.sender, depositAmount);

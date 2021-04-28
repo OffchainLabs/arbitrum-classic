@@ -131,6 +131,15 @@ contract RollupCore {
         return _zombies.length;
     }
 
+    function isZombie(address staker) public view returns (bool) {
+        for (uint256 i = 0; i < _zombies.length; i++) {
+            if (staker == _zombies[i].stakerAddress) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * @notice Get the amount of funds withdrawable by the given address
      * @param owner Address to check the funds of
@@ -399,7 +408,7 @@ contract RollupCore {
      * @notice Destroy the given node and clear out its address
      * @param nodeNum Index of the node to remove
      */
-    function destroyNode(uint256 nodeNum) private {
+    function destroyNode(uint256 nodeNum) internal {
         _nodes[nodeNum].destroy();
         _nodes[nodeNum] = INode(0);
     }
