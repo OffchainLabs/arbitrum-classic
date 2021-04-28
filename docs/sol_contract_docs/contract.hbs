@@ -16,6 +16,8 @@ title: {{name}}.sol Spec
 {{/each}}
 
 {{#each ownFunctions}}
+{{#unless (eq visibility "internal")}}
+{{#unless (eq visibility "private")}}
 ### `{{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}` ({{visibility}})
 
 {{{natspec.userdoc}}}
@@ -28,6 +30,8 @@ title: {{name}}.sol Spec
 {{#each natspec.returns}}
 **Returns**: {{param}}: {{description}}
 {{/each}}
+{{/unless}}
+{{/unless}}
 
 {{/each}}
 
