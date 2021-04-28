@@ -121,7 +121,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	for len(b.txQueue) > 0 {
 		tx := <-b.txQueue
 		batchTxs = append(batchTxs, tx)
-		l2BatchContents = append(l2BatchContents, message.NewTransactionFromEthTx(tx))
+		l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(tx))
 	}
 
 	if len(l2BatchContents) == 0 {
