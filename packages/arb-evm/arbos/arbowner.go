@@ -17,6 +17,7 @@
 package arbos
 
 import (
+	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -33,6 +34,7 @@ var (
 	getUploadedCodeHashABI   abi.Method
 	setFeesEnabledABI        abi.Method
 	setFairGasPriceSenderABI abi.Method
+	deployContractABI        abi.Method
 )
 
 func init() {
@@ -48,6 +50,7 @@ func init() {
 	getUploadedCodeHashABI = arbowner.Methods["getUploadedCodeHash"]
 	setFeesEnabledABI = arbowner.Methods["setFeesEnabled"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
+	deployContractABI = arbowner.Methods["deployContract"]
 }
 
 func GiveOwnershipData(newOwnerAddr common.Address) []byte {
@@ -76,4 +79,8 @@ func SetFairGasPriceSender(sender common.Address) []byte {
 
 func SetFeesEnabled(enabled bool) []byte {
 	return makeFuncData(setFeesEnabledABI, enabled)
+}
+
+func DeployContract(constructor []byte, sender common.Address, nonce *big.Int) []byte {
+	return makeFuncData(deployContractABI, constructor, sender.ToEthAddress(), nonce)
 }
