@@ -25,12 +25,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
-
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -43,6 +42,7 @@ type BroadcastClient struct {
 	startingBroadcastClientMutex *sync.Mutex
 	RetryCount                   int
 	retrying                     bool
+	ConfirmedAccumulatorListener chan common.Hash
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
@@ -60,16 +60,22 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	return bc
 }
 
-func (bc *BroadcastClient) Connect() (chan monitor.SequencerFeedItem, error) {
-	messageReceiver := make(chan monitor.SequencerFeedItem)
+func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastInboxMessage, error) {
+	messageReceiver := make(chan broadcaster.BroadcastInboxMessage)
+	bc.ConfirmedAccumulatorListener = make(chan common.Hash)
 	return bc.connect(messageReceiver)
 }
 
-func (bc *BroadcastClient) connect(messageReceiver chan monitor.SequencerFeedItem) (chan monitor.SequencerFeedItem, error) {
+func (bc *BroadcastClient) GetConfirmedAccumulatorListner() chan common.Hash {
+	return bc.ConfirmedAccumulatorListener
+}
+
+func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastInboxMessage) (chan broadcaster.BroadcastInboxMessage, error) {
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
 		return nil, nil
 	}
+
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
 	if err != nil {
@@ -124,8 +130,14 @@ func (bc *BroadcastClient) connect(messageReceiver chan monitor.SequencerFeedIte
 			return
 		}
 
-		for _, message := range res.Messages {
-			messageReceiver <- message.FeedItem
+		if res.Version == 1 {
+			for _, message := range res.Messages {
+				messageReceiver <- *message
+			}
+
+			if res.ConfirmedAccumulator.IsConfirmed {
+				bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
+			}
 		}
 	})
 
@@ -161,7 +173,7 @@ func (bc *BroadcastClient) Ping() (<-chan string, error) {
 	return out, nil
 }
 
-func (bc *BroadcastClient) RetryConnect(messageReceiver chan monitor.SequencerFeedItem) {
+func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastInboxMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true

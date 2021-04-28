@@ -37,21 +37,17 @@ func (ar *ArbRelay) Start() {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
 	}
 
-	_ = messages
-	/*
-		go func() {
-			for {
-				select {
-				case receivedMsgs := <-messages:
-					for i := range receivedMsgs.Messages {
-						m := receivedMsgs.Messages[i]
-						ar.broadcaster.Broadcast(m.BeforeAccumulator, m.InboxMessage, m.Signature)
-					}
-
-				}
+	confirmedAccumulator := ar.broadcastClient.ConfirmedAccumulatorListener
+	go func() {
+		for {
+			select {
+			case msg := <-messages:
+				ar.broadcaster.Broadcast(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
+			case ca := <-confirmedAccumulator:
+				ar.broadcaster.ConfirmedAccumulator(ca)
 			}
-		}()
-	*/
+		}
+	}()
 }
 
 func (ar *ArbRelay) Stop() {
