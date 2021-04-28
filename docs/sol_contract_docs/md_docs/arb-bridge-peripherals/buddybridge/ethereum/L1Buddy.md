@@ -12,8 +12,4 @@ title: L1Buddy.sol Spec
 
 ### `finalizeBuddyDeploy(bool success)` (external)
 
-### `handleDeploySuccess()` (internal)
-
-### `handleDeployFail()` (internal)
-
 ### `DeployBuddyContract(uint256 seqNum, address l2Address)`

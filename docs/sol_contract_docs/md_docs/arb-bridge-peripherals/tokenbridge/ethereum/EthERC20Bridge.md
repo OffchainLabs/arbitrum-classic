@@ -74,35 +74,6 @@ Finalizes a withdraw via Outbox message; callable only by ArbTokenBridge.\_withd
 
 - `amount`: Token amount being withdrawn
 
-### `callStatic(address targetContract, bytes4 targetFunction) → bytes` (internal)
-
-utility function used to perform external read-only calls.
-
-the result is returned even if the call failed, the L2 is expected to
-identify and deal with this.
-
-**Returns**: result: bytes, even if the call failed.
-
-### `depositToken(address erc20, address sender, address destination, uint256 amount, struct EthERC20Bridge.RetryableTxParams retryableParams, bytes deployData, bytes callHookData) → uint256` (internal)
-
-internal function used to escrow tokens, then trigger their minting in the L2
-
-- `erc20`: L1 token address
-
-- `sender`: account that initiated the deposit in the L1
-
-- `destination`: account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
-
-- `amount`: token amount to be minted to the user
-
-- `retryableParams`: params for inbox's createRetryableTicket
-
-- `deployData`: encoded symbol/name/decimal data for initial deploy
-
-- `callHookData`: optional data for external call upon minting
-
-**Returns**: ticket: ID used to redeem the retryable transaction in the L2
-
 ### `deposit(address erc20, address destination, uint256 amount, uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid, bytes callHookData) → uint256` (external)
 
 Deposit standard or custom ERC20 token. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy.
@@ -122,20 +93,6 @@ Deposit standard or custom ERC20 token. If L2 side hasn't been deployed yet, inc
 - `callHookData`: optional data for external call upon minting
 
 **Returns**: ticket: ID used to redeem the retryable transaction in the L2
-
-### `encodeWithdrawal(uint256 exitNum, address initialDestination, address erc20, uint256 amount) → bytes32` (internal)
-
-Output unique identifier for a token withdrawal. Used for tracking fast exits.
-
-- `exitNum`: Sequentially increasing exit counter
-
-- `initialDestination`: address for tokens before/unless otherwise redirected (via, i.e., a fast-withdrawal)
-
-- `erc20`: L1 address of token being withdrawn
-
-- `amount`: amount of token being withdrawn
-
-**Returns**: bytes: hash uniquely identifying withdrawal
 
 ### `calculateL2TokenAddress(address erc20) → address` (public)
 

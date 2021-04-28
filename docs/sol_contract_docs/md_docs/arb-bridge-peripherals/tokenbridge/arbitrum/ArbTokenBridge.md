@@ -43,17 +43,6 @@ is expected to include the deployData. If not a L1 withdrawal is automatically t
 
 - `callHookData`: optional data for external call upon minting
 
-### `deployToken(address l1ERC20, bytes deployData) → address` (internal)
-
-internal utility function used to deploy ERC20 tokens with the beacon proxy pattern.
-
-the transparent proxy implementation by OpenZeppelin can't be used if we want to be able to
-upgrade the token logic.
-
-- `l1ERC20`: L1 address of ERC20
-
-- `deployData`: encoded symbol/name/decimal data for initial deploy
-
 ### `customTokenRegistered(address l1Address, address l2Address)` (external)
 
 Sets the L1 / L2 custom token pairing; called from the L1 via EthErc20Bridge.registerCustomL2Token
@@ -76,21 +65,6 @@ this call is initiated by the token, ie StandardArbERC20.withdraw or WhateverCus
 - `destination`: the account to be credited with the tokens
 
 - `amount`: token amount to be withdrawn
-
-### `_withdraw(address l1ERC20, address destination, uint256 amount) → uint256` (internal)
-
-internal utility function that encodes and calls a L2 to L1 withdrawal transaction
-
-this executes the withdrawal without validating the inputs.
-It is expected that the input is validated before calling this function.
-
-- `l1ERC20`: L1 address of ERC20
-
-- `destination`: the account to be credited with the tokens
-
-- `amount`: token amount to be withdrawn
-
-**Returns**: identifier: used to trigger the transaction in the L1.
 
 ### `migrate(address l1ERC20, address sender, address destination, uint256 amount)` (external)
 
