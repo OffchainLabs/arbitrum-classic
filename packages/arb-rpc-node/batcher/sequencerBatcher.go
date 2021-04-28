@@ -333,7 +333,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 				if len(seqMsg.Data) != 0 {
 					return errors.New("end of block message has data")
 				}
-			} else {
+			} else if seqMsg.Kind != message.L2Type {
 				return errors.Errorf("unexpected sequencer message kind %v", seqMsg.Kind)
 			}
 
