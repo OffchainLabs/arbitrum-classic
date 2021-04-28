@@ -329,6 +329,8 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 			} else if l1Timestamp.Cmp(seqMsg.ChainTime.Timestamp) != 0 {
 				break
 			}
+
+			// Do some basic validation of the message
 			if seqMsg.Kind == message.EndOfBlockType {
 				if len(seqMsg.Data) != 0 {
 					return errors.New("end of block message has data")
