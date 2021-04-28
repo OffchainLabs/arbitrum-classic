@@ -393,3 +393,97 @@ func balanceCheck(
 		t.Error("unexpected destination balance")
 	}
 }
+func TestRetryableReverted(t *testing.T) {
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	defer closeFunc()
+
+	client := web3.NewEthClient(srv, true)
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+
+	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
+	test.FailIfError(t, err)
+
+	retryableTx := message.RetryableTx{
+		Destination:       common.NewAddressFromEth(dest),
+		Value:             big.NewInt(20),
+		Deposit:           big.NewInt(100),
+		MaxSubmissionCost: big.NewInt(30),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
+		MaxGas:            big.NewInt(0),
+		GasPriceBid:       big.NewInt(0),
+		Data:              simpleABI.Methods["reverts"].ID,
+	}
+
+	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	test.FailIfError(t, err)
+
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+
+	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	_, err = retryable.Redeem(otherAuth, ticketId)
+	if err == nil {
+		t.Fatal("expected error from redeem")
+	}
+	if err.Error() != "failed to estimate gas needed: execution reverted: this is a test" {
+		t.Error("wrong error message from redeem", err)
+	}
+	balanceCheck(t, srv, sender, retryableTx, big.NewInt(50), big.NewInt(0), big.NewInt(30), big.NewInt(0))
+}
+
+func TestRetryableWithReturnData(t *testing.T) {
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	defer closeFunc()
+
+	client := web3.NewEthClient(srv, true)
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+
+	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
+	test.FailIfError(t, err)
+
+	retryableTx := message.RetryableTx{
+		Destination:       common.NewAddressFromEth(dest),
+		Value:             big.NewInt(20),
+		Deposit:           big.NewInt(100),
+		MaxSubmissionCost: big.NewInt(30),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
+		MaxGas:            big.NewInt(0),
+		GasPriceBid:       big.NewInt(0),
+		Data:              simpleABI.Methods["exists"].ID,
+	}
+
+	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	test.FailIfError(t, err)
+
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+
+	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	tx, err := retryable.Redeem(otherAuth, ticketId)
+	test.FailIfError(t, err)
+
+	res, err := backend.db.GetRequest(ticketId)
+	test.FailIfError(t, err)
+
+	res2, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+	test.FailIfError(t, err)
+
+	if len(res.ReturnData) != 32 {
+		t.Fatal("expected 32 byte of return data")
+	}
+	if new(big.Int).SetBytes(res.ReturnData).Cmp(big.NewInt(10)) != 0 {
+		t.Error("wrong return value")
+	}
+
+	if len(res2.ReturnData) != 0 {
+		t.Fatal("expected no return data")
+	}
+}
