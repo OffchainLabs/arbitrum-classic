@@ -4,7 +4,13 @@ path_prefix = "docs/sol_contract_docs/md_docs/"
 
 
 black_list_dirs = ["arb-bridge-eth/libraries", "arb-bridge-eth/interfaces"]
-black_list_files = ["ProxySetter.md"]
+black_list_files = [
+    "ProxySetter.md",
+    "TokenAddressHandler.md",
+    "INode.md",
+    "IRollup.md",
+    "IEthERC20Bridge.md",
+]
 
 
 def get_all_files(dir):
@@ -50,11 +56,13 @@ def remove_unwanted_docs():
                 os.system("rm " + _file)
             else:
                 # remove "empty" (header-only) files
+                if not os.path.exists(_file):
+                    continue
                 file_data = open(_file, "r")
                 lines = len([line for line in file_data if len(line.strip()) > 0])
+                file_data.close()
                 if lines <= 3:
                     os.system("rm " + _file)
-                file_data.close()
 
 
 def run():
