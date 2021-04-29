@@ -28,7 +28,7 @@ import (
 )
 
 func TestCodeCache(t *testing.T) {
-	skipBelowVersion(t, 8)
+	skipBelowVersion(t, 10)
 	tx1 := message.Transaction{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
