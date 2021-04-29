@@ -38,7 +38,7 @@ contract Simple {
         return 10;
     }
 
-    function reverts() external {
+    function reverts() external payable {
         require(false, "this is a test");
     }
 
