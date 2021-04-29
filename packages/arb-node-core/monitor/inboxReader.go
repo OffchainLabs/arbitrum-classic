@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"sync"
 	"time"
@@ -15,11 +16,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-type SequencerFeedItem struct {
-	BatchItem inbox.SequencerBatchItem `json:"batchItem"`
-	PrevAcc   common.Hash              `json:"prevAcc"`
-}
-
 type InboxReader struct {
 	// Only in run thread
 	delayedBridge      *ethbridge.DelayedBridgeWatcher
@@ -30,7 +26,7 @@ type InboxReader struct {
 	caughtUpTarget     *big.Int
 	healthChan         chan nodehealth.Log
 	lastAcc            common.Hash
-	sequencerFeedQueue []SequencerFeedItem
+	sequencerFeedQueue []broadcaster.SequencerFeedItem
 
 	// Only in main thread
 	running    bool
@@ -40,7 +36,7 @@ type InboxReader struct {
 	// Thread safe
 	caughtUpChan         chan bool
 	MessageDeliveryMutex sync.Mutex
-	SequencerFeed        chan SequencerFeedItem
+	BroadcastFeed        chan broadcaster.BroadcastFeedMessage
 }
 
 func NewInboxReader(
@@ -49,7 +45,7 @@ func NewInboxReader(
 	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	db core.ArbCore,
 	healthChan chan nodehealth.Log,
-	sequencerFeed chan SequencerFeedItem,
+	broadcastFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
@@ -63,7 +59,7 @@ func NewInboxReader(
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
 		healthChan:        healthChan,
-		SequencerFeed:     sequencerFeed,
+		BroadcastFeed:     broadcastFeed,
 	}, nil
 }
 
@@ -96,7 +92,7 @@ func (ir *InboxReader) IsRunning() bool {
 	return ir.running
 }
 
-// May only be called once
+// WaitToCatchUp may only be called once
 func (ir *InboxReader) WaitToCatchUp() {
 	<-ir.caughtUpChan
 }
@@ -253,14 +249,14 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	FeedReadLoop:
 		for {
 			select {
-			case feedItem := <-ir.SequencerFeed:
+			case broadcastItem := <-ir.BroadcastFeed:
 				readFromFeed = true
-				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != feedItem.PrevAcc
-				feedCaughtUp := feedItem.PrevAcc == ir.lastAcc
+				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
+				feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc
 				if feedReorg || feedCaughtUp {
-					ir.sequencerFeedQueue = []SequencerFeedItem{}
+					ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
 				}
-				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, feedItem)
+				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
 			default:
 				break FeedReadLoop
 			}
@@ -274,7 +270,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				queueItems = append(queueItems, item.BatchItem)
 			}
 			prevAcc := ir.sequencerFeedQueue[0].PrevAcc
-			ir.sequencerFeedQueue = []SequencerFeedItem{}
+			ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
 			ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
 			if err != nil {
 				return err

@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
@@ -43,11 +42,11 @@ func setSequenceNumberInData(data []byte, sequenceNumber *big.Int) []byte {
 }
 
 // returns a function that when called returns the next random message in the sequence
-func SequencedMessages() func() (common.Hash, monitor.SequencerFeedItem, *big.Int) {
+func SequencedMessages() func() (common.Hash, SequencerFeedItem, *big.Int) {
 	sequenceNumber := big.NewInt(41)
 	accumulator := common.RandHash()
 
-	return func() (common.Hash, monitor.SequencerFeedItem, *big.Int) {
+	return func() (common.Hash, SequencerFeedItem, *big.Int) {
 		prevAccumulator := accumulator
 		sequenceNumber = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
 		batchItem := inbox.SequencerBatchItem{}
@@ -59,7 +58,7 @@ func SequencedMessages() func() (common.Hash, monitor.SequencerFeedItem, *big.In
 
 		signature := common.RandBigInt()
 
-		feedItem := monitor.SequencerFeedItem{
+		feedItem := SequencerFeedItem{
 			BatchItem: batchItem,
 			PrevAcc:   prevAccumulator,
 		}

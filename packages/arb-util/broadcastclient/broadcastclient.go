@@ -60,8 +60,8 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	return bc
 }
 
-func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastInboxMessage, error) {
-	messageReceiver := make(chan broadcaster.BroadcastInboxMessage)
+func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastFeedMessage, error) {
+	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
 	bc.ConfirmedAccumulatorListener = make(chan common.Hash)
 	return bc.connect(messageReceiver)
 }
@@ -70,7 +70,7 @@ func (bc *BroadcastClient) GetConfirmedAccumulatorListner() chan common.Hash {
 	return bc.ConfirmedAccumulatorListener
 }
 
-func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastInboxMessage) (chan broadcaster.BroadcastInboxMessage, error) {
+func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
 		return nil, nil
@@ -173,7 +173,7 @@ func (bc *BroadcastClient) Ping() (<-chan string, error) {
 	return out, nil
 }
 
-func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastInboxMessage) {
+func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true

@@ -1,6 +1,7 @@
-package arbrelay
+package main
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -10,6 +11,8 @@ import (
 )
 
 func TestRelayRebroadcasts(t *testing.T) {
+	ctx := context.Background()
+
 	// Start up an arbitrum sequencer broadcaster
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9742",
@@ -35,7 +38,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 
 	// Start up an arbitrum sequencer relay
 	arbRelay := NewArbRelay("ws://127.0.0.1:9742/", relaySettings)
-	arbRelay.Start()
+	arbRelay.Start(ctx, false)
 	defer arbRelay.Stop()
 
 	// Create RandomMessageGenerator
@@ -66,6 +69,7 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 
 	_ = messageCount
 	_ = messages
+	_ = expectedCount
 	/*
 		for {
 			select {

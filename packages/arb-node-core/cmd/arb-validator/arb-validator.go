@@ -92,12 +92,6 @@ func startup() error {
 		}
 	}()
 
-	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:9742/", nil)
-	sequencerFeed, err := broadcastClient.Connect()
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to start broadcastclient")
-	}
-
 	if len(os.Args) < 2 {
 		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] [strategy] " + cmdhelp.WalletArgsString
 		fmt.Println(usageStr)
@@ -113,6 +107,7 @@ func startup() error {
 	disableOpenEthereumCheck := flagSet.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
 	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
 	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+	sequencerWebsocketURL := flagSet.String("sequencer-websocket-url", "", "websocket address of sequencer feed")
 
 	if err := flagSet.Parse(os.Args[6:]); err != nil {
 		return errors.Wrap(err, "failed parsing command line arguments")
@@ -126,6 +121,12 @@ func startup() error {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
 		}()
+	}
+
+	broadcastClient := broadcastclient.NewBroadcastClient(*sequencerWebsocketURL, nil)
+	sequencerFeed, err := broadcastClient.Connect()
+	if err != nil {
+		log.Fatal().Err(err).Msg("unable to start broadcastclient")
 	}
 
 	folder := os.Args[1]

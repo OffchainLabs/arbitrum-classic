@@ -1,8 +1,8 @@
 package broadcaster
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
 type ConfirmedAccumulator struct {
@@ -10,13 +10,18 @@ type ConfirmedAccumulator struct {
 	Accumulator common.Hash `json:"accumulator"`
 }
 
-type BroadcastInboxMessage struct {
-	FeedItem  monitor.SequencerFeedItem `json:"feedItem"`
-	Signature []byte                    `json:"signature"`
+type BroadcastFeedMessage struct {
+	FeedItem  SequencerFeedItem `json:"feedItem"`
+	Signature []byte            `json:"signature"`
+}
+
+type SequencerFeedItem struct {
+	BatchItem inbox.SequencerBatchItem `json:"batchItem"`
+	PrevAcc   common.Hash              `json:"prevAcc"`
 }
 
 type BroadcastMessage struct {
-	Version              int                      `json:"version"`
-	Messages             []*BroadcastInboxMessage `json:"messages"`
-	ConfirmedAccumulator ConfirmedAccumulator     `json:"confirmedAccumulator"`
+	Version              int                     `json:"version"`
+	Messages             []*BroadcastFeedMessage `json:"messages"`
+	ConfirmedAccumulator ConfirmedAccumulator    `json:"confirmedAccumulator"`
 }

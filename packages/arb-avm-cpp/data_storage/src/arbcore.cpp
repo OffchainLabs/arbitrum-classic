@@ -98,7 +98,9 @@ std::optional<std::string> ArbCore::machineClearError() {
 }
 
 bool ArbCore::startThread() {
-    abortThread();
+    if (core_thread != nullptr) {
+        return false;
+    }
 
     core_thread =
         std::make_unique<std::thread>(std::reference_wrapper<ArbCore>(*this));
