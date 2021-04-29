@@ -18,6 +18,7 @@ package monitor
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -74,7 +75,7 @@ func (m *Monitor) StartInboxReader(
 	ethClient ethutils.EthClient,
 	rollupAddress common.Address,
 	healthChan chan nodehealth.Log,
-	sequencerFeed chan SequencerFeedItem,
+	sequencerFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), ethClient)
 	if err != nil {

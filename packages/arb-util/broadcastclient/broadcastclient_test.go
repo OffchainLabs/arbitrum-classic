@@ -101,7 +101,8 @@ func TestBroadcastClientPings(t *testing.T) {
 	}
 }
 
-func SkipTestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
+func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
+	t.Skip("Currently broken")
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9743",
 		Workers:   128,

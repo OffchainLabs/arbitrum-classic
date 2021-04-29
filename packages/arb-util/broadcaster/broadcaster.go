@@ -206,8 +206,13 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBa
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
 
-func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
-	b.clientManager.confirmedAccumulator(accumulator)
+func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {
+	err := b.clientManager.confirmedAccumulator(accumulator)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *Broadcaster) messageCacheCount() int {

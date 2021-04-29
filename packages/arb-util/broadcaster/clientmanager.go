@@ -15,7 +15,6 @@ import (
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -25,7 +24,7 @@ type ClientManager struct {
 	seq               uint
 	clientList        []*ClientConnection
 	clientMap         map[string]*ClientConnection
-	broadcastMessages []*BroadcastInboxMessage
+	broadcastMessages []*BroadcastFeedMessage
 	pool              *gopool.Pool
 	poller            netpoll.Poller
 	out               chan []byte
@@ -103,7 +102,7 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	broadcastMessages := make([]*BroadcastInboxMessage, 0)
+	broadcastMessages := make([]*BroadcastFeedMessage, 0)
 	accumulatorFound := false
 
 	for i := range cm.broadcastMessages {
@@ -146,10 +145,10 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(w)
 
-	var broadcastMessages []*BroadcastInboxMessage
+	var broadcastMessages []*BroadcastFeedMessage
 
-	msg := BroadcastInboxMessage{
-		FeedItem:  monitor.SequencerFeedItem{BatchItem: batchItem, PrevAcc: prevAcc},
+	msg := BroadcastFeedMessage{
+		FeedItem:  SequencerFeedItem{BatchItem: batchItem, PrevAcc: prevAcc},
 		Signature: signature,
 	}
 
