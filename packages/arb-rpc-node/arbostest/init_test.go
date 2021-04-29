@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
 )
 
@@ -27,7 +28,7 @@ func TestInit(t *testing.T) {
 	cmach, err := cmachine.New(*arbosfile)
 	failIfError(t, err)
 	mach := arbosmachine.New(cmach)
-	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, nil, false)
-
+	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, nil, false)
+	test.FailIfError(t, err)
 	t.Log("Startup used", assertion.NumGas, "gas")
 }

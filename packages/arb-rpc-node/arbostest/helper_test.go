@@ -38,6 +38,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
+const printArbOSLog = false
+
 func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
 	params := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(0),
@@ -206,9 +208,11 @@ func runSimpleAssertion(t *testing.T, messages []message.Message) ([]value.Value
 func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot) {
 	t.Helper()
 	logs, sends, snap := runAssertionWithoutPrint(t, inboxMessages, logCount, sendCount)
-	//testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-	//failIfError(t, err)
-	//t.Log(string(testCase))
+	if printArbOSLog {
+		testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
+		failIfError(t, err)
+		t.Log(string(testCase))
+	}
 	return logs, sends, snap
 }
 
@@ -225,7 +229,8 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 	var sends [][]byte
 	for i, msg := range inboxMessages {
 		t.Log("Message", i)
-		assertion, _, _ := mach.ExecuteAssertion(10000000000, false, []inbox.InboxMessage{msg}, false)
+		assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, []inbox.InboxMessage{msg}, false)
+		failIfError(t, err)
 		logs = append(logs, assertion.Logs...)
 		sends = append(sends, assertion.Sends...)
 
