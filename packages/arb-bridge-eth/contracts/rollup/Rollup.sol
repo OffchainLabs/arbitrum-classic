@@ -30,14 +30,12 @@ import "../challenge/IChallengeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
 
 contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
-    using SafeERC20 for IERC20;
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
@@ -394,7 +392,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function newStake(uint256 tokenAmount) external whenNotPaused {
         require(stakeToken != address(0), "WRONG_STAKE_TYPE");
         _newStake(tokenAmount);
-        IERC20(stakeToken).safeTransferFrom(msg.sender, address(this), tokenAmount);
+        require(
+            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+            "TRANSFER_FAIL"
+        );
     }
 
     /**
@@ -611,7 +612,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
         require(stakeToken != address(0), "WRONG_STAKE_TYPE");
         _addToDeposit(stakerAddress, tokenAmount);
-        IERC20(stakeToken).safeTransferFrom(msg.sender, address(this), tokenAmount);
+        require(
+            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+            "TRANSFER_FAIL"
+        );
     }
 
     /**
