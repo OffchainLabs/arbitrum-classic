@@ -108,7 +108,7 @@ func TestEVMOps(t *testing.T) {
 		message.NewSafeL2Message(tx7),
 	}
 
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[0], connAddress1)

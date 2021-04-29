@@ -99,7 +99,7 @@ func TestCreate2(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
-	logs, _, snap, _ := runAssertion(t, inboxMessages, 4, 0)
+	logs, _, snap := runAssertion(t, inboxMessages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)

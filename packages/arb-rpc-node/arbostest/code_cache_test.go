@@ -1,5 +1,5 @@
 /*
-* Copyright 2020, Offchain Labs, Inc.
+* Copyright 2021, Offchain Labs, Inc.
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,48 +17,55 @@
 package arbostest
 
 import (
-	"bytes"
 	"math/big"
-	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func TestRevert(t *testing.T) {
-	simpleConstructorTx := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(0))
-
-	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
-	if err != nil {
-		t.Fatal(err)
+func TestCodeCache(t *testing.T) {
+	skipBelowVersion(t, 10)
+	tx1 := message.Transaction{
+		MaxGas:      big.NewInt(10000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.FailedSendBin),
 	}
-
-	revertsTx := message.Transaction{
+	tx2 := message.Transaction{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
-		DestAddress: connAddress1,
+		DestAddress: common.Address{},
 		Payment:     big.NewInt(0),
-		Data:        simpleABI.Methods["reverts"].ID,
+		Data:        hexutil.MustDecode(arbostestcontracts.FailedSendBin),
 	}
 
 	messages := []message.Message{
-		message.NewSafeL2Message(simpleConstructorTx),
-		message.NewSafeL2Message(revertsTx),
+		message.NewSafeL2Message(tx1),
+		message.NewSafeL2Message(tx2),
 	}
 
 	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
-
 	checkConstructorResult(t, results[0], connAddress1)
-	revertedTxCheck(t, results[1])
+	checkConstructorResult(t, results[1], connAddress2)
 
-	correctResult := []byte("this is a test")
-	if !bytes.Contains(results[1].ReturnData, correctResult) {
-		t.Error("incorrect return data", hexutil.Encode(results[1].ReturnData))
+	res1Units := results[0].FeeStats.UnitsUsed
+	res2Units := results[1].FeeStats.UnitsUsed
+
+	t.Log(results[0].FeeStats.UnitsUsed)
+	t.Log(results[1].FeeStats.UnitsUsed)
+
+	if res2Units.L2Storage.Cmp(big.NewInt(0)) != 0 {
+		t.Error("l2 storage used should be zero if contract is in cache")
+	}
+	if new(big.Rat).SetFrac(res2Units.L2Computation, res1Units.L2Computation).Cmp(big.NewRat(3, 4)) > 0 {
+		t.Error("l2 computation too high with caching")
 	}
 }
