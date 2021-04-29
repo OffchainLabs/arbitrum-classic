@@ -115,17 +115,19 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) external {
-        bytes32 userTx = calculateItemHash(
-            l2Sender,
-            destAddr,
-            l2Block,
-            l1Block,
-            l2Timestamp,
-            amount,
-            calldataForL1
-        );
+        bytes32 userTx =
+            calculateItemHash(
+                l2Sender,
+                destAddr,
+                l2Block,
+                l1Block,
+                l2Timestamp,
+                amount,
+                calldataForL1
+            );
 
         spendOutput(outboxIndex, proof, index, userTx);
+        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, index);
 
         address currentSender = _sender;
         uint128 currentL2Block = _l2Block;
@@ -199,18 +201,19 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) public pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                SendType_sendTxToL1,
-                uint256(uint160(bytes20(l2Sender))),
-                uint256(uint160(bytes20(destAddr))),
-                l2Block,
-                l1Block,
-                l2Timestamp,
-                amount,
-                calldataForL1
-            )
-        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    SendType_sendTxToL1,
+                    uint256(uint160(bytes20(l2Sender))),
+                    uint256(uint160(bytes20(destAddr))),
+                    l2Block,
+                    l1Block,
+                    l2Timestamp,
+                    amount,
+                    calldataForL1
+                )
+            );
     }
 
     function calculateMerkleRoot(
