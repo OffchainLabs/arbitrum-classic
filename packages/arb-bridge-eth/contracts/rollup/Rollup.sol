@@ -35,7 +35,7 @@ import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
 
-contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
+abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
@@ -375,34 +375,9 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Create a new stake
-     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
-     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
-     */
-    function newStake() external payable whenNotPaused {
-        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
-        _newStake(msg.value);
-    }
-
-    /**
-     * @notice Create a new stake
-     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
-     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
-     * @param tokenAmount the amount of tokens staked
-     */
-    function newStake(uint256 tokenAmount) external whenNotPaused {
-        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
-        _newStake(tokenAmount);
-        require(
-            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
-            "TRANSFER_FAIL"
-        );
-    }
-
-    /**
-     * @notice Create a new stake
      * @param depositAmount The amount of either eth or tokens staked
      */
-    function _newStake(uint256 depositAmount) private whenNotPaused {
+    function _newStake(uint256 depositAmount) internal whenNotPaused {
         // Verify that sender is not already a staker
         require(!isStaked(msg.sender), "ALREADY_STAKED");
         require(!isZombie(msg.sender), "STAKER_IS_ZOMBIE");
@@ -593,29 +568,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
         requireUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
-    }
-
-    /**
-     * @notice Increase the amount staked eth for the given staker
-     * @param stakerAddress Address of the staker whose stake is increased
-     */
-    function addToDeposit(address stakerAddress) external payable whenNotPaused {
-        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
-        _addToDeposit(stakerAddress, msg.value);
-    }
-
-    /**
-     * @notice Increase the amount staked tokens for the given staker
-     * @param stakerAddress Address of the staker whose stake is increased
-     * @param tokenAmount the amount of tokens staked
-     */
-    function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
-        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
-        _addToDeposit(stakerAddress, tokenAmount);
-        require(
-            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
-            "TRANSFER_FAIL"
-        );
     }
 
     /**
@@ -936,5 +888,57 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     function requireUnchallengedStaker(address stakerAddress) private view {
         require(isStaked(stakerAddress), "NOT_STAKED");
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
+    }
+}
+
+contract Rollup is AbsRollup {
+    /**
+     * @notice Create a new stake
+     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
+     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
+     */
+    function newStake() external payable whenNotPaused {
+        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
+        _newStake(msg.value);
+    }
+
+    /**
+     * @notice Increase the amount staked eth for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     */
+    function addToDeposit(address stakerAddress) external payable whenNotPaused {
+        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
+        _addToDeposit(stakerAddress, msg.value);
+    }
+}
+
+contract ERC20Rollup is AbsRollup {
+    /**
+     * @notice Create a new stake
+     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
+     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
+     * @param tokenAmount the amount of tokens staked
+     */
+    function newStake(uint256 tokenAmount) external whenNotPaused {
+        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
+        _newStake(tokenAmount);
+        require(
+            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+            "TRANSFER_FAIL"
+        );
+    }
+
+    /**
+     * @notice Increase the amount staked tokens for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     * @param tokenAmount the amount of tokens staked
+     */
+    function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
+        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
+        _addToDeposit(stakerAddress, tokenAmount);
+        require(
+            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+            "TRANSFER_FAIL"
+        );
     }
 }
