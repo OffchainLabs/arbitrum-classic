@@ -744,7 +744,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         remainingLoserStake = remainingLoserStake.sub(amountWon);
         clearChallenge(winningStaker);
 
-        increaseStakeBy(owner, remainingLoserStake);
+        increaseWithdrawableFunds(owner, remainingLoserStake);
         turnIntoZombie(losingStaker);
     }
 

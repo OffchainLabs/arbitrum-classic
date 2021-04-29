@@ -392,6 +392,15 @@ contract RollupCore {
     }
 
     /**
+     * @notice Increase the withdrawable funds for the given address
+     * @param owner Address of the account to add withdrawable funds to
+     * @return Amount of withdrawable funds to add to account
+     */
+    function increaseWithdrawableFunds(address owner, uint256 amount) internal {
+        _withdrawableFunds[owner] = _withdrawableFunds[owner].add(amount);
+    }
+
+    /**
      * @notice Remove the given staker
      * @param stakerAddress Address of the staker to remove
      */
