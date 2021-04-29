@@ -43,8 +43,11 @@ func (m *TestMachine) ExecuteAssertion(
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 	finalMessageOfBlock bool,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
-	assertion, debugPrints, numSteps := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
+) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
+	assertion, debugPrints, numSteps, err := m.Machine.ExecuteAssertion(maxGas, goOverGas, messages, finalMessageOfBlock)
+	if err != nil {
+		return nil, nil, 0, err
+	}
 	for _, d := range debugPrints {
 		parsed, err := handleDebugPrint(d)
 		if err != nil {
@@ -53,5 +56,5 @@ func (m *TestMachine) ExecuteAssertion(
 			m.t.Log("debugprint", parsed)
 		}
 	}
-	return assertion, debugPrints, numSteps
+	return assertion, debugPrints, numSteps, nil
 }
