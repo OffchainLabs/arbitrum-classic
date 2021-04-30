@@ -19,15 +19,17 @@ package evm
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
-	"math/big"
 )
 
 type ResultType int
@@ -214,10 +216,11 @@ func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
 }
 
 type FeeStats struct {
-	Price      *FeeSet
-	UnitsUsed  *FeeSet
-	Paid       *FeeSet
-	Aggregator *common.Address
+	Price                  *FeeSet
+	UnitsUsed              *FeeSet
+	Paid                   *FeeSet
+	Aggregator             *common.Address
+	NoFeeGasEstimationMode bool
 }
 
 func (fs *FeeStats) String() string {
@@ -226,13 +229,22 @@ func (fs *FeeStats) String() string {
 
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 4 {
-		return nil, errors.Errorf("expected gas fee tuple of length 4, but recieved %v", val)
+	if !ok || tup.Len() < 4 || tup.Len() > 5 {
+		return nil, errors.Errorf("expected gas fee tuple of length 4 or 5, but recieved %v", val)
 	}
 	pricesVal, _ := tup.GetByInt64(0)
 	unitsVal, _ := tup.GetByInt64(1)
 	paidVal, _ := tup.GetByInt64(2)
 	aggregator, _ := tup.GetByInt64(3)
+	noFeeGasEstimationMode := false
+	if tup.Len() == 5 {
+		noFeeGasEstimationModeVal, _ := tup.GetByInt64(4)
+		var err error
+		noFeeGasEstimationMode, err = NewBoolFromValue(noFeeGasEstimationModeVal)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	prices, err := NewFeeSetFromValue(pricesVal)
 	if err != nil {
@@ -257,10 +269,11 @@ func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 		aggAddress = &rawAggregatorAddress
 	}
 	return &FeeStats{
-		Price:      prices,
-		UnitsUsed:  units,
-		Paid:       paid,
-		Aggregator: aggAddress,
+		Price:                  prices,
+		UnitsUsed:              units,
+		Paid:                   paid,
+		Aggregator:             aggAddress,
+		NoFeeGasEstimationMode: noFeeGasEstimationMode,
 	}, nil
 }
 

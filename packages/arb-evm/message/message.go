@@ -89,11 +89,12 @@ func RetryableId(requestId common.Hash) common.Hash {
 }
 
 type GasEstimationMessage struct {
-	Aggregator common.Address
-	TxData     []byte
+	Aggregator       common.Address
+	ComputationLimit *big.Int
+	TxData           []byte
 }
 
-func NewGasEstimationMessage(aggregator common.Address, tx CompressedECDSATransaction) (GasEstimationMessage, error) {
+func NewGasEstimationMessage(aggregator common.Address, computationLimit *big.Int, tx CompressedECDSATransaction) (GasEstimationMessage, error) {
 	// Make sure upper bound of estimate is accurate
 	tx.R = math.MaxBig256
 	tx.S = math.MaxBig256
@@ -110,8 +111,9 @@ func NewGasEstimationMessage(aggregator common.Address, tx CompressedECDSATransa
 		return GasEstimationMessage{}, err
 	}
 	return GasEstimationMessage{
-		Aggregator: aggregator,
-		TxData:     batchData,
+		Aggregator:       aggregator,
+		ComputationLimit: computationLimit,
+		TxData:           batchData,
 	}, nil
 }
 
@@ -123,6 +125,7 @@ func (t GasEstimationMessage) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, 3)
 	ret = append(ret, addressData(t.Aggregator)...)
+	ret = append(ret, math.U256Bytes(t.ComputationLimit)...)
 	ret = append(ret, t.TxData...)
 	return ret
 }

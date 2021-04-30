@@ -221,12 +221,12 @@ func TestFees(t *testing.T) {
 		// Reverted since insufficient funds
 		{
 			GasPrice: big.NewInt(0),
-			Gas:      10000000000,
+			Gas:      1000000000,
 			To:       &contractDest,
 			Value:    big.NewInt(0),
 			Data:     common.RandBytes(100000),
 
-			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasFundsCode, evm.InsufficientGasForBaseFee},
+			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasForBaseFee, evm.InsufficientGasForBaseFee},
 			nonzeroComputation: []bool{true, false, false},
 			correctStorageUsed: 0,
 		},
@@ -356,7 +356,7 @@ func TestFees(t *testing.T) {
 		for _, tx := range ethTxes {
 			compressed := message.NewCompressedECDSAFromEth(tx)
 			compressed.GasLimit = big.NewInt(1<<29 - 1)
-			msg, err := message.NewGasEstimationMessage(aggregator, compressed)
+			msg, err := message.NewGasEstimationMessage(aggregator, big.NewInt(100000000), compressed)
 			test.FailIfError(t, err)
 			estimateFeeIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
 			chainTime.BlockNum = common.NewTimeBlocksInt(int64(len(estimateFeeIB.Messages)))

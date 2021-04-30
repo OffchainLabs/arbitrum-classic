@@ -18,8 +18,11 @@ package snapshot
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
@@ -28,7 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 )
 
 type Snapshot struct {
@@ -111,7 +113,7 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		}
 		return s.Call(msg, sender)
 	} else {
-		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, message.NewCompressedECDSAFromEth(tx))
+		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, new(big.Int).SetUint64(tx.Gas()), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
 			return nil, err
 		}
