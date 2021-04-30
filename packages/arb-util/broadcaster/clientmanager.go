@@ -18,11 +18,11 @@ package broadcaster
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/rand"
 	"net"
-	"sort"
 	"strconv"
 	"sync"
 
@@ -37,8 +37,7 @@ import (
 type ClientManager struct {
 	mu                sync.RWMutex
 	seq               uint
-	clientList        []*ClientConnection
-	clientMap         map[string]*ClientConnection
+	clientPtrMap      map[*ClientConnection]bool
 	broadcastMessages []*BroadcastFeedMessage
 	pool              *gopool.Pool
 	poller            netpoll.Poller
@@ -46,16 +45,12 @@ type ClientManager struct {
 }
 
 func NewClientManager(pool *gopool.Pool, poller netpoll.Poller) *ClientManager {
-	clientManager := &ClientManager{
-		poller:    poller,
-		pool:      pool,
-		clientMap: make(map[string]*ClientConnection),
-		out:       make(chan []byte, 1),
+	return &ClientManager{
+		poller:       poller,
+		pool:         pool,
+		clientPtrMap: make(map[*ClientConnection]bool),
+		out:          make(chan []byte, 1),
 	}
-
-	go clientManager.writer()
-
-	return clientManager
 }
 
 // Register registers new connection as a Client.
@@ -73,8 +68,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 		clientConnection.id = cm.seq
 		clientConnection.name = conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10))
 
-		cm.clientList = append(cm.clientList, clientConnection)
-		cm.clientMap[clientConnection.name] = clientConnection
+		cm.clientPtrMap[clientConnection] = true
 
 		if len(cm.broadcastMessages) > 0 {
 			// send the newly connected client all the messages we've got...
@@ -92,44 +86,48 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 // RemoveAll removes all clients.
 func (cm *ClientManager) RemoveAll() {
 	cm.mu.Lock()
-	// the remove() affects the client list held by the instance
-	clientList := make([]*ClientConnection, len(cm.clientList))
-	for i := range cm.clientList {
-		clientList[i] = cm.clientList[i]
+	defer cm.mu.Unlock()
+
+	// Make copy of list because the remove() affects the client list held by the instance
+	clientList := make([]*ClientConnection, len(cm.clientPtrMap))
+	var i uint64
+	for client := range cm.clientPtrMap {
+		clientList[i] = client
+		i++
 	}
+
+	// Only called by destructor, so keep mutex while looping through client list
 	for i := range clientList {
 		cm.remove(clientList[i])
 	}
-
-	cm.mu.Unlock()
 }
 
 // Remove removes client from stream.
 func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.mu.Lock()
+	defer cm.mu.Unlock()
 
 	cm.remove(clientConnection)
-	cm.mu.Unlock()
 }
 
-// ConfirmedAccumulator clears out everything prior to finding the matching accumulator
+// ConfirmedAccumulator clears out entry that matches accumulator and all older entries
 func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	broadcastMessages := make([]*BroadcastFeedMessage, 0)
-	accumulatorFound := false
-
-	for i := range cm.broadcastMessages {
-		accum := cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator
-		if accumulatorFound {
-			broadcastMessages = append(broadcastMessages, cm.broadcastMessages[i])
-		} else if accum.Equals(accumulator) {
-			accumulatorFound = true
+	for i, msg := range cm.broadcastMessages {
+		if msg.FeedItem.BatchItem.Accumulator == accumulator {
+			// This entry was confirmed, so this and all previous messages should be removed from cache
+			unconfirmedIndex := i + 1
+			if unconfirmedIndex >= len(cm.broadcastMessages) {
+				//  Nothing newer, so clear entire cache
+				cm.broadcastMessages = nil
+			} else {
+				cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
+			}
+			break
 		}
 	}
-
-	cm.broadcastMessages = broadcastMessages
 
 	bm := BroadcastMessage{Version: 1}
 	bm.ConfirmedAccumulator = ConfirmedAccumulator{
@@ -210,31 +208,41 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	return nil
 }
 
-// writer writes broadcast messages from cm.out channel.
-func (cm *ClientManager) writer() {
-	for data := range cm.out {
-		// For closure
-		data := data
-		cm.mu.RLock()
-		clientList := make([]*ClientConnection, len(cm.clientList))
-		copy(clientList, cm.clientList[:])
-		cm.mu.RUnlock()
-
-		for _, c := range clientList {
-			c := c // For closure.
-			cm.pool.Schedule(func() {
-				err := c.writeRaw(data)
-				if err != nil {
-					logger.Warn().Err(err).Msg("error with writeRaw")
+// startWriter starts thread to write broadcast messages from cm.out channel.
+func (cm *ClientManager) startWriter(ctx context.Context) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data := <-cm.out:
+				cm.mu.RLock()
+				// Copy list so data can be written to each client without lock held
+				clientList := make([]*ClientConnection, len(cm.clientPtrMap))
+				var i uint64
+				for client := range cm.clientPtrMap {
+					clientList[i] = client
+					i++
 				}
-			})
+				cm.mu.RUnlock()
+
+				for _, c := range clientList {
+					c := c // For closure.
+					cm.pool.Schedule(func() {
+						err := c.writeRaw(data)
+						if err != nil {
+							logger.Warn().Err(err).Msg("error with writeRaw")
+						}
+					})
+				}
+			}
 		}
-	}
+	}()
 }
 
 // mutex must be held before calling
 func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
-	if _, has := cm.clientMap[clientConnection.name]; !has {
+	if !cm.clientPtrMap[clientConnection] {
 		return false
 	}
 
@@ -249,20 +257,7 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 		logger.Warn().Err(err).Msg("Failed to close client connection")
 	}
 
-	delete(cm.clientMap, clientConnection.name)
-
-	i := sort.Search(len(cm.clientList), func(i int) bool {
-		return cm.clientList[i].id >= clientConnection.id
-	})
-
-	if i >= len(cm.clientList) {
-		panic("stream: inconsistent state")
-	}
-
-	without := make([]*ClientConnection, len(cm.clientList)-1)
-	copy(without[:i], cm.clientList[:i])
-	copy(without[i:], cm.clientList[i+1:])
-	cm.clientList = without
+	delete(cm.clientPtrMap, clientConnection)
 
 	// TODO: properly close file descriptor
 	//_ = clientConnection.desc.Close()
