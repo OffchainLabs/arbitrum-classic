@@ -226,8 +226,8 @@ func TestFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     common.RandBytes(100000),
 
-			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasForBaseFee, evm.InsufficientGasForBaseFee},
-			nonzeroComputation: []bool{true, false, false},
+			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasForBaseFee, evm.InsufficientGasForBaseFee, evm.InsufficientGasForBaseFee},
+			nonzeroComputation: []bool{true, false, false, false},
 			correctStorageUsed: 0,
 		},
 	}
@@ -379,7 +379,7 @@ func TestFees(t *testing.T) {
 				t.Fatal("unexpected result got", res.ResultCode, "", "but expected", resType, "for", i)
 			}
 			checkUnits(t, res, rawTxes[i], index, calldataExact)
-			unpaid := checkGas(t, res, aggregator)
+			unpaid := checkGas(t, res, aggregator, index == 3)
 			amountUnpaid = amountUnpaid.Add(amountUnpaid, unpaid)
 		}
 		return results, snap, amountUnpaid
@@ -392,7 +392,7 @@ func TestFees(t *testing.T) {
 	t.Log("Checking results for fee with agg")
 	feeWithAggResults, feeWithAggSnap, _ := processMessages(feeWithAggIB, 2, aggregator, true)
 	t.Log("Checking results for estimate")
-	estimateFeeResults, _, _ := processMessages(estimateFeeIB, 2, aggregator, false)
+	estimateFeeResults, _, _ := processMessages(estimateFeeIB, 3, aggregator, false)
 
 	if unpaidNoFee.Cmp(big.NewInt(0)) != 0 {
 		t.Error("shouldn't have unpaid")
@@ -475,6 +475,8 @@ func TestFees(t *testing.T) {
 
 		aggBal, err := snap.GetBalance(aggregator)
 		test.FailIfError(t, err)
+
+		t.Log("netFeeRecipient", netFeeRecipient)
 
 		netFeeRecipientBal, err := snap.GetBalance(netFeeRecipient)
 		test.FailIfError(t, err)
@@ -673,7 +675,7 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index int, 
 	}
 }
 
-func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address) *big.Int {
+func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address, l2Unpaid bool) *big.Int {
 	t.Helper()
 	unitsUsed := res.FeeStats.UnitsUsed
 	prices := res.FeeStats.Price
@@ -711,12 +713,22 @@ func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address) *big.I
 	l2ComputationUnpaid := new(big.Int).Sub(l2ComputationGoal, paid.L2Computation)
 	l2StorageUnpaid := new(big.Int).Sub(l2StorageGoal, paid.L2Storage)
 
-	if l2ComputationUnpaid.Cmp(big.NewInt(0)) != 0 {
-		t.Error("unpaid computation amount", l2ComputationUnpaid)
-	}
+	if l2Unpaid {
+		if paid.L2Computation.Cmp(big.NewInt(0)) != 0 {
+			t.Error("incorrectly paid computation amount", paid.L2Computation)
+		}
 
-	if l2StorageUnpaid.Cmp(big.NewInt(0)) != 0 {
-		t.Error("unpaid storage amount", l2StorageUnpaid)
+		if paid.L2Storage.Cmp(big.NewInt(0)) != 0 {
+			t.Error("incorrectly paid storage amount", paid.L2Storage)
+		}
+	} else {
+		if l2ComputationUnpaid.Cmp(big.NewInt(0)) != 0 {
+			t.Error("incorrectly unpaid computation amount", l2ComputationUnpaid)
+		}
+
+		if l2StorageUnpaid.Cmp(big.NewInt(0)) != 0 {
+			t.Error("incorrectly unpaid storage amount", l2StorageUnpaid)
+		}
 	}
 
 	totalUnpaid := new(big.Int).Add(l1TxUnpaid, l1CalldataUnpaid)
