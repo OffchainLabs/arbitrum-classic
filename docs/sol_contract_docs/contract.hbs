@@ -1,7 +1,9 @@
-## `{{name}}`
+---
+title: {{name}}.sol Spec
+---
 
+{{{natspec.title}}}
 {{{natspec.userdoc}}}
-
 {{{natspec.devdoc}}}
 
 {{#each ownModifiers}}
@@ -14,6 +16,8 @@
 {{/each}}
 
 {{#each ownFunctions}}
+{{#unless (eq visibility "internal")}}
+{{#unless (eq visibility "private")}}
 ### `{{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}` ({{visibility}})
 
 {{{natspec.userdoc}}}
@@ -26,6 +30,8 @@
 {{#each natspec.returns}}
 **Returns**: {{param}}: {{description}}
 {{/each}}
+{{/unless}}
+{{/unless}}
 
 {{/each}}
 

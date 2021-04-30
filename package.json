@@ -34,8 +34,7 @@
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
     "deploy:validators": "./scripts/arb_deploy.py",
-    "sol_docs:generate": "solidity-docgen -i packages/$DIR/contracts -o docs/sol_contract_docs/md_docs/$DIR -t ./docs/sol_contract_docs",
-    "sol_docs:generate_all": "rm -rf docs/sol_contract_docs/md_docs/ && mkdir docs/sol_contract_docs/md_docs && DIR=arb-bridge-eth yarn sol_docs:generate && DIR=arb-bridge-peripherals yarn sol_docs:generate && DIR=arb-os yarn sol_docs:generate"
+    "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
