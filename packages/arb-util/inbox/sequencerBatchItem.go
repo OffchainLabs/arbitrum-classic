@@ -20,9 +20,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/pkg/errors"
 )
 
 type SequencerBatchItem struct {
@@ -33,12 +34,12 @@ type SequencerBatchItem struct {
 }
 
 func (i *SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) error {
-	var data []byte
 	delayedCmp := i.TotalDelayedCount.Cmp(prevDelayedCount)
 	if delayedCmp > 0 {
 		if len(i.SequencerMessage) > 0 {
 			return errors.New("Sequencer batch item has both sequencer message and delayed messages")
 		}
+		var data []byte
 		data = append(data, "Delayed messages:"...)
 		data = append(data, prevAcc.Bytes()...)
 		firstSeqNum := big.NewInt(1)
@@ -49,19 +50,26 @@ func (i *SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelay
 		data = append(data, math.U256Bytes(prevDelayedCount)...)
 		data = append(data, math.U256Bytes(i.TotalDelayedCount)...)
 		data = append(data, delayedAcc.Bytes()...)
+		i.Accumulator = hashing.SoliditySHA3(data)
 	} else if delayedCmp == 0 {
-		data = append(data, "Sequencer message:"...)
-		data = append(data, prevAcc.Bytes()...)
-		data = append(data, math.U256Bytes(i.LastSeqNum)...)
 		msg, err := NewInboxMessageFromData(i.SequencerMessage)
 		if err != nil {
 			return err
 		}
-		data = append(data, msg.CommitmentHash().Bytes()...)
+		i.Accumulator = hashing.SoliditySHA3(
+			[]byte("Sequencer message:"),
+			hashing.Bytes32(prevAcc),
+			hashing.Uint256(i.LastSeqNum),
+			hashing.Bytes32(hashing.SoliditySHA3(
+				hashing.Address(msg.Sender),
+				hashing.Uint256(msg.ChainTime.BlockNum.AsInt()),
+				hashing.Uint256(msg.ChainTime.Timestamp),
+			)),
+			hashing.Bytes32(hashing.SoliditySHA3(msg.Data)),
+		)
 	} else {
 		return errors.New("Sequencer batch item delayed count went backwards")
 	}
-	i.Accumulator = hashing.SoliditySHA3(data)
 	return nil
 }
 

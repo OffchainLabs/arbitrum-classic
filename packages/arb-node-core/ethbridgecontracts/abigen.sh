@@ -50,7 +50,7 @@ IGNORED_MORE=$IGNORED,$ROLLUP_LIBS,$OZ/contracts/proxy/ProxyAdmin.sol:ProxyAdmin
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/ValidatorUtils.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=validatorutils.go --combined-json combined.json --exc=$IGNORED
 
-solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreator.sol --overwrite -o .
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1000 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreator.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=rollupcreator.go --combined-json combined.json --exc=$IGNORED_MORE
 
 rm combined.json
