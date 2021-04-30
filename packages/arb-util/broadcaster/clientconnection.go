@@ -32,7 +32,6 @@ type ClientConnection struct {
 	conn io.ReadWriteCloser
 	desc *netpoll.Desc
 
-	id            uint
 	name          string
 	clientManager *ClientManager
 }

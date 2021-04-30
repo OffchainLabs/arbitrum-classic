@@ -36,7 +36,6 @@ import (
 // ClientManager manages client connections
 type ClientManager struct {
 	mu                sync.RWMutex
-	seq               uint
 	clientPtrMap      map[*ClientConnection]bool
 	broadcastMessages []*BroadcastFeedMessage
 	pool              *gopool.Pool
@@ -63,9 +62,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 
 	{
 		cm.mu.Lock()
-		defer cm.mu.Unlock()
 
-		clientConnection.id = cm.seq
 		clientConnection.name = conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10))
 
 		cm.clientPtrMap[clientConnection] = true
@@ -77,7 +74,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 			_ = clientConnection.write(bm)
 		}
 
-		cm.seq++
+		cm.mu.Unlock()
 	}
 
 	return clientConnection
@@ -170,7 +167,6 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	// also add this to our global list for broadcasting to clients when connecting
 	{
 		cm.mu.Lock()
-		defer cm.mu.Unlock()
 
 		if len(cm.broadcastMessages) == 0 {
 			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
@@ -192,6 +188,7 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 			}
 		}
 
+		cm.mu.Unlock()
 	}
 
 	bm := BroadcastMessage{Version: 1, Messages: broadcastMessages}
