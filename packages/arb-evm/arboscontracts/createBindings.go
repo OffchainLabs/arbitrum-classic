@@ -1,3 +1,5 @@
+// +build ignore
+
 /*
  * Copyright 2021, Offchain Labs, Inc.
  *
@@ -14,28 +16,16 @@
  * limitations under the License.
  */
 
-package arbostestcontracts
+package main
 
 import (
-	"io/fs"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
+	"github.com/rs/zerolog/log"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/binding"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 )
 
-//go:generate go run createBindings.go
-
-func RunBindingGen() error {
-	return filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
-		if filepath.Ext(path) != ".sol" {
-			return nil
-		}
-		code, err := binding.GenerateBindingFromSolidity(path, "arbostestcontracts")
-		if err != nil {
-			return err
-		}
-		return ioutil.WriteFile(strings.Split(path, ".")[0]+".go", []byte(code), 0777)
-	})
+func main() {
+	if err := arboscontracts.RunBindingGen(); err != nil {
+		log.Error().Err(err).Msg("error generating arbos bindings")
+	}
 }

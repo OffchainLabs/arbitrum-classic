@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,49 @@
  * limitations under the License.
  */
 
-//go:generate ./abigen.sh
-
 package ethbridgecontracts
+
+import (
+	"path/filepath"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/binding"
+)
+
+//go:generate go run createBindings.go
+
+func RunBindingGen() error {
+	artifactsFolder, err := binding.EthbridgeArtifactsFolder()
+	if err != nil {
+		return err
+	}
+	base := filepath.Join(artifactsFolder, "contracts")
+	oz := filepath.Join(artifactsFolder, "@openzeppelin")
+	contracts := binding.GenerateContractsList(
+		filepath.Join(base, "challenge"),
+		[]string{"Challenge"},
+	)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(base, "rollup"),
+		[]string{"Rollup", "RollupCreator", "INode"},
+	)...)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(base, "bridge"),
+		[]string{"Bridge", "Inbox", "Outbox", "OutboxEntry"},
+	)...)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(base, "validator"),
+		[]string{"Validator", "ValidatorUtils", "ValidatorWalletCreator"},
+	)...)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(oz, "contracts", "token", "ERC20"),
+		[]string{"IERC20"},
+	)...)
+
+	for _, con := range contracts {
+		err := binding.GenerateBinding(con.File, con.Contract, "ethbridgecontracts")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

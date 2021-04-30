@@ -29,16 +29,6 @@ var (
 // SimpleABI is the input ABI used to generate the binding from.
 const SimpleABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"y\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
-// SimpleFuncSigs maps the 4-byte function signature to its string representation.
-var SimpleFuncSigs = map[string]string{
-	"ae0aba8c": "acceptPayment()",
-	"267c4ae4": "exists()",
-	"9b7c9da3": "nestedCall(uint256)",
-	"9436bc1f": "rejectPayment()",
-	"3bccbbc9": "reverts()",
-	"a56dfe4a": "y()",
-}
-
 // SimpleBin is the compiled bytecode used for deploying new contracts.
 var SimpleBin = "0x6080604081905234600181905581527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1610225806100436000396000f3fe6080604052600436106100595760003560e01c8063267c4ae4146100a05780633bccbbc9146100ba5780639436bc1f146100c25780639b7c9da3146100d7578063a56dfe4a14610101578063ae0aba8c146101165761009b565b3661009b576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b6100a861011e565b60408051918252519081900360200190f35b61009961015e565b3480156100ce57600080fd5b5061009961019c565b3480156100e357600080fd5b50610099600480360360208110156100fa57600080fd5b503561019e565b34801561010d57600080fd5b506100a86101e9565b61009961019c565b600560009081556040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d80600081146101de576040519150601f19603f3d011682016040523d82523d6000602084013e6101e3565b606091505b50505050565b6001548156fea26469706673582212208349681db7d6dfec35837f9f0dac8bbff0d61639b929758e45141060e44247f264736f6c634300060c0033"
 
