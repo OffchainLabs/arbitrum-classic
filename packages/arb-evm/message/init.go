@@ -37,18 +37,18 @@ type Init struct {
 	ExtraConfig []byte
 }
 
-func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) Init {
+func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) (Init, error) {
 	data := make([]byte, 0)
 	for _, item := range config {
 		itemData := item.AsData()
 		optionId := item.OptionCode()
 		var w bytes.Buffer
 		if err := binary.Write(&w, binary.BigEndian, &optionId); err != nil {
-			logger.Fatal().Err(err).Send()
+			return Init{}, err
 		}
 		length := uint64(len(itemData))
 		if err := binary.Write(&w, binary.BigEndian, &length); err != nil {
-			logger.Fatal().Err(err).Send()
+			return Init{}, err
 		}
 		data = append(data, w.Bytes()...)
 		data = append(data, itemData...)
@@ -57,7 +57,7 @@ func NewInitMessage(params protocol.ChainParams, owner common.Address, config []
 		ChainParams: params,
 		Owner:       owner,
 		ExtraConfig: data,
-	}
+	}, nil
 }
 
 func NewInitFromData(data []byte) Init {

@@ -62,13 +62,13 @@ func TestOwner(t *testing.T) {
 	// Actual upgrade tested in dev/upgrade_test.go
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, messages, len(messages)-1, 0)
+	logs, _, _ := runAssertion(t, messages, len(messages)-1, 0)
 	results := processTxResults(t, logs)
 	// Transfer from non-owner fails
 	revertedTxCheck(t, results[0])

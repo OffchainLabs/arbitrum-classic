@@ -26,9 +26,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     'addToReserveFunds()': FunctionFragment
     'bindAddressToPluggable(address,uint256)': FunctionFragment
     'continueCodeUpload(bytes)': FunctionFragment
-    'finishCodeUploadAsArbosUpgrade()': FunctionFragment
+    'finishCodeUploadAsArbosUpgrade(bytes32)': FunctionFragment
     'finishCodeUploadAsPluggable(uint256,bool)': FunctionFragment
     'getFeeRecipients()': FunctionFragment
+    'getUploadedCodeHash()': FunctionFragment
     'giveOwnership(address)': FunctionFragment
     'setFairGasPriceSender(address)': FunctionFragment
     'setFeeRecipients(address,address)': FunctionFragment
@@ -52,7 +53,7 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'finishCodeUploadAsArbosUpgrade',
-    values?: undefined
+    values: [BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'finishCodeUploadAsPluggable',
@@ -60,6 +61,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'getFeeRecipients',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getUploadedCodeHash',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -113,6 +118,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'getFeeRecipients',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getUploadedCodeHash',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -192,10 +201,12 @@ export class ArbOwner extends Contract {
     ): Promise<ContractTransaction>
 
     finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -214,6 +225,10 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<[string]>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<[string]>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -315,10 +330,12 @@ export class ArbOwner extends Contract {
   ): Promise<ContractTransaction>
 
   finishCodeUploadAsArbosUpgrade(
+    requiredCodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'finishCodeUploadAsArbosUpgrade()'(
+  'finishCodeUploadAsArbosUpgrade(bytes32)'(
+    requiredCodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -337,6 +354,10 @@ export class ArbOwner extends Contract {
   getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
   'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+  getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
+
+  'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
   giveOwnership(
     newOwnerAddr: string,
@@ -435,9 +456,15 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    finishCodeUploadAsArbosUpgrade(overrides?: CallOverrides): Promise<void>
+    finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    'finishCodeUploadAsArbosUpgrade()'(overrides?: CallOverrides): Promise<void>
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     finishCodeUploadAsPluggable(
       id: BigNumberish,
@@ -454,6 +481,10 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -552,9 +583,13 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    finishCodeUploadAsArbosUpgrade(overrides?: Overrides): Promise<BigNumber>
+    finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -573,6 +608,10 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<BigNumber>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<BigNumber>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -674,10 +713,12 @@ export class ArbOwner extends Contract {
     ): Promise<PopulatedTransaction>
 
     finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -696,6 +737,14 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'getFeeRecipients()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getUploadedCodeHash(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getUploadedCodeHash()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

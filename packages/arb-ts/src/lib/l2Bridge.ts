@@ -41,7 +41,9 @@ export interface L2TokenData {
 export interface Tokens {
   [contractAddress: string]: L2TokenData | undefined
 }
-
+/**
+ * L2 side only of {@link Bridge}
+ */
 export class L2Bridge {
   l2Signer: Signer
   arbSys: ArbSys

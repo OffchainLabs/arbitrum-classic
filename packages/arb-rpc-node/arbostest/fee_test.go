@@ -132,7 +132,7 @@ func TestFees(t *testing.T) {
 
 	var conDeployedLength int
 	{
-		client, keys := test.SimulatedBackend()
+		client, keys := test.SimulatedBackend(t)
 		auth := bind.NewKeyedTransactor(keys[0])
 		addr, _, _, err := arbostestcontracts.DeployGasUsed(auth, client, false)
 		failIfError(t, err)
@@ -266,7 +266,8 @@ func TestFees(t *testing.T) {
 			CongestionFeeRecipient: congestionFeeRecipient,
 		}
 		aggInit := message.DefaultAggConfig{Aggregator: aggregator}
-		init := message.NewInitMessage(config, owner, []message.ChainConfigOption{feeConfigInit, aggInit})
+		init, err := message.NewInitMessage(config, owner, []message.ChainConfigOption{feeConfigInit, aggInit})
+		test.FailIfError(t, err)
 
 		chainTime := inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(0),
@@ -365,7 +366,7 @@ func TestFees(t *testing.T) {
 
 	processMessages := func(ib *InboxBuilder, index int, aggregator common.Address, calldataExact bool) ([]*evm.TxResult, *snapshot.Snapshot, *big.Int) {
 		t.Helper()
-		logs, _, snap, _ := runAssertionWithoutPrint(t, ib.Messages, math.MaxInt32, 0)
+		logs, _, snap := runAssertionWithoutPrint(t, ib.Messages, math.MaxInt32, 0)
 		rawResults := extractTxResults(t, logs)
 		allResultsSucceeded(t, rawResults[:len(rawResults)-len(rawTxes)])
 		results := rawResults[len(rawResults)-len(rawTxes):]

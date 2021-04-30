@@ -18,9 +18,7 @@ package dev
 
 import (
 	"context"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -31,7 +29,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -40,13 +37,6 @@ import (
 
 func TestFees(t *testing.T) {
 	skipBelowVersion(t, 3)
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	test.FailIfError(t, err)
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}()
 
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
@@ -80,9 +70,14 @@ func TestFees(t *testing.T) {
 	}
 
 	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(aggAuth.From)}
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, *arbosfile, config, common.NewAddressFromEth(auth.From), []message.ChainConfigOption{feeConfigInit, aggInit})
-	defer monitor.Close()
-	defer db.Close()
+	backend, _, srv, cancelDevNode := NewTestDevNode(
+		t,
+		*arbosfile,
+		config,
+		common.NewAddressFromEth(auth.From),
+		[]message.ChainConfigOption{feeConfigInit, aggInit},
+	)
+	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -99,7 +94,6 @@ func TestFees(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
 	client := web3.NewEthClient(srv, true)
 
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
