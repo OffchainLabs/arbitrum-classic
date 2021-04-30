@@ -202,14 +202,6 @@ contract RollupCore {
         return _nodeHashes[index];
     }
 
-    /**
-     * @notice Update the latest node created
-     * @param newLatestNodeCreated New value for the latest node created
-     */
-    function updateLatestNodeCreated(uint256 newLatestNodeCreated) internal {
-        _latestNodeCreated = newLatestNodeCreated;
-    }
-
     /// @notice Reject the next unresolved node
     function rejectNextNode() internal {
         destroyNode(_firstUnresolvedNode);
@@ -348,16 +340,6 @@ contract RollupCore {
             staker.amountStaked
         );
         deleteStaker(stakerAddress);
-    }
-
-    /**
-     * @notice Update the latest staked node of the staker at the given addresss
-     * @param stakerAddress Address of the staker to move
-     * @param latest New latest node the staker is staked on
-     */
-    function stakerUpdateLatestStakedNode(address stakerAddress, uint256 latest) internal {
-        Staker storage staker = _stakerMap[stakerAddress];
-        staker.latestStakedNode = latest;
     }
 
     /**

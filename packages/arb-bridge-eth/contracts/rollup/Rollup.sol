@@ -59,10 +59,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     address public owner;
     ProxyAdmin public admin;
 
-    uint256 latestNodeToTruncateTo;
-    uint256 nextStakerToTruncate;
-    bool truncating;
-
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
@@ -208,69 +204,59 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      * @notice Resume interaction with the rollup contract
      */
     function resume() external onlyOwner {
-        require(!truncating, "STILL_TRUNCATING");
         _unpause();
+    }
+
+    /**
+     * @notice Reassign the node a staker is currently staked on
+     * @dev staker at index i of the stakers array gets assigned to node at index i of nodeNums
+     * @param stakers array of addresses of stakers to be reassigned
+     * @param nodeNums number of node for staker to be reassigned to
+     */
+    function reassignStakers(address[] calldata stakers, uint256[] calldata nodeNums)
+        external
+        onlyOwner
+        whenPaused
+    {
+        require(stakers.length == nodeNums.length, "WRONG_LENGTH");
+        require(stakers.length <= stakerCount(), "WRONG_STAKERS");
+
+        for (uint256 i = 0; i < stakers.length; i++) {
+            require(nodeNums[i] < latestNodeCreated(), "TOO_NEW");
+            require(nodeNums[i] >= firstUnresolvedNode() - 1, "TOO_OLD");
+
+            Staker storage staker = _stakerMap[stakers[i]];
+            require(staker.isStaked, "NOT_STAKED");
+            // TODO: reset challenge if in challenge?
+            // require(staker.currentChallenge == address(0), "IN_CHAL");
+            staker.latestStakedNode = nodeNums[i];
+            emit StakerReassigned(stakers[i], nodeNums[i]);
+        }
     }
 
     /**
      * @notice Begin the process of trunacting the chain back to the given node
      * @dev maxItems is used to make sure this doesn't exceed the max gas cost
-     * @param newLatestNodeCreated Index that we want to be the latest unresolved node
-     * @param maxItems Maximum number of items to eliminate to eliminate
+     * @param maxItems Maximum number of items to eliminate
      */
-    function beginTruncatingNodes(uint256 newLatestNodeCreated, uint256 maxItems)
-        external
-        onlyOwner
-        whenPaused
-    {
-        require(!truncating, "ALREADY_TRUNCATING");
-        require(newLatestNodeCreated < latestNodeCreated(), "TOO_NEW");
-        require(newLatestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
-        latestNodeToTruncateTo = newLatestNodeCreated;
-        truncating = true;
-        continueTruncatingNodes(maxItems);
-    }
+    function destroyPendingNodes(uint256 maxItems) external onlyOwner whenPaused {
+        uint256 latestConfirmed = latestConfirmed();
+        uint256 limit = latestConfirmed + maxItems;
+        require(limit <= latestNodeCreated(), "OVERFLOW");
 
-    /**
-     * @notice Continue the process of trunacting the chain back to the given node
-     * @dev maxItems is used to make sure this doesn't exceed the max gas cost
-     * @param maxItems Maximum number of items to eliminate to eliminate
-     */
-    function continueTruncatingNodes(uint256 maxItems) public onlyOwner whenPaused {
-        require(truncating, "NOT_TRUNCATING");
-        uint256 target = latestNodeToTruncateTo;
-
-        uint256 stakerIndex = nextStakerToTruncate;
         uint256 stakers = stakerCount();
-        while (maxItems > 0 && stakerIndex < stakers) {
-            address stakerAddress = getStakerAddress(stakerIndex);
+        for (uint256 i = 0; i < stakers; i++) {
+            address stakerAddress = getStakerAddress(i);
             uint256 latestStakedNode = latestStakedNode(stakerAddress);
-            while (maxItems > 0 && latestStakedNode > target) {
-                INode node = getNode(latestStakedNode);
-                latestStakedNode = node.prev();
-                maxItems--;
-            }
-            stakerUpdateLatestStakedNode(stakerAddress, latestStakedNode);
-
-            if (latestStakedNode > target) {
-                nextStakerToTruncate = stakerIndex;
-                return;
-            }
-            stakerIndex++;
+            // reassign stakers before trying to delete node
+            require(latestStakedNode > limit, "HAS_STAKE");
         }
-        nextStakerToTruncate = stakerIndex;
 
-        uint256 latest;
-        for (latest = latestNodeCreated(); maxItems > 0 && latest > target; latest--) {
-            destroyNode(latest);
+        while (maxItems > 0) {
+            rejectNextNode();
             maxItems--;
         }
-        updateLatestNodeCreated(latest);
-        if (latest == target) {
-            latestNodeToTruncateTo = 0;
-            nextStakerToTruncate = 0;
-            truncating = false;
-        }
+        emit NodesDestroyed(latestConfirmed, limit);
     }
 
     /**
