@@ -76,6 +76,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	// goroutine.
 	var pool = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
 	var clientManager = NewClientManager(pool, b.poller)
+	clientManager.startWriter(ctx)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 
