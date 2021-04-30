@@ -1,3 +1,19 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package broadcaster
 
 import (
@@ -15,6 +31,8 @@ import (
 )
 
 func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
+	ctx := context.Background()
+
 	broadcasterSettings := Settings{
 		Addr:      ":9642",
 		Workers:   128,
@@ -24,7 +42,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start()
+	err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +135,8 @@ func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 }
 
 func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
+	ctx := context.Background()
+
 	broadcasterSettings := Settings{
 		Addr:      ":9642",
 		Workers:   128,
@@ -126,7 +146,7 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start()
+	err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,6 +249,8 @@ func receivedConfirmedAccumulator(t *testing.T, wg *sync.WaitGroup, accumulatorC
 }
 
 func TestBroadcasterRespondsToPing(t *testing.T) {
+	ctx := context.Background()
+
 	broadcasterSettings := Settings{
 		Addr:      ":9643",
 		Workers:   128,
@@ -237,7 +259,7 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	}
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start()
+	err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,6 +304,8 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	t.Skip("Doesn't cleanly exit right now")
 
+	ctx := context.Background()
+
 	broadcasterSettings := Settings{
 		Addr:      ":9642",
 		Workers:   128,
@@ -291,7 +315,7 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start()
+	err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

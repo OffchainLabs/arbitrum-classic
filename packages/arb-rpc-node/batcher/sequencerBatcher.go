@@ -108,7 +108,7 @@ func NewSequencerBatcher(
 		IoTimeout: 2 * time.Second,
 	}
 	feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
-	err = feedBroadcaster.Start()
+	err = feedBroadcaster.Start(ctx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error starting feed broadcaster")
 		return nil, err
