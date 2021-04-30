@@ -57,7 +57,6 @@ func (i *SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelay
 			return err
 		}
 		i.Accumulator = hashing.SoliditySHA3(
-			[]byte("Sequencer message:"),
 			hashing.Bytes32(prevAcc),
 			hashing.Uint256(i.LastSeqNum),
 			hashing.Bytes32(hashing.SoliditySHA3(

@@ -204,8 +204,8 @@ contract SequencerInbox is ISequencerInbox {
             beforeAcc = inboxAccs[inboxAccs.length - 1];
         }
 
-        (bytes32 acc, uint256 count) =
-            calcL2Batch(transactions, lengths, l1BlockNumber, timestamp, beforeAcc);
+        bytes32 prefixHash = keccak256(abi.encodePacked(msg.sender, l1BlockNumber, timestamp));
+        (bytes32 acc, uint256 count) = calcL2Batch(transactions, lengths, prefixHash, beforeAcc);
 
         (delayedAcc, acc, count) = includeDelayedMessages(
             acc,
@@ -223,23 +223,25 @@ contract SequencerInbox is ISequencerInbox {
     }
 
     function calcL2Batch(
-        bytes calldata transactions,
+        bytes memory transactions,
         uint256[] calldata lengths,
-        uint256 l1BlockNumber,
-        uint256 timestamp,
+        bytes32 prefixHash,
         bytes32 beforeAcc
     ) private view returns (bytes32 acc, uint256 count) {
         uint256 txCount = lengths.length;
-        bytes32 prefixHash = keccak256(abi.encodePacked(msg.sender, l1BlockNumber, timestamp));
         count = messageCount;
         acc = beforeAcc;
-        uint256 offset = 0;
+        uint256 offset;
+        assembly {
+            offset := add(transactions, 32)
+        }
         for (uint256 i = 0; i < txCount; i++) {
             uint256 length = lengths[i];
-            bytes32 messageDataHash = keccak256(bytes(transactions[offset:offset + length]));
-            acc = keccak256(
-                abi.encodePacked("Sequencer message:", acc, count, prefixHash, messageDataHash)
-            );
+            bytes32 messageDataHash;
+            assembly {
+                messageDataHash := keccak256(offset, length)
+            }
+            acc = keccak256(abi.encodePacked(acc, count, prefixHash, messageDataHash));
             offset += length;
             count++;
         }
@@ -278,7 +280,6 @@ contract SequencerInbox is ISequencerInbox {
             bytes memory emptyBytes;
             acc = keccak256(
                 abi.encodePacked(
-                    "Sequencer message:",
                     acc,
                     count,
                     keccak256(abi.encodePacked(address(0), l1BlockNumber, timestamp)),
