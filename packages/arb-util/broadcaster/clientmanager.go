@@ -19,13 +19,12 @@ package broadcaster
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/rand"
 	"net"
 	"sort"
 	"strconv"
 	"sync"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
@@ -213,17 +212,18 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 
 // writer writes broadcast messages from cm.out channel.
 func (cm *ClientManager) writer() {
-	for bts := range cm.out {
+	for data := range cm.out {
 		// For closure
-		bts := bts
+		data := data
 		cm.mu.RLock()
-		cl := cm.clientList
+		clientList := make([]*ClientConnection, len(cm.clientList))
+		copy(clientList, cm.clientList[:])
 		cm.mu.RUnlock()
 
-		for _, c := range cl {
+		for _, c := range clientList {
 			c := c // For closure.
 			cm.pool.Schedule(func() {
-				err := c.writeRaw(bts)
+				err := c.writeRaw(data)
 				if err != nil {
 					logger.Warn().Err(err).Msg("error with writeRaw")
 				}
@@ -238,10 +238,13 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 		return false
 	}
 
-	// doing this causes a hang.
-	// cm.poller.Stop(clientConnection.desc)
+	err := cm.poller.Stop(clientConnection.desc)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to stop poller")
+		return false
+	}
 
-	err := clientConnection.conn.Close()
+	err = clientConnection.conn.Close()
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to close client connection")
 	}
@@ -260,6 +263,9 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 	copy(without[:i], cm.clientList[:i])
 	copy(without[i:], cm.clientList[i+1:])
 	cm.clientList = without
+
+	// TODO: properly close file descriptor
+	//_ = clientConnection.desc.Close()
 
 	return true
 }

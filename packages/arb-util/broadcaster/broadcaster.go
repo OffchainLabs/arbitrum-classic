@@ -118,7 +118,6 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 				// ReadHup or Hup received, means the client has close the connection
 				// remove it from the clientManager registry.
 				logger.Info().Str("connection_name", nameConn(safeConn)).Msg("Hup received")
-				_ = b.poller.Stop(desc)
 				clientManager.Remove(client)
 				return
 			}
@@ -135,8 +134,6 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 			pool.Schedule(func() {
 				if err := client.Receive(); err != nil {
 					logger.Warn().Err(err).Str("connection_name", nameConn(safeConn)).Msg("receive error")
-					_ = b.poller.Stop(desc)
-					_ = desc.Close()
 					clientManager.Remove(client)
 					return
 				}
