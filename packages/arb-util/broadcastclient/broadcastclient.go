@@ -48,25 +48,24 @@ type BroadcastClient struct {
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *BroadcastClient {
-	bc := &BroadcastClient{}
-	bc.startingBroadcastClientMutex = &sync.Mutex{}
-	bc.websocketUrl = websocketUrl
+	var seqNum *big.Int
 	if lastInboxSeqNum == nil {
-		bc.lastInboxSeqNum = big.NewInt(0)
+		seqNum = big.NewInt(0)
 	} else {
-		bc.lastInboxSeqNum = lastInboxSeqNum
+		seqNum = lastInboxSeqNum
 	}
 
-	return bc
+	return &BroadcastClient{
+		startingBroadcastClientMutex: &sync.Mutex{},
+		websocketUrl:                 websocketUrl,
+		lastInboxSeqNum:              seqNum,
+		ConfirmedAccumulatorListener: make(chan common.Hash),
+	}
 }
 
 func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
 	return bc.connect(messageReceiver)
-}
-
-func (bc *BroadcastClient) SetConfirmedAccumulatorListner(listener chan common.Hash) {
-	bc.ConfirmedAccumulatorListener = listener
 }
 
 func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {

@@ -1,8 +1,25 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package main
 
 import (
 	"context"
 	"flag"
+	"github.com/pkg/errors"
 	golog "log"
 	"net/http"
 	"os"
@@ -11,8 +28,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -90,7 +105,7 @@ func startup() error {
 
 	bc := broadcaster.NewBroadcaster(broadcasterSettings)
 
-	err := bc.Start()
+	err := bc.Start(ctx)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to start broadcaster")
 	}
@@ -129,7 +144,7 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
 	done := make(chan bool)
 	ar.broadcastClient = broadcastclient.NewBroadcastClient(ar.ArbitrumBroadcasterWebsocketUrl, nil)
 
-	err := ar.broadcaster.Start()
+	err := ar.broadcaster.Start(ctx)
 	if err != nil {
 		logger.Error().Err(err).Msg("broadcasted unable to start")
 	}
@@ -139,10 +154,6 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
 	if err != nil {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
 	}
-
-	accList := make(chan common.Hash)
-
-	ar.broadcastClient.SetConfirmedAccumulatorListner(accList)
 
 	go func() {
 		defer func() {
@@ -156,12 +167,27 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
 				if debug {
 					logger.Info().Hex("acc", msg.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
 				}
-				_ = ar.broadcaster.Broadcast(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
-			case ca := <-accList:
+				err = ar.broadcaster.Broadcast(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
+				if err != nil {
+					logger.
+						Error().
+						Err(err).
+						Hex("PrevAcc", msg.FeedItem.PrevAcc.Bytes()).
+						Hex("BatchItem", msg.FeedItem.BatchItem.ToBytesWithSeqNum()).
+						Msg("unable to broadcast batch item")
+				}
+			case ca := <-ar.broadcastClient.ConfirmedAccumulatorListener:
 				if debug {
 					logger.Info().Hex("acc", ca.Bytes()).Msg("confirmed accumulator")
 				}
-				_ = ar.broadcaster.ConfirmedAccumulator(ca)
+				err = ar.broadcaster.ConfirmedAccumulator(ca)
+				if err != nil {
+					logger.
+						Error().
+						Err(err).
+						Hex("acc", ca.Bytes()).
+						Msg("unable to broadcast confirmed accumulator")
+				}
 			}
 		}
 	}()
