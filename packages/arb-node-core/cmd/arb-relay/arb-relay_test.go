@@ -8,6 +8,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestRelayRebroadcasts(t *testing.T) {
@@ -62,27 +63,27 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	messageCount := 0
 
 	// connect returns
-	messages, err := broadcastClient.Connect()
+	messageReceiver, err := broadcastClient.Connect()
 	if err != nil {
 		t.Errorf("Can not connect: %v\n", err)
 	}
 
-	_ = messageCount
-	_ = messages
-	_ = expectedCount
-	/*
-		for {
-			select {
-			case receivedMsgs := <-messages:
-				for i := range receivedMsgs.Messages {
-					fmt.Printf("Received Message, Sequence Number: %v\n", inbox.GetSequenceNumber(receivedMsgs.Messages[i].InboxMessage))
-					messageCount++
-					if messageCount == expectedCount {
-						broadcastClient.Close()
-						return
-					}
-				}
+	accList := make(chan common.Hash)
+
+	broadcastClient.SetConfirmedAccumulatorListner(accList)
+
+	for {
+		select {
+		case receivedMsg := <-messageReceiver:
+			t.Logf("Received Message, Sequence Message: %v\n", receivedMsg.FeedItem.BatchItem.SequencerMessage)
+			messageCount++
+
+			if messageCount == expectedCount {
+				broadcastClient.Close()
+				return
 			}
+		case confirmedAccumulator := <-accList:
+			t.Logf("Received confirmedAccumulator, Sequence Message: %v\n", confirmedAccumulator.ShortString())
 		}
-	*/
+	}
 }

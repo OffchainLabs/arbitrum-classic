@@ -19,6 +19,7 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -194,10 +195,13 @@ func TestSequencerBatcher(t *testing.T) {
 	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
+	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	dummyDataSigner := func([]byte) ([]byte, error) { return make([]byte, 0), nil }
+
+	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
+	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
 	test.FailIfError(t, err)
 
 	client.Commit()
@@ -212,6 +216,7 @@ func TestSequencerBatcher(t *testing.T) {
 		big.NewInt(1),
 		seqInbox,
 		auth,
+        dummyDataSigner,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true

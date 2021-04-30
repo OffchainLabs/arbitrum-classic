@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/pkg/errors"
 	golog "log"
 	"net/http"
 	"os"
@@ -12,6 +11,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -139,7 +140,10 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
 	}
 
-	confirmedAccumulator := ar.broadcastClient.ConfirmedAccumulatorListener
+	accList := make(chan common.Hash)
+
+	ar.broadcastClient.SetConfirmedAccumulatorListner(accList)
+
 	go func() {
 		defer func() {
 			done <- true
@@ -153,7 +157,7 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
 					logger.Info().Hex("acc", msg.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
 				}
 				_ = ar.broadcaster.Broadcast(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
-			case ca := <-confirmedAccumulator:
+			case ca := <-accList:
 				if debug {
 					logger.Info().Hex("acc", ca.Bytes()).Msg("confirmed accumulator")
 				}

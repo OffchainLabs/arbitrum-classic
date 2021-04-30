@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestBroadcastClientConnectsAndReceivesMessages(t *testing.T) {
@@ -50,7 +51,9 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 		t.Errorf("Can not connect: %v\n", err)
 	}
 
-	accList := broadcastClient.GetConfirmedAccumulatorListner()
+	accList := make(chan common.Hash)
+
+	broadcastClient.SetConfirmedAccumulatorListner(accList)
 
 	for {
 		select {
@@ -102,7 +105,6 @@ func TestBroadcastClientPings(t *testing.T) {
 }
 
 func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
-	t.Skip("Currently broken")
 	broadcasterSettings := broadcaster.Settings{
 		Addr:      ":9743",
 		Workers:   128,
