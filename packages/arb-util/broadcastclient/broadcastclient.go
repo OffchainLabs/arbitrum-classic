@@ -62,12 +62,11 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 
 func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastInboxMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastInboxMessage)
-	bc.ConfirmedAccumulatorListener = make(chan common.Hash)
 	return bc.connect(messageReceiver)
 }
 
-func (bc *BroadcastClient) GetConfirmedAccumulatorListner() chan common.Hash {
-	return bc.ConfirmedAccumulatorListener
+func (bc *BroadcastClient) SetConfirmedAccumulatorListner(listener chan common.Hash) {
+	bc.ConfirmedAccumulatorListener = listener
 }
 
 func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastInboxMessage) (chan broadcaster.BroadcastInboxMessage, error) {
@@ -135,7 +134,7 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastInb
 				messageReceiver <- *message
 			}
 
-			if res.ConfirmedAccumulator.IsConfirmed {
+			if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 				bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
 			}
 		}

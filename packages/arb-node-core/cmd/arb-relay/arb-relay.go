@@ -3,6 +3,7 @@ package arbrelay
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,13 +38,16 @@ func (ar *ArbRelay) Start() {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
 	}
 
-	confirmedAccumulator := ar.broadcastClient.ConfirmedAccumulatorListener
+	accList := make(chan common.Hash)
+
+	ar.broadcastClient.SetConfirmedAccumulatorListner(accList)
+
 	go func() {
 		for {
 			select {
 			case msg := <-messages:
 				ar.broadcaster.Broadcast(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
-			case ca := <-confirmedAccumulator:
+			case ca := <-accList:
 				ar.broadcaster.ConfirmedAccumulator(ca)
 			}
 		}
