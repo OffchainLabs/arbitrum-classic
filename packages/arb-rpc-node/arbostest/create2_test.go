@@ -35,7 +35,7 @@ import (
 )
 
 func TestCreate2(t *testing.T) {
-	backend, pks := test.SimulatedBackend()
+	backend, pks := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
 
@@ -92,14 +92,14 @@ func TestCreate2(t *testing.T) {
 
 	sender := common.NewAddressFromEth(auth.From)
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(factoryConstructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(simpleConstructorTx), sender, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(create2Tx), sender, big.NewInt(3), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(existsCloneTx), sender, big.NewInt(4), big.NewInt(0), chainTime),
 	}
 
-	logs, _, snap, _ := runAssertion(t, inboxMessages, 4, 0)
+	logs, _, snap := runAssertion(t, inboxMessages, 4, 0)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)

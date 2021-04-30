@@ -51,6 +51,9 @@ export interface Tokens {
   [contractAddress: string]: L1TokenData | undefined
 }
 
+/**
+ * L1 side only of {@link Bridge}
+ */
 export class L1Bridge {
   l1Signer: Signer
   ethERC20Bridge: EthERC20Bridge

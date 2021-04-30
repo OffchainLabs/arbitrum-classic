@@ -56,7 +56,13 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [],
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: 'requiredCodeHash',
+        type: 'bytes32',
+      },
+    ],
     name: 'finishCodeUploadAsArbosUpgrade',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -93,6 +99,19 @@ const _abi = [
         internalType: 'address',
         name: '',
         type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getUploadedCodeHash',
+    outputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
       },
     ],
     stateMutability: 'view',

@@ -20,7 +20,13 @@ pragma solidity >=0.4.21 <0.7.0;
 
 contract Simple {
     uint256 x;
+    uint256 public y;
     event TestEvent(uint256 value);
+
+    constructor() public payable {
+        y = msg.value;
+        emit TestEvent(msg.value);
+    }
 
     receive() external payable {
         require(false, "no deposits");
@@ -32,7 +38,7 @@ contract Simple {
         return 10;
     }
 
-    function reverts() external {
+    function reverts() external payable {
         require(false, "this is a test");
     }
 
@@ -41,6 +47,6 @@ contract Simple {
     function rejectPayment() external {}
 
     function nestedCall(uint256 value) external {
-        address(this).call.value(value)("");
+        address(this).call{ value: value }("");
     }
 }

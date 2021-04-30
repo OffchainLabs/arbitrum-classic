@@ -1,10 +1,12 @@
 package arbos
 
 import (
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
 	"path/filepath"
 	"runtime"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "arbos").Logger()
@@ -21,15 +23,19 @@ var ARB_RETRYABLE_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000
 
 var ARB_NODE_INTERFACE_ADDRESS = ethcommon.HexToAddress("0x00000000000000000000000000000000000000C8")
 
-func Path() string {
-	return filepath.Join(Dir(), "arbos.mexe")
+func Path() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "arbos.mexe"), nil
 }
 
-func Dir() string {
+func Dir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		logger.Fatal().Msg("Failed to get arbos path")
+		return "", errors.New("failed to get arbos path")
 	}
 
-	return filepath.Join(filepath.Dir(filename), "../../arb-os/arb_os")
+	return filepath.Join(filepath.Dir(filename), "../../arb-os/arb_os"), nil
 }

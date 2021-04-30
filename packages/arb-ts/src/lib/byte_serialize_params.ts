@@ -1,3 +1,31 @@
+// byte_serialize_params.ts
+/**
+#### Byte Serializing Solidity Arguments Schema
+
+#### address[]:
+
+| field         | size (bytes)       | Description                                                             |
+| ------------- | ------------------ | ----------------------------------------------------------------------- |
+| length        | 1                  | Size of array                                                           |
+| is-registered | 1                  | 1 = all registered, 0 = not all registered                              |
+| addresses     | 4 or 20 (x length) | If is registered, left-padded 4-byte integers; otherwise, eth addresses |
+
+#### non-address[]:
+
+| field  | size (bytes) | Description              |
+| ------ | ------------ | ------------------------ |
+| length | 1            | Size of array            |
+| items  | (variable)   | All items (concatenated) |
+
+#### address:
+
+| field         | size (bytes) | Description                                                       |
+| ------------- | ------------ | ----------------------------------------------------------------- |
+| is-registered | 1            | 1 = registered, 0 = not registered                                |
+| address       | 4 or 20      | If registered, left-padded 4-byte integer; otherwise, eth address |
+
+ * @module Byte-Serialization
+ */
 import { isAddress as _isAddress } from '@ethersproject/address'
 import { concat, hexZeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
@@ -44,9 +72,13 @@ export const getAddressIndex = (() => {
   }
 })()
 
-// to use:
-// const mySerializeParamsFunction = argSerializerConstructor("rpcurl")
-
+/**
+  // to use:
+  ```js
+  const mySerializeParamsFunction = argSerializerConstructor("rpcurl")
+  mySerializeParamsFunction(["4","5", "6"])
+  ```
+*/
 export const argSerializerConstructor = (
   arbProvider: providers.JsonRpcProvider
 ): ((params: PrimativeOrPrimativeArray[]) => Promise<Uint8Array>) => {
@@ -79,7 +111,10 @@ const formatPrimative = (value: PrimativeType) => {
     throw new Error('unsupported type')
   }
 }
-
+/**
+ * @param params array of serializable types to
+ * @param addressToIndex optional getter of address index registered in table
+ */
 export const serializeParams = async (
   params: PrimativeOrPrimativeArray[],
   addressToIndex: (address: string) => Promise<number> = () =>

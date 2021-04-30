@@ -130,7 +130,9 @@ export class BridgeHelper {
       ])
     )
   }
-
+  /**
+   * Calculates hash of L2 side of a "retryable" transaction (L1 to L2 message, message type 9)
+   */
   static calculateL2RetryableTransactionHash = async (
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider
@@ -147,6 +149,9 @@ export class BridgeHelper {
     )
   }
 
+  /**
+   * Return receipt of retryable transaction after execution
+   */
   static waitForRetriableReceipt = async (
     seqNum: BigNumber,
     l2Provider: providers.Provider
@@ -527,7 +532,9 @@ export class BridgeHelper {
       throw e
     }
   }
-
+  /**
+   * Attempt to execute an outbox message; must be confirmed to succeed (i.e., confirmation delay must have passed)
+   */
   static triggerL2ToL1Transaction = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
