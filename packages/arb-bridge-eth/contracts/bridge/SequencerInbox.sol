@@ -301,12 +301,14 @@ contract SequencerInbox is ISequencerInbox {
 
         bytes32 buildingAcc;
         uint256 seqNum;
-        bytes32 messageHash;
+        bytes32 messageHeaderHash;
+        bytes32 messageDataHash;
         (offset, buildingAcc) = Marshaling.deserializeBytes32(proof, offset);
         (offset, seqNum) = Marshaling.deserializeInt(proof, offset);
-        (offset, messageHash) = Marshaling.deserializeBytes32(proof, offset);
+        (offset, messageHeaderHash) = Marshaling.deserializeBytes32(proof, offset);
+        (offset, messageDataHash) = Marshaling.deserializeBytes32(proof, offset);
         buildingAcc = keccak256(
-            abi.encodePacked("Sequencer message:", buildingAcc, seqNum, messageHash)
+            abi.encodePacked(buildingAcc, seqNum, messageHeaderHash, messageDataHash)
         );
         endCount = seqNum + 1;
         require(buildingAcc == acc, "BATCH_ACC");

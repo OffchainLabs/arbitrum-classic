@@ -388,7 +388,13 @@ func (v *Validator) generateBatchEndProof(count *big.Int) ([]byte, error) {
 	var proof []byte
 	proof = append(proof, beforeAcc.Bytes()...)
 	proof = append(proof, math.U256Bytes(seqNum)...)
-	proof = append(proof, message.CommitmentHash().Bytes()...)
+	prefixHash := hashing.SoliditySHA3(
+		hashing.Address(message.Sender),
+		hashing.Uint256(message.ChainTime.BlockNum.AsInt()),
+		hashing.Uint256(message.ChainTime.Timestamp),
+	)
+	proof = append(proof, prefixHash.Bytes()...)
+	proof = append(proof, hashing.SoliditySHA3(message.Data).Bytes()...)
 	return proof, nil
 }
 
