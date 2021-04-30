@@ -29,13 +29,6 @@ var (
 // ArbFunctionTableABI is the input ABI used to generate the binding from.
 const ArbFunctionTableABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"index\",\"type\":\"uint256\"}],\"name\":\"get\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"size\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"buf\",\"type\":\"bytes\"}],\"name\":\"upload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// ArbFunctionTableFuncSigs maps the 4-byte function signature to its string representation.
-var ArbFunctionTableFuncSigs = map[string]string{
-	"b464631b": "get(address,uint256)",
-	"88987068": "size(address)",
-	"ce2ae159": "upload(bytes)",
-}
-
 // ArbFunctionTable is an auto generated Go binding around an Ethereum contract.
 type ArbFunctionTable struct {
 	ArbFunctionTableCaller     // Read-only binding to the contract

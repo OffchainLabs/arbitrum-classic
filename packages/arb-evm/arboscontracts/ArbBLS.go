@@ -29,12 +29,6 @@ var (
 // ArbBLSABI is the input ABI used to generate the binding from.
 const ArbBLSABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getPublicKey\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"x0\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"x1\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y0\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"y1\",\"type\":\"uint256\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// ArbBLSFuncSigs maps the 4-byte function signature to its string representation.
-var ArbBLSFuncSigs = map[string]string{
-	"857cdbb8": "getPublicKey(address)",
-	"375a7c7f": "register(uint256,uint256,uint256,uint256)",
-}
-
 // ArbBLS is an auto generated Go binding around an Ethereum contract.
 type ArbBLS struct {
 	ArbBLSCaller     // Read-only binding to the contract

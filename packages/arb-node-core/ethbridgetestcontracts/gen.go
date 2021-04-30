@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,44 @@
  * limitations under the License.
  */
 
-//go:generate ./abigen.sh
-
 package ethbridgetestcontracts
+
+import (
+	"path/filepath"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/binding"
+)
+
+//go:generate go run createBindings.go
+
+func RunBindingGen() error {
+	artifactsFolder, err := binding.EthbridgeArtifactsFolder()
+	if err != nil {
+		return err
+	}
+	base := filepath.Join(artifactsFolder, "contracts")
+	contracts := binding.GenerateContractsList(
+		filepath.Join(base, "challenge"),
+		[]string{"ChallengeFactory"},
+	)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(base, "rollup"),
+		[]string{"RollupCreatorNoProxy", "NodeFactory"},
+	)...)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(base, "arch"),
+		[]string{"IOneStepProof", "OneStepProof", "OneStepProof2", "OneStepProofHash"},
+	)...)
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(base, "test_only"),
+		[]string{"ChallengeTester", "MachineTester", "InboxHelperTester"},
+	)...)
+
+	for _, con := range contracts {
+		err := binding.GenerateBinding(con.File, con.Contract, "ethbridgetestcontracts")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

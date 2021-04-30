@@ -29,11 +29,6 @@ var (
 // NodeInterfaceABI is the input ABI used to generate the binding from.
 const NodeInterfaceABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"batchNum\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"}],\"name\":\"lookupMessageBatchProof\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"path\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"l2Sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"l1Dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
-// NodeInterfaceFuncSigs maps the 4-byte function signature to its string representation.
-var NodeInterfaceFuncSigs = map[string]string{
-	"52d388b8": "lookupMessageBatchProof(uint256,uint64)",
-}
-
 // NodeInterface is an auto generated Go binding around an Ethereum contract.
 type NodeInterface struct {
 	NodeInterfaceCaller     // Read-only binding to the contract
