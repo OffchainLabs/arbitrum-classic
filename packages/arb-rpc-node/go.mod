@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-rpc-node
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.10.1
+	github.com/ethereum/go-ethereum v1.10.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
@@ -14,7 +14,6 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.21.0
-	github.com/tevino/abool v1.2.0
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
