@@ -19,6 +19,7 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"net"
 	"sync"
 	"testing"
@@ -302,9 +303,8 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 }
 
 func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
-	t.Skip("Doesn't cleanly exit right now")
-
-	ctx := context.Background()
+	ctx, cancelFunc, _ := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
 
 	broadcasterSettings := Settings{
 		Addr:      ":9642",
