@@ -228,6 +228,15 @@ func (fs *FeeStats) String() string {
 	return fmt.Sprintf("FeeStats{Prices=%v, Units=%v, Paid=%v, Aggregator=%v}", fs.Price, fs.UnitsUsed, fs.Paid, fs.Aggregator)
 }
 
+func (fs *FeeStats) PayTarget() *FeeSet {
+	return &FeeSet{
+		L1Transaction: new(big.Int).Mul(fs.Price.L1Transaction, fs.UnitsUsed.L1Transaction),
+		L1Calldata:    new(big.Int).Mul(fs.Price.L1Calldata, fs.UnitsUsed.L1Calldata),
+		L2Storage:     new(big.Int).Mul(fs.Price.L2Storage, fs.UnitsUsed.L2Storage),
+		L2Computation: new(big.Int).Mul(fs.Price.L2Computation, fs.UnitsUsed.L2Computation),
+	}
+}
+
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() < 4 || tup.Len() > 5 {

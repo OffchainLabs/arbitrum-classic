@@ -311,7 +311,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		gasAmount := new(big.Int).Div(res.FeeStats.Paid.Total(), res.FeeStats.Price.L2Computation)
+		gasAmount := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
 		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
 	}
 }
