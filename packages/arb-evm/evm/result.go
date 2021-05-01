@@ -132,6 +132,14 @@ func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
 	return evmLogs
 }
 
+func (r *TxResult) CalcGasUsed() *big.Int {
+	if r.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
+		return r.GasUsed
+	} else {
+		return new(big.Int).Div(r.FeeStats.PayTarget().Total(), r.FeeStats.Price.L2Computation)
+	}
+}
+
 func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	contractAddress := ethcommon.Address{}
 	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
@@ -160,7 +168,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		Logs:              evmLogs,
 		TxHash:            r.IncomingRequest.MessageID.ToEthHash(),
 		ContractAddress:   contractAddress,
-		GasUsed:           r.GasUsed.Uint64(),
+		GasUsed:           r.CalcGasUsed().Uint64(),
 		BlockHash:         blockHash.ToEthHash(),
 		BlockNumber:       r.IncomingRequest.L2BlockNumber,
 		TransactionIndex:  uint(r.TxIndex.Uint64()),

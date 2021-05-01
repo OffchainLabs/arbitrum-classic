@@ -89,7 +89,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, params protoc
 		monitor.Close()
 	}
 
-	backend := NewBackend(backendCore, db, l1, signer, aggregator, big.NewInt(10000))
+	backend := NewBackend(backendCore, db, l1, signer, aggregator, big.NewInt(100000000000))
 
 	return backend, db, rollupAddress, cancel, errChan, nil
 }
