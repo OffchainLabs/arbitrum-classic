@@ -290,6 +290,7 @@ export class RollupContract {
     parentNode: Node,
     assertion: Assertion,
     afterInboxAcc: BytesLike,
+    batchProof: BytesLike,
     prevNode?: Node
   ): Promise<{ tx: ContractTransaction; node: Node; event: NodeCreatedEvent }> {
     if (!prevNode) {
@@ -307,7 +308,8 @@ export class RollupContract {
       assertion.bytes32Fields(),
       assertion.intFields(),
       parentNode.afterState.proposedBlock,
-      parentNode.afterState.inboxMaxCount
+      parentNode.afterState.inboxMaxCount,
+      batchProof
     )
     const receipt = await tx.wait()
     if (receipt.logs == undefined) {
