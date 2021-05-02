@@ -20,11 +20,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/rand"
 	"net"
 	"strconv"
 	"sync"
+	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
@@ -58,6 +60,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 		clientManager: cm,
 		conn:          conn,
 		desc:          desc,
+		lastHeard:     time.Now(),
 	}
 
 	{
@@ -205,6 +208,51 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	return nil
 }
 
+func (cm *ClientManager) verifyClients() {
+	TIME_TO_PING_CLIENTS := 5.0
+	CLIENT_TIMEOUT_SECONDS := 15.0 // if a client hasn't said anything to us in 15 seconds close it
+
+	cm.mu.RLock()
+	// Create list of clients to ping and clients to remove
+	clientList := make([]*ClientConnection, len(cm.clientPtrMap))
+	deadClientList := make([]*ClientConnection, len(cm.clientPtrMap))
+	var i, x uint64
+	for client := range cm.clientPtrMap {
+		diff := time.Since(client.lastHeard).Seconds()
+		if diff > CLIENT_TIMEOUT_SECONDS {
+			deadClientList[x] = client
+			x++
+		} else if diff >= TIME_TO_PING_CLIENTS {
+			clientList[i] = client
+			i++
+		}
+	}
+
+	for _, deadClient := range deadClientList {
+		if deadClient != nil {
+			cm.remove(deadClient)
+		} else {
+			break
+		}
+	}
+	cm.mu.RUnlock()
+
+	for _, c := range clientList {
+		if c != nil {
+			c := c // For closure.
+			cm.pool.Schedule(func() {
+				err := c.Ping()
+				if err != nil {
+					logger.Warn().Err(err).Msg("error pinging client")
+				}
+			})
+		} else {
+			break
+		}
+	}
+
+}
+
 // startWriter starts thread to write broadcast messages from cm.out channel.
 func (cm *ClientManager) startWriter(ctx context.Context) {
 	go func() {
@@ -232,8 +280,13 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 						}
 					})
 				}
+			case <-time.After(2 * time.Second):
+				logger.Info().Msg("time to make the donuts")
 			}
+
+			cm.verifyClients()
 		}
+
 	}()
 }
 

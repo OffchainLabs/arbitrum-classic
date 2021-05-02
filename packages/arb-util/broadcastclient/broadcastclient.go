@@ -19,7 +19,6 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"net"
 	"sync"
@@ -43,6 +42,7 @@ type BroadcastClient struct {
 	RetryCount                   int
 	retrying                     bool
 	ConfirmedAccumulatorListener chan common.Hash
+	pongListener                 chan string
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
@@ -142,47 +142,20 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFee
 	return messageReceiver, err
 }
 
-func (bc *BroadcastClient) Ping() (<-chan string, error) {
-
-	_, err := bc.conn.Write(ws.CompiledPing)
-	if err != nil {
-		return nil, err
-	}
-
-	out := make(chan string)
-	go func() {
-		h, _, err := wsutil.NextReader(bc.conn, ws.StateClientSide)
-		if err != nil {
-			out <- err.Error()
-			return
-		}
-
-		switch h.OpCode {
-		case ws.OpPong:
-			logger.Info().Msg("pong")
-			out <- "pong"
-		default:
-			str := fmt.Sprintf("Received unknown JSON OpCode from server after ping: %v", h.OpCode)
-			logger.Error().Msg(str)
-			out <- str
-		}
-	}()
-
-	return out, nil
-}
-
 func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true
 	for {
+		time.Sleep(time.Duration(waitMs) * time.Millisecond)
+
 		bc.RetryCount++
 		_, err := bc.connect(messageReceiver)
 		if err == nil {
 			bc.retrying = false
 			return
 		}
-		time.Sleep(time.Duration(waitMs) * time.Millisecond)
+
 		if waitMs < MaxWaitMs {
 			waitMs += 500
 		}

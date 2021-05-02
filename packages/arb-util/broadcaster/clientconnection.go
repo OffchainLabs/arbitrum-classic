@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -34,6 +35,7 @@ type ClientConnection struct {
 
 	name          string
 	clientManager *ClientManager
+	lastHeard     time.Time
 }
 
 // Receive reads next message from client's underlying connection.
@@ -44,6 +46,7 @@ func (cc *ClientConnection) Receive() error {
 		_ = cc.conn.Close()
 		return err
 	}
+
 	return nil
 }
 
@@ -52,12 +55,13 @@ func (cc *ClientConnection) readRequest() error {
 	cc.io.Lock()
 	defer cc.io.Unlock()
 
+	cc.lastHeard = time.Now()
+
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
 	if err != nil && !h.OpCode.IsControl() {
 		return err
 	}
 
-	// this handles any ping requests
 	if h.OpCode.IsControl() {
 		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
 	}
@@ -86,4 +90,15 @@ func (cc *ClientConnection) writeRaw(p []byte) error {
 	_, err := cc.conn.Write(p)
 
 	return err
+}
+
+func (cc *ClientConnection) Ping() error {
+	cc.io.Lock()
+	defer cc.io.Unlock()
+	_, err := cc.conn.Write(ws.CompiledPing)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
