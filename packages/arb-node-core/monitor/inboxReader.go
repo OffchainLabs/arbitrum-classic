@@ -122,11 +122,11 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 
 		for {
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: true}
 				arbCorePosition := ir.db.MachineMessagesRead()
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
-				if ir.healthChan != nil && arbCorePosition != nil {
+				if ir.healthChan != nil {
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: true}
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
 					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: new(big.Int).Set(arbCorePosition)}
 				}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
