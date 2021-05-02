@@ -215,12 +215,18 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			if blocksToFetch == 0 {
 				blocksToFetch++
 			}
-			logger.Debug().
+
+			logMsg := logger.Debug().
 				Str("from", from.String()).
 				Str("to", to.String()).
 				Int("delayedCount", len(delayedMessages)).
-				Int("batchCount", len(sequencerBatches)).
-				Msg("Looking up messages")
+				Int("batchCount", len(sequencerBatches))
+			if len(sequencerBatches) > 0 {
+				logMsg = logMsg.
+					Str("beforeCount", sequencerBatches[0].GetBeforeCount().String()).
+					Str("afterCount", sequencerBatches[len(sequencerBatches)-1].GetAfterCount().String())
+			}
+			logMsg.Msg("Looking up messages")
 			if reorging {
 				from, err = ir.getPrevBlockForReorg(from)
 				if err != nil {

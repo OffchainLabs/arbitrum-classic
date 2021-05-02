@@ -137,8 +137,6 @@ func generateTxs(t *testing.T, totalCount int, dataSizePerTx int) []*types.Trans
 }
 
 func TestSequencerBatcher(t *testing.T) {
-	ctx := context.Background()
-
 	arbosPath, err := arbos.Path()
 	test.FailIfError(t, err)
 
@@ -180,6 +178,15 @@ func TestSequencerBatcher(t *testing.T) {
 		extraConfig,
 	)
 
+	seqMon, shutdown := monitor.PrepareArbCore(t)
+	defer shutdown()
+
+	otherMon, shutdown2 := monitor.PrepareArbCore(t)
+	defer shutdown2()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, client)
 	test.FailIfError(t, err)
 
@@ -189,14 +196,8 @@ func TestSequencerBatcher(t *testing.T) {
 	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	seqMon, shutdown := monitor.PrepareArbCore(t)
-	defer shutdown()
-
 	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
 	test.FailIfError(t, err)
-
-	otherMon, shutdown := monitor.PrepareArbCore(t)
-	defer shutdown()
 
 	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
 	test.FailIfError(t, err)
@@ -214,7 +215,7 @@ func TestSequencerBatcher(t *testing.T) {
 	client.Commit()
 
 	for _, totalCount := range []int{1, 10, 100} {
-		for _, dataSizePerTx := range []int{0, 1, 10, 1000, 100000} {
+		for _, dataSizePerTx := range []int{1, 10, 100} {
 			txs := generateTxs(t, totalCount, dataSizePerTx)
 			for _, tx := range txs {
 				if err := batcher.SendTransaction(ctx, tx); err != nil {
@@ -229,7 +230,7 @@ func TestSequencerBatcher(t *testing.T) {
 
 	msgCount1, err := seqMon.Core.GetMessageCount()
 	test.FailIfError(t, err)
-	if msgCount1.Cmp(big.NewInt(1000)) < 0 {
+	if msgCount1.Cmp(big.NewInt(668)) < 0 {
 		t.Error("Not enough messages, only got", msgCount1.String())
 	}
 
@@ -242,6 +243,7 @@ func TestSequencerBatcher(t *testing.T) {
 			break
 		}
 		time.Sleep(time.Millisecond * 100)
+		client.Commit()
 
 		if time.Now().After(timeout) {
 			t.Fatal("Exceeded message delivery timeout")

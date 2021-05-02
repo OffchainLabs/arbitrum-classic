@@ -374,6 +374,11 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 
 func (b *SequencerBatcher) chainManager(ctx context.Context) {
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		time.Sleep(b.chainTimeCheckInterval)
 		chainTime, err := getChainTime(ctx, b.client)
 		if err != nil {
