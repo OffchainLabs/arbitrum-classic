@@ -4,10 +4,11 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 )
 
 type ExecutionImpl struct {
@@ -149,6 +150,9 @@ func (e *ExecutionImpl) OneStepProof(
 		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
 		if err != nil {
 			return err
+		}
+		if batch == nil {
+			return errors.New("Failed to lookup batch containing message")
 		}
 		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
 		if err != nil {

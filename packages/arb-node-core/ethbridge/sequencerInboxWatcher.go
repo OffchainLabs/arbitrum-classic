@@ -74,6 +74,10 @@ func NewSequencerInboxWatcher(address ethcommon.Address, client ethutils.EthClie
 	}, nil
 }
 
+func (r *SequencerInboxWatcher) Address() ethcommon.Address {
+	return r.address
+}
+
 func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
 	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
 	if err != nil {

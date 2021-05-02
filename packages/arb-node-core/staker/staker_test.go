@@ -207,7 +207,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	mon, shutdown := monitor.PrepareArbCore(t, nil)
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
@@ -393,7 +393,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 }
 
 func calculateGasToFirstInbox(t *testing.T) *big.Int {
-	mon, shutdown := monitor.PrepareArbCore(t, nil)
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
 	test.FailIfError(t, err)

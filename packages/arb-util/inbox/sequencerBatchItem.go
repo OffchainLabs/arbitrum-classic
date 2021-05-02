@@ -20,9 +20,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/pkg/errors"
 )
 
 type SequencerBatchItem struct {

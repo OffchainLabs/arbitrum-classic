@@ -189,13 +189,13 @@ func TestSequencerBatcher(t *testing.T) {
 	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	seqMon, shutdown := monitor.PrepareArbCore(t, nil)
+	seqMon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
 	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
 	test.FailIfError(t, err)
 
-	otherMon, shutdown := monitor.PrepareArbCore(t, nil)
+	otherMon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
 	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)

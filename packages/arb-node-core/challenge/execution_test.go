@@ -12,9 +12,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
-	mon, shutdown := monitor.PrepareArbCore(t, messages)
+func runExecutionTest(t *testing.T, init message.Init, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
+
+	monitor.DeliverMessagesToCore(t, mon.Core, big.NewInt(0), common.Hash{}, messages)
 	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
 	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
@@ -25,6 +27,7 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 	time := big.NewInt(100)
 	return executeChallenge(
 		t,
+		init,
 		challengedNode,
 		time,
 		time,
@@ -35,24 +38,27 @@ func runExecutionTest(t *testing.T, messages []inbox.InboxMessage, startGas *big
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runExecutionTest(t, []inbox.InboxMessage{}, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
+	runExecutionTest(t, makeInit(), nil, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
+}
+
+func makeInit() message.Init {
+	return message.Init{
+		ChainParams: protocol.ChainParams{
+			StakeRequirement:          big.NewInt(0),
+			StakeToken:                common.Address{},
+			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
+			MaxExecutionSteps:         0,
+			ArbGasSpeedLimitPerSecond: 0,
+		},
+		Owner:       common.RandAddress(),
+		ExtraConfig: []byte{},
+	}
 }
 
 func makeInitMsg() inbox.InboxMessage {
-	owner := common.RandAddress()
 	chain := common.RandAddress()
 	return message.NewInboxMessage(
-		message.Init{
-			ChainParams: protocol.ChainParams{
-				StakeRequirement:          big.NewInt(0),
-				StakeToken:                common.Address{},
-				GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-				MaxExecutionSteps:         0,
-				ArbGasSpeedLimitPerSecond: 0,
-			},
-			Owner:       owner,
-			ExtraConfig: []byte{},
-		},
+		makeInit(),
 		chain,
 		big.NewInt(0),
 		big.NewInt(0),
@@ -67,21 +73,21 @@ func TestChallengeToOSPWithMessage(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
 	start := new(big.Int).Sub(inboxGas, big.NewInt(50000))
 	end := new(big.Int).Add(inboxGas, big.NewInt(50000))
-	runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{DistortMachineAtGas: inboxGas}, false)
+	runExecutionTest(t, makeInit(), []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{DistortMachineAtGas: inboxGas}, false)
 }
 
 func TestChallengeToUnreachable(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
 	start := new(big.Int).Sub(inboxGas, big.NewInt(50000))
 	end := new(big.Int).Add(inboxGas, big.NewInt(50000))
-	rounds := runExecutionTest(t, []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{MessagesReadCap: big.NewInt(0)}, true)
+	rounds := runExecutionTest(t, makeInit(), []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{MessagesReadCap: big.NewInt(0)}, true)
 	if rounds < 2 {
 		t.Fatal("TestChallengeToUnreachable failed too early")
 	}
 }
 
 func calculateGasToFirstInbox(t *testing.T) *big.Int {
-	mon, shutdown := monitor.PrepareArbCore(t, nil)
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
 	test.FailIfError(t, err)
@@ -92,8 +98,9 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 
 func TestChallengeToUnreachableSmall(t *testing.T) {
 	messages := []inbox.InboxMessage{makeInitMsg()}
-	mon, shutdown := monitor.PrepareArbCore(t, messages)
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
+	monitor.DeliverMessagesToCore(t, mon.Core, big.NewInt(0), common.Hash{}, messages)
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)
 	startGas := cursor.TotalGasConsumed()
@@ -107,6 +114,7 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 	time := big.NewInt(100)
 	executeChallenge(
 		t,
+		makeInit(),
 		challengedNode,
 		time,
 		time,
