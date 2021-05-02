@@ -267,9 +267,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		nodehealth.StartNodeHealthCheck(ctx, healthChan)
 	}()
 
-	reader, err := mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
 	test.FailIfError(t, err)
-	defer reader.Stop()
 
 	for i := 1; i <= 10; i++ {
 		msgCount, err := mon.Core.GetMessageCount()
