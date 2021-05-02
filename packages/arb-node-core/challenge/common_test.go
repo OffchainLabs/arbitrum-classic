@@ -8,6 +8,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -22,7 +23,7 @@ import (
 
 func executeChallenge(
 	t *testing.T,
-	init message.Init,
+	init inbox.InboxMessage,
 	challengedNode *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
@@ -179,13 +180,14 @@ func initializeChallengeTest(
 	nd *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-	init message.Init,
+	init inbox.InboxMessage,
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.SequencerInboxWatcher, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
 	ctx := context.Background()
 	clnt, pks := test.SimulatedBackend(t)
 	deployer := bind.NewKeyedTransactor(pks[0])
 	asserter := bind.NewKeyedTransactor(pks[1])
 	challenger := bind.NewKeyedTransactor(pks[2])
+	sequencer := bind.NewKeyedTransactor(pks[3])
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(deployer, client)
 	test.FailIfError(t, err)
@@ -204,14 +206,35 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	client.Commit()
 
-	rollup := common.RandAddress().ToEthAddress()
-	_, err = delayedBridge.DeliverMessageToInbox(deployer, uint8(init.Type()), rollup, hashing.SoliditySHA3(init.AsData()))
+	_, err = delayedBridge.DeliverMessageToInbox(deployer, uint8(init.Kind), init.Sender.ToEthAddress(), hashing.SoliditySHA3(init.Data))
 	test.FailIfError(t, err)
 
-	sequencer := ethcommon.Address{}
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)
-	sequencerBridge, _, _, err := ethbridgecontracts.DeploySequencerInbox(deployer, client, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
+	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client, delayedBridgeAddr, sequencer.From, maxDelayBlocks, maxDelaySeconds)
+	test.FailIfError(t, err)
+	client.Commit()
+
+	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{}, big.NewInt(0))
+	test.FailIfError(t, err)
+
+	latestHeader, err := client.HeaderByNumber(context.Background(), nil)
+	test.FailIfError(t, err)
+	chainTime := inbox.ChainTime{
+		BlockNum:  common.NewTimeBlocks(latestHeader.Number),
+		Timestamp: new(big.Int).SetUint64(latestHeader.Time),
+	}
+
+	delayedItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
+	endOfBlockMessage := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		big.NewInt(1),
+		big.NewInt(0),
+		chainTime,
+	)
+	endOfBlockItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, delayedItem.Accumulator)
+	_, err = sequencerBridge.AddSequencerL2BatchFromOrigin(sequencer, nil, nil, chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), endOfBlockItem.Accumulator)
 	test.FailIfError(t, err)
 
 	asserterWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(asserter, client)
@@ -237,7 +260,7 @@ func initializeChallengeTest(
 		challengerWallet.Address().ToEthAddress(),
 		asserterTime,
 		challengerTime,
-		sequencerBridge,
+		sequencerBridgeAddr,
 		delayedBridgeAddr,
 	)
 	test.FailIfError(t, err)
@@ -245,7 +268,7 @@ func initializeChallengeTest(
 	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
 	test.FailIfError(t, err)
 
-	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerBridge, client)
+	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerBridgeAddr, client)
 	test.FailIfError(t, err)
 
 	return client, tester, sequencerInboxWatcher, asserterWallet, challengerWallet, challengeAddress

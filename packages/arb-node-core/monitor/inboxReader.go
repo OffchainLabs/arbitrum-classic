@@ -332,11 +332,7 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 	}
 	delayedMessages := make([]inbox.DelayedMessage, 0, len(deliveredDelayedMessages))
 	for _, deliveredMsg := range deliveredDelayedMessages {
-		msg := inbox.DelayedMessage{
-			DelayedSequenceNumber: deliveredMsg.Message.InboxSeqNum,
-			DelayedAccumulator:    deliveredMsg.AfterInboxAcc(),
-			Message:               deliveredMsg.Message.ToBytes(),
-		}
+		msg := inbox.NewDelayedMessage(deliveredMsg.BeforeInboxAcc, deliveredMsg.Message)
 		delayedMessages = append(delayedMessages, msg)
 	}
 	ir.MessageDeliveryMutex.Lock()

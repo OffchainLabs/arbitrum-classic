@@ -3,20 +3,37 @@ package challenge
 import (
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func runExecutionTest(t *testing.T, init message.Init, messages []inbox.InboxMessage, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
+func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultConfig FaultConfig, asserterMayFail bool) int {
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	monitor.DeliverMessagesToCore(t, mon.Core, big.NewInt(0), common.Hash{}, messages)
+	initMsg := makeInitMsg()
+	delayed := inbox.NewDelayedMessage(common.Hash{}, initMsg)
+	batchItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayed.DelayedAccumulator)
+
+	_, err := core.DeliverMessagesAndWait(mon.Core, common.Hash{}, []inbox.SequencerBatchItem{batchItem}, []inbox.DelayedMessage{delayed}, nil)
+	test.FailIfError(t, err)
+
+	for {
+		msgCount, err := mon.Core.GetMessageCount()
+		test.FailIfError(t, err)
+		if mon.Core.MachineIdle() && msgCount.Cmp(big.NewInt(1)) == 0 {
+			break
+		}
+		<-time.After(time.Millisecond * 200)
+	}
+
 	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
 	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
@@ -24,13 +41,12 @@ func runExecutionTest(t *testing.T, init message.Init, messages []inbox.InboxMes
 		t.Fatal("Error with initializeChallengeData")
 	}
 
-	time := big.NewInt(100)
 	return executeChallenge(
 		t,
-		init,
+		initMsg,
 		challengedNode,
-		time,
-		time,
+		big.NewInt(100),
+		big.NewInt(100),
 		mon.Core,
 		faultyCore,
 		asserterMayFail,
@@ -38,7 +54,7 @@ func runExecutionTest(t *testing.T, init message.Init, messages []inbox.InboxMes
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runExecutionTest(t, makeInit(), nil, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
+	runExecutionTest(t, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
 }
 
 func makeInit() message.Init {
@@ -73,14 +89,14 @@ func TestChallengeToOSPWithMessage(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
 	start := new(big.Int).Sub(inboxGas, big.NewInt(50000))
 	end := new(big.Int).Add(inboxGas, big.NewInt(50000))
-	runExecutionTest(t, makeInit(), []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{DistortMachineAtGas: inboxGas}, false)
+	runExecutionTest(t, start, end, FaultConfig{DistortMachineAtGas: inboxGas}, false)
 }
 
 func TestChallengeToUnreachable(t *testing.T) {
 	inboxGas := calculateGasToFirstInbox(t)
 	start := new(big.Int).Sub(inboxGas, big.NewInt(50000))
 	end := new(big.Int).Add(inboxGas, big.NewInt(50000))
-	rounds := runExecutionTest(t, makeInit(), []inbox.InboxMessage{makeInitMsg()}, start, end, FaultConfig{MessagesReadCap: big.NewInt(0)}, true)
+	rounds := runExecutionTest(t, start, end, FaultConfig{MessagesReadCap: big.NewInt(0)}, true)
 	if rounds < 2 {
 		t.Fatal("TestChallengeToUnreachable failed too early")
 	}
@@ -114,7 +130,7 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 	time := big.NewInt(100)
 	executeChallenge(
 		t,
-		makeInit(),
+		makeInitMsg(),
 		challengedNode,
 		time,
 		time,

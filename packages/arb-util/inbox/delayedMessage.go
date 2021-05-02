@@ -20,13 +20,26 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
 type DelayedMessage struct {
 	DelayedSequenceNumber *big.Int
 	DelayedAccumulator    common.Hash
 	Message               []byte
+}
+
+func NewDelayedMessage(beforeAcc common.Hash, message InboxMessage) DelayedMessage {
+	return DelayedMessage{
+		DelayedSequenceNumber: message.InboxSeqNum,
+		DelayedAccumulator: hashing.SoliditySHA3(
+			hashing.Bytes32(beforeAcc),
+			hashing.Bytes32(message.CommitmentHash()),
+		),
+		Message: message.ToBytes(),
+	}
 }
 
 func (m DelayedMessage) ToBytesWithSeqNum() []byte {
