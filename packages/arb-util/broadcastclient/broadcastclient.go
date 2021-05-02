@@ -86,6 +86,7 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFee
 	poller, err := netpoll.New(nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("error starting net poller")
+		_ = conn.Close()
 		return nil, err
 	}
 
@@ -93,6 +94,7 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFee
 	desc, err := netpoll.HandleRead(conn)
 	if err != nil {
 		logger.Error().Err(err).Msg("error getting netpoll descriptor")
+		_ = conn.Close()
 		return nil, err
 	}
 
