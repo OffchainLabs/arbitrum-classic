@@ -3,13 +3,11 @@ package challenge
 import (
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
@@ -18,21 +16,7 @@ func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultCon
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	initMsg := makeInitMsg()
-	delayed := inbox.NewDelayedMessage(common.Hash{}, initMsg)
-	batchItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayed.DelayedAccumulator)
-
-	_, err := core.DeliverMessagesAndWait(mon.Core, common.Hash{}, []inbox.SequencerBatchItem{batchItem}, []inbox.DelayedMessage{delayed}, nil)
-	test.FailIfError(t, err)
-
-	for {
-		msgCount, err := mon.Core.GetMessageCount()
-		test.FailIfError(t, err)
-		if mon.Core.MachineIdle() && msgCount.Cmp(big.NewInt(1)) == 0 {
-			break
-		}
-		<-time.After(time.Millisecond * 200)
-	}
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(100), big.NewInt(100), mon.Core)
 
 	faultyCore := NewFaultyCore(mon.Core, faultConfig)
 
@@ -41,15 +25,18 @@ func runExecutionTest(t *testing.T, startGas *big.Int, endGas *big.Int, faultCon
 		t.Fatal("Error with initializeChallengeData")
 	}
 
+	startChallenge(challengedNode)
 	return executeChallenge(
 		t,
-		initMsg,
 		challengedNode,
-		big.NewInt(100),
-		big.NewInt(100),
 		mon.Core,
 		faultyCore,
 		asserterMayFail,
+		client,
+		tester,
+		seqInboxAddr,
+		asserterWallet,
+		challengerWallet,
 	)
 }
 
@@ -113,10 +100,9 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 }
 
 func TestChallengeToUnreachableSmall(t *testing.T) {
-	messages := []inbox.InboxMessage{makeInitMsg()}
 	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
-	monitor.DeliverMessagesToCore(t, mon.Core, big.NewInt(0), common.Hash{}, messages)
+	client, tester, seqInboxAddr, asserterWallet, challengerWallet, startChallenge := initializeChallengeTest(t, big.NewInt(100), big.NewInt(100), mon.Core)
 	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(1 << 30))
 	test.FailIfError(t, err)
 	startGas := cursor.TotalGasConsumed()
@@ -127,15 +113,18 @@ func TestChallengeToUnreachableSmall(t *testing.T) {
 
 	challengedNode, _ := initializeChallengeData(t, faultyCore, startGas, endGas)
 
-	time := big.NewInt(100)
+	startChallenge(challengedNode)
+
 	executeChallenge(
 		t,
-		makeInitMsg(),
 		challengedNode,
-		time,
-		time,
 		mon.Core,
 		faultyCore,
 		true,
+		client,
+		tester,
+		seqInboxAddr,
+		asserterWallet,
+		challengerWallet,
 	)
 }

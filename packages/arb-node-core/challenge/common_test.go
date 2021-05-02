@@ -23,17 +23,20 @@ import (
 
 func executeChallenge(
 	t *testing.T,
-	init inbox.InboxMessage,
 	challengedNode *core.NodeInfo,
-	asserterTime *big.Int,
-	challengerTime *big.Int,
 	correctLookup core.ArbCoreLookup,
 	falseLookup core.ArbCoreLookup,
 	asserterMayFail bool,
+	client *ethutils.SimulatedEthClient,
+	tester *ethbridgetestcontracts.ChallengeTester,
+	seqInboxAddr ethcommon.Address,
+	asserterWallet *ethbridge.ValidatorWallet,
+	challengerWallet *ethbridge.ValidatorWallet,
 ) int {
 	ctx := context.Background()
 
-	client, tester, seqInbox, asserterWallet, challengerWallet, challengeAddress := initializeChallengeTest(t, challengedNode, asserterTime, challengerTime, init)
+	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
+	test.FailIfError(t, err)
 
 	asserterBackend, err := ethbridge.NewBuilderBackend(asserterWallet)
 	test.FailIfError(t, err)
@@ -46,6 +49,9 @@ func executeChallenge(
 	test.FailIfError(t, err)
 
 	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, client)
+	test.FailIfError(t, err)
+
+	seqInbox, err := ethbridge.NewSequencerInboxWatcher(seqInboxAddr, client)
 	test.FailIfError(t, err)
 
 	challenger := NewChallenger(challengerChallengeCon, seqInbox, correctLookup, challengedNode, challengerWallet.Address())
@@ -177,11 +183,10 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 
 func initializeChallengeTest(
 	t *testing.T,
-	nd *core.NodeInfo,
 	asserterTime *big.Int,
 	challengerTime *big.Int,
-	init inbox.InboxMessage,
-) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.SequencerInboxWatcher, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
+	arbCore core.ArbCore,
+) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, ethcommon.Address, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, func(nd *core.NodeInfo)) {
 	ctx := context.Background()
 	clnt, pks := test.SimulatedBackend(t)
 	deployer := bind.NewKeyedTransactor(pks[0])
@@ -206,17 +211,31 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	client.Commit()
 
-	_, err = delayedBridge.DeliverMessageToInbox(deployer, uint8(init.Kind), init.Sender.ToEthAddress(), hashing.SoliditySHA3(init.Data))
+	init := makeInit()
+	rollup := common.RandAddress()
+	tx, err := delayedBridge.DeliverMessageToInbox(deployer, uint8(init.Type()), rollup.ToEthAddress(), hashing.SoliditySHA3(init.AsData()))
 	test.FailIfError(t, err)
+	client.Commit()
+	initReceipt, err := clnt.TransactionReceipt(context.Background(), tx.Hash())
+	test.FailIfError(t, err)
+	initBlock, err := clnt.BlockByHash(context.Background(), initReceipt.BlockHash)
+	test.FailIfError(t, err)
+	initMsg := message.NewInboxMessage(
+		init,
+		rollup,
+		big.NewInt(0),
+		tx.GasPrice(),
+		inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(initBlock.Number()),
+			Timestamp: new(big.Int).SetUint64(initBlock.Time()),
+		},
+	)
 
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)
 	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client, delayedBridgeAddr, sequencer.From, maxDelayBlocks, maxDelaySeconds)
 	test.FailIfError(t, err)
 	client.Commit()
-
-	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{}, big.NewInt(0))
-	test.FailIfError(t, err)
 
 	latestHeader, err := client.HeaderByNumber(context.Background(), nil)
 	test.FailIfError(t, err)
@@ -225,7 +244,8 @@ func initializeChallengeTest(
 		Timestamp: new(big.Int).SetUint64(latestHeader.Time),
 	}
 
-	delayedItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
+	delayed := inbox.NewDelayedMessage(common.Hash{}, initMsg)
+	delayedItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayed.DelayedAccumulator)
 	endOfBlockMessage := message.NewInboxMessage(
 		message.EndBlockMessage{},
 		common.Address{},
@@ -235,6 +255,9 @@ func initializeChallengeTest(
 	)
 	endOfBlockItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, delayedItem.Accumulator)
 	_, err = sequencerBridge.AddSequencerL2BatchFromOrigin(sequencer, nil, nil, chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), endOfBlockItem.Accumulator)
+	test.FailIfError(t, err)
+
+	_, err = core.DeliverMessagesAndWait(arbCore, common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endOfBlockItem}, []inbox.DelayedMessage{delayed}, nil)
 	test.FailIfError(t, err)
 
 	asserterWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(asserter, client)
@@ -252,24 +275,21 @@ func initializeChallengeTest(
 	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)
 
-	_, err = tester.StartChallenge(
-		deployer,
-		nd.Assertion.ExecutionHash(),
-		nd.Assertion.After.TotalMessagesRead,
-		asserterWallet.Address().ToEthAddress(),
-		challengerWallet.Address().ToEthAddress(),
-		asserterTime,
-		challengerTime,
-		sequencerBridgeAddr,
-		delayedBridgeAddr,
-	)
-	test.FailIfError(t, err)
-	client.Commit()
-	challengeAddress, err := tester.Challenge(&bind.CallOpts{})
-	test.FailIfError(t, err)
+	startChallenge := func(nd *core.NodeInfo) {
+		_, err = tester.StartChallenge(
+			deployer,
+			nd.Assertion.ExecutionHash(),
+			nd.Assertion.After.TotalMessagesRead,
+			asserterWallet.Address().ToEthAddress(),
+			challengerWallet.Address().ToEthAddress(),
+			asserterTime,
+			challengerTime,
+			sequencerBridgeAddr,
+			delayedBridgeAddr,
+		)
+		test.FailIfError(t, err)
+		client.Commit()
+	}
 
-	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerBridgeAddr, client)
-	test.FailIfError(t, err)
-
-	return client, tester, sequencerInboxWatcher, asserterWallet, challengerWallet, challengeAddress
+	return client, tester, sequencerBridgeAddr, asserterWallet, challengerWallet, startChallenge
 }
