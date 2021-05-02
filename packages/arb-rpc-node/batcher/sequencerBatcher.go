@@ -86,7 +86,7 @@ func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *moni
 		return nil, err
 	}
 
-	batcher := &SequencerBatcher{
+	return &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
 		client:                     client,
@@ -99,9 +99,7 @@ func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *moni
 		txQueue:         make(chan *types.Transaction, 10),
 		newTxFeed:       event.Feed{},
 		latestChainTime: chainTime,
-	}
-	go batcher.chainManager(ctx)
-	return batcher, nil
+	}, nil
 }
 
 func (b *SequencerBatcher) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
@@ -153,7 +151,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		return err
 	}
 	l2Message := message.NewSafeL2Message(batch)
-	seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime)
+	seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 
 	newBlockSeqNum := new(big.Int).Add(msgCount, big.NewInt(1))
 	newBlockMessage := message.NewInboxMessage(
@@ -161,7 +159,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		b.sequencer,
 		newBlockSeqNum,
 		big.NewInt(0),
-		b.latestChainTime,
+		b.latestChainTime.Clone(),
 	)
 
 	txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
@@ -232,7 +230,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 		common.Address{},
 		endOfBlockSeqNum,
 		big.NewInt(0),
-		b.latestChainTime,
+		b.latestChainTime.Clone(),
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	success, err := core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}, []inbox.DelayedMessage{}, nil)
@@ -372,7 +370,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 	return publishingAllBatchItems, nil
 }
 
-func (b *SequencerBatcher) chainManager(ctx context.Context) {
+func (b *SequencerBatcher) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():

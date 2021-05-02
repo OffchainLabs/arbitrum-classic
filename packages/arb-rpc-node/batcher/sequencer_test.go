@@ -209,7 +209,7 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
 	batcher.chainTimeCheckInterval = time.Millisecond * 10
-
+	go batcher.Start(ctx)
 	client.Commit()
 	time.Sleep(time.Second)
 	client.Commit()

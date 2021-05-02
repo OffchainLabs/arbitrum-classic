@@ -116,7 +116,12 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth)
+		seqBatcher, err := batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth)
+		if err != nil {
+			return nil, err
+		}
+		go seqBatcher.Start(ctx)
+		return seqBatcher, nil
 	default:
 		return nil, errors.New("unexpected batcher type")
 	}
