@@ -37,9 +37,9 @@ var logger zerolog.Logger
 var pprofMux *http.ServeMux
 
 type ArbRelay struct {
-	ArbitrumBroadcasterWebsocketUrl string
-	broadcastClient                 *broadcastclient.BroadcastClient
-	broadcaster                     *broadcaster.Broadcaster
+	SequencerFeedAddress string
+	broadcastClient      *broadcastclient.BroadcastClient
+	broadcaster          *broadcaster.Broadcaster
 }
 
 func init() {
@@ -60,7 +60,7 @@ func main() {
 	logger = log.With().Caller().Stack().Str("component", "arb-validator").Logger()
 
 	if err := startup(); err != nil {
-		logger.Error().Err(err).Msg("Error running validator")
+		logger.Error().Err(err).Msg("Error running relay")
 	}
 }
 
@@ -75,8 +75,10 @@ func startup() error {
 
 	// Relay Config
 	enableDebug := flagSet.Bool("debug", false, "Enable debug logging")
-	sequencerWebsocketURL := flagSet.String("sequencer-websocket-url", "", "websocket address of sequencer feed source")
-	relayWebsocketURL := flagSet.String("relay-websocket-url", "0.0.0.0:9742", "address to bind the sequencer feed output to")
+	sequencerAddr := flagSet.String("sequencer.addr", "", "address of sequencer feed source")
+	sequencerPort := flagSet.String("sequencer.port", "9642", "port of sequencer feed source")
+	feedOutputAddr := flagSet.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
+	feedOutputPort := flagSet.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 
 	if err := flagSet.Parse(os.Args[1:]); err != nil {
 		return errors.Wrap(err, "failed parsing command line arguments")
@@ -85,8 +87,8 @@ func startup() error {
 		return err
 	}
 
-	if *sequencerWebsocketURL == "" {
-		return errors.New("Missing --relayWebsocketURL")
+	if *sequencerAddr == "" {
+		return errors.New("Missing --sequencer.addr")
 	}
 
 	if *enablePProf {
@@ -96,31 +98,19 @@ func startup() error {
 		}()
 	}
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:      *relayWebsocketURL,
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
-	}
-
-	bc := broadcaster.NewBroadcaster(broadcasterSettings)
-
-	err := bc.Start(ctx)
-	if err != nil {
-		logger.Error().Err(err).Msg("unable to start broadcaster")
-	}
-	defer bc.Stop()
-
 	relaySettings := broadcaster.Settings{
-		Addr:      *sequencerWebsocketURL,
+		Addr:      *feedOutputAddr + ":" + *feedOutputPort,
 		Workers:   128,
 		Queue:     1,
 		IoTimeout: 2 * time.Second,
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay(*sequencerWebsocketURL, relaySettings)
-	relayDone := arbRelay.Start(ctx, *enableDebug)
+	arbRelay := NewArbRelay("ws://"+*sequencerAddr+":"+*sequencerPort, relaySettings)
+	relayDone, err := arbRelay.Start(ctx, *enableDebug)
+	if err != nil {
+		return err
+	}
 	defer arbRelay.Stop()
 
 	select {
@@ -131,28 +121,26 @@ func startup() error {
 	}
 }
 
-func NewArbRelay(websocketUrl string, rebroadcastSettings broadcaster.Settings) *ArbRelay {
-	ar := &ArbRelay{}
-	ar.ArbitrumBroadcasterWebsocketUrl = websocketUrl
-
-	ar.broadcaster = broadcaster.NewBroadcaster(rebroadcastSettings)
-
-	return ar
+func NewArbRelay(sequencerFeedAddress string, rebroadcastSettings broadcaster.Settings) *ArbRelay {
+	return &ArbRelay{
+		SequencerFeedAddress: sequencerFeedAddress,
+		broadcaster:          broadcaster.NewBroadcaster(rebroadcastSettings),
+		broadcastClient:      broadcastclient.NewBroadcastClient(sequencerFeedAddress, nil),
+	}
 }
 
-func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
+func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 	done := make(chan bool)
-	ar.broadcastClient = broadcastclient.NewBroadcastClient(ar.ArbitrumBroadcasterWebsocketUrl, nil)
 
 	err := ar.broadcaster.Start(ctx)
 	if err != nil {
-		logger.Error().Err(err).Msg("broadcasted unable to start")
+		return nil, errors.New("broadcast unable to start")
 	}
 
 	// connect returns
 	messages, err := ar.broadcastClient.Connect()
 	if err != nil {
-		logger.Error().Err(err).Msg("broadcast client unable to connect")
+		return nil, errors.Wrap(err, "broadcast client unable to start")
 	}
 
 	go func() {
@@ -192,7 +180,7 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) chan bool {
 		}
 	}()
 
-	return done
+	return done, nil
 }
 
 func (ar *ArbRelay) Stop() {
