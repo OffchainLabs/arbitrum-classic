@@ -217,6 +217,10 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	return nil
 }
 
+func (b *Broadcaster) ClientConnectionCount() int {
+	return len(b.clientManager.clientPtrMap)
+}
+
 func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
