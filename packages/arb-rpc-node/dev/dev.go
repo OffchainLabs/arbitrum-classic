@@ -174,21 +174,11 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 			return common.Hash{}, err
 		}
 	}
-	seqBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        msgCount,
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(0),
-		SequencerMessage:  inboxMessage.ToBytes(),
-	}
-	err = seqBatchItem.RecomputeAccumulator(prevHash, big.NewInt(0), common.Hash{})
-	if err != nil {
-		return common.Hash{}, err
-	}
-
+	seqBatchItem := inbox.NewSequencerItem(big.NewInt(0), inboxMessage, prevHash)
 	nextBlockMessage := inbox.InboxMessage{
 		Kind:        6,
 		Sender:      common.Address{},
-		InboxSeqNum: big.NewInt(0),
+		InboxSeqNum: new(big.Int).Add(msgCount, big.NewInt(1)),
 		GasPrice:    big.NewInt(0),
 		Data:        []byte{},
 		ChainTime: inbox.ChainTime{
@@ -196,17 +186,7 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 			Timestamp: big.NewInt(0),
 		},
 	}
-	nextBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        new(big.Int).Add(msgCount, big.NewInt(1)),
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(0),
-		SequencerMessage:  nextBlockMessage.ToBytes(),
-	}
-	err = nextBlockBatchItem.RecomputeAccumulator(seqBatchItem.Accumulator, big.NewInt(0), common.Hash{})
-	if err != nil {
-		return common.Hash{}, err
-	}
-
+	nextBlockBatchItem := inbox.NewSequencerItem(big.NewInt(0), nextBlockMessage, seqBatchItem.Accumulator)
 	successful, err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
 	if err != nil {
 		return common.Hash{}, err

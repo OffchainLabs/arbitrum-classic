@@ -164,21 +164,8 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		b.latestChainTime,
 	)
 
-	txBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        msgCount,
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: totalDelayedCount,
-		SequencerMessage:  seqMsg.ToBytes(),
-	}
-	txBatchItem.RecomputeAccumulator(prevAcc, totalDelayedCount, common.Hash{})
-	newBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        newBlockSeqNum,
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: totalDelayedCount,
-		SequencerMessage:  newBlockMessage.ToBytes(),
-	}
-	newBlockBatchItem.RecomputeAccumulator(txBatchItem.Accumulator, totalDelayedCount, common.Hash{})
-
+	txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
+	newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, txBatchItem.Accumulator)
 	seqBatchItems := []inbox.SequencerBatchItem{txBatchItem, newBlockBatchItem}
 	success, err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
@@ -225,12 +212,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	newMsgCount := new(big.Int).Add(msgCount, delayedRead)
 	newMsgCount.Add(newMsgCount, big.NewInt(1)) // end of block message
 	lastSeqNum := new(big.Int).Sub(newMsgCount, big.NewInt(2))
-	batchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        lastSeqNum,
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: newDelayedCount,
-		SequencerMessage:  []byte{},
-	}
+
 	var prevAcc common.Hash
 	if msgCount.Cmp(big.NewInt(1)) > 0 {
 		prevAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
@@ -242,13 +224,9 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	if err != nil {
 		return nil, err
 	}
-	err = batchItem.RecomputeAccumulator(prevAcc, oldDelayedCount, delayedAcc)
-	if err != nil {
-		return nil, err
-	}
+	batchItem := inbox.NewDelayedItem(lastSeqNum, newDelayedCount, prevAcc, oldDelayedCount, delayedAcc)
 
 	endOfBlockSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
-
 	endOfBlockMessage := message.NewInboxMessage(
 		message.EndBlockMessage{},
 		common.Address{},
@@ -256,17 +234,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 		big.NewInt(0),
 		b.latestChainTime,
 	)
-	endBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        endOfBlockSeqNum,
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: newDelayedCount,
-		SequencerMessage:  endOfBlockMessage.ToBytes(),
-	}
-	err = endBlockBatchItem.RecomputeAccumulator(batchItem.Accumulator, newDelayedCount, delayedAcc)
-	if err != nil {
-		return nil, err
-	}
-
+	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	success, err := core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return nil, err

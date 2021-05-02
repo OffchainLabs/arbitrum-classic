@@ -70,15 +70,8 @@ func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 func DeliverMessagesToCore(t *testing.T, arbCore core.ArbCore, delayedCount *big.Int, prevAcc common.Hash, messages []inbox.InboxMessage) {
 	startAcc := prevAcc
 	var batchItems []inbox.SequencerBatchItem
-	for i, msg := range messages {
-		batchItem := inbox.SequencerBatchItem{
-			LastSeqNum:        big.NewInt(int64(i)),
-			TotalDelayedCount: delayedCount,
-			SequencerMessage:  msg.ToBytes(),
-		}
-		if err := batchItem.RecomputeAccumulator(prevAcc, delayedCount, common.Hash{}); err != nil {
-			t.Fatal(err)
-		}
+	for _, msg := range messages {
+		batchItem := inbox.NewSequencerItem(delayedCount, msg, prevAcc)
 		batchItems = append(batchItems, batchItem)
 		prevAcc = batchItem.Accumulator
 	}
@@ -94,7 +87,7 @@ func DeliverMessagesToCore(t *testing.T, arbCore core.ArbCore, delayedCount *big
 	for {
 		msgCount, err := arbCore.GetMessageCount()
 		test.FailIfError(t, err)
-		if arbCore.MachineIdle() && msgCount.Cmp(target) != 0 {
+		if arbCore.MachineIdle() && msgCount.Cmp(target) == 0 {
 			break
 		}
 		<-time.After(time.Millisecond * 200)

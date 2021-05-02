@@ -225,16 +225,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	delayedBridge, err := ethbridgecontracts.NewBridge(delayedBridgeAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	batchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        big.NewInt(0),
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(1),
-		SequencerMessage:  []byte{},
-	}
 	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{Context: ctx}, big.NewInt(0))
 	test.FailIfError(t, err)
-	err = batchItem.RecomputeAccumulator(common.Hash{}, big.NewInt(0), delayedAcc)
-	test.FailIfError(t, err)
+	batchItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
 
 	latestHeader, err := client.HeaderByNumber(ctx, nil)
 	test.FailIfError(t, err)
@@ -251,15 +244,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 			Timestamp: currentTimestamp,
 		},
 	)
-	endBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        big.NewInt(1),
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(1),
-		SequencerMessage:  endOfBlockMessage.ToBytes(),
-	}
-	err = endBlockBatchItem.RecomputeAccumulator(batchItem.Accumulator, big.NewInt(1), delayedAcc)
-	test.FailIfError(t, err)
 
+	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, batchItem.Accumulator)
 	_, err = seqInbox.AddSequencerL2Batch(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
 	test.FailIfError(t, err)
 	client.Commit()
