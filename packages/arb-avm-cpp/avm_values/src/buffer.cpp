@@ -64,7 +64,7 @@ const RawBuffer::NodeData* RawBuffer::get_children_const() const {
 }
 
 uint256_t RawBuffer::hash() const {
-    auto current_hash_cache = hash_cache.val.load();
+    auto current_hash_cache = hash_cache.val;
     if (current_hash_cache) {
         return *current_hash_cache;
     }
@@ -76,12 +76,12 @@ uint256_t RawBuffer::hash() const {
         auto& bytes = std::get<LeafData>(components);
         calculated_hash = ::hash(bytes);
     }
-    hash_cache.val.store(calculated_hash);
+    hash_cache.val = calculated_hash;
     return calculated_hash;
 }
 
 uint256_t RawBuffer::packed_size() const {
-    auto current_packed = packed_size_cache.val.load();
+    auto current_packed = packed_size_cache.val;
     if (current_packed) {
         return *current_packed;
     }
@@ -109,7 +109,7 @@ uint256_t RawBuffer::packed_size() const {
             calculated_packed_size -= 1;
         }
     }
-    packed_size_cache.val.store(calculated_packed_size);
+    packed_size_cache.val = calculated_packed_size;
     return calculated_packed_size;
 }
 
@@ -142,8 +142,8 @@ RawBuffer RawBuffer::set_many_without_resize(uint64_t offset,
     RawBuffer ret(*this);
     RawBuffer* target = &ret;
     while (true) {
-        target->hash_cache.val.store(std::nullopt);
-        target->packed_size_cache.val.store(std::nullopt);
+        target->hash_cache.val = std::nullopt;
+        target->packed_size_cache.val = std::nullopt;
         if (auto children = target->get_children()) {
             // Clone each buffer on our way down, and adjust the offset.
             auto child_size = children->first->size();

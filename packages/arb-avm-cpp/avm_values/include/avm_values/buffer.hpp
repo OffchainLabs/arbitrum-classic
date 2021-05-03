@@ -31,14 +31,14 @@
 constexpr uint64_t ALIGN = 32;
 
 struct CachedCalculation {
-    std::atomic<std::optional<uint256_t>> val;
+    std::optional<uint256_t> val;
 
     CachedCalculation() : val(std::nullopt) {}
 
-    CachedCalculation(const CachedCalculation& o) : val(o.val.load()) {}
+    CachedCalculation(const CachedCalculation& o) : val(o.val) {}
 
     CachedCalculation& operator=(const CachedCalculation& o) {
-        val = o.val.load();
+        val = o.val;
         return *this;
     }
 };
