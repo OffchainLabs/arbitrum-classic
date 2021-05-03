@@ -62,8 +62,8 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
      * @param _templateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
      */
     function initialize(address _ethTokenBridge, address _templateERC20) external {
-        require(address(ethTokenBridge) == address(0), "already init");
         require(_ethTokenBridge != address(0), "L1 pair can't be address 0");
+        require(address(ethTokenBridge) == address(0), "already init");
         templateERC20 = _templateERC20;
 
         ethTokenBridge = _ethTokenBridge;
