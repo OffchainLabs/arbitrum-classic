@@ -18,6 +18,7 @@ package web3
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -276,7 +277,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	}
 	from, tx := buildTransaction(args, s.maxCallGas)
 	var agg arbcommon.Address
-	if s.aggregator != nil {
+	if args.Aggregator != nil {
+		agg = arbcommon.NewAddressFromEth(*args.Aggregator)
+	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
 	res, err := snap.EstimateGas(tx, agg, from)
@@ -312,6 +315,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
 		gasAmount := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
+		fmt.Println("Estimate gas", agg, gasAmount)
 		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
 	}
 }

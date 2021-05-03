@@ -19,9 +19,13 @@ package dev
 import (
 	"context"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -35,7 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func setupFeeChain(t *testing.T) (*Backend, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, func()) {
+func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, func()) {
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)
@@ -91,6 +95,8 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.EthClient, *bind.TransactOpts,
 		t.Fatal(err)
 	}
 
+	web3Server := web3.NewServer(srv, true)
+
 	client := web3.NewEthClient(srv, true)
 
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
@@ -105,12 +111,12 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.EthClient, *bind.TransactOpts,
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
-	return backend, client, auth, aggAuth, feeConfigInit, config, cancelDevNode
+	return backend, web3Server, client, auth, aggAuth, feeConfigInit, config, cancelDevNode
 }
 
 func TestFees(t *testing.T) {
 	skipBelowVersion(t, 3)
-	backend, client, auth, aggAuth, feeConfig, config, cancel := setupFeeChain(t)
+	backend, _, client, auth, aggAuth, feeConfig, config, cancel := setupFeeChain(t)
 	defer cancel()
 
 	agg := common.NewAddressFromEth(aggAuth.From)
@@ -191,7 +197,7 @@ func TestFees(t *testing.T) {
 
 	if arbosVersion <= 4 {
 		if aggBal.Cmp(big.NewInt(0)) <= 0 {
-			t.Error("aggregator should have nonzero balance")
+			t.Error("currentAggregator should have nonzero balance")
 		}
 		if feeCollectorBal.Cmp(big.NewInt(0)) != 0 {
 			t.Error("fee collector should have 0 balance")
@@ -199,7 +205,7 @@ func TestFees(t *testing.T) {
 	} else {
 		test.FailIfError(t, feeCollectorErr)
 		if aggBal.Cmp(big.NewInt(0)) != 0 {
-			t.Error("aggregator should have 0 balance")
+			t.Error("currentAggregator should have 0 balance")
 		}
 		if feeCollectorBal.Cmp(big.NewInt(0)) <= 0 {
 			t.Error("fee collector should have nonzero balance")
@@ -221,4 +227,30 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 		t.Error("too much extra gas estimated")
 	}
 	return arbRes.FeeStats.Paid.Total()
+}
+
+func TestNonAggregatorFee(t *testing.T) {
+	skipBelowVersion(t, 3)
+	backend, web3SServer, client, auth, _, _, _, cancel := setupFeeChain(t)
+	defer cancel()
+
+	simpleAddr, _, simple, err := arbostestcontracts.DeploySimple(auth, client)
+	test.FailIfError(t, err)
+	backend.currentAggregator = common.Address{}
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+	data := simpleABI.Methods["exists"].ID
+	emptyAgg := ethcommon.Address{}
+
+	estimatedGas, err := web3SServer.EstimateGas(web3.CallTxArgs{
+		From:       &auth.From,
+		To:         &simpleAddr,
+		Data:       (*hexutil.Bytes)(&data),
+		Aggregator: &emptyAgg,
+	})
+	auth.GasLimit = uint64(estimatedGas)
+	tx, err := simple.Exists(auth)
+	test.FailIfError(t, err)
+	checkFees(t, backend, tx)
 }
