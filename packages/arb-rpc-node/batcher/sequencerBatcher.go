@@ -102,10 +102,12 @@ func NewSequencerBatcher(
 	}
 
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9642",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9642",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 	feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
 	err = feedBroadcaster.Start(ctx)
@@ -288,7 +290,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	seqBatchItems := []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}
-success, err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
+	success, err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return nil, err
 	}
