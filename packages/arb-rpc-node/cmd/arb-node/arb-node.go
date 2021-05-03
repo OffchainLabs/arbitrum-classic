@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	golog "log"
 	"math/big"
 	"net/http"
@@ -102,31 +103,41 @@ func startup() error {
 	)
 	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
-	sequencerURL := fs.String("sequencer-url", "", "url to get sequencer feed")
+	sequencerAddr := fs.String("sequencer.addr", "", "address of sequencer feed source")
+	sequencerPort := fs.String("sequencer.port", "9642", "port of sequencer feed source")
+	feedOutputAddr := fs.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
+	feedOutputPort := fs.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
-	//go http.ListenAndServe("localhost:6060", nil)
-
-	broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
-	sequencerFeed, err := broadcastClient.Connect()
-	if err != nil {
-		log.Fatal().Err(err).Msg("unable to start broadcastclient")
-	}
-
-	err = fs.Parse(os.Args[1:])
+	err := fs.Parse(os.Args[1:])
 	if err != nil {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 3 {
-		fmt.Printf("usage: arb-node [--maxBatchTime=NumSeconds] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+	if fs.NArg() != 3 || (!*sequencerMode && *sequencerAddr == "") {
+		fmt.Printf("usage      sequencer: arb-node --sequencer [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or   primary node: arb-node --sequencer.addr=<sequencer address> --inbox=<inbox address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or secondary node: arb-node --sequencer.addr=<sequencer address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		return errors.New("invalid arguments")
 	}
 
 	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
 		return err
+	}
+
+	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	if !*sequencerMode {
+		if *sequencerAddr == "" {
+			return errors.New("Missing --sequencer.addr")
+		}
+
+		broadcastClient := broadcastclient.NewBroadcastClient("ws://"+*sequencerAddr+":"+*sequencerPort, nil)
+		sequencerFeed, err = broadcastClient.Connect()
+		if err != nil {
+			log.Fatal().Err(err).Msg("unable to start broadcastclient")
+		}
 	}
 
 	if *enablePProf {
@@ -192,6 +203,7 @@ func startup() error {
 		time.Sleep(time.Second * 5)
 	}
 
+	var broadcasterSettings broadcaster.Settings
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
 	if *forwardTxURL != "" {
@@ -230,6 +242,15 @@ func startup() error {
 				InboxReader:                inboxReader,
 				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
 			}
+
+			broadcasterSettings = broadcaster.Settings{
+				Addr:                    *feedOutputAddr + ":" + *feedOutputPort,
+				Workers:                 128,
+				Queue:                   1,
+				IoReadWriteTimeout:      2 * time.Second,
+				ClientPingInterval:      5 * time.Second,
+				ClientNoResponseTimeout: 15 * time.Second,
+			}
 		} else if *keepPendingState {
 			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		} else {
@@ -247,7 +268,16 @@ func startup() error {
 		inboxReader.WaitToCatchUp()
 	}
 
-	batch, err := rpc.SetupBatcher(ctx, ethclint, rollupArgs.Address, db, time.Duration(*maxBatchTime)*time.Second, batcherMode, dataSigner)
+	batch, err := rpc.SetupBatcher(
+		ctx,
+		ethclint,
+		rollupArgs.Address,
+		db,
+		time.Duration(*maxBatchTime)*time.Second,
+		batcherMode,
+		dataSigner,
+		broadcasterSettings,
+	)
 	if err != nil {
 		return err
 	}

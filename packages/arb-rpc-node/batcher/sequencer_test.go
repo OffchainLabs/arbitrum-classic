@@ -207,6 +207,14 @@ func TestSequencerBatcher(t *testing.T) {
 	client.Commit()
 	time.Sleep(time.Second)
 
+	broadcasterSettings := broadcaster.Settings{
+		Addr:                    ":9642",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
+	}
 	batcher, err := NewSequencerBatcher(
 		ctx,
 		seqMon.Core,
@@ -217,6 +225,7 @@ func TestSequencerBatcher(t *testing.T) {
 		seqInbox,
 		auth,
         dummyDataSigner,
+        broadcasterSettings,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
