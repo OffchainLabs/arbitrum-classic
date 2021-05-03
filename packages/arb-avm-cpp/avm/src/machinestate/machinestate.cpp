@@ -717,7 +717,7 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
-    std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
+    // std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];

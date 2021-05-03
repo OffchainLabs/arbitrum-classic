@@ -245,5 +245,6 @@ struct MachineState {
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf);
 uint256_t runWasmMachine(MachineState &machine_state);
+value make_table(std::vector<value> tab);
 
 #endif /* machinestate_hpp */
