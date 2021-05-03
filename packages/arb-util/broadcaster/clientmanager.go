@@ -35,6 +35,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
+type ClientManagerSettings struct {
+	ClientPingInterval      time.Duration
+	ClientNoResponseTimeout time.Duration
+}
+
 // ClientManager manages client connections
 type ClientManager struct {
 	mu                sync.RWMutex
@@ -43,14 +48,16 @@ type ClientManager struct {
 	pool              *gopool.Pool
 	poller            netpoll.Poller
 	out               chan []byte
+	settings          ClientManagerSettings
 }
 
-func NewClientManager(pool *gopool.Pool, poller netpoll.Poller) *ClientManager {
+func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientManagerSettings) *ClientManager {
 	return &ClientManager{
 		poller:       poller,
 		pool:         pool,
 		clientPtrMap: make(map[*ClientConnection]bool),
 		out:          make(chan []byte, 1),
+		settings:     settings,
 	}
 }
 
@@ -208,49 +215,52 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	return nil
 }
 
+func (cm *ClientManager) ClientConnectionCount() int {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	return len(cm.clientPtrMap)
+}
+
 func (cm *ClientManager) verifyClients() {
-	TIME_TO_PING_CLIENTS := 5.0
-	CLIENT_TIMEOUT_SECONDS := 15.0 // if a client hasn't said anything to us in 15 seconds close it
+	logger.Info().Msg("Verifying client connections")
+	TIME_TO_PING_CLIENTS := cm.settings.ClientPingInterval
+	CLIENT_TIMEOUT_SECONDS := cm.settings.ClientNoResponseTimeout
 
 	cm.mu.RLock()
+	clientConnectionCount := len(cm.clientPtrMap)
+	logger.Info().Msgf("Client connection count %d clients", clientConnectionCount)
+
 	// Create list of clients to ping and clients to remove
-	clientList := make([]*ClientConnection, len(cm.clientPtrMap))
-	deadClientList := make([]*ClientConnection, len(cm.clientPtrMap))
+	clientList := make([]*ClientConnection, 0, clientConnectionCount)
+	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
 	var i, x uint64
 	for client := range cm.clientPtrMap {
-		diff := time.Since(client.lastHeard).Seconds()
+		diff := time.Since(client.lastHeard)
 		if diff > CLIENT_TIMEOUT_SECONDS {
-			deadClientList[x] = client
+			deadClientList = append(deadClientList, client)
 			x++
 		} else if diff >= TIME_TO_PING_CLIENTS {
-			clientList[i] = client
+			clientList = append(clientList, client)
 			i++
-		}
-	}
-
-	for _, deadClient := range deadClientList {
-		if deadClient != nil {
-			cm.remove(deadClient)
-		} else {
-			break
 		}
 	}
 	cm.mu.RUnlock()
 
-	for _, c := range clientList {
-		if c != nil {
-			c := c // For closure.
-			cm.pool.Schedule(func() {
-				err := c.Ping()
-				if err != nil {
-					logger.Warn().Err(err).Msg("error pinging client")
-				}
-			})
-		} else {
-			break
-		}
+	logger.Info().Msgf("Disconecting %d clients", x)
+	for _, deadClient := range deadClientList {
+		cm.Remove(deadClient)
 	}
 
+	logger.Info().Msgf("Pinging %d clients", i)
+	for _, c := range clientList {
+		c := c // For closure.
+		cm.pool.Schedule(func() {
+			err := c.Ping()
+			if err != nil {
+				logger.Warn().Err(err).Msg("error pinging client")
+			}
+		})
+	}
 }
 
 // startWriter starts thread to write broadcast messages from cm.out channel.
@@ -281,7 +291,7 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 					})
 				}
 			case <-time.After(2 * time.Second):
-				logger.Info().Msg("time to make the donuts")
+				logger.Info().Msg("No New Messages")
 			}
 
 			cm.verifyClients()

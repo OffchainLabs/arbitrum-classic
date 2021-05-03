@@ -13,10 +13,12 @@ func TestBroadcastClientConnectsAndReceivesMessages(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9742",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9742",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	b := broadcaster.NewBroadcaster(broadcasterSettings)
@@ -73,14 +75,15 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 }
 
 func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
-	t.Skip("This test takes to long, need to make the timeouts more configurable for the broadcaster")
 	ctx := context.Background()
 
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9743",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9743",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      1 * time.Second,
+		ClientNoResponseTimeout: 2 * time.Second,
 	}
 
 	b := broadcaster.NewBroadcaster(broadcasterSettings)
@@ -105,7 +108,7 @@ func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
 	}
 
 	broadcastClient.Close()
-	time.Sleep(30 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	connectionCount = b.ClientConnectionCount()
 	if connectionCount != 0 {
@@ -126,10 +129,12 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9743",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9743",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	b1 := broadcaster.NewBroadcaster(broadcasterSettings)
