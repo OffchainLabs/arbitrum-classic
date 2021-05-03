@@ -164,6 +164,13 @@ HashPreImage calcHashPreImage(const Tuple& tup) {
     auto hash_val = ethash::keccak256(
         tupData.data(),
         static_cast<unsigned int>(1 + hash_size * (tup.tuple_size())));
+/*
+    std::cerr << "tuple hash size " << 1 + hash_size * (tup.tuple_size()) << "\n";
+    auto len = 1 + hash_size * (tup.tuple_size());
+    for (int i = 0; i < len; i++) {
+        std::cerr << ", " << int(tupData[i]);
+    }
+    std::cerr << "\n"; */
     std::array<unsigned char, 32> hashData{};
     std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
 

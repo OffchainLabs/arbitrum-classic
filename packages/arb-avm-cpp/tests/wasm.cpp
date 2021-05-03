@@ -55,13 +55,16 @@ TEST_CASE("wasm_compile") {
                 op = {opcode,Tuple::createTuple(v)};
             } else if (immed == 3) {
                 std::vector<value> v;
-                v.push_back(0);
+                v.push_back(Buffer());
                 v.push_back(get_int_value(bytes, i));
                 i += 8;
                 op = {opcode,Tuple::createTuple(v)};
             }
             stub = code->addOperation(stub.pc, op);
-            std::cerr << "Loaded op " << op << " idx " << i << "\n";
+            if (op.immediate) {
+                std::cerr << "Immed hash " << op << " hash " << intx::to_string(hash_value(*op.immediate), 16) << "\n";
+            }
+            std::cerr << "Loaded op " << op << " hash " << intx::to_string(stub.hash, 16) << "\n";
             if (bytes[i]) {
                 // std::cerr << "Label " << stub << " at " << labels.size() <<
                 // "\n";
@@ -71,7 +74,6 @@ TEST_CASE("wasm_compile") {
         }
 
         std::reverse(labels.begin(), labels.end());
-
         auto table = make_table(labels);
         std::cerr << "Here " << intx::to_string(stub.hash, 16) << " "
                   << labels.size() << " \n";
@@ -80,6 +82,7 @@ TEST_CASE("wasm_compile") {
         std::cerr << "Table hash " << intx::to_string(hash_value(table), 16)
                   << " size " << getSize(table) << "\n";
         // convert table
+        std::cerr << "Buffer hash " << intx::to_string(hash_value(Buffer()), 16) << "\n";
     }
 }
 
