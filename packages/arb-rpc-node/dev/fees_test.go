@@ -35,9 +35,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func TestFees(t *testing.T) {
-	skipBelowVersion(t, 3)
-
+func setupFeeChain(t *testing.T) (*Backend, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, func()) {
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)
@@ -77,7 +75,6 @@ func TestFees(t *testing.T) {
 		common.NewAddressFromEth(auth.From),
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
 	)
-	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -98,14 +95,6 @@ func TestFees(t *testing.T) {
 
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
-	arbGasInfo, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, client)
-	test.FailIfError(t, err)
-	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
-	test.FailIfError(t, err)
-
-	feeCollector := common.RandAddress()
-
-	_, feeCollectorErr := arbAggregator.SetFeeCollector(aggAuth, aggInit.Aggregator.ToEthAddress(), feeCollector.ToEthAddress())
 
 	_, err = arbOwner.SetFairGasPriceSender(auth, aggInit.Aggregator.ToEthAddress())
 	test.FailIfError(t, err)
@@ -116,6 +105,28 @@ func TestFees(t *testing.T) {
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
+	return backend, client, auth, aggAuth, feeConfigInit, config, cancelDevNode
+}
+
+func TestFees(t *testing.T) {
+	skipBelowVersion(t, 3)
+	backend, client, auth, aggAuth, feeConfig, config, cancel := setupFeeChain(t)
+	defer cancel()
+
+	agg := common.NewAddressFromEth(aggAuth.From)
+
+	arbGasInfo, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	feeCollector := common.RandAddress()
+
+	_, feeCollectorErr := arbAggregator.SetFeeCollector(aggAuth, agg.ToEthAddress(), feeCollector.ToEthAddress())
+
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
 
 	totalPaid := big.NewInt(0)
 	for i := 0; i < 5; i++ {
@@ -127,10 +138,10 @@ func TestFees(t *testing.T) {
 
 	networkDest, congestionDest, err := arbOwner.GetFeeRecipients(&bind.CallOpts{})
 	test.FailIfError(t, err)
-	if networkDest != netFeeRecipient.ToEthAddress() {
+	if networkDest != feeConfig.NetFeeRecipient.ToEthAddress() {
 		t.Error("wrong network dest", networkDest)
 	}
-	if congestionDest != congestionFeeRecipient.ToEthAddress() {
+	if congestionDest != feeConfig.CongestionFeeRecipient.ToEthAddress() {
 		t.Error("wrong congestion dest", congestionDest)
 	}
 
@@ -163,10 +174,10 @@ func TestFees(t *testing.T) {
 	paid := checkFees(t, backend, tx)
 	totalPaid = totalPaid.Add(totalPaid, paid)
 
-	netFeeBal, err := client.BalanceAt(context.Background(), netFeeRecipient.ToEthAddress(), nil)
+	netFeeBal, err := client.BalanceAt(context.Background(), feeConfig.NetFeeRecipient.ToEthAddress(), nil)
 	test.FailIfError(t, err)
 
-	aggBal, err := client.BalanceAt(context.Background(), aggInit.Aggregator.ToEthAddress(), nil)
+	aggBal, err := client.BalanceAt(context.Background(), agg.ToEthAddress(), nil)
 	test.FailIfError(t, err)
 
 	feeCollectorBal, err := client.BalanceAt(context.Background(), feeCollector.ToEthAddress(), nil)
