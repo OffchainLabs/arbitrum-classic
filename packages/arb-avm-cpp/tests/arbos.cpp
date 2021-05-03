@@ -74,14 +74,33 @@ TEST_CASE("ARBOS test vectors") {
             INFO("Machine ran for " << assertion.gasCount << " gas with target "
                                     << total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
+            uint64_t block_log_count = 0;
+            uint64_t tx_log_count = 0;
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
-                REQUIRE(assertion.logs[k] == logs[k]);
+                auto typecode = std::get<Tuple>(logs[k]).get_element(0);
+                if (typecode == value{uint256_t{0}}) {
+                    tx_log_count++;
+                } else if (typecode == value{uint256_t{1}}) {
+                    block_log_count++;
+                }
             }
+            INFO("Machine had " << tx_log_count << " tx logs and "
+                                << block_log_count << " block logs");
+            for (size_t k = 0; k < assertion.logs.size(); ++k) {
+                INFO("Checking log " << k);
+                CHECK(assertion.logs[k] == logs[k]);
+                if (std::get<Tuple>(logs[k]).get_element(0) ==
+                    value{uint256_t{1}}) {
+                    block_log_count++;
+                }
+            }
+
             REQUIRE(assertion.sends.size() == sends.size());
             for (size_t k = 0; k < assertion.sends.size(); ++k) {
-                REQUIRE(assertion.sends[k] == sends[k]);
+                INFO("Checking send " << k);
+                CHECK(assertion.sends[k] == sends[k]);
             }
-            REQUIRE(assertion.gasCount == total_gas_target);
+            CHECK(assertion.gasCount == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
                 saveMachine(*tx, *mach);
