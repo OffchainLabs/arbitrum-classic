@@ -35,10 +35,12 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := Settings{
-		Addr:      ":9642",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9642",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)
@@ -139,10 +141,12 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := Settings{
-		Addr:      ":9642",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9642",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)
@@ -254,10 +258,12 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := Settings{
-		Addr:      ":9643",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9643",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 	b := NewBroadcaster(broadcasterSettings)
 
@@ -308,10 +314,12 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	defer cancelFunc()
 
 	broadcasterSettings := Settings{
-		Addr:      ":9642",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9642",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)

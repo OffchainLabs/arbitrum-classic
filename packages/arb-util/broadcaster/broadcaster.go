@@ -34,10 +34,12 @@ import (
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
 type Settings struct {
-	Addr      string
-	Workers   int
-	Queue     int
-	IoTimeout time.Duration
+	Addr                    string
+	Workers                 int
+	Queue                   int
+	IoReadWriteTimeout      time.Duration
+	ClientPingInterval      time.Duration
+	ClientNoResponseTimeout time.Duration
 }
 
 type Broadcaster struct {
@@ -50,10 +52,39 @@ type Broadcaster struct {
 	listener              net.Listener
 }
 
+func validateSettings(settings Settings) Settings {
+	if len(settings.Addr) == 0 {
+		panic("Invalid settings for broadcaster, missing Addr")
+	}
+
+	if settings.Workers == 0 {
+		panic("Invalid settings for broadcaster, Workers is zero")
+	}
+
+	if settings.Queue == 0 {
+		panic("Invalid settings for broadcaster, Queue is zero")
+	}
+	if settings.IoReadWriteTimeout == 0 {
+		settings.IoReadWriteTimeout = 2
+		panic("Invalid settings for broadcaster, Queue is zero")
+	}
+	if settings.ClientPingInterval == 0 {
+		logger.Warn().Msg("broadcaster ClientPingInterval was not set. Using default value of 5 seconds")
+		settings.ClientPingInterval = 5
+	}
+
+	if settings.ClientNoResponseTimeout == 0 {
+		logger.Warn().Msg("broadcaster ClientNoResponseTimeout was not set. Using default value of 15 seconds")
+		settings.ClientNoResponseTimeout = 15
+	}
+
+	return settings
+}
+
 func NewBroadcaster(settings Settings) *Broadcaster {
 	return &Broadcaster{
 		startBroadcasterMutex: &sync.Mutex{},
-		settings:              settings,
+		settings:              validateSettings(settings),
 		broadcasterStarted:    false,
 	}
 }
@@ -75,7 +106,11 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	// Make pool of X size, Y sized work queue and one pre-spawned
 	// goroutine.
 	var pool = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
-	var clientManager = NewClientManager(pool, b.poller)
+	cmSettings := ClientManagerSettings{
+		ClientPingInterval:      b.settings.ClientPingInterval,
+		ClientNoResponseTimeout: b.settings.ClientNoResponseTimeout,
+	}
+	var clientManager = NewClientManager(pool, b.poller, cmSettings)
 	clientManager.startWriter(ctx)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
@@ -87,7 +122,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	// Called below in accept() loop.
 	handle := func(conn net.Conn) {
 
-		safeConn := deadliner{conn, b.settings.IoTimeout}
+		safeConn := deadliner{conn, b.settings.IoReadWriteTimeout}
 
 		// Zero-copy upgrade to WebSocket connection.
 		hs, err := ws.Upgrade(safeConn)
@@ -218,7 +253,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 }
 
 func (b *Broadcaster) ClientConnectionCount() int {
-	return len(b.clientManager.clientPtrMap)
+	return b.clientManager.ClientConnectionCount()
 }
 
 func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {

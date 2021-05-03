@@ -27,6 +27,7 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/rs/zerolog/log"
@@ -42,7 +43,6 @@ type BroadcastClient struct {
 	RetryCount                   int
 	retrying                     bool
 	ConfirmedAccumulatorListener chan common.Hash
-	pongListener                 chan string
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
