@@ -99,10 +99,12 @@ func startup() error {
 	}
 
 	relaySettings := broadcaster.Settings{
-		Addr:      *feedOutputAddr + ":" + *feedOutputPort,
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    *feedOutputAddr + ":" + *feedOutputPort,
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	// Start up an arbitrum sequencer relay

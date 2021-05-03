@@ -31,10 +31,12 @@ func TestRelayRebroadcasts(t *testing.T) {
 
 	// Start up an Arbitrum sequencer broadcaster
 	broadcasterSettings := broadcaster.Settings{
-		Addr:      ":9742",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":9742",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	bc := broadcaster.NewBroadcaster(broadcasterSettings)
@@ -46,15 +48,20 @@ func TestRelayRebroadcasts(t *testing.T) {
 	defer bc.Stop()
 
 	relaySettings := broadcaster.Settings{
-		Addr:      ":7429",
-		Workers:   128,
-		Queue:     1,
-		IoTimeout: 2 * time.Second,
+		Addr:                    ":7429",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
 	// Start up an arbitrum sequencer relay
 	arbRelay := NewArbRelay("ws://127.0.0.1:9742/", relaySettings)
-	arbRelay.Start(ctx, false)
+	_, err = arbRelay.Start(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer arbRelay.Stop()
 
 	// Create RandomMessageGenerator
