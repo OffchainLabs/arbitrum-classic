@@ -81,7 +81,8 @@ func NewSequencerBatcher(
 	delayedMessagesTargetDelay *big.Int,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
-    dataSigner func([]byte) ([]byte, error),
+	dataSigner func([]byte) ([]byte, error),
+	broadcasterSettings broadcaster.Settings,
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -101,14 +102,6 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
-	}
 	feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
 	err = feedBroadcaster.Start(ctx)
 	if err != nil {

@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"time"
 
@@ -78,6 +79,7 @@ func SetupBatcher(
 	maxBatchTime time.Duration,
 	batcherMode BatcherMode,
 	dataSigner func([]byte) ([]byte, error),
+	broadcasterSettings broadcaster.Settings,
 ) (batcher.TransactionBatcher, error) {
 	l2ChainID := message.ChainAddressToID(rollupAddress)
 	switch batcherMode := batcherMode.(type) {
@@ -117,7 +119,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		seqBatcher, err := batcher.NewSequencerBatcher(ctx, batcherMode.Core, l2ChainID, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth, dataSigner)
+		seqBatcher, err := batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth, dataSigner, broadcasterSettings)
 		if err != nil {
 			return nil, err
 		}
