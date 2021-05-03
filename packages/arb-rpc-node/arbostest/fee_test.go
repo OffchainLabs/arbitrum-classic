@@ -106,7 +106,7 @@ func TestFees(t *testing.T) {
 
 	var countCalldataFunc func(data []byte) int
 	var l1GasPerL2Calldata *big.Int
-	if arbosVersion < 7 {
+	if arbosVersion < 11 {
 		t.Log("Using old calldata accounting")
 		countCalldataFunc = countCalldataUnitsOld
 		l1GasPerL2Calldata = big.NewInt(16)
