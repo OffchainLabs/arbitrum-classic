@@ -287,6 +287,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	}
 
 	faultsExist := faultConfig != challenge.FaultConfig{}
+	t.Log("faultsExist:", faultsExist)
 
 	var targetNode *big.Int
 	if faultsExist {
@@ -397,7 +398,7 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400), OneStepProof)
 }
 
 func TestChallengeToInboxOSP(t *testing.T) {
@@ -406,7 +407,7 @@ func TestChallengeToInboxOSP(t *testing.T) {
 }
 
 func TestChallengeTimeout(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400*2), Timeout)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), Timeout)
 }
 
 func TestStakersCooperative(t *testing.T) {
