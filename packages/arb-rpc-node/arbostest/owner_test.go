@@ -68,7 +68,7 @@ func TestOwner(t *testing.T) {
 		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(3), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, messages, len(messages)-1, 0)
+	logs, _, _ := runAssertion(t, messages, len(messages)-1, 0)
 	results := processTxResults(t, logs)
 	// Transfer from non-owner fails
 	revertedTxCheck(t, results[0])

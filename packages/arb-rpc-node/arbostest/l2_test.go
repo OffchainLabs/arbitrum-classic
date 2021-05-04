@@ -52,7 +52,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 	var param common.Hash
 	copy(param[12:], connAddress1.Bytes())
 	createTx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
+		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.Address{},
@@ -74,7 +74,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message2,
 	}
 
-	logs, _, snap, _ := runSimpleAssertion(t, messages)
+	logs, _, snap := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)
@@ -270,7 +270,7 @@ func TestUnsignedTx(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 	}
 
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	for i, result := range results[1:] {
@@ -347,7 +347,7 @@ func TestBatch(t *testing.T) {
 	}
 	messages = append(messages, message.NewSafeL2Message(msg))
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1, 0)
+	logs, _, _ := runAssertion(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1, 0)
 	results := processTxResults(t, logs)
 
 	for i, result := range results[len(messages)-1:] {
@@ -389,7 +389,7 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	signedTx2, err := types.SignTx(tx2, types.HomesteadSigner{}, pk)
 	failIfError(t, err)
 
-	tx3 := types.NewContractCreation(2, big.NewInt(0), 1000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
+	tx3 := types.NewContractCreation(2, big.NewInt(0), 3000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
 	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
 	failIfError(t, err)
 	return []*types.Transaction{signedTx, signedTx2, signedTx3}
@@ -450,7 +450,7 @@ func TestCompressedECDSATx(t *testing.T) {
 		)
 	}
 
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	verifyTxLogs(t, signer, txes, logs[1:])
 }
 
@@ -473,7 +473,7 @@ func TestCall(t *testing.T) {
 		message.NewSafeL2Message(tx1),
 		message.NewSafeL2Message(tx2),
 	}
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[0], connAddress1)

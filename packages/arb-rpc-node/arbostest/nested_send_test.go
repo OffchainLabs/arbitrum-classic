@@ -58,7 +58,7 @@ func TestFailedNestedSend(t *testing.T) {
 		message.NewSafeL2Message(sendTx),
 	}
 
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	checkConstructorResult(t, results[1], connAddress1)
 	revertedTxCheck(t, results[2])
@@ -90,7 +90,7 @@ func TestRevertedNestedCall(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 		message.NewSafeL2Message(tx3),
 	}
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	checkConstructorResult(t, results[0], connAddress1)
 	succeededTxCheck(t, results[1])
