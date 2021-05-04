@@ -226,7 +226,7 @@ func TestFees(t *testing.T) {
 			Value:    big.NewInt(0),
 			Data:     common.RandBytes(100000),
 
-			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasForBaseFee, evm.InsufficientGasForBaseFee, evm.InsufficientGasForBaseFee},
+			resultType:         []evm.ResultType{evm.RevertCode, evm.InsufficientGasForBaseFee, evm.InsufficientGasFundsCode, evm.InsufficientGasFundsCode},
 			nonzeroComputation: []bool{true, false, false, false},
 			correctStorageUsed: 0,
 		},
@@ -733,7 +733,7 @@ func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address, l2Unpa
 	}
 
 	totalUnpaid := new(big.Int).Add(l1TxUnpaid, l1CalldataUnpaid)
-	if totalUnpaid.Cmp(big.NewInt(0)) != 0 && res.ResultCode != evm.InsufficientGasForBaseFee {
+	if totalUnpaid.Cmp(big.NewInt(0)) != 0 && res.ResultCode != evm.InsufficientGasForBaseFee && res.ResultCode != evm.InsufficientGasFundsCode {
 		t.Error("gas left unpaid, but got wrong error")
 	}
 	return totalUnpaid
