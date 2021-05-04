@@ -17,11 +17,14 @@
 package message
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -86,29 +89,43 @@ func RetryableId(requestId common.Hash) common.Hash {
 }
 
 type GasEstimationMessage struct {
-	Aggregator common.Address
-	TxData     []byte
+	Aggregator       common.Address
+	ComputationLimit *big.Int
+	TxData           []byte
 }
 
-func NewGasEstimationMessage(aggregator common.Address, tx CompressedECDSATransaction) (GasEstimationMessage, error) {
+func NewGasEstimationMessage(aggregator common.Address, computationLimit *big.Int, tx CompressedECDSATransaction) (GasEstimationMessage, error) {
+	// Make sure upper bound of estimate is accurate
+	tx.R = math.MaxBig256
+	tx.S = math.MaxBig256
+	tx.V = 1
+	tx.SequenceNum = big.NewInt(1)
+
 	batch, err := NewTransactionBatchFromMessages([]AbstractL2Message{tx})
 	if err != nil {
 		return GasEstimationMessage{}, err
 	}
 	batchData, err := batch.AsData()
+
 	if err != nil {
 		return GasEstimationMessage{}, err
 	}
 	return GasEstimationMessage{
-		Aggregator: aggregator,
-		TxData:     batchData,
+		Aggregator:       aggregator,
+		ComputationLimit: computationLimit,
+		TxData:           batchData,
 	}, nil
 }
 
 func (t GasEstimationMessage) AsData() []byte {
+	return t.AsDataSafe()
+}
+
+func (t GasEstimationMessage) AsDataSafe() []byte {
 	ret := make([]byte, 0)
 	ret = append(ret, 3)
 	ret = append(ret, addressData(t.Aggregator)...)
+	ret = append(ret, math.U256Bytes(t.ComputationLimit)...)
 	ret = append(ret, t.TxData...)
 	return ret
 }

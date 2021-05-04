@@ -89,7 +89,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, params protoc
 		monitor.Close()
 	}
 
-	backend := NewBackend(backendCore, db, l1, signer, aggregator, big.NewInt(10000))
+	backend := NewBackend(backendCore, db, l1, signer, aggregator, big.NewInt(100000000000))
 
 	return backend, db, rollupAddress, cancel, errChan, nil
 }
@@ -209,23 +209,25 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 type Backend struct {
 	sync.Mutex
 	*BackendCore
-	db         *txdb.TxDB
-	l1Emulator *L1Emulator
-	signer     types.Signer
-	aggregator common.Address
-	l1GasPrice *big.Int
+	db                *txdb.TxDB
+	l1Emulator        *L1Emulator
+	signer            types.Signer
+	currentAggregator common.Address
+	chainAggregator   common.Address
+	l1GasPrice        *big.Int
 
 	newTxFeed event.Feed
 }
 
 func NewBackend(core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
 	return &Backend{
-		BackendCore: core,
-		db:          db,
-		l1Emulator:  l1,
-		signer:      signer,
-		aggregator:  aggregator,
-		l1GasPrice:  l1GasPrice,
+		BackendCore:       core,
+		db:                db,
+		l1Emulator:        l1,
+		signer:            signer,
+		currentAggregator: aggregator,
+		chainAggregator:   aggregator,
+		l1GasPrice:        l1GasPrice,
 	}
 }
 
@@ -278,7 +280,6 @@ func (b *Backend) reorg(height uint64) error {
 	return nil
 }
 
-// Return nil if no pending transaction count is available
 func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
 	b.Lock()
 	defer b.Unlock()
@@ -310,7 +311,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		Msg("sent transaction")
 	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
 	block := b.l1Emulator.GenerateBlock()
-	if _, err := b.addInboxMessage(message.NewSafeL2Message(arbMsg), b.aggregator, b.l1GasPrice, block); err != nil {
+	if _, err := b.addInboxMessage(message.NewSafeL2Message(arbMsg), b.currentAggregator, b.l1GasPrice, block); err != nil {
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
@@ -331,7 +332,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 		// Insert an empty block instead
 		block := b.l1Emulator.GenerateBlock()
-		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), b.aggregator, b.l1GasPrice, block); err != nil {
+		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), b.currentAggregator, b.l1GasPrice, block); err != nil {
 			return err
 		}
 
@@ -342,7 +343,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 }
 
 func (b *Backend) Aggregator() *common.Address {
-	return &b.aggregator
+	return &b.chainAggregator
 }
 
 func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (common.Hash, error) {
@@ -357,7 +358,6 @@ func (b *Backend) SubscribeNewTxsEvent(ch chan<- core2.NewTxsEvent) event.Subscr
 	return b.newTxFeed.Subscribe(ch)
 }
 
-// Return nil if no pending snapshot is available
 func (b *Backend) PendingSnapshot() (*snapshot.Snapshot, error) {
 	b.Lock()
 	defer b.Unlock()

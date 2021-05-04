@@ -113,7 +113,7 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		}
 		return s.Call(msg, sender)
 	} else {
-		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, message.NewCompressedECDSAFromEth(tx))
+		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, new(big.Int).SetUint64(tx.Gas()), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
 			return nil, err
 		}
