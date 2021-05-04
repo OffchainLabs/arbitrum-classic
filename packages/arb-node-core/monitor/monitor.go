@@ -68,6 +68,7 @@ func (m *Monitor) Close() {
 		m.Reader.Stop()
 	}
 	m.Storage.CloseArbStorage()
+	logger.Info().Msg("Database closed")
 }
 
 func (m *Monitor) StartInboxReader(

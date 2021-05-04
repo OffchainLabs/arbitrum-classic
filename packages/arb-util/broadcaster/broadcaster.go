@@ -112,6 +112,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	}
 	var clientManager = NewClientManager(pool, b.poller, cmSettings)
 	clientManager.startWriter(ctx)
+	clientManager.startVerifier(ctx)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 

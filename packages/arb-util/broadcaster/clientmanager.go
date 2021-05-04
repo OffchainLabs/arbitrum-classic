@@ -221,45 +221,40 @@ func (cm *ClientManager) ClientConnectionCount() int {
 	return len(cm.clientPtrMap)
 }
 
+// verifyClients should be called every cm.settings.ClientPingInterval
 func (cm *ClientManager) verifyClients() {
-	logger.Info().Msg("Verifying client connections")
-	TIME_TO_PING_CLIENTS := cm.settings.ClientPingInterval
-	CLIENT_TIMEOUT_SECONDS := cm.settings.ClientNoResponseTimeout
-
 	cm.mu.RLock()
 	clientConnectionCount := len(cm.clientPtrMap)
-	logger.Info().Msgf("Client connection count %d clients", clientConnectionCount)
+	logger.Debug().Int("feed_client_count", clientConnectionCount).Send()
 
 	// Create list of clients to ping and clients to remove
 	clientList := make([]*ClientConnection, 0, clientConnectionCount)
 	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
-	var i, x uint64
+	var deadClientCount uint64
+	var aliveClientCount uint64
 	for client := range cm.clientPtrMap {
 		diff := time.Since(client.lastHeard)
-		if diff > CLIENT_TIMEOUT_SECONDS {
+		if diff > cm.settings.ClientNoResponseTimeout {
 			deadClientList = append(deadClientList, client)
-			x++
-		} else if diff >= TIME_TO_PING_CLIENTS {
+			deadClientCount++
+		} else {
 			clientList = append(clientList, client)
-			i++
+			aliveClientCount++
 		}
 	}
 	cm.mu.RUnlock()
 
-	logger.Info().Msgf("Disconecting %d clients", x)
+	logger.Debug().Uint64("disconnecting clients", deadClientCount).Send()
 	for _, deadClient := range deadClientList {
 		cm.Remove(deadClient)
 	}
 
-	logger.Info().Msgf("Pinging %d clients", i)
-	for _, c := range clientList {
-		c := c // For closure.
-		cm.pool.Schedule(func() {
-			err := c.Ping()
-			if err != nil {
-				logger.Warn().Err(err).Msg("error pinging client")
-			}
-		})
+	logger.Debug().Uint64("pinging clients", aliveClientCount).Send()
+	for _, client := range clientList {
+		err := client.Ping()
+		if err != nil {
+			logger.Debug().Err(err).Str("name", client.name).Uint64("error pinging client", aliveClientCount).Send()
+		}
 	}
 }
 
@@ -290,13 +285,24 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 						}
 					})
 				}
-			case <-time.After(2 * time.Second):
-				logger.Info().Msg("No New Messages")
 			}
-
-			cm.verifyClients()
 		}
+	}()
+}
 
+// startVerifier starts thread to ping active connections and remove expired connections
+func (cm *ClientManager) startVerifier(ctx context.Context) {
+	go func() {
+		pingInterval := time.NewTicker(cm.settings.ClientPingInterval)
+		defer pingInterval.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-pingInterval.C:
+				cm.verifyClients()
+			}
+		}
 	}()
 }
 
