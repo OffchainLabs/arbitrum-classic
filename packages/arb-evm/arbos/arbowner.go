@@ -35,6 +35,7 @@ var (
 	setFeesEnabledABI        abi.Method
 	setFairGasPriceSenderABI abi.Method
 	deployContractABI        abi.Method
+	getTotalOfEthBalancesABI abi.Method
 )
 
 func init() {
@@ -51,6 +52,11 @@ func init() {
 	setFeesEnabledABI = arbowner.Methods["setFeesEnabled"]
 	setFairGasPriceSenderABI = arbowner.Methods["setFairGasPriceSender"]
 	deployContractABI = arbowner.Methods["deployContract"]
+	getTotalOfEthBalancesABI = arbowner.Methods["getTotalOfEthBalances"]
+}
+
+func GetTotalOfEthBalances() []byte {
+	return makeFuncData(getTotalOfEthBalancesABI)
 }
 
 func GiveOwnershipData(newOwnerAddr common.Address) []byte {
