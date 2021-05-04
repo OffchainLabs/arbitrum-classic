@@ -235,28 +235,37 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     }
 
     /**
-     * @notice Begin the process of trunacting the chain back to the given node
-     * @dev maxItems is used to make sure this doesn't exceed the max gas cost
-     * @param maxItems Maximum number of items to eliminate
+     * @notice Begin the process of truncating the chain back to the given node
+     * @dev This can be called multiple times to slowly truncate without going over the block gas limit
+     * @param newLatestNodeCreated Index that we want to be the latest unresolved node
      */
-    function destroyPendingNodes(uint256 maxItems) external onlyOwner whenPaused {
-        uint256 latestConfirmed = latestConfirmed();
-        uint256 limit = latestConfirmed + maxItems;
-        require(limit <= latestNodeCreated(), "OVERFLOW");
+    function destroyPendingNodes(uint256 newLatestNodeCreated) external onlyOwner whenPaused {
+        uint256 firstUnresolved = firstUnresolvedNode();
+        uint256 latestCreated = latestNodeCreated();
+
+        require(newLatestNodeCreated < latestCreated, "TOO_NEW");
+        require(newLatestNodeCreated >= firstUnresolved - 1, "TOO_OLD");
 
         uint256 stakers = stakerCount();
         for (uint256 i = 0; i < stakers; i++) {
             address stakerAddress = getStakerAddress(i);
             uint256 latestStakedNode = latestStakedNode(stakerAddress);
             // reassign stakers before trying to delete node
-            require(latestStakedNode > limit, "HAS_STAKE");
+            require(latestStakedNode <= newLatestNodeCreated, "HAS_STAKE");
         }
 
-        while (maxItems > 0) {
-            rejectNextNode();
-            maxItems--;
+        // start at latest created and destroy nodes until reach new latest
+        for (uint256 i = latestCreated; i > newLatestNodeCreated; i--) {
+            destroyNode(i);
+            resetNodeHash(i);
         }
-        emit NodesDestroyed(latestConfirmed, limit);
+
+        updateLatestNodeCreated(newLatestNodeCreated);
+        // TODO: what happens if firstChildBlock / latestChildNumber referenced one of the destroyed nodes?
+        // this shouldn't be an issue if newLatestNodeCreated == latestConfirmedNode
+        getNode(newLatestNodeCreated).resetChildren();
+
+        emit NodesDestroyed(newLatestNodeCreated, latestCreated);
     }
 
     /**
