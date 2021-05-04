@@ -18,6 +18,7 @@ package staker
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -297,11 +298,19 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	var lastChallenge *common.Address
 	faultyStakerAlive := false
 	faultyStakerDead := false
+
+	stakerMadeFirstMove := false
 	for i := 400; i >= 0; i-- {
 		if (i % 2) == 0 {
-			_, err := staker.Act(ctx)
+			fmt.Println("Honest staker acting")
+			tx, err := staker.Act(ctx)
 			test.FailIfError(t, err)
-		} else if !faultyStakerAlive || !faultyStakerDead {
+			if tx != nil {
+				stakerMadeFirstMove = true
+			}
+
+		} else if (!faultyStakerAlive || !faultyStakerDead) && stakerMadeFirstMove {
+			fmt.Println("Malicious staker acting")
 			_, err = faultyStaker.Act(ctx)
 			if err != nil {
 				errString := err.Error()
