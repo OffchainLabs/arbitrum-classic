@@ -27,7 +27,7 @@ var (
 )
 
 // ArbOwnerABI is the input ABI used to generate the binding from.
-const ArbOwnerABI = "[{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"constructorData\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"deemedSender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deemedNonce\",\"type\":\"uint256\"}],\"name\":\"deployContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"requiredCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeRecipients\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"netFeeRecipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"congestionFeeRecipient\",\"type\":\"address\"}],\"name\":\"setFeeRecipients\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setFeesEnabled\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"speedLimitPerBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPoolMax\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxTxGasLimit\",\"type\":\"uint256\"}],\"name\":\"setGasAccountingParams\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"blocksPerSend\",\"type\":\"uint256\"}],\"name\":\"setSecondsPerSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ArbOwnerABI = "[{\"inputs\":[],\"name\":\"addToReserveFunds\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"pluggableId\",\"type\":\"uint256\"}],\"name\":\"bindAddressToPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"marshalledCode\",\"type\":\"bytes\"}],\"name\":\"continueCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"constructorData\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"deemedSender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deemedNonce\",\"type\":\"uint256\"}],\"name\":\"deployContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"requiredCodeHash\",\"type\":\"bytes32\"}],\"name\":\"finishCodeUploadAsArbosUpgrade\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"keepState\",\"type\":\"bool\"}],\"name\":\"finishCodeUploadAsPluggable\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeRecipients\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalOfEthBalances\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getUploadedCodeHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwnerAddr\",\"type\":\"address\"}],\"name\":\"giveOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"setFairGasPriceSender\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"netFeeRecipient\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"congestionFeeRecipient\",\"type\":\"address\"}],\"name\":\"setFeeRecipients\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"enabled\",\"type\":\"bool\"}],\"name\":\"setFeesEnabled\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"speedLimitPerBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPoolMax\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxTxGasLimit\",\"type\":\"uint256\"}],\"name\":\"setGasAccountingParams\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"blocksPerSend\",\"type\":\"uint256\"}],\"name\":\"setSecondsPerSend\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"startCodeUpload\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ArbOwnerFuncSigs maps the 4-byte function signature to its string representation.
 var ArbOwnerFuncSigs = map[string]string{
@@ -38,6 +38,7 @@ var ArbOwnerFuncSigs = map[string]string{
 	"10e7af17": "finishCodeUploadAsArbosUpgrade(bytes32)",
 	"f4f4e136": "finishCodeUploadAsPluggable(uint256,bool)",
 	"08df6923": "getFeeRecipients()",
+	"2816aba5": "getTotalOfEthBalances()",
 	"c060180d": "getUploadedCodeHash()",
 	"e3a0a148": "giveOwnership(address)",
 	"ba7f4cc6": "setFairGasPriceSender(address)",
@@ -220,6 +221,37 @@ func (_ArbOwner *ArbOwnerSession) GetFeeRecipients() (common.Address, common.Add
 // Solidity: function getFeeRecipients() view returns(address, address)
 func (_ArbOwner *ArbOwnerCallerSession) GetFeeRecipients() (common.Address, common.Address, error) {
 	return _ArbOwner.Contract.GetFeeRecipients(&_ArbOwner.CallOpts)
+}
+
+// GetTotalOfEthBalances is a free data retrieval call binding the contract method 0x2816aba5.
+//
+// Solidity: function getTotalOfEthBalances() view returns(uint256)
+func (_ArbOwner *ArbOwnerCaller) GetTotalOfEthBalances(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _ArbOwner.contract.Call(opts, &out, "getTotalOfEthBalances")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTotalOfEthBalances is a free data retrieval call binding the contract method 0x2816aba5.
+//
+// Solidity: function getTotalOfEthBalances() view returns(uint256)
+func (_ArbOwner *ArbOwnerSession) GetTotalOfEthBalances() (*big.Int, error) {
+	return _ArbOwner.Contract.GetTotalOfEthBalances(&_ArbOwner.CallOpts)
+}
+
+// GetTotalOfEthBalances is a free data retrieval call binding the contract method 0x2816aba5.
+//
+// Solidity: function getTotalOfEthBalances() view returns(uint256)
+func (_ArbOwner *ArbOwnerCallerSession) GetTotalOfEthBalances() (*big.Int, error) {
+	return _ArbOwner.Contract.GetTotalOfEthBalances(&_ArbOwner.CallOpts)
 }
 
 // GetUploadedCodeHash is a free data retrieval call binding the contract method 0xc060180d.
