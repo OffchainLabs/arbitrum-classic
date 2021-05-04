@@ -130,13 +130,13 @@ func startup() error {
 	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	if !*sequencerMode {
 		if *sequencerAddr == "" {
-			return errors.New("Missing --sequencer.addr")
-		}
-
-		broadcastClient := broadcastclient.NewBroadcastClient("ws://"+*sequencerAddr+":"+*sequencerPort, nil)
-		sequencerFeed, err = broadcastClient.Connect()
-		if err != nil {
-			log.Fatal().Err(err).Msg("unable to start broadcastclient")
+			logger.Warn().Msg("Missing --sequencer.addr so not subscribing to feed")
+		} else {
+			broadcastClient := broadcastclient.NewBroadcastClient("ws://"+*sequencerAddr+":"+*sequencerPort, nil)
+			sequencerFeed, err = broadcastClient.Connect()
+			if err != nil {
+				log.Fatal().Err(err).Msg("unable to start broadcastclient")
+			}
 		}
 	}
 
