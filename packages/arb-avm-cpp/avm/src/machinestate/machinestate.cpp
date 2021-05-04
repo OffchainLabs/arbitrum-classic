@@ -852,13 +852,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
-    auto state_hash = val.hash();
-    if (state_hash) {
-        os << "hash " << intx::to_string(*state_hash, 16) << "\n";
-    } else {
-        os << "hash not available because staged value unresolved"
-           << "\n";
-    }
+    os << "hash " << intx::to_string(val.hash(), 16) << "\n";
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";

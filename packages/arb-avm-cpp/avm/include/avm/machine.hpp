@@ -73,7 +73,7 @@ class Machine {
     Assertion run();
 
     Status currentStatus() const { return machine_state.state; }
-    std::optional<uint256_t> hash() const { return machine_state.hash(); }
+    uint256_t hash() const { return machine_state.hash(); }
     BlockReason isBlocked(bool newMessages) const {
         return machine_state.isBlocked(newMessages);
     }
