@@ -243,7 +243,7 @@ export class BridgeHelper {
     l1Provider: providers.Provider
   ) => {
     const contract = Inbox__factory.connect(inboxAddress, l1Provider)
-    return contract.bridge()
+    return contract.functions.bridge().then(([res]) => res)
   }
 
   static getInboxSeqNumFromContractTransaction = async (
@@ -464,10 +464,10 @@ export class BridgeHelper {
       l1Provider
     )
 
-    const activeOutboxAddress = await bridge.allowedOutboxList(0)
+    const [activeOutboxAddress] = await bridge.functions.allowedOutboxList(0)
     try {
       // index 1 should not exist
-      await bridge.allowedOutboxList(1)
+      await bridge.functions.allowedOutboxList(1)
       console.error('There is more than 1 outbox registered with the bridge?!')
     } catch (e) {
       // this should fail!
@@ -500,7 +500,7 @@ export class BridgeHelper {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
       // if not challenged
-      const outboxExecute = await outbox.executeTransaction(
+      const outboxExecute = await outbox.functions.executeTransaction(
         outboxProofData.batchNumber,
         outboxProofData.proof,
         outboxProofData.path,
