@@ -394,7 +394,10 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
 
 const int LEVEL = 5;
 
-value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level) {
+value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level, int limit) {
+    if (limit < prefix) {
+        return 0;
+    }
     if (level == 0) {
         std::vector<value> v;
         for (int i = 0; i < 8; i++) {
@@ -409,13 +412,13 @@ value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level) 
     }
     std::vector<value> v;
     for (int i = 0; i < 8; i++) {
-        v.push_back(table_to_tuple2(tab, prefix + (i << shift), shift + 3, level - 1));
+        v.push_back(table_to_tuple2(tab, prefix + (i << shift), shift + 3, level - 1, limit));
     }
     return Tuple::createTuple(v);
 }
 
 value make_table(std::vector<value> tab) {
-    return table_to_tuple2(tab, 0, 0, LEVEL-1);
+    return table_to_tuple2(tab, 0, 0, LEVEL-1, tab.size());
 }
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf) {
