@@ -492,6 +492,7 @@ func TestRetryableWithReturnData(t *testing.T) {
 }
 
 func TestRetryableImmediateReceipts(t *testing.T) {
+	skipBelowVersion(t, 12)
 	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
@@ -520,10 +521,17 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
 
-	checkRetryableReceipts(t, client, retryableTx, requestId, redeemId)
+	checkRetryableReceipts(t, client, retryableTx, requestId, redeemId, retryableTx.MaxGas.Uint64(), retryableTx.GasPriceBid)
+
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+	ticketResult, err := backend.db.GetRequest(ticketId)
+	test.FailIfError(t, err)
+	t.Log("Ticket result", ticketResult.IncomingRequest)
+	test.FailIfError(t, err)
 }
 
 func TestRetryableSeparateReceipts(t *testing.T) {
+	skipBelowVersion(t, 12)
 	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
 	defer closeFunc()
 
@@ -557,10 +565,10 @@ func TestRetryableSeparateReceipts(t *testing.T) {
 	tx, err := retryable.Redeem(otherAuth, ticketId)
 	test.FailIfError(t, err)
 
-	checkRetryableReceipts(t, client, retryableTx, requestId, common.NewHashFromEth(tx.Hash()))
+	checkRetryableReceipts(t, client, retryableTx, requestId, common.NewHashFromEth(tx.Hash()), tx.Gas(), tx.GasPrice())
 }
 
-func checkRetryableReceipts(t *testing.T, client *web3.EthClient, retryableTx message.RetryableTx, requestId, redeemId common.Hash) {
+func checkRetryableReceipts(t *testing.T, client *web3.EthClient, retryableTx message.RetryableTx, requestId, redeemId common.Hash, redeemGas uint64, redeemGasPrice *big.Int) {
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
@@ -666,19 +674,23 @@ func checkRetryableReceipts(t *testing.T, client *web3.EthClient, retryableTx me
 	if ticketTransaction.To() == nil {
 		t.Error("expected dest")
 	} else if *ticketTransaction.To() != retryableTx.Destination.ToEthAddress() {
-		t.Error("dest doesn't match", *ticketTransaction.To(), retryableTx.Destination)
+		t.Error("dest doesn't match", *ticketTransaction.To(), "instead of", retryableTx.Destination)
 	}
 	if ticketTransaction.Value().Cmp(retryableTx.Value) != 0 {
-		t.Error("value doesn't match", ticketTransaction.Value(), retryableTx.Value)
+		t.Error("value doesn't match", ticketTransaction.Value(), "instead of", retryableTx.Value)
 	}
 	if !bytes.Equal(ticketTransaction.Data(), retryableTx.Data) {
-		t.Error("data doesn't match", hexutil.Encode(ticketTransaction.Data()), hexutil.Encode(retryableTx.Data))
+		t.Error("data doesn't match", hexutil.Encode(ticketTransaction.Data()), "instead of", hexutil.Encode(retryableTx.Data))
 	}
-	if ticketTransaction.Gas() != retryableTx.MaxGas.Uint64() {
-		t.Error("gas doesn't match")
+	if ticketTransaction.Gas() > redeemGas {
+		t.Error("ticket gas should be <= redeem gas")
 	}
-	if ticketTransaction.GasPrice().Cmp(retryableTx.GasPriceBid) != 0 {
-		t.Error("gas price doesn't match")
+	gasPercentage := float64(ticketTransaction.Gas()) / float64(redeemGas)
+	if gasPercentage < .84 {
+		t.Error("bad gas percentage", gasPercentage)
+	}
+	if ticketTransaction.GasPrice().Cmp(redeemGasPrice) != 0 {
+		t.Error("gas price doesn't match", ticketTransaction.GasPrice(), "instead of", redeemGasPrice)
 	}
 	if ticketTransaction.Nonce() != 0 {
 		t.Error("unexpected nonce", ticketTransaction.Nonce())
