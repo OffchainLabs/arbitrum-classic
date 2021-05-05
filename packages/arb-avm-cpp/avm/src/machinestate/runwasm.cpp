@@ -33,6 +33,20 @@ wasm_trap_t* cb_set_length(void* env,
     return NULL;
 }
 
+wasm_trap_t* cb_usegas(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    printf("Calling back closure...\n");
+
+    if (args->data[0].kind == WASM_I32) {
+        dta->gas_left -= args->data[0].of.i32;
+    } else if (args->data[0].kind == WASM_I64) {
+        dta->gas_left -= args->data[0].of.i64;
+    }
+    return NULL;
+}
+
 wasm_trap_t* cb_get_buffer(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t* results) {
@@ -69,6 +83,31 @@ wasm_trap_t* cb_set_buffer(void* env,
         v = args->data[1].of.i64;
     }
     dta->buffer = dta->buffer.set(offset, v);
+    return NULL;
+}
+
+wasm_trap_t* cb_write_extra(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    uint64_t offset;
+    uint8_t v;
+    printf("Calling back closure...\n");
+
+    if (args->data[0].kind == WASM_I32) {
+        offset = args->data[0].of.i32;
+    } else if (args->data[0].kind == WASM_I64) {
+        offset = args->data[0].of.i64;
+    }
+    if (args->data[1].kind == WASM_I32) {
+        v = args->data[1].of.i32;
+    } else if (args->data[1].kind == WASM_I64) {
+        v = args->data[1].of.i64;
+    }
+    if (dta->extra.size() <= offset) {
+        dta->extra.resize(offset+1, 0);
+    }
+    dta->extra[offset] = v;
     return NULL;
 }
 
@@ -135,6 +174,8 @@ RunWasm::RunWasm() {
         wasm_functype_new_1_0(wasm_valtype_new_i32());
     wasm_func_t* callback_func2 = wasm_func_new_with_env(
         store, callback_type_setlen, cb_set_length, (void*)env, NULL);
+    wasm_func_t* callback_func6 = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_usegas, (void*)env, NULL);
     wasm_functype_delete(callback_type_setlen);
 
     printf("Creating get buf callback...\n");
@@ -149,20 +190,49 @@ RunWasm::RunWasm() {
         wasm_functype_new_2_0(wasm_valtype_new_i32(), wasm_valtype_new_i32());
     wasm_func_t* callback_func4 = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_set_buffer, (void*)env, NULL);
+
+    printf("Creating write extra callback...\n");
+    wasm_func_t* callback_func5 = wasm_func_new_with_env(
+        store, callback_type_setbuf, cb_write_extra, (void*)env, NULL);
     wasm_functype_delete(callback_type_setbuf);
 
     printf("Instantiating module...\n");
 
+    wasm_importtype_vec_t import_vec;
+    wasm_module_imports(module, &import_vec);
+
     wasm_instance_t* instance = NULL;
+    wasm_extern_t* imports[import_vec.size];
+    for (int i = 0; i < import_vec.size; i++) {
+        auto imp = import_vec.data[i];
+        auto name = wasm_importtype_name(imp);
+        std::string str = name->data;
+        if (str.find("read") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func3);
+        } else if (str.find("write") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func4);
+        } else if (str.find("usegas") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func6);
+        } else if (str.find("wextra") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func5);
+        } else if (str.find("getlen") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func1);
+        } else if (str.find("setlen") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func2);
+        }
+    }
+    /*
     wasm_extern_t* imports[] = {
         wasm_func_as_extern(callback_func1),
         wasm_func_as_extern(callback_func2),
         wasm_func_as_extern(callback_func3),
-        wasm_func_as_extern(callback_func4)
-    };
-    wasm_extern_vec_t imports_vec = WASM_ARRAY_VEC(imports);
-    error =
-        wasmtime_instance_new(store, module, &imports_vec, &instance, &this->trap);
+        wasm_func_as_extern(callback_func4),
+        wasm_func_as_extern(callback_func5)
+    };*/
+    wasm_extern_vec_t imports_vec;
+    printf("Extracting export...\n");
+    wasm_extern_vec_new(&imports_vec, import_vec.size, imports);
+    error = wasmtime_instance_new(store, module, &imports_vec, &instance, &this->trap);
     if (instance == NULL)
         exit_with_error(error, trap);
 

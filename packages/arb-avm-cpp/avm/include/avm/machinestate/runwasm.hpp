@@ -22,6 +22,8 @@
 struct WasmEnvData {
     uint64_t buffer_len;
     Buffer buffer;
+    std::vector<uint8_t> extra;
+    uint64_t gas_left;
 };
 
 struct RunWasm {

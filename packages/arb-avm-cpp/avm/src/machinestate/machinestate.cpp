@@ -421,6 +421,80 @@ value make_table(std::vector<value> tab) {
     return table_to_tuple2(tab, 0, 0, LEVEL-1, tab.size());
 }
 
+value get_int_value(std::vector<uint8_t> bytes, uint64_t offset) {
+    uint256_t acc = 0;
+    for (int i = 0; i < 32; i++) {
+        acc = acc*256;
+        acc += bytes[offset+i];
+    }
+    return acc;
+}
+
+WasmCodepoint wasmAvmToCodepoint(std::vector<uint8_t>& bytes) {
+    // code to hash
+    auto code = std::make_shared<Code>(0);
+    CodePointStub stub = code->addSegment();
+    std::vector<value> labels;
+    int i = 0;
+    int num = 0;
+    while (bytes[i] != 255) {
+        OpCode opcode = static_cast<OpCode>(bytes[i]);
+        i++;
+        Operation op = {opcode};
+        auto immed = bytes[i];
+        i++;
+        if (immed == 1) {
+            op = {opcode, get_int_value(bytes, i)};
+            i += 32;
+        } else if (immed == 2) {
+            std::vector<value> v;
+            v.push_back(Buffer());
+            v.push_back(0);
+            v.push_back(Buffer());
+            v.push_back(0);
+            v.push_back(100000);  // check that these are the same
+            op = {opcode, Tuple::createTuple(v)};
+        } else if (immed == 3) {
+            std::vector<value> v;
+            v.push_back(Buffer());
+            v.push_back(get_int_value(bytes, i));
+            i += 32;
+            op = {opcode, Tuple::createTuple(v)};
+        }
+        stub = code->addOperation(stub.pc, op);
+        if (++num % 1000 == 0) {
+            // std::cerr << "Loaded " << num << " ops at " << i << "\n";
+        }
+        /*
+        if (op.immediate) {
+            std::cerr << "Immed hash " << op << " hash "
+                      << intx::to_string(hash_value(*op.immediate), 16) << "\n";
+        }
+        std::cerr << "Loaded op " << op << " hash "
+                  << intx::to_string(stub.hash, 16) << "\n";
+        */
+        if (bytes[i]) {
+            // std::cerr << "Label " << stub << " at " << labels.size() <<
+            // "\n";
+            labels.push_back(stub);
+        }
+        i++;
+    }
+
+    std::reverse(labels.begin(), labels.end());
+    auto table = make_table(labels);
+    std::cerr << "Here " << intx::to_string(stub.hash, 16) << " "
+              << labels.size() << " \n";
+    // std::cerr << "Table " << table << " hash " <<
+    // intx::to_string(hash_value(table), 16) << "\n";
+    std::cerr << "Table hash " << intx::to_string(hash_value(table), 16)
+              << " size " << getSize(table) << "\n";
+    // convert table
+    std::cerr << "Buffer hash " << intx::to_string(hash_value(Buffer()), 16)
+              << "\n";
+    return {stub, table};
+}
+
 MachineState makeWasmMachine(uint64_t len, Buffer buf) {
     std::ifstream labels_input_stream("/home/sami/arb-os/wasm-labels.json");
     if (!labels_input_stream.is_open()) {
