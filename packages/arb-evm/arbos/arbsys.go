@@ -17,16 +17,16 @@
 package arbos
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -64,8 +64,8 @@ func TransactionCountData(address common.Address) []byte {
 	return makeFuncData(txCountABI, address)
 }
 
-func ParseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
-	vals, err := txCountABI.Outputs.UnpackValues(res.ReturnData)
+func ParseTransactionCountResult(data []byte) (*big.Int, error) {
+	vals, err := txCountABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}
@@ -80,31 +80,12 @@ func WithdrawEthData(address common.Address) []byte {
 	return makeFuncData(withdrawEthABI, address)
 }
 
-func encodeLog(log evm.Log) types.Log {
-	return types.Log{
-		Address: log.Address.ToEthAddress(),
-		Topics:  common.NewEthHashesFromHashes(log.Topics),
-		Data:    log.Data,
-	}
-}
-
-func ParseEthWithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysEthWithdrawal, error) {
-	if log.Topics[0].ToEthHash() != ethWithdrawal {
-		return nil, errors.New("wrong event type")
-	}
-	event := new(arboscontracts.ArbSysEthWithdrawal)
-	if err := arbsysConn.UnpackLog(event, "EthWithdrawal", encodeLog(log)); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 func StorageAtData(address common.Address, index *big.Int) []byte {
 	return makeFuncData(getStorageAtABI, address, index)
 }
 
-func ParseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
-	vals, err := getStorageAtABI.Outputs.UnpackValues(res.ReturnData)
+func ParseGetStorageAtResult(data []byte) (*big.Int, error) {
+	vals, err := getStorageAtABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +100,8 @@ func ArbOSVersionData() []byte {
 	return makeFuncData(arbOSVersionABI)
 }
 
-func ParseArbOSVersionResult(res *evm.TxResult) (*big.Int, error) {
-	vals, err := arbOSVersionABI.Outputs.UnpackValues(res.ReturnData)
+func ParseArbOSVersionResult(data []byte) (*big.Int, error) {
+	vals, err := arbOSVersionABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}
