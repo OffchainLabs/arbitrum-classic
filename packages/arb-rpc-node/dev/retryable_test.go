@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"bytes"
 	"context"
 	"math/big"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -486,5 +488,199 @@ func TestRetryableWithReturnData(t *testing.T) {
 
 	if len(res2.ReturnData) != 0 {
 		t.Fatal("expected no return data")
+	}
+}
+
+func TestRetryableImmediateReceipts(t *testing.T) {
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	defer closeFunc()
+
+	client := web3.NewEthClient(srv, true)
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+
+	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
+	test.FailIfError(t, err)
+
+	retryableTx := message.RetryableTx{
+		Destination:       common.NewAddressFromEth(dest),
+		Value:             big.NewInt(20),
+		Deposit:           big.NewInt(100),
+		MaxSubmissionCost: big.NewInt(30),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
+		MaxGas:            big.NewInt(1000000000),
+		GasPriceBid:       big.NewInt(0),
+		Data:              simpleABI.Methods["exists"].ID,
+	}
+
+	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	test.FailIfError(t, err)
+
+	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
+
+	checkRetryableReceipts(t, client, retryableTx, requestId, redeemId)
+}
+
+func TestRetryableSeparateReceipts(t *testing.T) {
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	defer closeFunc()
+
+	client := web3.NewEthClient(srv, true)
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+
+	dest, _, _, err := arbostestcontracts.DeploySimple(otherAuth, client)
+	test.FailIfError(t, err)
+
+	retryableTx := message.RetryableTx{
+		Destination:       common.NewAddressFromEth(dest),
+		Value:             big.NewInt(20),
+		Deposit:           big.NewInt(100),
+		MaxSubmissionCost: big.NewInt(30),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
+		MaxGas:            big.NewInt(0),
+		GasPriceBid:       big.NewInt(0),
+		Data:              simpleABI.Methods["exists"].ID,
+	}
+
+	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	test.FailIfError(t, err)
+
+	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+	tx, err := retryable.Redeem(otherAuth, ticketId)
+	test.FailIfError(t, err)
+
+	checkRetryableReceipts(t, client, retryableTx, requestId, common.NewHashFromEth(tx.Hash()))
+}
+
+func checkRetryableReceipts(t *testing.T, client *web3.EthClient, retryableTx message.RetryableTx, requestId, redeemId common.Hash) {
+	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+
+	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	simpleConn, err := arbostestcontracts.NewSimple(retryableTx.Destination.ToEthAddress(), client)
+	test.FailIfError(t, err)
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+
+	// Check create ticket transaction and receipt
+
+	createTicketReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if len(createTicketReceipt.Logs) != 1 {
+		t.Fatal("unexpected log count")
+	}
+	evmLog := createTicketReceipt.Logs[0]
+	if evmLog.Address != arbos.ARB_RETRYABLE_ADDRESS {
+		t.Error("event from wrong address")
+	}
+	ticketEvent, err := retryable.ParseTicketCreated(*evmLog)
+	test.FailIfError(t, err)
+	if ticketEvent.TicketId != ticketId {
+		t.Error("wrong ticket id in event")
+	}
+
+	createTicketTransaction, _, err := client.TransactionByHash(context.Background(), requestId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if createTicketTransaction.To() == nil {
+		t.Error("expected non-nil dest")
+	} else if *createTicketTransaction.To() != arbos.ARB_RETRYABLE_ADDRESS {
+		t.Error("bad dest")
+	}
+	createdTicket, err := arbos.ParseCreateRetryableTicketTx(createTicketTransaction)
+	test.FailIfError(t, err)
+
+	if !createdTicket.Equals(retryableTx) {
+		t.Log(createdTicket)
+		t.Log(retryableTx)
+		t.Error("bad ticket data")
+	}
+
+	// Check redeem transaction and receipt
+
+	redeemReceipt, err := client.TransactionReceipt(context.Background(), redeemId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if len(redeemReceipt.Logs) != 1 {
+		t.Fatal("unexpected log count")
+	}
+	evmLog = redeemReceipt.Logs[0]
+	if evmLog.Address != arbos.ARB_RETRYABLE_ADDRESS {
+		t.Error("event from wrong address")
+	}
+	redeemedEvent, err := retryable.ParseRedeemed(*evmLog)
+	test.FailIfError(t, err)
+	if redeemedEvent.TicketId != ticketId {
+		t.Error("wrong ticket id in redeem event")
+	}
+
+	redeemTransaction, _, err := client.TransactionByHash(context.Background(), redeemId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if len(redeemTransaction.Data()) != 36 {
+		t.Fatal("unexpected data length")
+	}
+	if !bytes.Equal(redeemTransaction.Data()[4:], ticketId.Bytes()) {
+		t.Error("unexpected ticket id")
+	}
+	if redeemTransaction.To() == nil {
+		t.Fatal("expected non-nil dest")
+	}
+	if *redeemTransaction.To() != arbos.ARB_RETRYABLE_ADDRESS {
+		t.Error("bad dest address")
+	}
+
+	// Ticket transaction and receipt
+	ticketReceipt, err := client.TransactionReceipt(context.Background(), ticketId.ToEthHash())
+	test.FailIfError(t, err)
+	if len(ticketReceipt.Logs) != 1 {
+		t.Fatal("unexpected log count")
+	}
+	evmLog = ticketReceipt.Logs[0]
+	if evmLog.Address != retryableTx.Destination.ToEthAddress() {
+		t.Error("wrong address for log")
+	}
+	if evmLog.Topics[0] != simpleABI.Events["TestEvent"].ID {
+		t.Fatal("bad topic")
+	}
+	parsedLog, err := simpleConn.ParseTestEvent(*evmLog)
+	test.FailIfError(t, err)
+	if parsedLog.Value.Cmp(retryableTx.Value) != 0 {
+		t.Error("bad event data")
+	}
+
+	ticketTransaction, _, err := client.TransactionByHash(context.Background(), ticketId.ToEthHash())
+	test.FailIfError(t, err)
+
+	if ticketTransaction.To() == nil {
+		t.Error("expected dest")
+	} else if *ticketTransaction.To() != retryableTx.Destination.ToEthAddress() {
+		t.Error("dest doesn't match", *ticketTransaction.To(), retryableTx.Destination)
+	}
+	if ticketTransaction.Value().Cmp(retryableTx.Value) != 0 {
+		t.Error("value doesn't match", ticketTransaction.Value(), retryableTx.Value)
+	}
+	if !bytes.Equal(ticketTransaction.Data(), retryableTx.Data) {
+		t.Error("data doesn't match", hexutil.Encode(ticketTransaction.Data()), hexutil.Encode(retryableTx.Data))
+	}
+	if ticketTransaction.Gas() != retryableTx.MaxGas.Uint64() {
+		t.Error("gas doesn't match")
+	}
+	if ticketTransaction.GasPrice().Cmp(retryableTx.GasPriceBid) != 0 {
+		t.Error("gas price doesn't match")
+	}
+	if ticketTransaction.Nonce() != 0 {
+		t.Error("unexpected nonce", ticketTransaction.Nonce())
 	}
 }

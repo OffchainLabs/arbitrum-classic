@@ -14,3 +14,4 @@ abigen --sol=$PREFIX/ArbGasInfo.sol --pkg=$PACKAGE --out=arbgasinfo.go
 abigen --sol=$PREFIX/ArbRetryableTx.sol --pkg=$PACKAGE --out=arbretryable.go
 
 abigen --sol=$PREFIX2/NodeInterface.sol --pkg=$PACKAGE --out=nodeinterface.go
+abigen --sol=$PREFIX2/RetryableTicketCreator.sol --pkg=$PACKAGE --out=retryableticketcreator.go
