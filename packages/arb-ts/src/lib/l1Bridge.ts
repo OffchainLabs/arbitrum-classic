@@ -24,7 +24,7 @@ import { ERC20 } from './abi/ERC20'
 
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { addressToSymbol } from './bridge_helpers'
-import { TransactionOverrides } from './bridge_helpers'
+import { PayableOverrides } from '@ethersproject/contracts'
 
 utils.computeAddress
 const MIN_APPROVAL = constants.MaxUint256
@@ -161,7 +161,7 @@ export class L1Bridge {
     value: BigNumber,
     destinationAddress?: string,
     maxGas: BigNumber = BigNumber.from(5000),
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     const address = destinationAddress || (await this.getWalletAddress())
     const inbox = await this.getInbox()
@@ -179,7 +179,7 @@ export class L1Bridge {
 
   public async approveToken(
     erc20L1Address: string,
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
     if (!tokenData.ERC20) {
@@ -199,7 +199,7 @@ export class L1Bridge {
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string,
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)

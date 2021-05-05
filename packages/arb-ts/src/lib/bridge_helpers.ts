@@ -1,4 +1,4 @@
-import { BigNumberish, ContractReceipt, ethers } from 'ethers'
+import { ContractReceipt, ethers } from 'ethers'
 import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
 import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
 import { Outbox__factory } from './abi/factories/Outbox__factory'
@@ -11,14 +11,6 @@ import { ARB_SYS_ADDRESS } from './l2Bridge'
 
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
-}
-
-export class TransactionOverrides {
-  nonce?: BigNumberish | Promise<BigNumberish>
-  gasLimit?: BigNumberish | Promise<BigNumberish>
-  gasPrice?: BigNumberish | Promise<BigNumberish>
-  value?: BigNumberish | Promise<BigNumberish>
-  chainId?: number | Promise<number>
 }
 
 // TODO: can we import these interfaces directly from typechain?
