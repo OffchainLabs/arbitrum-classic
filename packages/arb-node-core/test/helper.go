@@ -18,9 +18,7 @@ package test
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -63,21 +61,10 @@ func FailIfError(t *testing.T, err error) {
 }
 
 func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
+	storage, err := cmachine.NewArbStorage(t.TempDir())
 	FailIfError(t, err)
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	if err != nil {
-		if removeErr := os.RemoveAll(tmpDir); removeErr != nil {
-			t.Error(err)
-			t.Fatal(removeErr)
-		}
-		t.Fatal(err)
-	}
 	shutdown := func() {
 		storage.CloseArbStorage()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
 	}
 	returning := false
 	defer (func() {

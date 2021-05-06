@@ -18,10 +18,11 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
