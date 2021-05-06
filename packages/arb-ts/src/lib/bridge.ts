@@ -18,7 +18,8 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import { TransactionOverrides, BridgeHelper } from './bridge_helpers'
+import { BridgeHelper } from './bridge_helpers'
+import { PayableOverrides } from '@ethersproject/contracts'
 
 const { Zero } = constants
 
@@ -86,7 +87,7 @@ export class Bridge extends L2Bridge {
    */
   public async approveToken(
     erc20L1Address: string,
-    overrides?: TransactionOverrides
+    overrides?: PayableOverrides
   ) {
     return this.l1Bridge.approveToken(erc20L1Address, overrides)
   }
@@ -95,7 +96,7 @@ export class Bridge extends L2Bridge {
     value: BigNumber,
     destinationAddress?: string,
     maxGas: BigNumber = BigNumber.from(5000),
-    overrides?: TransactionOverrides
+    overrides?: PayableOverrides
   ) {
     return this.l1Bridge.depositETH(
       value,
@@ -111,7 +112,7 @@ export class Bridge extends L2Bridge {
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string,
-    overrides?: TransactionOverrides
+    overrides?: PayableOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
