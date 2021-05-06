@@ -56,9 +56,9 @@ describe('Bridge peripherals layer 1', () => {
       token.address,
       accounts[0].address,
       tokenAmount,
-      0,
-      1000000,
-      0,
+      maxSubmissionCost,
+      maxGas,
+      gasPrice,
       '0x'
     )
 
@@ -78,9 +78,9 @@ describe('Bridge peripherals layer 1', () => {
       token.address,
       accounts[0].address,
       tokenAmount,
-      0,
-      1000000,
-      0,
+      maxSubmissionCost,
+      maxGas,
+      gasPrice,
       '0x'
     )
 
@@ -105,227 +105,77 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it.skip('should not deposit erc777 token to L2', async function () {
-    assert.equal(true, false, 'Not implemented')
-  })
-
-  it.skip('should updateTokenInfo 18 decimals', async function () {
-    // deploy erc20 with 18 decimals
-    const Token = await ethers.getContractFactory('StandardArbERC20')
+  it('should process fast withdrawal correctly', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
 
-    const newDecimals = 18
-    const newName = 'Test Token'
-    const newSymbol = 'TT'
-
-    await token.initialize(
-      accounts[0].address,
-      accounts[0].address,
-      newDecimals
-    )
-
-    await token.updateInfo(newName, newSymbol, newDecimals)
-
-    const tokenType = 0
-    const tx = await testBridge.updateTokenInfo(
+    await token.mint()
+    await token.approve(testBridge.address, tokenAmount)
+    await testBridge.deposit(
       token.address,
-      tokenType,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice
-    )
-    const receipt = await tx.wait()
-
-    // event UpdateTokenInfo
-    const eventTopic =
-      '0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c'
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-
-    assert.equal(events.length, 1, 'Expected only one event to be emitted')
-
-    const event = events[0]
-
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals,
-    } = event.args
-
-    assert.equal(
-      eventName,
-      '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e00000000000000000000000000000000000000000000',
-      'Incorrect encoded name'
-    )
-    assert.equal(
-      eventSymbol,
-      '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000025454000000000000000000000000000000000000000000000000000000000000',
-      'Incorrect encoded symbol'
+      accounts[0].address,
+      tokenAmount,
+      0,
+      1000000,
+      0,
+      '0x'
     )
 
+    // parameters used for exit
+    const exitNum = 0
+    const maxFee = 10
+    const liquidityProof = '0x'
+
+    const FastExitMock = await ethers.getContractFactory('FastExitMock')
+    const fastExitMock = await FastExitMock.deploy()
+
+    await fastExitMock.setFee(maxFee)
+
+    // send tokens to liquidity provider
+    const liquidityProviderBalance = 10000
+    await token.transfer(fastExitMock.address, liquidityProviderBalance)
+
+    const prevUserBalance = await token.balanceOf(accounts[0].address)
+
+    // request liquidity from them
+    await testBridge.fastWithdrawalFromL2(
+      fastExitMock.address,
+      liquidityProof,
+      accounts[0].address,
+      token.address,
+      tokenAmount,
+      exitNum,
+      maxFee
+    )
+
+    const postUserBalance = await token.balanceOf(accounts[0].address)
+
     assert.equal(
-      eventDecimals,
-      '0x0000000000000000000000000000000000000000000000000000000000000012',
-      'Incorrect encoded symbol'
+      prevUserBalance.toNumber() + tokenAmount - maxFee,
+      postUserBalance.toNumber(),
+      'Tokens not escrowed'
+    )
+
+    await inbox.setL2ToL1Sender(l2Address)
+
+    // withdrawal should now be sent to liquidity provider
+    // const prevLPBalance = await token.balanceOf(expensiveFastExitMock[0].address)
+
+    await testBridge.withdrawFromL2(
+      exitNum,
+      token.address,
+      accounts[0].address,
+      tokenAmount
+    )
+
+    const postLPBalance = await token.balanceOf(fastExitMock.address)
+
+    assert.equal(
+      postLPBalance.toNumber(),
+      liquidityProviderBalance + maxFee,
+      'Liquidity provider balance not as expected'
     )
   })
-
-  it.skip('should updateTokenInfo 6 decimals as uint8', async function () {
-    // deploy erc20 with 18 decimals
-    const Token = await ethers.getContractFactory('StandardArbERC20')
-    const token = await Token.deploy()
-
-    const newDecimals = 6
-    const newName = 'Test Token'
-    const newSymbol = 'TT'
-
-    await token.initialize(
-      accounts[0].address,
-      accounts[0].address,
-      newDecimals
-    )
-
-    await token.updateInfo(newName, newSymbol, newDecimals)
-
-    const tokenType = 0
-    const tx = await testBridge.updateTokenInfo(
-      token.address,
-      tokenType,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice
-    )
-    const receipt = await tx.wait()
-
-    // event UpdateTokenInfo
-    const eventTopic =
-      '0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c'
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-
-    assert.equal(events.length, 1, 'Expected only one event to be emitted')
-
-    const event = events[0]
-
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals,
-    } = event.args
-
-    assert.equal(
-      eventName,
-      '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e00000000000000000000000000000000000000000000',
-      'Incorrect encoded name'
-    )
-    assert.equal(
-      eventSymbol,
-      '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000025454000000000000000000000000000000000000000000000000000000000000',
-      'Incorrect encoded symbol'
-    )
-
-    assert.equal(
-      eventDecimals,
-      '0x0000000000000000000000000000000000000000000000000000000000000006',
-      'Incorrect encoded symbol'
-    )
-  })
-
-  it.skip('should updateTokenInfo 6 decimals set as uint 256 and name as bytes32', async function () {
-    const Token = await ethers.getContractFactory('TesterERC20Token')
-    // this adds padding at the end, not the start!
-    const name = ethers.utils.formatBytes32String('0x617262697472756d')
-    const symbol = ethers.utils.formatBytes32String('0x617262')
-    const decimal = 6
-
-    const token = await Token.deploy(decimal, name, symbol)
-
-    const tokenType = 0
-    const tx = await testBridge.updateTokenInfo(
-      token.address,
-      tokenType,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice
-    )
-    const receipt = await tx.wait()
-
-    // event UpdateTokenInfo
-    const eventTopic =
-      '0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c'
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-
-    assert.equal(events.length, 1, 'Expected only one event to be emitted')
-
-    const event = events[0]
-
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals,
-    } = event.args
-
-    assert.equal(
-      eventName,
-      '0x3078363137323632363937343732373536640000000000000000000000000000',
-      'Incorrect encoded name'
-    )
-    assert.equal(
-      eventSymbol,
-      '0x3078363137323632000000000000000000000000000000000000000000000000',
-      'Incorrect encoded symbol'
-    )
-
-    assert.equal(
-      eventDecimals,
-      '0x0000000000000000000000000000000000000000000000000000000000000006',
-      'Incorrect encoded symbol'
-    )
-  })
-
-  it.skip('should updateTokenInfo even with token that has no metadata', async function () {
-    const Token = await ethers.getContractFactory('TesterERC20TokenNoMetadata')
-    const token = await Token.deploy()
-
-    const tokenType = 0
-    const tx = await testBridge.updateTokenInfo(
-      token.address,
-      tokenType,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice
-    )
-    const receipt = await tx.wait()
-
-    // event UpdateTokenInfo
-    const eventTopic =
-      '0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c'
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-
-    assert.equal(events.length, 1, 'Expected only one event to be emitted')
-
-    const event = events[0]
-
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals,
-    } = event.args
-
-    assert.equal(eventName, '0x', 'Incorrect encoded name')
-    assert.equal(eventSymbol, '0x', 'Incorrect encoded symbol')
-
-    assert.equal(eventDecimals, '0x', 'Incorrect encoded symbol')
-  })
-
-  it.skip('should deposit custom token', async function () {})
-  it.skip('should registerCustomL2Token', async function () {})
-  it.skip('should notifyCustomToken', async function () {})
-  it.skip('should fastWithdrawalFromL2', async function () {})
 })
