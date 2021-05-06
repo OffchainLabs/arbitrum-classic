@@ -1,4 +1,4 @@
-import { BigNumberish, ContractReceipt, ethers } from 'ethers'
+import { ContractReceipt, ethers } from 'ethers'
 import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
 import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
 import { Outbox__factory } from './abi/factories/Outbox__factory'
@@ -11,14 +11,6 @@ import { ARB_SYS_ADDRESS } from './l2Bridge'
 
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
-}
-
-export class TransactionOverrides {
-  nonce?: BigNumberish | Promise<BigNumberish>
-  gasLimit?: BigNumberish | Promise<BigNumberish>
-  gasPrice?: BigNumberish | Promise<BigNumberish>
-  value?: BigNumberish | Promise<BigNumberish>
-  chainId?: number | Promise<number>
 }
 
 // TODO: can we import these interfaces directly from typechain?
@@ -251,7 +243,7 @@ export class BridgeHelper {
     l1Provider: providers.Provider
   ) => {
     const contract = Inbox__factory.connect(inboxAddress, l1Provider)
-    return contract.bridge()
+    return contract.functions.bridge().then(([res]) => res)
   }
 
   static getInboxSeqNumFromContractTransaction = async (
@@ -472,10 +464,10 @@ export class BridgeHelper {
       l1Provider
     )
 
-    const activeOutboxAddress = await bridge.allowedOutboxList(0)
+    const [activeOutboxAddress] = await bridge.functions.allowedOutboxList(0)
     try {
       // index 1 should not exist
-      await bridge.allowedOutboxList(1)
+      await bridge.functions.allowedOutboxList(1)
       console.error('There is more than 1 outbox registered with the bridge?!')
     } catch (e) {
       // this should fail!
@@ -508,7 +500,7 @@ export class BridgeHelper {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
       // if not challenged
-      const outboxExecute = await outbox.executeTransaction(
+      const outboxExecute = await outbox.functions.executeTransaction(
         outboxProofData.batchNumber,
         outboxProofData.proof,
         outboxProofData.path,

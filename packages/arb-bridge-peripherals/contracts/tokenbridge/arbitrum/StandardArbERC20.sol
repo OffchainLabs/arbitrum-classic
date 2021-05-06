@@ -29,7 +29,7 @@ import "../libraries/BytesParser.sol";
  */
 contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
     ArbTokenBridge public bridge;
-    address public l1Address;
+    address public override l1Address;
 
     modifier onlyBridge {
         require(msg.sender == address(bridge), "ONLY_BRIDGE");
