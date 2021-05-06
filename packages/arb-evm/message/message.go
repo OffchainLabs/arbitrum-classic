@@ -17,6 +17,7 @@
 package message
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -92,6 +93,11 @@ type GasEstimationMessage struct {
 	Aggregator       common.Address
 	ComputationLimit *big.Int
 	TxData           []byte
+}
+
+func (t GasEstimationMessage) String() string {
+	batch := newTransactionBatchFromData(t.TxData)
+	return fmt.Sprintf("GasEstimationMessage{aggregator=%v, computeLimit=%v, tx=%v}", t.Aggregator, t.ComputationLimit, batch)
 }
 
 func NewGasEstimationMessage(aggregator common.Address, computationLimit *big.Int, tx CompressedECDSATransaction) (GasEstimationMessage, error) {
