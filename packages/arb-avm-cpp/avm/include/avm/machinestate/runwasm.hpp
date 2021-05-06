@@ -26,13 +26,20 @@ struct WasmEnvData {
     uint64_t gas_left;
 };
 
+struct WasmResult {
+    uint64_t buffer_len;
+    Buffer buffer;
+    std::vector<uint8_t> extra;
+    uint64_t gas_left;
+};
+
 struct RunWasm {
     WasmEnvData data;
     wasm_func_t* run;
     wasm_trap_t* trap = NULL;
     RunWasm(std::string);
 
-    std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len);
+    WasmResult run_wasm(Buffer buf, uint64_t len);
 
 };
 

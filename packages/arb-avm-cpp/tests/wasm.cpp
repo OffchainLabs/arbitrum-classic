@@ -23,22 +23,6 @@ std::vector<uint8_t> getFile(std::string fname) {
     return bytes;
 }
 
-std::vector<uint8_t> buf2vec(Buffer &buf, uint64_t sz) {
-    std::vector<uint8_t> res;
-    for (uint64_t i = 0; i < sz; i++) {
-        res.push_back(buf.get(i));
-    }
-    return res;
-}
-
-Buffer vec2buf(std::vector<uint8_t> &v) {
-    Buffer res;
-    for (uint64_t i = 0; i < v.size(); i++) {
-        res = res.set(i, v[i]);
-    }
-    return res;
-}
-
 TEST_CASE("wasm_compile") {
     /*
     SECTION("Compiler") {
@@ -55,12 +39,19 @@ TEST_CASE("wasm_compile") {
         // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
         auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
-        auto bytes = buf2vec(res.first, res.second);
+        auto bytes = buf2vec(res.buffer, res.buffer_len);
+        uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
+        uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
         std::cerr << "Result len " << bytes.size() << "\n";
         std::string hexstr;
         hexstr.resize(bytes.size()*2);
         boost::algorithm::hex(bytes.begin(), bytes.end(), hexstr.begin());
         std::cerr << "Result hash " << hexstr << "\n";
+        std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
+        auto wasmcp = wasmAvmToCodepoint(res.extra);
+        if (hash_value(wasmcp.codept) != hash1 || hash_value(wasmcp.jump_table) != hash2) {
+            std::cerr << "FAIL\n";
+        }
     }
 
     SECTION("Testing") {

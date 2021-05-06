@@ -12,7 +12,7 @@ wasm_trap_t* cb_get_length(void* env,
                            const wasm_val_vec_t*,
                            wasm_val_vec_t* results) {
     WasmEnvData* dta = (WasmEnvData*)env;
-    printf("get len... %i\n", (int32_t)dta->buffer_len);
+    // printf("get len... %i\n", (int32_t)dta->buffer_len);
 
     results->data[0].kind = WASM_I32;
     results->data[0].of.i32 = (int32_t)dta->buffer_len;
@@ -23,7 +23,7 @@ wasm_trap_t* cb_set_length(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
-    printf("set len...\n");
+    // printf("set len...\n");
 
     if (args->data[0].kind == WASM_I32) {
         dta->buffer_len = args->data[0].of.i32;
@@ -37,14 +37,14 @@ wasm_trap_t* cb_usegas(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
-    printf("use gas... %li %li\n", dta->gas_left, args->size);
+    // printf("use gas... %li %li\n", dta->gas_left, args->size);
 
     if (args->data[0].kind == WASM_I32) {
         dta->gas_left -= args->data[0].of.i32;
     } else if (args->data[0].kind == WASM_I64) {
         dta->gas_left -= args->data[0].of.i64;
     }
-    printf("used gas... %li %li\n", dta->gas_left, args->size);
+    // printf("used gas... %li %li\n", dta->gas_left, args->size);
     return NULL;
 }
 
@@ -53,7 +53,7 @@ wasm_trap_t* cb_get_buffer(void* env,
                            wasm_val_vec_t* results) {
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
-    printf("read buf...\n");
+    // printf("read buf...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -71,7 +71,7 @@ wasm_trap_t* cb_set_buffer(void* env,
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
     uint8_t v;
-    printf("write buf...\n");
+    // printf("write buf...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -93,7 +93,7 @@ wasm_trap_t* cb_write_extra(void* env,
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
     uint8_t v;
-    printf("wextra...\n");
+    // printf("wextra...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -128,7 +128,7 @@ void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
 }
 
 RunWasm::RunWasm(std::string fname) {
-    printf("Initializing... ????\n");
+    // printf("Initializing... ????\n");
     wasm_engine_t* engine = wasm_engine_new();
     assert(engine != NULL);
     // printf("Initialized...%x \n", engine);
@@ -148,11 +148,11 @@ RunWasm::RunWasm(std::string fname) {
     wasm_byte_vec_t wasm;
     wasm_byte_vec_new_uninitialized(&wasm, file_size);
     auto read_bytes = fread(wasm.data, file_size, 1, file);
-    printf("read bytes %li %li\n", read_bytes, file_size);
+    // printf("read bytes %li %li\n", read_bytes, file_size);
     fclose(file);
 
     // Now that we've got our binary webassembly we can compile our module.
-    printf("Compiling module...\n");
+    // printf("Compiling module...\n");
     wasm_module_t* module = NULL;
     wasmtime_error_t* error = wasmtime_module_new(engine, &wasm, &module);
     wasm_byte_vec_delete(&wasm);
@@ -164,14 +164,14 @@ RunWasm::RunWasm(std::string fname) {
     WasmEnvData* env = &this->data;
 
     // Create external functions
-    printf("Creating get len callback...\n");
+    // printf("Creating get len callback...\n");
     wasm_functype_t* callback_type_getlen =
         wasm_functype_new_0_1(wasm_valtype_new_i32());
     wasm_func_t* callback_func1 = wasm_func_new_with_env(
         store, callback_type_getlen, cb_get_length, (void*)env, NULL);
     wasm_functype_delete(callback_type_getlen);
 
-    printf("Creating set len callback...\n");
+    // printf("Creating set len callback...\n");
     wasm_functype_t* callback_type_setlen =
         wasm_functype_new_1_0(wasm_valtype_new_i32());
     wasm_func_t* callback_func2 = wasm_func_new_with_env(
@@ -180,25 +180,25 @@ RunWasm::RunWasm(std::string fname) {
         store, callback_type_setlen, cb_usegas, (void*)env, NULL);
     wasm_functype_delete(callback_type_setlen);
 
-    printf("Creating get buf callback...\n");
+    // printf("Creating get buf callback...\n");
     wasm_functype_t* callback_type_getbuf =
         wasm_functype_new_1_1(wasm_valtype_new_i32(), wasm_valtype_new_i32());
     wasm_func_t* callback_func3 = wasm_func_new_with_env(
         store, callback_type_getbuf, cb_get_buffer, (void*)env, NULL);
     wasm_functype_delete(callback_type_getbuf);
 
-    printf("Creating set buf callback...\n");
+    // printf("Creating set buf callback...\n");
     wasm_functype_t* callback_type_setbuf =
         wasm_functype_new_2_0(wasm_valtype_new_i32(), wasm_valtype_new_i32());
     wasm_func_t* callback_func4 = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_set_buffer, (void*)env, NULL);
 
-    printf("Creating write extra callback...\n");
+    // printf("Creating write extra callback...\n");
     wasm_func_t* callback_func5 = wasm_func_new_with_env(
         store, callback_type_setbuf, cb_write_extra, (void*)env, NULL);
     wasm_functype_delete(callback_type_setbuf);
 
-    printf("Instantiating module...\n");
+    // printf("Instantiating module...\n");
 
     wasm_importtype_vec_t import_vec;
     wasm_module_imports(module, &import_vec);
@@ -246,7 +246,7 @@ RunWasm::RunWasm(std::string fname) {
 
 }
 
-std::pair<Buffer, uint64_t> RunWasm::run_wasm(Buffer buf, uint64_t len) {
+WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
     data.buffer = buf;
     data.buffer_len = len;
     wasm_val_t arg_params[1];
@@ -262,16 +262,15 @@ std::pair<Buffer, uint64_t> RunWasm::run_wasm(Buffer buf, uint64_t len) {
     wasm_val_vec_new(&results_vec, 1, res_params);
 
     data.gas_left = 1000000;
+    data.extra.resize(0);
 
-    std::cerr << "Running wasm\n";
-
-
+    // std::cerr << "Running wasm\n";
     wasmtime_error_t* error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
     if (error != NULL || trap != NULL)
         exit_with_error(error, trap);
-    std::cerr << "Ran wasm\n";
+    // std::cerr << "Ran wasm\n";
 
-    return {data.buffer, data.buffer_len};
+    return {data.buffer_len, data.buffer, data.extra, data.gas_left};
 
 }
 
