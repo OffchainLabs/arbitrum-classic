@@ -17,9 +17,7 @@
 package monitor
 
 import (
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -31,22 +29,13 @@ import (
 )
 
 func PrepareArbCore(t *testing.T) (*Monitor, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
-	test.FailIfError(t, err)
 	arbosPath, err := arbos.Path()
 	test.FailIfError(t, err)
-	monitor, err := NewMonitor(tmpDir, arbosPath)
-	if err != nil {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
-	}
+	monitor, err := NewMonitor(t.TempDir(), arbosPath)
+	test.FailIfError(t, err)
 
 	shutdown := func() {
 		monitor.Close()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
 	}
 	returning := false
 	defer (func() {

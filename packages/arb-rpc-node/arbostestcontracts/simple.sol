@@ -34,7 +34,7 @@ contract Simple {
 
     function exists() external payable returns (uint256) {
         x = 5;
-        emit TestEvent(15);
+        emit TestEvent(msg.value);
         return 10;
     }
 
