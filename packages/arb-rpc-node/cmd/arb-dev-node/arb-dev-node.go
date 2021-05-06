@@ -95,6 +95,7 @@ func startup() error {
 	walletcount := fs.Int("walletcount", 10, "number of wallets to fund")
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	arbosPath := fs.String("arbos", "", "ArbOS version")
+	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -129,14 +130,6 @@ func startup() error {
 	}
 	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
-	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
-		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000000,
-	}
-
 	accounts := make([]accounts2.Account, 0)
 	for i := 0; i < *walletcount; i++ {
 		path := hdwallet.MustParseDerivationPath(fmt.Sprintf("m/44'/60'/0'/0/%v", i))
@@ -160,7 +153,45 @@ func startup() error {
 
 	ctx := context.Background()
 
-	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(ctx, tmpDir, *arbosPath, config, common.NewAddressFromEth(accounts[0].Address), nil)
+	config := protocol.ChainParams{
+		StakeRequirement:          big.NewInt(10),
+		StakeToken:                common.Address{},
+		GracePeriod:               common.NewTimeBlocksInt(3),
+		MaxExecutionSteps:         10000000000,
+		ArbGasSpeedLimitPerSecond: 2000000000000,
+	}
+
+	var configOptions []message.ChainConfigOption
+	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(accounts[1].Address)}
+	if *enableFees {
+		configOptions = append(configOptions, aggInit)
+
+		netFeeRecipient := common.RandAddress()
+		congestionFeeRecipient := common.RandAddress()
+		feeConfigInit := message.FeeConfig{
+			SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
+			L1GasPerL2Tx:           big.NewInt(3700),
+			ArbGasPerL2Tx:          big.NewInt(0),
+			L1GasPerL2Calldata:     big.NewInt(1),
+			ArbGasPerL2Calldata:    big.NewInt(0),
+			L1GasPerStorage:        big.NewInt(2000),
+			ArbGasPerStorage:       big.NewInt(0),
+			ArbGasDivisor:          big.NewInt(10000),
+			NetFeeRecipient:        netFeeRecipient,
+			CongestionFeeRecipient: congestionFeeRecipient,
+		}
+
+		configOptions = append(configOptions, feeConfigInit)
+	}
+
+	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
+		ctx,
+		tmpDir,
+		*arbosPath,
+		config,
+		common.NewAddressFromEth(accounts[0].Address),
+		configOptions,
+	)
 	if err != nil {
 		return err
 	}
@@ -233,6 +264,18 @@ func startup() error {
 	_, err = arbOwner.DeployContract(ownerAuth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
 	if err != nil {
 		return err
+	}
+
+	if *enableFees {
+		_, err = arbOwner.SetFairGasPriceSender(ownerAuth, aggInit.Aggregator.ToEthAddress())
+		if err != nil {
+			return err
+		}
+
+		_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("Arbitrum Dev Chain")
