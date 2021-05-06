@@ -180,9 +180,9 @@ func NewRandomTransaction() Transaction {
 func (t Transaction) AsEthTx() *types.Transaction {
 	emptyAddress := common.Address{}
 	if t.DestAddress == emptyAddress {
-		return types.NewContractCreation(t.SequenceNum.Uint64(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewContractCreation(t.SequenceNum.Uint64(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	} else {
-		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	}
 }
 
@@ -306,9 +306,9 @@ func (t ContractTransaction) L2Type() L2SubType {
 func (t ContractTransaction) AsEthTx() *types.Transaction {
 	emptyAddress := common.Address{}
 	if t.DestAddress == emptyAddress {
-		return types.NewContractCreation(0, t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewContractCreation(0, t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	} else {
-		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	}
 }
 
