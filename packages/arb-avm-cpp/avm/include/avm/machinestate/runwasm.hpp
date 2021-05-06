@@ -30,7 +30,7 @@ struct RunWasm {
     WasmEnvData data;
     wasm_func_t* run;
     wasm_trap_t* trap = NULL;
-    RunWasm();
+    RunWasm(std::string);
 
     std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len);
 

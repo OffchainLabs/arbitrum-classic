@@ -5,14 +5,14 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wasm.h>
+#include <wasm.hh>
 #include <wasmtime.h>
 
 wasm_trap_t* cb_get_length(void* env,
-                           const wasm_val_vec_t* args,
+                           const wasm_val_vec_t*,
                            wasm_val_vec_t* results) {
     WasmEnvData* dta = (WasmEnvData*)env;
-    printf("Calling back closure...\n");
+    printf("get len... %i\n", (int32_t)dta->buffer_len);
 
     results->data[0].kind = WASM_I32;
     results->data[0].of.i32 = (int32_t)dta->buffer_len;
@@ -21,9 +21,9 @@ wasm_trap_t* cb_get_length(void* env,
 
 wasm_trap_t* cb_set_length(void* env,
                            const wasm_val_vec_t* args,
-                           wasm_val_vec_t* results) {
+                           wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
-    printf("Calling back closure...\n");
+    printf("set len...\n");
 
     if (args->data[0].kind == WASM_I32) {
         dta->buffer_len = args->data[0].of.i32;
@@ -35,15 +35,16 @@ wasm_trap_t* cb_set_length(void* env,
 
 wasm_trap_t* cb_usegas(void* env,
                            const wasm_val_vec_t* args,
-                           wasm_val_vec_t* results) {
+                           wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
-    printf("Calling back closure...\n");
+    printf("use gas... %li %li\n", dta->gas_left, args->size);
 
     if (args->data[0].kind == WASM_I32) {
         dta->gas_left -= args->data[0].of.i32;
     } else if (args->data[0].kind == WASM_I64) {
         dta->gas_left -= args->data[0].of.i64;
     }
+    printf("used gas... %li %li\n", dta->gas_left, args->size);
     return NULL;
 }
 
@@ -52,7 +53,7 @@ wasm_trap_t* cb_get_buffer(void* env,
                            wasm_val_vec_t* results) {
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
-    printf("Calling back closure...\n");
+    printf("read buf...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -60,17 +61,17 @@ wasm_trap_t* cb_get_buffer(void* env,
         offset = args->data[0].of.i64;
     }
     results->data[0].kind = WASM_I32;
-    results->data[0].of.i32 = (int32_t)dta->buffer.get(offset);
+    results->data[0].of.i32 = ((int32_t)dta->buffer.get(offset)) & 0xff;
     return NULL;
 }
 
 wasm_trap_t* cb_set_buffer(void* env,
                            const wasm_val_vec_t* args,
-                           wasm_val_vec_t* results) {
+                           wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
     uint8_t v;
-    printf("Calling back closure...\n");
+    printf("write buf...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -88,11 +89,11 @@ wasm_trap_t* cb_set_buffer(void* env,
 
 wasm_trap_t* cb_write_extra(void* env,
                            const wasm_val_vec_t* args,
-                           wasm_val_vec_t* results) {
+                           wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
     uint64_t offset;
     uint8_t v;
-    printf("Calling back closure...\n");
+    printf("wextra...\n");
 
     if (args->data[0].kind == WASM_I32) {
         offset = args->data[0].of.i32;
@@ -126,27 +127,28 @@ void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
     exit(1);
 }
 
-RunWasm::RunWasm() {
+RunWasm::RunWasm(std::string fname) {
     printf("Initializing... ????\n");
     wasm_engine_t* engine = wasm_engine_new();
     assert(engine != NULL);
-    printf("Initialized...%x \n", engine);
+    // printf("Initialized...%x \n", engine);
 
     // With an engine we can create a *store* which is a long-lived group of
     // wasm modules.
     wasm_store_t* store = wasm_store_new(engine);
     assert(store != NULL);
-    printf("Store...%x \n", store);
+    // printf("Store...%x \n", store);
 
     // Read our input file, which in this case is a wasm text file.
-    FILE* file = fopen("/home/sami/arb-os/wasm-tests/test-buffer.wasm", "r");
+    FILE* file = fopen(fname.c_str(), "r");
     assert(file != NULL);
     fseek(file, 0L, SEEK_END);
     size_t file_size = ftell(file);
     fseek(file, 0L, SEEK_SET);
     wasm_byte_vec_t wasm;
     wasm_byte_vec_new_uninitialized(&wasm, file_size);
-    fread(wasm.data, file_size, 1, file);
+    auto read_bytes = fread(wasm.data, file_size, 1, file);
+    printf("read bytes %li %li\n", read_bytes, file_size);
     fclose(file);
 
     // Now that we've got our binary webassembly we can compile our module.
@@ -203,7 +205,7 @@ RunWasm::RunWasm() {
 
     wasm_instance_t* instance = NULL;
     wasm_extern_t* imports[import_vec.size];
-    for (int i = 0; i < import_vec.size; i++) {
+    for (uint64_t i = 0; i < import_vec.size; i++) {
         auto imp = import_vec.data[i];
         auto name = wasm_importtype_name(imp);
         std::string str = name->data;
@@ -219,16 +221,10 @@ RunWasm::RunWasm() {
             imports[i] = wasm_func_as_extern(callback_func1);
         } else if (str.find("setlen") != std::string::npos) {
             imports[i] = wasm_func_as_extern(callback_func2);
+        } else {
+            imports[i] = wasm_func_as_extern(callback_func2);
         }
     }
-    /*
-    wasm_extern_t* imports[] = {
-        wasm_func_as_extern(callback_func1),
-        wasm_func_as_extern(callback_func2),
-        wasm_func_as_extern(callback_func3),
-        wasm_func_as_extern(callback_func4),
-        wasm_func_as_extern(callback_func5)
-    };*/
     wasm_extern_vec_t imports_vec;
     printf("Extracting export...\n");
     wasm_extern_vec_new(&imports_vec, import_vec.size, imports);
@@ -240,7 +236,13 @@ RunWasm::RunWasm() {
     printf("Extracting export...\n");
     wasm_extern_vec_t externs;
     wasm_instance_exports(instance, &externs);
-    run = wasm_extern_as_func(externs.data[0]);
+    for (uint64_t i = 0; i < externs.size; i++) {
+        if (wasm_extern_kind(externs.data[i]) == WASM_EXTERN_FUNC) {
+            run = wasm_extern_as_func(externs.data[i]);
+        }
+    }
+
+    // printf("externs %i\n", externs.size);
 
 }
 
@@ -251,7 +253,7 @@ std::pair<Buffer, uint64_t> RunWasm::run_wasm(Buffer buf, uint64_t len) {
     arg_params[0].kind = WASM_I64;
     arg_params[0].of.i64 = 123;
     wasm_val_vec_t args_vec;
-    wasm_val_vec_new(&args_vec, 1, arg_params);
+    wasm_val_vec_new_empty(&args_vec);
 
     wasm_val_t res_params[1];
     wasm_val_vec_t results_vec;
@@ -259,16 +261,24 @@ std::pair<Buffer, uint64_t> RunWasm::run_wasm(Buffer buf, uint64_t len) {
     res_params[0].of.i64 = 123;
     wasm_val_vec_new(&results_vec, 1, res_params);
 
+    data.gas_left = 1000000;
+
+    std::cerr << "Running wasm\n";
+
+
     wasmtime_error_t* error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
     if (error != NULL || trap != NULL)
         exit_with_error(error, trap);
+    std::cerr << "Ran wasm\n";
+
     return {data.buffer, data.buffer_len};
 
 }
 
-RunWasm runner;
+// RunWasm runner("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
 
 std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len) {
-    auto a = runner.run_wasm(Buffer(), 123);
-    return a;
+    return {buf, len};
+    // auto a = runner.run_wasm(Buffer(), 123);
+    // return a;
 }

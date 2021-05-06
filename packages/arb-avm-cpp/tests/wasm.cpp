@@ -16,6 +16,28 @@ value get_immed_value(uint8_t *a) {
     return 0;
 }*/
 
+std::vector<uint8_t> getFile(std::string fname) {
+    std::ifstream input(fname, std::ios::binary);
+    std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+    input.close();
+    return bytes;
+}
+
+std::vector<uint8_t> buf2vec(Buffer &buf, uint64_t sz) {
+    std::vector<uint8_t> res;
+    for (uint64_t i = 0; i < sz; i++) {
+        res.push_back(buf.get(i));
+    }
+    return res;
+}
+
+Buffer vec2buf(std::vector<uint8_t> &v) {
+    Buffer res;
+    for (uint64_t i = 0; i < v.size(); i++) {
+        res = res.set(i, v[i]);
+    }
+    return res;
+}
 
 TEST_CASE("wasm_compile") {
     /*
@@ -28,6 +50,19 @@ TEST_CASE("wasm_compile") {
         compile(bytes);
     }
     */
+    SECTION("JIT converter") {
+        RunWasm runner("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
+        // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
+        auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        auto res = runner.run_wasm(vec2buf(buf), buf.size());
+        auto bytes = buf2vec(res.first, res.second);
+        std::cerr << "Result len " << bytes.size() << "\n";
+        std::string hexstr;
+        hexstr.resize(bytes.size()*2);
+        boost::algorithm::hex(bytes.begin(), bytes.end(), hexstr.begin());
+        std::cerr << "Result hash " << hexstr << "\n";
+    }
+
     SECTION("Testing") {
         std::ifstream input("/home/sami/extra.bin", std::ios::binary);
 
