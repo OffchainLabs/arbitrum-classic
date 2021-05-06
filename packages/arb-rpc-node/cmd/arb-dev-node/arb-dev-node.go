@@ -276,6 +276,9 @@ func startup() error {
 		if err != nil {
 			return err
 		}
+		if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+			return err
+		}
 	}
 
 	fmt.Println("Arbitrum Dev Chain")
