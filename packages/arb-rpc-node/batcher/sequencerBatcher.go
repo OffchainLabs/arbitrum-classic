@@ -102,16 +102,15 @@ func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *moni
 	}, nil
 }
 
-func (b *SequencerBatcher) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
-	var x uint64
-	return &x
+func (b *SequencerBatcher) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
+	return nil
 }
 
 func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
 	return b.newTxFeed.Subscribe(ch)
 }
 
-func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.Transaction) error {
+func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Transaction) error {
 	b.txQueue <- startTx
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
@@ -142,6 +141,9 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 	}
 	totalDelayedCount, err := b.db.GetTotalDelayedMessagesSequenced()
+	if err != nil {
+		return err
+	}
 	if totalDelayedCount.Cmp(big.NewInt(0)) == 0 {
 		return errors.New("chain not yet initialized")
 	}
@@ -187,7 +189,7 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 	return &b.sequencer
 }
 
-func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime inbox.ChainTime) (*big.Int, error) {
+func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*big.Int, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 	msgCount, err := b.db.GetMessageCount()
@@ -203,6 +205,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 		return nil, err
 	}
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
+		b.latestChainTime = chainTime
 		return msgCount, nil
 	}
 
@@ -386,7 +389,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		if chainTime.BlockNum.Cmp(b.latestChainTime.BlockNum) <= 0 {
 			continue
 		}
-		newMsgCount, err := b.deliverDelayedMessages(ctx, chainTime)
+		newMsgCount, err := b.deliverDelayedMessages(chainTime)
 		if err != nil {
 			logger.Error().Err(err).Msg("Error delivering delayed messages")
 			continue
