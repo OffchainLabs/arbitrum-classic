@@ -4,10 +4,11 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
-	"github.com/pkg/errors"
 )
 
 type ExecutionImpl struct {
@@ -33,7 +34,7 @@ func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, g
 }
 
 func (e *ExecutionImpl) GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) ([]core.Cut, error) {
-	execTracker := core.NewExecutionTracker(lookup, true, offsets)
+	execTracker := core.NewExecutionTracker(lookup, true, offsets, true)
 	cuts := make([]core.Cut, 0, len(offsets))
 	for i, offset := range offsets {
 		cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
@@ -64,7 +65,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		SegmentSteps:     big.NewInt(0),
 		EndIsUnreachable: false,
 	}
-	execTracker := core.NewExecutionTracker(lookup, true, offsets)
+	execTracker := core.NewExecutionTracker(lookup, true, offsets, true)
 	lastSteps := big.NewInt(0)
 	for i, offset := range offsets {
 		localCut, newSteps, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
@@ -91,6 +92,7 @@ func (e *ExecutionImpl) Bisect(
 	inconsistentSegment *core.ChallengeSegment,
 	subCuts []core.Cut,
 ) error {
+	logger.Info().Str("start", inconsistentSegment.Start.String()).Str("end", inconsistentSegment.GetEnd().String()).Msg("Bisecting challenge")
 	return challenge.BisectExecution(
 		ctx,
 		prevBisection,
@@ -101,7 +103,7 @@ func (e *ExecutionImpl) Bisect(
 }
 
 func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion *core.Assertion, segment *core.ChallengeSegment) (*core.ExecutionState, machine.Machine, error) {
-	execTracker := core.NewExecutionTracker(lookup, true, []*big.Int{segment.Start})
+	execTracker := core.NewExecutionTracker(lookup, true, []*big.Int{segment.Start}, true)
 	cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, segment.Start)
 	if err != nil {
 		return nil, nil, err
@@ -122,6 +124,7 @@ func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion
 func (e *ExecutionImpl) OneStepProof(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
+	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	lookup core.ArbCoreLookup,
 	assertion *core.Assertion,
 	prevBisection *core.Bisection,
@@ -139,6 +142,24 @@ func (e *ExecutionImpl) OneStepProof(
 	}
 
 	opcode := proofData[0]
+	logger.Info().Int("opcode", int(opcode)).Str("gas", previousCut.TotalGasConsumed.String()).Msg("Issuing one step proof")
+
+	if opcode == 0x72 {
+		// INBOX proving
+		seqNum := previousCut.TotalMessagesRead
+		batch, err := LookupBatchContaining(ctx, lookup, sequencerInbox, seqNum)
+		if err != nil {
+			return err
+		}
+		if batch == nil {
+			return errors.New("Failed to lookup batch containing message")
+		}
+		inboxProof, err := lookup.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
+		if err != nil {
+			return err
+		}
+		proofData = append(proofData, inboxProof...)
+	}
 
 	return challenge.OneStepProveExecution(
 		ctx,
@@ -161,6 +182,7 @@ func (e *ExecutionImpl) ProveContinuedExecution(
 	segmentToChallenge int,
 	challengedSegment *core.ChallengeSegment,
 ) error {
+	logger.Info().Str("start", challengedSegment.Start.String()).Str("end", challengedSegment.GetEnd().String()).Msg("Proving continued execution")
 	previousCut, _, err := e.getSegmentStartInfo(lookup, assertion, challengedSegment)
 	if err != nil {
 		return err

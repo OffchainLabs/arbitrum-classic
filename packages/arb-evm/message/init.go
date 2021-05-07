@@ -19,11 +19,13 @@ package message
 import (
 	"bytes"
 	"encoding/binary"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"math/big"
 )
 
 var InitOptionSetChargingParams uint64 = 2
@@ -35,18 +37,18 @@ type Init struct {
 	ExtraConfig []byte
 }
 
-func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) Init {
+func NewInitMessage(params protocol.ChainParams, owner common.Address, config []ChainConfigOption) (Init, error) {
 	data := make([]byte, 0)
 	for _, item := range config {
 		itemData := item.AsData()
 		optionId := item.OptionCode()
 		var w bytes.Buffer
 		if err := binary.Write(&w, binary.BigEndian, &optionId); err != nil {
-			logger.Fatal().Err(err).Send()
+			return Init{}, err
 		}
 		length := uint64(len(itemData))
 		if err := binary.Write(&w, binary.BigEndian, &length); err != nil {
-			logger.Fatal().Err(err).Send()
+			return Init{}, err
 		}
 		data = append(data, w.Bytes()...)
 		data = append(data, itemData...)
@@ -55,7 +57,7 @@ func NewInitMessage(params protocol.ChainParams, owner common.Address, config []
 		ChainParams: params,
 		Owner:       owner,
 		ExtraConfig: data,
-	}
+	}, nil
 }
 
 func NewInitFromData(data []byte) Init {
@@ -102,8 +104,11 @@ type ChainConfigOption interface {
 type FeeConfig struct {
 	SpeedLimitPerSecond    *big.Int
 	L1GasPerL2Tx           *big.Int
+	ArbGasPerL2Tx          *big.Int
 	L1GasPerL2Calldata     *big.Int
+	ArbGasPerL2Calldata    *big.Int
 	L1GasPerStorage        *big.Int
+	ArbGasPerStorage       *big.Int
 	ArbGasDivisor          *big.Int
 	NetFeeRecipient        common.Address
 	CongestionFeeRecipient common.Address
@@ -117,8 +122,11 @@ func (c FeeConfig) AsData() []byte {
 	data := make([]byte, 0)
 	data = append(data, math.U256Bytes(c.SpeedLimitPerSecond)...)
 	data = append(data, math.U256Bytes(c.L1GasPerL2Tx)...)
+	data = append(data, math.U256Bytes(c.ArbGasPerL2Tx)...)
 	data = append(data, math.U256Bytes(c.L1GasPerL2Calldata)...)
+	data = append(data, math.U256Bytes(c.ArbGasPerL2Calldata)...)
 	data = append(data, math.U256Bytes(c.L1GasPerStorage)...)
+	data = append(data, math.U256Bytes(c.ArbGasPerStorage)...)
 	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
 	data = append(data, addressData(c.NetFeeRecipient)...)
 	data = append(data, addressData(c.CongestionFeeRecipient)...)

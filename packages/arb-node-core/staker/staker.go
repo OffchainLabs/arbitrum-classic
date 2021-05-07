@@ -19,6 +19,7 @@ package staker
 import (
 	"context"
 	"math/big"
+	"runtime"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -94,7 +95,10 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			} else {
 				backoff = time.Second
 			}
-			<-time.After(time.Minute)
+			// Force a GC run to clean up any execution cursors while we wait
+			delay := time.After(time.Minute)
+			runtime.GC()
+			<-delay
 		}
 	}()
 	return done
@@ -221,7 +225,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		s.activeChallenge = challenge.NewChallenger(challengeCon, s.lookup, nodeInfo, s.wallet.Address())
+		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo, s.wallet.Address())
 	}
 
 	return s.activeChallenge.HandleConflict(ctx)

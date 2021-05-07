@@ -25,6 +25,7 @@ interface IArbStandardTokenInterface extends ethers.utils.Interface {
     'bridgeBurn(address,uint256)': FunctionFragment
     'bridgeInit(address,bytes)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
+    'l1Address()': FunctionFragment
     'migrate(address,uint256)': FunctionFragment
     'withdraw(address,uint256)': FunctionFragment
   }
@@ -41,6 +42,7 @@ interface IArbStandardTokenInterface extends ethers.utils.Interface {
     functionFragment: 'bridgeMint',
     values: [string, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'migrate',
     values: [string, BigNumberish]
@@ -53,6 +55,7 @@ interface IArbStandardTokenInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeInit', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
@@ -108,6 +111,10 @@ export class IArbStandardToken extends Contract {
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    l1Address(overrides?: CallOverrides): Promise<[string]>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<[string]>
 
     migrate(
       destination: string,
@@ -170,6 +177,10 @@ export class IArbStandardToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  l1Address(overrides?: CallOverrides): Promise<string>
+
+  'l1Address()'(overrides?: CallOverrides): Promise<string>
+
   migrate(
     destination: string,
     amount: BigNumberish,
@@ -230,6 +241,10 @@ export class IArbStandardToken extends Contract {
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
+
+    l1Address(overrides?: CallOverrides): Promise<string>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<string>
 
     migrate(
       destination: string,
@@ -295,6 +310,10 @@ export class IArbStandardToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    l1Address(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
+
     migrate(
       destination: string,
       amount: BigNumberish,
@@ -356,6 +375,10 @@ export class IArbStandardToken extends Contract {
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     migrate(
       destination: string,

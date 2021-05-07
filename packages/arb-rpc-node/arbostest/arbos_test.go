@@ -75,7 +75,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	}
 
-	logs, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, snap := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[1], connAddress1)
@@ -111,7 +111,7 @@ func TestDeposit(t *testing.T) {
 		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	_, _, snap := runSimpleAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
@@ -122,7 +122,7 @@ func TestBlocks(t *testing.T) {
 		Timestamp: big.NewInt(1),
 	}
 
-	ib.AddMessage(initMsg(nil), chain, big.NewInt(0), startTime)
+	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), startTime)
 	ib.AddMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), startTime)
 
 	halfSendCount := int64(5)
@@ -222,7 +222,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertionWithoutPrint(t, ib.Messages, len(resultTypes), 2)
+	avmLogs, sends, _ := runAssertionWithoutPrint(t, ib.Messages, len(resultTypes), sendCount)
 	results := processResults(t, avmLogs)
 	for i, res := range results {
 		switch res := res.(type) {

@@ -26,10 +26,10 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'calculateL2TokenAddress(address)': FunctionFragment
     'customL2Token(address)': FunctionFragment
     'customTokenRegistered(address,address)': FunctionFragment
+    'ethTokenBridge()': FunctionFragment
     'getBeacon()': FunctionFragment
     'initialize(address,address)': FunctionFragment
     'isCustomToken(address)': FunctionFragment
-    'l1Pair()': FunctionFragment
     'migrate(address,address,address,uint256)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'mintFromL1(address,address,address,uint256,bytes,bytes)': FunctionFragment
@@ -53,6 +53,10 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'customTokenRegistered',
     values: [string, string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'ethTokenBridge',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'getBeacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
@@ -62,7 +66,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'isCustomToken',
     values: [string]
   ): string
-  encodeFunctionData(functionFragment: 'l1Pair', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'migrate',
     values: [string, string, string, BigNumberish]
@@ -100,13 +103,16 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'customTokenRegistered',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'ethTokenBridge',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'getBeacon', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'isCustomToken',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'l1Pair', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'migrate', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mintFromL1', data: BytesLike): Result
@@ -186,18 +192,22 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    ethTokenBridge(overrides?: CallOverrides): Promise<[string]>
+
+    'ethTokenBridge()'(overrides?: CallOverrides): Promise<[string]>
+
     getBeacon(overrides?: CallOverrides): Promise<[string]>
 
     'getBeacon()'(overrides?: CallOverrides): Promise<[string]>
 
     initialize(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'initialize(address,address)'(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -211,10 +221,6 @@ export class ArbTokenBridge extends Contract {
       l1Token: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>
-
-    l1Pair(overrides?: CallOverrides): Promise<[string]>
-
-    'l1Pair()'(overrides?: CallOverrides): Promise<[string]>
 
     migrate(
       l1ERC20: string,
@@ -330,18 +336,22 @@ export class ArbTokenBridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  ethTokenBridge(overrides?: CallOverrides): Promise<string>
+
+  'ethTokenBridge()'(overrides?: CallOverrides): Promise<string>
+
   getBeacon(overrides?: CallOverrides): Promise<string>
 
   'getBeacon()'(overrides?: CallOverrides): Promise<string>
 
   initialize(
-    _l1Pair: string,
+    _ethTokenBridge: string,
     _templateERC20: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'initialize(address,address)'(
-    _l1Pair: string,
+    _ethTokenBridge: string,
     _templateERC20: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -352,10 +362,6 @@ export class ArbTokenBridge extends Contract {
     l1Token: string,
     overrides?: CallOverrides
   ): Promise<boolean>
-
-  l1Pair(overrides?: CallOverrides): Promise<string>
-
-  'l1Pair()'(overrides?: CallOverrides): Promise<string>
 
   migrate(
     l1ERC20: string,
@@ -471,18 +477,22 @@ export class ArbTokenBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    ethTokenBridge(overrides?: CallOverrides): Promise<string>
+
+    'ethTokenBridge()'(overrides?: CallOverrides): Promise<string>
+
     getBeacon(overrides?: CallOverrides): Promise<string>
 
     'getBeacon()'(overrides?: CallOverrides): Promise<string>
 
     initialize(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: CallOverrides
     ): Promise<void>
 
     'initialize(address,address)'(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: CallOverrides
     ): Promise<void>
@@ -493,10 +503,6 @@ export class ArbTokenBridge extends Contract {
       l1Token: string,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    l1Pair(overrides?: CallOverrides): Promise<string>
-
-    'l1Pair()'(overrides?: CallOverrides): Promise<string>
 
     migrate(
       l1ERC20: string,
@@ -656,18 +662,22 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    ethTokenBridge(overrides?: CallOverrides): Promise<BigNumber>
+
+    'ethTokenBridge()'(overrides?: CallOverrides): Promise<BigNumber>
+
     getBeacon(overrides?: CallOverrides): Promise<BigNumber>
 
     'getBeacon()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initialize(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'initialize(address,address)'(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -681,10 +691,6 @@ export class ArbTokenBridge extends Contract {
       l1Token: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
-
-    l1Pair(overrides?: CallOverrides): Promise<BigNumber>
-
-    'l1Pair()'(overrides?: CallOverrides): Promise<BigNumber>
 
     migrate(
       l1ERC20: string,
@@ -804,18 +810,22 @@ export class ArbTokenBridge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    ethTokenBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'ethTokenBridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     getBeacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'getBeacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     initialize(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'initialize(address,address)'(
-      _l1Pair: string,
+      _ethTokenBridge: string,
       _templateERC20: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -829,10 +839,6 @@ export class ArbTokenBridge extends Contract {
       l1Token: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
-
-    l1Pair(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'l1Pair()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     migrate(
       l1ERC20: string,

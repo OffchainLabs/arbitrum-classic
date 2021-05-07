@@ -4,14 +4,19 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "challenge").Logger()
 
 type Challenger struct {
 	challenge      *ethbridge.Challenge
+	sequencerInbox *ethbridge.SequencerInboxWatcher
 	lookup         core.ArbCoreLookup
 	challengedNode *core.NodeInfo
 	stakerAddress  common.Address
@@ -21,9 +26,10 @@ func (c *Challenger) ChallengeAddress() common.Address {
 	return c.challenge.Address()
 }
 
-func NewChallenger(challenge *ethbridge.Challenge, lookup core.ArbCoreLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
+func NewChallenger(challenge *ethbridge.Challenge, sequencerInbox *ethbridge.SequencerInboxWatcher, lookup core.ArbCoreLookup, challengedNode *core.NodeInfo, stakerAddress common.Address) *Challenger {
 	return &Challenger{
 		challenge:      challenge,
+		sequencerInbox: sequencerInbox,
 		lookup:         lookup,
 		challengedNode: challengedNode,
 		stakerAddress:  stakerAddress,
@@ -54,17 +60,19 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 		prevBisection = c.challengedNode.InitialExecutionBisection()
 	}
 	challengeImpl := ExecutionImpl{}
-	return handleChallenge(ctx, c.challenge, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
+	return handleChallenge(ctx, c.challenge, c.sequencerInbox, c.challengedNode.Assertion, c.lookup, challengeImpl, prevBisection)
 }
 
 func handleChallenge(
 	ctx context.Context,
 	challenge *ethbridge.Challenge,
+	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	assertion *core.Assertion,
 	lookup core.ArbCoreLookup,
 	challengeImpl ExecutionImpl,
 	prevBisection *core.Bisection,
 ) error {
+	logger.Debug().Str("start", prevBisection.ChallengedSegment.Start.String()).Str("end", prevBisection.ChallengedSegment.GetEnd().String()).Msg("Examining opponent's bisection")
 	prevCutOffsets := generateBisectionCutOffsets(prevBisection.ChallengedSegment, len(prevBisection.Cuts)-1)
 	divergence, err := challengeImpl.FindFirstDivergence(lookup, assertion, prevCutOffsets, prevBisection.Cuts)
 	if err != nil {
@@ -119,6 +127,7 @@ func handleChallenge(
 		return challengeImpl.OneStepProof(
 			ctx,
 			challenge,
+			sequencerInbox,
 			lookup,
 			assertion,
 			prevBisection,
@@ -141,4 +150,36 @@ func generateBisectionCutOffsets(segment *core.ChallengeSegment, subSegmentCount
 		offset = offset.Add(offset, subSegmentLength)
 	}
 	return cutOffsets
+}
+
+func LookupBatchContaining(ctx context.Context, lookup core.ArbCoreLookup, sequencerInbox *ethbridge.SequencerInboxWatcher, seqNum *big.Int) (ethbridge.SequencerBatchRef, error) {
+	fromBlock, err := lookup.GetSequencerBlockNumberAt(seqNum)
+	if err != nil {
+		return nil, err
+	}
+	maxDelay, err := sequencerInbox.GetMaxDelayBlocks(ctx)
+	if err != nil {
+		return nil, err
+	}
+	toBlock := new(big.Int).Add(fromBlock, maxDelay)
+	latestBlockNumber, err := sequencerInbox.CurrentBlockHeight(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if toBlock.Cmp(latestBlockNumber) > 0 {
+		toBlock = latestBlockNumber
+	}
+
+	batchRefs, err := sequencerInbox.LookupBatchesInRange(ctx, fromBlock, toBlock)
+	if err != nil {
+		return nil, err
+	}
+	var found ethbridge.SequencerBatchRef
+	for _, batchRef := range batchRefs {
+		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
+			found = batchRef
+			break
+		}
+	}
+	return found, nil
 }

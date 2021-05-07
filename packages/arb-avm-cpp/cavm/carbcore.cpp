@@ -228,6 +228,31 @@ Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
     }
 }
 
+ByteSliceResult arbCoreGenInboxProof(CArbCore* arbcore_ptr,
+                                     const void* seq_num_ptr,
+                                     const void* batch_index_ptr,
+                                     const void* batch_end_count_ptr) {
+    auto arbcore = static_cast<const ArbCore*>(arbcore_ptr);
+    auto seq_num = receiveUint256(seq_num_ptr);
+    auto batch_end_count = receiveUint256(batch_end_count_ptr);
+    auto batch_index = receiveUint256(batch_index_ptr);
+    try {
+        auto res =
+            arbcore->genInboxProof(seq_num, batch_index, batch_end_count);
+        if (!res.status.ok()) {
+            std::cerr << "Failed to generate inbox proof for sequence number "
+                      << seq_num << " to " << batch_end_count << ": "
+                      << res.status.ToString() << std::endl;
+        }
+        return returnDataResult(res);
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to generate inbox proof for sequence number "
+                  << seq_num << " to " << batch_end_count << ": " << e.what()
+                  << std::endl;
+        return {{}, false};
+    }
+}
+
 int arbCoreGetInboxAcc(CArbCore* arbcore_ptr,
                        const void* index_ptr,
                        void* ret) {

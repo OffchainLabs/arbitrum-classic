@@ -22,10 +22,10 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface RollupCreatorInterface extends ethers.utils.Interface {
   functions: {
-    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)': FunctionFragment
+    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)': FunctionFragment
     'owner()': FunctionFragment
     'renounceOwnership()': FunctionFragment
-    'setTemplates(address,address,address)': FunctionFragment
+    'setTemplates(address,address,address,address)': FunctionFragment
     'transferOwnership(address)': FunctionFragment
   }
 
@@ -39,6 +39,9 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
       BigNumberish,
       string,
       string,
+      string,
+      BigNumberish,
+      BigNumberish,
       BytesLike
     ]
   ): string
@@ -49,7 +52,7 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'setTemplates',
-    values: [string, string, string]
+    values: [string, string, string, string]
   ): string
   encodeFunctionData(
     functionFragment: 'transferOwnership',
@@ -105,11 +108,14 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -117,6 +123,9 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -130,13 +139,15 @@ export class RollupCreator extends Contract {
     'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
 
     setTemplates(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'setTemplates(address,address,address)'(
+    'setTemplates(address,address,address,address)'(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
@@ -162,11 +173,14 @@ export class RollupCreator extends Contract {
     _baseStake: BigNumberish,
     _stakeToken: string,
     _owner: string,
+    _sequencer: string,
+    _sequencerDelayBlocks: BigNumberish,
+    _sequencerDelaySeconds: BigNumberish,
     _extraConfig: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
+  'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)'(
     _machineHash: BytesLike,
     _confirmPeriodBlocks: BigNumberish,
     _extraChallengeTimeBlocks: BigNumberish,
@@ -174,6 +188,9 @@ export class RollupCreator extends Contract {
     _baseStake: BigNumberish,
     _stakeToken: string,
     _owner: string,
+    _sequencer: string,
+    _sequencerDelayBlocks: BigNumberish,
+    _sequencerDelaySeconds: BigNumberish,
     _extraConfig: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -187,13 +204,15 @@ export class RollupCreator extends Contract {
   'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
 
   setTemplates(
+    _bridgeCreator: string,
     _rollupTemplate: string,
     _challengeFactory: string,
     _nodeFactory: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'setTemplates(address,address,address)'(
+  'setTemplates(address,address,address,address)'(
+    _bridgeCreator: string,
     _rollupTemplate: string,
     _challengeFactory: string,
     _nodeFactory: string,
@@ -219,11 +238,14 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -231,6 +253,9 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
@@ -244,13 +269,15 @@ export class RollupCreator extends Contract {
     'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
 
     setTemplates(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setTemplates(address,address,address)'(
+    'setTemplates(address,address,address,address)'(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
@@ -286,11 +313,14 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -298,6 +328,9 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -311,13 +344,15 @@ export class RollupCreator extends Contract {
     'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
 
     setTemplates(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'setTemplates(address,address,address)'(
+    'setTemplates(address,address,address,address)'(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
@@ -344,11 +379,14 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -356,6 +394,9 @@ export class RollupCreator extends Contract {
       _baseStake: BigNumberish,
       _stakeToken: string,
       _owner: string,
+      _sequencer: string,
+      _sequencerDelayBlocks: BigNumberish,
+      _sequencerDelaySeconds: BigNumberish,
       _extraConfig: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
@@ -369,13 +410,15 @@ export class RollupCreator extends Contract {
     'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     setTemplates(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'setTemplates(address,address,address)'(
+    'setTemplates(address,address,address,address)'(
+      _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,

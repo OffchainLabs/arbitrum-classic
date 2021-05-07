@@ -19,15 +19,17 @@ package evm
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
-	"math/big"
 )
 
 type ResultType int
@@ -43,6 +45,7 @@ const (
 	ContractAlreadyExists     ResultType = 7
 	ExceededTxGasLimit        ResultType = 8
 	InsufficientGasForBaseFee ResultType = 9
+	MinArbGasForContractTx    ResultType = 10
 	UnknownErrorCode          ResultType = 255
 )
 
@@ -129,6 +132,14 @@ func (r *TxResult) EthLogs(blockHash common.Hash) []*types.Log {
 	return evmLogs
 }
 
+func (r *TxResult) CalcGasUsed() *big.Int {
+	if r.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
+		return r.GasUsed
+	} else {
+		return new(big.Int).Div(r.FeeStats.PayTarget().Total(), r.FeeStats.Price.L2Computation)
+	}
+}
+
 func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	contractAddress := ethcommon.Address{}
 	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
@@ -157,7 +168,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 		Logs:              evmLogs,
 		TxHash:            r.IncomingRequest.MessageID.ToEthHash(),
 		ContractAddress:   contractAddress,
-		GasUsed:           r.GasUsed.Uint64(),
+		GasUsed:           r.CalcGasUsed().Uint64(),
 		BlockHash:         blockHash.ToEthHash(),
 		BlockNumber:       r.IncomingRequest.L2BlockNumber,
 		TransactionIndex:  uint(r.TxIndex.Uint64()),
@@ -214,25 +225,44 @@ func NewFeeSetFromValue(val value.Value) (*FeeSet, error) {
 }
 
 type FeeStats struct {
-	Price      *FeeSet
-	UnitsUsed  *FeeSet
-	Paid       *FeeSet
-	Aggregator *common.Address
+	Price                  *FeeSet
+	UnitsUsed              *FeeSet
+	Paid                   *FeeSet
+	Aggregator             *common.Address
+	NoFeeGasEstimationMode bool
 }
 
 func (fs *FeeStats) String() string {
 	return fmt.Sprintf("FeeStats{Prices=%v, Units=%v, Paid=%v, Aggregator=%v}", fs.Price, fs.UnitsUsed, fs.Paid, fs.Aggregator)
 }
 
+func (fs *FeeStats) PayTarget() *FeeSet {
+	return &FeeSet{
+		L1Transaction: new(big.Int).Mul(fs.Price.L1Transaction, fs.UnitsUsed.L1Transaction),
+		L1Calldata:    new(big.Int).Mul(fs.Price.L1Calldata, fs.UnitsUsed.L1Calldata),
+		L2Storage:     new(big.Int).Mul(fs.Price.L2Storage, fs.UnitsUsed.L2Storage),
+		L2Computation: new(big.Int).Mul(fs.Price.L2Computation, fs.UnitsUsed.L2Computation),
+	}
+}
+
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 4 {
-		return nil, errors.Errorf("expected gas fee tuple of length 4, but recieved %v", val)
+	if !ok || tup.Len() < 4 || tup.Len() > 5 {
+		return nil, errors.Errorf("expected gas fee tuple of length 4 or 5, but recieved %v", val)
 	}
 	pricesVal, _ := tup.GetByInt64(0)
 	unitsVal, _ := tup.GetByInt64(1)
 	paidVal, _ := tup.GetByInt64(2)
 	aggregator, _ := tup.GetByInt64(3)
+	noFeeGasEstimationMode := false
+	if tup.Len() == 5 {
+		noFeeGasEstimationModeVal, _ := tup.GetByInt64(4)
+		var err error
+		noFeeGasEstimationMode, err = NewBoolFromValue(noFeeGasEstimationModeVal)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	prices, err := NewFeeSetFromValue(pricesVal)
 	if err != nil {
@@ -257,10 +287,11 @@ func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 		aggAddress = &rawAggregatorAddress
 	}
 	return &FeeStats{
-		Price:      prices,
-		UnitsUsed:  units,
-		Paid:       paid,
-		Aggregator: aggAddress,
+		Price:                  prices,
+		UnitsUsed:              units,
+		Paid:                   paid,
+		Aggregator:             aggAddress,
+		NoFeeGasEstimationMode: noFeeGasEstimationMode,
 	}, nil
 }
 

@@ -17,15 +17,15 @@
 package arbos
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -63,8 +63,8 @@ func GetBalanceData(address common.Address) []byte {
 	return append(getBalanceSig, txData...)
 }
 
-func ParseBalanceResult(res *evm.TxResult) (*big.Int, error) {
-	vals, err := getBalanceABI.Outputs.UnpackValues(res.ReturnData)
+func ParseBalanceResult(data []byte) (*big.Int, error) {
+	vals, err := getBalanceABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func GetCodeData(address common.Address) []byte {
 	return append(getCodeSig, txData...)
 }
 
-func ParseCodeResult(res *evm.TxResult) ([]byte, error) {
-	vals, err := getCodeABI.Outputs.UnpackValues(res.ReturnData)
+func ParseCodeResult(data []byte) ([]byte, error) {
+	vals, err := getCodeABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}

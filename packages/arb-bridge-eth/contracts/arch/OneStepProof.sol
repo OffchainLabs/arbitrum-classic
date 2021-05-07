@@ -478,39 +478,32 @@ contract OneStepProof is OneStepProofCommon {
         require(isDelayed == 0 || isDelayed == 1, "IS_DELAYED_VAL");
 
         bytes32 acc;
+        (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
         if (isDelayed == 0) {
-            (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
             // Start the proof at an arbitrary previous accumulator, as we validate the end accumulator.
             acc = keccak256(abi.encodePacked("Sequencer message:", acc, inboxSeqNum, messageHash));
 
             require(inboxSeqNum == context.totalMessagesRead, "WRONG_SEQUENCER_MSG_SEQ_NUM");
             inboxSeqNum++;
         } else {
-            // Delayed messages are always at the start of a batch, so we can fetch the previous accumulator.
-            bytes32 prevBatchAcc = 0;
-            if (seqBatchNum > 0) {
-                prevBatchAcc = context.sequencerBridge.inboxAccs(seqBatchNum - 1);
-            }
-
             // Read in delayed batch info from the proof. These fields are all part of the accumulator hash.
             uint256 firstSequencerSeqNum;
             uint256 delayedStart;
             uint256 delayedEnd;
-            bytes32 delayedEndAcc;
             (context.offset, firstSequencerSeqNum) = Marshaling.deserializeInt(
                 proof,
                 context.offset
             );
             (context.offset, delayedStart) = Marshaling.deserializeInt(proof, context.offset);
             (context.offset, delayedEnd) = Marshaling.deserializeInt(proof, context.offset);
-            (context.offset, delayedEndAcc) = Marshaling.deserializeBytes32(proof, context.offset);
+            bytes32 delayedEndAcc = context.delayedBridge.inboxAccs(delayedEnd - 1);
 
             // Validate the delayed message is included in this sequencer batch.
             require(inboxSeqNum >= delayedStart, "DELAYED_START");
             require(inboxSeqNum < delayedEnd, "DELAYED_END");
 
             // Validate the delayed message is in the delayed inbox.
-            bytes32 prevDelayedAcc;
+            bytes32 prevDelayedAcc = 0;
             if (inboxSeqNum > 0) {
                 prevDelayedAcc = context.delayedBridge.inboxAccs(inboxSeqNum - 1);
             }
@@ -529,7 +522,7 @@ contract OneStepProof is OneStepProofCommon {
             acc = keccak256(
                 abi.encodePacked(
                     "Delayed messages:",
-                    prevBatchAcc,
+                    acc,
                     firstSequencerSeqNum,
                     delayedStart,
                     delayedEnd,
@@ -540,10 +533,14 @@ contract OneStepProof is OneStepProofCommon {
         }
 
         // Get to the end of the batch by hashing in arbitrary future sequencer messages.
-        uint256 remainingSeqMessages;
-        (context.offset, remainingSeqMessages) = Marshaling.deserializeInt(proof, context.offset);
-        for (uint256 i = 0; i < remainingSeqMessages; i++) {
+        while (true) {
+            // 0 = sequencer message
+            // 1 = delayed message batch
+            // 2 = end of batch
             isDelayed = uint8(proof[context.offset]);
+            if (isDelayed == 2) {
+                break;
+            }
             require(isDelayed == 0 || isDelayed == 1, "REM_IS_DELAYED_VAL");
             context.offset++;
             if (isDelayed == 0) {
@@ -559,13 +556,8 @@ contract OneStepProof is OneStepProofCommon {
             } else {
                 uint256 delayedStart;
                 uint256 delayedEnd;
-                bytes32 delayedEndAcc;
                 (context.offset, delayedStart) = Marshaling.deserializeInt(proof, context.offset);
                 (context.offset, delayedEnd) = Marshaling.deserializeInt(proof, context.offset);
-                (context.offset, delayedEndAcc) = Marshaling.deserializeBytes32(
-                    proof,
-                    context.offset
-                );
                 acc = keccak256(
                     abi.encodePacked(
                         "Delayed messages:",
@@ -573,7 +565,7 @@ contract OneStepProof is OneStepProofCommon {
                         inboxSeqNum,
                         delayedStart,
                         delayedEnd,
-                        delayedEndAcc
+                        context.delayedBridge.inboxAccs(delayedEnd - 1)
                     )
                 );
                 inboxSeqNum += delayedEnd - delayedStart;

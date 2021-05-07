@@ -119,7 +119,7 @@ std::vector<unsigned char> InboxMessage::serialize() const {
 std::vector<unsigned char> InboxMessage::serializeForProof() const {
     std::vector<unsigned char> state_data_vector;
     serializeHeader(state_data_vector);
-    uint256_t proofLength = state_data_vector.size();
+    uint256_t proofLength = data.size();
     marshal_uint256_t(proofLength, state_data_vector);
     state_data_vector.insert(state_data_vector.end(), data.begin(), data.end());
     return state_data_vector;

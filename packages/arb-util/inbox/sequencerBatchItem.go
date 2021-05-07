@@ -20,9 +20,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/pkg/errors"
 )
 
 type SequencerBatchItem struct {
@@ -32,37 +33,37 @@ type SequencerBatchItem struct {
 	SequencerMessage  []byte
 }
 
-func (i *SequencerBatchItem) RecomputeAccumulator(prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) error {
+func NewSequencerItem(totalDelayedCount *big.Int, msg InboxMessage, prevAcc common.Hash) SequencerBatchItem {
 	var data []byte
-	delayedCmp := i.TotalDelayedCount.Cmp(prevDelayedCount)
-	if delayedCmp > 0 {
-		if len(i.SequencerMessage) > 0 {
-			return errors.New("Sequencer batch item has both sequencer message and delayed messages")
-		}
-		data = append(data, "Delayed messages:"...)
-		data = append(data, prevAcc.Bytes()...)
-		firstSeqNum := big.NewInt(1)
-		firstSeqNum = firstSeqNum.Add(firstSeqNum, i.LastSeqNum)
-		firstSeqNum = firstSeqNum.Add(firstSeqNum, prevDelayedCount)
-		firstSeqNum = firstSeqNum.Sub(firstSeqNum, i.TotalDelayedCount)
-		data = append(data, math.U256Bytes(firstSeqNum)...)
-		data = append(data, math.U256Bytes(prevDelayedCount)...)
-		data = append(data, math.U256Bytes(i.TotalDelayedCount)...)
-		data = append(data, delayedAcc.Bytes()...)
-	} else if delayedCmp == 0 {
-		data = append(data, "Sequencer message:"...)
-		data = append(data, prevAcc.Bytes()...)
-		data = append(data, math.U256Bytes(i.LastSeqNum)...)
-		msg, err := NewInboxMessageFromData(i.SequencerMessage)
-		if err != nil {
-			return err
-		}
-		data = append(data, msg.CommitmentHash().Bytes()...)
-	} else {
-		return errors.New("Sequencer batch item delayed count went backwards")
+	data = append(data, "Sequencer message:"...)
+	data = append(data, prevAcc.Bytes()...)
+	data = append(data, math.U256Bytes(msg.InboxSeqNum)...)
+	data = append(data, msg.CommitmentHash().Bytes()...)
+	return SequencerBatchItem{
+		LastSeqNum:        msg.InboxSeqNum,
+		Accumulator:       hashing.SoliditySHA3(data),
+		TotalDelayedCount: totalDelayedCount,
+		SequencerMessage:  msg.ToBytes(),
 	}
-	i.Accumulator = hashing.SoliditySHA3(data)
-	return nil
+}
+
+func NewDelayedItem(lastSeqNum *big.Int, totalDelayedCount *big.Int, prevAcc common.Hash, prevDelayedCount *big.Int, delayedAcc common.Hash) SequencerBatchItem {
+	var data []byte
+	data = append(data, "Delayed messages:"...)
+	data = append(data, prevAcc.Bytes()...)
+	firstSeqNum := big.NewInt(1)
+	firstSeqNum = firstSeqNum.Add(firstSeqNum, lastSeqNum)
+	firstSeqNum = firstSeqNum.Add(firstSeqNum, prevDelayedCount)
+	firstSeqNum = firstSeqNum.Sub(firstSeqNum, totalDelayedCount)
+	data = append(data, math.U256Bytes(firstSeqNum)...)
+	data = append(data, math.U256Bytes(prevDelayedCount)...)
+	data = append(data, math.U256Bytes(totalDelayedCount)...)
+	data = append(data, delayedAcc.Bytes()...)
+	return SequencerBatchItem{
+		LastSeqNum:        lastSeqNum,
+		Accumulator:       hashing.SoliditySHA3(data),
+		TotalDelayedCount: totalDelayedCount,
+	}
 }
 
 func NewSequencerBatchItemFromData(data []byte) (SequencerBatchItem, error) {

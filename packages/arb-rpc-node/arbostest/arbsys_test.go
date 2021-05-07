@@ -18,15 +18,18 @@ package arbostest
 
 import (
 	"bytes"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"strings"
 	"testing"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -57,7 +60,7 @@ func makeTxCountCall(account common.Address) message.L2Message {
 func checkTxCountResult(t *testing.T, res *evm.TxResult, correctCount *big.Int) {
 	t.Helper()
 	succeededTxCheck(t, res)
-	txCount, err := arbos.ParseTransactionCountResult(res)
+	txCount, err := arbos.ParseTransactionCountResult(res.ReturnData)
 	failIfError(t, err)
 	if correctCount.Cmp(txCount) != 0 {
 		t.Fatal("unexpected tx count")
@@ -153,7 +156,7 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeEthDeposit(sender, big.NewInt(1000)), sender, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), big.NewInt(0), chainTime),
@@ -175,7 +178,7 @@ func TestTransactionCount(t *testing.T) {
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, messages, len(messages)-1, 0)
+	logs, _, _ := runAssertion(t, messages, len(messages)-1, 0)
 	results := processTxResults(t, logs)
 
 	checkTxCountResult(t, results[0], big.NewInt(0))
@@ -283,7 +286,7 @@ func TestAddressTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(addressTableCalls), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -407,7 +410,7 @@ func TestArbSysBLS(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -475,7 +478,7 @@ func TestArbSysFunctionTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])

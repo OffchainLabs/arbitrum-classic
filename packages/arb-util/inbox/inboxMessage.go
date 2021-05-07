@@ -45,6 +45,13 @@ func NewRandomChainTime() ChainTime {
 	}
 }
 
+func (c ChainTime) Clone() ChainTime {
+	return ChainTime{
+		BlockNum:  c.BlockNum.Clone(),
+		Timestamp: new(big.Int).Set(c.Timestamp),
+	}
+}
+
 type InboxMessage struct {
 	Kind        Type
 	Sender      common.Address

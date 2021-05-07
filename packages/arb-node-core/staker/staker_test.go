@@ -18,6 +18,7 @@ package staker
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -143,7 +144,10 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
-	mach, err := cmachine.New(arbos.Path())
+	arbosPath, err := arbos.Path()
+	test.FailIfError(t, err)
+
+	mach, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
 
 	hash, err := mach.Hash()
@@ -159,7 +163,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	sequencerDelaySeconds := big.NewInt(900)
 	var extraConfig []byte
 
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
 	auth2 := bind.NewKeyedTransactor(pks[1])
 	seqAuth := bind.NewKeyedTransactor(pks[2])
@@ -204,7 +208,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	mon, shutdown := monitor.PrepareArbCore(t, nil)
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
@@ -222,16 +226,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	delayedBridge, err := ethbridgecontracts.NewBridge(delayedBridgeAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	batchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        big.NewInt(0),
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(1),
-		SequencerMessage:  []byte{},
-	}
 	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{Context: ctx}, big.NewInt(0))
 	test.FailIfError(t, err)
-	err = batchItem.RecomputeAccumulator(common.Hash{}, big.NewInt(0), delayedAcc)
-	test.FailIfError(t, err)
+	batchItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
 
 	latestHeader, err := client.HeaderByNumber(ctx, nil)
 	test.FailIfError(t, err)
@@ -248,15 +245,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 			Timestamp: currentTimestamp,
 		},
 	)
-	endBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        big.NewInt(1),
-		Accumulator:       common.Hash{},
-		TotalDelayedCount: big.NewInt(1),
-		SequencerMessage:  endOfBlockMessage.ToBytes(),
-	}
-	err = endBlockBatchItem.RecomputeAccumulator(batchItem.Accumulator, big.NewInt(1), delayedAcc)
-	test.FailIfError(t, err)
 
+	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, batchItem.Accumulator)
 	_, err = seqInbox.AddSequencerL2Batch(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
 	test.FailIfError(t, err)
 	client.Commit()
@@ -268,15 +258,18 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
+	nodehealth.Init(healthChan)
+
 	go func() {
-		if err := nodehealth.NodeHealthCheck(healthChan); err != nil {
-			logger.Error().Err(err).Msg("healthcheck failed")
-		}
+		nodehealth.StartNodeHealthCheck(ctx, healthChan)
 	}()
 
-	reader, err := mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
 	test.FailIfError(t, err)
-	defer reader.Stop()
 
 	for i := 1; i <= 10; i++ {
 		msgCount, err := mon.Core.GetMessageCount()
@@ -294,6 +287,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	}
 
 	faultsExist := faultConfig != challenge.FaultConfig{}
+	t.Log("faultsExist:", faultsExist)
 
 	var targetNode *big.Int
 	if faultsExist {
@@ -305,11 +299,19 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	var lastChallenge *common.Address
 	faultyStakerAlive := false
 	faultyStakerDead := false
+
+	stakerMadeFirstMove := false
 	for i := 400; i >= 0; i-- {
 		if (i % 2) == 0 {
-			_, err := staker.Act(ctx)
+			fmt.Println("Honest staker acting")
+			tx, err := staker.Act(ctx)
 			test.FailIfError(t, err)
-		} else if !faultyStakerAlive || !faultyStakerDead {
+			if tx != nil {
+				stakerMadeFirstMove = true
+			}
+
+		} else if (!faultyStakerAlive || !faultyStakerDead) && stakerMadeFirstMove {
+			fmt.Println("Malicious staker acting")
 			_, err = faultyStaker.Act(ctx)
 			if err != nil {
 				errString := err.Error()
@@ -385,12 +387,27 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	}
 }
 
+func calculateGasToFirstInbox(t *testing.T) *big.Int {
+	mon, shutdown := monitor.PrepareArbCore(t)
+	defer shutdown()
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
+	test.FailIfError(t, err)
+	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
+	t.Logf("Found first inbox instruction starting at %v", inboxGas)
+	return inboxGas
+}
+
 func TestChallengeToOSP(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400), OneStepProof)
+}
+
+func TestChallengeToInboxOSP(t *testing.T) {
+	inboxGas := calculateGasToFirstInbox(t)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, new(big.Int).Add(inboxGas, big.NewInt(10000)), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400*2), Timeout)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), Timeout)
 }
 
 func TestStakersCooperative(t *testing.T) {

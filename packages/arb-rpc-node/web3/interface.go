@@ -32,12 +32,13 @@ type GetBlockResult struct {
 }
 
 type CallTxArgs struct {
-	From     *common.Address `json:"from"`
-	To       *common.Address `json:"to"`
-	Gas      *hexutil.Uint64 `json:"gas"`
-	GasPrice *hexutil.Big    `json:"gasPrice"`
-	Value    *hexutil.Big    `json:"value"`
-	Data     *hexutil.Bytes  `json:"data"`
+	From       *common.Address `json:"from"`
+	To         *common.Address `json:"to"`
+	Gas        *hexutil.Uint64 `json:"gas"`
+	GasPrice   *hexutil.Big    `json:"gasPrice"`
+	Value      *hexutil.Big    `json:"value"`
+	Data       *hexutil.Bytes  `json:"data"`
+	Aggregator *common.Address `json:"aggregator"`
 }
 
 type FeeSetResult struct {

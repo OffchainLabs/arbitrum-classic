@@ -415,16 +415,6 @@ OneStepProof MachineState::marshalForProof() const {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
     }
-    // Inbox or inbox peek
-    if (current_op.opcode == OpCode::INBOX) {
-        if (context.inboxEmpty()) {
-            throw std::runtime_error("Can't generate proof with empty inbox");
-        }
-        auto message_data = context.peekInbox().message.serializeForProof();
-        proof.standard_proof.insert(proof.standard_proof.end(),
-                                    message_data.begin(), message_data.end());
-        throw std::runtime_error("TODO: sequencer inbox proof");
-    }
     return proof;
 }
 
@@ -862,13 +852,7 @@ BlockReason MachineState::runOp(OpCode opcode) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
-    auto state_hash = val.hash();
-    if (state_hash) {
-        os << "hash " << intx::to_string(*state_hash, 16) << "\n";
-    } else {
-        os << "hash not available because staged value unresolved"
-           << "\n";
-    }
+    os << "hash " << intx::to_string(val.hash(), 16) << "\n";
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";

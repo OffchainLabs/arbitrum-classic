@@ -214,7 +214,7 @@ contract SequencerInbox is ISequencerInbox {
             }
             bytes32 messageHash =
                 Messages.messageHash(
-                    L2_MSG,
+                    messageType,
                     msg.sender,
                     l1BlockNumber,
                     timestamp, // solhint-disable-line not-rely-on-time

@@ -17,14 +17,16 @@
 package arbostest
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
-	"testing"
 )
 
 func TestGas(t *testing.T) {
@@ -84,7 +86,7 @@ func TestGas(t *testing.T) {
 		message.NewSafeL2Message(store2FuncCallTx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	allResultsSucceeded(t, results)

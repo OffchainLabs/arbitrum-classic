@@ -127,11 +127,7 @@ int main(int argc, char* argv[]) {
     saveMachine(*tx, *mach);
     tx->commit();
 
-    auto mach_hash = mach->hash();
-    if (!mach_hash.has_value()) {
-        throw std::runtime_error("Can't get machine hash");
-    }
-    auto mach2 = storage.getMachine(*mach->hash(), value_cache);
+    auto mach2 = storage.getMachine(mach->hash(), value_cache);
     execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();

@@ -24,9 +24,8 @@ import { ERC20 } from './abi/ERC20'
 
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { addressToSymbol } from './bridge_helpers'
-import { TransactionOverrides } from './bridge_helpers'
+import { PayableOverrides } from '@ethersproject/contracts'
 
-utils.computeAddress
 const MIN_APPROVAL = constants.MaxUint256
 //TODO handle address update / lowercase
 
@@ -51,6 +50,9 @@ export interface Tokens {
   [contractAddress: string]: L1TokenData | undefined
 }
 
+/**
+ * L1 side only of {@link Bridge}
+ */
 export class L1Bridge {
   l1Signer: Signer
   ethERC20Bridge: EthERC20Bridge
@@ -91,7 +93,6 @@ export class L1Bridge {
     }
     this.l1Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
-    const indboxAddress = (await this.getInbox()).address
 
     if (!tokenData.ERC20) {
       if ((await this.l1Provider.getCode(erc20L1Address)).length > 2) {
@@ -100,26 +101,29 @@ export class L1Bridge {
           erc20L1Address,
           this.l1Signer
         )
-        const balance = await ethERC20TokenContract.balanceOf(walletAddress)
+        const [balance] = await ethERC20TokenContract.functions.balanceOf(
+          walletAddress
+        )
 
-        const allowance = await ethERC20TokenContract.allowance(
+        const [allowance] = await ethERC20TokenContract.functions.allowance(
           walletAddress,
           this.ethERC20Bridge.address
         )
         // non-standard
-        let symbol, decimals, name
-        try {
-          symbol = await ethERC20TokenContract.symbol()
-          decimals = await ethERC20TokenContract.decimals()
-          name = await ethERC20TokenContract.name()
-        } catch (e) {
-          console.info(
-            `Weird but technically standard ERC20! ah! ${erc20L1Address}`
-          )
-          symbol = addressToSymbol(erc20L1Address)
-          decimals = 18 // 🤷‍♂️
-          name = symbol + '_Token'
-        }
+        const symbol = await ethERC20TokenContract.functions
+          .symbol()
+          .then(([res]) => res)
+          .catch(_ => addressToSymbol(erc20L1Address))
+
+        const decimals = await ethERC20TokenContract.functions
+          .decimals()
+          .then(([res]) => res)
+          .catch(_ => 18)
+
+        const name = await ethERC20TokenContract.functions
+          .name()
+          .then(([res]) => res)
+          .catch(_ => symbol + '_Token')
 
         const allowed = await allowance.gte(MIN_APPROVAL.div(2))
         tokenData.ERC20 = {
@@ -138,11 +142,13 @@ export class L1Bridge {
         erc20L1Address,
         this.l1Signer
       )
-      const balance = await ethERC20TokenContract.balanceOf(walletAddress)
+      const [balance] = await ethERC20TokenContract.functions.balanceOf(
+        walletAddress
+      )
       tokenData.ERC20.balance = balance
 
       if (!tokenData.ERC20.allowed) {
-        const allowance = await ethERC20TokenContract.allowance(
+        const [allowance] = await ethERC20TokenContract.functions.allowance(
           walletAddress,
           this.ethERC20Bridge.address
         )
@@ -150,7 +156,6 @@ export class L1Bridge {
       }
     }
 
-    // TODO: erc777? meh
     return tokenData
   }
 
@@ -158,11 +163,11 @@ export class L1Bridge {
     value: BigNumber,
     destinationAddress?: string,
     maxGas: BigNumber = BigNumber.from(5000),
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     const address = destinationAddress || (await this.getWalletAddress())
     const inbox = await this.getInbox()
-    return inbox.sendL1FundedContractTransaction(
+    return inbox.functions.sendL1FundedContractTransaction(
       maxGas,
       BigNumber.from(0),
       address,
@@ -176,13 +181,13 @@ export class L1Bridge {
 
   public async approveToken(
     erc20L1Address: string,
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
     }
-    return tokenData.ERC20.contract.approve(
+    return tokenData.ERC20.contract.functions.approve(
       this.ethERC20Bridge.address,
       MIN_APPROVAL,
       overrides
@@ -196,14 +201,14 @@ export class L1Bridge {
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string,
-    overrides: TransactionOverrides = {}
+    overrides: PayableOverrides = {}
   ) {
     const destination = destinationAddress || (await this.getWalletAddress())
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
     if (!tokenData.ERC20) {
       throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
     }
-    return this.ethERC20Bridge.deposit(
+    return this.ethERC20Bridge.functions.deposit(
       erc20L1Address,
       destination,
       amount,

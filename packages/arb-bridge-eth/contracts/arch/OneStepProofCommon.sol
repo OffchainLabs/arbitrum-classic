@@ -305,7 +305,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
         AssertionContext memory context;
         context.sequencerBridge = ISequencerInbox(bridges[0]);
-        context.delayedBridge = IBridge(bridges[0]);
+        context.delayedBridge = IBridge(bridges[1]);
         context.startMachine = mach;
         context.afterMachine = mach.clone();
         context.totalMessagesRead = initialMessagesRead;

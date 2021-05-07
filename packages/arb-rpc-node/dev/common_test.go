@@ -17,12 +17,20 @@
 package dev
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 var arbosfile *string
@@ -33,7 +41,12 @@ type ArbOSExec struct {
 }
 
 func TestMain(m *testing.M) {
-	arbosfile = flag.String("arbos", arbos.Path(), "version of arbos to run tests against")
+	arbosPath, err := arbos.Path()
+	if err != nil {
+		panic(err)
+	}
+
+	arbosfile = flag.String("arbos", arbosPath, "version of arbos to run tests against")
 	flag.Parse()
 
 	fileData, err := ioutil.ReadFile(*arbosfile)
@@ -57,4 +70,35 @@ func skipBelowVersion(t *testing.T, ver int) {
 	if arbosVersion < ver {
 		t.Skipf("Skipping test because version %v too below supported version %v", arbosVersion, ver)
 	}
+}
+
+func NewTestDevNode(
+	t *testing.T,
+	arbosPath string,
+	params protocol.ChainParams,
+	owner common.Address,
+	config []message.ChainConfigOption,
+) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
+	backend, db, rollupAddress, cancelDevNode, txDBErrChan, err := NewDevNode(
+		ctx,
+		t.TempDir(),
+		arbosPath,
+		params,
+		owner,
+		config,
+	)
+	test.FailIfError(t, err)
+	go func() {
+		if err := <-txDBErrChan; err != nil {
+			t.Error(err)
+			cancel()
+		}
+	}()
+	closeFunc := func() {
+		cancelDevNode()
+		cancel()
+	}
+	srv := aggregator.NewServer(backend, rollupAddress, db)
+	return backend, db, srv, closeFunc
 }

@@ -54,6 +54,19 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'l1Address',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',

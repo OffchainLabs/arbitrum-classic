@@ -3,7 +3,6 @@ package staker
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -11,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -181,8 +181,29 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	coreMessageCount := v.lookup.MachineMessagesRead()
 	if coreMessageCount.Cmp(startState.TotalMessagesRead) < 0 {
-		return nil, false, fmt.Errorf("catching up to chain (%v/%v)", coreMessageCount.String(), startState.TotalMessagesRead.String())
+		logger.Info().
+			Str("localcount", coreMessageCount.String()).
+			Str("target", startState.TotalMessagesRead.String()).
+			Msg("catching up to chain")
+		return nil, false, nil
 	}
+
+	currentBlock, err := getBlockID(ctx, v.client, nil)
+	if err != nil {
+		return nil, false, err
+	}
+
+	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+
+	timeSinceProposed := new(big.Int).Sub(currentBlock.Height.AsInt(), startState.ProposedBlock)
+	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
+		// Too soon to assert
+		return nil, false, nil
+	}
+
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
 		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
@@ -214,22 +235,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
 
-	currentBlock, err := getBlockID(ctx, v.client, nil)
-	if err != nil {
-		return nil, false, err
-	}
-
-	minAssertionPeriod, err := v.rollup.MinimumAssertionPeriod(ctx)
-	if err != nil {
-		return nil, false, err
-	}
-
-	timeSinceProposed := new(big.Int).Sub(currentBlock.Height.AsInt(), startState.ProposedBlock)
-	if timeSinceProposed.Cmp(minAssertionPeriod) < 0 {
-		// Too soon to assert
-		return nil, false, nil
-	}
-
 	arbGasSpeedLimitPerBlock, err := v.rollup.ArbGasSpeedLimitPerBlock(ctx)
 	if err != nil {
 		return nil, false, err
@@ -243,14 +248,14 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor)
+	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, false)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
 	if len(successorNodes) > 0 {
 		logger.Info().Int("count", len(successorNodes)).Msg("Examining existing potential successors")
 	}
-	for _, nd := range successorNodes {
+	for nodeI, nd := range successorNodes {
 		if correctNode != nil && wrongNodesExist {
 			// We've found everything we could hope to find
 			break
@@ -284,6 +289,10 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
 				if err != nil {
 					return nil, false, err
+				}
+				if nodeI != len(successorNodes)-1 && stakerInfo.latestExecutionCursor != nil {
+					// We will need to use this execution tracker more, so we need to clone this cursor
+					stakerInfo.latestExecutionCursor = stakerInfo.latestExecutionCursor.Clone()
 				}
 				continue
 			} else {
@@ -333,7 +342,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	var seqBatchProof []byte
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := v.lookupBatchContaining(ctx, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		batch, err := challenge.LookupBatchContaining(ctx, v.lookup, v.sequencerInbox, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
 		if err != nil {
 			return nil, false, err
 		}
@@ -362,39 +371,6 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	}
 	logger.Info().Str("hash", hex.EncodeToString(newNodeHash[:])).Int("lastNode", int(lastNum.Int64())).Int("parentNode", int(stakerInfo.LatestStakedNode.Int64())).Msg("Creating node")
 	return action, wrongNodesExist, nil
-}
-
-func (v *Validator) lookupBatchContaining(ctx context.Context, seqNum *big.Int) (ethbridge.SequencerBatchRef, error) {
-	fromBlock, err := v.lookup.GetSequencerBlockNumberAt(seqNum)
-	if err != nil {
-		return nil, err
-	}
-	maxDelay, err := v.sequencerInbox.GetMaxDelayBlocks(ctx)
-	if err != nil {
-		return nil, err
-	}
-	toBlock := new(big.Int).Add(fromBlock, maxDelay)
-	latestBlock, err := v.client.BlockInfoByNumber(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	latestBlockNumber := (*big.Int)(latestBlock.Number)
-	if toBlock.Cmp(latestBlockNumber) > 0 {
-		toBlock = latestBlockNumber
-	}
-
-	batchRefs, err := v.sequencerInbox.LookupBatchesInRange(ctx, fromBlock, toBlock)
-	if err != nil {
-		return nil, err
-	}
-	var found ethbridge.SequencerBatchRef
-	for _, batchRef := range batchRefs {
-		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
-			found = batchRef
-			break
-		}
-	}
-	return found, nil
 }
 
 func (v *Validator) generateBatchEndProof(count *big.Int) ([]byte, error) {

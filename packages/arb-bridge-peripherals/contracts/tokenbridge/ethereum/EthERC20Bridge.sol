@@ -259,7 +259,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         bytes memory deployData,
         bytes memory callHookData
     ) internal returns (uint256) {
-        IERC20(erc20).safeTransferFrom(sender, l2ArbTokenBridgeAddress, amount);
+        IERC20(erc20).safeTransferFrom(sender, address(this), amount);
 
         bytes memory data =
             abi.encodeWithSelector(

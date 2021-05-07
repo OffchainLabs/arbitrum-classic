@@ -19,11 +19,13 @@ package txdb
 import (
 	"context"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
 	"time"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	lru "github.com/hashicorp/golang-lru"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -74,10 +76,10 @@ func New(
 	as machine.NodeStore,
 	chain common.Address,
 	updateFrequency time.Duration,
-) (*TxDB, error) {
+) (*TxDB, <-chan error, error) {
 	snapshotCache, err := lru.New(100)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	db := &TxDB{
 		Lookup:        arbCore,
@@ -87,20 +89,8 @@ func New(
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
-	go func() {
-		err := <-errChan
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if err == nil {
-				return
-			}
-			log.Fatal().Err(err).Msg("error reading logs")
-		}
-	}()
 	db.logReader = logReader
-	return db, nil
+	return db, errChan, nil
 }
 
 func (db *TxDB) Close() {

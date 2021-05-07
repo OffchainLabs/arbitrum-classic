@@ -17,14 +17,16 @@
 package arbostest
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"math/big"
-	"testing"
 )
 
 func TestGetStorageAt(t *testing.T) {
@@ -56,13 +58,13 @@ func TestGetStorageAt(t *testing.T) {
 	}
 
 	inboxMessages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(constructorTx), sender, big.NewInt(1), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(getStorageAtTx), common.Address{}, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(failGetStorageAtTx), sender, big.NewInt(3), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, inboxMessages, 3, 0)
+	logs, _, _ := runAssertion(t, inboxMessages, 3, 0)
 	results := processTxResults(t, logs)
 
 	constructorRes := results[0]

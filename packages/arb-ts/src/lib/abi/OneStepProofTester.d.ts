@@ -22,12 +22,13 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface OneStepProofTesterInterface extends ethers.utils.Interface {
   functions: {
-    'executeStepTest(address,address,uint256,bytes32[2],bytes,bytes)': FunctionFragment
+    'executeStepTest(address,address,address,uint256,bytes32[2],bytes,bytes)': FunctionFragment
   }
 
   encodeFunctionData(
     functionFragment: 'executeStepTest',
     values: [
+      string,
       string,
       string,
       BigNumberish,
@@ -65,6 +66,7 @@ export class OneStepProofTester extends Contract {
   functions: {
     executeStepTest(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -73,8 +75,9 @@ export class OneStepProofTester extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'executeStepTest(address,address,uint256,bytes32[2],bytes,bytes)'(
+    'executeStepTest(address,address,address,uint256,bytes32[2],bytes,bytes)'(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -86,6 +89,7 @@ export class OneStepProofTester extends Contract {
 
   executeStepTest(
     executor: string,
+    sequencerBridge: string,
     bridge: string,
     initialMessagesRead: BigNumberish,
     accs: [BytesLike, BytesLike],
@@ -94,8 +98,9 @@ export class OneStepProofTester extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'executeStepTest(address,address,uint256,bytes32[2],bytes,bytes)'(
+  'executeStepTest(address,address,address,uint256,bytes32[2],bytes,bytes)'(
     executor: string,
+    sequencerBridge: string,
     bridge: string,
     initialMessagesRead: BigNumberish,
     accs: [BytesLike, BytesLike],
@@ -107,6 +112,7 @@ export class OneStepProofTester extends Contract {
   callStatic: {
     executeStepTest(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -115,8 +121,9 @@ export class OneStepProofTester extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'executeStepTest(address,address,uint256,bytes32[2],bytes,bytes)'(
+    'executeStepTest(address,address,address,uint256,bytes32[2],bytes,bytes)'(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -137,6 +144,7 @@ export class OneStepProofTester extends Contract {
   estimateGas: {
     executeStepTest(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -145,8 +153,9 @@ export class OneStepProofTester extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'executeStepTest(address,address,uint256,bytes32[2],bytes,bytes)'(
+    'executeStepTest(address,address,address,uint256,bytes32[2],bytes,bytes)'(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -159,6 +168,7 @@ export class OneStepProofTester extends Contract {
   populateTransaction: {
     executeStepTest(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
@@ -167,8 +177,9 @@ export class OneStepProofTester extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'executeStepTest(address,address,uint256,bytes32[2],bytes,bytes)'(
+    'executeStepTest(address,address,address,uint256,bytes32[2],bytes,bytes)'(
       executor: string,
+      sequencerBridge: string,
       bridge: string,
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],

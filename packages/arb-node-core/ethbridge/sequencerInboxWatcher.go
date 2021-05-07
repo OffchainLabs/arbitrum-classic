@@ -74,6 +74,10 @@ func NewSequencerInboxWatcher(address ethcommon.Address, client ethutils.EthClie
 	}, nil
 }
 
+func (r *SequencerInboxWatcher) Address() ethcommon.Address {
+	return r.address
+}
+
 func (r *SequencerInboxWatcher) CurrentBlockHeight(ctx context.Context) (*big.Int, error) {
 	latestHeader, err := r.client.HeaderByNumber(ctx, nil)
 	if err != nil {
@@ -173,13 +177,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 			ChainTime:   b.ChainTime,
 		}
 		dataOffset += length
-		item := inbox.SequencerBatchItem{
-			LastSeqNum:        nextSeqNum,
-			Accumulator:       common.Hash{},
-			TotalDelayedCount: startDelayedCount,
-			SequencerMessage:  seqMsg.ToBytes(),
-		}
-		item.RecomputeAccumulator(lastAcc, startDelayedCount, common.Hash{})
+		item := inbox.NewSequencerItem(startDelayedCount, seqMsg, lastAcc)
 		lastAcc = item.Accumulator
 		nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
 		ret = append(ret, item)
@@ -188,13 +186,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	if hasDelayed {
 		// Create batch item to read delayed messages
 		lastSeqNum := new(big.Int).Sub(b.AfterCount, big.NewInt(2))
-		item := inbox.SequencerBatchItem{
-			LastSeqNum:        lastSeqNum,
-			Accumulator:       common.Hash{},
-			TotalDelayedCount: b.TotalDelayedMessagesRead,
-			SequencerMessage:  []byte{},
-		}
-		item.RecomputeAccumulator(lastAcc, startDelayedCount, b.DelayedAcc)
+		item := inbox.NewDelayedItem(lastSeqNum, b.TotalDelayedMessagesRead, lastAcc, startDelayedCount, b.DelayedAcc)
 		lastAcc = item.Accumulator
 		ret = append(ret, item)
 
@@ -207,13 +199,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 			Data:        []byte{},
 			ChainTime:   b.ChainTime,
 		}
-		item2 := inbox.SequencerBatchItem{
-			LastSeqNum:        endSeqNum,
-			Accumulator:       common.Hash{},
-			TotalDelayedCount: b.TotalDelayedMessagesRead,
-			SequencerMessage:  endBlockMessage.ToBytes(),
-		}
-		item2.RecomputeAccumulator(lastAcc, b.TotalDelayedMessagesRead, b.DelayedAcc)
+		item2 := inbox.NewSequencerItem(b.TotalDelayedMessagesRead, endBlockMessage, lastAcc)
 		lastAcc = item2.Accumulator
 		ret = append(ret, item2)
 	}
