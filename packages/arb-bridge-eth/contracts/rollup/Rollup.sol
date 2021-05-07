@@ -502,6 +502,10 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
                     frame.prevNode.deadlineBlock()
                 )
                     .add(checkTime);
+                uint256 olderSibling = frame.prevNode.latestChildNumber();
+                if (olderSibling != 0) {
+                    deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
+                }
             }
 
             rollupEventBridge.nodeCreated(

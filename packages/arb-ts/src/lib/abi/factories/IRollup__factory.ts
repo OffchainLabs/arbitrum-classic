@@ -89,8 +89,14 @@ const _abi = [
       },
       {
         indexed: false,
+        internalType: 'uint256',
+        name: 'afterInboxBatchEndCount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
         internalType: 'bytes32',
-        name: 'afterInboxAcc',
+        name: 'afterInboxBatchAcc',
         type: 'bytes32',
       },
       {
@@ -227,9 +233,9 @@ const _abi = [
         type: 'bytes',
       },
       {
-        internalType: 'address[6]',
+        internalType: 'address[7]',
         name: 'connectedContracts',
-        type: 'address[6]',
+        type: 'address[7]',
       },
     ],
     name: 'initialize',
