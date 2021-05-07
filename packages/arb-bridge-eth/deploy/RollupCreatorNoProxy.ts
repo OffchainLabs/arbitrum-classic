@@ -11,12 +11,12 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const challengeFactory = await deployments.get('ChallengeFactory')
   const nodeFactory = await deployments.get('NodeFactory')
 
-  const dep = await deploy('RollupCreator', {
+  const dep = await deploy('RollupCreatorNoProxy', {
     from: await deployer.getAddress(),
     args: [],
   })
 
-  const RollupCreator = await ethers.getContractFactory('RollupCreator')
+  const RollupCreator = await ethers.getContractFactory('RollupCreatorNoProxy')
   const rollupCreator = RollupCreator.attach(dep.address).connect(deployer)
   await rollupCreator.setTemplates(
     bridgeCreator.address,
@@ -27,7 +27,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 }
 
 module.exports = func
-module.exports.tags = ['RollupCreator', 'live']
+module.exports.tags = ['RollupCreatorNoProxy', 'test']
 module.exports.dependencies = [
   'Rollup',
   'ChallengeFactory',

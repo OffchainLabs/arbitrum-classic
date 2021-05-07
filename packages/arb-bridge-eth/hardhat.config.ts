@@ -57,6 +57,16 @@ task('create-chain', 'Creates a rollup chain')
       receipt.logs[receipt.logs.length - 1]
     )
     console.log(ev)
+    
+    // const path = `rollup-${hre.network.name}.json`
+    const path = `rollup-${hre.network.name}.json`
+    const output = JSON.stringify({
+      rollupAddress: ev.args[0],
+      inboxAddress: ev.args[1],
+    })
+    
+    fs.writeFileSync(path, output)
+    console.log("New rollup chain created and output written to:", `${process.cwd()}:${path}`)
   })
 
 task('deposit', 'Deposit coins into ethbridge')

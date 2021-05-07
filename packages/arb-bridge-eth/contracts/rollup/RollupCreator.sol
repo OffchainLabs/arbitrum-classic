@@ -38,10 +38,10 @@ import "../libraries/ICloneable.sol";
 contract RollupCreator is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress, address inboxAddress);
 
-    BridgeCreator bridgeCreator;
-    ICloneable rollupTemplate;
-    address challengeFactory;
-    address nodeFactory;
+    BridgeCreator public bridgeCreator;
+    ICloneable public rollupTemplate;
+    address public challengeFactory;
+    address public nodeFactory;
 
     function setTemplates(
         BridgeCreator _bridgeCreator,

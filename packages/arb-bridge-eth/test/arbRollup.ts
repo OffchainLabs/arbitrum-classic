@@ -15,7 +15,7 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, deployments, run } from 'hardhat'
 import { Signer, BigNumberish } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
@@ -24,7 +24,7 @@ import { Node as NodeCon } from '../build/types/Node'
 import { RollupCreatorNoProxy } from '../build/types/RollupCreatorNoProxy'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
-import deploy_contracts from '../scripts/deploy'
+// import deploy_contracts from '../scripts/deploy'
 import { initializeAccounts } from './utils'
 
 import {
@@ -142,7 +142,11 @@ let prevNode: Node
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await initializeAccounts()
-    const { RollupCreatorNoProxy } = await deploy_contracts()
+    
+    await run("deploy", {"tags": "test"})
+
+    const RollupDeployment = await deployments.get("RollupCreatorNoProxy")
+    const RollupCreatorNoProxy = await ethers.getContractAt("RollupCreatorNoProxy", RollupDeployment.address)
     rollupCreator = RollupCreatorNoProxy as RollupCreatorNoProxy
   })
 

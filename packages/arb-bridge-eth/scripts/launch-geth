@@ -15,5 +15,6 @@ docker run -d -it --rm -p 7545:7545 -p 7546:7546 \
        --gcmode=archive
 while ! nc -z localhost 7545; do sleep 2; done;
 echo "Finished waiting for geth on localhost:7545..."
-yarn hardhat deploy --network local_development --export bridge_eth_addresses.json && [ -f bridge_eth_addresses.json ]
+rm -rf deployments/local_development
+yarn deploy:live --network local_development --export bridge_eth_addresses.json && [ -f bridge_eth_addresses.json ]
 docker attach arb-bridge-eth-geth

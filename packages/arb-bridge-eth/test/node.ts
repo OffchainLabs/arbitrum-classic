@@ -15,20 +15,23 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, run, deployments } from 'hardhat'
 import { Signer, BigNumberish } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
 
 import { Node } from '../build/types/Node'
 import { NodeFactory } from '../build/types/NodeFactory'
-import deploy_contracts from '../scripts/deploy'
 
 let nodeFactory: NodeFactory
 describe('NodeFactory', () => {
   it('should deploy contracts', async function () {
-    const { NodeFactory } = await deploy_contracts()
-    nodeFactory = NodeFactory as NodeFactory
+    await run("deploy", {"tags": "test"})
+
+    const NodeFactoryDeployment = await deployments.get("NodeFactory")
+    const nodeFactoryDeployment = await ethers.getContractAt("NodeFactory", NodeFactoryDeployment.address)
+    
+    nodeFactory = nodeFactoryDeployment as NodeFactory
   })
 
   it('should create node', async function () {
