@@ -70,7 +70,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, params protoc
 	}
 
 	l1 := NewL1Emulator()
-	backendCore := NewBackendCore(mon.Core, signer.ChainID())
+	backendCore := NewBackendCore(ctx, mon.Core, signer.ChainID())
 
 	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
 	if err != nil {
@@ -88,7 +88,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, params protoc
 		mon.Close()
 	}
 
-	backend := NewBackend(backendCore, db, l1, signer, aggregator, big.NewInt(100000000000))
+	backend := NewBackend(ctx, backendCore, db, l1, signer, aggregator, big.NewInt(100000000000))
 
 	return backend, db, rollupAddress, cancel, errChan, nil
 }
@@ -144,12 +144,14 @@ func (s *EVM) IncreaseTime(amount int64) (string, error) {
 }
 
 type BackendCore struct {
+	ctx     context.Context
 	arbcore core.ArbCore
 	chainID *big.Int
 }
 
-func NewBackendCore(arbcore core.ArbCore, chainID *big.Int) *BackendCore {
+func NewBackendCore(ctx context.Context, arbcore core.ArbCore, chainID *big.Int) *BackendCore {
 	return &BackendCore{
+		ctx:     ctx,
 		arbcore: arbcore,
 		chainID: chainID,
 	}
@@ -198,7 +200,12 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 		if b.arbcore.MachineIdle() {
 			break
 		}
-		<-time.After(time.Millisecond * 1000)
+		select {
+		case <-b.ctx.Done():
+			return [32]byte{}, errors.New("dev node canceled")
+		case <-time.After(time.Millisecond * 200):
+		}
+
 	}
 	for {
 		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
@@ -212,7 +219,11 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 		if cursorPos.Cmp(coreLogs) == 0 {
 			break
 		}
-		<-time.After(time.Millisecond * 200)
+		select {
+		case <-b.ctx.Done():
+			return [32]byte{}, errors.New("dev node canceled")
+		case <-time.After(time.Millisecond * 200):
+		}
 	}
 
 	return requestId, nil
@@ -221,6 +232,7 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 type Backend struct {
 	sync.Mutex
 	*BackendCore
+	ctx               context.Context
 	db                *txdb.TxDB
 	l1Emulator        *L1Emulator
 	signer            types.Signer
@@ -231,9 +243,10 @@ type Backend struct {
 	newTxFeed event.Feed
 }
 
-func NewBackend(core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
+func NewBackend(ctx context.Context, core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
 	return &Backend{
 		BackendCore:       core,
+		ctx:               ctx,
 		db:                db,
 		l1Emulator:        l1,
 		signer:            signer,

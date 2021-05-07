@@ -53,7 +53,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000000,
+		ArbGasSpeedLimitPerSecond: 2000000000,
 	}
 
 	netFeeRecipient := common.RandAddress()

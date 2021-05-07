@@ -102,6 +102,11 @@ func processResults(t *testing.T, logs []value.Value) []evm.Result {
 	for _, avmLog := range logs {
 		res, err := evm.NewResultFromValue(avmLog)
 		failIfError(t, err)
+		if res, ok := res.(*evm.BlockInfo); ok {
+			if res.GasLimit().Cmp(big.NewInt(100000000000)) > 0 {
+				t.Error("block gas limit too high", res.GasLimit())
+			}
+		}
 		results = append(results, res)
 	}
 	return results

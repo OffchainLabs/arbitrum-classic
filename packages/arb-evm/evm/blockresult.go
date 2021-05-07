@@ -17,9 +17,12 @@
 package evm
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type OutputStatistics struct {
@@ -69,7 +72,10 @@ func (b *BlockInfo) FirstAVMSend() *big.Int {
 }
 
 func (b *BlockInfo) GasLimit() *big.Int {
-	limit := new(big.Int).Set(b.GasSummary.GasPool)
+	limit := big.NewInt(0)
+	if b.GasSummary.GasPool.Cmp(limit) > 0 {
+		limit = limit.Set(b.GasSummary.GasPool)
+	}
 	if b.BlockStats.GasUsed.Cmp(limit) > 0 {
 		limit = limit.Set(b.BlockStats.GasUsed)
 	}
@@ -218,7 +224,7 @@ func parseGasAccountingSummary(val value.Value) (*GasAccountingSummary, error) {
 		PricePerArbGasBase:       pricePerArbGasBaseInt.BigInt(),
 		PricePerArbGasCongestion: pricePerArbGasCongestionInt.BigInt(),
 		PricePerArbGasTotal:      pricePerArbGasTotalInt.BigInt(),
-		GasPool:                  gasPoolInt.BigInt(),
+		GasPool:                  math.S256(gasPoolInt.BigInt()),
 	}, nil
 }
 

@@ -79,8 +79,9 @@ func NewTestDevNode(
 	owner common.Address,
 	config []message.ChainConfigOption,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
+	ctx, cancel := context.WithCancel(context.Background())
 	backend, db, rollupAddress, cancelDevNode, txDBErrChan, err := NewDevNode(
-		context.Background(),
+		ctx,
 		t.TempDir(),
 		arbosPath,
 		params,
@@ -91,10 +92,12 @@ func NewTestDevNode(
 	go func() {
 		if err := <-txDBErrChan; err != nil {
 			t.Error(err)
+			cancel()
 		}
 	}()
 	closeFunc := func() {
 		cancelDevNode()
+		cancel()
 	}
 	srv := aggregator.NewServer(backend, rollupAddress, db)
 	return backend, db, srv, closeFunc
