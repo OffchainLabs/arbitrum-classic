@@ -37,10 +37,10 @@ import (
 
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 
-func TestContructor(t *testing.T) {
+func TestConstructor(t *testing.T) {
 	client, pks := test.SimulatedBackend(t)
 
-	tx := types.NewContractCreation(0, big.NewInt(0), 1000000, big.NewInt(0), constructorData)
+	tx := types.NewContractCreation(0, big.NewInt(0), 5000000, big.NewInt(0), constructorData)
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
 	failIfError(t, err)
 
@@ -62,7 +62,7 @@ func TestContructor(t *testing.T) {
 	failIfError(t, err)
 
 	messages := []message.Message{l2Message}
-	logs, _, snap, _ := runSimpleAssertion(t, messages)
+	logs, _, snap := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	res := results[0]
@@ -98,7 +98,7 @@ func TestContructor(t *testing.T) {
 	}
 }
 
-func TestContructorExistingBalance(t *testing.T) {
+func TestConstructorExistingBalance(t *testing.T) {
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	failIfError(t, err)
 
@@ -121,7 +121,7 @@ func TestContructorExistingBalance(t *testing.T) {
 		message.NewSafeL2Message(tx),
 	}
 
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[2], connAddress1)

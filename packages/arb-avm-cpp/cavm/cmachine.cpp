@@ -54,13 +54,9 @@ void machineDestroy(CMachine* m) {
 int machineHash(CMachine* m, void* ret) {
     assert(m);
     auto optionalHash = static_cast<Machine*>(m)->hash();
-    if (!optionalHash) {
-        return 0;
-    }
     std::array<unsigned char, 32> val{};
-    to_big_endian(*optionalHash, val.begin());
+    to_big_endian(optionalHash, val.begin());
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
-
     return 1;
 }
 

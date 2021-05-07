@@ -122,11 +122,11 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 
 		for {
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: true}
 				arbCorePosition := ir.db.MachineMessagesRead()
-				ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
-				if ir.healthChan != nil && arbCorePosition != nil {
+				if ir.healthChan != nil {
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "caughtUpTarget", ValBigInt: new(big.Int).Set(ir.caughtUpTarget)}
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: true}
+					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "loadingDatabase", ValBool: false}
 					ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "arbCorePosition", ValBigInt: new(big.Int).Set(arbCorePosition)}
 				}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
@@ -215,12 +215,18 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			if blocksToFetch == 0 {
 				blocksToFetch++
 			}
-			logger.Debug().
+
+			logMsg := logger.Debug().
 				Str("from", from.String()).
 				Str("to", to.String()).
 				Int("delayedCount", len(delayedMessages)).
-				Int("batchCount", len(sequencerBatches)).
-				Msg("Looking up messages")
+				Int("batchCount", len(sequencerBatches))
+			if len(sequencerBatches) > 0 {
+				logMsg = logMsg.
+					Str("beforeCount", sequencerBatches[0].GetBeforeCount().String()).
+					Str("afterCount", sequencerBatches[len(sequencerBatches)-1].GetAfterCount().String())
+			}
+			logMsg.Msg("Looking up messages")
 			if reorging {
 				from, err = ir.getPrevBlockForReorg(from)
 				if err != nil {
@@ -332,11 +338,7 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 	}
 	delayedMessages := make([]inbox.DelayedMessage, 0, len(deliveredDelayedMessages))
 	for _, deliveredMsg := range deliveredDelayedMessages {
-		msg := inbox.DelayedMessage{
-			DelayedSequenceNumber: deliveredMsg.Message.InboxSeqNum,
-			DelayedAccumulator:    deliveredMsg.AfterInboxAcc(),
-			Message:               deliveredMsg.Message.ToBytes(),
-		}
+		msg := inbox.NewDelayedMessage(deliveredMsg.BeforeInboxAcc, deliveredMsg.Message)
 		delayedMessages = append(delayedMessages, msg)
 	}
 	ir.MessageDeliveryMutex.Lock()

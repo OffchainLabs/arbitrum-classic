@@ -44,6 +44,8 @@ const stakeToken = '0x0000000000000000000000000000000000000000'
 const confirmationPeriodBlocks = 100
 const arbGasSpeedLimitPerBlock = 1000000
 const minimumAssertionPeriod = 75
+const sequencerDelayBlocks = 15
+const sequencerDelaySeconds = 900
 
 let rollupCreator: RollupCreatorNoProxy
 let rollup: RollupContract
@@ -64,6 +66,9 @@ async function createRollup(): Promise<{
     stakeRequirement,
     stakeToken,
     await accounts[0].getAddress(), // owner
+    await accounts[1].getAddress(), // sequencer
+    sequencerDelayBlocks,
+    sequencerDelaySeconds,
     '0x'
   )
 
@@ -124,6 +129,7 @@ async function makeSimpleNode(
     parentNode,
     challengedAssertion,
     zerobytes32,
+    '0x',
     prevNode
   )
   assert.equal(event.nodeHash, node.nodeHash)

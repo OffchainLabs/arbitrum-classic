@@ -333,9 +333,7 @@ void saveState(ReadWriteTransaction& transaction,
 void checkSavedState(const ReadWriteTransaction& transaction,
                      const Machine& expected_machine,
                      uint32_t expected_ref_count) {
-    auto expected_hash = expected_machine.hash();
-    REQUIRE(expected_hash);
-    auto results = getMachineStateKeys(transaction, *expected_hash);
+    auto results = getMachineStateKeys(transaction, expected_machine.hash());
     REQUIRE(std::holds_alternative<CountedData<MachineStateKeys>>(results));
     auto res = std::get<CountedData<MachineStateKeys>>(results);
     REQUIRE(res.reference_count == expected_ref_count);
@@ -363,9 +361,7 @@ void checkSavedState(const ReadWriteTransaction& transaction,
 
 void checkDeletedCheckpoint(ReadTransaction& transaction,
                             const Machine& deleted_machine) {
-    auto deleted_hash = deleted_machine.hash();
-    REQUIRE(deleted_hash);
-    auto results = getMachineStateKeys(transaction, *deleted_hash);
+    auto results = getMachineStateKeys(transaction, deleted_machine.hash());
     REQUIRE(std::holds_alternative<rocksdb::Status>(results));
 
     auto datastack_tup =
@@ -384,9 +380,7 @@ void checkDeletedCheckpoint(ReadTransaction& transaction,
 
 void deleteCheckpoint(ReadWriteTransaction& transaction,
                       const Machine& deleted_machine) {
-    auto deleted_hash = deleted_machine.hash();
-    REQUIRE(deleted_hash);
-    auto res = deleteMachine(transaction, *deleted_hash);
+    auto res = deleteMachine(transaction, deleted_machine.hash());
     REQUIRE(res.status.ok());
     checkDeletedCheckpoint(transaction, deleted_machine);
 }
@@ -493,11 +487,9 @@ TEST_CASE("Delete checkpoint") {
             saveState(*transaction2, machine, 2);
         }
         auto transaction3 = storage.makeReadWriteTransaction();
-        auto machine_hash = machine.hash();
-        REQUIRE(machine_hash);
-        auto res = deleteMachine(*transaction3, *machine.hash());
+        auto res = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res.status.ok());
-        auto res2 = deleteMachine(*transaction3, *machine.hash());
+        auto res2 = deleteMachine(*transaction3, machine.hash());
         REQUIRE(res2.status.ok());
         checkDeletedCheckpoint(*transaction3, machine);
     }
@@ -508,11 +500,9 @@ TEST_CASE("Delete checkpoint") {
         saveState(*transaction2, machine, 2);
 
         checkSavedState(*transaction, machine, 2);
-        auto machine_hash = machine.hash();
-        REQUIRE(machine_hash);
-        auto res = deleteMachine(*transaction, *machine.hash());
+        auto res = deleteMachine(*transaction, machine.hash());
         checkSavedState(*transaction, machine, 1);
-        auto res2 = deleteMachine(*transaction, *machine.hash());
+        auto res2 = deleteMachine(*transaction, machine.hash());
         checkDeletedCheckpoint(*transaction, machine);
     }
 }

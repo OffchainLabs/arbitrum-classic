@@ -17,9 +17,7 @@
 package monitor
 
 import (
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -30,23 +28,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (*Monitor, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
-	test.FailIfError(t, err)
+func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 	arbosPath, err := arbos.Path()
 	test.FailIfError(t, err)
-	monitor, err := NewMonitor(tmpDir, arbosPath)
-	if err != nil {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
-	}
+	monitor, err := NewMonitor(t.TempDir(), arbosPath)
+	test.FailIfError(t, err)
 
 	shutdown := func() {
 		monitor.Close()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
 	}
 	returning := false
 	defer (func() {
@@ -55,29 +44,9 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (*Monitor, func
 		}
 	})()
 
-	if len(messages) > 0 {
-		var batchItems []inbox.SequencerBatchItem
-		var prevAcc common.Hash
-		for i, msg := range messages {
-			batchItem := inbox.SequencerBatchItem{
-				LastSeqNum:        big.NewInt(int64(i)),
-				TotalDelayedCount: big.NewInt(0),
-				SequencerMessage:  msg.ToBytes(),
-			}
-			if err := batchItem.RecomputeAccumulator(prevAcc, big.NewInt(0), common.Hash{}); err != nil {
-				t.Fatal(err)
-			}
-			batchItems = append(batchItems, batchItem)
-			prevAcc = batchItem.Accumulator
-		}
-
-		_, err = core.DeliverMessagesAndWait(monitor.Core, common.Hash{}, batchItems, nil, nil)
-		test.FailIfError(t, err)
-	}
 	for {
-		msgCount, err := monitor.Core.GetMessageCount()
 		test.FailIfError(t, err)
-		if monitor.Core.MachineIdle() && msgCount.Cmp(big.NewInt(int64(len(messages)))) >= 0 {
+		if monitor.Core.MachineIdle() {
 			break
 		}
 		<-time.After(time.Millisecond * 200)
@@ -85,4 +54,31 @@ func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (*Monitor, func
 
 	returning = true
 	return monitor, shutdown
+}
+
+func DeliverMessagesToCore(t *testing.T, arbCore core.ArbCore, delayedCount *big.Int, prevAcc common.Hash, messages []inbox.InboxMessage) {
+	startAcc := prevAcc
+	var batchItems []inbox.SequencerBatchItem
+	for _, msg := range messages {
+		batchItem := inbox.NewSequencerItem(delayedCount, msg, prevAcc)
+		batchItems = append(batchItems, batchItem)
+		prevAcc = batchItem.Accumulator
+	}
+
+	beforeCount, err := arbCore.GetMessageCount()
+	test.FailIfError(t, err)
+
+	target := new(big.Int).Add(beforeCount, big.NewInt(int64(len(messages))))
+
+	_, err = core.DeliverMessagesAndWait(arbCore, startAcc, batchItems, nil, nil)
+	test.FailIfError(t, err)
+
+	for {
+		msgCount, err := arbCore.GetMessageCount()
+		test.FailIfError(t, err)
+		if arbCore.MachineIdle() && msgCount.Cmp(target) == 0 {
+			break
+		}
+		<-time.After(time.Millisecond * 200)
+	}
 }

@@ -144,7 +144,7 @@ func TestDepositEthTx(t *testing.T) {
 		tx4,
 		message.NewSafeL2Message(getBalance5),
 	}
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	checkConstructorResult(t, results[0], connAddress1)
@@ -158,15 +158,15 @@ func TestDepositEthTx(t *testing.T) {
 	succeededTxCheck(t, results[8])
 	succeededTxCheck(t, results[9])
 
-	balance1, err := arbos.ParseBalanceResult(results[2])
+	balance1, err := arbos.ParseBalanceResult(results[2].ReturnData)
 	failIfError(t, err)
-	balance2, err := arbos.ParseBalanceResult(results[4])
+	balance2, err := arbos.ParseBalanceResult(results[4].ReturnData)
 	failIfError(t, err)
-	balance3, err := arbos.ParseBalanceResult(results[6])
+	balance3, err := arbos.ParseBalanceResult(results[6].ReturnData)
 	failIfError(t, err)
-	balance4, err := arbos.ParseBalanceResult(results[7])
+	balance4, err := arbos.ParseBalanceResult(results[7].ReturnData)
 	failIfError(t, err)
-	balance5, err := arbos.ParseBalanceResult(results[9])
+	balance5, err := arbos.ParseBalanceResult(results[9].ReturnData)
 	failIfError(t, err)
 
 	if balance1.Cmp(big.NewInt(100)) != 0 {

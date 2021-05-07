@@ -48,12 +48,7 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	ckp, err := cmachine.NewArbStorage(ckpDir)
+	ckp, err := cmachine.NewArbStorage(b.TempDir())
 	if err != nil {
 		b.Fatal(err)
 	}

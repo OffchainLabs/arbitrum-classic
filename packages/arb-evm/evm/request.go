@@ -60,6 +60,20 @@ func NewValueFromOptional(val value.Value) (value.Value, error) {
 	return nestedVal, nil
 }
 
+func NewBoolFromValue(val value.Value) (bool, error) {
+	intVal, ok := val.(value.IntValue)
+	if !ok {
+		return false, errors.New("expected bool value to be an int")
+	}
+	if intVal.Equal(value.NewInt64Value(0)) {
+		return false, nil
+	} else if intVal.Equal(value.NewInt64Value(1)) {
+		return true, nil
+	} else {
+		return false, errors.Errorf("expected bool to be an integer either 0 or 1, but received integer %v", intVal)
+	}
+}
+
 type AggregatorInfo struct {
 	Aggregator    *common.Address
 	CalldataBytes *big.Int
@@ -210,6 +224,38 @@ func NewProvenanceFromValue(val value.Value) (Provenance, error) {
 	}, nil
 }
 
+type GasEstimationParams struct {
+	ComputeGasLimit            *big.Int
+	IgnoreInsufficientGasFunds bool
+}
+
+func NewGasEstimationParamsFromValue(val value.Value) (*GasEstimationParams, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok {
+		return nil, errors.New("gas estimation params must be a tuple")
+	}
+	if tup.Len() != 2 {
+		return nil, errors.Errorf("expected tuple of length 2, but recieved tuple of length %v", tup.Len())
+	}
+	computeGasLimitVal, _ := tup.GetByInt64(0)
+	ignoreInsufficientGasFundsVal, _ := tup.GetByInt64(1)
+
+	computeGasLimitInt, ok := computeGasLimitVal.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gas estimation params computeGasLimit must be an int")
+	}
+
+	ignoreInsufficientGasFunds, err := NewBoolFromValue(ignoreInsufficientGasFundsVal)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GasEstimationParams{
+		ComputeGasLimit:            computeGasLimitInt.BigInt(),
+		IgnoreInsufficientGasFunds: ignoreInsufficientGasFunds,
+	}, nil
+}
+
 type IncomingRequest struct {
 	Kind           inbox.Type
 	Sender         common.Address
@@ -221,6 +267,7 @@ type IncomingRequest struct {
 	Provenance     Provenance
 	AggregatorInfo *AggregatorInfo
 	AdminMode      bool
+	GasEstimation  *GasEstimationParams
 }
 
 func (r IncomingRequest) String() string {
@@ -289,12 +336,27 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	if !ok {
 		return failRet, errors.New("remaining incoming request values must be a tuple")
 	}
-	if remTup.Len() != 3 {
-		return failRet, errors.Errorf("expected incoming request remaining values to be tuple of length 3, but received tuple of length %v", remTup.Len())
+	if remTup.Len() < 3 || remTup.Len() > 4 {
+		return failRet, errors.Errorf("expected incoming request remaining values to be tuple of at least length 3 and at most 4, but received tuple of length %v", remTup.Len())
 	}
 	provenanceVal, _ := remTup.GetByInt64(0)
 	aggregatorInfoVal, _ := remTup.GetByInt64(1)
 	adminModeVal, _ := remTup.GetByInt64(2)
+
+	var gasEstimationParams *GasEstimationParams
+	if remTup.Len() == 4 {
+		gasEstimationParamsRaw, _ := remTup.GetByInt64(3)
+		gasEstimationParamsVal, err := NewValueFromOptional(gasEstimationParamsRaw)
+		if err != nil {
+			return failRet, err
+		}
+		if gasEstimationParamsVal != nil {
+			gasEstimationParams, err = NewGasEstimationParamsFromValue(gasEstimationParamsVal)
+			if err != nil {
+				return failRet, err
+			}
+		}
+	}
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
@@ -343,17 +405,9 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		return failRet, err
 	}
 
-	adminModeInt, ok := adminModeVal.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("adminMode must be a boolean")
-	}
-	var adminMode bool
-	if adminModeInt.Equal(value.NewInt64Value(0)) {
-		adminMode = false
-	} else if adminModeInt.Equal(value.NewInt64Value(1)) {
-		adminMode = true
-	} else {
-		return failRet, errors.Errorf("expected adminMode to be an integer either 0 or 1, but received integer %v", adminModeInt)
+	adminMode, err := NewBoolFromValue(adminModeVal)
+	if err != nil {
+		return failRet, err
 	}
 
 	return IncomingRequest{
@@ -367,6 +421,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		Provenance:     provenance,
 		AggregatorInfo: aggregatorInfo,
 		AdminMode:      adminMode,
+		GasEstimation:  gasEstimationParams,
 	}, nil
 }
 

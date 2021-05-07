@@ -19,9 +19,13 @@ package dev
 import (
 	"context"
 	"math/big"
+	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -35,9 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
-func TestFees(t *testing.T) {
-	skipBelowVersion(t, 3)
-
+func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)
@@ -51,7 +53,7 @@ func TestFees(t *testing.T) {
 		StakeToken:                common.Address{},
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000000,
+		ArbGasSpeedLimitPerSecond: 2000000000,
 	}
 
 	netFeeRecipient := common.RandAddress()
@@ -59,8 +61,11 @@ func TestFees(t *testing.T) {
 	feeConfigInit := message.FeeConfig{
 		SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
 		L1GasPerL2Tx:           big.NewInt(3700),
-		L1GasPerL2Calldata:     big.NewInt(16),
+		ArbGasPerL2Tx:          big.NewInt(0),
+		L1GasPerL2Calldata:     big.NewInt(1),
+		ArbGasPerL2Calldata:    big.NewInt(0),
 		L1GasPerStorage:        big.NewInt(2000),
+		ArbGasPerStorage:       big.NewInt(0),
 		ArbGasDivisor:          big.NewInt(10000),
 		NetFeeRecipient:        netFeeRecipient,
 		CongestionFeeRecipient: congestionFeeRecipient,
@@ -74,7 +79,6 @@ func TestFees(t *testing.T) {
 		common.NewAddressFromEth(auth.From),
 		[]message.ChainConfigOption{feeConfigInit, aggInit},
 	)
-	defer cancelDevNode()
 
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -82,7 +86,7 @@ func TestFees(t *testing.T) {
 				MaxGas:      big.NewInt(1000000),
 				GasPriceBid: big.NewInt(0),
 				DestAddress: common.NewAddressFromEth(auth.From),
-				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(22), nil),
+				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil),
 				Data:        nil,
 			},
 		}),
@@ -91,18 +95,21 @@ func TestFees(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	web3Server := web3.NewServer(srv, true)
+
 	client := web3.NewEthClient(srv, true)
 
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
-	test.FailIfError(t, err)
-	arbGasInfo, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, client)
-	test.FailIfError(t, err)
 	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	test.FailIfError(t, err)
 
 	feeCollector := common.RandAddress()
+	_, feeCollectorErr := arbAggregator.SetFeeCollector(aggAuth, aggAuth.From, feeCollector.ToEthAddress())
+	if arbosVersion >= 5 {
+		test.FailIfError(t, feeCollectorErr)
+	}
 
-	_, feeCollectorErr := arbAggregator.SetFeeCollector(aggAuth, aggInit.Aggregator.ToEthAddress(), feeCollector.ToEthAddress())
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
 
 	_, err = arbOwner.SetFairGasPriceSender(auth, aggInit.Aggregator.ToEthAddress())
 	test.FailIfError(t, err)
@@ -113,6 +120,21 @@ func TestFees(t *testing.T) {
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
+	return backend, web3Server, client, auth, aggAuth, feeConfigInit, config, feeCollector, cancelDevNode
+}
+
+func TestFees(t *testing.T) {
+	skipBelowVersion(t, 3)
+	backend, _, client, auth, aggAuth, feeConfig, config, feeCollector, cancel := setupFeeChain(t)
+	defer cancel()
+
+	agg := common.NewAddressFromEth(aggAuth.From)
+
+	arbGasInfo, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, client)
+	test.FailIfError(t, err)
+
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	test.FailIfError(t, err)
 
 	totalPaid := big.NewInt(0)
 	for i := 0; i < 5; i++ {
@@ -124,10 +146,10 @@ func TestFees(t *testing.T) {
 
 	networkDest, congestionDest, err := arbOwner.GetFeeRecipients(&bind.CallOpts{})
 	test.FailIfError(t, err)
-	if networkDest != netFeeRecipient.ToEthAddress() {
+	if networkDest != feeConfig.NetFeeRecipient.ToEthAddress() {
 		t.Error("wrong network dest", networkDest)
 	}
-	if congestionDest != congestionFeeRecipient.ToEthAddress() {
+	if congestionDest != feeConfig.CongestionFeeRecipient.ToEthAddress() {
 		t.Error("wrong congestion dest", congestionDest)
 	}
 
@@ -160,10 +182,10 @@ func TestFees(t *testing.T) {
 	paid := checkFees(t, backend, tx)
 	totalPaid = totalPaid.Add(totalPaid, paid)
 
-	netFeeBal, err := client.BalanceAt(context.Background(), netFeeRecipient.ToEthAddress(), nil)
+	netFeeBal, err := client.BalanceAt(context.Background(), feeConfig.NetFeeRecipient.ToEthAddress(), nil)
 	test.FailIfError(t, err)
 
-	aggBal, err := client.BalanceAt(context.Background(), aggInit.Aggregator.ToEthAddress(), nil)
+	aggBal, err := client.BalanceAt(context.Background(), agg.ToEthAddress(), nil)
 	test.FailIfError(t, err)
 
 	feeCollectorBal, err := client.BalanceAt(context.Background(), feeCollector.ToEthAddress(), nil)
@@ -177,15 +199,14 @@ func TestFees(t *testing.T) {
 
 	if arbosVersion <= 4 {
 		if aggBal.Cmp(big.NewInt(0)) <= 0 {
-			t.Error("aggregator should have nonzero balance")
+			t.Error("currentAggregator should have nonzero balance")
 		}
 		if feeCollectorBal.Cmp(big.NewInt(0)) != 0 {
 			t.Error("fee collector should have 0 balance")
 		}
 	} else {
-		test.FailIfError(t, feeCollectorErr)
 		if aggBal.Cmp(big.NewInt(0)) != 0 {
-			t.Error("aggregator should have 0 balance")
+			t.Error("currentAggregator should have 0 balance")
 		}
 		if feeCollectorBal.Cmp(big.NewInt(0)) <= 0 {
 			t.Error("fee collector should have nonzero balance")
@@ -198,7 +219,39 @@ func TestFees(t *testing.T) {
 }
 
 func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
+	t.Helper()
 	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
+	extra := tx.Gas() - arbRes.CalcGasUsed().Uint64()
+	t.Log("gas remaining", extra)
+	if extra > 500000 {
+		t.Error("too much extra gas estimated")
+	}
 	return arbRes.FeeStats.Paid.Total()
+}
+
+func TestNonAggregatorFee(t *testing.T) {
+	skipBelowVersion(t, 3)
+	backend, web3SServer, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	defer cancel()
+
+	simpleAddr, _, simple, err := arbostestcontracts.DeploySimple(auth, client)
+	test.FailIfError(t, err)
+	backend.currentAggregator = common.Address{}
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+	data := simpleABI.Methods["exists"].ID
+	emptyAgg := ethcommon.Address{}
+
+	estimatedGas, err := web3SServer.EstimateGas(web3.CallTxArgs{
+		From:       &auth.From,
+		To:         &simpleAddr,
+		Data:       (*hexutil.Bytes)(&data),
+		Aggregator: &emptyAgg,
+	})
+	auth.GasLimit = uint64(estimatedGas)
+	tx, err := simple.Exists(auth)
+	test.FailIfError(t, err)
+	checkFees(t, backend, tx)
 }

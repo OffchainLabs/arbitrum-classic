@@ -79,12 +79,10 @@ func NewTestDevNode(
 	owner common.Address,
 	config []message.ChainConfigOption,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	test.FailIfError(t, err)
-
+	ctx, cancel := context.WithCancel(context.Background())
 	backend, db, rollupAddress, cancelDevNode, txDBErrChan, err := NewDevNode(
-		context.Background(),
-		tmpDir,
+		ctx,
+		t.TempDir(),
 		arbosPath,
 		params,
 		owner,
@@ -94,13 +92,12 @@ func NewTestDevNode(
 	go func() {
 		if err := <-txDBErrChan; err != nil {
 			t.Error(err)
+			cancel()
 		}
 	}()
 	closeFunc := func() {
 		cancelDevNode()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			t.Fatal(err)
-		}
+		cancel()
 	}
 	srv := aggregator.NewServer(backend, rollupAddress, db)
 	return backend, db, srv, closeFunc

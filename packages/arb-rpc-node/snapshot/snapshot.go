@@ -113,7 +113,7 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		}
 		return s.Call(msg, sender)
 	} else {
-		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, message.NewCompressedECDSAFromEth(tx))
+		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, new(big.Int).SetUint64(tx.Gas()), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseBalanceResult(res)
+	return arbos.ParseBalanceResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
@@ -172,7 +172,7 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseTransactionCountResult(res)
+	return arbos.ParseTransactionCountResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
@@ -183,7 +183,7 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseCodeResult(res)
+	return arbos.ParseCodeResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
@@ -194,7 +194,7 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseGetStorageAtResult(res)
+	return arbos.ParseGetStorageAtResult(res.ReturnData)
 }
 
 func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
@@ -205,7 +205,7 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseArbOSVersionResult(res)
+	return arbos.ParseArbOSVersionResult(res.ReturnData)
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {

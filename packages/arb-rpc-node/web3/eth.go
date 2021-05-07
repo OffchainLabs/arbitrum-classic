@@ -18,10 +18,12 @@ package web3
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"math/big"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -55,7 +57,7 @@ func NewServer(
 	return &Server{
 		srv:         srv,
 		ganacheMode: ganacheMode,
-		maxCallGas:  1000000000,
+		maxCallGas:  1<<31 - 1,
 		aggregator:  srv.Aggregator(),
 	}
 }
@@ -274,7 +276,9 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	}
 	from, tx := buildTransaction(args, s.maxCallGas)
 	var agg arbcommon.Address
-	if s.aggregator != nil {
+	if args.Aggregator != nil {
+		agg = arbcommon.NewAddressFromEth(*args.Aggregator)
+	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
 	res, err := snap.EstimateGas(tx, agg, from)
@@ -309,7 +313,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		gasAmount := new(big.Int).Div(res.FeeStats.Paid.Total(), res.FeeStats.Price.L2Computation)
+		gasAmount := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
 		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
 	}
 }

@@ -25,6 +25,7 @@ import { use, expect, assert } from 'chai'
 import { OneStepProofTester } from '../build/types/OneStepProofTester'
 import { IOneStepProof } from '../build/types/IOneStepProof'
 import { Bridge } from '../build/types/Bridge'
+import { SequencerInbox } from '../build/types/SequencerInbox'
 import * as fs from 'fs'
 
 const { utils } = ethers
@@ -49,6 +50,7 @@ interface Proof {
 let ospTester: OneStepProofTester
 let executors: IOneStepProof[]
 let bridge: Bridge
+let sequencerInbox: SequencerInbox
 
 function getProver(op: number) {
   if ((op >= 0xa1 && op <= 0xa6) || op == 0x70) {
@@ -85,6 +87,15 @@ describe('OneStepProof', function () {
     const Bridge = await ethers.getContractFactory('Bridge')
     bridge = (await Bridge.deploy()) as Bridge
     await bridge.deployed()
+
+    const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
+    sequencerInbox = (await SequencerInbox.deploy(
+      bridge.address,
+      ethers.constants.AddressZero,
+      15,
+      900
+    )) as SequencerInbox
+    await sequencerInbox.deployed()
   })
   const files = fs.readdirSync('./test/proofs')
   for (const filename of files) {
@@ -122,6 +133,7 @@ describe('OneStepProof', function () {
           try {
             const tx = await ospTester.executeStepTest(
               executors[prover].address,
+              sequencerInbox.address,
               bridge.address,
               proof.BeforeCut.TotalMessagesRead,
               [proof.BeforeCut.SendAcc, proof.BeforeCut.LogAcc],

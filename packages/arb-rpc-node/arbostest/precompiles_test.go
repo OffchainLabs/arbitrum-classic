@@ -63,7 +63,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 	}
 
 	messages := []message.Message{message.NewSafeL2Message(tx)}
-	logs, _, _, _ := runSimpleAssertion(t, messages)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	res := results[0]

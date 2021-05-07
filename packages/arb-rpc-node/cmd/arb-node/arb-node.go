@@ -249,7 +249,10 @@ func startup() error {
 	errChan := make(chan error, 1)
 	defer close(errChan)
 	go func() {
-		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		err := rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		if err != nil {
+			errChan <- err
+		}
 	}()
 
 	select {
