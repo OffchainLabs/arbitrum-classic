@@ -20,9 +20,9 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'contract IBridge',
-        name: 'bridge',
-        type: 'address',
+        internalType: 'address[2]',
+        name: 'bridges',
+        type: 'address[2]',
       },
       {
         internalType: 'uint256',
@@ -54,7 +54,7 @@ const _abi = [
       },
       {
         internalType: 'uint256',
-        name: 'totalMessagesRead',
+        name: 'afterMessagesRead',
         type: 'uint256',
       },
       {
@@ -69,9 +69,9 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'contract IBridge',
-        name: 'bridge',
-        type: 'address',
+        internalType: 'address[2]',
+        name: 'bridges',
+        type: 'address[2]',
       },
       {
         internalType: 'uint256',

@@ -24,6 +24,7 @@ interface IArbTokenInterface extends ethers.utils.Interface {
   functions: {
     'bridgeBurn(address,uint256)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
+    'l1Address()': FunctionFragment
     'withdraw(address,uint256)': FunctionFragment
   }
 
@@ -35,6 +36,7 @@ interface IArbTokenInterface extends ethers.utils.Interface {
     functionFragment: 'bridgeMint',
     values: [string, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'withdraw',
     values: [string, BigNumberish]
@@ -42,6 +44,7 @@ interface IArbTokenInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {}
@@ -85,6 +88,10 @@ export class IArbToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    l1Address(overrides?: CallOverrides): Promise<[string]>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<[string]>
+
     withdraw(
       account: string,
       amount: BigNumberish,
@@ -122,6 +129,10 @@ export class IArbToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  l1Address(overrides?: CallOverrides): Promise<string>
+
+  'l1Address()'(overrides?: CallOverrides): Promise<string>
+
   withdraw(
     account: string,
     amount: BigNumberish,
@@ -158,6 +169,10 @@ export class IArbToken extends Contract {
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
+
+    l1Address(overrides?: CallOverrides): Promise<string>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<string>
 
     withdraw(
       account: string,
@@ -199,6 +214,10 @@ export class IArbToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    l1Address(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
+
     withdraw(
       account: string,
       amount: BigNumberish,
@@ -236,6 +255,10 @@ export class IArbToken extends Contract {
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     withdraw(
       account: string,

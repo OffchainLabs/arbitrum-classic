@@ -13,6 +13,7 @@ import {
 import {
   Contract,
   ContractTransaction,
+  Overrides,
   PayableOverrides,
   CallOverrides,
 } from '@ethersproject/contracts'
@@ -22,9 +23,18 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface InboxMockInterface extends ethers.utils.Interface {
   functions: {
+    'activeOutbox()': FunctionFragment
+    'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
+    'l2ToL1Sender()': FunctionFragment
+    'setL2ToL1Sender(address)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'activeOutbox',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'createRetryableTicket',
     values: [
@@ -38,9 +48,30 @@ interface InboxMockInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(
+    functionFragment: 'l2ToL1Sender',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'setL2ToL1Sender',
+    values: [string]
+  ): string
 
   decodeFunctionResult(
+    functionFragment: 'activeOutbox',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
+  decodeFunctionResult(
     functionFragment: 'createRetryableTicket',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'l2ToL1Sender',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'setL2ToL1Sender',
     data: BytesLike
   ): Result
 
@@ -61,6 +92,14 @@ export class InboxMock extends Contract {
   interface: InboxMockInterface
 
   functions: {
+    activeOutbox(overrides?: Overrides): Promise<ContractTransaction>
+
+    'activeOutbox()'(overrides?: Overrides): Promise<ContractTransaction>
+
+    bridge(overrides?: Overrides): Promise<ContractTransaction>
+
+    'bridge()'(overrides?: Overrides): Promise<ContractTransaction>
+
     createRetryableTicket(
       destAddr: string,
       l2CallValue: BigNumberish,
@@ -84,7 +123,29 @@ export class InboxMock extends Contract {
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    l2ToL1Sender(overrides?: Overrides): Promise<ContractTransaction>
+
+    'l2ToL1Sender()'(overrides?: Overrides): Promise<ContractTransaction>
+
+    setL2ToL1Sender(
+      sender: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setL2ToL1Sender(address)'(
+      sender: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
   }
+
+  activeOutbox(overrides?: Overrides): Promise<ContractTransaction>
+
+  'activeOutbox()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  bridge(overrides?: Overrides): Promise<ContractTransaction>
+
+  'bridge()'(overrides?: Overrides): Promise<ContractTransaction>
 
   createRetryableTicket(
     destAddr: string,
@@ -110,7 +171,29 @@ export class InboxMock extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  l2ToL1Sender(overrides?: Overrides): Promise<ContractTransaction>
+
+  'l2ToL1Sender()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  setL2ToL1Sender(
+    sender: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setL2ToL1Sender(address)'(
+    sender: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   callStatic: {
+    activeOutbox(overrides?: CallOverrides): Promise<string>
+
+    'activeOutbox()'(overrides?: CallOverrides): Promise<string>
+
+    bridge(overrides?: CallOverrides): Promise<string>
+
+    'bridge()'(overrides?: CallOverrides): Promise<string>
+
     createRetryableTicket(
       destAddr: string,
       l2CallValue: BigNumberish,
@@ -134,11 +217,30 @@ export class InboxMock extends Contract {
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    l2ToL1Sender(overrides?: CallOverrides): Promise<string>
+
+    'l2ToL1Sender()'(overrides?: CallOverrides): Promise<string>
+
+    setL2ToL1Sender(sender: string, overrides?: CallOverrides): Promise<void>
+
+    'setL2ToL1Sender(address)'(
+      sender: string,
+      overrides?: CallOverrides
+    ): Promise<void>
   }
 
   filters: {}
 
   estimateGas: {
+    activeOutbox(overrides?: Overrides): Promise<BigNumber>
+
+    'activeOutbox()'(overrides?: Overrides): Promise<BigNumber>
+
+    bridge(overrides?: Overrides): Promise<BigNumber>
+
+    'bridge()'(overrides?: Overrides): Promise<BigNumber>
+
     createRetryableTicket(
       destAddr: string,
       l2CallValue: BigNumberish,
@@ -162,9 +264,28 @@ export class InboxMock extends Contract {
       data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    l2ToL1Sender(overrides?: Overrides): Promise<BigNumber>
+
+    'l2ToL1Sender()'(overrides?: Overrides): Promise<BigNumber>
+
+    setL2ToL1Sender(sender: string, overrides?: Overrides): Promise<BigNumber>
+
+    'setL2ToL1Sender(address)'(
+      sender: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
+    activeOutbox(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'activeOutbox()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    bridge(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'bridge()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
     createRetryableTicket(
       destAddr: string,
       l2CallValue: BigNumberish,
@@ -187,6 +308,20 @@ export class InboxMock extends Contract {
       gasPriceBid: BigNumberish,
       data: BytesLike,
       overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    l2ToL1Sender(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'l2ToL1Sender()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    setL2ToL1Sender(
+      sender: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setL2ToL1Sender(address)'(
+      sender: string,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
   }
 }
