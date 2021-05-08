@@ -75,8 +75,7 @@ func TestFib(t *testing.T) {
 		message.NewSafeL2Message(getFibTx),
 	}
 
-	logs, _, snap := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, snap := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[1], connAddress1)
 
@@ -111,7 +110,7 @@ func TestDeposit(t *testing.T) {
 		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap := runSimpleAssertion(t, messages)
+	_, snap := runSimpleTxAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
@@ -221,9 +220,10 @@ func TestBlocks(t *testing.T) {
 		}
 	}
 
+	t.Log("results", resultTypes)
+
 	// Last value returned is not an error type
-	avmLogs, sends, _ := runAssertionWithoutPrint(t, ib.Messages, len(resultTypes), sendCount)
-	results := processResults(t, avmLogs)
+	results, sends, _ := runBasicAssertion(t, ib.Messages)
 	for i, res := range results {
 		switch res := res.(type) {
 		case *evm.TxResult:
@@ -233,6 +233,14 @@ func TestBlocks(t *testing.T) {
 		default:
 			t.Logf("%v %T\n", i, res)
 		}
+	}
+
+	if len(results) != len(resultTypes) {
+		t.Fatal("unexpected log count ", len(resultTypes), "instead of", len(results))
+	}
+
+	if len(sends) != sendCount {
+		t.Fatal("unxpected send count ", len(sends), "instead of", sendCount)
 	}
 
 	arbSendsAccumulated := big.NewInt(0)

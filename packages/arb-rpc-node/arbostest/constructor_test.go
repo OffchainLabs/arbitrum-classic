@@ -62,8 +62,7 @@ func TestConstructor(t *testing.T) {
 	failIfError(t, err)
 
 	messages := []message.Message{l2Message}
-	logs, _, snap := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, snap := runSimpleTxAssertion(t, messages)
 
 	res := results[0]
 
@@ -121,8 +120,7 @@ func TestConstructorExistingBalance(t *testing.T) {
 		message.NewSafeL2Message(tx),
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 
 	checkConstructorResult(t, results[2], connAddress1)
 	checkConstructorResult(t, results[3], connAddress2)
