@@ -137,6 +137,15 @@ func TestBlocks(t *testing.T) {
 	halfSendCount := int64(5)
 
 	blockTimes := make([]inbox.ChainTime, 0)
+	blocksToSkip := int64(1)
+	if arbosVersion >= 14 {
+		blockTimes = append(blockTimes, inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		})
+		blocksToSkip++
+	}
+
 	blockTimes = append(blockTimes, inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(1),
 		Timestamp: big.NewInt(1),
@@ -166,8 +175,8 @@ func TestBlocks(t *testing.T) {
 			Payment:     big.NewInt(i*2 + 1),
 			Data:        arbos.WithdrawEthData(common.RandAddress()),
 		}
-		ib.AddMessage(message.NewSafeL2Message(tx), sender, big.NewInt(0), blockTimes[i+1])
-		ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), blockTimes[i+1])
+		ib.AddMessage(message.NewSafeL2Message(tx), sender, big.NewInt(0), blockTimes[i+blocksToSkip])
+		ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), blockTimes[i+blocksToSkip])
 	}
 
 	type resType int
@@ -178,7 +187,12 @@ func TestBlocks(t *testing.T) {
 		blockRes
 	)
 
-	targetBlocks := []TargetBlockInfo{
+	var targetBlocks []TargetBlockInfo
+	if arbosVersion >= 14 {
+		targetBlocks = append(targetBlocks, TargetBlockInfo{})
+	}
+
+	targetBlocks = append(targetBlocks, []TargetBlockInfo{
 		{
 			otherTxCount:  1,
 			includesBatch: false,
@@ -203,7 +217,7 @@ func TestBlocks(t *testing.T) {
 			withdrawCount: 2,
 			includesBatch: false,
 		},
-	}
+	}...)
 
 	resultTypes := make([]resType, 0)
 	sendCount := 0
