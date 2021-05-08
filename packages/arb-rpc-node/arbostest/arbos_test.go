@@ -114,6 +114,16 @@ func TestDeposit(t *testing.T) {
 	checkBalance(t, snap, sender, amount)
 }
 
+type TargetBlockInfo struct {
+	otherTxCount  int
+	withdrawCount int
+	includesBatch bool
+}
+
+func (t TargetBlockInfo) txCount() int {
+	return t.otherTxCount + t.withdrawCount
+}
+
 func TestBlocks(t *testing.T) {
 	ib := &InboxBuilder{}
 	startTime := inbox.ChainTime{
@@ -160,11 +170,6 @@ func TestBlocks(t *testing.T) {
 		ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), blockTimes[i+1])
 	}
 
-	type TargetBlockInfo struct {
-		txCount       int
-		includesBatch bool
-	}
-
 	type resType int
 	const (
 		txRes resType = iota
@@ -175,27 +180,27 @@ func TestBlocks(t *testing.T) {
 
 	targetBlocks := []TargetBlockInfo{
 		{
-			txCount:       1,
+			otherTxCount:  1,
 			includesBatch: false,
 		},
 		{
-			txCount:       2,
+			withdrawCount: 2,
 			includesBatch: true,
 		},
 		{
-			txCount:       2,
+			withdrawCount: 2,
 			includesBatch: false,
 		},
 		{
-			txCount:       2,
+			withdrawCount: 2,
 			includesBatch: true,
 		},
 		{
-			txCount:       2,
+			withdrawCount: 2,
 			includesBatch: false,
 		},
 		{
-			txCount:       2,
+			withdrawCount: 2,
 			includesBatch: false,
 		},
 	}
@@ -203,14 +208,12 @@ func TestBlocks(t *testing.T) {
 	resultTypes := make([]resType, 0)
 	sendCount := 0
 	for i, targetBlock := range targetBlocks {
-		for i := 0; i < targetBlock.txCount; i++ {
+		for i := 0; i < targetBlock.txCount(); i++ {
 			resultTypes = append(resultTypes, txRes)
 		}
 		if i != len(targetBlocks)-1 {
-			if i != 0 {
-				for i := 0; i < targetBlock.txCount; i++ {
-					resultTypes = append(resultTypes, sendRes)
-				}
+			for i := 0; i < targetBlock.withdrawCount; i++ {
+				resultTypes = append(resultTypes, sendRes)
 			}
 			if targetBlock.includesBatch {
 				resultTypes = append(resultTypes, merkleRes)
@@ -401,8 +404,8 @@ func TestBlocks(t *testing.T) {
 		target := targetBlocks[i]
 		txCount := block.BlockStats.TxCount.Uint64()
 
-		if uint64(target.txCount) != txCount {
-			t.Fatal("wrong tx count in block, got", txCount, "but expected", target.txCount, "in block", i)
+		if uint64(target.txCount()) != txCount {
+			t.Fatal("wrong tx count in block, got", txCount, "but expected", target.txCount(), "in block", i)
 		}
 
 		startLog := block.FirstAVMLog().Uint64()
