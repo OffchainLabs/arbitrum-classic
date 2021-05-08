@@ -31,6 +31,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
@@ -143,9 +144,7 @@ func TestSequencerBatcher(t *testing.T) {
 	mach, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
 
-	hash, err := mach.Hash()
-	test.FailIfError(t, err)
-
+	hash := mach.Hash()
 	confirmPeriodBlocks := big.NewInt(100)
 	extraChallengeTimeBlocks := big.NewInt(0)
 	arbGasSpeedLimitPerBlock := big.NewInt(100000)
@@ -205,7 +204,16 @@ func TestSequencerBatcher(t *testing.T) {
 	client.Commit()
 	time.Sleep(time.Second)
 
-	batcher, err := NewSequencerBatcher(ctx, seqMon.Core, seqMon.Reader, client, big.NewInt(1), seqInbox, auth)
+	batcher, err := NewSequencerBatcher(
+		ctx,
+		seqMon.Core,
+		message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)),
+		seqMon.Reader,
+		client,
+		big.NewInt(1),
+		seqInbox,
+		auth,
+	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
 	batcher.chainTimeCheckInterval = time.Millisecond * 10

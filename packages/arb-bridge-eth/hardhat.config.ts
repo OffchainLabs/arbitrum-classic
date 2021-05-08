@@ -104,9 +104,14 @@ const config = {
   },
   networks: {
     hardhat: {
+      chainId: 1337,
       allowUnlimitedContractSize: true,
       accounts: {
         accountsBalance: '10000000000000000000000000',
+      },
+      mining: {
+        auto: false,
+        interval: 1000,
       },
     },
     local_development: {
