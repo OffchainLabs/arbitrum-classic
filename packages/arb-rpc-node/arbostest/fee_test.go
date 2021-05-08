@@ -366,12 +366,12 @@ func TestFees(t *testing.T) {
 
 	processMessages := func(ib *InboxBuilder, index int, aggregator common.Address, calldataExact bool) ([]*evm.TxResult, *snapshot.Snapshot, *big.Int) {
 		t.Helper()
-		logs, _, snap := runAssertionWithoutPrint(t, ib.Messages, math.MaxInt32, 0)
-		rawResults := extractTxResults(t, logs)
+		results, _, snap := runAssertion(t, ib.Messages, math.MaxInt32, 0)
+		rawResults := extractTxResults(t, results)
 		allResultsSucceeded(t, rawResults[:len(rawResults)-len(rawTxes)])
-		results := rawResults[len(rawResults)-len(rawTxes):]
+		extractedResults := rawResults[len(rawResults)-len(rawTxes):]
 		amountUnpaid := big.NewInt(0)
-		for i, res := range results {
+		for i, res := range extractedResults {
 			resType := rawTxes[i].resultType[0]
 			if len(rawTxes[i].resultType) > 1 {
 				resType = rawTxes[i].resultType[index]
@@ -383,7 +383,7 @@ func TestFees(t *testing.T) {
 			unpaid := checkGas(t, res, aggregator, index == 3)
 			amountUnpaid = amountUnpaid.Add(amountUnpaid, unpaid)
 		}
-		return results, snap, amountUnpaid
+		return extractedResults, snap, amountUnpaid
 	}
 
 	t.Log("Checking results for no fee")

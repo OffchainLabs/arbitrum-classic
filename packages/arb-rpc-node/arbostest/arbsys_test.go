@@ -178,8 +178,7 @@ func TestTransactionCount(t *testing.T) {
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _ := runAssertion(t, messages, len(messages)-1, 0)
-	results := processTxResults(t, logs)
+	results, _ := runTxAssertion(t, messages)
 
 	checkTxCountResult(t, results[0], big.NewInt(0))
 
@@ -286,8 +285,7 @@ func TestAddressTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 
 	revertedTxCheck(t, results[0])
 
@@ -410,8 +408,7 @@ func TestArbSysBLS(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 
 	revertedTxCheck(t, results[0])
 
@@ -478,8 +475,7 @@ func TestArbSysFunctionTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 
 	revertedTxCheck(t, results[0])
 

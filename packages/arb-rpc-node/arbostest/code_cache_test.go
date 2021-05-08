@@ -51,8 +51,7 @@ func TestCodeCache(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 	}
 
-	logs, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 	checkConstructorResult(t, results[0], connAddress1)
 	checkConstructorResult(t, results[1], connAddress2)
 
