@@ -50,6 +50,7 @@ type SequencerBatcher struct {
 	logBatchGasCosts           bool
 
 	sequencer       common.Address
+	signer          types.Signer
 	txQueue         chan *types.Transaction
 	newTxFeed       event.Feed
 	latestChainTime inbox.ChainTime
@@ -67,7 +68,16 @@ func getChainTime(ctx context.Context, client ethutils.EthClient) (inbox.ChainTi
 	return chainTime, nil
 }
 
-func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *monitor.InboxReader, client ethutils.EthClient, delayedMessagesTargetDelay *big.Int, sequencerInbox *ethbridgecontracts.SequencerInbox, auth *bind.TransactOpts) (*SequencerBatcher, error) {
+func NewSequencerBatcher(
+	ctx context.Context,
+	db core.ArbCore,
+	chainId *big.Int,
+	inboxReader *monitor.InboxReader,
+	client ethutils.EthClient,
+	delayedMessagesTargetDelay *big.Int,
+	sequencerInbox *ethbridgecontracts.SequencerInbox,
+	auth *bind.TransactOpts,
+) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
 		return nil, err
@@ -96,6 +106,7 @@ func NewSequencerBatcher(ctx context.Context, db core.ArbCore, inboxReader *moni
 		chainTimeCheckInterval:     time.Second,
 
 		sequencer:       common.NewAddressFromEth(sequencer),
+		signer:          types.NewEIP155Signer(chainId),
 		txQueue:         make(chan *types.Transaction, 10),
 		newTxFeed:       event.Feed{},
 		latestChainTime: chainTime,
@@ -111,6 +122,16 @@ func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) e
 }
 
 func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Transaction) error {
+	_, err := types.Sender(b.signer, startTx)
+	if err != nil {
+		logger.Warn().Err(err).Msg("error processing user transaction")
+		return err
+	}
+	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
+	j, err := startTx.MarshalJSON()
+	if err == nil {
+		fmt.Println("SendTransaction", string(j))
+	}
 	b.txQueue <- startTx
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
@@ -123,6 +144,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		batchTxs = append(batchTxs, tx)
 		l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(tx))
 	}
+	logger.Info().Int("count", len(l2BatchContents)).Msg("gather user txes")
 
 	if len(l2BatchContents) == 0 {
 		// The queue is empty, so another goroutine processed startTx already
@@ -192,6 +214,7 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*big.Int, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+	fmt.Println("deliverDelayedMessages")
 	msgCount, err := b.db.GetMessageCount()
 	if err != nil {
 		return nil, err
@@ -204,6 +227,8 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("oldDelayedCount", oldDelayedCount)
+	fmt.Println("newDelayedCount", newDelayedCount)
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
 		b.latestChainTime = chainTime
 		return msgCount, nil
@@ -226,6 +251,10 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 		return nil, err
 	}
 	batchItem := inbox.NewDelayedItem(lastSeqNum, newDelayedCount, prevAcc, oldDelayedCount, delayedAcc)
+	logger.Info().
+		Str("old", oldDelayedCount.String()).
+		Str("new", newDelayedCount.String()).
+		Msg("Adding messages from delayed queue")
 
 	endOfBlockSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	endOfBlockMessage := message.NewInboxMessage(
@@ -255,6 +284,7 @@ const gasCostPerMessageByte int = 16
 const gasCostMaximum int = 2_000_000
 
 func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int) (bool, error) {
+	fmt.Println("createBatch")
 	prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return false, err
@@ -374,9 +404,12 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 }
 
 func (b *SequencerBatcher) Start(ctx context.Context) {
+	logger.Log().Msg("Starting sequencer batch submission thread")
+	firstBoot := true
 	for {
 		select {
 		case <-ctx.Done():
+			logger.Log().Msg("exiting sequencer since context was canceled")
 			return
 		default:
 		}
@@ -386,9 +419,10 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			logger.Warn().Err(err).Msg("Error getting chain time")
 			continue
 		}
-		if chainTime.BlockNum.Cmp(b.latestChainTime.BlockNum) <= 0 {
+		if chainTime.BlockNum.Cmp(b.latestChainTime.BlockNum) <= 0 && !firstBoot {
 			continue
 		}
+		firstBoot = false
 		newMsgCount, err := b.deliverDelayedMessages(chainTime)
 		if err != nil {
 			logger.Error().Err(err).Msg("Error delivering delayed messages")

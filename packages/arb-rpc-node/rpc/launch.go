@@ -116,7 +116,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		seqBatcher, err := batcher.NewSequencerBatcher(ctx, batcherMode.Core, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth)
+		seqBatcher, err := batcher.NewSequencerBatcher(ctx, batcherMode.Core, l2ChainID, batcherMode.InboxReader, client, batcherMode.DelayedMessagesTargetDelay, seqInbox, batcherMode.Auth)
 		if err != nil {
 			return nil, err
 		}
