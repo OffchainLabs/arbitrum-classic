@@ -147,10 +147,14 @@ describe('Ether', () => {
   const ethFromL2WithdrawAmount = parseEther('0.00001')
 
   it('deposit ether transaction succeeds', async () => {
+    const inbox = await bridge.l1Bridge.getInbox()
+    const initialInboxBalance = await ethProvider.getBalance(inbox.address)
     const res = await bridge.depositETH(ethToL2DepositAmount)
     const rec = await res.wait()
 
     expect(rec.status).to.equal(1)
+    const finalInboxBalance = await ethProvider.getBalance(inbox.address)
+    expect(initialInboxBalance.add(ethToL2DepositAmount).eq(finalInboxBalance))
   })
   it('L2 address has expected balance after deposit eth', async () => {
     await wait()
@@ -227,6 +231,10 @@ describe('ERC20', () => {
   })
 
   it('initial erc20 deposit txns — L1 and L2 — both succeed', async () => {
+    const tokenContract = TestERC20__factory.connect(erc20Address, ethProvider)
+    const initialBridgeTokenBalance = await tokenContract.balanceOf(
+      bridge.ethERC20Bridge.address
+    )
     const depositRes = await bridge.deposit(
       erc20Address,
       tokenDepositAmount,
@@ -238,6 +246,16 @@ describe('ERC20', () => {
 
     const depositRec = await depositRes.wait()
     await wait()
+
+    expect(depositRec.status).to.equal(1)
+    const finalBridgeTokenBalance = await tokenContract.balanceOf(
+      bridge.ethERC20Bridge.address
+    )
+    expect(
+      initialBridgeTokenBalance
+        .add(tokenDepositAmount)
+        .eq(finalBridgeTokenBalance)
+    )
 
     const tokenDepositData = (
       await bridge.getDepositTokenEventData(depositRec)
@@ -252,7 +270,6 @@ describe('ERC20', () => {
       l2RetryableHash
     )
 
-    expect(depositRec.status).to.equal(1)
     expect(retryableReceipt.status).to.equal(1)
   })
 
@@ -428,6 +445,13 @@ describe('CustomToken', () => {
     expect(allowed).to.be.true
   })
   it('deposits custom token', async () => {
+    const tokenContract = TestCustomTokenL1__factory.connect(
+      erc20Address,
+      ethProvider
+    )
+    const initialBridgeTokenBalance = await tokenContract.balanceOf(
+      bridge.ethERC20Bridge.address
+    )
     const depositRes = await bridge.deposit(
       l1CustomToken.address,
       tokenDepositAmount,
@@ -439,6 +463,14 @@ describe('CustomToken', () => {
 
     const depositRec = await depositRes.wait()
     expect(depositRec.status).to.equal(1)
+    const finalBridgeTokenBalance = await tokenContract.balanceOf(
+      bridge.ethERC20Bridge.address
+    )
+    expect(
+      initialBridgeTokenBalance
+        .add(tokenDepositAmount)
+        .eq(finalBridgeTokenBalance)
+    )
     await wait(10000)
 
     const tokenDepositData = (
