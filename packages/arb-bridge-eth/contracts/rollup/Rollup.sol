@@ -26,6 +26,7 @@ import "./RollupEventBridge.sol";
 import "./IRollup.sol";
 import "./INode.sol";
 import "./INodeFactory.sol";
+import "../challenge/IChallenge.sol";
 import "../challenge/IChallengeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
@@ -208,67 +209,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     }
 
     /**
-     * @notice Reassign the node a staker is currently staked on
-     * @dev staker at index i of the stakers array gets assigned to node at index i of nodeNums
-     * @param stakers array of addresses of stakers to be reassigned
-     * @param nodeNums number of node for staker to be reassigned to
-     */
-    function reassignStakers(address[] calldata stakers, uint256[] calldata nodeNums)
-        external
-        onlyOwner
-        whenPaused
-    {
-        require(stakers.length == nodeNums.length, "WRONG_LENGTH");
-        require(stakers.length <= stakerCount(), "WRONG_STAKERS");
-
-        for (uint256 i = 0; i < stakers.length; i++) {
-            require(nodeNums[i] < latestNodeCreated(), "TOO_NEW");
-            require(nodeNums[i] >= firstUnresolvedNode() - 1, "TOO_OLD");
-
-            Staker storage staker = _stakerMap[stakers[i]];
-            require(staker.isStaked, "NOT_STAKED");
-            // TODO: reset challenge if in challenge?
-            // require(staker.currentChallenge == address(0), "IN_CHAL");
-            staker.latestStakedNode = nodeNums[i];
-            emit StakerReassigned(stakers[i], nodeNums[i]);
-        }
-    }
-
-    /**
-     * @notice Begin the process of truncating the chain back to the given node
-     * @dev This can be called multiple times to slowly truncate without going over the block gas limit
-     * @param newLatestNodeCreated Index that we want to be the latest unresolved node
-     */
-    function destroyPendingNodes(uint256 newLatestNodeCreated) external onlyOwner whenPaused {
-        uint256 firstUnresolved = firstUnresolvedNode();
-        uint256 latestCreated = latestNodeCreated();
-
-        require(newLatestNodeCreated < latestCreated, "TOO_NEW");
-        require(newLatestNodeCreated >= firstUnresolved - 1, "TOO_OLD");
-
-        uint256 stakers = stakerCount();
-        for (uint256 i = 0; i < stakers; i++) {
-            address stakerAddress = getStakerAddress(i);
-            uint256 latestStakedNode = latestStakedNode(stakerAddress);
-            // reassign stakers before trying to delete node
-            require(latestStakedNode <= newLatestNodeCreated, "HAS_STAKE");
-        }
-
-        // start at latest created and destroy nodes until reach new latest
-        for (uint256 i = latestCreated; i > newLatestNodeCreated; i--) {
-            destroyNode(i);
-            resetNodeHash(i);
-        }
-
-        updateLatestNodeCreated(newLatestNodeCreated);
-        // TODO: what happens if firstChildBlock / latestChildNumber referenced one of the destroyed nodes?
-        // this shouldn't be an issue if newLatestNodeCreated == latestConfirmedNode
-        getNode(newLatestNodeCreated).resetChildren();
-
-        emit NodesDestroyed(newLatestNodeCreated, latestCreated);
-    }
-
-    /**
      * @notice Reject the next unresolved node
      * @param stakerAddress Example staker staked on sibling
      */
@@ -439,28 +379,31 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        INode prevNode = getNode(latestStakedNode(msg.sender));
-        StakeOnNewNodeFrame memory frame;
-        frame.currentInboxSize = sequencerBridge.messageCount();
-        frame.prevNode = getNode(latestStakedNode(msg.sender));
-        {
-            uint256 nodeNum = latestNodeCreated() + 1;
-            RollupLib.Assertion memory assertion =
+        uint256 prevNodeNum = latestStakedNode(msg.sender);
+        INode prevNode = getNode(prevNodeNum);
+        uint256 currentInboxSize = sequencerBridge.messageCount();
+
+        RollupLib.Assertion memory assertion =
                 RollupLib.decodeAssertion(
                     assertionBytes32Fields,
                     assertionIntFields,
                     beforeProposedBlock,
                     beforeInboxMaxCount,
-                    frame.currentInboxSize
+                    currentInboxSize
                 );
-            frame.executionHash = RollupLib.executionHash(assertion);
+
+        uint256 sequencerBatchEnd;
+        bytes32 sequencerBatchAcc;
+        uint256 deadlineBlock;
+        {
+            // frame.executionHash = RollupLib.executionHash(assertion);
             // Make sure the previous state is correct against the node being built on
             require(
-                RollupLib.stateHash(assertion.beforeState) == frame.prevNode.stateHash(),
+                RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
                 "PREV_STATE_HASH"
             );
 
-            (frame.sequencerBatchEnd, frame.sequencerBatchAcc) = sequencerBridge
+            (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge
                 .proveBatchContainsSequenceNumber(
                 sequencerBatchProof,
                 assertion.afterState.inboxCount
@@ -485,75 +428,51 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
             // Don't allow an assertion to use above a maximum amount of gas
             require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
 
-            uint256 deadlineBlock;
             {
                 // Set deadline rounding up to the nearest block
                 uint256 checkTime =
                     gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
                 deadlineBlock = max(
                     block.number.add(confirmPeriodBlocks),
-                    frame.prevNode.deadlineBlock()
+                    prevNode.deadlineBlock()
                 )
                     .add(checkTime);
-                uint256 olderSibling = frame.prevNode.latestChildNumber();
+                uint256 olderSibling = prevNode.latestChildNumber();
                 if (olderSibling != 0) {
                     deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
                 }
             }
-
-            rollupEventBridge.nodeCreated(
-                nodeNum,
-                latestStakedNode(msg.sender),
-                deadlineBlock,
-                msg.sender
-            );
-
             // Ensure that the assertion doesn't read past the end of the current inbox
-            require(assertion.afterState.inboxCount <= frame.currentInboxSize, "INBOX_PAST_END");
-
-            frame.node = INode(
-                nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
-                    RollupLib.confirmHash(assertion),
-                    latestStakedNode(msg.sender),
-                    deadlineBlock
-                )
-            );
+            require(assertion.afterState.inboxCount <= currentInboxSize, "INBOX_PAST_END");
         }
 
+        bytes32 nodeHash;
         {
             bytes32 lastHash;
             bool hasSibling = prevNode.latestChildNumber() > 0;
             if (hasSibling) {
                 lastHash = getNodeHash(prevNode.latestChildNumber());
             } else {
-                lastHash = getNodeHash(frame.node.prev());
+                lastHash = getNodeHash(prevNodeNum);
             }
-            bytes32 nodeHash =
-                RollupLib.nodeHash(
-                    hasSibling,
-                    lastHash,
-                    frame.executionHash,
-                    frame.sequencerBatchAcc
-                );
-            require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
-            nodeCreated(frame.node, nodeHash);
-            prevNode.childCreated(latestNodeCreated());
+
+            nodeHash = _newNode(assertion, deadlineBlock, sequencerBatchEnd, sequencerBatchAcc, prevNodeNum, lastHash, hasSibling);
         }
+        require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
+
         stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
-        emit NodeCreated(
-            latestNodeCreated(),
-            getNodeHash(frame.node.prev()),
-            expectedNodeHash,
-            frame.executionHash,
-            frame.currentInboxSize,
-            frame.sequencerBatchEnd,
-            frame.sequencerBatchAcc,
-            assertionBytes32Fields,
-            assertionIntFields
-        );
+        // emit NodeCreated(
+        //     latestNodeCreated(),
+        //     getNodeHash(prevNodeNum),
+        //     expectedNodeHash,
+        //     frame.executionHash,
+        //     frame.currentInboxSize,
+        //     frame.sequencerBatchEnd,
+        //     frame.sequencerBatchAcc,
+        //     assertionBytes32Fields,
+        //     assertionIntFields
+        // );
     }
 
     /**
@@ -698,6 +617,146 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         increaseWithdrawableFunds(owner, remainingLoserStake);
         turnIntoZombie(losingStaker);
     }
+
+    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external onlyOwner whenPaused {
+        require(stackerA.length == stackerB.length, "WRONG_LENGTH");
+        for (uint256 i = 0; i < stackerA.length; i++) {
+            address chall = inChallenge(stackerA[i], stackerB[i]);
+
+            require(address(0) != chall, "NOT_IN_CHALL");
+            clearChallenge(stackerA[i]);
+            clearChallenge(stackerB[i]);
+
+            IChallenge(chall).clearChallenge();
+        }
+    }
+
+    function forceRefundStaker(address[] memory stacker) external onlyOwner whenPaused {
+        for (uint256 i = 0; i < stacker.length; i++) {
+            withdrawStaker(stacker[i]);
+        }
+    }
+
+    function _newNode(
+        RollupLib.Assertion memory assertion,
+        uint256 deadlineBlock,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc,
+        uint256 prevNode,
+        bytes32 prevHash,
+        bool hasSibling
+    ) internal returns (bytes32) {
+        StakeOnNewNodeFrame memory frame;
+        frame.currentInboxSize = sequencerBridge.messageCount();
+        frame.prevNode = getNode(prevNode);
+        {
+            uint256 nodeNum = latestNodeCreated() + 1;
+            frame.executionHash = RollupLib.executionHash(assertion);
+
+            frame.sequencerBatchEnd = sequencerBatchEnd;
+            frame.sequencerBatchAcc = sequencerBatchAcc;
+
+            rollupEventBridge.nodeCreated(
+                nodeNum,
+                prevNode,
+                deadlineBlock,
+                msg.sender
+            );
+
+            frame.node = INode(
+                nodeFactory.createNode(
+                    RollupLib.stateHash(assertion.afterState),
+                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
+                    RollupLib.confirmHash(assertion),
+                    prevNode,
+                    deadlineBlock
+                )
+            );
+        }
+
+        bytes32 nodeHash =
+                RollupLib.nodeHash(
+                    hasSibling,
+                    prevHash,
+                    frame.executionHash,
+                    frame.sequencerBatchAcc
+                );
+            
+        nodeCreated(frame.node, nodeHash);
+        frame.prevNode.childCreated(latestNodeCreated());
+
+        // emit NodeCreated(
+        //     latestNodeCreated(),
+        //     getNodeHash(frame.node.prev()),
+        //     nodeHash,
+        //     frame.executionHash,
+        //     frame.currentInboxSize,
+        //     frame.sequencerBatchEnd,
+        //     frame.sequencerBatchAcc,
+        //     assertionBytes32Fields,
+        //     assertionIntFields
+        // );
+
+        return nodeHash;
+    }
+
+    function forceCreateNode(
+        bytes32 expectedNodeHash,
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        uint256 beforeProposedBlock,
+        uint256 beforeInboxMaxCount,
+        uint256 prevNode,
+        uint256 deadlineBlock,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc
+    ) external onlyOwner whenPaused {
+        require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
+
+        RollupLib.Assertion memory assertion =
+                RollupLib.decodeAssertion(
+                    assertionBytes32Fields,
+                    assertionIntFields,
+                    beforeProposedBlock,
+                    beforeInboxMaxCount,
+                    sequencerBridge.messageCount()
+                );
+
+        bytes32 nodeHash =
+            _newNode(
+                assertion,
+                deadlineBlock,
+                sequencerBatchEnd,
+                sequencerBatchAcc,
+                prevNode,
+                getNodeHash(prevNode),
+                false
+            );
+        // TODO: should we add a stake?
+        
+        require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
+    }
+
+    function forceConfirmNode(
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths
+    ) external onlyOwner whenPaused {
+        outbox.processOutgoingMessages(sendsData, sendLengths);
+
+        confirmLatestNode();
+
+        rollupEventBridge.nodeConfirmed(latestConfirmed());
+
+        // emit NodeConfirmed(
+        //     firstUnresolved,
+        //     afterSendAcc,
+        //     afterSendCount,
+        //     afterLogAcc,
+        //     afterLogCount
+        // );
+    }
+
+    
 
     /**
      * @notice Remove the given zombie from nodes it is staked on, moving backwords from the latest node it is staked on

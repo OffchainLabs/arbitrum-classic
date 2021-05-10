@@ -227,6 +227,14 @@ contract RollupCore {
         _firstUnresolvedNode++;
     }
 
+    /// @notice Confirm the next unresolved node
+    function confirmLatestNode() internal {
+        destroyNode(_latestConfirmed);
+        uint256 latestNode = _latestNodeCreated;
+        _latestConfirmed = latestNode;
+        _firstUnresolvedNode = latestNode + 1;
+    }
+
     /**
      * @notice Create a new stake
      * @param stakerAddress Address of the new staker

@@ -363,6 +363,11 @@ contract Challenge is Cloneable, IChallenge {
         }
     }
 
+    function clearChallenge() external override {
+        require(msg.sender == address(resultReceiver), "NOT_RES_RECEIVER");
+        safeSelfDestruct(msg.sender);
+    }
+
     function _currentWin() private {
         if (turn == Turn.Asserter) {
             _asserterWin();

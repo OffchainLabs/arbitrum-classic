@@ -45,4 +45,6 @@ interface IChallenge {
     function asserter() external view returns (address);
 
     function challenger() external view returns (address);
+
+    function clearChallenge() external;
 }
