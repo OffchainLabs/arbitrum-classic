@@ -103,8 +103,7 @@ func startup() error {
 	)
 	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
-	sequencerAddr := fs.String("sequencer.addr", "", "address of sequencer feed source")
-	sequencerPort := fs.String("sequencer.port", "9642", "port of sequencer feed source")
+	sequencerURL := fs.String("sequencer-url", "", "URL of sequencer feed source")
 	feedOutputAddr := fs.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := fs.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 
@@ -116,7 +115,7 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 3 || (!*sequencerMode && *sequencerAddr == "") {
+	if fs.NArg() != 3 || (!*sequencerMode && *sequencerURL == "") {
 		fmt.Printf("usage      sequencer: arb-node --sequencer [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		fmt.Printf("   or   primary node: arb-node --sequencer.addr=<sequencer address> --inbox=<inbox address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		fmt.Printf("   or secondary node: arb-node --sequencer.addr=<sequencer address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
@@ -129,10 +128,10 @@ func startup() error {
 
 	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	if !*sequencerMode {
-		if *sequencerAddr == "" {
+		if *sequencerURL == "" {
 			logger.Warn().Msg("Missing --sequencer.addr so not subscribing to feed")
 		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient("ws://"+*sequencerAddr+":"+*sequencerPort, nil)
+			broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
 			sequencerFeed, err = broadcastClient.Connect()
 			if err != nil {
 				log.Fatal().Err(err).Msg("unable to start broadcastclient")
