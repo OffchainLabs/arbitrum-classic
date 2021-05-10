@@ -65,7 +65,7 @@ COPY --chown=user arb-rpc-node/ /home/user/arb-rpc-node/
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 
 # Build arb-validator
-RUN cd arb-node-core && go install -v ./cmd/arb-validator && \
+RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
     cd ../arb-rpc-node && go install -v ./cmd/arb-node && go install -v ./cmd/arb-dev-node
 
 FROM offchainlabs/cpp-base:0.3.1 as arb-validator
