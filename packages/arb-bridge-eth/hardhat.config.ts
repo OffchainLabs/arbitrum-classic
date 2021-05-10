@@ -109,10 +109,10 @@ const config = {
       accounts: {
         accountsBalance: '10000000000000000000000000',
       },
-      mining: {
-        auto: false,
-        interval: 1000,
-      },
+      // mining: {
+      //   auto: false,
+      //   interval: 1000,
+      // },
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
