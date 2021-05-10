@@ -129,7 +129,7 @@ func startup() error {
 	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	if !*sequencerMode {
 		if *sequencerURL == "" {
-			logger.Warn().Msg("Missing --sequencer.addr so not subscribing to feed")
+			logger.Warn().Msg("Missing --sequencer-url so not subscribing to feed")
 		} else {
 			broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
 			sequencerFeed, err = broadcastClient.Connect()
