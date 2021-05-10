@@ -128,10 +128,6 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return err
 	}
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
-	j, err := startTx.MarshalJSON()
-	if err == nil {
-		fmt.Println("SendTransaction", string(j))
-	}
 	b.txQueue <- startTx
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
@@ -214,7 +210,6 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*big.Int, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
-	fmt.Println("deliverDelayedMessages")
 	msgCount, err := b.db.GetMessageCount()
 	if err != nil {
 		return nil, err
@@ -227,8 +222,6 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("oldDelayedCount", oldDelayedCount)
-	fmt.Println("newDelayedCount", newDelayedCount)
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
 		b.latestChainTime = chainTime
 		return msgCount, nil
@@ -284,7 +277,6 @@ const gasCostPerMessageByte int = 16
 const gasCostMaximum int = 2_000_000
 
 func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int) (bool, error) {
-	fmt.Println("createBatch")
 	prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
 	if err != nil {
 		return false, err
