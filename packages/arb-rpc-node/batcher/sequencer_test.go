@@ -107,9 +107,8 @@ func deployRollup(
 	return createEv.RollupAddress
 }
 
-func generateTxs(t *testing.T, totalCount int, dataSizePerTx int) []*types.Transaction {
+func generateTxs(t *testing.T, totalCount int, dataSizePerTx int, chainId *big.Int) []*types.Transaction {
 	rand.Seed(4537345)
-	chainId := common.RandBigInt()
 	signer := types.NewEIP155Signer(chainId)
 	randomKeys := make([]*ecdsa.PrivateKey, 0, 10)
 	for i := 0; i < 10; i++ {
@@ -224,7 +223,7 @@ func TestSequencerBatcher(t *testing.T) {
 
 	for _, totalCount := range []int{1, 10, 100} {
 		for _, dataSizePerTx := range []int{1, 10, 100} {
-			txs := generateTxs(t, totalCount, dataSizePerTx)
+			txs := generateTxs(t, totalCount, dataSizePerTx, message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)))
 			for _, tx := range txs {
 				if err := batcher.SendTransaction(ctx, tx); err != nil {
 					t.Fatal(err)
