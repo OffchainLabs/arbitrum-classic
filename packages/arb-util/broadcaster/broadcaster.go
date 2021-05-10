@@ -18,6 +18,7 @@ package broadcaster
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"net"
 	"sync"
 	"time"
@@ -257,8 +258,24 @@ func (b *Broadcaster) ClientConnectionCount() int {
 	return b.clientManager.ClientConnectionCount()
 }
 
-func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
+func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
+}
+
+func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.SequencerBatchItem, dataSigner func([]byte) ([]byte, error)) error {
+	for _, item := range batchItems {
+		signature, err := dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(item.Accumulator)).Bytes())
+		if err != nil {
+			return err
+		}
+
+		err = b.BroadcastSingle(prevAcc, item, signature)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {

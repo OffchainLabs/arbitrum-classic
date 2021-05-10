@@ -119,7 +119,7 @@ func (mg *RandomMessageGenerator) StartWorker() {
 	messageCount := 0
 	go func() {
 		for range ticker.C {
-			_ = mg.broadcaster.Broadcast(
+			_ = mg.broadcaster.BroadcastSingle(
 				common.HexToHash("0x0001"),
 				inbox.SequencerBatchItem{
 					LastSeqNum:        big.NewInt(0),

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"math/big"
 	"time"
 
@@ -208,11 +207,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return errors.New("failed to deliver messages")
 	}
 
-	signature, err := b.dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(txBatchItem.Accumulator)).Bytes())
-	if err != nil {
-		return err
-	}
-	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems[0], signature)
+	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 	if err != nil {
 		return err
 	}
@@ -291,11 +286,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 		return nil, errors.New("Failed to deliver messages")
 	}
 
-	signature, err := b.dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(batchItem.Accumulator)).Bytes())
-	if err != nil {
-		return nil, err
-	}
-	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems[0], signature)
+	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
 	if err != nil {
 		return nil, err
 	}
