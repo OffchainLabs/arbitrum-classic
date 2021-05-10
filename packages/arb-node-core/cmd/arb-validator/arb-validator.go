@@ -123,7 +123,7 @@ func startup() error {
 	}
 
 	// Dummy sequencerFeed since validator doesn't use it
-	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
 	folder := os.Args[1]
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
@@ -250,7 +250,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, sequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, dummySequencerFeed)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}

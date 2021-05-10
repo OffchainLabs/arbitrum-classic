@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -198,9 +199,10 @@ func startup() error {
 	}
 	defer mon.Close()
 
+	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, nil)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, nil, dummySequencerFeed)
 		if err == nil {
 			break
 		}
@@ -252,6 +254,14 @@ func startup() error {
 		InboxReader:                inboxReader,
 		DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
 	}
+	broadcasterSettings := broadcaster.Settings{
+		Addr:                    "",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
+	}
 
 	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 100*time.Millisecond)
 	if err != nil {
@@ -259,7 +269,20 @@ func startup() error {
 	}
 	defer db.Close()
 
-	batch, err := rpc.SetupBatcher(ctx, ethclint, rollupAddress, db, time.Duration(5)*time.Second, batcherMode)
+	var dummyDataSigner = func([]byte) ([]byte, error) {
+		return common.HexToHash("0x0").Bytes(), nil
+	}
+
+	batch, err := rpc.SetupBatcher(
+		ctx,
+		ethclint,
+		rollupAddress,
+		db,
+		time.Duration(5)*time.Second,
+		batcherMode,
+		dummyDataSigner,
+		broadcasterSettings,
+	)
 	if err != nil {
 		return err
 	}
