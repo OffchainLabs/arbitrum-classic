@@ -422,6 +422,12 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		return false, err
 	}
 
+	// Confirm feed messages that are already on chain
+	err = b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
+	if err != nil {
+		return false, err
+	}
+
 	if b.logBatchGasCosts {
 		fmt.Printf("%v,%v,%v\n", len(transactionsLengths), len(transactionsData), receipt.GasUsed)
 	}
