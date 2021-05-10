@@ -75,8 +75,7 @@ func startup() error {
 
 	// Relay Config
 	enableDebug := flagSet.Bool("debug", false, "Enable debug logging")
-	sequencerAddr := flagSet.String("sequencer.addr", "", "address of sequencer feed source")
-	sequencerPort := flagSet.String("sequencer.port", "9642", "port of sequencer feed source")
+	sequencerURL := flagSet.String("sequencer-url", "", "URL of sequencer feed source")
 	feedOutputAddr := flagSet.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := flagSet.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 
@@ -87,8 +86,8 @@ func startup() error {
 		return err
 	}
 
-	if *sequencerAddr == "" {
-		return errors.New("Missing --sequencer.addr")
+	if *sequencerURL == "" {
+		return errors.New("Missing --sequencer-url")
 	}
 
 	if *enablePProf {
@@ -108,7 +107,7 @@ func startup() error {
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay("ws://"+*sequencerAddr+":"+*sequencerPort, relaySettings)
+	arbRelay := NewArbRelay(*sequencerURL, relaySettings)
 	relayDone, err := arbRelay.Start(ctx, *enableDebug)
 	if err != nil {
 		return err
