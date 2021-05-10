@@ -19,9 +19,10 @@ package batcher
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -117,6 +118,7 @@ func NewSequencerBatcher(
 	err = feedBroadcaster.Start(ctx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error starting feed broadcaster")
+		return nil, err
 	}
 
 	return &SequencerBatcher{
@@ -265,7 +267,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 	lastSeqNum := new(big.Int).Sub(newMsgCount, big.NewInt(2))
 
 	var prevAcc common.Hash
-	if msgCount.Cmp(big.NewInt(1)) > 0 {
+	if msgCount.Cmp(big.NewInt(0)) > 0 {
 		prevAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
 		if err != nil {
 			return nil, err
@@ -428,7 +430,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		}
 
 		var previousSeqBatchAcc common.Hash
-		if prevMsgCount.Cmp(big.NewInt(1)) > 0 {
+		if prevMsgCount.Cmp(big.NewInt(0)) > 0 {
 			previousSeqBatchAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(prevMsgCount, big.NewInt(1)))
 			if err != nil {
 				return false, err
