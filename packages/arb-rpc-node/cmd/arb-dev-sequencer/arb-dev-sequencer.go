@@ -269,8 +269,8 @@ func startup() error {
 	}
 	defer db.Close()
 
-	var dummyDataSigner = func([]byte) ([]byte, error) {
-		return common.HexToHash("0x0").Bytes(), nil
+	signer := func(hash []byte) ([]byte, error) {
+		return crypto.Sign(hash, seqPrivKey)
 	}
 
 	batch, err := rpc.SetupBatcher(
@@ -280,7 +280,7 @@ func startup() error {
 		db,
 		time.Duration(5)*time.Second,
 		batcherMode,
-		dummyDataSigner,
+		signer,
 		broadcasterSettings,
 	)
 	if err != nil {
