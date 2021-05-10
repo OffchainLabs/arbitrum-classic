@@ -157,7 +157,7 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 				if debug {
 					logger.Info().Hex("acc", msg.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
 				}
-				err = ar.broadcaster.Broadcast(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
+				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
 				if err != nil {
 					logger.
 						Error().
