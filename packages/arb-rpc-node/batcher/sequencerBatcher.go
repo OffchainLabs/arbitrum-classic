@@ -51,6 +51,8 @@ type SequencerBatcher struct {
 	logBatchGasCosts           bool
 	feedBroadcaster            *broadcaster.Broadcaster
 	dataSigner                 func([]byte) ([]byte, error)
+	maxDelayBlocks             *big.Int
+	maxDelaySeconds            *big.Int
 
 	sequencer       common.Address
 	signer          types.Signer
@@ -88,7 +90,8 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	sequencer, err := sequencerInbox.Sequencer(&bind.CallOpts{Context: ctx})
+	callOpts := &bind.CallOpts{Context: ctx}
+	sequencer, err := sequencerInbox.Sequencer(callOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -101,11 +104,19 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
+	maxDelayBlocks, err := sequencerInbox.MaxDelayBlocks(callOpts)
+	if err != nil {
+		return nil, err
+	}
+	maxDelaySeconds, err := sequencerInbox.MaxDelaySeconds(callOpts)
+	if err != nil {
+		return nil, err
+	}
+
 	feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
 	err = feedBroadcaster.Start(ctx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error starting feed broadcaster")
-		return nil, err
 	}
 
 	return &SequencerBatcher{
@@ -118,6 +129,8 @@ func NewSequencerBatcher(
 		chainTimeCheckInterval:     time.Second,
 		feedBroadcaster:            feedBroadcaster,
 		dataSigner:                 dataSigner,
+		maxDelayBlocks:             maxDelayBlocks,
+		maxDelaySeconds:            maxDelaySeconds,
 
 		sequencer:       common.NewAddressFromEth(sequencer),
 		signer:          types.NewEIP155Signer(chainId),
@@ -393,6 +406,58 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 			publishingAllBatchItems = true
 		}
 		lastAcc = item.Accumulator
+	}
+
+	delayBlocks := new(big.Int).Sub(b.latestChainTime.BlockNum.AsInt(), l1BlockNumber)
+	delaySeconds := new(big.Int).Sub(b.latestChainTime.Timestamp, l1Timestamp)
+	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
+		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
+		b.inboxReader.MessageDeliveryMutex.Lock()
+		defer b.inboxReader.MessageDeliveryMutex.Unlock()
+
+		newestMsgCount, err := b.db.GetMessageCount()
+		if err != nil {
+			return false, err
+		}
+		if newestMsgCount.Cmp(newMsgCount) > 0 {
+			newerBatchItems, err := b.db.GetSequencerBatchItems(newMsgCount, newestMsgCount)
+			if err != nil {
+				return false, err
+			}
+			batchItems = append(batchItems, newerBatchItems...)
+		}
+
+		var previousSeqBatchAcc common.Hash
+		if prevMsgCount.Cmp(big.NewInt(1)) > 0 {
+			previousSeqBatchAcc, err = b.db.GetInboxAcc(new(big.Int).Sub(prevMsgCount, big.NewInt(1)))
+			if err != nil {
+				return false, err
+			}
+		}
+		lastAcc := previousSeqBatchAcc
+		for i := range batchItems {
+			item := batchItems[i]
+			if len(item.SequencerMessage) == 0 {
+				continue
+			}
+			seqMsg, err := inbox.NewInboxMessageFromData(item.SequencerMessage)
+			if err != nil {
+				return false, err
+			}
+			seqMsg.ChainTime = b.latestChainTime
+			newItem := inbox.NewSequencerItem(item.TotalDelayedCount, seqMsg, lastAcc)
+			batchItems[i] = newItem
+			lastAcc = newItem.Accumulator
+		}
+		success, err := core.DeliverMessagesAndWait(b.db, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+		if err != nil {
+			return false, err
+		}
+		if !success {
+			return false, errors.New("failed to deliver reorganized messages")
+		}
+
+		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
 	}
 
 	if skippingImplicitEndOfBlock {
