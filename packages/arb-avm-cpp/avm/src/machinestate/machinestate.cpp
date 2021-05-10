@@ -430,7 +430,7 @@ value get_int_value(std::vector<uint8_t> bytes, uint64_t offset) {
     return acc;
 }
 
-WasmCodepoint wasmAvmToCodepoint(std::vector<uint8_t>& bytes) {
+WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes) {
     // code to hash
     auto code = std::make_shared<Code>(0);
     CodePointStub stub = code->addSegment();
@@ -492,7 +492,8 @@ WasmCodepoint wasmAvmToCodepoint(std::vector<uint8_t>& bytes) {
     // convert table
     std::cerr << "Buffer hash " << intx::to_string(hash_value(Buffer()), 16)
               << "\n";
-    return {stub, table};
+    std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(stub, table);
+    return {std::move(tpl)};
 }
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf) {

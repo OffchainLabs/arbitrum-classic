@@ -29,6 +29,23 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
+struct WasmCodePoint {
+    std::shared_ptr<Tuple> data;
+    uint256_t hash() const;
+};
+
+inline uint256_t hash(const WasmCodePoint& hv) {
+    return hv.hash();
+}
+
+inline bool operator==(const WasmCodePoint& val1, const WasmCodePoint& val2) {
+    return val1.hash() == val2.hash();
+}
+
+inline bool operator!=(const WasmCodePoint& val1, const WasmCodePoint& val2) {
+    return val1.hash() != val2.hash();
+}
+
 class Tuple {
    private:
     std::shared_ptr<RawTuple> tpl;

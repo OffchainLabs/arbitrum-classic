@@ -20,6 +20,11 @@
 
 #include <iostream>
 
+
+uint256_t WasmCodePoint::hash() const {
+    return hash_value(*data);
+}
+
 Tuple Tuple::createSizedTuple(const size_t size) {
     if (size == 0) {
         return {};

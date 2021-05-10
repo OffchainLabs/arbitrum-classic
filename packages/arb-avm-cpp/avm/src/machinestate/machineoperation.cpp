@@ -405,6 +405,7 @@ struct ValueTypeVisitor {
     ValueTypes operator()(const uint256_t&) const { return NUM; }
     ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
     ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const WasmCodePoint&) const { return WASM_CODE_POINT; }
     ValueTypes operator()(const HashPreImage&) const { return TUPLE; }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
 };
@@ -1034,19 +1035,18 @@ void wasm_compile(MachineState& m) {
     auto res = m.compile.run_wasm(md, len);
     
     auto bytes = buf2vec(res.buffer, res.buffer_len);
-    auto wasmcp = wasmAvmToCodepoint(res.extra);
+    auto wasmcp = wasmAvmToCodePoint(res.extra);
 
     uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
     uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
 
-    if (hash_value(wasmcp.codept) != hash1 || hash_value(wasmcp.jump_table) != hash2) {
+    if (hash_value(wasmcp.data->get_element(0)) != hash1 || hash_value(wasmcp.data->get_element(0)) != hash2) {
         std::cerr << "FAIL\n";
     }
 
     m.stack.popClear();
     m.stack.popClear();
-    m.stack.push(std::move(wasmcp.codept));
-    m.stack.push(std::move(wasmcp.jump_table));
+    m.stack.push(std::move(wasmcp));
     ++m.pc;
 }
 

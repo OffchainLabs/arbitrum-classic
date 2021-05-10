@@ -133,6 +133,11 @@ struct Marshaller {
         }
     }
 
+    void operator()(const WasmCodePoint& cp) const {
+        buf.push_back(WASM_CODE_POINT);
+        values.push_back(*cp.data);
+    }
+
     void operator()(const Buffer& val) const {
         buf.push_back(BUFFER);
         auto data = val.toFlatVector();
@@ -245,6 +250,8 @@ struct GetSize {
 
     uint256_t operator()(const Tuple& val) const { return val.getSize(); }
 
+    uint256_t operator()(const WasmCodePoint& val) const { return val.data->getSize(); }
+
     uint256_t operator()(const Buffer&) const { return 1; }
 
     uint256_t operator()(const uint256_t&) const { return 1; }
@@ -266,6 +273,11 @@ struct ValuePrinter {
 
     std::ostream* operator()(const Tuple& val) const {
         os << val;
+        return &os;
+    }
+
+    std::ostream* operator()(const WasmCodePoint& val) const {
+        os << "WasmPoint(" << *val.data << ")";
         return &os;
     }
 

@@ -245,12 +245,7 @@ struct MachineState {
     void marshalBufferProof(OneStepProof& proof) const;
 };
 
-struct WasmCodepoint {
-    value codept;
-    value jump_table;
-};
-
-WasmCodepoint wasmAvmToCodepoint(std::vector<uint8_t>& bytes);
+WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes);
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf);
 uint256_t runWasmMachine(MachineState &machine_state);
