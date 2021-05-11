@@ -24,7 +24,6 @@ import { Node as NodeCon } from '../build/types/Node'
 import { RollupCreatorNoProxy } from '../build/types/RollupCreatorNoProxy'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
-// import deploy_contracts from '../scripts/deploy'
 import { initializeAccounts } from './utils'
 
 import {
