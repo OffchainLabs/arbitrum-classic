@@ -239,6 +239,10 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 gasPriceBid;
     }
 
+    function shouldTryDeply(address erc20) internal view returns (bool) {
+        return !hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20);
+    }
+
     function createMintCallData(
         address erc20,
         address destination,
@@ -247,7 +251,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         bytes calldata callHookData
     ) public view returns (bytes memory data) {
         bytes memory deployData = "";
-        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
+        if (shouldTryDeply(erc20)) {
             // TODO: use OZ's ERC20Metadata once available
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
             deployData = abi.encode(
@@ -291,7 +295,9 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     ) external payable override returns (uint256) {
         bytes memory data =
             createMintCallData(erc20, destination, msg.sender, amount, callHookData);
-        // TODO hasTriedDeploy[erc20] = true;
+        if (shouldTryDeply(erc20)) {
+            hasTriedDeploy[erc20] = true;
+        }
         uint256 seqNum =
             inbox.createRetryableTicket{ value: msg.value }(
                 l2ArbTokenBridgeAddress,
