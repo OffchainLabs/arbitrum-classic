@@ -75,7 +75,7 @@ func deployRollup(
 	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
 	test.FailIfError(t, err)
 
-	bridgeCreatorAddr, _, _, err := ethbridgecontracts.DeployBridgeCreator(auth, client)
+	bridgeCreatorAddr, _, _, err := ethbridgetestcontracts.DeployBridgeCreatorNoProxy(auth, client)
 	test.FailIfError(t, err)
 
 	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
@@ -189,10 +189,16 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorUtilsAddr, _, _, err := ethbridgecontracts.DeployValidatorUtils(auth, client)
 	test.FailIfError(t, err)
 
-	validatorAddress, _, _, err := ethbridgecontracts.DeployValidator(auth, client)
+	validatorAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(auth, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = validatorCon.Initialize(auth)
 	test.FailIfError(t, err)
 
-	validatorAddress2, _, _, err := ethbridgecontracts.DeployValidator(auth2, client)
+	validatorAddress2, _, validatorCon2, err := ethbridgecontracts.DeployValidator(auth2, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = validatorCon2.Initialize(auth2)
 	test.FailIfError(t, err)
 
 	client.Commit()
@@ -312,7 +318,6 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 			if tx != nil {
 				stakerMadeFirstMove = true
 			}
-
 		} else if (!faultyStakerAlive || !faultyStakerDead) && stakerMadeFirstMove {
 			fmt.Println("Malicious staker acting")
 			_, err = faultyStaker.Act(ctx)

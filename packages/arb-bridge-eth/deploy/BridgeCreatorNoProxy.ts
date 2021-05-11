@@ -6,11 +6,11 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments
   const { deployer } = await getNamedAccounts()
 
-  await deploy('BridgeCreator', {
+  await deploy('BridgeCreatorNoProxy', {
     from: deployer,
     args: [],
   })
 }
 
 module.exports = func
-module.exports.tags = ['BridgeCreator', 'live']
+module.exports.tags = ['BridgeCreatorNoProxy', 'test']

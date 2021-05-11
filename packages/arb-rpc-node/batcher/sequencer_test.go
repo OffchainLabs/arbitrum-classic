@@ -19,11 +19,12 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -72,7 +73,7 @@ func deployRollup(
 	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
 	test.FailIfError(t, err)
 
-	bridgeCreatorAddr, _, _, err := ethbridgecontracts.DeployBridgeCreator(auth, client)
+	bridgeCreatorAddr, _, _, err := ethbridgetestcontracts.DeployBridgeCreatorNoProxy(auth, client)
 	test.FailIfError(t, err)
 
 	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
@@ -224,8 +225,8 @@ func TestSequencerBatcher(t *testing.T) {
 		big.NewInt(1),
 		seqInbox,
 		auth,
-        dummyDataSigner,
-        broadcasterSettings,
+		dummyDataSigner,
+		broadcasterSettings,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
