@@ -23,14 +23,16 @@ import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "../libraries/CloneFactory.sol";
-import "../libraries/ICloneable.sol";
+import "./Validator.sol";
 
 contract ValidatorWalletCreator is Ownable, CloneFactory {
     event WalletCreated(address indexed walletAddress, address indexed userAddress);
 
     address public template;
 
-    constructor() public Ownable() {}
+    constructor() public Ownable() {
+        template = address(new Validator());
+    }
 
     function setTemplate(address _template) external onlyOwner {
         template = _template;

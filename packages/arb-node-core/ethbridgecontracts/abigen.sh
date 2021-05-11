@@ -59,4 +59,7 @@ abigen --pkg=$PACKAGE --out=challenge.go --combined-json combined.json --exc=$IG
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/Validator.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=validator.go --combined-json combined.json --exc=$IGNORED_MORE
 
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/ValidatorWalletCreator.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=validatorwalletcreator.go --combined-json combined.json --exc=$IGNORED_MORE
+
 rm combined.json
