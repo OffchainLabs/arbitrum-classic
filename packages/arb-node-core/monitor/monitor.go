@@ -18,6 +18,7 @@ package monitor
 
 import (
 	"context"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
@@ -82,7 +83,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	delayedBridgeAddress, err := rollup.DelayedBridge(context.Background())
+	delayedBridgeAddress, err := rollup.DelayedBridge(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	sequencerAddress, err := rollup.SequencerBridge(context.Background())
+	sequencerAddress, err := rollup.SequencerBridge(ctx)
 	if err != nil {
 		return nil, err
 	}

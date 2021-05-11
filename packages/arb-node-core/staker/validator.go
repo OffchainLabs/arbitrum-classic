@@ -45,7 +45,7 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	delayedBridgeAddress, err := rollup.DelayedBridge(context.Background())
+	delayedBridgeAddress, err := rollup.DelayedBridge(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	sequencerBridgeAddress, err := rollup.SequencerBridge(context.Background())
+	sequencerBridgeAddress, err := rollup.SequencerBridge(ctx)
 	if err != nil {
 		return nil, err
 	}
