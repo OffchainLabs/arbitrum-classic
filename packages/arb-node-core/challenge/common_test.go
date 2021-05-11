@@ -206,6 +206,9 @@ func initializeChallengeTest(
 	delayedBridgeAddr, _, delayedBridge, err := ethbridgecontracts.DeployBridge(deployer, client)
 	test.FailIfError(t, err)
 	client.Commit()
+	_, err = delayedBridge.Initialize(deployer)
+	test.FailIfError(t, err)
+	client.Commit()
 
 	_, err = delayedBridge.SetInbox(deployer, deployer.From, true)
 	test.FailIfError(t, err)
@@ -262,9 +265,16 @@ func initializeChallengeTest(
 	_, err = core.DeliverMessagesAndWait(arbCore, common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endOfBlockItem}, []inbox.DelayedMessage{delayed}, nil)
 	test.FailIfError(t, err)
 
-	asserterWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(asserter, client)
+	asserterWalletAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(asserter, client)
 	test.FailIfError(t, err)
-	challengerWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(challenger, client)
+	client.Commit()
+	_, err = validatorCon.Initialize(asserter)
+	test.FailIfError(t, err)
+
+	challengerWalletAddress, _, validatorCon2, err := ethbridgecontracts.DeployValidator(challenger, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = validatorCon2.Initialize(challenger)
 	test.FailIfError(t, err)
 
 	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)

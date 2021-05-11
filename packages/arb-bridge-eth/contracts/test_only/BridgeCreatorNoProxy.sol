@@ -28,40 +28,7 @@ import "../bridge/interfaces/IBridge.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract BridgeCreatorNoProxy is Ownable {
-    Bridge delayedBridgeTemplate;
-    SequencerInbox sequencerInboxTemplate;
-    Inbox inboxTemplate;
-    RollupEventBridge rollupEventBridgeTemplate;
-    Outbox outboxTemplate;
-
-    event TemplatesUpdated();
-
-    constructor() public Ownable() {
-        delayedBridgeTemplate = new Bridge();
-        sequencerInboxTemplate = new SequencerInbox();
-        inboxTemplate = new Inbox();
-        rollupEventBridgeTemplate = new RollupEventBridge();
-        outboxTemplate = new Outbox();
-    }
-
-    function updateTemplates(
-        address _delayedBridgeTemplate,
-        address _sequencerInboxTemplate,
-        address _inboxTemplate,
-        address _rollupEventBridgeTemplate,
-        address _outboxTemplate
-    ) external onlyOwner {
-        delayedBridgeTemplate = Bridge(_delayedBridgeTemplate);
-        sequencerInboxTemplate = SequencerInbox(_sequencerInboxTemplate);
-        inboxTemplate = Inbox(_inboxTemplate);
-        rollupEventBridgeTemplate = RollupEventBridge(_rollupEventBridgeTemplate);
-        outboxTemplate = Outbox(_outboxTemplate);
-
-        emit TemplatesUpdated();
-    }
-
     struct CreateBridgeFrame {
-        ProxyAdmin admin;
         Bridge delayedBridge;
         SequencerInbox sequencerInbox;
         Inbox inbox;
@@ -70,7 +37,6 @@ contract BridgeCreatorNoProxy is Ownable {
     }
 
     function createBridge(
-        address adminProxy,
         address rollup,
         address sequencer,
         uint256 sequencerDelayBlocks,
@@ -87,11 +53,11 @@ contract BridgeCreatorNoProxy is Ownable {
     {
         CreateBridgeFrame memory frame;
         {
-            frame.delayedBridge = delayedBridgeTemplate;
-            frame.sequencerInbox = sequencerInboxTemplate;
-            frame.inbox = inboxTemplate;
-            frame.rollupEventBridge = rollupEventBridgeTemplate;
-            frame.outbox = outboxTemplate;
+            frame.delayedBridge = new Bridge();
+            frame.sequencerInbox = new SequencerInbox();
+            frame.inbox = new Inbox();
+            frame.rollupEventBridge = new RollupEventBridge();
+            frame.outbox = new Outbox();
         }
 
         frame.delayedBridge.initialize();

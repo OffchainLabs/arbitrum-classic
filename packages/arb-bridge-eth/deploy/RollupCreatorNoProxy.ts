@@ -6,7 +6,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments
   const [deployer] = await ethers.getSigners()
 
-  const bridgeCreator = await deployments.get('BridgeCreator')
+  const bridgeCreator = await deployments.get('BridgeCreatorNoProxy')
   const rollup = await deployments.get('Rollup')
   const challengeFactory = await deployments.get('ChallengeFactory')
   const nodeFactory = await deployments.get('NodeFactory')

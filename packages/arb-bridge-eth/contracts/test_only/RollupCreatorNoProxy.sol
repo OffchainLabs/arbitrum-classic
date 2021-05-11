@@ -18,12 +18,12 @@
 
 pragma solidity ^0.6.11;
 
+import "./BridgeCreatorNoProxy.sol";
 import "../bridge/Bridge.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 import "../bridge/SequencerInbox.sol";
 import "../rollup/RollupEventBridge.sol";
-import "./BridgeCreatorNoProxy.sol";
 
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
@@ -106,7 +106,6 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
             frame.rollupEventBridge,
             frame.outbox
         ) = bridgeCreator.createBridge(
-            config.owner,
             frame.rollup,
             config.sequencer,
             config.sequencerDelayBlocks,

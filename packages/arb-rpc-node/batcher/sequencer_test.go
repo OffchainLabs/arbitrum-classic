@@ -73,7 +73,7 @@ func deployRollup(
 	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
 	test.FailIfError(t, err)
 
-	bridgeCreatorAddr, _, _, err := ethbridgecontracts.DeployBridgeCreator(auth, client)
+	bridgeCreatorAddr, _, _, err := ethbridgetestcontracts.DeployBridgeCreatorNoProxy(auth, client)
 	test.FailIfError(t, err)
 
 	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
