@@ -22,7 +22,7 @@ MESSAGES=$PREFIX/bridge/Messages.sol:Messages
 BRIDGE_LIBS=$PREFIX/bridge/interfaces/IBridge.sol:IBridge,$PREFIX/bridge/interfaces/ISequencerInbox.sol:ISequencerInbox,$PREFIX/bridge/interfaces/IOutbox.sol:IOutbox,$PREFIX/bridge/interfaces/IMessageProvider.sol:IMessageProvider,$MESSAGES
 
 ROLLUP_LIB=$PREFIX/rollup/RollupLib.sol:RollupLib
-ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup
+ROLLUP=$PREFIX/rollup/Rollup.sol:Rollup,$PREFIX/rollup/Rollup.sol:AbsRollup,$PREFIX/rollup/Rollup.sol:ERC20Rollup
 OUTBOX=$PREFIX/rollup/Outbox.sol:Outbox
 INBOX=$PREFIX/rollup/Inbox.sol:Inbox
 
@@ -53,7 +53,10 @@ abigen --pkg=$PACKAGE --out=validatorutils.go --combined-json combined.json --ex
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreator.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=rollupcreator.go --combined-json combined.json --exc=$IGNORED_MORE
 
-rm combined.json
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/challenge/Challenge.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=challenge.go --combined-json combined.json --exc=$IGNORED_MORE
 
-abigen --sol=$PREFIX/challenge/Challenge.sol --pkg=$PACKAGE --out=challenge.go --exc=$IGNORED_MORE
-abigen --sol=$PREFIX/validator/Validator.sol --pkg=$PACKAGE --out=validator.go --exc=$IGNORED_MORE
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/Validator.sol --overwrite -o .
+abigen --pkg=$PACKAGE --out=validator.go --combined-json combined.json --exc=$IGNORED_MORE
+
+rm combined.json

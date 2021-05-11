@@ -37,6 +37,7 @@ interface INodeInterface extends ethers.utils.Interface {
     'removeStaker(address)': FunctionFragment
     'requirePastChildConfirmDeadline()': FunctionFragment
     'requirePastDeadline()': FunctionFragment
+    'resetChildren()': FunctionFragment
     'stakerCount()': FunctionFragment
     'stakers(address)': FunctionFragment
     'stateHash()': FunctionFragment
@@ -98,6 +99,10 @@ interface INodeInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'resetChildren',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'stakerCount',
     values?: undefined
   ): string
@@ -147,6 +152,10 @@ interface INodeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'requirePastDeadline',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'resetChildren',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'stakerCount', data: BytesLike): Result
@@ -274,6 +283,10 @@ export class INode extends Contract {
 
     'requirePastDeadline()'(overrides?: CallOverrides): Promise<[void]>
 
+    resetChildren(overrides?: Overrides): Promise<ContractTransaction>
+
+    'resetChildren()'(overrides?: Overrides): Promise<ContractTransaction>
+
     stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
@@ -387,6 +400,10 @@ export class INode extends Contract {
 
   'requirePastDeadline()'(overrides?: CallOverrides): Promise<void>
 
+  resetChildren(overrides?: Overrides): Promise<ContractTransaction>
+
+  'resetChildren()'(overrides?: Overrides): Promise<ContractTransaction>
+
   stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
   'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -497,6 +514,10 @@ export class INode extends Contract {
     requirePastDeadline(overrides?: CallOverrides): Promise<void>
 
     'requirePastDeadline()'(overrides?: CallOverrides): Promise<void>
+
+    resetChildren(overrides?: CallOverrides): Promise<void>
+
+    'resetChildren()'(overrides?: CallOverrides): Promise<void>
 
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -613,6 +634,10 @@ export class INode extends Contract {
     requirePastDeadline(overrides?: CallOverrides): Promise<BigNumber>
 
     'requirePastDeadline()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    resetChildren(overrides?: Overrides): Promise<BigNumber>
+
+    'resetChildren()'(overrides?: Overrides): Promise<BigNumber>
 
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -746,6 +771,10 @@ export class INode extends Contract {
     'requirePastDeadline()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    resetChildren(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'resetChildren()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     stakerCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

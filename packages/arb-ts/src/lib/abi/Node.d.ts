@@ -38,6 +38,7 @@ interface NodeInterface extends ethers.utils.Interface {
     'removeStaker(address)': FunctionFragment
     'requirePastChildConfirmDeadline()': FunctionFragment
     'requirePastDeadline()': FunctionFragment
+    'resetChildren()': FunctionFragment
     'rollup()': FunctionFragment
     'stakerCount()': FunctionFragment
     'stakers(address)': FunctionFragment
@@ -100,6 +101,10 @@ interface NodeInterface extends ethers.utils.Interface {
     functionFragment: 'requirePastDeadline',
     values?: undefined
   ): string
+  encodeFunctionData(
+    functionFragment: 'resetChildren',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'rollup', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'stakerCount',
@@ -152,6 +157,10 @@ interface NodeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'requirePastDeadline',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'resetChildren',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'rollup', data: BytesLike): Result
@@ -284,6 +293,10 @@ export class Node extends Contract {
 
     'requirePastDeadline()'(overrides?: CallOverrides): Promise<[void]>
 
+    resetChildren(overrides?: Overrides): Promise<ContractTransaction>
+
+    'resetChildren()'(overrides?: Overrides): Promise<ContractTransaction>
+
     rollup(overrides?: CallOverrides): Promise<[string]>
 
     'rollup()'(overrides?: CallOverrides): Promise<[string]>
@@ -405,6 +418,10 @@ export class Node extends Contract {
 
   'requirePastDeadline()'(overrides?: CallOverrides): Promise<void>
 
+  resetChildren(overrides?: Overrides): Promise<ContractTransaction>
+
+  'resetChildren()'(overrides?: Overrides): Promise<ContractTransaction>
+
   rollup(overrides?: CallOverrides): Promise<string>
 
   'rollup()'(overrides?: CallOverrides): Promise<string>
@@ -520,6 +537,10 @@ export class Node extends Contract {
     requirePastDeadline(overrides?: CallOverrides): Promise<void>
 
     'requirePastDeadline()'(overrides?: CallOverrides): Promise<void>
+
+    resetChildren(overrides?: CallOverrides): Promise<void>
+
+    'resetChildren()'(overrides?: CallOverrides): Promise<void>
 
     rollup(overrides?: CallOverrides): Promise<string>
 
@@ -647,6 +668,10 @@ export class Node extends Contract {
     requirePastDeadline(overrides?: CallOverrides): Promise<BigNumber>
 
     'requirePastDeadline()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    resetChildren(overrides?: Overrides): Promise<BigNumber>
+
+    'resetChildren()'(overrides?: Overrides): Promise<BigNumber>
 
     rollup(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -788,6 +813,10 @@ export class Node extends Contract {
     'requirePastDeadline()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    resetChildren(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'resetChildren()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     rollup(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

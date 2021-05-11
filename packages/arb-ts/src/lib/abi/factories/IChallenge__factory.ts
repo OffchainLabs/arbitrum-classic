@@ -45,6 +45,13 @@ const _abi = [
   },
   {
     inputs: [],
+    name: 'clearChallenge',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'currentResponderTimeLeft',
     outputs: [
       {

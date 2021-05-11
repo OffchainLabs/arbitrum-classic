@@ -48,7 +48,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     uint256 public extraChallengeTimeBlocks;
     uint256 public arbGasSpeedLimitPerBlock;
     uint256 public baseStake;
-    address public stakeToken;
 
     // Bridge is an IInbox and IOutbox
     IBridge public delayedBridge;
@@ -76,7 +75,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         address _owner,
         bytes calldata _extraConfig,
         address[7] calldata connectedContracts
-    ) external override {
+    ) public virtual override {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
         require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
 
@@ -107,7 +106,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         extraChallengeTimeBlocks = _extraChallengeTimeBlocks;
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
-        stakeToken = _stakeToken;
         owner = _owner;
         admin = ProxyAdmin(connectedContracts[0]);
 
@@ -321,22 +319,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         createNewStake(msg.sender, depositAmount);
 
         rollupEventBridge.stakeCreated(msg.sender, latestConfirmed());
-    }
-
-    /**
-     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
-     * @param destination Address to transfer the withdrawn funds to
-     */
-    function withdrawStakerFunds(address payable destination)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
-        uint256 amount = withdrawFunds(msg.sender);
-        // Note: This is an unsafe external call and could be used for reentrency
-        // This is safe because it occurs after all checks and effects
-        sendStakerFunds(destination, amount);
-        return amount;
     }
 
     /**
@@ -846,7 +828,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      * that only blocks operations that should be blocked anyway
      * @return The current minimum stake requirement
      */
-    function currentRequiredStake(
+    function requiredStake(
         uint256 blockNumber,
         uint256 firstUnresolvedNodeNum,
         uint256 latestNodeCreated,
@@ -863,7 +845,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
             );
     }
 
-    function currentRequiredStake() internal view returns (uint256) {
+    function currentRequiredStake() public view returns (uint256) {
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
 
         return
@@ -915,22 +897,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     }
 
     /**
-     * @notice Send funds to the given address, if staking is eth, transfer eth, otherwise transfer tokens
-     * @param destination Address to tranfer funds to
-     * @param amount Amount of funds to transfer
-     */
-    function sendStakerFunds(address payable destination, uint256 amount) private {
-        if (amount == 0) {
-            return;
-        }
-        if (stakeToken == address(0)) {
-            destination.transfer(amount);
-        } else {
-            require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
-        }
-    }
-
-    /**
      * @notice Verify that the given address is staked and not actively in a challenge
      * @param stakerAddress Address to check
      */
@@ -947,7 +913,6 @@ contract Rollup is AbsRollup {
      * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
      */
     function newStake() external payable whenNotPaused {
-        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
         _newStake(msg.value);
     }
 
@@ -956,12 +921,55 @@ contract Rollup is AbsRollup {
      * @param stakerAddress Address of the staker whose stake is increased
      */
     function addToDeposit(address stakerAddress) external payable whenNotPaused {
-        require(stakeToken == address(0), "WRONG_STAKE_TYPE");
         _addToDeposit(stakerAddress, msg.value);
+    }
+
+    /**
+     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
+     * @param destination Address to transfer the withdrawn funds to
+     */
+    function withdrawStakerFunds(address payable destination)
+        external
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 amount = withdrawFunds(msg.sender);
+        // Note: This is an unsafe external call and could be used for reentrency
+        // This is safe because it occurs after all checks and effects
+        destination.transfer(amount);
+        return amount;
     }
 }
 
 contract ERC20Rollup is AbsRollup {
+    address public stakeToken;
+
+    function initialize(
+        bytes32 _machineHash,
+        uint256 _confirmPeriodBlocks,
+        uint256 _extraChallengeTimeBlocks,
+        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _baseStake,
+        address _stakeToken,
+        address _owner,
+        bytes calldata _extraConfig,
+        address[7] calldata connectedContracts
+    ) public override {
+        require(stakeToken != address(0), "NEED_STAKE_TOKEN");
+        super.initialize(
+            _machineHash,
+            _confirmPeriodBlocks,
+            _extraChallengeTimeBlocks,
+            _arbGasSpeedLimitPerBlock,
+            _baseStake,
+            _stakeToken,
+            _owner,
+            _extraConfig,
+            connectedContracts
+        );
+        stakeToken = _stakeToken;
+    }
+
     /**
      * @notice Create a new stake
      * @dev It is recomended to call stakeOnExistingNode after creating a new stake
@@ -969,7 +977,6 @@ contract ERC20Rollup is AbsRollup {
      * @param tokenAmount the amount of tokens staked
      */
     function newStake(uint256 tokenAmount) external whenNotPaused {
-        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
         _newStake(tokenAmount);
         require(
             IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
@@ -983,11 +990,26 @@ contract ERC20Rollup is AbsRollup {
      * @param tokenAmount the amount of tokens staked
      */
     function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
-        require(stakeToken != address(0), "WRONG_STAKE_TYPE");
         _addToDeposit(stakerAddress, tokenAmount);
         require(
             IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
             "TRANSFER_FAIL"
         );
+    }
+
+    /**
+     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
+     * @param destination Address to transfer the withdrawn funds to
+     */
+    function withdrawStakerFunds(address payable destination)
+        external
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 amount = withdrawFunds(msg.sender);
+        // Note: This is an unsafe external call and could be used for reentrency
+        // This is safe because it occurs after all checks and effects
+        require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
+        return amount;
     }
 }

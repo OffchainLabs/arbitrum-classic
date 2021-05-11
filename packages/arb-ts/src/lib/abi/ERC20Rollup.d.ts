@@ -14,17 +14,16 @@ import {
   Contract,
   ContractTransaction,
   Overrides,
-  PayableOverrides,
   CallOverrides,
 } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface RollupInterface extends ethers.utils.Interface {
+interface ERC20RollupInterface extends ethers.utils.Interface {
   functions: {
     '_stakerMap(address)': FunctionFragment
-    'addToDeposit(address)': FunctionFragment
+    'addToDeposit(address,uint256)': FunctionFragment
     'admin()': FunctionFragment
     'amountStaked(address)': FunctionFragment
     'arbGasSpeedLimitPerBlock()': FunctionFragment
@@ -52,7 +51,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'latestNodeCreated()': FunctionFragment
     'latestStakedNode(address)': FunctionFragment
     'minimumAssertionPeriod()': FunctionFragment
-    'newStake()': FunctionFragment
+    'newStake(uint256)': FunctionFragment
     'nodeFactory()': FunctionFragment
     'outbox()': FunctionFragment
     'owner()': FunctionFragment
@@ -74,6 +73,7 @@ interface RollupInterface extends ethers.utils.Interface {
     'setOutbox(address)': FunctionFragment
     'stakeOnExistingNode(uint256,bytes32)': FunctionFragment
     'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256,bytes)': FunctionFragment
+    'stakeToken()': FunctionFragment
     'stakerCount()': FunctionFragment
     'upgradeImplementation(address)': FunctionFragment
     'upgradeImplementationAndCall(address,bytes)': FunctionFragment
@@ -85,7 +85,10 @@ interface RollupInterface extends ethers.utils.Interface {
   }
 
   encodeFunctionData(functionFragment: '_stakerMap', values: [string]): string
-  encodeFunctionData(functionFragment: 'addToDeposit', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'addToDeposit',
+    values: [string, BigNumberish]
+  ): string
   encodeFunctionData(functionFragment: 'admin', values?: undefined): string
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
   encodeFunctionData(
@@ -199,7 +202,10 @@ interface RollupInterface extends ethers.utils.Interface {
     functionFragment: 'minimumAssertionPeriod',
     values?: undefined
   ): string
-  encodeFunctionData(functionFragment: 'newStake', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'newStake',
+    values: [BigNumberish]
+  ): string
   encodeFunctionData(
     functionFragment: 'nodeFactory',
     values?: undefined
@@ -276,6 +282,7 @@ interface RollupInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(functionFragment: 'stakeToken', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'stakerCount',
     values?: undefined
@@ -459,6 +466,7 @@ interface RollupInterface extends ethers.utils.Interface {
     functionFragment: 'stakeOnNewNode',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'stakeToken', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'stakerCount', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'upgradeImplementation',
@@ -509,7 +517,7 @@ interface RollupInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'Unpaused'): EventFragment
 }
 
-export class Rollup extends Contract {
+export class ERC20Rollup extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -520,7 +528,7 @@ export class Rollup extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: RollupInterface
+  interface: ERC20RollupInterface
 
   functions: {
     _stakerMap(
@@ -551,12 +559,14 @@ export class Rollup extends Contract {
 
     addToDeposit(
       stakerAddress: string,
-      overrides?: PayableOverrides
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'addToDeposit(address)'(
+    'addToDeposit(address,uint256)'(
       stakerAddress: string,
-      overrides?: PayableOverrides
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
     ): Promise<ContractTransaction>
 
     admin(overrides?: CallOverrides): Promise<[string]>
@@ -792,9 +802,15 @@ export class Rollup extends Contract {
 
     'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    newStake(overrides?: PayableOverrides): Promise<ContractTransaction>
+    newStake(
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
-    'newStake()'(overrides?: PayableOverrides): Promise<ContractTransaction>
+    'newStake(uint256)'(
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     nodeFactory(overrides?: CallOverrides): Promise<[string]>
 
@@ -986,6 +1002,10 @@ export class Rollup extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    stakeToken(overrides?: CallOverrides): Promise<[string]>
+
+    'stakeToken()'(overrides?: CallOverrides): Promise<[string]>
+
     stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
@@ -1085,12 +1105,14 @@ export class Rollup extends Contract {
 
   addToDeposit(
     stakerAddress: string,
-    overrides?: PayableOverrides
+    tokenAmount: BigNumberish,
+    overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'addToDeposit(address)'(
+  'addToDeposit(address,uint256)'(
     stakerAddress: string,
-    overrides?: PayableOverrides
+    tokenAmount: BigNumberish,
+    overrides?: Overrides
   ): Promise<ContractTransaction>
 
   admin(overrides?: CallOverrides): Promise<string>
@@ -1313,9 +1335,15 @@ export class Rollup extends Contract {
 
   'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  newStake(overrides?: PayableOverrides): Promise<ContractTransaction>
+  newStake(
+    tokenAmount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
-  'newStake()'(overrides?: PayableOverrides): Promise<ContractTransaction>
+  'newStake(uint256)'(
+    tokenAmount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   nodeFactory(overrides?: CallOverrides): Promise<string>
 
@@ -1507,6 +1535,10 @@ export class Rollup extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  stakeToken(overrides?: CallOverrides): Promise<string>
+
+  'stakeToken()'(overrides?: CallOverrides): Promise<string>
+
   stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
   'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -1606,11 +1638,13 @@ export class Rollup extends Contract {
 
     addToDeposit(
       stakerAddress: string,
+      tokenAmount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'addToDeposit(address)'(
+    'addToDeposit(address,uint256)'(
       stakerAddress: string,
+      tokenAmount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1834,9 +1868,15 @@ export class Rollup extends Contract {
 
     'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    newStake(overrides?: CallOverrides): Promise<void>
+    newStake(
+      tokenAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    'newStake()'(overrides?: CallOverrides): Promise<void>
+    'newStake(uint256)'(
+      tokenAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     nodeFactory(overrides?: CallOverrides): Promise<string>
 
@@ -2022,6 +2062,10 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    stakeToken(overrides?: CallOverrides): Promise<string>
+
+    'stakeToken()'(overrides?: CallOverrides): Promise<string>
+
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -2147,12 +2191,14 @@ export class Rollup extends Contract {
 
     addToDeposit(
       stakerAddress: string,
-      overrides?: PayableOverrides
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
     ): Promise<BigNumber>
 
-    'addToDeposit(address)'(
+    'addToDeposit(address,uint256)'(
       stakerAddress: string,
-      overrides?: PayableOverrides
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
     ): Promise<BigNumber>
 
     admin(overrides?: CallOverrides): Promise<BigNumber>
@@ -2384,9 +2430,15 @@ export class Rollup extends Contract {
 
     'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    newStake(overrides?: PayableOverrides): Promise<BigNumber>
+    newStake(
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
-    'newStake()'(overrides?: PayableOverrides): Promise<BigNumber>
+    'newStake(uint256)'(
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
     nodeFactory(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -2572,6 +2624,10 @@ export class Rollup extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    stakeToken(overrides?: CallOverrides): Promise<BigNumber>
+
+    'stakeToken()'(overrides?: CallOverrides): Promise<BigNumber>
+
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -2656,12 +2712,14 @@ export class Rollup extends Contract {
 
     addToDeposit(
       stakerAddress: string,
-      overrides?: PayableOverrides
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'addToDeposit(address)'(
+    'addToDeposit(address,uint256)'(
       stakerAddress: string,
-      overrides?: PayableOverrides
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     admin(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -2932,9 +2990,15 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    newStake(overrides?: PayableOverrides): Promise<PopulatedTransaction>
+    newStake(
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
 
-    'newStake()'(overrides?: PayableOverrides): Promise<PopulatedTransaction>
+    'newStake(uint256)'(
+      tokenAmount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
 
     nodeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
@@ -3133,6 +3197,10 @@ export class Rollup extends Contract {
       sequencerBatchProof: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    stakeToken(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'stakeToken()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     stakerCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
