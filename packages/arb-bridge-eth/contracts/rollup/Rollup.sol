@@ -885,6 +885,8 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         require(isStaked(stakerAddress), "NOT_STAKED");
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
     }
+
+    function withdrawStakerFunds(address payable destination) external virtual returns (uint256);
 }
 
 contract Rollup is AbsRollup {
@@ -911,6 +913,7 @@ contract Rollup is AbsRollup {
      */
     function withdrawStakerFunds(address payable destination)
         external
+        override
         whenNotPaused
         returns (uint256)
     {
@@ -984,6 +987,7 @@ contract ERC20Rollup is AbsRollup {
      */
     function withdrawStakerFunds(address payable destination)
         external
+        override
         whenNotPaused
         returns (uint256)
     {
