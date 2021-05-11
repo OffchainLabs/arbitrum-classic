@@ -77,10 +77,7 @@ func createValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
-	if len(receipt.Logs) != 1 {
-		return ethcommon.Address{}, errors.New("unexpected log count in wallet creation")
-	}
-	ev, err := walletCreator.ParseWalletCreated(*receipt.Logs[0])
+	ev, err := walletCreator.ParseWalletCreated(*receipt.Logs[len(receipt.Logs)-1])
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
