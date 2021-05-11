@@ -780,26 +780,24 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      * @return The current minimum stake requirement
      */
     function currentRequiredStake(
-        uint256 _baseStake,
         uint256 _blockNumber,
-        uint256 _confirmPeriodBlocks,
         uint256 _firstUnresolvedNodeNum,
-        uint256 _latestNodeCreated,
-        uint256 _firstUnresolvedDeadline
-    ) internal pure returns (uint256) {
+        uint256 _latestNodeCreated
+    ) internal view returns (uint256) {
         // If there are no unresolved nodes, then you can use the base stake
         if (_firstUnresolvedNodeNum - 1 == _latestNodeCreated) {
-            return _baseStake;
+            return baseStake;
         }
-        if (_blockNumber < _firstUnresolvedDeadline) {
-            return _baseStake;
+        uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).deadlineBlock();
+        if (_blockNumber < firstUnresolvedDeadline) {
+            return baseStake;
         }
         uint24[10] memory numerators =
             [1, 122971, 128977, 80017, 207329, 114243, 314252, 129988, 224562, 162163];
         uint24[10] memory denominators =
             [1, 114736, 112281, 64994, 157126, 80782, 207329, 80017, 128977, 86901];
-        uint256 firstUnresolvedAge = _blockNumber.sub(_firstUnresolvedDeadline);
-        uint256 periodsPassed = firstUnresolvedAge.mul(10).div(_confirmPeriodBlocks);
+        uint256 firstUnresolvedAge = _blockNumber.sub(firstUnresolvedDeadline);
+        uint256 periodsPassed = firstUnresolvedAge.mul(10).div(confirmPeriodBlocks);
         // Overflow check
         if (periodsPassed.div(10) >= 255) {
             return type(uint256).max;
@@ -814,9 +812,9 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         if (multiplier == 0) {
             multiplier = 1;
         }
-        uint256 fullStake = _baseStake * multiplier;
+        uint256 fullStake = baseStake * multiplier;
         // Overflow check
-        if (fullStake / _baseStake != multiplier) {
+        if (fullStake / baseStake != multiplier) {
             return type(uint256).max;
         }
         return fullStake;
@@ -831,32 +829,15 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     function requiredStake(
         uint256 blockNumber,
         uint256 firstUnresolvedNodeNum,
-        uint256 latestNodeCreated,
-        uint256 firstUnresolvedDeadline
+        uint256 latestNodeCreated
     ) public view returns (uint256) {
-        return
-            currentRequiredStake(
-                baseStake,
-                blockNumber,
-                confirmPeriodBlocks,
-                firstUnresolvedNodeNum,
-                latestNodeCreated,
-                firstUnresolvedDeadline
-            );
+        return currentRequiredStake(blockNumber, firstUnresolvedNodeNum, latestNodeCreated);
     }
 
     function currentRequiredStake() public view returns (uint256) {
         uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
 
-        return
-            currentRequiredStake(
-                baseStake,
-                block.number,
-                confirmPeriodBlocks,
-                firstUnresolvedNodeNum,
-                latestNodeCreated(),
-                getNode(firstUnresolvedNodeNum).deadlineBlock()
-            );
+        return currentRequiredStake(block.number, firstUnresolvedNodeNum, latestNodeCreated());
     }
 
     /**
