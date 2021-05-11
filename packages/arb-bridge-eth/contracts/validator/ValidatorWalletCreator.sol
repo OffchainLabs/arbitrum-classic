@@ -49,6 +49,8 @@ contract ValidatorWalletCreator is Ownable, CloneFactory {
         address proxy =
             address(new TransparentUpgradeableProxy(address(template), address(admin), ""));
         admin.transferOwnership(msg.sender);
+        Validator(proxy).initialize();
+        Validator(proxy).transferOwnership(msg.sender);
         emit WalletCreated(proxy, msg.sender, address(admin));
         return proxy;
     }

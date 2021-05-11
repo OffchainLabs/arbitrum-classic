@@ -40,12 +40,9 @@ contract Bridge is OwnableUpgradeable, IBridge {
 
     address public override activeOutbox;
     bytes32[] public override inboxAccs;
-    bool isInit;
 
-    function initialize() external {
-        require(!isInit, "ALREADY_INIT");
+    function initialize() external initializer {
         __Ownable_init();
-        isInit = true;
     }
 
     function allowedInboxes(address inbox) external view override returns (bool) {
