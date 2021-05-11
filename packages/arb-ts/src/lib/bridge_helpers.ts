@@ -2,12 +2,18 @@ import { ContractReceipt, ethers } from 'ethers'
 import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
 import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
 import { Outbox__factory } from './abi/factories/Outbox__factory'
+import { OutboxEntry__factory } from './abi/factories/OutboxEntry__factory'
+
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
-import { providers, utils } from 'ethers'
+import { Rollup__factory } from './abi/factories/Rollup__factory'
+import { OutboxEntry } from './abi/OutboxEntry'
+
+import { providers, utils, constants } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
 import { ARB_SYS_ADDRESS } from './l2Bridge'
+import { Bridge } from './bridge'
 
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
@@ -69,6 +75,20 @@ export interface ActivateCustomTokenResult {
   seqNum: BigNumber
   l1Addresss: string
   l2Address: string
+}
+
+export interface OutBoxTransactionExecuted {
+  destAddr: string
+  l2Sender: string
+  outboxIndex: BigNumber
+  transactionIndex: BigNumber
+}
+
+enum OutgoingMessageState {
+  NOT_FOUND,
+  UNCONFIRMED,
+  CONFIRMED,
+  EXECUTED,
 }
 
 export type ChainIdOrProvider = BigNumber | providers.Provider
@@ -137,6 +157,22 @@ export class BridgeHelper {
       utils.concat([
         utils.zeroPad(requestID, 32),
         utils.zeroPad(BigNumber.from(1).toHexString(), 32),
+      ])
+    )
+  }
+
+  static calculateRetryableAutoReedemTxnHash = async (
+    inboxSequenceNumber: BigNumber,
+    chainIdOrL2Provider: ChainIdOrProvider
+  ): Promise<string> => {
+    const requestID = await BridgeHelper.calculateL2TransactionHash(
+      inboxSequenceNumber,
+      chainIdOrL2Provider
+    )
+    return utils.keccak256(
+      utils.concat([
+        utils.zeroPad(requestID, 32),
+        utils.zeroPad(BigNumber.from(0).toHexString(), 32),
       ])
     )
   }
@@ -608,5 +644,161 @@ export class BridgeHelper {
     return logs.map(
       log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
     )
+  }
+
+  static assertionIsConfirmed = async (
+    nodeNum: BigNumber,
+    rollupAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const contract = Rollup__factory.connect(rollupAddress, l1Provider)
+      .interface
+    const iface = contract
+    const nodeConfirmedEvent = iface.getEvent('NodeConfirmed')
+    const nodeConfirmedEventTopic = iface.getEventTopic(nodeConfirmedEvent)
+
+    const logs = await l1Provider.getLogs({
+      address: rollupAddress,
+      topics: [
+        nodeConfirmedEventTopic,
+        ethers.utils.hexZeroPad(nodeNum.toHexString(), 32),
+      ],
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    return logs.length === 1
+  }
+
+  static getNodeCreatedEvents = async (
+    rollupAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const contract = Rollup__factory.connect(rollupAddress, l1Provider)
+      .interface
+    const iface = contract
+    const nodeCreatedEvent = iface.getEvent('NodeCreated')
+    const nodeCreatedEventTopic = iface.getEventTopic(nodeCreatedEvent)
+
+    const logs = await l1Provider.getLogs({
+      address: rollupAddress,
+      topics: [nodeCreatedEventTopic],
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    return logs
+  }
+  static getOutgoingMessage = async (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
+    l2Provider: providers.Provider
+  ) => {
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
+    const iface = contract.interface
+    const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
+    const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
+
+    const topics = [
+      l2ToL1TransactionTopic,
+      null,
+      null,
+      ethers.utils.hexZeroPad(batchNumber.toHexString(), 32),
+    ]
+
+    const logs = await l2Provider.getLogs({
+      address: ARB_SYS_ADDRESS,
+      // @ts-ignore
+      topics,
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    const parsedData = logs.map(
+      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+    )
+
+    return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
+  }
+
+  static calculateOutgoingMessageId = (
+    path: BigNumber,
+    proofLength: BigNumber
+  ) => {
+    return utils.keccak256(
+      utils.defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
+    )
+  }
+
+  static messageHasExecuted = async (
+    outboxIndex: BigNumber,
+    messageIndex: BigNumber,
+    outboxAddress: string,
+    l1Provider: providers.Provider
+  ): Promise<boolean> => {
+    const contract = Outbox__factory.connect(outboxAddress, l1Provider)
+      .interface
+    const iface = contract
+    const executedEvent = iface.getEvent('OutBoxTransactionExecuted')
+    const executedTopic = iface.getEventTopic(executedEvent)
+    const logs = await l1Provider.getLogs({
+      address: outboxAddress,
+      // @ts-ignore
+      topics: [
+        executedTopic,
+        null,
+        null,
+        ethers.utils.hexZeroPad(outboxIndex.toHexString(), 32),
+      ],
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+    const parsedData = logs.map(
+      log => (iface.parseLog(log).args as unknown) as OutBoxTransactionExecuted
+    )
+    return (
+      parsedData.filter(
+        executedEvent => executedEvent.transactionIndex === messageIndex
+      ).length === 1
+    )
+  }
+
+  static getOutgoingMessageState = async (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
+    outBoxAddress: string,
+    l1Provider: providers.Provider,
+    l2Provider: providers.Provider
+  ): Promise<OutgoingMessageState> => {
+    const proofData = await BridgeHelper.tryGetProofOnce(
+      batchNumber,
+      indexInBatch,
+      l2Provider
+    )
+    if (!proofData) {
+      return OutgoingMessageState.UNCONFIRMED
+    }
+
+    const messageExecuted = await BridgeHelper.messageHasExecuted(
+      batchNumber,
+      indexInBatch,
+      outBoxAddress,
+      l1Provider
+    )
+    if (messageExecuted) {
+      return OutgoingMessageState.EXECUTED
+    }
+
+    const outboxEntry = await BridgeHelper.getOutboxEntry(
+      proofData.path,
+      outBoxAddress,
+      l1Provider
+    )
+
+    if (outboxEntry === constants.AddressZero) {
+      return OutgoingMessageState.UNCONFIRMED
+    } else {
+      return OutgoingMessageState.CONFIRMED
+    }
   }
 }
