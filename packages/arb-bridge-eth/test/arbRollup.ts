@@ -190,7 +190,7 @@ describe('ArbRollup', () => {
 
   it('should place stake', async function () {
     const stake = await rollup.currentRequiredStake()
-    await rollup.newStake(0, { value: stake })
+    await rollup.newStake({ value: stake })
   })
 
   it('should place stake on new node', async function () {
@@ -200,7 +200,7 @@ describe('ArbRollup', () => {
   })
 
   it('should let a new staker place on existing node', async function () {
-    await rollup.connect(accounts[1]).newStake(0, { value: 10 })
+    await rollup.connect(accounts[1]).newStake({ value: 10 })
 
     await rollup.connect(accounts[1]).stakeOnExistingNode(1, prevNode.nodeHash)
   })
@@ -282,7 +282,7 @@ describe('ArbRollup', () => {
 
   it('new staker should make a conflicting node', async function () {
     const stake = await rollup.currentRequiredStake()
-    await rollup.connect(accounts[2]).newStake(0, { value: stake })
+    await rollup.connect(accounts[2]).newStake({ value: stake })
 
     await rollup.connect(accounts[2]).stakeOnExistingNode(3, validNode.nodeHash)
 
@@ -371,7 +371,7 @@ describe('ArbRollup', () => {
   it('can add stake', async function () {
     await rollup
       .connect(accounts[2])
-      .addToDeposit(await accounts[2].getAddress(), 0, { value: 5 })
+      .addToDeposit(await accounts[2].getAddress(), { value: 5 })
   })
 
   it('can reduce stake', async function () {
