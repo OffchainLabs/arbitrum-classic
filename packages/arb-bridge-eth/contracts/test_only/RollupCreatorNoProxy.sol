@@ -35,7 +35,6 @@ import "../rollup/RollupLib.sol";
 import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
-
 contract RollupCreatorNoProxy is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress);
 
@@ -123,7 +122,6 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
             config.owner,
             config.extraConfig,
             [
-                address(0),
                 address(frame.delayedBridge),
                 address(frame.sequencerInbox),
                 address(frame.outbox),
