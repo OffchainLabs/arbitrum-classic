@@ -19,9 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	golog "log"
 	"math/big"
 	"net/http"
@@ -29,6 +26,10 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
 
@@ -126,7 +127,7 @@ func startup() error {
 		return err
 	}
 
-	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
 	if !*sequencerMode {
 		if *sequencerURL == "" {
 			logger.Warn().Msg("Missing --sequencer-url so not subscribing to feed")
