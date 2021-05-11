@@ -18,10 +18,11 @@ package monitor
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
 
@@ -261,24 +262,20 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				from = from.Add(to, big.NewInt(1))
 			}
 		}
-		readFromFeed := false
+		sleepChan := time.After(time.Second)
 	FeedReadLoop:
 		for {
 			select {
 			case broadcastItem := <-ir.BroadcastFeed:
-				readFromFeed = true
 				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
 				feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc
 				if feedReorg || feedCaughtUp {
 					ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
-			default:
+			case <-sleepChan:
 				break FeedReadLoop
 			}
-		}
-		if !readFromFeed {
-			time.Sleep(time.Second)
 		}
 		if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
 			queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
