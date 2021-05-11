@@ -144,7 +144,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     function setOutbox(IOutbox _outbox) external onlyOwner {
         outbox = _outbox;
         delayedBridge.setOutbox(address(_outbox), true);
-        emit OwnerFunctionCalled();
+        emit OwnerFunctionCalled(0);
     }
 
     /**
@@ -154,7 +154,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     function removeOldOutbox(address _outbox) external onlyOwner {
         require(_outbox != address(outbox), "CUR_OUTBOX");
         delayedBridge.setOutbox(_outbox, false);
-        emit OwnerFunctionCalled();
+        emit OwnerFunctionCalled(1);
     }
 
     /**
@@ -164,7 +164,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function setInbox(address _inbox, bool _enabled) external onlyOwner {
         delayedBridge.setInbox(address(_inbox), _enabled);
-        emit OwnerFunctionCalled();
+        emit OwnerFunctionCalled(2);
     }
 
     /**
@@ -172,7 +172,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function pause() external onlyOwner {
         _pause();
-        emit OwnerFunctionCalled();
+        emit OwnerFunctionCalled(3);
     }
 
     /**
@@ -180,7 +180,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function resume() external onlyOwner {
         _unpause();
-        emit OwnerFunctionCalled();
+        emit OwnerFunctionCalled(4);
     }
 
     /**
