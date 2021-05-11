@@ -406,7 +406,7 @@ func calculateGasToFirstInbox(t *testing.T) *big.Int {
 }
 
 func TestChallengeToOSP(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(390), OneStepProof)
 }
 
 func TestChallengeToInboxOSP(t *testing.T) {
