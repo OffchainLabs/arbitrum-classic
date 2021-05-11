@@ -19,11 +19,12 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -224,16 +225,29 @@ func TestSequencerBatcher(t *testing.T) {
 		big.NewInt(1),
 		seqInbox,
 		auth,
-        dummyDataSigner,
-        broadcasterSettings,
+		dummyDataSigner,
+		broadcasterSettings,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
 	batcher.chainTimeCheckInterval = time.Millisecond * 10
 	go batcher.Start(ctx)
 	client.Commit()
-	time.Sleep(time.Second)
-	client.Commit()
+	attempts := 0
+	for {
+		client.Commit()
+		totalDelayedCount, err := seqMon.Core.GetTotalDelayedMessagesSequenced()
+		test.FailIfError(t, err)
+		if totalDelayedCount.Cmp(big.NewInt(0)) != 0 {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+		attempts++
+
+		if attempts == 20 {
+			t.Fatal("sequencer didn't sequence initial message")
+		}
+	}
 
 	for _, totalCount := range []int{1, 10, 100} {
 		for _, dataSizePerTx := range []int{1, 10, 100} {
