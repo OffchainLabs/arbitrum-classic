@@ -20,12 +20,12 @@ pragma solidity ^0.6.11;
 
 import "./Inbox.sol";
 import "./Outbox.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./interfaces/IBridge.sol";
 
-contract Bridge is Ownable, IBridge {
+contract Bridge is OwnableUpgradeable, IBridge {
     using Address for address;
     struct InOutInfo {
         uint256 index;
@@ -40,6 +40,13 @@ contract Bridge is Ownable, IBridge {
 
     address public override activeOutbox;
     bytes32[] public override inboxAccs;
+    bool isInit;
+
+    function initialize() external {
+        require(!isInit, "ALREADY_INIT");
+        __Ownable_init();
+        isInit = true;
+    }
 
     function allowedInboxes(address inbox) external view override returns (bool) {
         return allowedInboxesMap[inbox].allowed;
