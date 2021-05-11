@@ -26,7 +26,11 @@ import "../libraries/CloneFactory.sol";
 import "./Validator.sol";
 
 contract ValidatorWalletCreator is Ownable, CloneFactory {
-    event WalletCreated(address indexed walletAddress, address indexed userAddress);
+    event WalletCreated(
+        address indexed walletAddress,
+        address indexed userAddress,
+        address adminProxy
+    );
     event TemplateUpdated();
 
     address public template;
@@ -45,7 +49,7 @@ contract ValidatorWalletCreator is Ownable, CloneFactory {
         address proxy =
             address(new TransparentUpgradeableProxy(address(template), address(admin), ""));
         admin.transferOwnership(msg.sender);
-        emit WalletCreated(proxy, msg.sender);
+        emit WalletCreated(proxy, msg.sender, address(admin));
         return proxy;
     }
 }

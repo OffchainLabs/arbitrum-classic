@@ -120,7 +120,7 @@ contract RollupCreator is Ownable, CloneFactory {
             frame.rollupEventBridge,
             frame.outbox
         ) = bridgeCreator.createBridge(
-            config.owner,
+            address(frame.admin),
             frame.rollup,
             config.sequencer,
             config.sequencerDelayBlocks,

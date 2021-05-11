@@ -70,7 +70,7 @@ contract BridgeCreator is Ownable {
     }
 
     function createBridge(
-        address rollupOwner,
+        address adminProxy,
         address rollup,
         address sequencer,
         uint256 sequencerDelayBlocks,
@@ -87,52 +87,30 @@ contract BridgeCreator is Ownable {
     {
         CreateBridgeFrame memory frame;
         {
-            frame.admin = new ProxyAdmin();
-
             frame.delayedBridge = Bridge(
                 address(
-                    new TransparentUpgradeableProxy(
-                        address(delayedBridgeTemplate),
-                        address(frame.admin),
-                        ""
-                    )
+                    new TransparentUpgradeableProxy(address(delayedBridgeTemplate), adminProxy, "")
                 )
             );
             frame.sequencerInbox = SequencerInbox(
                 address(
-                    new TransparentUpgradeableProxy(
-                        address(sequencerInboxTemplate),
-                        address(frame.admin),
-                        ""
-                    )
+                    new TransparentUpgradeableProxy(address(sequencerInboxTemplate), adminProxy, "")
                 )
             );
             frame.inbox = Inbox(
-                address(
-                    new TransparentUpgradeableProxy(
-                        address(inboxTemplate),
-                        address(frame.admin),
-                        ""
-                    )
-                )
+                address(new TransparentUpgradeableProxy(address(inboxTemplate), adminProxy, ""))
             );
             frame.rollupEventBridge = RollupEventBridge(
                 address(
                     new TransparentUpgradeableProxy(
                         address(rollupEventBridgeTemplate),
-                        address(frame.admin),
+                        adminProxy,
                         ""
                     )
                 )
             );
             frame.outbox = Outbox(
-                address(
-                    new TransparentUpgradeableProxy(
-                        address(outboxTemplate),
-                        address(frame.admin),
-                        ""
-                    )
-                )
+                address(new TransparentUpgradeableProxy(address(outboxTemplate), adminProxy, ""))
             );
         }
 
@@ -148,8 +126,6 @@ contract BridgeCreator is Ownable {
 
         frame.delayedBridge.setInbox(address(frame.inbox), true);
         frame.delayedBridge.transferOwnership(rollup);
-
-        frame.admin.transferOwnership(rollupOwner);
 
         return (
             frame.delayedBridge,
