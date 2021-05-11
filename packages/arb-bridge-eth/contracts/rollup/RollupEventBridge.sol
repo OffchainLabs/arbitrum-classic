@@ -23,8 +23,9 @@ import "./Rollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IMessageProvider.sol";
 import "./INode.sol";
+import "../libraries/Cloneable.sol";
 
-contract RollupEventBridge is IMessageProvider {
+contract RollupEventBridge is IMessageProvider, Cloneable {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
@@ -42,7 +43,8 @@ contract RollupEventBridge is IMessageProvider {
         _;
     }
 
-    constructor(address _bridge, address _rollup) public {
+    function initialize(address _bridge, address _rollup) external {
+        require(rollup == address(0), "ALREADY_INIT");
         bridge = IBridge(_bridge);
         rollup = _rollup;
     }

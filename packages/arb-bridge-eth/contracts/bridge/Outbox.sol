@@ -27,8 +27,9 @@ import "./interfaces/IBridge.sol";
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
+import "../libraries/Cloneable.sol";
 
-contract Outbox is CloneFactory, IOutbox {
+contract Outbox is CloneFactory, IOutbox, Cloneable {
     using BytesLib for bytes;
 
     bytes1 internal constant MSG_ROOT = 0;
@@ -49,7 +50,8 @@ contract Outbox is CloneFactory, IOutbox {
     uint128 internal _l1Block;
     uint128 internal _timestamp;
 
-    constructor(address _rollup, IBridge _bridge) public {
+    function initialize(address _rollup, IBridge _bridge) external {
+        require(rollup == address(0), "ALREADY_INIT");
         rollup = _rollup;
         bridge = _bridge;
         outboxEntryTemplate = ICloneable(new OutboxEntry());

@@ -63,7 +63,34 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         _;
     }
 
-    // connectedContracts = [bridge, outbox, rollupEventBridge, challengeFactory, nodeFactory]
+    function updateConnectedContracts(
+        address[6] calldata connectedContracts,
+        bool[6] calldata shouldChange
+    ) external onlyOwner {
+        if (shouldChange[0]) {
+            delayedBridge = IBridge(connectedContracts[0]);
+        }
+        if (shouldChange[1]) {
+            sequencerBridge = ISequencerInbox(connectedContracts[1]);
+        }
+        if (shouldChange[2]) {
+            outbox = IOutbox(connectedContracts[2]);
+            delayedBridge.setOutbox(connectedContracts[2], true);
+        }
+        if (shouldChange[3]) {
+            rollupEventBridge = RollupEventBridge(connectedContracts[3]);
+            delayedBridge.setInbox(connectedContracts[3], true);
+        }
+        if (shouldChange[4]) {
+            challengeFactory = IChallengeFactory(connectedContracts[4]);
+        }
+        if (shouldChange[5]) {
+            nodeFactory = INodeFactory(connectedContracts[5]);
+        }
+        emit OwnerFunctionCalled();
+    }
+
+    // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
@@ -144,6 +171,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     function setOutbox(IOutbox _outbox) external onlyOwner {
         outbox = _outbox;
         delayedBridge.setOutbox(address(_outbox), true);
+        emit OwnerFunctionCalled();
     }
 
     /**
@@ -153,6 +181,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     function removeOldOutbox(address _outbox) external onlyOwner {
         require(_outbox != address(outbox), "CUR_OUTBOX");
         delayedBridge.setOutbox(_outbox, false);
+        emit OwnerFunctionCalled();
     }
 
     /**
@@ -162,6 +191,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function setInbox(address _inbox, bool _enabled) external onlyOwner {
         delayedBridge.setInbox(address(_inbox), _enabled);
+        emit OwnerFunctionCalled();
     }
 
     /**
@@ -169,6 +199,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function pause() external onlyOwner {
         _pause();
+        emit OwnerFunctionCalled();
     }
 
     /**
@@ -176,6 +207,7 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function resume() external onlyOwner {
         _unpause();
+        emit OwnerFunctionCalled();
     }
 
     /**

@@ -22,8 +22,9 @@ import "./interfaces/IInbox.sol";
 import "./interfaces/IBridge.sol";
 
 import "./Messages.sol";
+import "../libraries/Cloneable.sol";
 
-contract Inbox is IInbox {
+contract Inbox is IInbox, Cloneable {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant L1MessageType_L2FundedByL1 = 7;
@@ -34,7 +35,8 @@ contract Inbox is IInbox {
 
     IBridge public override bridge;
 
-    constructor(IBridge _bridge) public {
+    function initialize(IBridge _bridge) external {
+        require(address(bridge) == address(0), "ALREADY_INIT");
         bridge = _bridge;
     }
 

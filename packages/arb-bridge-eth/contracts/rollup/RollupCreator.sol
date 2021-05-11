@@ -37,7 +37,8 @@ import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
 contract RollupCreator is Ownable, CloneFactory {
-    event RollupCreated(address indexed rollupAddress, address inboxAddress);
+    event RollupCreated(address indexed rollupAddress, address inboxAddress, address adminProxy);
+    event TemplatesUpdated();
 
     BridgeCreator public bridgeCreator;
     ICloneable public rollupTemplate;
@@ -56,6 +57,7 @@ contract RollupCreator is Ownable, CloneFactory {
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
+        emit TemplatesUpdated();
     }
 
     function createRollup(
@@ -101,7 +103,8 @@ contract RollupCreator is Ownable, CloneFactory {
 
     // After this setup:
     // Rollup should be the owner of bridge
-    // RollupOwner should be the owner of Rollup's upgrade admin
+    // RollupOwner should be the owner of Rollup's ProxyAdmin
+    // RollupOwner should be the owner of Rollup
     // Bridge should have a single inbox and outbox
     function createRollup(RollupLib.Config memory config) private returns (IRollup) {
         CreateRollupFrame memory frame;
@@ -117,6 +120,7 @@ contract RollupCreator is Ownable, CloneFactory {
             frame.rollupEventBridge,
             frame.outbox
         ) = bridgeCreator.createBridge(
+            config.owner,
             frame.rollup,
             config.sequencer,
             config.sequencerDelayBlocks,
@@ -142,7 +146,7 @@ contract RollupCreator is Ownable, CloneFactory {
                 nodeFactory
             ]
         );
-        emit RollupCreated(frame.rollup, address(frame.inbox));
+        emit RollupCreated(frame.rollup, address(frame.inbox), address(frame.admin));
         return IRollup(frame.rollup);
     }
 }
