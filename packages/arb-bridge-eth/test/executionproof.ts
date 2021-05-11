@@ -87,15 +87,17 @@ describe('OneStepProof', function () {
     const Bridge = await ethers.getContractFactory('Bridge')
     bridge = (await Bridge.deploy()) as Bridge
     await bridge.deployed()
+    await bridge.initialize()
 
     const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
-    sequencerInbox = (await SequencerInbox.deploy(
+    sequencerInbox = (await SequencerInbox.deploy()) as SequencerInbox
+    await sequencerInbox.deployed()
+    await sequencerInbox.initialize(
       bridge.address,
       ethers.constants.AddressZero,
       15,
       900
-    )) as SequencerInbox
-    await sequencerInbox.deployed()
+    )
   })
   const files = fs.readdirSync('./test/proofs')
   for (const filename of files) {

@@ -70,15 +70,17 @@ describe('Challenge', () => {
     const Bridge = await ethers.getContractFactory('Bridge')
     bridge = (await Bridge.deploy()) as Bridge
     await bridge.deployed()
+    await bridge.initialize()
 
     const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
-    sequencerInbox = (await SequencerInbox.deploy(
+    sequencerInbox = (await SequencerInbox.deploy()) as SequencerInbox
+    await sequencerInbox.deployed()
+    await sequencerInbox.initialize(
       bridge.address,
       await accounts[0].getAddress(),
       15,
       900
-    )) as SequencerInbox
-    await sequencerInbox.deployed()
+    )
   })
 
   let challenge: Challenge
