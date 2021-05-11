@@ -101,6 +101,7 @@ func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
 	if err != nil {
 		t.Errorf("Can not connect: %v\n", err)
 	}
+	time.Sleep(500 * time.Millisecond)
 
 	connectionCount := b.ClientConnectionCount()
 	if connectionCount != 1 {
