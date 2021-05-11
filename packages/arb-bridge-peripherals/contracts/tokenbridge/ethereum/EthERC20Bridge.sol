@@ -239,28 +239,23 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 gasPriceBid;
     }
 
-    /**
-     * @notice internal function used to escrow tokens, then trigger their minting in the L2
-     * @param erc20 L1 token address
-     * @param sender account that initiated the deposit in the L1
-     * @param destination account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
-     * @param amount token amount to be minted to the user
-     * @param retryableParams params for inbox's createRetryableTicket
-     * @param deployData encoded symbol/name/decimal data for initial deploy
-     * @param callHookData optional data for external call upon minting
-     * @return ticket ID used to redeem the retryable transaction in the L2
-     */
-    function depositToken(
+    function createMintCallData(
         address erc20,
-        address sender,
         address destination,
+        address sender,
         uint256 amount,
-        RetryableTxParams memory retryableParams,
-        bytes memory deployData,
-        bytes memory callHookData
-    ) internal returns (uint256) {
-        IERC20(erc20).safeTransferFrom(sender, address(this), amount);
-
+        bytes calldata callHookData
+    ) public view returns (bytes memory data) {
+        bytes memory deployData = "";
+        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
+            // TODO: use OZ's ERC20Metadata once available
+            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
+            deployData = abi.encode(
+                callStatic(erc20, ERC20.name.selector),
+                callStatic(erc20, ERC20.symbol.selector),
+                callStatic(erc20, ERC20.decimals.selector)
+            );
+        }
         bytes memory data =
             abi.encodeWithSelector(
                 IArbTokenBridge.mintFromL1.selector,
@@ -271,21 +266,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
                 deployData,
                 callHookData
             );
-
-        uint256 seqNum =
-            inbox.createRetryableTicket{ value: msg.value }(
-                l2ArbTokenBridgeAddress,
-                0,
-                retryableParams.maxSubmissionCost,
-                sender,
-                sender,
-                retryableParams.maxGas,
-                retryableParams.gasPriceBid,
-                data
-            );
-
-        emit DepositToken(destination, sender, seqNum, amount, erc20);
-        return seqNum;
+        return data;
     }
 
     /**
@@ -308,30 +289,23 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 gasPriceBid,
         bytes calldata callHookData
     ) external payable override returns (uint256) {
-        bytes memory deployData = "";
-
-        // if no deploy done and no custom L2 token set
-        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
-            // TODO: use OZ's ERC20Metadata once available
-            // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
-            deployData = abi.encode(
-                callStatic(erc20, ERC20.name.selector),
-                callStatic(erc20, ERC20.symbol.selector),
-                callStatic(erc20, ERC20.decimals.selector)
-            );
-            hasTriedDeploy[erc20] = true;
-        }
-
-        return
-            depositToken(
-                erc20,
+        bytes memory data =
+            createMintCallData(erc20, destination, msg.sender, amount, callHookData);
+        // TODO hasTriedDeploy[erc20] = true;
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: msg.value }(
+                l2ArbTokenBridgeAddress,
+                0,
+                maxSubmissionCost,
                 msg.sender,
-                destination,
-                amount,
-                RetryableTxParams(maxSubmissionCost, maxGas, gasPriceBid),
-                deployData,
-                callHookData
+                msg.sender,
+                maxGas,
+                gasPriceBid,
+                data
             );
+
+        emit DepositToken(destination, msg.sender, seqNum, amount, erc20);
+        return seqNum;
     }
 
     /**
