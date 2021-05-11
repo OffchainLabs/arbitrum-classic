@@ -20,6 +20,8 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/pkg/errors"
+	"io"
+	"io/ioutil"
 	"math/big"
 	"net"
 	"sync"
@@ -43,6 +45,7 @@ type BroadcastClient struct {
 	retrying                     bool
 	shuttingDown                 bool
 	ConfirmedAccumulatorListener chan common.Hash
+	lastHeard                    time.Time
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
@@ -59,6 +62,7 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 		connMutex:       &sync.Mutex{},
 		websocketUrl:    websocketUrl,
 		lastInboxSeqNum: seqNum,
+		lastHeard:                    time.Now(),
 	}
 }
 
@@ -109,7 +113,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			default:
 			}
 
-			msg, op, err := wsutil.ReadServerData(bc.conn)
+			msg, op, err := bc.readData(ctx, bc.conn, ws.StateClientSide, ws.OpText|ws.OpBinary)
 			if err != nil {
 				if bc.shuttingDown {
 					return
@@ -143,6 +147,61 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			}
 		}
 	}()
+}
+
+func (bc *BroadcastClient) readData(ctx context.Context, conn io.ReadWriter, state ws.State, want ws.OpCode) ([]byte, ws.OpCode, error) {
+	controlHandler := wsutil.ControlFrameHandler(conn, state)
+	reader := wsutil.Reader{
+		Source:          conn,
+		State:           state,
+		CheckUTF8:       true,
+		SkipHeaderCheck: false,
+		OnIntermediate:  controlHandler,
+	}
+
+	// Remove timeout when leaving this function
+	defer func(conn net.Conn) {
+		err := conn.SetReadDeadline(time.Time{})
+		if err != nil {
+			logger.Error().Err(err).Msg("error removing read deadline")
+		}
+	}(bc.conn)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, 0, nil
+		default:
+		}
+
+		err := bc.conn.SetReadDeadline(time.Now().Add(time.Second * 15))
+		if err != nil {
+			return nil, 0, err
+		}
+
+		header, err := reader.NextFrame()
+		if err != nil {
+			return nil, 0, err
+		}
+
+		bc.lastHeard = time.Now()
+		if header.OpCode.IsControl() {
+			if err := controlHandler(header, &reader); err != nil {
+				return nil, 0, err
+			}
+			continue
+		}
+		if header.OpCode&want == 0 {
+			if err := reader.Discard(); err != nil {
+				return nil, 0, err
+			}
+			continue
+		}
+
+		data, err := ioutil.ReadAll(&reader)
+
+		return data, header.OpCode, err
+	}
 }
 
 func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {

@@ -97,7 +97,7 @@ func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
 
 	// connect returns
-	feed, err := broadcastClient.Connect(ctx)
+	_, err = broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,8 +105,6 @@ func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
 	newBroadcastMessage := broadcaster.SequencedMessages()
 	hash1, feedItem1, signature1 := newBroadcastMessage()
 	err = b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
-
-	_ = <-feed
 
 	connectionCount := b.ClientConnectionCount()
 	if connectionCount != 1 {
