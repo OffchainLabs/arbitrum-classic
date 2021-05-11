@@ -31,6 +31,7 @@ interface BridgeInterface extends ethers.utils.Interface {
     'deliverMessageToInbox(uint8,address,bytes32)': FunctionFragment
     'executeCall(address,uint256,bytes)': FunctionFragment
     'inboxAccs(uint256)': FunctionFragment
+    'initialize()': FunctionFragment
     'messageCount()': FunctionFragment
     'owner()': FunctionFragment
     'renounceOwnership()': FunctionFragment
@@ -71,6 +72,7 @@ interface BridgeInterface extends ethers.utils.Interface {
     functionFragment: 'inboxAccs',
     values: [BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'initialize', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'messageCount',
     values?: undefined
@@ -119,6 +121,7 @@ interface BridgeInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'executeCall', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'inboxAccs', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'messageCount',
     data: BytesLike
@@ -233,6 +236,10 @@ export class Bridge extends Contract {
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>
+
+    initialize(overrides?: Overrides): Promise<ContractTransaction>
+
+    'initialize()'(overrides?: Overrides): Promise<ContractTransaction>
 
     messageCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
@@ -354,6 +361,10 @@ export class Bridge extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  initialize(overrides?: Overrides): Promise<ContractTransaction>
+
+  'initialize()'(overrides?: Overrides): Promise<ContractTransaction>
+
   messageCount(overrides?: CallOverrides): Promise<BigNumber>
 
   'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -473,6 +484,10 @@ export class Bridge extends Contract {
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
+
+    initialize(overrides?: CallOverrides): Promise<void>
+
+    'initialize()'(overrides?: CallOverrides): Promise<void>
 
     messageCount(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -614,6 +629,10 @@ export class Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    initialize(overrides?: Overrides): Promise<BigNumber>
+
+    'initialize()'(overrides?: Overrides): Promise<BigNumber>
+
     messageCount(overrides?: CallOverrides): Promise<BigNumber>
 
     'messageCount()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -743,6 +762,10 @@ export class Bridge extends Contract {
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    initialize(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'initialize()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     messageCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

@@ -151,6 +151,19 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'OwnerFunctionCalled',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: true,
         internalType: 'address',
         name: 'challengeContract',
@@ -271,9 +284,9 @@ const _abi = [
         type: 'bytes',
       },
       {
-        internalType: 'address[7]',
+        internalType: 'address[6]',
         name: 'connectedContracts',
-        type: 'address[7]',
+        type: 'address[6]',
       },
     ],
     name: 'initialize',

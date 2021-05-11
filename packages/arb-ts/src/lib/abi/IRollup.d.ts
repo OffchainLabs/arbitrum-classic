@@ -23,7 +23,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface IRollupInterface extends ethers.utils.Interface {
   functions: {
     'completeChallenge(address,address)': FunctionFragment
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[7])': FunctionFragment
+    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])': FunctionFragment
     'returnOldDeposit(address)': FunctionFragment
   }
 
@@ -42,7 +42,7 @@ interface IRollupInterface extends ethers.utils.Interface {
       string,
       string,
       BytesLike,
-      [string, string, string, string, string, string, string]
+      [string, string, string, string, string, string]
     ]
   ): string
   encodeFunctionData(
@@ -65,6 +65,7 @@ interface IRollupInterface extends ethers.utils.Interface {
     'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
     'NodeRejected(uint256)': EventFragment
     'NodesDestroyed(uint256,uint256)': EventFragment
+    'OwnerFunctionCalled(uint256)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
     'StakerReassigned(address,uint256)': EventFragment
@@ -74,6 +75,7 @@ interface IRollupInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'NodeCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeRejected'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodesDestroyed'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupChallengeStarted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'StakerReassigned'): EventFragment
@@ -114,19 +116,11 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[7])'(
+    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -135,15 +129,7 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -179,19 +165,11 @@ export class IRollup extends Contract {
     _stakeToken: string,
     _owner: string,
     _extraConfig: BytesLike,
-    connectedContracts: [
-      string,
-      string,
-      string,
-      string,
-      string,
-      string,
-      string
-    ],
+    connectedContracts: [string, string, string, string, string, string],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[7])'(
+  'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
     _machineHash: BytesLike,
     _confirmPeriodBlocks: BigNumberish,
     _extraChallengeTimeBlocks: BigNumberish,
@@ -200,15 +178,7 @@ export class IRollup extends Contract {
     _stakeToken: string,
     _owner: string,
     _extraConfig: BytesLike,
-    connectedContracts: [
-      string,
-      string,
-      string,
-      string,
-      string,
-      string,
-      string
-    ],
+    connectedContracts: [string, string, string, string, string, string],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -244,19 +214,11 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[7])'(
+    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -265,15 +227,7 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -316,6 +270,8 @@ export class IRollup extends Contract {
       endNode: BigNumberish | null
     ): EventFilter
 
+    OwnerFunctionCalled(id: null): EventFilter
+
     RollupChallengeStarted(
       challengeContract: string | null,
       asserter: null,
@@ -350,19 +306,11 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[7])'(
+    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -371,15 +319,7 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -416,19 +356,11 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[7])'(
+    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
       _extraChallengeTimeBlocks: BigNumberish,
@@ -437,15 +369,7 @@ export class IRollup extends Contract {
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
-      connectedContracts: [
-        string,
-        string,
-        string,
-        string,
-        string,
-        string,
-        string
-      ],
+      connectedContracts: [string, string, string, string, string, string],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

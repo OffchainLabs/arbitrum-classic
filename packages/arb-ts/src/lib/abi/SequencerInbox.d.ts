@@ -27,6 +27,8 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
     'delayedInbox()': FunctionFragment
     'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32)': FunctionFragment
     'inboxAccs(uint256)': FunctionFragment
+    'initialize(address,address,uint256,uint256)': FunctionFragment
+    'isMaster()': FunctionFragment
     'maxDelayBlocks()': FunctionFragment
     'maxDelaySeconds()': FunctionFragment
     'messageCount()': FunctionFragment
@@ -77,6 +79,11 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [string, string, BigNumberish, BigNumberish]
+  ): string
+  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
+  encodeFunctionData(
     functionFragment: 'maxDelayBlocks',
     values?: undefined
   ): string
@@ -111,6 +118,8 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inboxAccs', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'maxDelayBlocks',
     data: BytesLike
@@ -229,6 +238,26 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
+    initialize(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'initialize(address,address,uint256,uint256)'(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
+
     maxDelayBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'maxDelayBlocks()'(overrides?: CallOverrides): Promise<[BigNumber]>
@@ -331,6 +360,26 @@ export class SequencerInbox extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  initialize(
+    _delayedInbox: string,
+    _sequencer: string,
+    _maxDelayBlocks: BigNumberish,
+    _maxDelaySeconds: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'initialize(address,address,uint256,uint256)'(
+    _delayedInbox: string,
+    _sequencer: string,
+    _maxDelayBlocks: BigNumberish,
+    _maxDelaySeconds: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  isMaster(overrides?: CallOverrides): Promise<boolean>
+
+  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+
   maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
   'maxDelayBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -432,6 +481,26 @@ export class SequencerInbox extends Contract {
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
+
+    initialize(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initialize(address,address,uint256,uint256)'(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    isMaster(overrides?: CallOverrides): Promise<boolean>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
 
     maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -570,6 +639,26 @@ export class SequencerInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    initialize(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'initialize(address,address,uint256,uint256)'(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
+
     maxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     'maxDelayBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -675,6 +764,26 @@ export class SequencerInbox extends Contract {
       arg0: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    initialize(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'initialize(address,address,uint256,uint256)'(
+      _delayedInbox: string,
+      _sequencer: string,
+      _maxDelayBlocks: BigNumberish,
+      _maxDelaySeconds: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     maxDelayBlocks(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
