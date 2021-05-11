@@ -26,7 +26,6 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/mailru/easygo/netpoll"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -37,11 +36,10 @@ type BroadcastClient struct {
 	websocketUrl                 string
 	lastInboxSeqNum              *big.Int
 	conn                         net.Conn
-	desc                         netpoll.Desc
-	poller                       netpoll.Poller
 	startingBroadcastClientMutex *sync.Mutex
 	RetryCount                   int
 	retrying                     bool
+	shuttingDown                 bool
 	ConfirmedAccumulatorListener chan common.Hash
 }
 
@@ -82,51 +80,34 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFee
 		logger.Info().Msg("Connected")
 	}
 
-	poller, err := netpoll.New(nil)
-	if err != nil {
-		logger.Error().Err(err).Msg("error starting net poller")
-		_ = conn.Close()
-		return nil, err
-	}
-
-	// Get netpoll descriptor with EventRead|EventEdgeTriggered.
-	desc, err := netpoll.HandleRead(conn)
-	if err != nil {
-		logger.Error().Err(err).Msg("error getting netpoll descriptor")
-		_ = conn.Close()
-		return nil, err
-	}
-
-	bc.desc = *desc
-	bc.poller = poller
 	bc.conn = conn
 
-	err = poller.Start(desc, func(ev netpoll.Event) {
-		if ev&netpoll.EventReadHup != 0 {
-			logger.Info().Msg("received hang up")
-			_ = poller.Stop(desc)
-			_ = conn.Close()
+	go bc.backgroundReader(messageReceiver)
+
+	return messageReceiver, err
+}
+
+func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.BroadcastFeedMessage) {
+	for {
+		msg, op, err := wsutil.ReadServerData(bc.conn)
+		if err != nil {
+			if bc.shuttingDown {
+				return
+			}
+			logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
+			_ = bc.conn.Close()
+			// Starts up a new backgroundReader
 			bc.RetryConnect(messageReceiver)
 			return
 		}
 
-		if ev != 0 {
-			logger.Info().Int("event", int(ev)).Msg("non-zero netpoll event")
-		}
-
-		msg, op, err := wsutil.ReadServerData(conn)
-		if err != nil {
-			logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
-			_ = poller.Stop(desc)
-			_ = conn.Close()
-			return
-		}
+		logger.Debug().Int("length", len(msg)).Msg("received broadcast message")
 
 		res := broadcaster.BroadcastMessage{}
 		err = json.Unmarshal(msg, &res)
 		if err != nil {
 			logger.Error().Err(err).Msg("error unmarshalling message")
-			return
+			continue
 		}
 
 		if res.Version == 1 {
@@ -138,16 +119,14 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFee
 				bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
 			}
 		}
-	})
-
-	return messageReceiver, err
+	}
 }
 
 func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true
-	for {
+	for !bc.shuttingDown {
 		time.Sleep(time.Duration(waitMs) * time.Millisecond)
 
 		bc.RetryCount++
@@ -164,6 +143,7 @@ func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.Broadca
 }
 
 func (bc *BroadcastClient) Close() {
-	_ = bc.poller.Stop(&bc.desc)
+	logger.Debug().Msg("closing broadcaster client connection")
+	bc.shuttingDown = true
 	_ = bc.conn.Close()
 }
