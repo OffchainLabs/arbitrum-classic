@@ -63,33 +63,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         _;
     }
 
-    function updateConnectedContracts(
-        address[6] calldata connectedContracts,
-        bool[6] calldata shouldChange
-    ) external onlyOwner {
-        if (shouldChange[0]) {
-            delayedBridge = IBridge(connectedContracts[0]);
-        }
-        if (shouldChange[1]) {
-            sequencerBridge = ISequencerInbox(connectedContracts[1]);
-        }
-        if (shouldChange[2]) {
-            outbox = IOutbox(connectedContracts[2]);
-            delayedBridge.setOutbox(connectedContracts[2], true);
-        }
-        if (shouldChange[3]) {
-            rollupEventBridge = RollupEventBridge(connectedContracts[3]);
-            delayedBridge.setInbox(connectedContracts[3], true);
-        }
-        if (shouldChange[4]) {
-            challengeFactory = IChallengeFactory(connectedContracts[4]);
-        }
-        if (shouldChange[5]) {
-            nodeFactory = INodeFactory(connectedContracts[5]);
-        }
-        emit OwnerFunctionCalled();
-    }
-
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
