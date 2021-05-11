@@ -154,31 +154,23 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 
 	bridgeAddress, _, bridge, err := ethbridgecontracts.DeployBridge(ethAuth, clnt)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FailIfError(t, err)
+	outboxAddress, _, outbox, err := ethbridgecontracts.DeployOutbox(ethAuth, clnt)
+	test.FailIfError(t, err)
+	inboxAddress, _, inbox, err := ethbridgecontracts.DeployInbox(ethAuth, clnt)
+	test.FailIfError(t, err)
 	clnt.Commit()
 
-	outboxAddress, _, outbox, err := ethbridgecontracts.DeployOutbox(ethAuth, clnt, ethAuth.From, bridgeAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
-	clnt.Commit()
-
-	inboxAddress, _, inbox, err := ethbridgecontracts.DeployInbox(ethAuth, clnt, bridgeAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, err = outbox.Initialize(ethAuth, ethAuth.From, bridgeAddress)
+	test.FailIfError(t, err)
+	_, err = inbox.Initialize(ethAuth, bridgeAddress)
+	test.FailIfError(t, err)
 	clnt.Commit()
 
 	_, err = bridge.SetOutbox(ethAuth, outboxAddress, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FailIfError(t, err)
 	_, err = bridge.SetInbox(ethAuth, inboxAddress, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FailIfError(t, err)
 	clnt.Commit()
 
 	bridgeDeposit := big.NewInt(100000000)

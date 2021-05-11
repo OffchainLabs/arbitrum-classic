@@ -41,7 +41,7 @@ BASE=$FILEROOT/packages/arb-bridge-eth/contracts
 OZUTILS=$OZ/contracts/utils
 OZ_TOKENS=$OZ/contracts/token/ERC20/IERC20.sol:IERC20
 OZ_MATH=$OZ/contracts/math/SafeMath.sol:SafeMath
-OZ_PROXY=$OZ/contracts/proxy/Proxy.sol:Proxy,$OZ/contracts/proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy,$OZ/contracts/proxy/UpgradeableProxy.sol:UpgradeableProxy
+OZ_PROXY=$OZ/contracts/proxy/Proxy.sol:Proxy,$OZ/contracts/proxy/Clones.sol:Clones,$OZ/contracts/proxy/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy,$OZ/contracts/proxy/UpgradeableProxy.sol:UpgradeableProxy
 OZ_LIBS=$OZUTILS/Address.sol:Address,$OZUTILS/Pausable.sol:Pausable,$OZ/contracts/utils/Context.sol:Context,$OZ/contracts/access/Ownable.sol:Ownable,$OZ_PROXY
 #OZCONN=$OZ/contracts
 IGNORED=$IGNORED_LIB,$IGNORED_CHALLENGE,$IGNORED_ROLLUP,$IGNORED_ARCH,$BRIDGE_LIBS,$OZ_MATH,$OZ_TOKENS,$OZ_LIBS,$IGNORED_INTERFACES
@@ -55,9 +55,6 @@ abigen --pkg=$PACKAGE --out=rollupcreator.go --combined-json combined.json --exc
 
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/challenge/Challenge.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=challenge.go --combined-json combined.json --exc=$IGNORED_MORE
-
-solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/Validator.sol --overwrite -o .
-abigen --pkg=$PACKAGE --out=validator.go --combined-json combined.json --exc=$IGNORED_MORE
 
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/validator/ValidatorWalletCreator.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=validatorwalletcreator.go --combined-json combined.json --exc=$IGNORED_MORE

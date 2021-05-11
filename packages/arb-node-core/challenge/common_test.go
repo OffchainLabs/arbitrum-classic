@@ -233,10 +233,12 @@ func initializeChallengeTest(
 
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)
-	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client, delayedBridgeAddr, sequencer.From, maxDelayBlocks, maxDelaySeconds)
+	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client)
 	test.FailIfError(t, err)
 	client.Commit()
-
+	_, err = sequencerBridge.Initialize(deployer, delayedBridgeAddr, sequencer.From, maxDelayBlocks, maxDelaySeconds)
+	test.FailIfError(t, err)
+	client.Commit()
 	latestHeader, err := client.HeaderByNumber(context.Background(), nil)
 	test.FailIfError(t, err)
 	chainTime := inbox.ChainTime{

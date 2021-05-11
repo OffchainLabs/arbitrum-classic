@@ -238,7 +238,10 @@ func TestValidateProof(t *testing.T) {
 	test.FailIfError(t, err)
 	delayedBridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
 	test.FailIfError(t, err)
-	sequencerAddr, _, _, err := ethbridgecontracts.DeploySequencerInbox(auth, client, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
+	sequencerAddr, _, sequencerCon, err := ethbridgecontracts.DeploySequencerInbox(auth, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
 	test.FailIfError(t, err)
 	client.Commit()
 
