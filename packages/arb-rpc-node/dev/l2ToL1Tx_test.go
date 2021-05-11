@@ -161,6 +161,8 @@ func TestL2ToL1Tx(t *testing.T) {
 	test.FailIfError(t, err)
 	clnt.Commit()
 
+	_, err = bridge.Initialize(ethAuth)
+	test.FailIfError(t, err)
 	_, err = outbox.Initialize(ethAuth, ethAuth.From, bridgeAddress)
 	test.FailIfError(t, err)
 	_, err = inbox.Initialize(ethAuth, bridgeAddress)
