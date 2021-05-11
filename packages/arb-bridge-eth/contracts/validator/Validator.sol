@@ -24,12 +24,14 @@ import "../rollup/IRollup.sol";
 import "../challenge/IChallenge.sol";
 import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract Validator is Ownable, Cloneable {
+contract Validator is OwnableUpgradeable, Cloneable {
     using Address for address;
 
-    constructor() public Ownable() {}
+    function initialize() external initializer {
+        __Ownable_init();
+    }
 
     function executeTransactions(
         bytes[] calldata data,
