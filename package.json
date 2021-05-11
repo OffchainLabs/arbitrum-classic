@@ -37,7 +37,7 @@
     "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
   },
   "engines": {
-    "node": ">= 8.0.0 < 13.0.0",
+    "node": ">= 8.0.0 < 16.0.0",
     "npm": "^6.0.0",
     "yarn": "^1.0.0"
   },

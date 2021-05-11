@@ -61,6 +61,12 @@ type InboxMessage struct {
 	ChainTime   ChainTime
 }
 
+func GetSequenceNumber(data []byte) *big.Int {
+	seqNumOffset := 85
+	sequenceNum := new(big.Int).SetBytes(data[seqNumOffset : seqNumOffset+32])
+	return sequenceNum
+}
+
 func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
 	if len(data) < 129 {
 		return InboxMessage{}, errors.New("Not enough data for inbox message")

@@ -46,8 +46,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 		l2Tx, err := message.NewL2Message(message.NewCompressedECDSAFromEth(tx))
 		test.FailIfError(t, err)
 		messages := []message.Message{l2Tx}
-		logs, _, snap := runSimpleAssertion(t, messages)
-		results := processTxResults(t, logs)
+		results, snap := runSimpleTxAssertion(t, messages)
 		allResultsSucceeded(t, results)
 		t.Log(results[0])
 		return snap
@@ -66,8 +65,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 		ib := &InboxBuilder{}
 		ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
 		ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
-		logs, _, snap := runAssertion(t, ib.Messages, len(ib.Messages)-1, 0)
-		results := processTxResults(t, logs)
+		results, snap := runTxAssertion(t, ib.Messages)
 		allResultsSucceeded(t, results)
 		t.Log(results[0])
 		return snap
@@ -105,8 +103,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
 	ib.AddMessage(makeEthDeposit(owner, big.NewInt(1000)), sender, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
-	logs, _, snap := runAssertion(t, ib.Messages, len(ib.Messages)-1, 0)
-	results := processTxResults(t, logs)
+	results, snap := runTxAssertion(t, ib.Messages)
 	correctConnAddress := crypto.CreateAddress(sender.ToEthAddress(), nonce)
 	checkConstructorResult(t, results[1], common.NewAddressFromEth(correctConnAddress))
 

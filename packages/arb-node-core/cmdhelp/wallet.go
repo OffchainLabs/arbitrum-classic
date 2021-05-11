@@ -64,7 +64,7 @@ func GetKeystore(
 	args WalletFlags,
 	flags *flag.FlagSet,
 	chainId *big.Int,
-) (*bind.TransactOpts, error) {
+) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
 	ks := keystore.NewKeyStore(
 		filepath.Join(validatorFolder, "wallets"),
 		keystore.StandardScryptN,
@@ -88,7 +88,7 @@ func GetKeystore(
 
 		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		passphrase = string(bytePassword)
 
@@ -102,25 +102,30 @@ func GetKeystore(
 		var err error
 		account, err = ks.NewAccount(passphrase)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	} else {
 		account = ks.Accounts()[0]
 	}
 	err := ks.Unlock(account, passphrase)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	gasPriceAsFloat := 1e9 * (*args.gasPrice)
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
-	return auth, nil
+
+	signer := func(data []byte) ([]byte, error) {
+		return ks.SignHash(account, data)
+	}
+
+	return auth, signer, nil
 }
 
 const WalletArgsString = "[--password=pass] [--gasprice==FloatInGwei]"

@@ -19,6 +19,7 @@ package batcher
 import (
 	"context"
 	"crypto/ecdsa"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
@@ -106,9 +108,8 @@ func deployRollup(
 	return createEv.RollupAddress
 }
 
-func generateTxs(t *testing.T, totalCount int, dataSizePerTx int) []*types.Transaction {
+func generateTxs(t *testing.T, totalCount int, dataSizePerTx int, chainId *big.Int) []*types.Transaction {
 	rand.Seed(4537345)
-	chainId := common.RandBigInt()
 	signer := types.NewEIP155Signer(chainId)
 	randomKeys := make([]*ecdsa.PrivateKey, 0, 10)
 	for i := 0; i < 10; i++ {
@@ -143,9 +144,7 @@ func TestSequencerBatcher(t *testing.T) {
 	mach, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
 
-	hash, err := mach.Hash()
-	test.FailIfError(t, err)
-
+	hash := mach.Hash()
 	confirmPeriodBlocks := big.NewInt(100)
 	extraChallengeTimeBlocks := big.NewInt(0)
 	arbGasSpeedLimitPerBlock := big.NewInt(100000)
@@ -196,16 +195,38 @@ func TestSequencerBatcher(t *testing.T) {
 	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
+	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	dummyDataSigner := func([]byte) ([]byte, error) { return make([]byte, 0), nil }
+
+	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil)
+	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
 	test.FailIfError(t, err)
 
 	client.Commit()
 	time.Sleep(time.Second)
 
-	batcher, err := NewSequencerBatcher(ctx, seqMon.Core, seqMon.Reader, client, big.NewInt(1), seqInbox, auth)
+	broadcasterSettings := broadcaster.Settings{
+		Addr:                    ":9642",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
+	}
+	batcher, err := NewSequencerBatcher(
+		ctx,
+		seqMon.Core,
+		message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)),
+		seqMon.Reader,
+		client,
+		big.NewInt(1),
+		seqInbox,
+		auth,
+        dummyDataSigner,
+        broadcasterSettings,
+	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
 	batcher.chainTimeCheckInterval = time.Millisecond * 10
@@ -216,7 +237,7 @@ func TestSequencerBatcher(t *testing.T) {
 
 	for _, totalCount := range []int{1, 10, 100} {
 		for _, dataSizePerTx := range []int{1, 10, 100} {
-			txs := generateTxs(t, totalCount, dataSizePerTx)
+			txs := generateTxs(t, totalCount, dataSizePerTx, message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)))
 			for _, tx := range txs {
 				if err := batcher.SendTransaction(ctx, tx); err != nil {
 					t.Fatal(err)

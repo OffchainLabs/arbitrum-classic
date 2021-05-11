@@ -126,9 +126,8 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 	return txResults
 }
 
-func extractTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+func extractTxResults(t *testing.T, results []evm.Result) []*evm.TxResult {
 	t.Helper()
-	results := processResults(t, logs)
 	txResults := make([]*evm.TxResult, 0, len(results))
 	for _, res := range results {
 		txRes, ok := res.(*evm.TxResult)
@@ -205,23 +204,46 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
-func runSimpleAssertion(t *testing.T, messages []message.Message) ([]value.Value, [][]byte, *snapshot.Snapshot) {
+func runSimpleTxAssertion(t *testing.T, messages []message.Message) ([]*evm.TxResult, *snapshot.Snapshot) {
 	t.Helper()
-	return runAssertion(t, makeSimpleInbox(t, messages), len(messages), 0)
+	return runTxAssertion(t, makeSimpleInbox(t, messages))
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot) {
+func runTxAssertion(t *testing.T, messages []inbox.InboxMessage) ([]*evm.TxResult, *snapshot.Snapshot) {
 	t.Helper()
-	logs, sends, snap := runAssertionWithoutPrint(t, inboxMessages, logCount, sendCount)
-	if printArbOSLog {
-		testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
-		failIfError(t, err)
-		t.Log(string(testCase))
+	if len(messages) == 0 {
+		t.Fatal("must have at least one message")
 	}
-	return logs, sends, snap
+	return runTxAssertionWithCount(t, messages, len(messages)-1)
 }
 
-func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot) {
+func runTxAssertionWithCount(t *testing.T, messages []inbox.InboxMessage, logCount int) ([]*evm.TxResult, *snapshot.Snapshot) {
+	t.Helper()
+	results, sends, snap := runBasicAssertion(t, messages)
+	if len(sends) != 0 {
+		t.Fatal("expected no sends", len(sends))
+	}
+	txResults := extractTxResults(t, results)
+	if len(txResults) != logCount {
+		t.Fatal("unexpected log count ", len(txResults), "instead of", logCount)
+	}
+	return txResults, snap
+}
+
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]evm.Result, [][]byte, *snapshot.Snapshot) {
+	t.Helper()
+	results, sends, snap := runBasicAssertion(t, inboxMessages)
+	if logCount != math.MaxInt32 && len(results) != logCount+1 {
+		t.Fatal("unexpected log count ", len(results), "instead of", logCount+1)
+	}
+
+	if len(sends) != sendCount {
+		t.Fatal("unxpected send count ", len(sends), "instead of", sendCount)
+	}
+	return results, sends, snap
+}
+
+func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.Result, [][]byte, *snapshot.Snapshot) {
 	t.Helper()
 	if inboxMessages[0].Kind != message.InitType {
 		t.Fatal("inbox must start with init message")
@@ -232,6 +254,10 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 
 	var logs []value.Value
 	var sends [][]byte
+	assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, nil)
+	failIfError(t, err)
+	logs = append(logs, assertion.Logs...)
+	sends = append(sends, assertion.Sends...)
 	for i, msg := range inboxMessages {
 		t.Log("Message", i)
 		assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, []inbox.InboxMessage{msg})
@@ -255,14 +281,6 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 		}
 	}
 
-	if logCount != math.MaxInt32 && len(logs) != logCount {
-		t.Fatal("unexpected log count ", len(logs), "instead of", logCount)
-	}
-
-	if len(sends) != sendCount {
-		t.Fatal("unxpected send count ", len(sends), "instead of", sendCount)
-	}
-
 	var snap *snapshot.Snapshot
 	if len(inboxMessages) > 0 {
 		lastMessage := inboxMessages[len(inboxMessages)-1]
@@ -282,7 +300,12 @@ func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, 
 		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
 		test.FailIfError(t, err)
 	}
-	return logs, sends, snap
+	if printArbOSLog {
+		testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
+		failIfError(t, err)
+		t.Log(string(testCase))
+	}
+	return processResults(t, logs), sends, snap
 }
 
 type InboxBuilder struct {

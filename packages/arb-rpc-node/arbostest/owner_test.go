@@ -90,8 +90,7 @@ func TestOwner(t *testing.T) {
 	ib.AddMessage(message.NewSafeL2Message(tx3), owner, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(0), chainTime)
 
-	logs, _, _ := runAssertion(t, ib.Messages, len(ib.Messages)-1, 0)
-	results := processTxResults(t, logs)
+	results, _ := runTxAssertion(t, ib.Messages)
 	succeededTxCheck(t, results[0])
 	succeededTxCheck(t, results[1])
 	// Transfer from non-owner fails

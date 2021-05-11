@@ -32,7 +32,7 @@ const (
 )
 
 type Machine interface {
-	Hash() (common.Hash, error)
+	Hash() common.Hash
 	CodePointHash() common.Hash
 
 	Clone() Machine

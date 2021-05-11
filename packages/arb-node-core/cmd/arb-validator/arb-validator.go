@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -121,6 +122,9 @@ func startup() error {
 		}()
 	}
 
+	// Dummy sequencerFeed since validator doesn't use it
+	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+
 	folder := os.Args[1]
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
@@ -147,7 +151,7 @@ func startup() error {
 
 	rollupAddr := ethcommon.HexToAddress(os.Args[3])
 	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
-	auth, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
+	auth, _, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
@@ -246,7 +250,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, dummySequencerFeed)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}

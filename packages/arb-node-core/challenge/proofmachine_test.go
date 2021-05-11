@@ -74,11 +74,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 		messages = append(messages, inbox.NewRandomInboxMessage())
 	}
 
-	hash, err := mach.Hash()
-	if err != nil {
-		return nil, nil, err
-	}
-
+	hash := mach.Hash()
 	beforeCut := ExecutionCutJSON{
 		GasUsed:           0,
 		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
@@ -126,11 +122,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return proofs, nil, nil
 		}
 
-		hash, err := mach.Hash()
-		if err != nil {
-			return nil, nil, err
-		}
-
+		hash := mach.Hash()
 		afterCut := ExecutionCutJSON{
 			GasUsed:           beforeCut.GasUsed + a.NumGas,
 			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),

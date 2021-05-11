@@ -18,6 +18,7 @@ package monitor
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -67,9 +68,16 @@ func (m *Monitor) Close() {
 		m.Reader.Stop()
 	}
 	m.Storage.CloseArbStorage()
+	logger.Info().Msg("Database closed")
 }
 
-func (m *Monitor) StartInboxReader(ctx context.Context, ethClient ethutils.EthClient, rollupAddress common.Address, healthChan chan nodehealth.Log) (*InboxReader, error) {
+func (m *Monitor) StartInboxReader(
+	ctx context.Context,
+	ethClient ethutils.EthClient,
+	rollupAddress common.Address,
+	healthChan chan nodehealth.Log,
+	sequencerFeed chan broadcaster.BroadcastFeedMessage,
+) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), ethClient)
 	if err != nil {
 		return nil, err
@@ -90,7 +98,7 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethClient ethutils.EthCl
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan)
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerFeed)
 	if err != nil {
 		return nil, err
 	}

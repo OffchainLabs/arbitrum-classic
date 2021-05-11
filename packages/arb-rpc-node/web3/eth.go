@@ -675,7 +675,7 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 		return nil, err
 	}
 	if snap == nil {
-		return nil, errors.New("unsupported block number")
+		return nil, errors.Errorf("unsupported block number %v", uint64(*blockNum))
 	}
 	return snap, nil
 }
