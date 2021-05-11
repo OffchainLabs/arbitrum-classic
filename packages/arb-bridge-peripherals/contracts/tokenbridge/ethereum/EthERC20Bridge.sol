@@ -225,20 +225,6 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return res;
     }
 
-    /**
-     * @notice necessary params for inbox's createRetryableTicket.
-     * @dev if gasPriceBid * maxGas > 0, in the L2 a retriable ticket is created and immediately redeemed.
-     * This struct is used to avoid stack size limit;
-     * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
-     * @param gasPriceBid Gas price for L2 execution
-     */
-    struct RetryableTxParams {
-        uint256 maxSubmissionCost;
-        uint256 maxGas;
-        uint256 gasPriceBid;
-    }
-
     function shouldTryDeply(address erc20) internal view returns (bool) {
         return !hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20);
     }
