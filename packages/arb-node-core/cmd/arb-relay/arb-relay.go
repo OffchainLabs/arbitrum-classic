@@ -19,18 +19,20 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/pkg/errors"
 	golog "log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/pkg/errors"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 )
 
 var logger zerolog.Logger
@@ -78,6 +80,8 @@ func startup() error {
 	sequencerURL := flagSet.String("sequencer-url", "", "URL of sequencer feed source")
 	feedOutputAddr := flagSet.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := flagSet.String("feedoutput.port", "9642", "port to bind the relay feed output to")
+	feedOutputPingInterval := flagSet.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
+	feedOutputTimeout := flagSet.Duration("feedoutput.timeout", 15*time.Second, "number of seconds for timeout")
 
 	if err := flagSet.Parse(os.Args[1:]); err != nil {
 		return errors.Wrap(err, "failed parsing command line arguments")
@@ -102,8 +106,8 @@ func startup() error {
 		Workers:                 128,
 		Queue:                   1,
 		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+		ClientPingInterval:      *feedOutputPingInterval,
+		ClientNoResponseTimeout: *feedOutputTimeout,
 	}
 
 	// Start up an arbitrum sequencer relay

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -107,7 +108,8 @@ func startup() error {
 	sequencerURL := fs.String("sequencer-url", "", "URL of sequencer feed source")
 	feedOutputAddr := fs.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := fs.String("feedoutput.port", "9642", "port to bind the relay feed output to")
-
+	feedOutputPingInterval := fs.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
+	feedOutputTimeout := fs.Duration("feedoutput.timeout", 15*time.Second, "number of seconds for timeout")
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
@@ -248,8 +250,8 @@ func startup() error {
 				Workers:                 128,
 				Queue:                   1,
 				IoReadWriteTimeout:      2 * time.Second,
-				ClientPingInterval:      5 * time.Second,
-				ClientNoResponseTimeout: 15 * time.Second,
+				ClientPingInterval:      *feedOutputPingInterval,
+				ClientNoResponseTimeout: *feedOutputTimeout,
 			}
 		} else if *keepPendingState {
 			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
