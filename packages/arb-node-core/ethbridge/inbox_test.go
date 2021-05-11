@@ -38,6 +38,8 @@ func TestRetryable(t *testing.T) {
 	inboxAddress, _, inbox, err := ethbridgecontracts.DeployInbox(auth, clnt)
 	test.FailIfError(t, err)
 	clnt.Commit()
+	_, err = bridge.Initialize(auth)
+	test.FailIfError(t, err)
 	_, err = inbox.Initialize(auth, bridgeAddress)
 	test.FailIfError(t, err)
 	_, err = bridge.SetInbox(auth, inboxAddress, true)
