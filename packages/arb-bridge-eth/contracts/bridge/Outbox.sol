@@ -44,10 +44,10 @@ contract Outbox is CloneFactory, IOutbox {
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
     // be empty outside of transactions
-    address private _sender;
-    uint128 private _l2Block;
-    uint128 private _l1Block;
-    uint128 private _timestamp;
+    address internal _sender;
+    uint128 internal _l2Block;
+    uint128 internal _l1Block;
+    uint128 internal _timestamp;
 
     constructor(address _rollup, IBridge _bridge) public {
         rollup = _rollup;
@@ -127,7 +127,7 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 l2Timestamp,
         uint256 amount,
         bytes calldata calldataForL1
-    ) external {
+    ) external virtual {
         bytes32 userTx =
             calculateItemHash(
                 l2Sender,
@@ -165,7 +165,7 @@ contract Outbox is CloneFactory, IOutbox {
         bytes32[] memory proof,
         uint256 path,
         bytes32 item
-    ) private {
+    ) internal {
         require(proof.length <= 256, "PROOF_TOO_LONG");
         require(path < 2**proof.length, "PATH_NOT_MINIMAL");
 
@@ -190,7 +190,7 @@ contract Outbox is CloneFactory, IOutbox {
         address destAddr,
         uint256 amount,
         bytes memory data
-    ) private {
+    ) internal {
         (bool success, bytes memory returndata) = bridge.executeCall(destAddr, amount, data);
         if (!success) {
             if (returndata.length > 0) {
