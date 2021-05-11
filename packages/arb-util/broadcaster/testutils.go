@@ -130,7 +130,7 @@ func (mg *RandomMessageGenerator) StartWorker() {
 					TotalDelayedCount: big.NewInt(0),
 					SequencerMessage:  big.NewInt(42).Bytes(),
 				},
-				big.NewInt(0).Bytes(),
+				make([]byte, 0),
 			)
 			messageCount++
 			if messageCount == mg.count {
