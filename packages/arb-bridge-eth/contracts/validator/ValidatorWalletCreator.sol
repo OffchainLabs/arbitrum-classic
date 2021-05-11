@@ -27,6 +27,7 @@ import "./Validator.sol";
 
 contract ValidatorWalletCreator is Ownable, CloneFactory {
     event WalletCreated(address indexed walletAddress, address indexed userAddress);
+    event TemplateUpdated();
 
     address public template;
 
@@ -36,6 +37,7 @@ contract ValidatorWalletCreator is Ownable, CloneFactory {
 
     function setTemplate(address _template) external onlyOwner {
         template = _template;
+        emit TemplateUpdated();
     }
 
     function createWallet() external returns (address) {

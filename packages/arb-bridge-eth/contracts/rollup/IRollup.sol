@@ -52,6 +52,7 @@ interface IRollup {
 
     event StakerReassigned(address indexed staker, uint256 newNode);
     event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
+    event OwnerFunctionCalled();
 
     function initialize(
         bytes32 _machineHash,

@@ -106,6 +106,7 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
             frame.rollupEventBridge,
             frame.outbox
         ) = bridgeCreator.createBridge(
+            config.owner,
             frame.rollup,
             config.sequencer,
             config.sequencerDelayBlocks,
