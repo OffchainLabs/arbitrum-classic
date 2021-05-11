@@ -18,10 +18,11 @@ package broadcaster
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
@@ -273,6 +274,7 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.Sequence
 		if err != nil {
 			return err
 		}
+		prevAcc = item.Accumulator
 	}
 
 	return nil
