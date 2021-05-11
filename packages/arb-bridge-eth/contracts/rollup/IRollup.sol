@@ -62,7 +62,7 @@ interface IRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[7] calldata connectedContracts
+        address[6] calldata connectedContracts
     ) external;
 
     function completeChallenge(address winningStaker, address losingStaker) external;

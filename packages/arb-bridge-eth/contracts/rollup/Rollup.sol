@@ -57,14 +57,13 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     IChallengeFactory public challengeFactory;
     INodeFactory public nodeFactory;
     address public owner;
-    ProxyAdmin public admin;
 
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
     }
 
-    // connectedContracts = [admin, bridge, outbox, rollupEventBridge, challengeFactory, nodeFactory]
+    // connectedContracts = [bridge, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
@@ -74,17 +73,17 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[7] calldata connectedContracts
+        address[6] calldata connectedContracts
     ) public virtual override {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
         require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
 
-        delayedBridge = IBridge(connectedContracts[1]);
-        sequencerBridge = ISequencerInbox(connectedContracts[2]);
-        outbox = IOutbox(connectedContracts[3]);
-        delayedBridge.setOutbox(connectedContracts[3], true);
-        rollupEventBridge = RollupEventBridge(connectedContracts[4]);
-        delayedBridge.setInbox(connectedContracts[4], true);
+        delayedBridge = IBridge(connectedContracts[0]);
+        sequencerBridge = ISequencerInbox(connectedContracts[1]);
+        outbox = IOutbox(connectedContracts[2]);
+        delayedBridge.setOutbox(connectedContracts[2], true);
+        rollupEventBridge = RollupEventBridge(connectedContracts[3]);
+        delayedBridge.setInbox(connectedContracts[3], true);
 
         rollupEventBridge.rollupInitialized(
             _confirmPeriodBlocks,
@@ -96,8 +95,8 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
             _extraConfig
         );
 
-        challengeFactory = IChallengeFactory(connectedContracts[5]);
-        nodeFactory = INodeFactory(connectedContracts[6]);
+        challengeFactory = IChallengeFactory(connectedContracts[4]);
+        nodeFactory = INodeFactory(connectedContracts[5]);
 
         INode node = createInitialNode(_machineHash);
         initializeCore(node);
@@ -107,7 +106,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
         owner = _owner;
-        admin = ProxyAdmin(connectedContracts[0]);
 
         emit RollupCreated(_machineHash);
     }
@@ -164,32 +162,6 @@ abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
      */
     function setInbox(address _inbox, bool _enabled) external onlyOwner {
         delayedBridge.setInbox(address(_inbox), _enabled);
-    }
-
-    /**
-     * @notice Switch over to a new implementation of the rollup
-     * @param _newRollup New implementation contract
-     */
-    function upgradeImplementation(address _newRollup) external onlyOwner {
-        address currentAddress = address(this);
-        admin.upgrade(TransparentUpgradeableProxy(payable(currentAddress)), _newRollup);
-    }
-
-    /**
-     * @notice Switch over to a new implementation of the rollup
-     * @param _newRollup New implementation contract
-     * @param _data Data to call the new rollup implementation with
-     */
-    function upgradeImplementationAndCall(address _newRollup, bytes calldata _data)
-        external
-        onlyOwner
-    {
-        address currentAddress = address(this);
-        admin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(currentAddress)),
-            _newRollup,
-            _data
-        );
     }
 
     /**
@@ -937,7 +909,7 @@ contract ERC20Rollup is AbsRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[7] calldata connectedContracts
+        address[6] calldata connectedContracts
     ) public override {
         require(stakeToken != address(0), "NEED_STAKE_TOKEN");
         super.initialize(

@@ -27,6 +27,7 @@ import "./BridgeCreator.sol";
 
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
@@ -36,12 +37,14 @@ import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
 contract RollupCreator is Ownable, CloneFactory {
-    event RollupCreated(address rollupAddress, address inboxAddress);
+    event RollupCreated(address indexed rollupAddress, address inboxAddress);
 
     BridgeCreator public bridgeCreator;
     ICloneable public rollupTemplate;
     address public challengeFactory;
     address public nodeFactory;
+
+    constructor() public Ownable() {}
 
     function setTemplates(
         BridgeCreator _bridgeCreator,
@@ -98,7 +101,7 @@ contract RollupCreator is Ownable, CloneFactory {
 
     // After this setup:
     // Rollup should be the owner of bridge
-    // Rollup should be the owner of it's upgrade admin
+    // RollupOwner should be the owner of Rollup's upgrade admin
     // Bridge should have a single inbox and outbox
     function createRollup(RollupLib.Config memory config) private returns (IRollup) {
         CreateRollupFrame memory frame;
@@ -120,7 +123,7 @@ contract RollupCreator is Ownable, CloneFactory {
             config.sequencerDelaySeconds
         );
 
-        frame.admin.transferOwnership(frame.rollup);
+        frame.admin.transferOwnership(config.owner);
         IRollup(frame.rollup).initialize(
             config.machineHash,
             config.confirmPeriodBlocks,
@@ -131,7 +134,6 @@ contract RollupCreator is Ownable, CloneFactory {
             config.owner,
             config.extraConfig,
             [
-                address(frame.admin),
                 address(frame.delayedBridge),
                 address(frame.sequencerInbox),
                 address(frame.outbox),
