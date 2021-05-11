@@ -82,7 +82,7 @@ interface IEthERC20Bridge {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable returns (uint256);
+    ) external payable returns (uint256, uint256);
 
     function calculateL2TokenAddress(address erc20) external view returns (address);
 }
