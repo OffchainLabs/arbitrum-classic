@@ -32,9 +32,11 @@ IGNORED_MORE=$IGNORED,$ROLLUP_LIBS
 
 NM=$(realpath ./../../../node_modules)
 OZ=$NM/@openzeppelin
+OZUTILS=$OZ/contracts/utils
+OZ_MATH=$OZ/contracts/math/SafeMath.sol:SafeMath
 BASE=$(realpath ./../../arb-bridge-eth/contracts)
 
-OZ_LIBS=$OZ/contracts/proxy/Clones.sol:Clones
+OZ_LIBS=$OZ/contracts/proxy/Clones.sol:Clones,$OZUTILS/Address.sol:Address,$OZ_MATH
 
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/NodeFactory.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=nodefactory.go --combined-json combined.json --exc=$IGNORED_MORE
@@ -46,7 +48,7 @@ solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=
 abigen --pkg=$PACKAGE --out=challengeTester.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof,$CHAL_PREFIX/ChallengeFactory.sol:ChallengeFactory
 
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreatorNoProxy.sol --overwrite -o .
-abigen --pkg=$PACKAGE --out=rollupcreatornoproxy.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS
+abigen --pkg=$PACKAGE --out=rollupcreatornoproxy.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 
 rm combined.json
 

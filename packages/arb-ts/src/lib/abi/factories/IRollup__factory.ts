@@ -133,6 +133,25 @@ const _abi = [
     inputs: [
       {
         indexed: true,
+        internalType: 'uint256',
+        name: 'startNode',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'endNode',
+        type: 'uint256',
+      },
+    ],
+    name: 'NodesDestroyed',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
         internalType: 'address',
         name: 'challengeContract',
         type: 'address',
@@ -170,6 +189,25 @@ const _abi = [
       },
     ],
     name: 'RollupCreated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'staker',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'newNode',
+        type: 'uint256',
+      },
+    ],
+    name: 'StakerReassigned',
     type: 'event',
   },
   {

@@ -200,12 +200,11 @@ export class ValidatorUtils extends Contract {
       rollup: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber, string] & {
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
         confirmPeriodBlocks: BigNumber
         extraChallengeTimeBlocks: BigNumber
         arbGasSpeedLimitPerBlock: BigNumber
         baseStake: BigNumber
-        stakeToken: string
       }
     >
 
@@ -213,12 +212,11 @@ export class ValidatorUtils extends Contract {
       rollup: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber, string] & {
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
         confirmPeriodBlocks: BigNumber
         extraChallengeTimeBlocks: BigNumber
         arbGasSpeedLimitPerBlock: BigNumber
         baseStake: BigNumber
-        stakeToken: string
       }
     >
 
@@ -387,12 +385,11 @@ export class ValidatorUtils extends Contract {
     rollup: string,
     overrides?: CallOverrides
   ): Promise<
-    [BigNumber, BigNumber, BigNumber, BigNumber, string] & {
+    [BigNumber, BigNumber, BigNumber, BigNumber] & {
       confirmPeriodBlocks: BigNumber
       extraChallengeTimeBlocks: BigNumber
       arbGasSpeedLimitPerBlock: BigNumber
       baseStake: BigNumber
-      stakeToken: string
     }
   >
 
@@ -400,12 +397,11 @@ export class ValidatorUtils extends Contract {
     rollup: string,
     overrides?: CallOverrides
   ): Promise<
-    [BigNumber, BigNumber, BigNumber, BigNumber, string] & {
+    [BigNumber, BigNumber, BigNumber, BigNumber] & {
       confirmPeriodBlocks: BigNumber
       extraChallengeTimeBlocks: BigNumber
       arbGasSpeedLimitPerBlock: BigNumber
       baseStake: BigNumber
-      stakeToken: string
     }
   >
 
@@ -568,12 +564,11 @@ export class ValidatorUtils extends Contract {
       rollup: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber, string] & {
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
         confirmPeriodBlocks: BigNumber
         extraChallengeTimeBlocks: BigNumber
         arbGasSpeedLimitPerBlock: BigNumber
         baseStake: BigNumber
-        stakeToken: string
       }
     >
 
@@ -581,12 +576,11 @@ export class ValidatorUtils extends Contract {
       rollup: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, BigNumber, BigNumber, BigNumber, string] & {
+      [BigNumber, BigNumber, BigNumber, BigNumber] & {
         confirmPeriodBlocks: BigNumber
         extraChallengeTimeBlocks: BigNumber
         arbGasSpeedLimitPerBlock: BigNumber
         baseStake: BigNumber
-        stakeToken: string
       }
     >
 

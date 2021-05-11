@@ -18,12 +18,14 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -117,7 +119,7 @@ func (v *ValidatorUtils) GetConfig(ctx context.Context) (*RollupConfig, error) {
 		ExtraChallengeTimeBlocks: config.ExtraChallengeTimeBlocks,
 		ArbGasSpeedLimitPerBlock: config.ArbGasSpeedLimitPerBlock,
 		BaseStake:                config.BaseStake,
-		StakeToken:               common.NewAddressFromEth(config.StakeToken),
+		StakeToken:               common.Address{},
 	}, nil
 }
 

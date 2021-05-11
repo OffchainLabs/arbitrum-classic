@@ -29,6 +29,7 @@ interface RollupCoreInterface extends ethers.utils.Interface {
     'getNodeHash(uint256)': FunctionFragment
     'getStakerAddress(uint256)': FunctionFragment
     'isStaked(address)': FunctionFragment
+    'isZombie(address)': FunctionFragment
     'lastStakeBlock()': FunctionFragment
     'latestConfirmed()': FunctionFragment
     'latestNodeCreated()': FunctionFragment
@@ -63,6 +64,7 @@ interface RollupCoreInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'isStaked', values: [string]): string
+  encodeFunctionData(functionFragment: 'isZombie', values: [string]): string
   encodeFunctionData(
     functionFragment: 'lastStakeBlock',
     values?: undefined
@@ -120,6 +122,7 @@ interface RollupCoreInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'isStaked', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isZombie', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'lastStakeBlock',
     data: BytesLike
@@ -248,6 +251,13 @@ export class RollupCore extends Contract {
     isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    isZombie(staker: string, overrides?: CallOverrides): Promise<[boolean]>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>
@@ -388,6 +398,13 @@ export class RollupCore extends Contract {
     overrides?: CallOverrides
   ): Promise<boolean>
 
+  isZombie(staker: string, overrides?: CallOverrides): Promise<boolean>
+
+  'isZombie(address)'(
+    staker: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
   lastStakeBlock(overrides?: CallOverrides): Promise<BigNumber>
 
   'lastStakeBlock()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -524,6 +541,13 @@ export class RollupCore extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
+    isZombie(staker: string, overrides?: CallOverrides): Promise<boolean>
+
+    'isZombie(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     lastStakeBlock(overrides?: CallOverrides): Promise<BigNumber>
 
     'lastStakeBlock()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -649,6 +673,13 @@ export class RollupCore extends Contract {
     isStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    isZombie(staker: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -789,6 +820,16 @@ export class RollupCore extends Contract {
     ): Promise<PopulatedTransaction>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    isZombie(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>

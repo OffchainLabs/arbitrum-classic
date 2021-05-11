@@ -29,6 +29,7 @@ interface ChallengeInterface extends ethers.utils.Interface {
     'challengeState()': FunctionFragment
     'challenger()': FunctionFragment
     'challengerTimeLeft()': FunctionFragment
+    'clearChallenge()': FunctionFragment
     'currentResponder()': FunctionFragment
     'currentResponderTimeLeft()': FunctionFragment
     'executors(uint256)': FunctionFragment
@@ -70,6 +71,10 @@ interface ChallengeInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'challenger', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'challengerTimeLeft',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'clearChallenge',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -152,6 +157,10 @@ interface ChallengeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'challenger', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'challengerTimeLeft',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'clearChallenge',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -264,6 +273,10 @@ export class Challenge extends Contract {
     challengerTimeLeft(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'challengerTimeLeft()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
 
     currentResponder(overrides?: CallOverrides): Promise<[string]>
 
@@ -430,6 +443,10 @@ export class Challenge extends Contract {
 
   'challengerTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
 
+  clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
+
+  'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
+
   currentResponder(overrides?: CallOverrides): Promise<string>
 
   'currentResponder()'(overrides?: CallOverrides): Promise<string>
@@ -592,6 +609,10 @@ export class Challenge extends Contract {
     challengerTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
     'challengerTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    clearChallenge(overrides?: CallOverrides): Promise<void>
+
+    'clearChallenge()'(overrides?: CallOverrides): Promise<void>
 
     currentResponder(overrides?: CallOverrides): Promise<string>
 
@@ -776,6 +797,10 @@ export class Challenge extends Contract {
 
     'challengerTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    clearChallenge(overrides?: Overrides): Promise<BigNumber>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<BigNumber>
+
     currentResponder(overrides?: CallOverrides): Promise<BigNumber>
 
     'currentResponder()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -946,6 +971,10 @@ export class Challenge extends Contract {
     'challengerTimeLeft()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    clearChallenge(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     currentResponder(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

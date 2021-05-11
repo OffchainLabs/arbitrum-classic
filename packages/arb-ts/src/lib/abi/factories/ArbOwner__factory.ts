@@ -58,6 +58,35 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: 'bytes',
+        name: 'constructorData',
+        type: 'bytes',
+      },
+      {
+        internalType: 'address',
+        name: 'deemedSender',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'deemedNonce',
+        type: 'uint256',
+      },
+    ],
+    name: 'deployContract',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'bytes32',
         name: 'requiredCodeHash',
         type: 'bytes32',
@@ -99,6 +128,19 @@ const _abi = [
         internalType: 'address',
         name: '',
         type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getTotalOfEthBalances',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
       },
     ],
     stateMutability: 'view',

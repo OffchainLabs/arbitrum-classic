@@ -23,7 +23,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -36,7 +36,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
       {
@@ -55,7 +55,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -63,10 +63,23 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'bytes32',
+        name: 'ticketId',
+        type: 'bytes32',
+      },
+    ],
+    name: 'TicketCreated',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -79,7 +92,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -98,7 +111,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -159,7 +172,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],
@@ -178,7 +191,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'txId',
+        name: 'ticketId',
         type: 'bytes32',
       },
     ],

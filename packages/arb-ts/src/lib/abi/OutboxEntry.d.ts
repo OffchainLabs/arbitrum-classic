@@ -23,7 +23,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface OutboxEntryInterface extends ethers.utils.Interface {
   functions: {
     'destroy()': FunctionFragment
-    'initialize(address,bytes32,uint256)': FunctionFragment
+    'initialize(bytes32,uint256)': FunctionFragment
     'isMaster()': FunctionFragment
     'numRemaining()': FunctionFragment
     'root()': FunctionFragment
@@ -34,7 +34,7 @@ interface OutboxEntryInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'destroy', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [string, BytesLike, BigNumberish]
+    values: [BytesLike, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(
@@ -84,14 +84,12 @@ export class OutboxEntry extends Contract {
     'destroy()'(overrides?: Overrides): Promise<ContractTransaction>
 
     initialize(
-      _bridge: string,
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address,bytes32,uint256)'(
-      _bridge: string,
+    'initialize(bytes32,uint256)'(
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: Overrides
@@ -134,14 +132,12 @@ export class OutboxEntry extends Contract {
   'destroy()'(overrides?: Overrides): Promise<ContractTransaction>
 
   initialize(
-    _bridge: string,
     _root: BytesLike,
     _numInBatch: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address,bytes32,uint256)'(
-    _bridge: string,
+  'initialize(bytes32,uint256)'(
     _root: BytesLike,
     _numInBatch: BigNumberish,
     overrides?: Overrides
@@ -184,14 +180,12 @@ export class OutboxEntry extends Contract {
     'destroy()'(overrides?: CallOverrides): Promise<void>
 
     initialize(
-      _bridge: string,
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,bytes32,uint256)'(
-      _bridge: string,
+    'initialize(bytes32,uint256)'(
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: CallOverrides
@@ -213,13 +207,13 @@ export class OutboxEntry extends Contract {
       _root: BytesLike,
       _id: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     'spendOutput(bytes32,bytes32)'(
       _root: BytesLike,
       _id: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     spentOutput(arg0: BytesLike, overrides?: CallOverrides): Promise<boolean>
 
@@ -237,14 +231,12 @@ export class OutboxEntry extends Contract {
     'destroy()'(overrides?: Overrides): Promise<BigNumber>
 
     initialize(
-      _bridge: string,
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address,bytes32,uint256)'(
-      _bridge: string,
+    'initialize(bytes32,uint256)'(
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: Overrides
@@ -288,14 +280,12 @@ export class OutboxEntry extends Contract {
     'destroy()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     initialize(
-      _bridge: string,
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,bytes32,uint256)'(
-      _bridge: string,
+    'initialize(bytes32,uint256)'(
       _root: BytesLike,
       _numInBatch: BigNumberish,
       overrides?: Overrides

@@ -279,11 +279,8 @@ export class RollupContract {
     return new RollupContract(this.rollup.connect(signerOrProvider))
   }
 
-  newStake(
-    tokenAmount: BigNumberish,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    return this.rollup.newStake(tokenAmount, overrides)
+  newStake(overrides: PayableOverrides = {}): Promise<ContractTransaction> {
+    return this.rollup.newStake(overrides)
   }
 
   async stakeOnNewNode(
@@ -384,10 +381,9 @@ export class RollupContract {
 
   addToDeposit(
     staker: string,
-    tokenAmount: BigNumberish,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    return this.rollup.addToDeposit(staker, tokenAmount, overrides)
+    return this.rollup.addToDeposit(staker, overrides)
   }
 
   reduceDeposit(amount: BigNumberish): Promise<ContractTransaction> {

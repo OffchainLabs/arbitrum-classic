@@ -19,14 +19,13 @@
 pragma solidity ^0.6.11;
 
 import "../libraries/Cloneable.sol";
-import "../libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./IChallenge.sol";
 import "../rollup/IRollup.sol";
 import "../arch/IOneStepProof.sol";
 
 import "./ChallengeLib.sol";
-import "../libraries/MerkleLib.sol";
 
 contract Challenge is Cloneable, IChallenge {
     using SafeMath for uint256;
@@ -187,12 +186,26 @@ contract Challenge is Cloneable, IChallenge {
                 _chainHashes[0],
                 _oldEndHash
             );
-        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
+        require(
+            ChallengeLib.verifySegmentProof(
+                challengeState,
+                bisectionHash,
+                _merkleNodes,
+                _merkleRoute
+            ),
+            BIS_PREV
+        );
 
-        updateBisectionRoot(_chainHashes, _challengedSegmentStart, _challengedSegmentLength);
+        bytes32 newChallengeState =
+            ChallengeLib.updatedBisectionRoot(
+                _chainHashes,
+                _challengedSegmentStart,
+                _challengedSegmentLength
+            );
+        challengeState = newChallengeState;
 
         emit Bisected(
-            challengeState,
+            newChallengeState,
             _challengedSegmentStart,
             _challengedSegmentLength,
             _chainHashes
@@ -217,7 +230,15 @@ contract Challenge is Cloneable, IChallenge {
                 beforeChainHash,
                 _oldEndHash
             );
-        verifySegmentProof(bisectionHash, _merkleNodes, _merkleRoute);
+        require(
+            ChallengeLib.verifySegmentProof(
+                challengeState,
+                bisectionHash,
+                _merkleNodes,
+                _merkleRoute
+            ),
+            BIS_PREV
+        );
 
         require(
             _gasUsedBefore >= _challengedSegmentStart.add(_challengedSegmentLength),
@@ -300,7 +321,10 @@ contract Challenge is Cloneable, IChallenge {
             );
         }
 
-        verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
+        require(
+            ChallengeLib.verifySegmentProof(challengeState, rootHash, _merkleNodes, _merkleRoute),
+            BIS_PREV
+        );
 
         emit OneStepProofCompleted();
         _currentWin();
@@ -339,33 +363,9 @@ contract Challenge is Cloneable, IChallenge {
         }
     }
 
-    function updateBisectionRoot(
-        bytes32[] memory _chainHashes,
-        uint256 _challengedSegmentStart,
-        uint256 _challengedSegmentLength
-    ) private returns (bytes32) {
-        uint256 bisectionCount = _chainHashes.length - 1;
-        bytes32[] memory hashes = new bytes32[](bisectionCount);
-        uint256 chunkSize = ChallengeLib.firstSegmentSize(_challengedSegmentLength, bisectionCount);
-        uint256 segmentStart = _challengedSegmentStart;
-        hashes[0] = ChallengeLib.bisectionChunkHash(
-            segmentStart,
-            chunkSize,
-            _chainHashes[0],
-            _chainHashes[1]
-        );
-        segmentStart = segmentStart.add(chunkSize);
-        chunkSize = ChallengeLib.otherSegmentSize(_challengedSegmentLength, bisectionCount);
-        for (uint256 i = 1; i < bisectionCount; i++) {
-            hashes[i] = ChallengeLib.bisectionChunkHash(
-                segmentStart,
-                chunkSize,
-                _chainHashes[i],
-                _chainHashes[i + 1]
-            );
-            segmentStart = segmentStart.add(chunkSize);
-        }
-        challengeState = MerkleLib.generateRoot(hashes);
+    function clearChallenge() external override {
+        require(msg.sender == address(resultReceiver), "NOT_RES_RECEIVER");
+        safeSelfDestruct(msg.sender);
     }
 
     function _currentWin() private {
@@ -384,17 +384,6 @@ contract Challenge is Cloneable, IChallenge {
     function _challengerWin() private {
         resultReceiver.completeChallenge(challenger, asserter);
         safeSelfDestruct(msg.sender);
-    }
-
-    function verifySegmentProof(
-        bytes32 item,
-        bytes32[] calldata _merkleNodes,
-        uint256 _merkleRoute
-    ) private view {
-        require(
-            challengeState == MerkleLib.calculateRoot(_merkleNodes, _merkleRoute, item),
-            BIS_PREV
-        );
     }
 
     function bisectionDegree(uint256 _chainLength, uint256 targetDegree)

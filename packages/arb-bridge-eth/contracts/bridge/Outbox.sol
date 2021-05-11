@@ -96,7 +96,7 @@ contract Outbox is CloneFactory, IOutbox {
             bytes32 outputRoot = data.toBytes32(65);
 
             address clone = createClone(outboxEntryTemplate);
-            OutboxEntry(clone).initialize(bridge, outputRoot, numInBatch);
+            OutboxEntry(clone).initialize(outputRoot, numInBatch);
             uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));
             emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
@@ -140,6 +140,7 @@ contract Outbox is CloneFactory, IOutbox {
             );
 
         spendOutput(outboxIndex, proof, index, userTx);
+        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, index);
 
         address currentSender = _sender;
         uint128 currentL2Block = _l2Block;
@@ -177,32 +178,12 @@ contract Outbox is CloneFactory, IOutbox {
         // a unique leaf. The path itself is not enough since the path length to different
         // leaves could potentially be different
         bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
+        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey);
 
-        executeBridgeSystemCall(
-            address(outbox),
-            0,
-            abi.encodeWithSelector(OutboxEntry.spendOutput.selector, calcRoot, uniqueKey)
-        );
-
-        if (outbox.numRemaining() == 0) {
-            executeBridgeSystemCall(
-                address(outbox),
-                0,
-                abi.encodeWithSelector(OutboxEntry.destroy.selector)
-            );
+        if (numRemaining == 0) {
+            outbox.destroy();
             outboxes[outboxIndex] = OutboxEntry(address(0));
         }
-    }
-
-    function executeBridgeSystemCall(
-        address destAddr,
-        uint256 amount,
-        bytes memory data
-    ) private {
-        address currentSender = _sender;
-        _sender = address(0);
-        executeBridgeCall(destAddr, amount, data);
-        _sender = currentSender;
     }
 
     function executeBridgeCall(

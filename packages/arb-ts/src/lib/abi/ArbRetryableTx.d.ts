@@ -79,11 +79,13 @@ interface ArbRetryableTxInterface extends ethers.utils.Interface {
     'Canceled(bytes32)': EventFragment
     'LifetimeExtended(bytes32,uint256)': EventFragment
     'Redeemed(bytes32)': EventFragment
+    'TicketCreated(bytes32)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'Canceled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'LifetimeExtended'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Redeemed'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TicketCreated'): EventFragment
 }
 
 export class ArbRetryableTx extends Contract {
@@ -100,30 +102,33 @@ export class ArbRetryableTx extends Contract {
   interface: ArbRetryableTxInterface
 
   functions: {
-    cancel(txId: BytesLike, overrides?: Overrides): Promise<ContractTransaction>
+    cancel(
+      ticketId: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     'cancel(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     getBeneficiary(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string]>
 
     'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string]>
 
     getKeepalivePrice(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
     'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
@@ -141,20 +146,23 @@ export class ArbRetryableTx extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
-    getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<[BigNumber]>
+    getTimeout(
+      ticketId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
     'getTimeout(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
     keepalive(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'keepalive(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
@@ -166,27 +174,33 @@ export class ArbRetryableTx extends Contract {
     ): Promise<ContractTransaction>
   }
 
-  cancel(txId: BytesLike, overrides?: Overrides): Promise<ContractTransaction>
-
-  'cancel(bytes32)'(
-    txId: BytesLike,
+  cancel(
+    ticketId: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  getBeneficiary(txId: BytesLike, overrides?: CallOverrides): Promise<string>
+  'cancel(bytes32)'(
+    ticketId: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  getBeneficiary(
+    ticketId: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   'getBeneficiary(bytes32)'(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
 
   getKeepalivePrice(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber]>
 
   'getKeepalivePrice(bytes32)'(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber]>
 
@@ -204,20 +218,20 @@ export class ArbRetryableTx extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, BigNumber]>
 
-  getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
+  getTimeout(ticketId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
 
   'getTimeout(bytes32)'(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
   keepalive(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'keepalive(bytes32)'(
-    txId: BytesLike,
+    ticketId: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
@@ -229,24 +243,30 @@ export class ArbRetryableTx extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    cancel(txId: BytesLike, overrides?: CallOverrides): Promise<void>
+    cancel(ticketId: BytesLike, overrides?: CallOverrides): Promise<void>
 
-    'cancel(bytes32)'(txId: BytesLike, overrides?: CallOverrides): Promise<void>
+    'cancel(bytes32)'(
+      ticketId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    getBeneficiary(txId: BytesLike, overrides?: CallOverrides): Promise<string>
+    getBeneficiary(
+      ticketId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
 
     'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
 
     getKeepalivePrice(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
     'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
@@ -264,17 +284,23 @@ export class ArbRetryableTx extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber, BigNumber]>
 
-    getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-    'getTimeout(bytes32)'(
-      txId: BytesLike,
+    getTimeout(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    keepalive(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
+    'getTimeout(bytes32)'(
+      ticketId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    keepalive(
+      ticketId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     'keepalive(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -284,38 +310,40 @@ export class ArbRetryableTx extends Contract {
   }
 
   filters: {
-    Canceled(txId: BytesLike | null): EventFilter
+    Canceled(ticketId: BytesLike | null): EventFilter
 
-    LifetimeExtended(txId: BytesLike | null, newTimeout: null): EventFilter
+    LifetimeExtended(ticketId: BytesLike | null, newTimeout: null): EventFilter
 
-    Redeemed(txId: BytesLike | null): EventFilter
+    Redeemed(ticketId: BytesLike | null): EventFilter
+
+    TicketCreated(ticketId: BytesLike | null): EventFilter
   }
 
   estimateGas: {
-    cancel(txId: BytesLike, overrides?: Overrides): Promise<BigNumber>
+    cancel(ticketId: BytesLike, overrides?: Overrides): Promise<BigNumber>
 
     'cancel(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     getBeneficiary(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     getKeepalivePrice(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
     'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -333,17 +361,23 @@ export class ArbRetryableTx extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    getTimeout(txId: BytesLike, overrides?: CallOverrides): Promise<BigNumber>
-
-    'getTimeout(bytes32)'(
-      txId: BytesLike,
+    getTimeout(
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    keepalive(txId: BytesLike, overrides?: PayableOverrides): Promise<BigNumber>
+    'getTimeout(bytes32)'(
+      ticketId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    keepalive(
+      ticketId: BytesLike,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
 
     'keepalive(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
@@ -357,32 +391,32 @@ export class ArbRetryableTx extends Contract {
 
   populateTransaction: {
     cancel(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'cancel(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     getBeneficiary(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'getBeneficiary(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     getKeepalivePrice(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'getKeepalivePrice(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -401,22 +435,22 @@ export class ArbRetryableTx extends Contract {
     ): Promise<PopulatedTransaction>
 
     getTimeout(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     'getTimeout(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     keepalive(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'keepalive(bytes32)'(
-      txId: BytesLike,
+      ticketId: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 

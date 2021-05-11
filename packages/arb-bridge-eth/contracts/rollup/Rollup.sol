@@ -26,6 +26,7 @@ import "./RollupEventBridge.sol";
 import "./IRollup.sol";
 import "./INode.sol";
 import "./INodeFactory.sol";
+import "../challenge/IChallenge.sol";
 import "../challenge/IChallengeFactory.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IOutbox.sol";
@@ -35,7 +36,7 @@ import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
 
-contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
+abstract contract AbsRollup is Cloneable, RollupCore, Pausable, IRollup {
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
@@ -47,7 +48,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     uint256 public extraChallengeTimeBlocks;
     uint256 public arbGasSpeedLimitPerBlock;
     uint256 public baseStake;
-    address public stakeToken;
 
     // Bridge is an IInbox and IOutbox
     IBridge public delayedBridge;
@@ -58,10 +58,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     INodeFactory public nodeFactory;
     address public owner;
     ProxyAdmin public admin;
-
-    uint256 latestNodeToTruncateTo;
-    uint256 nextStakerToTruncate;
-    bool truncating;
 
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
@@ -79,7 +75,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         address _owner,
         bytes calldata _extraConfig,
         address[7] calldata connectedContracts
-    ) external override {
+    ) public virtual override {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
         require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
 
@@ -110,7 +106,6 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         extraChallengeTimeBlocks = _extraChallengeTimeBlocks;
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
-        stakeToken = _stakeToken;
         owner = _owner;
         admin = ProxyAdmin(connectedContracts[0]);
 
@@ -208,70 +203,7 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
      * @notice Resume interaction with the rollup contract
      */
     function resume() external onlyOwner {
-        require(!truncating, "STILL_TRUNCATING");
         _unpause();
-    }
-
-    /**
-     * @notice Begin the process of trunacting the chain back to the given node
-     * @dev maxItems is used to make sure this doesn't exceed the max gas cost
-     * @param newLatestNodeCreated Index that we want to be the latest unresolved node
-     * @param maxItems Maximum number of items to eliminate to eliminate
-     */
-    function beginTruncatingNodes(uint256 newLatestNodeCreated, uint256 maxItems)
-        external
-        onlyOwner
-        whenPaused
-    {
-        require(!truncating, "ALREADY_TRUNCATING");
-        require(newLatestNodeCreated < latestNodeCreated(), "TOO_NEW");
-        require(newLatestNodeCreated >= firstUnresolvedNode() - 1, "TOO_OLD");
-        latestNodeToTruncateTo = newLatestNodeCreated;
-        truncating = true;
-        continueTruncatingNodes(maxItems);
-    }
-
-    /**
-     * @notice Continue the process of trunacting the chain back to the given node
-     * @dev maxItems is used to make sure this doesn't exceed the max gas cost
-     * @param maxItems Maximum number of items to eliminate to eliminate
-     */
-    function continueTruncatingNodes(uint256 maxItems) public onlyOwner whenPaused {
-        require(truncating, "NOT_TRUNCATING");
-        uint256 target = latestNodeToTruncateTo;
-
-        uint256 stakerIndex = nextStakerToTruncate;
-        uint256 stakers = stakerCount();
-        while (maxItems > 0 && stakerIndex < stakers) {
-            address stakerAddress = getStakerAddress(stakerIndex);
-            uint256 latestStakedNode = latestStakedNode(stakerAddress);
-            while (maxItems > 0 && latestStakedNode > target) {
-                INode node = getNode(latestStakedNode);
-                latestStakedNode = node.prev();
-                maxItems--;
-            }
-            stakerUpdateLatestStakedNode(stakerAddress, latestStakedNode);
-
-            if (latestStakedNode > target) {
-                nextStakerToTruncate = stakerIndex;
-                return;
-            }
-            stakerIndex++;
-        }
-        nextStakerToTruncate = stakerIndex;
-
-        uint256 latest;
-        for (latest = latestNodeCreated(); maxItems > 0 && latest > target; latest--) {
-            INode node = getNode(latest);
-            node.destroy();
-            maxItems--;
-        }
-        updateLatestNodeCreated(latest);
-        if (latest == target) {
-            latestNodeToTruncateTo = 0;
-            nextStakerToTruncate = 0;
-            truncating = false;
-        }
     }
 
     /**
@@ -376,34 +308,17 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Create a new stake
-     * @param tokenAmount If staking in something other than eth, this is the amount of tokens staked, otherwise 0
+     * @param depositAmount The amount of either eth or tokens staked
      */
-    function newStake(uint256 tokenAmount) external payable whenNotPaused {
+    function _newStake(uint256 depositAmount) internal whenNotPaused {
         // Verify that sender is not already a staker
         require(!isStaked(msg.sender), "ALREADY_STAKED");
-
-        uint256 depositAmount = receiveStakerFunds(tokenAmount);
+        require(!isZombie(msg.sender), "STAKER_IS_ZOMBIE");
         require(depositAmount >= currentRequiredStake(), "NOT_ENOUGH_STAKE");
 
         createNewStake(msg.sender, depositAmount);
 
         rollupEventBridge.stakeCreated(msg.sender, latestConfirmed());
-    }
-
-    /**
-     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
-     * @param destination Address to transfer the withdrawn funds to
-     */
-    function withdrawStakerFunds(address payable destination)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
-        uint256 amount = withdrawFunds(msg.sender);
-        // Note: This is an unsafe external call and could be used for reentrency
-        // This is safe because it occurs after all checks and effects
-        sendStakerFunds(destination, amount);
-        return amount;
     }
 
     /**
@@ -446,113 +361,105 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     ) external whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
-        INode prevNode = getNode(latestStakedNode(msg.sender));
+        uint256 prevNodeNum = latestStakedNode(msg.sender);
         StakeOnNewNodeFrame memory frame;
-        frame.currentInboxSize = sequencerBridge.messageCount();
-        frame.prevNode = getNode(latestStakedNode(msg.sender));
         {
-            uint256 nodeNum = latestNodeCreated() + 1;
+            INode prevNode = getNode(prevNodeNum);
+            uint256 currentInboxSize = sequencerBridge.messageCount();
+
             RollupLib.Assertion memory assertion =
                 RollupLib.decodeAssertion(
                     assertionBytes32Fields,
                     assertionIntFields,
                     beforeProposedBlock,
                     beforeInboxMaxCount,
-                    frame.currentInboxSize
+                    currentInboxSize
                 );
-            frame.executionHash = RollupLib.executionHash(assertion);
-            // Make sure the previous state is correct against the node being built on
-            require(
-                RollupLib.stateHash(assertion.beforeState) == frame.prevNode.stateHash(),
-                "PREV_STATE_HASH"
-            );
 
-            (frame.sequencerBatchEnd, frame.sequencerBatchAcc) = sequencerBridge
-                .proveBatchContainsSequenceNumber(
-                sequencerBatchProof,
-                assertion.afterState.inboxCount
-            );
-
-            uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
-            // Verify that assertion meets the minimum Delta time requirement
-            require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
-
-            uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
-            // Minimum size requirements: each assertion must satisfy either
-            require(
-                // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
-                assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
-                    // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
-                    gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
-                    assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
-                    MAX_SEND_COUNT,
-                "TOO_SMALL"
-            );
-
-            // Don't allow an assertion to use above a maximum amount of gas
-            require(gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4), "TOO_LARGE");
-
+            uint256 sequencerBatchEnd;
+            bytes32 sequencerBatchAcc;
             uint256 deadlineBlock;
             {
-                // Set deadline rounding up to the nearest block
-                uint256 checkTime =
-                    gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
-                deadlineBlock = max(
-                    block.number.add(confirmPeriodBlocks),
-                    frame.prevNode.deadlineBlock()
-                )
-                    .add(checkTime);
-                uint256 olderSibling = frame.prevNode.latestChildNumber();
-                if (olderSibling != 0) {
-                    deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
-                }
-            }
-
-            rollupEventBridge.nodeCreated(
-                nodeNum,
-                latestStakedNode(msg.sender),
-                deadlineBlock,
-                msg.sender
-            );
-
-            // Ensure that the assertion doesn't read past the end of the current inbox
-            require(assertion.afterState.inboxCount <= frame.currentInboxSize, "INBOX_PAST_END");
-
-            frame.node = INode(
-                nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
-                    RollupLib.confirmHash(assertion),
-                    latestStakedNode(msg.sender),
-                    deadlineBlock
-                )
-            );
-        }
-
-        {
-            bytes32 lastHash;
-            bool hasSibling = prevNode.latestChildNumber() > 0;
-            if (hasSibling) {
-                lastHash = getNodeHash(prevNode.latestChildNumber());
-            } else {
-                lastHash = getNodeHash(frame.node.prev());
-            }
-            bytes32 nodeHash =
-                RollupLib.nodeHash(
-                    hasSibling,
-                    lastHash,
-                    frame.executionHash,
-                    frame.sequencerBatchAcc
+                // frame.executionHash = RollupLib.executionHash(assertion);
+                // Make sure the previous state is correct against the node being built on
+                require(
+                    RollupLib.stateHash(assertion.beforeState) == prevNode.stateHash(),
+                    "PREV_STATE_HASH"
                 );
+
+                (sequencerBatchEnd, sequencerBatchAcc) = sequencerBridge
+                    .proveBatchContainsSequenceNumber(
+                    sequencerBatchProof,
+                    assertion.afterState.inboxCount
+                );
+
+                uint256 timeSinceLastNode = block.number.sub(assertion.beforeState.proposedBlock);
+                // Verify that assertion meets the minimum Delta time requirement
+                require(timeSinceLastNode >= minimumAssertionPeriod, "TIME_DELTA");
+
+                uint256 gasUsed = assertion.afterState.gasUsed.sub(assertion.beforeState.gasUsed);
+                // Minimum size requirements: each assertion must satisfy either
+                require(
+                    // Consumes at least all inbox messages put into L1 inbox before your prev node’s L1 blocknum
+                    assertion.afterState.inboxCount >= assertion.beforeState.inboxMaxCount ||
+                        // Consumes ArbGas >=100% of speed limit for time since your prev node (based on difference in L1 blocknum)
+                        gasUsed >= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock) ||
+                        assertion.afterState.sendCount.sub(assertion.beforeState.sendCount) ==
+                        MAX_SEND_COUNT,
+                    "TOO_SMALL"
+                );
+
+                // Don't allow an assertion to use above a maximum amount of gas
+                require(
+                    gasUsed <= timeSinceLastNode.mul(arbGasSpeedLimitPerBlock).mul(4),
+                    "TOO_LARGE"
+                );
+
+                {
+                    // Set deadline rounding up to the nearest block
+                    uint256 checkTime =
+                        gasUsed.add(arbGasSpeedLimitPerBlock.sub(1)).div(arbGasSpeedLimitPerBlock);
+                    deadlineBlock = max(
+                        block.number.add(confirmPeriodBlocks),
+                        prevNode.deadlineBlock()
+                    )
+                        .add(checkTime);
+                    uint256 olderSibling = prevNode.latestChildNumber();
+                    if (olderSibling != 0) {
+                        deadlineBlock = max(deadlineBlock, getNode(olderSibling).deadlineBlock());
+                    }
+                }
+                // Ensure that the assertion doesn't read past the end of the current inbox
+                require(assertion.afterState.inboxCount <= currentInboxSize, "INBOX_PAST_END");
+            }
+
+            bytes32 nodeHash;
+            {
+                bytes32 lastHash;
+                bool hasSibling = prevNode.latestChildNumber() > 0;
+                if (hasSibling) {
+                    lastHash = getNodeHash(prevNode.latestChildNumber());
+                } else {
+                    lastHash = getNodeHash(prevNodeNum);
+                }
+
+                (nodeHash, frame) = createNewNode(
+                    assertion,
+                    deadlineBlock,
+                    sequencerBatchEnd,
+                    sequencerBatchAcc,
+                    prevNodeNum,
+                    lastHash,
+                    hasSibling
+                );
+            }
             require(nodeHash == expectedNodeHash, "UNEXPECTED_NODE_HASH");
-            nodeCreated(frame.node, nodeHash);
-            prevNode.childCreated(latestNodeCreated());
+            stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
         }
-        stakeOnNode(msg.sender, latestNodeCreated(), confirmPeriodBlocks);
 
         emit NodeCreated(
             latestNodeCreated(),
-            getNodeHash(frame.node.prev()),
+            getNodeHash(prevNodeNum),
             expectedNodeHash,
             frame.executionHash,
             frame.currentInboxSize,
@@ -563,8 +470,52 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         );
     }
 
+    function createNewNode(
+        RollupLib.Assertion memory assertion,
+        uint256 deadlineBlock,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc,
+        uint256 prevNode,
+        bytes32 prevHash,
+        bool hasSibling
+    ) internal returns (bytes32, StakeOnNewNodeFrame memory) {
+        StakeOnNewNodeFrame memory frame;
+        frame.currentInboxSize = sequencerBridge.messageCount();
+        frame.prevNode = getNode(prevNode);
+        {
+            uint256 nodeNum = latestNodeCreated() + 1;
+            frame.executionHash = RollupLib.executionHash(assertion);
+
+            frame.sequencerBatchEnd = sequencerBatchEnd;
+            frame.sequencerBatchAcc = sequencerBatchAcc;
+
+            rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
+
+            frame.node = INode(
+                nodeFactory.createNode(
+                    RollupLib.stateHash(assertion.afterState),
+                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
+                    RollupLib.confirmHash(assertion),
+                    prevNode,
+                    deadlineBlock
+                )
+            );
+        }
+
+        bytes32 nodeHash =
+            RollupLib.nodeHash(hasSibling, prevHash, frame.executionHash, frame.sequencerBatchAcc);
+
+        nodeCreated(frame.node, nodeHash);
+        frame.prevNode.childCreated(latestNodeCreated());
+
+        return (nodeHash, frame);
+    }
+
     /**
      * @notice Refund a staker that is currently staked on or before the latest confirmed node
+     * @dev Since a staker is initially placed in the latest confirmed node, if they don't move it
+     * a griefer can remove their stake. It is recomended to batch together the txs to place a stake
+     * and move it to the desired node.
      * @param stakerAddress Address of the staker whose stake is refunded
      */
     function returnOldDeposit(address stakerAddress) external override whenNotPaused {
@@ -576,15 +527,11 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     /**
      * @notice Increase the amount staked for the given staker
      * @param stakerAddress Address of the staker whose stake is increased
-     * @param tokenAmount If staking in something other than eth, this is the amount of tokens staked, otherwise 0
+     * @param depositAmount The amount of either eth or tokens deposited
      */
-    function addToDeposit(address stakerAddress, uint256 tokenAmount)
-        external
-        payable
-        whenNotPaused
-    {
+    function _addToDeposit(address stakerAddress, uint256 depositAmount) internal whenNotPaused {
         requireUnchallengedStaker(stakerAddress);
-        increaseStakeBy(stakerAddress, receiveStakerFunds(tokenAmount));
+        increaseStakeBy(stakerAddress, depositAmount);
     }
 
     /**
@@ -703,9 +650,86 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
         remainingLoserStake = remainingLoserStake.sub(amountWon);
         clearChallenge(winningStaker);
 
-        increaseStakeBy(owner, remainingLoserStake);
+        increaseWithdrawableFunds(owner, remainingLoserStake);
         turnIntoZombie(losingStaker);
     }
+
+    /*
+    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external onlyOwner whenPaused {
+        require(stackerA.length == stackerB.length, "WRONG_LENGTH");
+        for (uint256 i = 0; i < stackerA.length; i++) {
+            address chall = inChallenge(stackerA[i], stackerB[i]);
+
+            require(address(0) != chall, "NOT_IN_CHALL");
+            clearChallenge(stackerA[i]);
+            clearChallenge(stackerB[i]);
+
+            IChallenge(chall).clearChallenge();
+        }
+    }
+
+    function forceRefundStaker(address[] memory stacker) external onlyOwner whenPaused {
+        for (uint256 i = 0; i < stacker.length; i++) {
+            withdrawStaker(stacker[i]);
+        }
+    }
+
+    function forceCreateNode(
+        bytes32 expectedNodeHash,
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        uint256 beforeProposedBlock,
+        uint256 beforeInboxMaxCount,
+        uint256 prevNode,
+        uint256 deadlineBlock,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc
+    ) external onlyOwner whenPaused {
+        require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
+
+        RollupLib.Assertion memory assertion =
+                RollupLib.decodeAssertion(
+                    assertionBytes32Fields,
+                    assertionIntFields,
+                    beforeProposedBlock,
+                    beforeInboxMaxCount,
+                    sequencerBridge.messageCount()
+                );
+
+        bytes32 nodeHash =
+            _newNode(
+                assertion,
+                deadlineBlock,
+                sequencerBatchEnd,
+                sequencerBatchAcc,
+                prevNode,
+                getNodeHash(prevNode),
+                false
+            );
+        // TODO: should we add a stake?
+        
+        require(expectedNodeHash == nodeHash, "NOT_EXPECTED_HASH");
+    }
+
+    function forceConfirmNode(
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths
+    ) external onlyOwner whenPaused {
+        outbox.processOutgoingMessages(sendsData, sendLengths);
+
+        confirmLatestNode();
+
+        rollupEventBridge.nodeConfirmed(latestConfirmed());
+
+        // emit NodeConfirmed(
+        //     firstUnresolved,
+        //     afterSendAcc,
+        //     afterSendCount,
+        //     afterLogAcc,
+        //     afterLogCount
+        // );
+    }
+    */
 
     /**
      * @notice Remove the given zombie from nodes it is staked on, moving backwords from the latest node it is staked on
@@ -751,27 +775,28 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
 
     /**
      * @notice Calculate the current amount of funds required to place a new stake in the rollup
-     * @dev If the stake requirement get's too high, this function may stop reverting due to overflow, but
+     * @dev If the stake requirement get's too high, this function may start reverting due to overflow, but
      * that only blocks operations that should be blocked anyway
      * @return The current minimum stake requirement
      */
-    function currentRequiredStake() public view returns (uint256) {
+    function currentRequiredStake(
+        uint256 _blockNumber,
+        uint256 _firstUnresolvedNodeNum,
+        uint256 _latestNodeCreated
+    ) internal view returns (uint256) {
         // If there are no unresolved nodes, then you can use the base stake
-        uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
-        if (firstUnresolvedNodeNum - 1 == latestNodeCreated()) {
+        if (_firstUnresolvedNodeNum - 1 == _latestNodeCreated) {
             return baseStake;
         }
-        INode firstUnresolved = getNode(firstUnresolvedNodeNum);
-
-        uint256 firstUnresolvedDeadline = firstUnresolved.deadlineBlock();
-        if (block.number < firstUnresolvedDeadline) {
+        uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).deadlineBlock();
+        if (_blockNumber < firstUnresolvedDeadline) {
             return baseStake;
         }
         uint24[10] memory numerators =
             [1, 122971, 128977, 80017, 207329, 114243, 314252, 129988, 224562, 162163];
         uint24[10] memory denominators =
             [1, 114736, 112281, 64994, 157126, 80782, 207329, 80017, 128977, 86901];
-        uint256 firstUnresolvedAge = block.number.sub(firstUnresolvedDeadline);
+        uint256 firstUnresolvedAge = _blockNumber.sub(firstUnresolvedDeadline);
         uint256 periodsPassed = firstUnresolvedAge.mul(10).div(confirmPeriodBlocks);
         // Overflow check
         if (periodsPassed.div(10) >= 255) {
@@ -793,6 +818,26 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
             return type(uint256).max;
         }
         return fullStake;
+    }
+
+    /**
+     * @notice Calculate the current amount of funds required to place a new stake in the rollup
+     * @dev If the stake requirement get's too high, this function may start reverting due to overflow, but
+     * that only blocks operations that should be blocked anyway
+     * @return The current minimum stake requirement
+     */
+    function requiredStake(
+        uint256 blockNumber,
+        uint256 firstUnresolvedNodeNum,
+        uint256 latestNodeCreated
+    ) public view returns (uint256) {
+        return currentRequiredStake(blockNumber, firstUnresolvedNodeNum, latestNodeCreated);
+    }
+
+    function currentRequiredStake() public view returns (uint256) {
+        uint256 firstUnresolvedNodeNum = firstUnresolvedNode();
+
+        return currentRequiredStake(block.number, firstUnresolvedNodeNum, latestNodeCreated());
     }
 
     /**
@@ -833,46 +878,123 @@ contract Rollup is Cloneable, RollupCore, Pausable, IRollup {
     }
 
     /**
-     * @notice Ensure that funds are properly received
-     * @param tokenAmount If staking in something other than eth, this is the amount of tokens to transfer, otherwise 0
-     * @return Amount of funds that have been received by the rollup
-     */
-    function receiveStakerFunds(uint256 tokenAmount) private returns (uint256) {
-        if (stakeToken == address(0)) {
-            require(tokenAmount == 0, "BAD_STK_TYPE");
-            return msg.value;
-        } else {
-            require(msg.value == 0, "BAD_STK_TYPE");
-            require(
-                IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
-                "TRANSFER_FAILED"
-            );
-            return tokenAmount;
-        }
-    }
-
-    /**
-     * @notice Send funds to the given address, if staking is eth, transfer eth, otherwise transfer tokens
-     * @param destination Address to tranfer funds to
-     * @param amount Amount of funds to transfer
-     */
-    function sendStakerFunds(address payable destination, uint256 amount) private {
-        if (amount == 0) {
-            return;
-        }
-        if (stakeToken == address(0)) {
-            destination.transfer(amount);
-        } else {
-            require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
-        }
-    }
-
-    /**
      * @notice Verify that the given address is staked and not actively in a challenge
      * @param stakerAddress Address to check
      */
     function requireUnchallengedStaker(address stakerAddress) private view {
         require(isStaked(stakerAddress), "NOT_STAKED");
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
+    }
+
+    function withdrawStakerFunds(address payable destination) external virtual returns (uint256);
+}
+
+contract Rollup is AbsRollup {
+    /**
+     * @notice Create a new stake
+     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
+     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
+     */
+    function newStake() external payable whenNotPaused {
+        _newStake(msg.value);
+    }
+
+    /**
+     * @notice Increase the amount staked eth for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     */
+    function addToDeposit(address stakerAddress) external payable whenNotPaused {
+        _addToDeposit(stakerAddress, msg.value);
+    }
+
+    /**
+     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
+     * @param destination Address to transfer the withdrawn funds to
+     */
+    function withdrawStakerFunds(address payable destination)
+        external
+        override
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 amount = withdrawFunds(msg.sender);
+        // Note: This is an unsafe external call and could be used for reentrency
+        // This is safe because it occurs after all checks and effects
+        destination.transfer(amount);
+        return amount;
+    }
+}
+
+contract ERC20Rollup is AbsRollup {
+    address public stakeToken;
+
+    function initialize(
+        bytes32 _machineHash,
+        uint256 _confirmPeriodBlocks,
+        uint256 _extraChallengeTimeBlocks,
+        uint256 _arbGasSpeedLimitPerBlock,
+        uint256 _baseStake,
+        address _stakeToken,
+        address _owner,
+        bytes calldata _extraConfig,
+        address[7] calldata connectedContracts
+    ) public override {
+        require(stakeToken != address(0), "NEED_STAKE_TOKEN");
+        super.initialize(
+            _machineHash,
+            _confirmPeriodBlocks,
+            _extraChallengeTimeBlocks,
+            _arbGasSpeedLimitPerBlock,
+            _baseStake,
+            _stakeToken,
+            _owner,
+            _extraConfig,
+            connectedContracts
+        );
+        stakeToken = _stakeToken;
+    }
+
+    /**
+     * @notice Create a new stake
+     * @dev It is recomended to call stakeOnExistingNode after creating a new stake
+     * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
+     * @param tokenAmount the amount of tokens staked
+     */
+    function newStake(uint256 tokenAmount) external whenNotPaused {
+        _newStake(tokenAmount);
+        require(
+            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+            "TRANSFER_FAIL"
+        );
+    }
+
+    /**
+     * @notice Increase the amount staked tokens for the given staker
+     * @param stakerAddress Address of the staker whose stake is increased
+     * @param tokenAmount the amount of tokens staked
+     */
+    function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
+        _addToDeposit(stakerAddress, tokenAmount);
+        require(
+            IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
+            "TRANSFER_FAIL"
+        );
+    }
+
+    /**
+     * @notice Withdraw uncomitted funds owned by sender from the rollup chain
+     * @param destination Address to transfer the withdrawn funds to
+     */
+    function withdrawStakerFunds(address payable destination)
+        external
+        override
+        whenNotPaused
+        returns (uint256)
+    {
+        uint256 amount = withdrawFunds(msg.sender);
+        // Note: This is an unsafe external call and could be used for reentrency
+        // This is safe because it occurs after all checks and effects
+        require(IERC20(stakeToken).transfer(destination, amount), "TRANSFER_FAILED");
+        return amount;
     }
 }

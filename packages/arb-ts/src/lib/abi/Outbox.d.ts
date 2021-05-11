@@ -130,9 +130,11 @@ interface OutboxInterface extends ethers.utils.Interface {
   ): Result
 
   events: {
+    'OutBoxTransactionExecuted(address,address,uint256,uint256)': EventFragment
     'OutboxEntryCreated(uint256,uint256,bytes32,uint256)': EventFragment
   }
 
+  getEvent(nameOrSignatureOrTopic: 'OutBoxTransactionExecuted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboxEntryCreated'): EventFragment
 }
 
@@ -463,6 +465,13 @@ export class Outbox extends Contract {
   }
 
   filters: {
+    OutBoxTransactionExecuted(
+      destAddr: string | null,
+      l2Sender: string | null,
+      outboxIndex: BigNumberish | null,
+      transactionIndex: null
+    ): EventFilter
+
     OutboxEntryCreated(
       batchNum: BigNumberish | null,
       outboxIndex: null,
