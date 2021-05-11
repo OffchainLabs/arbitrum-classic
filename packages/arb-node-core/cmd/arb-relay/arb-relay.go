@@ -33,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 var logger zerolog.Logger
@@ -127,10 +128,12 @@ func startup() error {
 }
 
 func NewArbRelay(sequencerFeedAddress string, rebroadcastSettings broadcaster.Settings) *ArbRelay {
+	broadcastClient := broadcastclient.NewBroadcastClient(sequencerFeedAddress, nil)
+	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	return &ArbRelay{
 		SequencerFeedAddress: sequencerFeedAddress,
 		broadcaster:          broadcaster.NewBroadcaster(rebroadcastSettings),
-		broadcastClient:      broadcastclient.NewBroadcastClient(sequencerFeedAddress, nil),
+		broadcastClient:      broadcastClient,
 	}
 }
 
