@@ -743,10 +743,12 @@ export class BridgeHelper {
     const executedTopic = iface.getEventTopic(executedEvent)
     const logs = await l1Provider.getLogs({
       address: outboxAddress,
-      // @ts-ignore
+
       topics: [
         executedTopic,
+        // @ts-ignore
         null,
+        // @ts-ignore
         null,
         ethers.utils.hexZeroPad(outboxIndex.toHexString(), 32),
       ],
