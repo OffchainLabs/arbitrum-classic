@@ -23,6 +23,8 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface RollupEventBridgeInterface extends ethers.utils.Interface {
   functions: {
     'claimNode(uint256,address)': FunctionFragment
+    'initialize(address,address)': FunctionFragment
+    'isMaster()': FunctionFragment
     'nodeConfirmed(uint256)': FunctionFragment
     'nodeCreated(uint256,uint256,uint256,address)': FunctionFragment
     'nodeRejected(uint256)': FunctionFragment
@@ -34,6 +36,11 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'claimNode',
     values: [BigNumberish, string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [string, string]
+  ): string
+  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'nodeConfirmed',
     values: [BigNumberish]
@@ -64,6 +71,8 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(functionFragment: 'claimNode', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'nodeConfirmed',
     data: BytesLike
@@ -118,6 +127,22 @@ export class RollupEventBridge extends Contract {
       staker: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    initialize(
+      _bridge: string,
+      _rollup: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'initialize(address,address)'(
+      _bridge: string,
+      _rollup: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
 
     nodeConfirmed(
       nodeNum: BigNumberish,
@@ -202,6 +227,22 @@ export class RollupEventBridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  initialize(
+    _bridge: string,
+    _rollup: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'initialize(address,address)'(
+    _bridge: string,
+    _rollup: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  isMaster(overrides?: CallOverrides): Promise<boolean>
+
+  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+
   nodeConfirmed(
     nodeNum: BigNumberish,
     overrides?: Overrides
@@ -284,6 +325,22 @@ export class RollupEventBridge extends Contract {
       staker: string,
       overrides?: CallOverrides
     ): Promise<void>
+
+    initialize(
+      _bridge: string,
+      _rollup: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initialize(address,address)'(
+      _bridge: string,
+      _rollup: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    isMaster(overrides?: CallOverrides): Promise<boolean>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
 
     nodeConfirmed(
       nodeNum: BigNumberish,
@@ -380,6 +437,22 @@ export class RollupEventBridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    initialize(
+      _bridge: string,
+      _rollup: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'initialize(address,address)'(
+      _bridge: string,
+      _rollup: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
+
     nodeConfirmed(
       nodeNum: BigNumberish,
       overrides?: Overrides
@@ -463,6 +536,22 @@ export class RollupEventBridge extends Contract {
       staker: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    initialize(
+      _bridge: string,
+      _rollup: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'initialize(address,address)'(
+      _bridge: string,
+      _rollup: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     nodeConfirmed(
       nodeNum: BigNumberish,

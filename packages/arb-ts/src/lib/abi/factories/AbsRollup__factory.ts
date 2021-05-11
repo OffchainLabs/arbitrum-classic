@@ -152,6 +152,19 @@ const _abi = [
     inputs: [
       {
         indexed: false,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'OwnerFunctionCalled',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
         internalType: 'address',
         name: 'account',
         type: 'address',
@@ -270,19 +283,6 @@ const _abi = [
         internalType: 'bool',
         name: 'isStaked',
         type: 'bool',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'admin',
-    outputs: [
-      {
-        internalType: 'contract ProxyAdmin',
-        name: '',
-        type: 'address',
       },
     ],
     stateMutability: 'view',
@@ -638,9 +638,9 @@ const _abi = [
         type: 'bytes',
       },
       {
-        internalType: 'address[7]',
+        internalType: 'address[6]',
         name: 'connectedContracts',
-        type: 'address[7]',
+        type: 'address[6]',
       },
     ],
     name: 'initialize',
@@ -936,11 +936,6 @@ const _abi = [
         name: 'latestNodeCreated',
         type: 'uint256',
       },
-      {
-        internalType: 'uint256',
-        name: 'firstUnresolvedDeadline',
-        type: 'uint256',
-      },
     ],
     name: 'requiredStake',
     outputs: [
@@ -1102,31 +1097,19 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'address',
-        name: '_newRollup',
+        internalType: 'address payable',
+        name: 'destination',
         type: 'address',
       },
     ],
-    name: 'upgradeImplementation',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
+    name: 'withdrawStakerFunds',
+    outputs: [
       {
-        internalType: 'address',
-        name: '_newRollup',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
       },
     ],
-    name: 'upgradeImplementationAndCall',
-    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },

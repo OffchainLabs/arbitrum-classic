@@ -22,13 +22,25 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface RollupCreatorInterface extends ethers.utils.Interface {
   functions: {
+    'bridgeCreator()': FunctionFragment
+    'challengeFactory()': FunctionFragment
     'createRollup(bytes32,uint256,uint256,uint256,uint256,address,address,address,uint256,uint256,bytes)': FunctionFragment
+    'nodeFactory()': FunctionFragment
     'owner()': FunctionFragment
     'renounceOwnership()': FunctionFragment
+    'rollupTemplate()': FunctionFragment
     'setTemplates(address,address,address,address)': FunctionFragment
     'transferOwnership(address)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'bridgeCreator',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'challengeFactory',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'createRollup',
     values: [
@@ -45,9 +57,17 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(
+    functionFragment: 'nodeFactory',
+    values?: undefined
+  ): string
   encodeFunctionData(functionFragment: 'owner', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'renounceOwnership',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'rollupTemplate',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -60,12 +80,25 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(
+    functionFragment: 'bridgeCreator',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'challengeFactory',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'createRollup',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'nodeFactory', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'renounceOwnership',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'rollupTemplate',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -79,11 +112,13 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
 
   events: {
     'OwnershipTransferred(address,address)': EventFragment
-    'RollupCreated(address,address)': EventFragment
+    'RollupCreated(address,address,address)': EventFragment
+    'TemplatesUpdated()': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TemplatesUpdated'): EventFragment
 }
 
 export class RollupCreator extends Contract {
@@ -100,6 +135,14 @@ export class RollupCreator extends Contract {
   interface: RollupCreatorInterface
 
   functions: {
+    bridgeCreator(overrides?: CallOverrides): Promise<[string]>
+
+    'bridgeCreator()'(overrides?: CallOverrides): Promise<[string]>
+
+    challengeFactory(overrides?: CallOverrides): Promise<[string]>
+
+    'challengeFactory()'(overrides?: CallOverrides): Promise<[string]>
+
     createRollup(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
@@ -130,6 +173,10 @@ export class RollupCreator extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    nodeFactory(overrides?: CallOverrides): Promise<[string]>
+
+    'nodeFactory()'(overrides?: CallOverrides): Promise<[string]>
+
     owner(overrides?: CallOverrides): Promise<[string]>
 
     'owner()'(overrides?: CallOverrides): Promise<[string]>
@@ -137,6 +184,10 @@ export class RollupCreator extends Contract {
     renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
 
     'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+
+    rollupTemplate(overrides?: CallOverrides): Promise<[string]>
+
+    'rollupTemplate()'(overrides?: CallOverrides): Promise<[string]>
 
     setTemplates(
       _bridgeCreator: string,
@@ -164,6 +215,14 @@ export class RollupCreator extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  bridgeCreator(overrides?: CallOverrides): Promise<string>
+
+  'bridgeCreator()'(overrides?: CallOverrides): Promise<string>
+
+  challengeFactory(overrides?: CallOverrides): Promise<string>
+
+  'challengeFactory()'(overrides?: CallOverrides): Promise<string>
 
   createRollup(
     _machineHash: BytesLike,
@@ -195,6 +254,10 @@ export class RollupCreator extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  nodeFactory(overrides?: CallOverrides): Promise<string>
+
+  'nodeFactory()'(overrides?: CallOverrides): Promise<string>
+
   owner(overrides?: CallOverrides): Promise<string>
 
   'owner()'(overrides?: CallOverrides): Promise<string>
@@ -202,6 +265,10 @@ export class RollupCreator extends Contract {
   renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
 
   'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  rollupTemplate(overrides?: CallOverrides): Promise<string>
+
+  'rollupTemplate()'(overrides?: CallOverrides): Promise<string>
 
   setTemplates(
     _bridgeCreator: string,
@@ -230,6 +297,14 @@ export class RollupCreator extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    bridgeCreator(overrides?: CallOverrides): Promise<string>
+
+    'bridgeCreator()'(overrides?: CallOverrides): Promise<string>
+
+    challengeFactory(overrides?: CallOverrides): Promise<string>
+
+    'challengeFactory()'(overrides?: CallOverrides): Promise<string>
+
     createRollup(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
@@ -260,6 +335,10 @@ export class RollupCreator extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    nodeFactory(overrides?: CallOverrides): Promise<string>
+
+    'nodeFactory()'(overrides?: CallOverrides): Promise<string>
+
     owner(overrides?: CallOverrides): Promise<string>
 
     'owner()'(overrides?: CallOverrides): Promise<string>
@@ -267,6 +346,10 @@ export class RollupCreator extends Contract {
     renounceOwnership(overrides?: CallOverrides): Promise<void>
 
     'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
+
+    rollupTemplate(overrides?: CallOverrides): Promise<string>
+
+    'rollupTemplate()'(overrides?: CallOverrides): Promise<string>
 
     setTemplates(
       _bridgeCreator: string,
@@ -301,10 +384,24 @@ export class RollupCreator extends Contract {
       newOwner: string | null
     ): EventFilter
 
-    RollupCreated(rollupAddress: null, inboxAddress: null): EventFilter
+    RollupCreated(
+      rollupAddress: string | null,
+      inboxAddress: null,
+      adminProxy: null
+    ): EventFilter
+
+    TemplatesUpdated(): EventFilter
   }
 
   estimateGas: {
+    bridgeCreator(overrides?: CallOverrides): Promise<BigNumber>
+
+    'bridgeCreator()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    challengeFactory(overrides?: CallOverrides): Promise<BigNumber>
+
+    'challengeFactory()'(overrides?: CallOverrides): Promise<BigNumber>
+
     createRollup(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
@@ -335,6 +432,10 @@ export class RollupCreator extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    nodeFactory(overrides?: CallOverrides): Promise<BigNumber>
+
+    'nodeFactory()'(overrides?: CallOverrides): Promise<BigNumber>
+
     owner(overrides?: CallOverrides): Promise<BigNumber>
 
     'owner()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -342,6 +443,10 @@ export class RollupCreator extends Contract {
     renounceOwnership(overrides?: Overrides): Promise<BigNumber>
 
     'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
+
+    rollupTemplate(overrides?: CallOverrides): Promise<BigNumber>
+
+    'rollupTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
 
     setTemplates(
       _bridgeCreator: string,
@@ -371,6 +476,16 @@ export class RollupCreator extends Contract {
   }
 
   populateTransaction: {
+    bridgeCreator(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'bridgeCreator()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    challengeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'challengeFactory()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     createRollup(
       _machineHash: BytesLike,
       _confirmPeriodBlocks: BigNumberish,
@@ -401,6 +516,10 @@ export class RollupCreator extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    nodeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'nodeFactory()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -408,6 +527,10 @@ export class RollupCreator extends Contract {
     renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
 
     'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    rollupTemplate(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'rollupTemplate()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     setTemplates(
       _bridgeCreator: string,
