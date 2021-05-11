@@ -59,7 +59,6 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 		startingBroadcastClientMutex: &sync.Mutex{},
 		websocketUrl:                 websocketUrl,
 		lastInboxSeqNum:              seqNum,
-		ConfirmedAccumulatorListener: make(chan common.Hash),
 	}
 }
 

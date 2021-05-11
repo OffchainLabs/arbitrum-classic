@@ -1903,24 +1903,27 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 seq_batch_it->SeekForPrev(start_slice);
                 if (!seq_batch_it->status().ok()) {
                     return seq_batch_it->status();
-                } else if (!seq_batch_it->Valid()) {
-                    throw std::runtime_error(
-                        "Previous sequencer batch item not found");
                 }
+                if (seq_batch_it->Valid()) {
+                    auto key_ptr = reinterpret_cast<const unsigned char*>(
+                        seq_batch_it->key().data());
+                    auto value_ptr = reinterpret_cast<const unsigned char*>(
+                        seq_batch_it->value().data());
+                    auto value_end_ptr =
+                        value_ptr + seq_batch_it->value().size();
+                    auto db_item = deserializeSequencerBatchItem(
+                        extractUint256(key_ptr), value_ptr, value_end_ptr);
 
-                auto key_ptr = reinterpret_cast<const unsigned char*>(
-                    seq_batch_it->key().data());
-                auto value_ptr = reinterpret_cast<const unsigned char*>(
-                    seq_batch_it->value().data());
-                auto value_end_ptr = value_ptr + seq_batch_it->value().size();
-                auto db_item = deserializeSequencerBatchItem(
-                    extractUint256(key_ptr), value_ptr, value_end_ptr);
-
-                if (db_item.accumulator != data.previous_batch_acc) {
-                    throw std::runtime_error("prev_batch_acc didn't match");
+                    if (db_item.accumulator != data.previous_batch_acc) {
+                        throw std::runtime_error("prev_batch_acc didn't match");
+                    }
+                    prev_item = db_item;
+                    seq_batch_it->Next();
+                } else {
+                    // If this was not found, this batch item is the first,
+                    // which means that the default prev_item is correct.
+                    seq_batch_it->Seek(start_slice);
                 }
-                prev_item = db_item;
-                seq_batch_it->Next();
             } else {
                 seq_batch_it->Seek(start_slice);
             }
