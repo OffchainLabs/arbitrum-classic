@@ -6,14 +6,9 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments
   const [deployer] = await ethers.getSigners()
 
-  const validatorTemplate = await deploy('Validator', {
-    from: await deployer.getAddress(),
-    args: [],
-  })
-
   const dep = await deploy('ValidatorWalletCreator', {
     from: await deployer.getAddress(),
-    args: [validatorTemplate.address],
+    args: [],
   })
 }
 
