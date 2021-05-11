@@ -47,7 +47,7 @@ abigen --pkg=$PACKAGE --out=challengefactory.go --combined-json combined.json --
 solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/test_only/ChallengeTester.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=challengeTester.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof,$CHAL_PREFIX/ChallengeFactory.sol:ChallengeFactory
 
-solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/rollup/RollupCreatorNoProxy.sol --overwrite -o .
+solc --combined-json bin,abi,userdoc,devdoc,metadata --optimize --optimize-runs=1 --allow-paths $BASE,$NM @openzeppelin=$OZ ../../arb-bridge-eth/contracts/test_only/RollupCreatorNoProxy.sol --overwrite -o .
 abigen --pkg=$PACKAGE --out=rollupcreatornoproxy.go --combined-json combined.json --exc=$IGNORED_MORE,$OZ_LIBS,$ARCH_PREFIX/IOneStepProof.sol:IOneStepProof
 
 rm combined.json
