@@ -262,7 +262,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				from = from.Add(to, big.NewInt(1))
 			}
 		}
-		sleepChan := time.After(time.Second)
+		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:
 		for {
 			select {
@@ -273,27 +273,41 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
+				if len(ir.BroadcastFeed) == 0 {
+					err := ir.deliverQueueItems()
+					if err != nil {
+						return err
+					}
+				}
 			case <-sleepChan:
 				break FeedReadLoop
 			}
 		}
-		if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
-			queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
-			for _, item := range ir.sequencerFeedQueue {
-				queueItems = append(queueItems, item.BatchItem)
-			}
-			prevAcc := ir.sequencerFeedQueue[0].PrevAcc
-			ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
-			ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return errors.New("Failed to deliver sequencer feed messages to ArbCore")
-			}
-			ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
+		err = ir.deliverQueueItems()
+		if err != nil {
+			return err
 		}
 	}
+}
+
+func (ir *InboxReader) deliverQueueItems() error {
+	if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
+		queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
+		for _, item := range ir.sequencerFeedQueue {
+			queueItems = append(queueItems, item.BatchItem)
+		}
+		prevAcc := ir.sequencerFeedQueue[0].PrevAcc
+		ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
+		ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("Failed to deliver sequencer feed messages to ArbCore")
+		}
+		ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
+	}
+	return nil
 }
 
 func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
