@@ -23,7 +23,7 @@ import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 import "../bridge/SequencerInbox.sol";
 import "../rollup/RollupEventBridge.sol";
-import "../rollup/BridgeCreator.sol";
+import "./BridgeCreatorNoProxy.sol";
 
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
@@ -38,13 +38,13 @@ import "../libraries/ICloneable.sol";
 contract RollupCreatorNoProxy is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress);
 
-    BridgeCreator public bridgeCreator;
+    BridgeCreatorNoProxy public bridgeCreator;
     ICloneable public rollupTemplate;
     address public challengeFactory;
     address public nodeFactory;
 
     function setTemplates(
-        BridgeCreator _bridgeCreator,
+        BridgeCreatorNoProxy _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
         address _nodeFactory

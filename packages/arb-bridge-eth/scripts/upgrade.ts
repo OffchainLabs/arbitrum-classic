@@ -114,8 +114,6 @@ async function main() {
     throw new Error('Wrong node factory')
   }
 
-  // TODO: Do we want to make RollupCreator and ValidatorWalletCreator upgradeable? If so add transaparent proxy
-
   const rollupsCreated = await rollupCreator.queryFilter(
     rollupCreator.filters.RollupCreated(prevAddresses.rollup, null, null),
     0, // fromBlock
