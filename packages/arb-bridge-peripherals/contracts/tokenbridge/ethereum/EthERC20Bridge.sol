@@ -225,8 +225,9 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return res;
     }
 
-    function shouldTryDeply(address erc20) internal view returns (bool) {
-        return !hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20);
+    struct MintCallDataReturn {
+        bytes data;
+        bool deployed;
     }
 
     function createMintCallData(
@@ -235,9 +236,10 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         address sender,
         uint256 amount,
         bytes calldata callHookData
-    ) public view returns (bytes memory data) {
+    ) internal view returns (MintCallDataReturn memory) {
         bytes memory deployData = "";
-        if (shouldTryDeply(erc20)) {
+        bool deployed = false;
+        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
             // TODO: use OZ's ERC20Metadata once available
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
             deployData = abi.encode(
@@ -245,6 +247,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
                 callStatic(erc20, ERC20.symbol.selector),
                 callStatic(erc20, ERC20.decimals.selector)
             );
+            deployed = true;
         }
         bytes memory data =
             abi.encodeWithSelector(
@@ -256,7 +259,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
                 deployData,
                 callHookData
             );
-        return data;
+        return MintCallDataReturn(data, deployed);
     }
 
     /**
@@ -278,10 +281,10 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable override returns (uint256) {
-        bytes memory data =
+    ) external payable override returns (uint256, uint256) {
+        MintCallDataReturn memory mintCallDataReturn =
             createMintCallData(erc20, destination, msg.sender, amount, callHookData);
-        if (shouldTryDeply(erc20)) {
+        if (mintCallDataReturn.deployed) {
             hasTriedDeploy[erc20] = true;
         }
         uint256 seqNum =
@@ -293,11 +296,11 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
                 msg.sender,
                 maxGas,
                 gasPriceBid,
-                data
+                mintCallDataReturn.data
             );
 
         emit DepositToken(destination, msg.sender, seqNum, amount, erc20);
-        return seqNum;
+        return (seqNum, mintCallDataReturn.data.length);
     }
 
     /**
