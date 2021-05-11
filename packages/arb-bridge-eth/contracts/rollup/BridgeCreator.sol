@@ -114,6 +114,7 @@ contract BridgeCreator is Ownable {
             );
         }
 
+        frame.delayedBridge.initialize();
         frame.sequencerInbox.initialize(
             IBridge(frame.delayedBridge),
             sequencer,
