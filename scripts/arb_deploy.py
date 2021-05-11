@@ -51,7 +51,7 @@ services:
             - %s:/home/user/state
         image: arb-validator
         entrypoint: '/home/user/go/bin/arb-node'
-        command: %s --inbox=%s --maxBatchTime=2 state %s %s
+        command: --sequencer %s state %s %s
         ports:
             - '1235:1235'
             - '8547:8547'
@@ -59,14 +59,8 @@ services:
 """
 
 
-def compose_header(state_abspath, extra_flags, rpc_url, rollup_address, inbox_address):
-    return COMPOSE_HEADER % (
-        state_abspath,
-        extra_flags,
-        inbox_address,
-        rpc_url,
-        rollup_address,
-    )
+def compose_header(state_abspath, extra_flags, rpc_url, rollup_address):
+    return COMPOSE_HEADER % (state_abspath, extra_flags, rpc_url, rollup_address)
 
 
 # Parameters: validator id, absolute path to state folder,
@@ -76,7 +70,7 @@ COMPOSE_VALIDATOR = """
         volumes:
             - %s:/home/user/state
         image: arb-validator
-        command: state %s %s %s %s %s
+        command: state %s %s %s %s %s %s
 """
 
 
@@ -88,6 +82,7 @@ def compose_validator(
     rpc_url,
     rollup_address,
     validator_utils_address,
+    validator_wallet_factory_address,
     strategy,
 ):
     return COMPOSE_VALIDATOR % (
@@ -96,6 +91,7 @@ def compose_validator(
         rpc_url,
         rollup_address,
         validator_utils_address,
+        validator_wallet_factory_address,
         strategy,
         extra_flags,
     )
@@ -127,8 +123,8 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
         with open(os.path.join(states_path % i, "config.json")) as json_file:
             data = json.load(json_file)
             rollup_address = data["rollup_address"]
-            inbox_address = data["inbox_address"]
             validator_utils_address = data["validator_utils_address"]
+            validator_wallet_factory_address = data["validator_wallet_factory_address"]
             extra_flags = ""
             eth_url = (
                 data["eth_url"]
@@ -146,7 +142,7 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
                 )
         if i == 0:
             contents = compose_header(
-                states_path % 0, extra_flags, eth_url, rollup_address, inbox_address
+                states_path % 0, extra_flags, eth_url, rollup_address
             )
         else:
             strategy = "StakeLatest"
@@ -159,6 +155,7 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
                 eth_url,
                 rollup_address,
                 validator_utils_address,
+                validator_wallet_factory_address,
                 strategy,
             )
 
