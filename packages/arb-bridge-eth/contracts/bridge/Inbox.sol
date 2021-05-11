@@ -70,7 +70,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 nonce,
         address destAddr,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -92,7 +92,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 gasPriceBid,
         address destAddr,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -115,7 +115,7 @@ contract Inbox is IInbox, Cloneable {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external override returns (uint256) {
+    ) external virtual override returns (uint256) {
         return
             _deliverMessage(
                 L2_MSG,
@@ -138,7 +138,7 @@ contract Inbox is IInbox, Cloneable {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external override returns (uint256) {
+    ) external virtual override returns (uint256) {
         return
             _deliverMessage(
                 L2_MSG,
@@ -154,7 +154,7 @@ contract Inbox is IInbox, Cloneable {
             );
     }
 
-    function depositEth(address destAddr) external payable override returns (uint256) {
+    function depositEth(address destAddr) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -174,7 +174,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 maxGasPrice
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             this.createRetryableTicket(
                 destAddr,
@@ -210,7 +210,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_submitRetryableTx,
@@ -234,7 +234,7 @@ contract Inbox is IInbox, Cloneable {
         uint8 _kind,
         address _sender,
         bytes memory _messageData
-    ) private returns (uint256) {
+    ) internal returns (uint256) {
         uint256 msgNum = deliverToBridge(_kind, _sender, keccak256(_messageData));
         emit InboxMessageDelivered(msgNum, _messageData);
         return msgNum;
@@ -244,7 +244,7 @@ contract Inbox is IInbox, Cloneable {
         uint8 kind,
         address sender,
         bytes32 messageDataHash
-    ) private returns (uint256) {
+    ) internal returns (uint256) {
         return bridge.deliverMessageToInbox{ value: msg.value }(kind, sender, messageDataHash);
     }
 }

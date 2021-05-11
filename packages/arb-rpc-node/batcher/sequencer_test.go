@@ -233,8 +233,21 @@ func TestSequencerBatcher(t *testing.T) {
 	batcher.chainTimeCheckInterval = time.Millisecond * 10
 	go batcher.Start(ctx)
 	client.Commit()
-	time.Sleep(time.Second)
-	client.Commit()
+	attempts := 0
+	for {
+		client.Commit()
+		totalDelayedCount, err := seqMon.Core.GetTotalDelayedMessagesSequenced()
+		test.FailIfError(t, err)
+		if totalDelayedCount.Cmp(big.NewInt(0)) != 0 {
+			break
+		}
+		time.Sleep(500 * time.Millisecond)
+		attempts++
+
+		if attempts == 20 {
+			t.Fatal("sequencer didn't sequence initial message")
+		}
+	}
 
 	for _, totalCount := range []int{1, 10, 100} {
 		for _, dataSizePerTx := range []int{1, 10, 100} {
