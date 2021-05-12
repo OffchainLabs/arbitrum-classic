@@ -29,13 +29,15 @@ import (
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
-	io   sync.Mutex
-	conn io.ReadWriteCloser
-	desc *netpoll.Desc
+	ioMutex sync.Mutex
+	conn    io.ReadWriteCloser
 
+	desc          *netpoll.Desc
 	name          string
 	clientManager *ClientManager
-	lastHeard     time.Time
+
+	timeoutMutex sync.Mutex
+	lastHeard    time.Time
 }
 
 // Receive reads next message from client's underlying connection.
@@ -52,10 +54,12 @@ func (cc *ClientConnection) Receive() error {
 
 // readRequests reads json-rpc request from connection.
 func (cc *ClientConnection) readRequest() error {
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 
+	cc.timeoutMutex.Lock()
 	cc.lastHeard = time.Now()
+	cc.timeoutMutex.Unlock()
 
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
 	if err != nil && !h.OpCode.IsControl() {
@@ -73,8 +77,8 @@ func (cc *ClientConnection) write(x interface{}) error {
 	w := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(w)
 
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 
 	if err := encoder.Encode(x); err != nil {
 		return err
@@ -84,8 +88,8 @@ func (cc *ClientConnection) write(x interface{}) error {
 }
 
 func (cc *ClientConnection) writeRaw(p []byte) error {
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 
 	_, err := cc.conn.Write(p)
 
@@ -93,8 +97,8 @@ func (cc *ClientConnection) writeRaw(p []byte) error {
 }
 
 func (cc *ClientConnection) Ping() error {
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 	_, err := cc.conn.Write(ws.CompiledPing)
 	if err != nil {
 		return err
