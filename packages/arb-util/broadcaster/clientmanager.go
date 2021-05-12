@@ -128,7 +128,7 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
 			unconfirmedIndex := i + 1
 			if unconfirmedIndex >= len(cm.broadcastMessages) {
 				//  Nothing newer, so clear entire cache
-				cm.broadcastMessages = nil
+				cm.broadcastMessages = cm.broadcastMessages[:0]
 			} else {
 				cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
 			}
@@ -162,6 +162,8 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
 func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	var buf bytes.Buffer
 
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
+
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(w)
 
@@ -184,17 +186,18 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
 		} else {
 			// We need to do a re-org
+			logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
 			i := len(cm.broadcastMessages) - 1
 			for ; i >= 0; i-- {
 				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == prevAcc {
-					broadcastMessages := cm.broadcastMessages[:i+1]
-					cm.broadcastMessages = append(broadcastMessages, &msg)
+					cm.broadcastMessages = append(cm.broadcastMessages[:i+1], &msg)
 					break
 				}
 			}
 
-			if i == -1 { // didn't even find the previous accumulator... start from here.
-				cm.broadcastMessages = append(cm.broadcastMessages, &msg)
+			if i == -1 {
+				// Don't use anything in existing slice
+				cm.broadcastMessages = append(cm.broadcastMessages[:0], &msg)
 			}
 		}
 
@@ -211,6 +214,8 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	}
 
 	cm.out <- buf.Bytes()
+
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("batch item queued")
 
 	return nil
 }
@@ -281,8 +286,9 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 					cm.pool.Schedule(func() {
 						err := c.writeRaw(data)
 						if err != nil {
-							logger.Warn().Err(err).Msg("error with writeRaw")
+							logger.Warn().Err(err).Str("client", c.name).Msg("error with writeRaw")
 						}
+						logger.Debug().Str("client", c.name).Int("length", len(data)).Msg("batch item sent")
 					})
 				}
 			}

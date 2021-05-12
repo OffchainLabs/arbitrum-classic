@@ -101,13 +101,17 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.Bro
 			return
 		}
 
-		logger.Debug().Int("length", len(msg)).Msg("received broadcast message")
-
 		res := broadcaster.BroadcastMessage{}
 		err = json.Unmarshal(msg, &res)
 		if err != nil {
 			logger.Error().Err(err).Msg("error unmarshalling message")
 			continue
+		}
+
+		if len(res.Messages) > 0 {
+			logger.Debug().Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
+		} else {
+			logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
 		}
 
 		if res.Version == 1 {
