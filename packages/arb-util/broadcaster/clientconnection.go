@@ -17,8 +17,12 @@
 package broadcaster
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"math/rand"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,6 +30,8 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
 )
+
+const MaxSendQueue = 20
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
@@ -38,6 +44,45 @@ type ClientConnection struct {
 
 	timeoutMutex sync.Mutex
 	lastHeard    time.Time
+	cancelFunc context.CancelFunc
+	out        chan []byte
+}
+
+func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+	return &ClientConnection{
+		conn:          conn,
+		desc:          desc,
+		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
+		clientManager: clientManager,
+		lastHeard:     time.Now(),
+	}
+}
+
+func (cc *ClientConnection) Start(parentCtx context.Context) {
+	ctx, cancelFunc := context.WithCancel(parentCtx)
+	cc.cancelFunc = cancelFunc
+
+	cc.out = make(chan []byte, MaxSendQueue)
+	go func() {
+		defer close(cc.out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data := <-cc.out:
+				err := cc.writeRaw(data)
+				if err != nil {
+					logger.Error().Err(err).Str("client", cc.name).Msg("error writing data to client")
+					cc.clientManager.Remove(cc)
+					return
+				}
+			}
+		}
+	}()
+}
+
+func (cc *ClientConnection) Stop() {
+	cc.cancelFunc()
 }
 
 func (cc *ClientConnection) GetLastHeard() time.Time {
@@ -81,8 +126,8 @@ func (cc *ClientConnection) readRequest() error {
 }
 
 func (cc *ClientConnection) write(x interface{}) error {
-	w := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(w)
+	writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(writer)
 
 	cc.ioMutex.Lock()
 	defer cc.ioMutex.Unlock()
@@ -91,7 +136,7 @@ func (cc *ClientConnection) write(x interface{}) error {
 		return err
 	}
 
-	return w.Flush()
+	return writer.Flush()
 }
 
 func (cc *ClientConnection) writeRaw(p []byte) error {
