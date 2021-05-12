@@ -225,11 +225,6 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         return res;
     }
 
-    struct MintCallDataReturn {
-        bytes data;
-        bool deployed;
-    }
-
     /**
      * @notice Utility method that allows you to get the calldata to be submitted to the L2 for a token deposit
      * @param erc20 L1 address of ERC20
