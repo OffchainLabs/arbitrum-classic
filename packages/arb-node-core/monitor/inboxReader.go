@@ -270,7 +270,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				logger.Debug().Str("prevAcc", broadcastItem.FeedItem.PrevAcc.String()).Str("acc", broadcastItem.FeedItem.BatchItem.Accumulator.String()).Msg("received broadcast feed item")
 				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
 				feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc
-				if feedReorg || feedCaughtUp {
+				if (feedReorg || feedCaughtUp) && len(ir.sequencerFeedQueue) > 0 {
 					var reason string
 					if feedReorg {
 						reason = "reorg"
