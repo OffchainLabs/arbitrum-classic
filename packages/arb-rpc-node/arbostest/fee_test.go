@@ -459,8 +459,14 @@ func TestFees(t *testing.T) {
 
 		correctCount := int64(0)
 		for _, res := range results {
-			if res.ResultCode == evm.ReturnCode || res.ResultCode == evm.RevertCode {
-				correctCount++
+			if arbosVersion < 16 {
+				if res.ResultCode == evm.ReturnCode || res.ResultCode == evm.RevertCode {
+					correctCount++
+				}
+			} else {
+				if res.ResultCode != evm.BadSequenceCode && res.ResultCode != evm.InsufficientTxFundsCode {
+					correctCount++
+				}
 			}
 		}
 
