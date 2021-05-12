@@ -238,7 +238,9 @@ func (cm *ClientManager) verifyClients() {
 	var deadClientCount uint64
 	var aliveClientCount uint64
 	for client := range cm.clientPtrMap {
+		client.ioMutex.Lock()
 		diff := time.Since(client.lastHeard)
+		client.ioMutex.Unlock()
 		if diff > cm.settings.ClientNoResponseTimeout {
 			deadClientList = append(deadClientList, client)
 			deadClientCount++
