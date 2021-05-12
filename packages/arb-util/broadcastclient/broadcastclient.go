@@ -109,7 +109,7 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.Bro
 		}
 
 		if len(res.Messages) > 0 {
-			logger.Debug().Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
+			logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
 		} else {
 			logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
 		}
