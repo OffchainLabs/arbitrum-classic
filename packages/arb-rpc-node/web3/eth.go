@@ -274,14 +274,14 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	from, tx := buildTransaction(args, s.maxCallGas)
+	from, tx := buildTransactionForEstimation(args)
 	var agg arbcommon.Address
 	if args.Aggregator != nil {
 		agg = arbcommon.NewAddressFromEth(*args.Aggregator)
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, err := snap.EstimateGas(tx, agg, from)
+	res, err := snap.EstimateGas(tx, agg, from, new(big.Int).SetUint64(s.maxCallGas))
 	res, err = handleCallResult(res, err, &blockNum)
 	if err != nil {
 		logging := log.Warn()
@@ -313,8 +313,10 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		gasAmount := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
-		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
+		gasUsed := len(res.FeeStats.GasUsed().Bytes()) * 16
+		// Adjust calldata units used for calldata from gas limit
+		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(gasUsed)))
+		return hexutil.Uint64(res.FeeStats.GasUsed().Uint64() + 1000), nil
 	}
 }
 
@@ -570,17 +572,29 @@ func makeTransactionResult(processedTx *evm.ProcessedTx, blockHash *common.Hash)
 	}
 }
 
-func buildTransaction(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
-	var from arbcommon.Address
-	if args.From != nil {
-		from = arbcommon.NewAddressFromEth(*args.From)
+func buildTransactionForEstimation(args CallTxArgs) (arbcommon.Address, *types.Transaction) {
+	gas := uint64(0)
+	if args.Gas != nil {
+		gas = uint64(*args.Gas)
 	}
+	return buildTransactionImpl(args, gas)
+}
+
+func buildTransactionForCall(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types.Transaction) {
 	gas := uint64(0)
 	if args.Gas != nil {
 		gas = uint64(*args.Gas)
 	}
 	if gas == 0 || gas > maxGas {
 		gas = maxGas
+	}
+	return buildTransactionImpl(args, gas)
+}
+
+func buildTransactionImpl(args CallTxArgs, gas uint64) (arbcommon.Address, *types.Transaction) {
+	var from arbcommon.Address
+	if args.From != nil {
+		from = arbcommon.NewAddressFromEth(*args.From)
 	}
 	gasPrice := big.NewInt(0)
 	if args.GasPrice != nil {
@@ -606,7 +620,7 @@ func buildTransaction(args CallTxArgs, maxGas uint64) (arbcommon.Address, *types
 }
 
 func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.ContractTransaction) {
-	from, tx := buildTransaction(args, maxGas)
+	from, tx := buildTransactionForCall(args, maxGas)
 	var dest arbcommon.Address
 	if tx.To() != nil {
 		dest = arbcommon.NewAddressFromEth(*tx.To())
