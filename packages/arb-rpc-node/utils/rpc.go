@@ -49,8 +49,8 @@ func launchServer(ctx context.Context, handler http.Handler, port string, server
 	)
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
-	logger.Info().Msgf("Launching %s server over http", serverType)
-	server := &http.Server{Addr: ":" + port, Handler: h}
+	logger.Info().Str("port", port).Msgf("Launching %s server over http", serverType)
+	server := &http.Server{Addr: "127.0.0.1:" + port, Handler: h}
 
 	errChan := make(chan error, 1)
 	defer close(errChan)
