@@ -230,16 +230,17 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         bool deployed;
     }
 
-    function createMintCallData(
+    function getDepositCalldata(
         address erc20,
         address destination,
         address sender,
         uint256 amount,
         bytes calldata callHookData
-    ) internal view returns (MintCallDataReturn memory) {
+    ) public view override returns (bool isDeployed, bytes memory depositCalldata) {
+        isDeployed = hasTriedDeploy[erc20];
+
         bytes memory deployData = "";
-        bool deployed = false;
-        if (!hasTriedDeploy[erc20] && !TokenAddressHandler.isCustomToken(erc20)) {
+        if (!isDeployed && !TokenAddressHandler.isCustomToken(erc20)) {
             // TODO: use OZ's ERC20Metadata once available
             // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
             deployData = abi.encode(
@@ -247,19 +248,19 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
                 callStatic(erc20, ERC20.symbol.selector),
                 callStatic(erc20, ERC20.decimals.selector)
             );
-            deployed = true;
         }
-        bytes memory data =
-            abi.encodeWithSelector(
-                IArbTokenBridge.mintFromL1.selector,
-                erc20,
-                sender,
-                destination,
-                amount,
-                deployData,
-                callHookData
-            );
-        return MintCallDataReturn(data, deployed);
+
+        depositCalldata = abi.encodeWithSelector(
+            IArbTokenBridge.mintFromL1.selector,
+            erc20,
+            sender,
+            destination,
+            amount,
+            deployData,
+            callHookData
+        );
+
+        return (isDeployed, depositCalldata);
     }
 
     /**
@@ -271,7 +272,8 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
      * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
      * @param gasPriceBid Gas price for L2 execution
      * @param callHookData optional data for external call upon minting
-     * @return ticket ID used to redeem the retryable transaction in the L2
+     * @return seqNum ticket ID used to redeem the retryable transaction in the L2
+     * @return depositCalldataLength length of calldata submitted to the L2
      */
     function deposit(
         address erc20,
@@ -281,26 +283,37 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable override returns (uint256, uint256) {
-        MintCallDataReturn memory mintCallDataReturn =
-            createMintCallData(erc20, destination, msg.sender, amount, callHookData);
-        if (mintCallDataReturn.deployed) {
-            hasTriedDeploy[erc20] = true;
-        }
-        uint256 seqNum =
-            inbox.createRetryableTicket{ value: msg.value }(
-                l2ArbTokenBridgeAddress,
-                0,
-                maxSubmissionCost,
+    ) external payable override returns (uint256 seqNum, uint256 depositCalldataLength) {
+        IERC20(erc20).safeTransferFrom(msg.sender, address(this), amount);
+
+        bytes memory depositCalldata;
+        {
+            bool isDeployed;
+            (isDeployed, depositCalldata) = getDepositCalldata(
+                erc20,
+                destination,
                 msg.sender,
-                msg.sender,
-                maxGas,
-                gasPriceBid,
-                mintCallDataReturn.data
+                amount,
+                callHookData
             );
 
+            if (!isDeployed) {
+                hasTriedDeploy[erc20] = true;
+            }
+        }
+        seqNum = inbox.createRetryableTicket{ value: msg.value }(
+            l2ArbTokenBridgeAddress,
+            0,
+            maxSubmissionCost,
+            msg.sender,
+            msg.sender,
+            maxGas,
+            gasPriceBid,
+            depositCalldata
+        );
+
         emit DepositToken(destination, msg.sender, seqNum, amount, erc20);
-        return (seqNum, mintCallDataReturn.data.length);
+        return (seqNum, depositCalldata.length);
     }
 
     /**
