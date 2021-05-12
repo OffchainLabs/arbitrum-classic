@@ -464,7 +464,7 @@ func TestFees(t *testing.T) {
 					correctCount++
 				}
 			} else {
-				if res.ResultCode != evm.BadSequenceCode && res.ResultCode != evm.InsufficientTxFundsCode {
+				if res.ResultCode != evm.BadSequenceCode {
 					correctCount++
 				}
 			}
