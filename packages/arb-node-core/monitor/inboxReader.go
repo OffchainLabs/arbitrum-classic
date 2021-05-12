@@ -141,6 +141,10 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		}
 
 		for {
+			err = ir.receiveFeedItems()
+			if err != nil {
+				return err
+			}
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
 				arbCorePosition := ir.db.MachineMessagesRead()
 				if ir.healthChan != nil {
@@ -262,30 +266,24 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				from = from.Add(to, big.NewInt(1))
 			}
 		}
-		sleepChan := time.After(time.Second * 5)
-	FeedReadLoop:
-		for {
-			select {
-			case broadcastItem := <-ir.BroadcastFeed:
-				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
-				feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc
-				if feedReorg || feedCaughtUp {
-					ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
-				}
-				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
-				if len(ir.BroadcastFeed) == 0 {
-					err := ir.deliverQueueItems()
-					if err != nil {
-						return err
-					}
-				}
-			case <-sleepChan:
-				break FeedReadLoop
+	}
+}
+
+func (ir *InboxReader) receiveFeedItems() error {
+	for {
+		select {
+		case broadcastItem := <-ir.BroadcastFeed:
+			feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
+			feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc
+			if feedReorg || feedCaughtUp {
+				ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
 			}
-		}
-		err = ir.deliverQueueItems()
-		if err != nil {
-			return err
+			ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
+			if len(ir.sequencerFeedQueue) > 100 {
+				return ir.deliverQueueItems()
+			}
+		case <-time.After(time.Millisecond * 10):
+			return ir.deliverQueueItems()
 		}
 	}
 }
