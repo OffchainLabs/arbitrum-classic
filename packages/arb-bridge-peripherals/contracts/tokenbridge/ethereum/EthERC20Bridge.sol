@@ -230,10 +230,20 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         bool deployed;
     }
 
+    /**
+     * @notice Utility method that allows you to get the calldata to be submitted to the L2 for a token deposit
+     * @param erc20 L1 address of ERC20
+     * @param sender account initiating the L1 deposit
+     * @param destination account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param amount Token Amount
+     * @param callHookData optional data for external call upon minting
+     * @return isDeployed if token has already been deployed to the L2
+     * @return depositCalldata calldata submitted to the L2
+     */
     function getDepositCalldata(
         address erc20,
-        address destination,
         address sender,
+        address destination,
         uint256 amount,
         bytes calldata callHookData
     ) public view override returns (bool isDeployed, bytes memory depositCalldata) {
@@ -291,8 +301,8 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
             bool isDeployed;
             (isDeployed, depositCalldata) = getDepositCalldata(
                 erc20,
-                destination,
                 msg.sender,
+                destination,
                 amount,
                 callHookData
             );
