@@ -150,7 +150,7 @@ func txResultCheck(t *testing.T, res *evm.TxResult, correct evm.ResultType) {
 			t.Log("Nested:", nested)
 		}
 		t.Log("data", hexutil.Encode(res.ReturnData))
-		t.Fatal("unexpected result", res.ResultCode)
+		t.Fatal("unexpected result", res.ResultCode, "instead of", correct)
 	}
 }
 
