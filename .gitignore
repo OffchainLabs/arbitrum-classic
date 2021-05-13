@@ -14,7 +14,7 @@ docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
 packages/arb-avm-cpp/rocksdb
 bridge_eth_addresses.json
-rollup-local_development.json
+packages/arb-bridge-eth/rollup-*
 keys.json
 /workspace
 arbitrum_flat.sol
