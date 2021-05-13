@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -83,9 +84,10 @@ func startup() error {
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	prometheusRegistry := prometheus.NewRegistry()
 
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, prometheusRegistry)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -258,7 +260,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	reader, err := staker.NewInboxReader(ctx, bridge, arbCore, healthChan)
+	reader, err := staker.NewInboxReader(ctx, bridge, arbCore, healthChan, prometheusRegistry)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}

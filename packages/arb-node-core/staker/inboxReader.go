@@ -2,6 +2,7 @@ package staker
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/big"
 	"time"
 
@@ -26,13 +27,34 @@ type InboxReader struct {
 	running    bool
 	cancelFunc context.CancelFunc
 	completed  chan bool
+
+	registry         *prometheus.Registry
+	processedCounter prometheus.Counter
+	ethHeightGauge   prometheus.Gauge
 }
 
-func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db core.ArbCore, healthChan chan nodehealth.Log) (*InboxReader, error) {
+func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db core.ArbCore, healthChan chan nodehealth.Log, registry *prometheus.Registry) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
 		return nil, err
 	}
+
+	_ethHeightGauge := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "arbitrum",
+		Subsystem: "ethereum",
+		Name:      "block_height",
+		Help:      "Current best block in the anchoring Ethereum chain.",
+	})
+	_processedCounter := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "processed",
+		Help:      "Number of Inbox Messages Processed",
+	})
+	if registry != nil {
+		registry.MustRegister(_processedCounter, _ethHeightGauge)
+	}
+
 	return &InboxReader{
 		bridge:            bridge,
 		db:                db,
@@ -40,6 +62,9 @@ func NewInboxReader(ctx context.Context, bridge *ethbridge.BridgeWatcher, db cor
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
 		healthChan:        healthChan,
+		registry:          registry,
+		processedCounter:  _processedCounter,
+		ethHeightGauge:    _ethHeightGauge,
 	}, nil
 }
 
@@ -170,6 +195,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			} else {
 				from = from.Add(to, big.NewInt(1))
 			}
+			ir.processedCounter.Add(float64(len(newMessages)))
+			ir.ethHeightGauge.Set(float64(from.Uint64()))
 		}
 		<-time.After(time.Second * 1)
 	}

@@ -174,7 +174,7 @@ type Log struct {
 }
 
 // Default configuration values for the healthcheck server
-func newConfig() *configStruct {
+func newConfig(prometheusRegistry *prometheus.Registry) *configStruct {
 	config := configStruct{}
 	const init = false
 
@@ -201,7 +201,7 @@ func newConfig() *configStruct {
 
 	//Load configuration into struct
 	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
-	config.prometheusRegistry = prometheus.NewRegistry()
+	config.prometheusRegistry = prometheusRegistry
 
 	config.init = init
 	config.healthcheckRPC = healthcheckRPC
@@ -909,12 +909,12 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 }
 
 // NodeHealthCheck Create a node healthcheck that listens on the given channel
-func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log) error {
+func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log, prometheusRegistry *prometheus.Registry) error {
 	//Create the configuration struct
 	state := newHealthState()
 
 	//Load the default configuration
-	config := newConfig()
+	config := newConfig(prometheusRegistry)
 
 	//Start the channel logger
 	go logger(ctx, config, state, logMsgChan)

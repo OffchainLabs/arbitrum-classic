@@ -2,6 +2,7 @@ package staker
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/big"
 	"strings"
 	"testing"
@@ -184,6 +185,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
+	prometheusRegistry := prometheus.NewRegistry()
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
@@ -193,10 +195,10 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	nodehealth.Init(healthChan)
 
 	go func() {
-		nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		nodehealth.StartNodeHealthCheck(ctx, healthChan, prometheusRegistry)
 	}()
 
-	reader, err := NewInboxReader(ctx, bridge, core, healthChan)
+	reader, err := NewInboxReader(ctx, bridge, core, healthChan, prometheus.NewRegistry())
 	test.FailIfError(t, err)
 	reader.Start(ctx)
 	defer reader.Stop()

@@ -18,6 +18,7 @@ package staker
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -69,7 +70,7 @@ func (m *Monitor) Close() {
 	m.Storage.CloseArbStorage()
 }
 
-func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAddress common.Address, healthChan chan nodehealth.Log) (*InboxReader, error) {
+func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAddress common.Address, healthChan chan nodehealth.Log, prometheusRegistry *prometheus.Registry) (*InboxReader, error) {
 	ethClient, err := ethutils.NewRPCEthClient(ethurl)
 	if err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ func (m *Monitor) StartInboxReader(ctx context.Context, ethurl string, rollupAdd
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, bridgeWatcher, m.Core, healthChan)
+	reader, err := NewInboxReader(ctx, bridgeWatcher, m.Core, healthChan, prometheusRegistry)
 	if err != nil {
 		return nil, err
 	}

@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	golog "log"
 	"net/http"
 	_ "net/http/pprof"
@@ -186,9 +187,10 @@ func startup() error {
 	}
 	defer monitor.Close()
 
+	prometheusRegistry := prometheus.NewRegistry()
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, prometheusRegistry)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -207,7 +209,7 @@ func startup() error {
 
 	var inboxReader *staker.InboxReader
 	for {
-		inboxReader, err = monitor.StartInboxReader(ctx, rollupArgs.EthURL, rollupArgs.Address, healthChan)
+		inboxReader, err = monitor.StartInboxReader(ctx, rollupArgs.EthURL, rollupArgs.Address, healthChan, prometheusRegistry)
 		if err == nil {
 			break
 		}
@@ -218,7 +220,21 @@ func startup() error {
 		time.Sleep(time.Second * 5)
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	nodeStore := monitor.Storage.GetNodeStore()
+	avmGauge := prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "arbitrum",
+			Subsystem: "avm",
+			Name:      "block_height",
+			Help:      "Current height of the Arbitrum chain",
+		},
+		func() float64 {
+			count, _ := nodeStore.BlockCount()
+			return float64(count)
+		})
+	prometheusRegistry.MustRegister(avmGauge)
+
+	db, txDBErrChan, err := txdb.New(ctx, monitor.Core, nodeStore, rollupArgs.Address, 100*time.Millisecond)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
