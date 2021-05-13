@@ -307,12 +307,9 @@ func (ir *InboxReader) deliverQueueItems() error {
 		prevAcc := ir.sequencerFeedQueue[0].PrevAcc
 		logger.Debug().Str("prevAcc", prevAcc.String()).Str("acc", queueItems[len(queueItems)-1].Accumulator.String()).Int("count", len(queueItems)).Msg("delivering broadcast feed items")
 		ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
-		ok, err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
+		err := core.DeliverMessagesAndWait(ir.db, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
-		}
-		if !ok {
-			return errors.New("Failed to deliver sequencer feed messages to ArbCore")
 		}
 		ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
 	}
@@ -388,12 +385,9 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		beforeAcc = sequencerBatchRefs[0].GetBeforeAcc()
 		logger.Debug().Str("prevAcc", beforeAcc.String()).Str("acc", seqBatchItems[len(seqBatchItems)-1].Accumulator.String()).Int("count", len(seqBatchItems)).Msg("delivering on-chain inbox items")
 	}
-	ok, err := core.DeliverMessagesAndWait(ir.db, beforeAcc, seqBatchItems, delayedMessages, nil)
+	err := core.DeliverMessagesAndWait(ir.db, beforeAcc, seqBatchItems, delayedMessages, nil)
 	if err != nil {
 		return err
-	}
-	if !ok {
-		return errors.New("Failed to deliver messages to ArbCore")
 	}
 	dupBroadcasterItems := 0
 	for _, item := range seqBatchItems {

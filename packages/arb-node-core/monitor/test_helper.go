@@ -70,7 +70,7 @@ func DeliverMessagesToCore(t *testing.T, arbCore core.ArbCore, delayedCount *big
 
 	target := new(big.Int).Add(beforeCount, big.NewInt(int64(len(messages))))
 
-	_, err = core.DeliverMessagesAndWait(arbCore, startAcc, batchItems, nil, nil)
+	err = core.DeliverMessagesAndWait(arbCore, startAcc, batchItems, nil, nil)
 	test.FailIfError(t, err)
 
 	for {
