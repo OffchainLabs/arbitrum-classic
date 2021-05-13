@@ -68,8 +68,16 @@ func (s *Server) ChainId() hexutil.Uint64 {
 	).Uint64())
 }
 
-func (s *Server) GasPrice() *hexutil.Big {
-	return (*hexutil.Big)(big.NewInt(0))
+func (s *Server) GasPrice() (*hexutil.Big, error) {
+	snap, err := s.srv.PendingSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	prices, err := snap.GetPricesInWei()
+	if err != nil {
+		return nil, err
+	}
+	return (*hexutil.Big)(prices[5]), nil
 }
 
 func (s *Server) Accounts() []common.Address {

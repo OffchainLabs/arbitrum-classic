@@ -208,6 +208,17 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 	return arbos.ParseArbOSVersionResult(res.ReturnData)
 }
 
+func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
+	res, err := s.BasicCall(arbos.GetPricesInWeiData(), common.NewAddressFromEth(arbos.ARB_GAS_INFO_ADDRESS))
+	if err != nil {
+		return [6]*big.Int{}, err
+	}
+	if err := checkValidResult(res); err != nil {
+		return [6]*big.Int{}, err
+	}
+	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
+}
+
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
 	assertion, _, steps, err := mach.ExecuteAssertionAdvanced(100000000000, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 	if err != nil {
