@@ -77,7 +77,8 @@ func (s *Server) GasPrice() (*hexutil.Big, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(prices[5]), nil
+	price := new(big.Rat).Mul(new(big.Rat).SetInt(prices[5]), big.NewRat(11, 10))
+	return (*hexutil.Big)(new(big.Int).Div(price.Num(), price.Denom())), nil
 }
 
 func (s *Server) Accounts() []common.Address {
