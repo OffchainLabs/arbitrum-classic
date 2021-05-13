@@ -189,7 +189,7 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 		},
 	}
 	nextBlockBatchItem := inbox.NewSequencerItem(big.NewInt(0), nextBlockMessage, seqBatchItem.Accumulator)
-	err := core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
+	err = core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
 	if err != nil {
 		return common.Hash{}, err
 	}

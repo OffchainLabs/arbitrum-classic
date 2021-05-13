@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -155,6 +157,39 @@ func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) e
 	return b.newTxFeed.Subscribe(ch)
 }
 
+const maxExcludeComputation int64 = 10_000
+
+func shouldIncludeTxResult(txRes evm.TxResult) bool {
+	if txRes.ResultCode == 0 {
+		// Success
+		return true
+	}
+	if txRes.ResultCode == 1 {
+		// EVM revert
+		// Still include computations taking up a lot of gas to avoid DoS
+		return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
+	}
+	// Other failure (probably not enough ETH balance)
+	return false
+}
+
+func txLogsToResults(logs []value.Value) (map[common.Hash]bool, error) {
+	shouldIncludeMap := make(map[common.Hash]bool)
+	for _, log := range logs {
+		res, err := evm.NewResultFromValue(log)
+		if err != nil {
+			return nil, err
+		}
+		txRes, ok := res.(evm.TxResult)
+		if !ok {
+			continue
+		}
+		shouldInclude := shouldIncludeTxResult(txRes)
+		shouldIncludeMap[txRes.IncomingRequest.MessageID] = shouldInclude
+	}
+	return shouldIncludeMap, nil
+}
+
 func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Transaction) error {
 	_, err := types.Sender(b.signer, startTx)
 	if err != nil {
@@ -234,7 +269,6 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 
 	var sequencedTxs []*types.Transaction
 	var sequencedBatchItems []inbox.SequencerBatchItem
-	var eachSucceeded []bool
 
 	newLogCount, err := b.db.GetLogCount()
 	if err != nil {
@@ -244,10 +278,14 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	if err != nil {
 		return err
 	}
+	txResults, err := txLogsToResults(txLogs)
+	if err != nil {
+		return err
+	}
 
 	successCount := 0
-	for _, success := range eachSucceeded {
-		if success {
+	for _, tx := range batchTxs {
+		if txResults[common.NewHashFromEth(tx.Hash())] {
 			successCount++
 		}
 	}
@@ -270,13 +308,17 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			}
 			return <-startResultChan
 		}
-		// At least one of the transactions failed and one of the transactions succeeded.
+		// At least one of the transactions failed and one of the transactions succeeded
 		for i, tx := range batchTxs {
-			if !eachSucceeded[i] {
+			txHash := common.NewHashFromEth(tx.Hash())
+			if !txResults[txHash] {
 				continue
 			}
 			l2Msg := message.NewCompressedECDSAFromEth(tx)
 			batch, err = message.NewTransactionBatchFromMessages([]message.AbstractL2Message{l2Msg})
+			if err != nil {
+				return err
+			}
 			l2Message := message.NewSafeL2Message(batch)
 			seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 			txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
@@ -292,7 +334,11 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			if err != nil {
 				return err
 			}
-			if !succeeded {
+			newTxResults, err := txLogsToResults(txLogs)
+			if err != nil {
+				return err
+			}
+			if !newTxResults[txHash] {
 				err = core.DeliverMessagesAndWait(b.db, prevAcc, nil, nil, msgCount)
 				if err != nil {
 					return err
@@ -396,7 +442,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	seqBatchItems := []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}
-	err := core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -551,7 +597,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 			batchItems[i] = newItem
 			lastAcc = newItem.Accumulator
 		}
-		err := core.DeliverMessagesAndWait(b.db, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+		err = core.DeliverMessagesAndWait(b.db, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return false, err
 		}
