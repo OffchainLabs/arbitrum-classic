@@ -207,7 +207,7 @@ func TestBlocks(t *testing.T) {
 		},
 		{
 			withdrawCount: 2,
-			includesBatch: true,
+			includesBatch: false,
 		},
 		{
 			withdrawCount: 2,
