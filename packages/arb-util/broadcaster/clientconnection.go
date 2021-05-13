@@ -31,6 +31,7 @@ import (
 	"github.com/mailru/easygo/netpoll"
 )
 
+const MaxSendCount = 10
 const MaxSendQueue = 20
 
 // ClientConnection represents client connection.
@@ -64,6 +65,7 @@ func (cc *ClientConnection) Start(parentCtx context.Context) {
 
 	cc.out = make(chan []byte, MaxSendQueue)
 	go func() {
+		defer cancelFunc()
 		defer close(cc.out)
 		for {
 			select {
