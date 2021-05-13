@@ -159,7 +159,7 @@ func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) e
 
 const maxExcludeComputation int64 = 10_000
 
-func shouldIncludeTxResult(txRes evm.TxResult) bool {
+func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	if txRes.ResultCode == 0 {
 		// Success
 		return true
@@ -180,7 +180,7 @@ func txLogsToResults(logs []value.Value) (map[common.Hash]bool, error) {
 		if err != nil {
 			return nil, err
 		}
-		txRes, ok := res.(evm.TxResult)
+		txRes, ok := res.(*evm.TxResult)
 		if !ok {
 			continue
 		}
@@ -266,6 +266,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	if err != nil {
 		return err
 	}
+	core.WaitForMachineIdle(b.db)
 
 	var sequencedTxs []*types.Transaction
 	var sequencedBatchItems []inbox.SequencerBatchItem
@@ -301,6 +302,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		if err != nil {
 			return err
 		}
+		core.WaitForMachineIdle(b.db)
 		if successCount == 0 {
 			// All of the transactions failed
 			for _, c := range resultChans {

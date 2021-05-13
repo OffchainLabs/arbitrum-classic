@@ -114,6 +114,16 @@ func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
 	return errors.New("Unexpected status")
 }
 
+func WaitForMachineIdle(db ArbCore) {
+	for {
+		idle := db.MachineIdle()
+		if idle {
+			break
+		}
+		time.Sleep(time.Millisecond * 20)
+	}
+}
+
 func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 	start := time.Now()
 	var status MessageStatus
