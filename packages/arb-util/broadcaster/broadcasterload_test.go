@@ -29,7 +29,8 @@ import (
 	"github.com/gobwas/ws/wsutil"
 )
 
-var MESSAGE_COUNT = 3
+var MessageCount = 100
+var ClientCount = 100
 
 func TestBroadcasterLoad(t *testing.T) {
 	ctx := context.Background()
@@ -52,7 +53,7 @@ func TestBroadcasterLoad(t *testing.T) {
 	defer b.Stop()
 
 	var wg sync.WaitGroup
-	for i := 0; i < 1; i++ {
+	for i := 0; i < ClientCount; i++ {
 		wg.Add(1)
 		go receiveMessages(t, i, &wg)
 	}
@@ -110,20 +111,20 @@ func receiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 				}
 			}
 			t.Logf("%d receive: %v，type: %v\n", i, res, op)
-			if messagesReceived == MESSAGE_COUNT {
+			if messagesReceived == MessageCount {
 				break
 			}
 		}
 	}
 
-	if messagesReceived != MESSAGE_COUNT {
-		t.Errorf("%d Should have received %d cached messages: %s\n", i, MESSAGE_COUNT, err)
+	if messagesReceived != MessageCount {
+		t.Errorf("%d Should have received %d cached messages: %s\n", i, MessageCount, err)
 	}
 }
 
 func broadcastTonsOfMessages(b *Broadcaster, t *testing.T) {
 	newBroadcastMessage := SequencedMessages()
-	for i := 0; i < MESSAGE_COUNT; i++ {
+	for i := 0; i < MessageCount; i++ {
 		hash1, feedItem1, signature1 := newBroadcastMessage()
 		err := b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
 		if err != nil {
