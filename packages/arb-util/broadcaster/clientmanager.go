@@ -266,12 +266,23 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 				clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
 				cm.mu.Lock()
 				// Lock mutex while writing to channels to ensure items delivered in order
-				for client := range cm.clientPtrMap {
-					if len(client.out) > MaxSendQueue {
-						// Queue for client too backed up, so delete after going through all other clients
-						clientDeleteList = append(clientDeleteList, client)
-					} else {
-						client.out <- data
+				for i := 0; i < MaxSendCount; i++ {
+					for client := range cm.clientPtrMap {
+						if len(client.out) == MaxSendQueue {
+							// Queue for client too backed up, so delete after going through all other clients
+							clientDeleteList = append(clientDeleteList, client)
+						} else {
+							client.out <- data
+						}
+					}
+
+					select {
+					case <-ctx.Done():
+						return
+					case data = <-cm.out:
+						continue
+					default:
+						break
 					}
 				}
 				cm.mu.Unlock()
