@@ -86,18 +86,18 @@ type ArbCoreInbox interface {
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) (bool, error) {
+func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
 	if !db.DeliverMessages(previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
-		return false, errors.New("unable to deliver messages")
+		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)
 	if err != nil {
-		return false, err
+		return err
 	}
-	if status == MessagesSuccess {
-		return true, nil
+	if status != MessagesSuccess {
+		return errors.New("Unexpected status")
 	}
-	return false, errors.New("Unexpected status")
+	return nil
 }
 
 func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
