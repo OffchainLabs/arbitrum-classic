@@ -25,11 +25,9 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 
@@ -192,60 +190,6 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 	return tx.Hash().Bytes(), nil
 }
 
-type revertError struct {
-	error
-	reason interface{}
-}
-
-// ErrorCode returns the JSON error code for a revertal.
-// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
-func (e revertError) ErrorCode() int {
-	return 3
-}
-
-// ErrorData returns the hex encoded revert reason.
-func (e revertError) ErrorData() interface{} {
-	return e.reason
-}
-
-type ganacheErrorData struct {
-	Error  string `json:"error"`
-	Return string `json:"return"`
-	Reason string `json:"reason"`
-}
-
-func HandleCallError(res *evm.TxResult, ganacheMode bool) error {
-	if len(res.ReturnData) > 0 {
-		err := vm.ErrExecutionReverted
-		reason := ""
-		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
-		if unpackError == nil {
-			err = errors.Errorf("execution reverted: %v", revertReason)
-			reason = revertReason
-		}
-
-		var errorReason interface{}
-		if ganacheMode {
-			errMap := make(map[string]ganacheErrorData)
-			errMap[res.IncomingRequest.MessageID.String()] = ganacheErrorData{
-				Error:  err.Error(),
-				Return: hexutil.Encode(res.ReturnData),
-				Reason: reason,
-			}
-			errorReason = errMap
-		} else {
-			errorReason = hexutil.Encode(res.ReturnData)
-		}
-
-		return revertError{
-			error:  err,
-			reason: errorReason,
-		}
-	} else {
-		return vm.ErrExecutionReverted
-	}
-}
-
 func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
@@ -268,7 +212,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 	}
 
 	if res.ResultCode != evm.ReturnCode {
-		return nil, HandleCallError(res, s.ganacheMode)
+		return nil, evm.HandleCallError(res, s.ganacheMode)
 	}
 	return res.ReturnData, nil
 }
@@ -316,7 +260,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		return 0, err
 	}
 	if res.ResultCode != evm.ReturnCode {
-		return 0, HandleCallError(res, s.ganacheMode)
+		return 0, evm.HandleCallError(res, s.ganacheMode)
 	}
 
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
