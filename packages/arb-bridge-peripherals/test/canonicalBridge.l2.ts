@@ -292,7 +292,7 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
-  it('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
+  it.only('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000001325'
     const sender = '0x0000000000000000000000000000000000000015'
     const amount = '1'
@@ -312,7 +312,7 @@ describe('Bridge peripherals layer 2', () => {
 
     // we need to hardcode this value as you can only send 63/64 of your remaining
     // gas into a call a high gas limit makes the test pass artificially
-    const gasLimit = ethers.BigNumber.from(9000000)
+    const gasLimit = ethers.BigNumber.from(900000)
     const tx = await testBridge.mintFromL1(
       l1ERC20,
       sender,
