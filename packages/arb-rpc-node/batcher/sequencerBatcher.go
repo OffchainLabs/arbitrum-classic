@@ -160,12 +160,14 @@ func (b *SequencerBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) e
 const maxExcludeComputation int64 = 10_000
 
 func shouldIncludeTxResult(txRes *evm.TxResult) bool {
-	if txRes.ResultCode == 0 {
-		// Success
+	if txRes == nil {
+		// Tx receipt not found
+		return false
+	}
+	if txRes.ResultCode == evm.ReturnCode {
 		return true
 	}
-	if txRes.ResultCode == 1 {
-		// EVM revert
+	if txRes.ResultCode == evm.RevertCode {
 		// Still include computations taking up a lot of gas to avoid DoS
 		return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
 	}
@@ -173,8 +175,8 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	return false
 }
 
-func txLogsToResults(logs []value.Value) (map[common.Hash]bool, error) {
-	shouldIncludeMap := make(map[common.Hash]bool)
+func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) {
+	resMap := make(map[common.Hash]*evm.TxResult)
 	for _, log := range logs {
 		res, err := evm.NewResultFromValue(log)
 		if err != nil {
@@ -184,10 +186,9 @@ func txLogsToResults(logs []value.Value) (map[common.Hash]bool, error) {
 		if !ok {
 			continue
 		}
-		shouldInclude := shouldIncludeTxResult(txRes)
-		shouldIncludeMap[txRes.IncomingRequest.MessageID] = shouldInclude
+		resMap[txRes.IncomingRequest.MessageID] = txRes
 	}
-	return shouldIncludeMap, nil
+	return resMap, nil
 }
 
 func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Transaction) error {
@@ -284,9 +285,14 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return err
 	}
 
-	successCount := 0
+	txHashes := make([]common.Hash, 0, len(batchTxs))
 	for _, tx := range batchTxs {
-		if txResults[common.NewHashFromEth(tx.Hash())] {
+		txHashes = append(txHashes, common.NewHashFromEth(tx.Hash()))
+	}
+
+	successCount := 0
+	for _, hash := range txHashes {
+		if shouldIncludeTxResult(txResults[hash]) {
 			successCount++
 		}
 	}
@@ -305,15 +311,15 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		core.WaitForMachineIdle(b.db)
 		if successCount == 0 {
 			// All of the transactions failed
-			for _, c := range resultChans {
-				c <- errors.New("transaction errored")
+			for i, c := range resultChans {
+				c <- evm.HandleCallError(txResults[txHashes[i]], false)
 			}
 			return <-startResultChan
 		}
 		// At least one of the transactions failed and one of the transactions succeeded
 		for i, tx := range batchTxs {
-			txHash := common.NewHashFromEth(tx.Hash())
-			if !txResults[txHash] {
+			txHash := txHashes[i]
+			if !shouldIncludeTxResult(txResults[txHash]) {
 				continue
 			}
 			l2Msg := message.NewCompressedECDSAFromEth(tx)
@@ -340,7 +346,8 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			if err != nil {
 				return err
 			}
-			if !newTxResults[txHash] {
+			txResult := newTxResults[txHash]
+			if !shouldIncludeTxResult(txResult) {
 				err = core.DeliverMessagesAndWait(b.db, prevAcc, nil, nil, msgCount)
 				if err != nil {
 					return err

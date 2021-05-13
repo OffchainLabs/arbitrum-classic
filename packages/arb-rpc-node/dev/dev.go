@@ -37,7 +37,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -358,7 +357,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 			return err
 		}
 
-		return web3.HandleCallError(res, true)
+		return evm.HandleCallError(res, true)
 	}
 
 	return nil

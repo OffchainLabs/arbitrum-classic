@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -63,6 +65,67 @@ type TxResult struct {
 	TxIndex         *big.Int
 	StartLogIndex   *big.Int
 	FeeStats        *FeeStats
+}
+
+type revertError struct {
+	error
+	reason interface{}
+}
+
+// ErrorCode returns the JSON error code for a revertal.
+// See: https://github.com/ethereum/wiki/wiki/JSON-RPC-Error-Codes-Improvement-Proposal
+func (e revertError) ErrorCode() int {
+	return 3
+}
+
+// ErrorData returns the hex encoded revert reason.
+func (e revertError) ErrorData() interface{} {
+	return e.reason
+}
+
+type ganacheErrorData struct {
+	Error  string `json:"error"`
+	Return string `json:"return"`
+	Reason string `json:"reason"`
+}
+
+func HandleCallError(res *TxResult, ganacheMode bool) error {
+	if res == nil {
+		logger.Warn().Msg("missing tx error result")
+		return vm.ErrExecutionReverted
+	}
+	if len(res.ReturnData) > 0 {
+		err := vm.ErrExecutionReverted
+		reason := ""
+		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
+		if unpackError == nil {
+			err = errors.Errorf("execution reverted: %v", revertReason)
+			reason = revertReason
+		}
+
+		var errorReason interface{}
+		if ganacheMode {
+			errMap := make(map[string]ganacheErrorData)
+			errMap[res.IncomingRequest.MessageID.String()] = ganacheErrorData{
+				Error:  err.Error(),
+				Return: hexutil.Encode(res.ReturnData),
+				Reason: reason,
+			}
+			errorReason = errMap
+		} else {
+			errorReason = hexutil.Encode(res.ReturnData)
+		}
+
+		return revertError{
+			error:  err,
+			reason: errorReason,
+		}
+	} else if res.ResultCode == InsufficientTxFundsCode || res.ResultCode == InsufficientGasFundsCode {
+		return vm.ErrInsufficientBalance
+	} else {
+		// TODO: CongestionCode, BadSequenceCode, InvalidMessageFormatCode, and maybe error 7 cannot deploy at requested address
+		return vm.ErrExecutionReverted
+	}
 }
 
 func CompareResults(res1 *TxResult, res2 *TxResult) []string {
