@@ -361,51 +361,44 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             }
         }
 
-        if (std::holds_alternative<rocksdb::Status>(setup)) {
-            // Delete each checkpoint until at or below message_sequence_number
-            setup = [&]() -> std::variant<std::unique_ptr<MachineThread>,
-                                          rocksdb::Status> {
-                while (it->Valid()) {
-                    std::vector<unsigned char> checkpoint_vector(
-                        it->value().data(),
-                        it->value().data() + it->value().size());
-                    auto checkpoint =
-                        extractMachineStateKeys(checkpoint_vector.begin());
-                    if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
-                        (message_count >= checkpoint.getTotalMessagesRead())) {
-                        if (isValid(tx,
-                                    checkpoint.output.fully_processed_inbox)) {
-                            // Good checkpoint
-                            try {
-                                return getMachineUsingStateKeys<MachineThread>(
-                                    tx, checkpoint, cache);
-                            } catch (const std::exception& e) {
-                                std::cerr
-                                    << "Error loading machine from checkpoint: "
-                                    << e.what() << std::endl;
-                                assert(false);
-                            }
+        // Delete each checkpoint until at or below message_sequence_number
+        while (it->Valid()) {
+            std::vector<unsigned char> checkpoint_vector(
+                it->value().data(), it->value().data() + it->value().size());
+            auto checkpoint =
+                extractMachineStateKeys(checkpoint_vector.begin());
+            if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
+                (message_count >= checkpoint.getTotalMessagesRead())) {
+                if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
+                    // Good checkpoint
+                    try {
+                        if (std::holds_alternative<rocksdb::Status>(setup)) {
+                            setup = getMachineUsingStateKeys<MachineThread>(
+                                tx, checkpoint, cache);
                         }
-
-                        std::cerr << "Error: Invalid checkpoint found at gas: "
-                                  << checkpoint.output.arb_gas_used
-                                  << std::endl;
+                        break;
+                    } catch (const std::exception& e) {
+                        std::cerr << "Error loading machine from checkpoint: "
+                                  << e.what() << std::endl;
                         assert(false);
                     }
-
-                    // Obsolete checkpoint, need to delete referenced machine
-                    deleteMachineState(tx, checkpoint);
-
-                    // Delete checkpoint to make sure it isn't used later
-                    tx.checkpointDelete(it->key());
-
-                    it->Prev();
-                    if (!it->status().ok()) {
-                        return it->status();
-                    }
                 }
-                return it->status();
-            }();
+
+                std::cerr << "Error: Invalid checkpoint found at gas: "
+                          << checkpoint.output.arb_gas_used << std::endl;
+                assert(false);
+            }
+
+            // Obsolete checkpoint, need to delete referenced machine
+            deleteMachineState(tx, checkpoint);
+
+            // Delete checkpoint to make sure it isn't used later
+            tx.checkpointDelete(it->key());
+
+            it->Prev();
+        }
+        if (!it->Valid()) {
+            setup = it->status();
         }
 
         it = nullptr;
