@@ -335,21 +335,26 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             return rocksdb::Status::NotFound();
         }
 
-        // Delete each old cached machine until at or below message_sequence_number
+        // Delete each old cached machine until at or below
+        // message_sequence_number
         {
             std::unique_lock<std::shared_mutex> guard(old_machine_cache_mutex);
             auto it = old_machine_cache.end();
             while (it != old_machine_cache.begin()) {
                 it--;
-                auto& inbox = it->second->machine_state.output.fully_processed_inbox;
+                auto& inbox =
+                    it->second->machine_state.output.fully_processed_inbox;
                 if (use_latest || message_count >= inbox.count) {
                     if (isValid(tx, inbox)) {
-                        setup = std::make_unique<MachineThread>(it->second->machine_state);
+                        setup = std::make_unique<MachineThread>(
+                            it->second->machine_state);
                         break;
                     }
 
-                    std::cerr << "Error: Invalid cached old machine found at gas: "
-                        << it->second->machine_state.output.arb_gas_used << std::endl;
+                    std::cerr
+                        << "Error: Invalid cached old machine found at gas: "
+                        << it->second->machine_state.output.arb_gas_used
+                        << std::endl;
                     assert(false);
                 }
                 it = old_machine_cache.erase(it);
@@ -358,8 +363,8 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
 
         if (std::holds_alternative<rocksdb::Status>(setup)) {
             // Delete each checkpoint until at or below message_sequence_number
-            setup = [&]()
-                -> std::variant<std::unique_ptr<MachineThread>, rocksdb::Status> {
+            setup = [&]() -> std::variant<std::unique_ptr<MachineThread>,
+                                          rocksdb::Status> {
                 while (it->Valid()) {
                     std::vector<unsigned char> checkpoint_vector(
                         it->value().data(),
@@ -368,7 +373,8 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                         extractMachineStateKeys(checkpoint_vector.begin());
                     if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
                         (message_count >= checkpoint.getTotalMessagesRead())) {
-                        if (isValid(tx, checkpoint.output.fully_processed_inbox)) {
+                        if (isValid(tx,
+                                    checkpoint.output.fully_processed_inbox)) {
                             // Good checkpoint
                             try {
                                 return getMachineUsingStateKeys<MachineThread>(
@@ -382,7 +388,8 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
                         }
 
                         std::cerr << "Error: Invalid checkpoint found at gas: "
-                                << checkpoint.output.arb_gas_used << std::endl;
+                                  << checkpoint.output.arb_gas_used
+                                  << std::endl;
                         assert(false);
                     }
 
@@ -710,12 +717,15 @@ void ArbCore::operator()() {
                 last_machine = std::make_unique<Machine>(*machine);
             }
 
-            if (machine->machine_state.output.arb_gas_used > last_old_machine_cache_gas + old_machine_cache_interval) {
-                std::unique_lock<std::shared_mutex> guard(old_machine_cache_mutex);
+            if (machine->machine_state.output.arb_gas_used >
+                last_old_machine_cache_gas + old_machine_cache_interval) {
+                std::unique_lock<std::shared_mutex> guard(
+                    old_machine_cache_mutex);
                 if (old_machine_cache.size() > old_machine_cache_max_size) {
                     old_machine_cache.erase(old_machine_cache.begin());
                 }
-                old_machine_cache[machine->machine_state.output.arb_gas_used] = std::make_unique<Machine>(*machine);
+                old_machine_cache[machine->machine_state.output.arb_gas_used] =
+                    std::make_unique<Machine>(*machine);
             }
 
             // Save logs and sends
@@ -1551,11 +1561,11 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
             return std::get<rocksdb::Status>(closest_checkpoint);
         }
 
-        auto checkpoint_cursor =
-            std::get<ExecutionCursor>(closest_checkpoint);
+        auto checkpoint_cursor = std::get<ExecutionCursor>(closest_checkpoint);
         bool already_newer = false;
         if (execution_cursor.getOutput().arb_gas_used +
-                checkpoint_load_gas_cost > checkpoint_cursor.getOutput().arb_gas_used) {
+                checkpoint_load_gas_cost >
+            checkpoint_cursor.getOutput().arb_gas_used) {
             // The existing execution cursor is far enough ahead that running it
             // up to the target gas will be cheaper than loading the checkpoint
             // from disk and running it. We just need to check that the
@@ -1697,7 +1707,8 @@ rocksdb::Status ArbCore::advanceExecutionCursorImpl(
                 std::cerr << "No execution machine available" << std::endl;
                 return std::get<rocksdb::Status>(closest_checkpoint);
             }
-            execution_cursor = std::move(std::get<ExecutionCursor>(closest_checkpoint));
+            execution_cursor =
+                std::move(std::get<ExecutionCursor>(closest_checkpoint));
         }
     }
 
@@ -1713,7 +1724,8 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
         auto cache_it = old_machine_cache.upper_bound(total_gas_used);
         if (cache_it != old_machine_cache.begin()) {
             cache_it--;
-            return ExecutionCursor(std::make_unique<Machine>(*cache_it->second));
+            return ExecutionCursor(
+                std::make_unique<Machine>(*cache_it->second));
         }
     }
 
