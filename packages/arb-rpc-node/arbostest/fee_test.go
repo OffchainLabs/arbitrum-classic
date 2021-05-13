@@ -608,6 +608,11 @@ func TestFees(t *testing.T) {
 			t.Error("unexpected network fee collected")
 		}
 	}
+
+	_, err = feeSnap.GetPricesInWei()
+	test.FailIfError(t, err)
+	_, err = feeWithAggSnap.GetPricesInWei()
+	test.FailIfError(t, err)
 }
 
 func checkSameL2ComputationUnits(t *testing.T, res1 []*evm.TxResult, res2 []*evm.TxResult) {

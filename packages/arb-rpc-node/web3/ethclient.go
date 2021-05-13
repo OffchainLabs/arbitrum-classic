@@ -85,7 +85,8 @@ func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) 
 }
 
 func (c *EthClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
-	return (*big.Int)(c.srv.GasPrice()), nil
+	gasPriceRaw, err := c.srv.GasPrice()
+	return (*big.Int)(gasPriceRaw), err
 }
 
 func (c *EthClient) EstimateGas(_ context.Context, call ethereum.CallMsg) (uint64, error) {
