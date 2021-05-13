@@ -272,8 +272,10 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 		if err != nil {
 			continue
 		}
-		uncountedComputation := new(big.Int).Sub(new(big.Int).SetUint64(assertion.NumGas), res.FeeStats.UnitsUsed.L2Computation)
-		chargeRatio := new(big.Rat).SetFrac(res.FeeStats.UnitsUsed.L2Computation, new(big.Int).SetUint64(assertion.NumGas))
+		avmGasFactor := big.NewInt(100)
+		avmGas := new(big.Int).Mul(res.FeeStats.UnitsUsed.L2Computation, avmGasFactor)
+		uncountedComputation := new(big.Int).Sub(new(big.Int).SetUint64(assertion.NumGas), avmGas)
+		chargeRatio := new(big.Rat).SetFrac(avmGas, new(big.Int).SetUint64(assertion.NumGas))
 		// Note: These ratio's were set based on measurements to prevent any regressions
 		// If in the future arbos tries to provide a stronger bound on unmetered computation, this can be adjusted
 		if arbosVersion >= 8 && chargeRatio.Cmp(big.NewRat(7, 10)) < 0 && uncountedComputation.Cmp(big.NewInt(300000)) > 0 {

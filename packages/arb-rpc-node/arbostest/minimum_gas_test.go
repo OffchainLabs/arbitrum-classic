@@ -38,7 +38,7 @@ func TestMinimumGas(t *testing.T) {
 		Data:        hexutil.MustDecode(arbostestcontracts.FailedSendBin),
 	}
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000),
+		MaxGas:      big.NewInt(10),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
