@@ -225,7 +225,7 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
 	extra := tx.Gas() - arbRes.CalcGasUsed().Uint64()
 	t.Log("gas remaining", extra)
-	if extra > 700000 {
+	if extra > 1000000 {
 		t.Error("too much extra gas estimated")
 	}
 	return arbRes.FeeStats.Paid.Total()
