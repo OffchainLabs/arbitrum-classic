@@ -17,8 +17,12 @@
 package broadcaster
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"math/rand"
+	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -27,15 +31,67 @@ import (
 	"github.com/mailru/easygo/netpoll"
 )
 
+const MaxSendCount = 10
+const MaxSendQueue = 20
+
 // ClientConnection represents client connection.
 type ClientConnection struct {
-	io   sync.Mutex
-	conn io.ReadWriteCloser
-	desc *netpoll.Desc
+	ioMutex sync.Mutex
+	conn    io.ReadWriteCloser
 
+	desc          *netpoll.Desc
 	name          string
 	clientManager *ClientManager
-	lastHeard     time.Time
+
+	timeoutMutex sync.Mutex
+	lastHeard    time.Time
+	cancelFunc context.CancelFunc
+	out        chan []byte
+}
+
+func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+	return &ClientConnection{
+		conn:          conn,
+		desc:          desc,
+		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
+		clientManager: clientManager,
+		lastHeard:     time.Now(),
+	}
+}
+
+func (cc *ClientConnection) Start(parentCtx context.Context) {
+	ctx, cancelFunc := context.WithCancel(parentCtx)
+	cc.cancelFunc = cancelFunc
+
+	cc.out = make(chan []byte, MaxSendQueue)
+	go func() {
+		defer cancelFunc()
+		defer close(cc.out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data := <-cc.out:
+				err := cc.writeRaw(data)
+				if err != nil {
+					logger.Error().Err(err).Str("client", cc.name).Msg("error writing data to client")
+					cc.clientManager.Remove(cc)
+					return
+				}
+			}
+		}
+	}()
+}
+
+func (cc *ClientConnection) Stop() {
+	cc.cancelFunc()
+}
+
+func (cc *ClientConnection) GetLastHeard() time.Time {
+	cc.timeoutMutex.Lock()
+	defer cc.timeoutMutex.Unlock()
+
+	return cc.lastHeard
 }
 
 // Receive reads next message from client's underlying connection.
@@ -52,10 +108,12 @@ func (cc *ClientConnection) Receive() error {
 
 // readRequests reads json-rpc request from connection.
 func (cc *ClientConnection) readRequest() error {
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 
+	cc.timeoutMutex.Lock()
 	cc.lastHeard = time.Now()
+	cc.timeoutMutex.Unlock()
 
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
 	if err != nil && !h.OpCode.IsControl() {
@@ -70,22 +128,22 @@ func (cc *ClientConnection) readRequest() error {
 }
 
 func (cc *ClientConnection) write(x interface{}) error {
-	w := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(w)
+	writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(writer)
 
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 
 	if err := encoder.Encode(x); err != nil {
 		return err
 	}
 
-	return w.Flush()
+	return writer.Flush()
 }
 
 func (cc *ClientConnection) writeRaw(p []byte) error {
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 
 	_, err := cc.conn.Write(p)
 
@@ -93,8 +151,8 @@ func (cc *ClientConnection) writeRaw(p []byte) error {
 }
 
 func (cc *ClientConnection) Ping() error {
-	cc.io.Lock()
-	defer cc.io.Unlock()
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
 	_, err := cc.conn.Write(ws.CompiledPing)
 	if err != nil {
 		return err

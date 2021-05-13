@@ -149,7 +149,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		}
 
 		// Register incoming client in clientManager.
-		client := clientManager.Register(safeConn, desc)
+		client := clientManager.Register(ctx, safeConn, desc)
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {

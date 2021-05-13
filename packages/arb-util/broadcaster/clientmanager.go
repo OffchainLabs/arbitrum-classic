@@ -20,9 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"math/rand"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 
@@ -62,18 +60,11 @@ func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientM
 }
 
 // Register registers new connection as a Client.
-func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConnection {
-	clientConnection := &ClientConnection{
-		clientManager: cm,
-		conn:          conn,
-		desc:          desc,
-		lastHeard:     time.Now(),
-	}
+func (cm *ClientManager) Register(ctx context.Context, conn net.Conn, desc *netpoll.Desc) *ClientConnection {
+	clientConnection := NewClientConnection(conn, desc, cm)
 
 	{
 		cm.mu.Lock()
-
-		clientConnection.name = conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10))
 
 		cm.clientPtrMap[clientConnection] = true
 
@@ -84,6 +75,7 @@ func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConn
 			_ = clientConnection.write(bm)
 		}
 
+		clientConnection.Start(ctx)
 		cm.mu.Unlock()
 	}
 
@@ -164,8 +156,8 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 
 	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
 
-	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(w)
+	writer := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(writer)
 
 	var broadcastMessages []*BroadcastFeedMessage
 
@@ -209,7 +201,7 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	if err := encoder.Encode(bm); err != nil {
 		return err
 	}
-	if err := w.Flush(); err != nil {
+	if err := writer.Flush(); err != nil {
 		return err
 	}
 
@@ -238,7 +230,7 @@ func (cm *ClientManager) verifyClients() {
 	var deadClientCount uint64
 	var aliveClientCount uint64
 	for client := range cm.clientPtrMap {
-		diff := time.Since(client.lastHeard)
+		diff := time.Since(client.GetLastHeard())
 		if diff > cm.settings.ClientNoResponseTimeout {
 			deadClientList = append(deadClientList, client)
 			deadClientCount++
@@ -271,25 +263,33 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case data := <-cm.out:
-				cm.mu.RLock()
-				// Copy list so data can be written to each client without lock held
-				clientList := make([]*ClientConnection, len(cm.clientPtrMap))
-				var i uint64
-				for client := range cm.clientPtrMap {
-					clientList[i] = client
-					i++
-				}
-				cm.mu.RUnlock()
-
-				for _, c := range clientList {
-					c := c // For closure.
-					cm.pool.Schedule(func() {
-						err := c.writeRaw(data)
-						if err != nil {
-							logger.Warn().Err(err).Str("client", c.name).Msg("error with writeRaw")
+				clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
+				cm.mu.Lock()
+				// Lock mutex while writing to channels to ensure items delivered in order
+				for i := 0; i < MaxSendCount; i++ {
+					for client := range cm.clientPtrMap {
+						if len(client.out) == MaxSendQueue {
+							// Queue for client too backed up, so delete after going through all other clients
+							clientDeleteList = append(clientDeleteList, client)
+						} else {
+							client.out <- data
 						}
-						logger.Debug().Str("client", c.name).Int("length", len(data)).Msg("batch item sent")
-					})
+					}
+
+					select {
+					case <-ctx.Done():
+						return
+					case data = <-cm.out:
+						continue
+					default:
+						break
+					}
+				}
+				cm.mu.Unlock()
+
+				for _, client := range clientDeleteList {
+					logger.Warn().Str("client", client.name).Msg("disconnecting client, queue too large")
+					cm.Remove(client)
 				}
 			}
 		}
@@ -317,6 +317,8 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 	if !cm.clientPtrMap[clientConnection] {
 		return false
 	}
+
+	clientConnection.Stop()
 
 	err := cm.poller.Stop(clientConnection.desc)
 	if err != nil {
