@@ -64,10 +64,13 @@ func SequencedMessages() func() (common.Hash, SequencerFeedItem, *big.Int) {
 
 	return func() (common.Hash, SequencerFeedItem, *big.Int) {
 		prevAccumulator := accumulator
+
+		batchItem := inbox.SequencerBatchItem{
+			LastSeqNum:  big.NewInt(0).Set(sequenceNumber),
+			Accumulator: common.RandHash(),
+		}
+
 		sequenceNumber = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
-		batchItem := inbox.SequencerBatchItem{}
-		batchItem.LastSeqNum = sequenceNumber.Add(sequenceNumber, big.NewInt(1))
-		batchItem.Accumulator = common.RandHash()
 		accumulator = batchItem.Accumulator
 		batchItem.TotalDelayedCount = big.NewInt(0)
 		batchItem.SequencerMessage = setSequenceNumberInData(common.RandBytes(200), sequenceNumber)
