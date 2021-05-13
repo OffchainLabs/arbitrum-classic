@@ -263,8 +263,8 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case data := <-cm.out:
-				clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
 				cm.mu.Lock()
+				clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
 				// Lock mutex while writing to channels to ensure items delivered in order
 				for i := 0; i < MaxSendCount; i++ {
 					for client := range cm.clientPtrMap {
