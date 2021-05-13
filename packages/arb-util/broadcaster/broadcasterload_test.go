@@ -30,7 +30,7 @@ import (
 )
 
 var MessageCount = 10
-var ClientCount = 100
+var ClientCount = 10
 
 func TestBroadcasterLoad(t *testing.T) {
 	ctx := context.Background()
