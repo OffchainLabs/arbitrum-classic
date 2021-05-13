@@ -641,8 +641,8 @@ template std::unique_ptr<MachineThread> ArbCore::getMachineUsingStateKeys(
     const MachineStateKeys& state_data,
     ValueCache& value_cache) const;
 
-constexpr uint256_t old_machine_cache_interval = 100'000;
-constexpr size_t old_machine_cache_max_size = 10;
+constexpr uint256_t old_machine_cache_interval = 1'000'000;
+constexpr size_t old_machine_cache_max_size = 20;
 
 // operator() runs the main thread for ArbCore.  It is responsible for adding
 // messages to the queue, starting machine thread when needed and collecting
