@@ -46,7 +46,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
 
     // amount of arbgas necessary to send user tokens in case
     // of the "onTokenTransfer" call consumes all available gas
-    uint256 internal constant arbgasReserveIfCallRevert = 250000;
+    uint256 internal constant arbgasReserveIfCallRevert = 2500;
 
     /**
      * @notice This ensures that a method can only be called from the L1 pair of this contract
@@ -89,7 +89,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
 
         token.bridgeMint(dest, amount);
 
-        // ~7 300 000 arbgas used to get here
+        // ~73 000 arbgas used to get here
         uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert;
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 

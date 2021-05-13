@@ -40,6 +40,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
@@ -101,10 +102,15 @@ func startup() error {
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
 		"mnemonic to generate accounts from",
 	)
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
 		return errors.Wrap(err, "error parsing arguments")
+	}
+
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+		return err
 	}
 
 	if *enablePProf {

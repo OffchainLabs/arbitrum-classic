@@ -511,7 +511,7 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 		MaxSubmissionCost: big.NewInt(30),
 		CreditBack:        common.RandAddress(),
 		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
-		MaxGas:            big.NewInt(1000000000),
+		MaxGas:            big.NewInt(1000000),
 		GasPriceBid:       big.NewInt(0),
 		Data:              simpleABI.Methods["exists"].ID,
 	}
@@ -687,7 +687,7 @@ func checkRetryableReceipts(t *testing.T, client *web3.EthClient, retryableTx me
 	}
 	gasPercentage := float64(ticketTransaction.Gas()) / float64(redeemGas)
 	if gasPercentage < .84 {
-		t.Error("bad gas percentage", gasPercentage)
+		t.Error("bad gas percentage", gasPercentage, ticketTransaction.Gas(), redeemGas)
 	}
 	if ticketTransaction.GasPrice().Cmp(redeemGasPrice) != 0 {
 		t.Error("gas price doesn't match", ticketTransaction.GasPrice(), "instead of", redeemGasPrice)
