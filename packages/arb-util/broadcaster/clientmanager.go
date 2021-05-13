@@ -282,8 +282,8 @@ func (cm *ClientManager) startWriter(ctx context.Context) {
 					case data = <-cm.out:
 						continue
 					default:
-						break
 					}
+					break
 				}
 				cm.mu.Unlock()
 
