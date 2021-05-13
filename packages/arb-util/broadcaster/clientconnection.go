@@ -40,6 +40,13 @@ type ClientConnection struct {
 	lastHeard    time.Time
 }
 
+func (cc *ClientConnection) GetLastHeard() time.Time {
+	cc.timeoutMutex.Lock()
+	defer cc.timeoutMutex.Unlock()
+
+	return cc.lastHeard
+}
+
 // Receive reads next message from client's underlying connection.
 // It blocks until full message received.
 func (cc *ClientConnection) Receive() error {
