@@ -120,10 +120,15 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 			error:  err,
 			reason: errorReason,
 		}
+	} else if res.ResultCode == CongestionCode {
+		return errors.New("tx dropped due to L2 congestion")
 	} else if res.ResultCode == InsufficientTxFundsCode || res.ResultCode == InsufficientGasFundsCode {
 		return vm.ErrInsufficientBalance
+	} else if res.ResultCode == BadSequenceCode {
+		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == InvalidMessageFormatCode {
+		return errors.New("invalid message format")
 	} else {
-		// TODO: CongestionCode, BadSequenceCode, InvalidMessageFormatCode, and maybe error 7 cannot deploy at requested address
 		return vm.ErrExecutionReverted
 	}
 }
