@@ -86,7 +86,7 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 				MaxGas:      big.NewInt(1000000),
 				GasPriceBid: big.NewInt(0),
 				DestAddress: common.NewAddressFromEth(auth.From),
-				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil),
+				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(17), nil),
 				Data:        nil,
 			},
 		}),
@@ -222,9 +222,10 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	t.Helper()
 	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
+	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
 	extra := tx.Gas() - arbRes.CalcGasUsed().Uint64()
 	t.Log("gas remaining", extra)
-	if extra > 500000 {
+	if extra > 700000 {
 		t.Error("too much extra gas estimated")
 	}
 	return arbRes.FeeStats.Paid.Total()
@@ -250,6 +251,7 @@ func TestNonAggregatorFee(t *testing.T) {
 		Data:       (*hexutil.Bytes)(&data),
 		Aggregator: &emptyAgg,
 	})
+	test.FailIfError(t, err)
 	auth.GasLimit = uint64(estimatedGas)
 	tx, err := simple.Exists(auth)
 	test.FailIfError(t, err)

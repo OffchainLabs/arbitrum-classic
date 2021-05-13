@@ -356,7 +356,7 @@ func TestFees(t *testing.T) {
 		}
 		for _, tx := range ethTxes {
 			compressed := message.NewCompressedECDSAFromEth(tx)
-			compressed.GasLimit = big.NewInt(1<<29 - 1)
+			compressed.GasLimit = big.NewInt(0)
 			msg, err := message.NewGasEstimationMessage(aggregator, big.NewInt(100000000), compressed)
 			test.FailIfError(t, err)
 			estimateFeeIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
@@ -459,8 +459,14 @@ func TestFees(t *testing.T) {
 
 		correctCount := int64(0)
 		for _, res := range results {
-			if res.ResultCode == evm.ReturnCode || res.ResultCode == evm.RevertCode {
-				correctCount++
+			if arbosVersion < 16 {
+				if res.ResultCode == evm.ReturnCode || res.ResultCode == evm.RevertCode {
+					correctCount++
+				}
+			} else {
+				if res.ResultCode != evm.BadSequenceCode {
+					correctCount++
+				}
 			}
 		}
 
@@ -602,6 +608,11 @@ func TestFees(t *testing.T) {
 			t.Error("unexpected network fee collected")
 		}
 	}
+
+	_, err = feeSnap.GetPricesInWei()
+	test.FailIfError(t, err)
+	_, err = feeWithAggSnap.GetPricesInWei()
+	test.FailIfError(t, err)
 }
 
 func checkSameL2ComputationUnits(t *testing.T, res1 []*evm.TxResult, res2 []*evm.TxResult) {
@@ -644,11 +655,15 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index int, 
 			t.Error("wrong calldata used, got", unitsUsed.L1Calldata, "but expected", correct.calldata)
 		}
 	} else {
-		if unitsUsed.L1Calldata.Cmp(big.NewInt(int64(correct.calldata))) < 0 {
-			t.Error("calldata used should be upper bound, got", unitsUsed.L1Calldata, "but expected", correct.calldata)
+		// Adjust units used for gas used
+		gasUsed := len(res.FeeStats.GasUsed().Bytes()) * 16
+		adjustedCalldata := int(unitsUsed.L1Calldata.Int64()) + gasUsed
+
+		if adjustedCalldata < correct.calldata {
+			t.Error("calldata used should be upper bound, got", adjustedCalldata, "but expected", correct.calldata)
 		}
-		unitsDifference := new(big.Int).Sub(unitsUsed.L1Calldata, big.NewInt(int64(correct.calldata)))
-		if unitsDifference.Cmp(big.NewInt(200)) > 0 {
+		unitsDifference := adjustedCalldata - correct.calldata
+		if unitsDifference > 200 {
 			t.Error("calldata difference too large", unitsDifference)
 		} else {
 			t.Log("estimate was over by", unitsDifference)

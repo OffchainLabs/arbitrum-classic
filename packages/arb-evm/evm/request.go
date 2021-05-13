@@ -225,8 +225,9 @@ func NewProvenanceFromValue(val value.Value) (Provenance, error) {
 }
 
 type GasEstimationParams struct {
-	ComputeGasLimit            *big.Int
-	IgnoreInsufficientGasFunds bool
+	ComputeGasLimit *big.Int
+	IgnoreGasPrice  bool
+	IgnoreMaxGas    bool
 }
 
 func NewGasEstimationParamsFromValue(val value.Value) (*GasEstimationParams, error) {
@@ -234,26 +235,45 @@ func NewGasEstimationParamsFromValue(val value.Value) (*GasEstimationParams, err
 	if !ok {
 		return nil, errors.New("gas estimation params must be a tuple")
 	}
-	if tup.Len() != 2 {
-		return nil, errors.Errorf("expected tuple of length 2, but recieved tuple of length %v", tup.Len())
+	if tup.Len() != 2 && tup.Len() != 3 {
+		return nil, errors.Errorf("expected tuple of length 2 or 3, but recieved tuple of length %v", tup.Len())
 	}
 	computeGasLimitVal, _ := tup.GetByInt64(0)
-	ignoreInsufficientGasFundsVal, _ := tup.GetByInt64(1)
-
 	computeGasLimitInt, ok := computeGasLimitVal.(value.IntValue)
 	if !ok {
 		return nil, errors.New("gas estimation params computeGasLimit must be an int")
 	}
 
-	ignoreInsufficientGasFunds, err := NewBoolFromValue(ignoreInsufficientGasFundsVal)
-	if err != nil {
-		return nil, err
-	}
+	if tup.Len() == 2 {
+		ignoreInsufficientGasFundsVal, _ := tup.GetByInt64(1)
+		ignoreInsufficientGasFunds, err := NewBoolFromValue(ignoreInsufficientGasFundsVal)
+		if err != nil {
+			return nil, err
+		}
+		return &GasEstimationParams{
+			ComputeGasLimit: computeGasLimitInt.BigInt(),
+			IgnoreGasPrice:  ignoreInsufficientGasFunds,
+			IgnoreMaxGas:    ignoreInsufficientGasFunds,
+		}, nil
+	} else {
+		// tup.Len() == 3
+		ignoreGasPriceVal, _ := tup.GetByInt64(1)
+		ignoreMaxGasVal, _ := tup.GetByInt64(2)
 
-	return &GasEstimationParams{
-		ComputeGasLimit:            computeGasLimitInt.BigInt(),
-		IgnoreInsufficientGasFunds: ignoreInsufficientGasFunds,
-	}, nil
+		ignoreGasPrice, err := NewBoolFromValue(ignoreGasPriceVal)
+		if err != nil {
+			return nil, err
+		}
+		ignoreMaxGas, err := NewBoolFromValue(ignoreMaxGasVal)
+		if err != nil {
+			return nil, err
+		}
+		return &GasEstimationParams{
+			ComputeGasLimit: computeGasLimitInt.BigInt(),
+			IgnoreGasPrice:  ignoreGasPrice,
+			IgnoreMaxGas:    ignoreMaxGas,
+		}, nil
+	}
 }
 
 type IncomingRequest struct {

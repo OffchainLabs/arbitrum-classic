@@ -141,6 +141,11 @@ class ArbCore {
     std::unique_ptr<Machine> last_machine;
     std::shared_mutex last_machine_mutex;
 
+    std::shared_mutex old_machine_cache_mutex;
+    std::map<uint256_t, std::unique_ptr<Machine>> old_machine_cache;
+    // Not protected by mutex! Must only be used by the main ArbCore thread.
+    uint256_t last_old_machine_cache_gas;
+
    public:
     ArbCore() = delete;
     explicit ArbCore(std::shared_ptr<DataStorage> data_storage_);
@@ -357,7 +362,7 @@ class ArbCore {
     bool isValid(const ReadTransaction& tx,
                  const InboxState& fully_processed_inbox) const;
 
-    std::variant<rocksdb::Status, MachineStateKeys> getClosestExecutionMachine(
+    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionMachine(
         ReadTransaction& tx,
         const uint256_t& total_gas_used);
 

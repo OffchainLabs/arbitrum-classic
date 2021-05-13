@@ -82,6 +82,7 @@ func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.
 }
 
 func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	logger.Info().Str("hash", tx.Hash().String()).Msg("got user tx")
 	txes := []*types.Transaction{tx}
 	b.newTxFeed.Send(core.NewTxsEvent{Txs: txes})
 	return b.client.SendTransaction(ctx, tx)

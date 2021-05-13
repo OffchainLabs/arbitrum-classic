@@ -95,7 +95,7 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 	return s.time.BlockNum
 }
 
-func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.Address, maxComputationalGas *big.Int) (*evm.TxResult, error) {
 	if s.arbosVersion < 3 {
 
 		var dest common.Address
@@ -113,7 +113,7 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		}
 		return s.Call(msg, sender)
 	} else {
-		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, new(big.Int).SetUint64(tx.Gas()), message.NewCompressedECDSAFromEth(tx))
+		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, maxComputationalGas, message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
 			return nil, err
 		}
@@ -206,6 +206,17 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 		return nil, err
 	}
 	return arbos.ParseArbOSVersionResult(res.ReturnData)
+}
+
+func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
+	res, err := s.BasicCall(arbos.GetPricesInWeiData(), common.NewAddressFromEth(arbos.ARB_GAS_INFO_ADDRESS))
+	if err != nil {
+		return [6]*big.Int{}, err
+	}
+	if err := checkValidResult(res); err != nil {
+		return [6]*big.Int{}, err
+	}
+	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
