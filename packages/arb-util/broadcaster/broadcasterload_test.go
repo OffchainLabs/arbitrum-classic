@@ -106,9 +106,11 @@ func receiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 				msg := res.Messages[i]
 				if prevAcc == common.HexToHash("0x0") || prevAcc == msg.FeedItem.PrevAcc {
 					prevAcc = msg.FeedItem.BatchItem.Accumulator
+				} else if prevAcc == msg.FeedItem.BatchItem.Accumulator {
+					t.Logf("Duplicate message received: current: %v, client: %v\n", msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
 				} else {
 
-					t.Errorf("Message received out of order: previous: %v, expected previous: %v, current %v, client: %v\n", prevAcc, msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
+					t.Errorf("Message received out of order: previous: %v, expected previous: %v, current: %v, client: %v\n", prevAcc, msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
 				}
 			}
 			_ = op
