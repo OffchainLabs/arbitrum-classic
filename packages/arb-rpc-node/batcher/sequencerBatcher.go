@@ -242,6 +242,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			return err
 		}
 	}
+	originalAcc := prevAcc
 	totalDelayedCount, err := b.db.GetTotalDelayedMessagesSequenced()
 	if err != nil {
 		return err
@@ -299,6 +300,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	if successCount == len(batchTxs) {
 		sequencedTxs = batchTxs
 		prevAcc = txBatchItem.Accumulator
+		sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
 		for _, c := range resultChans {
 			c <- nil
 		}
@@ -334,6 +336,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			if err != nil {
 				return err
 			}
+			core.WaitForMachineIdle(b.db)
 			newLogCount, err = b.db.GetLogCount()
 			if err != nil {
 				return err
@@ -357,6 +360,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			}
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 			prevAcc = txBatchItem.Accumulator
+			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
 			sequencedTxs = append(sequencedTxs, tx)
 			logCount = newLogCount
 			resultChans[i] <- nil
@@ -379,9 +383,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return err
 	}
 
-	prevAcc = txBatchItem.Accumulator
-
-	err = b.feedBroadcaster.Broadcast(prevAcc, sequencedBatchItems, b.dataSigner)
+	err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
 	if err != nil {
 		return err
 	}
