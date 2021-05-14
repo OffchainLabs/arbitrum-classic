@@ -48,6 +48,7 @@ const (
 	ExceededTxGasLimit        ResultType = 8
 	InsufficientGasForBaseFee ResultType = 9
 	MinArbGasForContractTx    ResultType = 10
+	GasPriceTooLow            ResultType = 11
 	UnknownErrorCode          ResultType = 255
 )
 
@@ -128,8 +129,12 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 		return errors.New("invalid transaction nonce")
 	} else if res.ResultCode == InvalidMessageFormatCode {
 		return errors.New("invalid message format")
-	} else {
+	} else if res.ResultCode == RevertCode {
 		return vm.ErrExecutionReverted
+	} else if res.ResultCode == GasPriceTooLow {
+		return errors.New("gas price too low")
+	} else {
+		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
 	}
 }
 
