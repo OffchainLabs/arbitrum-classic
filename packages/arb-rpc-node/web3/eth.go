@@ -47,6 +47,7 @@ type Server struct {
 	srv         *aggregator.Server
 	ganacheMode bool
 	maxCallGas  uint64
+	maxAVMGas   uint64
 	aggregator  *arbcommon.Address
 }
 
@@ -58,6 +59,7 @@ func NewServer(
 		srv:         srv,
 		ganacheMode: ganacheMode,
 		maxCallGas:  1<<31 - 1,
+		maxAVMGas:   500000000,
 		aggregator:  srv.Aggregator(),
 	}
 }
@@ -235,7 +237,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, err := snap.EstimateGas(tx, agg, from, new(big.Int).SetUint64(s.maxCallGas))
+	res, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
 	res, err = handleCallResult(res, err, &blockNum)
 	if err != nil {
 		logging := log.Warn()
