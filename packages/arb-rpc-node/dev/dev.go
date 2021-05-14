@@ -487,14 +487,17 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 	client := web3.NewEthClient(srv, true)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error connecting to arb owner")
 	}
 
 	_, err = arbOwner.SetFairGasPriceSender(ownerAuth, aggregator)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
 
 	_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
-	return err
+	if err != nil {
+		return errors.Wrap(err, "error calling SetFeesEnabled")
+	}
+	return nil
 }

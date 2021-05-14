@@ -318,6 +318,8 @@ func startup() error {
 		return err
 	}
 
+	time.Sleep(time.Second * 40)
+
 	if err := dev.EnableFees(srv, ownerAuth, sequencer); err != nil {
 		return err
 	}
