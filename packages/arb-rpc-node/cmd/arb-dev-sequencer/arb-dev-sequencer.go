@@ -27,6 +27,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -89,8 +90,8 @@ func startup() error {
 	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
-	privKeyString := fs.String("privkey", "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", "funded private key")
-
+	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
+	fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
@@ -160,6 +161,12 @@ func startup() error {
 		return err
 	}
 
+	ownerPrivKey, err := crypto.GenerateKey()
+	ownerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l1ChainId)
+	if err != nil {
+		return err
+	}
+
 	owner := common.RandAddress().ToEthAddress()
 	sequencer := crypto.PubkeyToAddress(seqPrivKey.PublicKey)
 
@@ -189,6 +196,7 @@ func startup() error {
 		return err
 	}
 	rollupAddress := common.NewAddressFromEth(createdEvent.RollupAddress)
+	inboxAddress := createdEvent.InboxAddress
 
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Str("chainid", message.ChainAddressToID(rollupAddress).String()).Msg("Launching arbitrum node")
@@ -299,6 +307,21 @@ func startup() error {
 	}
 
 	srv := aggregator.NewServer(batch, rollupAddress, db)
+
+	inboxCon, err := ethbridgecontracts.NewInbox(inboxAddress, ethclint)
+	if err != nil {
+		return err
+	}
+
+	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
+	if err != nil {
+		return err
+	}
+
+	if err := dev.EnableFees(srv, ownerAuth, sequencer); err != nil {
+		return err
+	}
+
 	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
 	if err != nil {
 		return err

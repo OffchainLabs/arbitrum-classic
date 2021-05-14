@@ -273,13 +273,7 @@ func startup() error {
 	}
 
 	if *enableFees {
-		_, err = arbOwner.SetFairGasPriceSender(ownerAuth, aggInit.Aggregator.ToEthAddress())
-		if err != nil {
-			return err
-		}
-
-		_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
-		if err != nil {
+		if err := dev.EnableFees(srv, ownerAuth, aggInit.Aggregator.ToEthAddress()); err != nil {
 			return err
 		}
 		if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
