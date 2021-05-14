@@ -162,12 +162,12 @@ func startup() error {
 	}
 
 	ownerPrivKey, err := crypto.GenerateKey()
-	ownerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l1ChainId)
+	l1OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l1ChainId)
 	if err != nil {
 		return err
 	}
 
-	owner := ownerAuth.From
+	owner := l1OwnerAuth.From
 	sequencer := crypto.PubkeyToAddress(seqPrivKey.PublicKey)
 
 	tx, err := creator.CreateRollup(
@@ -197,6 +197,11 @@ func startup() error {
 	}
 	rollupAddress := common.NewAddressFromEth(createdEvent.RollupAddress)
 	inboxAddress := createdEvent.InboxAddress
+
+	l2OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, message.ChainAddressToID(rollupAddress))
+	if err != nil {
+		return err
+	}
 
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Str("chainid", message.ChainAddressToID(rollupAddress).String()).Msg("Launching arbitrum node")
@@ -327,7 +332,7 @@ func startup() error {
 
 	time.Sleep(time.Second * 40)
 
-	if err := dev.EnableFees(srv, ownerAuth, sequencer); err != nil {
+	if err := dev.EnableFees(srv, l2OwnerAuth, sequencer); err != nil {
 		return err
 	}
 
