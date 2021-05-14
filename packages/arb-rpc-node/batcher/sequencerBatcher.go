@@ -205,7 +205,11 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 
 	if len(startResultChan) > 0 {
 		// startTx was already picked up by another thread
-		return <-startResultChan
+		err = <-startResultChan
+		if err != nil {
+			core.WaitForMachineIdle(b.db)
+		}
+		return err
 	}
 
 	var batchTxs []*types.Transaction
@@ -387,6 +391,8 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	if err != nil {
 		return err
 	}
+
+	core.WaitForMachineIdle(b.db)
 
 	b.newTxFeed.Send(ethcore.NewTxsEvent{Txs: sequencedTxs})
 	return <-startResultChan
