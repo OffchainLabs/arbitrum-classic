@@ -167,7 +167,7 @@ func startup() error {
 		return err
 	}
 
-	owner := common.RandAddress().ToEthAddress()
+	owner := ownerAuth.From
 	sequencer := crypto.PubkeyToAddress(seqPrivKey.PublicKey)
 
 	tx, err := creator.CreateRollup(
@@ -313,10 +313,17 @@ func startup() error {
 		return err
 	}
 
+	deployer.Value = transferSize
 	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
 	if err != nil {
 		return err
 	}
+
+	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
+	if err != nil {
+		return err
+	}
+	deployer.Value = nil
 
 	time.Sleep(time.Second * 40)
 
