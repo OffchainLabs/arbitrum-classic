@@ -18,6 +18,7 @@ package web3
 
 import (
 	"crypto/ecdsa"
+	"github.com/prometheus/client_golang/prometheus"
 	"time"
 
 	"github.com/ethereum/go-ethereum/eth/filters"
@@ -28,10 +29,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}, methodCallCounter *prometheus.CounterVec) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
-	ethServer := NewServer(server, ganacheMode)
+	ethServer := NewServer(server, ganacheMode, methodCallCounter)
 
 	if err := s.RegisterName("eth", ethServer); err != nil {
 		return nil, err
@@ -41,24 +42,24 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
-	if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys)); err != nil {
+	if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, methodCallCounter)); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("arb", &Arb{srv: server}); err != nil {
+	if err := s.RegisterName("arb", &Arb{srv: server, counter: methodCallCounter}); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
+	if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys, methodCallCounter)); err != nil {
 		return nil, err
 	}
 
-	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(server.GetChainAddress())).Uint64()}
+	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(server.GetChainAddress())).Uint64(), counter: methodCallCounter}
 	if err := s.RegisterName("net", net); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("web3", &Web3{}); err != nil {
+	if err := s.RegisterName("web3", &Web3{counter: methodCallCounter}); err != nil {
 		return nil, err
 	}
 

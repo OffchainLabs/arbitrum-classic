@@ -20,10 +20,12 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Arb struct {
-	srv *aggregator.Server
+	srv     *aggregator.Server
+	counter *prometheus.CounterVec
 }
 
 func (a *Arb) GetAggregator() *batcher.AggregatorInfo {
@@ -33,5 +35,6 @@ func (a *Arb) GetAggregator() *batcher.AggregatorInfo {
 		tmp := agg.ToEthAddress()
 		ret = &tmp
 	}
+	a.counter.WithLabelValues("arb_getAggregator", "false").Inc()
 	return &batcher.AggregatorInfo{Address: ret}
 }

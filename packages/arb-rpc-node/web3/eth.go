@@ -18,6 +18,7 @@ package web3
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -48,66 +49,81 @@ type Server struct {
 	ganacheMode bool
 	maxCallGas  uint64
 	aggregator  *arbcommon.Address
+	counter     *prometheus.CounterVec
 }
 
 func NewServer(
 	srv *aggregator.Server,
 	ganacheMode bool,
+	counter *prometheus.CounterVec,
 ) *Server {
 	return &Server{
 		srv:         srv,
 		ganacheMode: ganacheMode,
 		maxCallGas:  1<<31 - 1,
 		aggregator:  srv.Aggregator(),
+		counter:     counter,
 	}
 }
 
 func (s *Server) ChainId() hexutil.Uint64 {
+	s.counter.WithLabelValues("eth_chainId", "true").Inc()
 	return hexutil.Uint64(message.ChainAddressToID(
 		arbcommon.NewAddressFromEth(s.srv.GetChainAddress()),
 	).Uint64())
 }
 
 func (s *Server) GasPrice() *hexutil.Big {
+	s.counter.WithLabelValues("eth_gasPrice", "true").Inc()
 	return (*hexutil.Big)(big.NewInt(0))
 }
 
 func (s *Server) Accounts() []common.Address {
+	s.counter.WithLabelValues("eth_accounts", "true").Inc()
 	return nil
 }
 
 func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 	blockCount, err := s.srv.GetBlockCount()
 	if err != nil {
+		s.counter.WithLabelValues("eth_blockNumber", "false").Inc()
 		return 0, err
 	}
 	if blockCount == 0 {
+		s.counter.WithLabelValues("eth_blockNumber", "false").Inc()
 		return 0, errors.New("can't get block number because there are no blocks")
 	}
+	s.counter.WithLabelValues("eth_blockNumber", "true").Inc()
 	return hexutil.Uint64(blockCount - 1), nil
 }
 
 func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getBalance", "false").Inc()
 		return nil, err
 	}
 	balance, err := snap.GetBalance(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
+		s.counter.WithLabelValues("eth_getBalance", "false").Inc()
 		return nil, errors.Wrap(err, "error getting balance")
 	}
+	s.counter.WithLabelValues("eth_getBalance", "true").Inc()
 	return (*hexutil.Big)(balance), nil
 }
 
 func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getStorageAt", "false").Inc()
 		return nil, err
 	}
 	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
 	if err != nil {
+		s.counter.WithLabelValues("eth_getStorageAt", "false").Inc()
 		return nil, errors.Wrap(err, "error getting storage")
 	}
+	s.counter.WithLabelValues("eth_getStorageAt", "true").Inc()
 	return (*hexutil.Big)(storageVal), nil
 }
 
@@ -115,10 +131,12 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 	account := arbcommon.NewAddressFromEth(*address)
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getTransactionCount", "false").Inc()
 		return 0, err
 	}
 	txCount, err := snap.GetTransactionCount(account)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getTransactionCount", "false").Inc()
 		return 0, errors.Wrap(err, "error getting transaction count")
 	}
 
@@ -132,54 +150,67 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 		}
 	}
 
+	s.counter.WithLabelValues("eth_getTransactionCount", "true").Inc()
 	return hexutil.Uint64(count), nil
 }
 
 func (s *Server) GetBlockTransactionCountByHash(blockHash common.Hash) (*hexutil.Big, error) {
 	info, err := s.srv.BlockInfoByHash(arbcommon.NewHashFromEth(blockHash))
 	if err != nil || info == nil {
+		s.counter.WithLabelValues("eth_getBlockTransactionCount", "false").Inc()
 		return nil, err
 	}
+	s.counter.WithLabelValues("eth_getBlockTransactionCount", "true").Inc()
 	return s.getBlockTransactionCount(info)
 }
 
 func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
 	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getBlockTransactionCountByNumber", "false").Inc()
 		return nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(height)
 	if err != nil || info == nil {
+		s.counter.WithLabelValues("eth_getBlockTransactionCountByNumber", "false").Inc()
 		return nil, err
 	}
+	s.counter.WithLabelValues("eth_getBlockTransactionCountByNumber", "true").Inc()
 	return s.getBlockTransactionCount(info)
 }
 
 func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
 	if *address == arbos.ARB_NODE_INTERFACE_ADDRESS {
+		s.counter.WithLabelValues("eth_getCode", "true").Inc()
 		// Fake code to make the contract appear real
 		return hexutil.Bytes{1}, nil
 	}
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getCode", "false").Inc()
 		return nil, err
 	}
 	code, err := snap.GetCode(arbcommon.NewAddressFromEth(*address))
 	if err != nil {
+		s.counter.WithLabelValues("eth_getCode", "false").Inc()
 		return nil, errors.Wrap(err, "error getting code")
 	}
+	s.counter.WithLabelValues("eth_getCode", "true").Inc()
 	return code, nil
 }
 
 func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (hexutil.Bytes, error) {
 	tx := new(types.Transaction)
 	if err := rlp.DecodeBytes(data, tx); err != nil {
+		s.counter.WithLabelValues("eth_sendRawTransaction", "false").Inc()
 		return nil, err
 	}
 	err := s.srv.SendTransaction(ctx, tx)
 	if err != nil {
+		s.counter.WithLabelValues("eth_sendRawTransaction", "false").Inc()
 		return nil, err
 	}
+	s.counter.WithLabelValues("eth_sendRawTransaction", "true").Inc()
 	return tx.Hash().Bytes(), nil
 }
 
@@ -243,11 +274,18 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 		if callArgs.Data != nil {
 			data = *callArgs.Data
 		}
-		return HandleNodeInterfaceCall(s.srv, data)
+		result, err := HandleNodeInterfaceCall(s.srv, data)
+		success := "true"
+		if err != nil {
+			success = "false"
+		}
+		s.counter.WithLabelValues("eth_call", success).Inc()
+		return result, err
 	}
 
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_call", "false").Inc()
 		return nil, err
 	}
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
@@ -255,23 +293,28 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 	res, err := snap.Call(msg, from)
 	res, err = handleCallResult(res, err, blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_call", "false").Inc()
 		return nil, err
 	}
 
 	if res.ResultCode != evm.ReturnCode {
+		s.counter.WithLabelValues("eth_call", "false").Inc()
 		return nil, HandleCallError(res, s.ganacheMode)
 	}
+	s.counter.WithLabelValues("eth_call", "true").Inc()
 	return res.ReturnData, nil
 }
 
 func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if args.To != nil && *args.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
+		s.counter.WithLabelValues("eth_estimateGas", "true").Inc()
 		// Fake gas for call
 		return hexutil.Uint64(21000), nil
 	}
 	blockNum := rpc.PendingBlockNumber
 	snap, err := s.getSnapshot(&blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_estimateGas", "false").Inc()
 		return 0, err
 	}
 	from, tx := buildTransaction(args, s.maxCallGas)
@@ -304,15 +347,19 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 			logging = logging.Hex("data", *args.Data)
 		}
 		logging.Err(err).Msg("error estimating gas")
+		s.counter.WithLabelValues("eth_estimateGas", "false").Inc()
 		return 0, err
 	}
 	if res.ResultCode != evm.ReturnCode {
+		s.counter.WithLabelValues("eth_estimateGas", "false").Inc()
 		return 0, HandleCallError(res, s.ganacheMode)
 	}
 
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
+		s.counter.WithLabelValues("eth_estimateGas", "true").Inc()
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
+		s.counter.WithLabelValues("eth_estimateGas", "true").Inc()
 		gasAmount := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
 		return hexutil.Uint64(gasAmount.Uint64() + 1000), nil
 	}
@@ -323,20 +370,25 @@ func (s *Server) GetBlockByHash(blockHashRaw hexutil.Bytes, includeTxData bool) 
 	copy(blockHash[:], blockHashRaw)
 	info, err := s.srv.BlockInfoByHash(blockHash)
 	if err != nil || info == nil {
+		s.counter.WithLabelValues("eth_getBlockByHash", "false").Inc()
 		return nil, err
 	}
+	s.counter.WithLabelValues("eth_getBlockByHash", "true").Inc()
 	return s.getBlock(info, includeTxData)
 }
 
 func (s *Server) GetBlockByNumber(blockNum *rpc.BlockNumber, includeTxData bool) (*GetBlockResult, error) {
 	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getBlockByNumber", "false").Inc()
 		return nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(height)
 	if err != nil || info == nil {
+		s.counter.WithLabelValues("eth_getBlockByNumber", "false").Inc()
 		return nil, err
 	}
+	s.counter.WithLabelValues("eth_getBlockByNumber", "true").Inc()
 	return s.getBlock(info, includeTxData)
 }
 
@@ -357,10 +409,12 @@ func (s *Server) getTransactionInfoByHash(txHash hexutil.Bytes) (*evm.TxResult, 
 func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult, error) {
 	res, info, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
+		s.counter.WithLabelValues("eth_getTransactionByHash", "false").Inc()
 		return nil, err
 	}
 	tx, err := evm.GetTransaction(res)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getTransactionByHash", "false").Inc()
 		return nil, err
 	}
 
@@ -370,33 +424,40 @@ func (s *Server) GetTransactionByHash(txHash hexutil.Bytes) (*TransactionResult,
 		blockHash = &h
 	}
 
+	s.counter.WithLabelValues("eth_getTransactionByHash", "true").Inc()
 	return makeTransactionResult(tx, blockHash), nil
 }
 
 func (s *Server) GetTransactionByBlockHashAndIndex(blockHash common.Hash, index hexutil.Uint64) (*TransactionResult, error) {
 	info, err := s.srv.BlockInfoByHash(arbcommon.NewHashFromEth(blockHash))
 	if err != nil || info == nil {
+		s.counter.WithLabelValues("eth_getTransactionByBlockHashAndIndex", "false").Inc()
 		return nil, err
 	}
+	s.counter.WithLabelValues("eth_getTransactionByBlockHashAndIndex", "true").Inc()
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
 func (s *Server) GetTransactionByBlockNumberAndIndex(blockNum *rpc.BlockNumber, index hexutil.Uint64) (*TransactionResult, error) {
 	height, err := s.srv.BlockNum(blockNum)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getTransactionByBlockNumberAndIndex", "false").Inc()
 		return nil, err
 	}
 	info, err := s.srv.BlockInfoByNumber(height)
 	if err != nil || info == nil {
+		s.counter.WithLabelValues("eth_getTransactionByBlockNumberAndIndex", "false").Inc()
 		return nil, err
 	}
 
+	s.counter.WithLabelValues("eth_getTransactionByBlockNumberAndIndex", "true").Inc()
 	return s.getTransactionByBlockAndIndex(info, index)
 }
 
 func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionReceiptResult, error) {
 	res, info, err := s.getTransactionInfoByHash(txHash)
 	if err != nil || res == nil {
+		s.counter.WithLabelValues("eth_getTransactionReceipt", "false").Inc()
 		return nil, err
 	}
 
@@ -404,6 +465,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 
 	tx, err := evm.GetTransaction(res)
 	if err != nil {
+		s.counter.WithLabelValues("eth_getTransactionReceipt", "false").Inc()
 		return nil, err
 	}
 
@@ -413,6 +475,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		contractAddress = &receipt.ContractAddress
 	}
 
+	s.counter.WithLabelValues("eth_getTransactionReceipt", "true").Inc()
 	return &GetTransactionReceiptResult{
 		TransactionHash:   receipt.TxHash,
 		TransactionIndex:  hexutil.Uint64(receipt.TransactionIndex),

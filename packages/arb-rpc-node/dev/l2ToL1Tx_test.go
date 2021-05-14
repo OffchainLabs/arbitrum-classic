@@ -19,6 +19,7 @@ package dev
 import (
 	"bytes"
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -51,7 +52,16 @@ func TestL2ToL1Tx(t *testing.T) {
 	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
 	defer cancelDevNode()
 
-	client := web3.NewEthClient(srv, true)
+	methodCallCounter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "arbitrum",
+			Subsystem: "rpc",
+			Name:      "call",
+		},
+		[]string{"method", "success"},
+	)
+
+	client := web3.NewEthClient(srv, true, methodCallCounter)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	if err != nil {
 		t.Fatal(err)

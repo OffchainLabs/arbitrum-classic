@@ -18,6 +18,7 @@ package dev
 
 import (
 	"encoding/json"
+	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
 	"math/big"
 	"path/filepath"
@@ -82,7 +83,16 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client := web3.NewEthClient(srv, true)
+	methodCallCounter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "arbitrum",
+			Subsystem: "rpc",
+			Name:      "call",
+		},
+		[]string{"method", "success"},
+	)
+
+	client := web3.NewEthClient(srv, true, methodCallCounter)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
 

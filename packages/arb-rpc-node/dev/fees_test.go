@@ -18,6 +18,7 @@ package dev
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/big"
 	"strings"
 	"testing"
@@ -95,9 +96,18 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		t.Fatal(err)
 	}
 
-	web3Server := web3.NewServer(srv, true)
+	methodCallCounter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "arbitrum",
+			Subsystem: "rpc",
+			Name:      "call",
+		},
+		[]string{"method", "success"},
+	)
 
-	client := web3.NewEthClient(srv, true)
+	web3Server := web3.NewServer(srv, true, methodCallCounter)
+
+	client := web3.NewEthClient(srv, true, methodCallCounter)
 
 	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	test.FailIfError(t, err)

@@ -21,6 +21,7 @@ import (
 	"crypto/ecdsa"
 	"flag"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -245,8 +246,16 @@ func startup() error {
 	signer := types.NewEIP155Signer(chainId)
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
+	methodCallCounter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "arbitrum",
+			Subsystem: "rpc",
+			Name:      "call",
+		},
+		[]string{"method", "success"},
+	)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, methodCallCounter)
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	if err != nil {
 		return err
@@ -322,7 +331,7 @@ func startup() error {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins, methodCallCounter)
 	if err != nil {
 		return err
 	}

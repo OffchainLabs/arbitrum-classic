@@ -221,18 +221,6 @@ func startup() error {
 	}
 
 	nodeStore := monitor.Storage.GetNodeStore()
-	avmGauge := prometheus.NewGaugeFunc(
-		prometheus.GaugeOpts{
-			Namespace: "arbitrum",
-			Subsystem: "avm",
-			Name:      "block_height",
-			Help:      "Current height of the Arbitrum chain",
-		},
-		func() float64 {
-			count, _ := nodeStore.BlockCount()
-			return float64(count)
-		})
-	prometheusRegistry.MustRegister(avmGauge)
 
 	db, txDBErrChan, err := txdb.New(ctx, monitor.Core, nodeStore, rollupArgs.Address, 100*time.Millisecond)
 	if err != nil {
@@ -249,8 +237,31 @@ func startup() error {
 		return err
 	}
 
+	avmGauge := prometheus.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Namespace: "arbitrum",
+			Subsystem: "avm",
+			Name:      "block_height",
+			Help:      "Current height of the Arbitrum chain",
+		},
+		func() float64 {
+			count, _ := nodeStore.BlockCount()
+			return float64(count)
+		})
+	methodCallCounter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: "arbitrum",
+			Subsystem: "rpc",
+			Name:      "call",
+		},
+		[]string{"method", "success"},
+	)
+	goCollector := prometheus.NewGoCollector()
+	processCollector := prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{})
+	prometheusRegistry.MustRegister(avmGauge, methodCallCounter, goCollector, processCollector)
+
 	srv := aggregator.NewServer(batch, rollupArgs.Address, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil, methodCallCounter)
 	if err != nil {
 		return err
 	}

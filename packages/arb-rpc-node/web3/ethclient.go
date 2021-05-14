@@ -2,6 +2,7 @@ package web3
 
 import (
 	"context"
+	"github.com/prometheus/client_golang/prometheus"
 	"math/big"
 	"time"
 
@@ -23,9 +24,9 @@ type EthClient struct {
 	filter *filters.PublicFilterAPI
 }
 
-func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
+func NewEthClient(srv *aggregator.Server, ganacheMode bool, methodCallCounter *prometheus.CounterVec) *EthClient {
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode),
+		srv:    NewServer(srv, ganacheMode, methodCallCounter),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}
