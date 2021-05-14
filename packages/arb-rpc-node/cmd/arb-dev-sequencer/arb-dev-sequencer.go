@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -27,6 +26,8 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -136,16 +137,30 @@ func startup() error {
 		return errors.Wrap(err, "error getting chain creator")
 	}
 
+	l1ChainId, err := ethclint.ChainID(ctx)
+	if err != nil {
+		return err
+	}
+
 	privKey, err := crypto.HexToECDSA(*privKeyString)
-	deployer := bind.NewKeyedTransactor(privKey)
+	if err != nil {
+		return err
+	}
+	deployer, err := bind.NewKeyedTransactorWithChainID(privKey, l1ChainId)
+	if err != nil {
+		return err
+	}
 
 	seqPrivKey, err := crypto.GenerateKey()
 	if err != nil {
 		return errors.Wrap(err, "error generating key")
 	}
-	seqAuth := bind.NewKeyedTransactor(seqPrivKey)
+	seqAuth, err := bind.NewKeyedTransactorWithChainID(seqPrivKey, l1ChainId)
+	if err != nil {
+		return err
+	}
 
-	owner := ethcommon.Address{}
+	owner := common.RandAddress().ToEthAddress()
 	sequencer := crypto.PubkeyToAddress(seqPrivKey.PublicKey)
 
 	tx, err := creator.CreateRollup(
@@ -174,12 +189,8 @@ func startup() error {
 		return err
 	}
 	rollupAddress := common.NewAddressFromEth(createdEvent.RollupAddress)
-	l1ChainId, err := ethclint.ChainID(ctx)
-	if err != nil {
-		return errors.Wrap(err, "error getting chain ID")
-	}
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
+	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Str("chainid", message.ChainAddressToID(rollupAddress).String()).Msg("Launching arbitrum node")
 
 	dbPath, err := ioutil.TempDir(".", "arbitrum")
@@ -255,7 +266,7 @@ func startup() error {
 		DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
 	}
 	broadcasterSettings := broadcaster.Settings{
-		Addr:                    "",
+		Addr:                    "127.0.0.1:9642",
 		Workers:                 128,
 		Queue:                   1,
 		IoReadWriteTimeout:      2 * time.Second,
