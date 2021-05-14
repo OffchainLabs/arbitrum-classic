@@ -103,7 +103,9 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	test.FailIfError(t, err)
 
 	feeCollector := common.RandAddress()
+	aggAuth.GasLimit = 100000000
 	_, feeCollectorErr := arbAggregator.SetFeeCollector(aggAuth, aggAuth.From, feeCollector.ToEthAddress())
+	aggAuth.GasLimit = 0
 	if arbosVersion >= 5 {
 		test.FailIfError(t, feeCollectorErr)
 	}
@@ -111,11 +113,13 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 	test.FailIfError(t, err)
 
+	auth.GasLimit = 100000000
 	_, err = arbOwner.SetFairGasPriceSender(auth, aggInit.Aggregator.ToEthAddress())
 	test.FailIfError(t, err)
 
 	_, err = arbOwner.SetFeesEnabled(auth, true)
 	test.FailIfError(t, err)
+	auth.GasLimit = 0
 
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
@@ -225,7 +229,7 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
 	extra := tx.Gas() - arbRes.CalcGasUsed().Uint64()
 	t.Log("gas remaining", extra)
-	if extra > 1000000 {
+	if extra > 5000000 {
 		t.Error("too much extra gas estimated")
 	}
 	return arbRes.FeeStats.Paid.Total()
