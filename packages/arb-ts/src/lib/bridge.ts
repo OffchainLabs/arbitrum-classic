@@ -112,10 +112,21 @@ export class Bridge extends L2Bridge {
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string,
+    maxSubmissionPriceIncreaseRatio = BigNumber.from(1.3),
     overrides?: PayableOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
-    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
+    const callDataLen = await this.l1Bridge.getDepositCallDataLength(
+      erc20L1Address,
+      amount,
+      maxGas,
+      gasPriceBid,
+      destinationAddress,
+      overrides
+    )
+    const maxSubmissionPrice = (
+      await this.getTxnSubmissionPrice(callDataLen)
+    )[0].mul(maxSubmissionPriceIncreaseRatio)
     return this.l1Bridge.deposit(
       erc20L1Address,
       amount,

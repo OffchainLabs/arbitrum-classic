@@ -194,6 +194,32 @@ export class L1Bridge {
     )
   }
 
+  public async getDepositCallDataLength(
+    erc20L1Address: string,
+    amount: BigNumber,
+    maxGas: BigNumber,
+    gasPriceBid: BigNumber,
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ) {
+    const destination = destinationAddress || (await this.getWalletAddress())
+    const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
+    if (!tokenData.ERC20) {
+      throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
+    }
+    const [seqNum, len] = await this.ethERC20Bridge.callStatic.deposit(
+      erc20L1Address,
+      destination,
+      amount,
+      0,
+      maxGas,
+      gasPriceBid,
+      '0x',
+      overrides
+    )
+    return len
+  }
+
   public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
