@@ -38,6 +38,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
@@ -490,11 +491,14 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 		return errors.Wrap(err, "error connecting to arb owner")
 	}
 
-	_, err = arbOwner.SetFairGasPriceSender(ownerAuth, aggregator)
+	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
-
+	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash())
+	if err != nil {
+		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
+	}
 	_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFeesEnabled")
