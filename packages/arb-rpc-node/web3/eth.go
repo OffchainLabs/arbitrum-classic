@@ -40,6 +40,7 @@ import (
 )
 
 var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
+var gasPriceFactor = big.NewInt(2)
 
 type Server struct {
 	srv         *aggregator.Server
@@ -75,7 +76,7 @@ func (s *Server) GasPrice() (*hexutil.Big, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*hexutil.Big)(new(big.Int).Mul(prices[5], big.NewInt(2))), nil
+	return (*hexutil.Big)(new(big.Int).Mul(prices[5], gasPriceFactor)), nil
 }
 
 func (s *Server) Accounts() []common.Address {
@@ -265,7 +266,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(res.FeeStats.Price.L2Computation.Bytes())) * 16
+		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes())) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
 		return hexutil.Uint64(res.FeeStats.GasUsed().Uint64() + 1000), nil
