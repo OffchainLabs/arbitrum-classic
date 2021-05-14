@@ -167,8 +167,8 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	logger.Info().Int("count", len(avmLogs)).Msg("deleting logs")
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
-	var currentBlockHeight uint64
-	blocksFound := false
+	var reorgBlockHeight uint64
+	blockReceiptFound := false
 	for _, avmLog := range avmLogs {
 		// L2 transaction receipts already provided in reverse
 		res, err := evm.NewResultFromValue(avmLog)
@@ -177,12 +177,15 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 		}
 		txRes, ok := res.(*evm.TxResult)
 		if !ok {
+			blockRes, ok := res.(*evm.BlockInfo)
+			if ok {
+				blockReceiptFound = true
+				reorgBlockHeight = blockRes.BlockNum.Uint64()
+			}
 			continue
 		}
 
-		blocksFound = true
-
-		currentBlockHeight = txRes.IncomingRequest.L2BlockNumber.Uint64()
+		currentBlockHeight := txRes.IncomingRequest.L2BlockNumber.Uint64()
 		logBlockInfo, err := db.GetBlock(currentBlockHeight)
 		if err != nil {
 			return err
@@ -206,18 +209,13 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			db.rmLogsFeed.Send(ethcore.RemovedLogsEvent{Logs: oldEthLogs})
 		}
 	}
-	if !blocksFound {
-		return nil
-	}
 
-	if currentBlockHeight > 0 {
-		currentBlockHeight--
-	}
-
-	// Reset block height
-	err := db.as.Reorg(currentBlockHeight)
-	if err != nil {
-		return err
+	if blockReceiptFound {
+		// Reset block height
+		err := db.as.Reorg(reorgBlockHeight)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
