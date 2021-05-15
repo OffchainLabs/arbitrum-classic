@@ -46,6 +46,9 @@ func TestInboxProof(t *testing.T) {
 	test.FailIfError(t, err)
 	client.Commit()
 
+	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddr, client)
+	test.FailIfError(t, err)
+
 	_, err = delayedBridge.Initialize(auth)
 	test.FailIfError(t, err)
 	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
@@ -182,11 +185,6 @@ func TestInboxProof(t *testing.T) {
 		cursors = append(cursors, cursor.Clone())
 	}
 
-	lastCursor := cursors[len(cursors)-1]
-	lastMach, err := arbCore.Core.TakeMachine(lastCursor.Clone())
-	test.FailIfError(t, err)
-	t.Log(lastMach)
-
 	t.Log("Generated", len(cursors), "curors")
 
 	for i := 0; i < len(cursors)-1; i++ {
@@ -199,23 +197,22 @@ func TestInboxProof(t *testing.T) {
 		test.FailIfError(t, err)
 
 		op := proof[0]
-
-		sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddr, client)
-		test.FailIfError(t, err)
-		if op == 0x72 {
-			// INBOX proving
-			seqNum := beforeCursor.TotalMessagesRead()
-			batch, err := LookupBatchContaining(context.Background(), arbCore.Core, sequencerInboxWatcher, seqNum)
-			test.FailIfError(t, err)
-			if batch == nil {
-				t.Fatal("Failed to lookup batch containing message")
-			}
-			inboxProof, err := arbCore.Core.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
-			test.FailIfError(t, err)
-			proof = append(proof, inboxProof...)
+		if op != 0x72 {
+			continue
 		}
 
-		t.Log("Op", op)
+		t.Log("Proving inbox opcode")
+
+		seqNum := beforeCursor.TotalMessagesRead()
+		batch, err := LookupBatchContaining(context.Background(), arbCore.Core, sequencerInboxWatcher, seqNum)
+		test.FailIfError(t, err)
+		if batch == nil {
+			t.Fatal("Failed to lookup batch containing message")
+		}
+		inboxProof, err := arbCore.Core.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
+		test.FailIfError(t, err)
+		proof = append(proof, inboxProof...)
+
 		ret, err := osp1.ExecuteStep(
 			&bind.CallOpts{},
 			[2]ethcommon.Address{sequencerAddr, delayedBridgeAddr},
