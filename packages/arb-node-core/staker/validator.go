@@ -217,7 +217,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 			return nil, false, err
 		}
 	}
-	cursorHash, err := cursor.MachineHash()
+	cursorHash := cursor.MachineHash()
 	if err != nil {
 		return nil, false, err
 	}
