@@ -513,11 +513,14 @@ contract OneStepProof is OneStepProofCommon {
                 "DELAYED_ACC"
             );
 
-            // Transform the delayed sequence number into the sequencer sequence number.
+            // Delayed messages are sequenced into a separate sequence number space with the upper bit set.
             // Note that messageHash is no longer accurate after this point, as this modifies the message.
-            inboxSeqNum = inboxSeqNum - delayedStart + firstSequencerSeqNum;
-            tupData[4] = Value.newInt(inboxSeqNum);
-            require(inboxSeqNum == context.totalMessagesRead, "WRONG_DELAYED_MSG_SEQ_NUM");
+            tupData[4] = Value.newInt(inboxSeqNum | (1 << 255));
+            // Confirm that this fits into the correct position of the sequencer sequence.
+            require(
+                inboxSeqNum - delayedStart + firstSequencerSeqNum == context.totalMessagesRead,
+                "WRONG_DELAYED_MSG_SEQ_NUM"
+            );
 
             acc = keccak256(
                 abi.encodePacked(

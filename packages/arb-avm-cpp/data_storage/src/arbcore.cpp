@@ -29,6 +29,7 @@
 #include <data_storage/value/valuecache.hpp>
 
 #include <ethash/keccak.hpp>
+#include <iomanip>
 #include <set>
 #include <sstream>
 #include <vector>
@@ -1237,7 +1238,6 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
                 delayed_msg_it->Seek(delayed_msg_lower_bound);
             }
 
-            auto next_sequence_number = index + messages.size();
             while (delayed_msg_it->Valid() &&
                    prev_delayed_count < item.total_delayed_count &&
                    messages.size() < count) {
@@ -1254,10 +1254,10 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
                 auto delayed_message = deserializeDelayedMessage(
                     prev_delayed_count, delayed_value_ptr,
                     delayed_value_end_ptr);
+                auto new_seq_num = prev_delayed_count | (uint256_t(1) << 255);
                 messages.emplace_back(std::move(delayed_message.message),
-                                      next_sequence_number, item.accumulator);
+                                      new_seq_num, item.accumulator);
                 prev_delayed_count += 1;
-                next_sequence_number += 1;
                 delayed_msg_it->Next();
             }
 
