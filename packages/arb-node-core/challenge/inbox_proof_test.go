@@ -59,38 +59,42 @@ func TestInboxProof(t *testing.T) {
 	initMsg, err := message.NewInitMessage(protocol.NewRandomChainParams(), common.RandAddress(), nil)
 	test.FailIfError(t, err)
 
-	chainTime := inbox.NewRandomChainTime()
-
 	arbCore, cancel := monitor.PrepareArbCoreWithMexe(t, mexe)
 	defer cancel()
 
-	delayedMsg := message.NewInboxMessage(initMsg, rollup, big.NewInt(0), big.NewInt(0), chainTime)
-	tx, err := delayedBridge.DeliverMessageToInbox(auth, uint8(delayedMsg.Kind), delayedMsg.Sender.ToEthAddress(), hashing.SoliditySHA3(delayedMsg.Data))
-	test.FailIfError(t, err)
-	client.Commit()
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
-	test.FailIfError(t, err)
-	ev, err := delayedBridge.ParseMessageDelivered(*receipt.Logs[0])
-	test.FailIfError(t, err)
-	header, err := client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
-	test.FailIfError(t, err)
-	delayedMsg.ChainTime = inbox.ChainTime{
-		BlockNum:  common.NewTimeBlocksInt(int64(ev.Raw.BlockNumber)),
-		Timestamp: new(big.Int).SetUint64(header.Time),
-	}
-	delayedMsg.GasPrice = tx.GasPrice()
-	delayed := inbox.NewDelayedMessage(common.Hash{}, delayedMsg)
-	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{}, big.NewInt(0))
-	test.FailIfError(t, err)
-	if delayedAcc != delayed.DelayedAccumulator {
-		t.Fatal("bad delayed acc", delayedAcc, delayed.DelayedAccumulator)
+	addDelayed := func(prevAcc common.Hash, msg message.Message, sender common.Address, msgNum int64) ([32]byte, inbox.DelayedMessage) {
+		t.Helper()
+		tx, err := delayedBridge.DeliverMessageToInbox(auth, uint8(msg.Type()), sender.ToEthAddress(), hashing.SoliditySHA3(msg.AsData()))
+		test.FailIfError(t, err)
+		client.Commit()
+		receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+		test.FailIfError(t, err)
+		ev, err := delayedBridge.ParseMessageDelivered(*receipt.Logs[0])
+		test.FailIfError(t, err)
+		header, err := client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
+		test.FailIfError(t, err)
+		delayedMsg := message.NewInboxMessage(msg, sender, ev.MessageIndex, tx.GasPrice(), inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(int64(ev.Raw.BlockNumber)),
+			Timestamp: new(big.Int).SetUint64(header.Time),
+		})
+		delayed := inbox.NewDelayedMessage(prevAcc, delayedMsg)
+		delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{}, big.NewInt(msgNum))
+		test.FailIfError(t, err)
+		if delayedAcc != delayed.DelayedAccumulator {
+			t.Fatal("bad delayed acc", delayedAcc, delayed.DelayedAccumulator)
+		}
+		return delayedAcc, delayed
 	}
 
-	delayedItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
+	delayedAcc1, delayed1 := addDelayed(common.Hash{}, initMsg, rollup, 0)
+	delayedAcc2, delayed2 := addDelayed(delayedAcc1, message.NewSafeL2Message(message.NewRandomTransaction()), common.RandAddress(), 1)
+
+	delayedItem1 := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc1)
+
 	latest, err := client.HeaderByNumber(context.Background(), nil)
 	test.FailIfError(t, err)
 
-	endOfBlockMessage := message.NewInboxMessage(
+	endOfBlockMessage1 := message.NewInboxMessage(
 		message.EndBlockMessage{},
 		common.Address{},
 		big.NewInt(1),
@@ -100,7 +104,7 @@ func TestInboxProof(t *testing.T) {
 			Timestamp: new(big.Int).SetUint64(latest.Time),
 		},
 	)
-	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, delayedItem.Accumulator)
+	endBlockBatchItem1 := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage1, delayedItem1.Accumulator)
 
 	_, err = sequencerCon.AddSequencerL2BatchFromOrigin(
 		auth,
@@ -109,12 +113,60 @@ func TestInboxProof(t *testing.T) {
 		latest.Number,
 		new(big.Int).SetUint64(latest.Time),
 		big.NewInt(1),
-		endBlockBatchItem.Accumulator,
+		endBlockBatchItem1.Accumulator,
 	)
 	test.FailIfError(t, err)
 	client.Commit()
 
-	err = core.DeliverMessagesAndWait(arbCore.Core, common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endBlockBatchItem}, []inbox.DelayedMessage{delayed}, nil)
+	seqMessage := message.NewInboxMessage(
+		message.NewSafeL2Message(message.NewRandomTransaction()),
+		common.NewAddressFromEth(sequencer),
+		big.NewInt(2),
+		big.NewInt(0),
+		inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(latest.Number),
+			Timestamp: new(big.Int).SetUint64(latest.Time),
+		},
+	)
+	seqMsgItem := inbox.NewSequencerItem(big.NewInt(1), seqMessage, endBlockBatchItem1.Accumulator)
+
+	delayedItem2 := inbox.NewDelayedItem(big.NewInt(3), big.NewInt(2), seqMsgItem.Accumulator, big.NewInt(1), delayedAcc2)
+
+	endOfBlockMessage2 := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		big.NewInt(4),
+		big.NewInt(0),
+		inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(latest.Number),
+			Timestamp: new(big.Int).SetUint64(latest.Time),
+		},
+	)
+	endBlockBatchItem2 := inbox.NewSequencerItem(big.NewInt(2), endOfBlockMessage2, delayedItem2.Accumulator)
+
+	_, err = sequencerCon.AddSequencerL2BatchFromOrigin(
+		auth,
+		seqMessage.Data,
+		[]*big.Int{big.NewInt(int64(len(seqMessage.Data)))},
+		//nil, nil,
+		latest.Number,
+		new(big.Int).SetUint64(latest.Time),
+		big.NewInt(2),
+		endBlockBatchItem2.Accumulator,
+	)
+	test.FailIfError(t, err)
+	client.Commit()
+
+	err = core.DeliverMessagesAndWait(arbCore.Core, common.Hash{}, []inbox.SequencerBatchItem{delayedItem1, endBlockBatchItem1}, []inbox.DelayedMessage{delayed1}, nil)
+	test.FailIfError(t, err)
+
+	err = core.DeliverMessagesAndWait(
+		arbCore.Core,
+		endBlockBatchItem1.Accumulator,
+		[]inbox.SequencerBatchItem{seqMsgItem, delayedItem2, endBlockBatchItem2},
+		[]inbox.DelayedMessage{delayed2},
+		nil,
+	)
 	test.FailIfError(t, err)
 
 	var cursors []core.ExecutionCursor
