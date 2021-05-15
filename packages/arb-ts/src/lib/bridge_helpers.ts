@@ -138,7 +138,10 @@ export class BridgeHelper {
     return utils.keccak256(
       utils.concat([
         utils.zeroPad(l2ChainId.toHexString(), 32),
-        utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
+        utils.zeroPad(
+          inboxSequenceNumber.or(BigNumber.from(1).shl(255)).toHexString(),
+          32
+        ),
       ])
     )
   }

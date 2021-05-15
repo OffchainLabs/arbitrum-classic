@@ -1,4 +1,4 @@
-import { providers, utils, Wallet, BigNumber, constants } from 'ethers'
+import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 import { Bridge } from '../src/lib/bridge'
 import {
   DepositTokenEventResult,
@@ -146,7 +146,7 @@ describe('Ether', () => {
     expect(testWalletL2EthBalance.eq(Zero)).to.be.true
   })
 
-  const ethToL2DepositAmount = parseEther('0.01')
+  const ethToL2DepositAmount = parseEther('0.05')
   const ethFromL2WithdrawAmount = parseEther('0.00001')
 
   it('deposit ether transaction succeeds', async () => {
@@ -197,7 +197,7 @@ const tokenWithdrawAmount = BigNumber.from(2)
 const tokenDepositAmountE18 = utils.parseUnits('50', 18)
 const tokenWithdrawAmountE18 = utils.parseUnits('2', 18)
 
-describe.only('ERC20', () => {
+describe('ERC20', () => {
   before('create/ensure l1 erc20 w initial supply', async () => {
     wait(10000)
     const testTokenFactory = await new TestERC20__factory(preFundedWallet)
@@ -277,6 +277,14 @@ describe.only('ERC20', () => {
     const l2RetryableHash = await bridge.calculateL2RetryableTransactionHash(
       seqNum
     )
+
+    const l2RedeemHash = await bridge.calculateRetryableAutoReedemTxnHash(
+      seqNum
+    )
+    console.warn('l2RedeemHash', l2RedeemHash)
+    const redeemReceipt = await arbProvider.waitForTransaction(l2RetryableHash)
+    console.warn('redeemReceipt', redeemReceipt)
+
     console.warn('l2RetryableHash', l2RetryableHash)
 
     const retryableReceipt = await arbProvider.waitForTransaction(
@@ -344,7 +352,7 @@ describe.only('ERC20', () => {
   })
 })
 
-describe('CustomToken', () => {
+describe.skip('CustomToken', () => {
   let l1CustomToken: TestCustomTokenL1
   let l2CustomToken: TestArbCustomToken
 
@@ -366,7 +374,8 @@ describe('CustomToken', () => {
       )
       l2CustomToken = await customL2TokenFactory.deploy(
         bridge.arbTokenBridge.address,
-        l1CustomToken.address
+        l1CustomToken.address,
+        { gasLimit: utils.parseEther('0.23') }
       )
       rec = await l2CustomToken.deployTransaction.wait()
       expect(rec.status).to.equal(1)

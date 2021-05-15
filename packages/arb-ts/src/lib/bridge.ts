@@ -191,6 +191,15 @@ export class Bridge extends L2Bridge {
       l2ChainId || this.l2Provider
     )
   }
+  public calculateRetryableAutoReedemTxnHash(
+    inboxSequenceNumber: BigNumber,
+    l2ChainId?: BigNumber
+  ): Promise<string> {
+    return BridgeHelper.calculateRetryableAutoReedemTxnHash(
+      inboxSequenceNumber,
+      l2ChainId || this.l2Provider
+    )
+  }
 
   public async getInboxSeqNumFromContractTransaction(
     l2Transaction: ethers.providers.TransactionReceipt
