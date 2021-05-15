@@ -27,6 +27,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'customL2Token(address)': FunctionFragment
     'deposit(address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)': FunctionFragment
+    'getDepositCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'hasTriedDeploy(address)': FunctionFragment
     'inbox()': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
@@ -70,6 +71,10 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'getDepositCalldata',
+    values: [string, string, string, BigNumberish, BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'hasTriedDeploy',
     values: [string]
   ): string
@@ -110,6 +115,10 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'fastWithdrawalFromL2',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getDepositCalldata',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -228,6 +237,28 @@ export class EthERC20Bridge extends Contract {
       maxFee: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    getDepositCalldata(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, string] & { isDeployed: boolean; depositCalldata: string }
+    >
+
+    'getDepositCalldata(address,address,address,uint256,bytes)'(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, string] & { isDeployed: boolean; depositCalldata: string }
+    >
 
     hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<[boolean]>
 
@@ -374,6 +405,28 @@ export class EthERC20Bridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  getDepositCalldata(
+    erc20: string,
+    sender: string,
+    destination: string,
+    amount: BigNumberish,
+    callHookData: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<
+    [boolean, string] & { isDeployed: boolean; depositCalldata: string }
+  >
+
+  'getDepositCalldata(address,address,address,uint256,bytes)'(
+    erc20: string,
+    sender: string,
+    destination: string,
+    amount: BigNumberish,
+    callHookData: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<
+    [boolean, string] & { isDeployed: boolean; depositCalldata: string }
+  >
+
   hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<boolean>
 
   'hasTriedDeploy(address)'(
@@ -478,7 +531,12 @@ export class EthERC20Bridge extends Contract {
       gasPriceBid: BigNumberish,
       callHookData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<BigNumber>
+    ): Promise<
+      [BigNumber, BigNumber] & {
+        seqNum: BigNumber
+        depositCalldataLength: BigNumber
+      }
+    >
 
     'deposit(address,address,uint256,uint256,uint256,uint256,bytes)'(
       erc20: string,
@@ -489,7 +547,12 @@ export class EthERC20Bridge extends Contract {
       gasPriceBid: BigNumberish,
       callHookData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<BigNumber>
+    ): Promise<
+      [BigNumber, BigNumber] & {
+        seqNum: BigNumber
+        depositCalldataLength: BigNumber
+      }
+    >
 
     fastWithdrawalFromL2(
       liquidityProvider: string,
@@ -512,6 +575,28 @@ export class EthERC20Bridge extends Contract {
       maxFee: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
+
+    getDepositCalldata(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, string] & { isDeployed: boolean; depositCalldata: string }
+    >
+
+    'getDepositCalldata(address,address,address,uint256,bytes)'(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [boolean, string] & { isDeployed: boolean; depositCalldata: string }
+    >
 
     hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<boolean>
 
@@ -690,6 +775,24 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    getDepositCalldata(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'getDepositCalldata(address,address,address,uint256,bytes)'(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     hasTriedDeploy(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'hasTriedDeploy(address)'(
@@ -837,6 +940,24 @@ export class EthERC20Bridge extends Contract {
       exitNum: BigNumberish,
       maxFee: BigNumberish,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    getDepositCalldata(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getDepositCalldata(address,address,address,uint256,bytes)'(
+      erc20: string,
+      sender: string,
+      destination: string,
+      amount: BigNumberish,
+      callHookData: BytesLike,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     hasTriedDeploy(

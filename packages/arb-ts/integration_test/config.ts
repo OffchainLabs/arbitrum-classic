@@ -2,7 +2,7 @@ import { utils } from 'ethers'
 export default {
   kovan4: {
     ethRPC: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
-    arbRPC: 'https://kovan4.arbitrum.io/rpc',
+    arbRPC: 'https://kovan5.arbitrum.io/rpc',
     // arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
     preFundedSignerPK:
       process.env['DEVNET_PRIVKEY'] ||
@@ -18,6 +18,25 @@ export default {
     // existentCustomTokenL2: '',
     defaultWait: 0,
   },
+  kovan5: {
+    ethRPC: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
+    arbRPC: 'https://kovan5.arbitrum.io/rpc',
+    // arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
+    preFundedSignerPK:
+      process.env['DEVNET_PRIVKEY'] ||
+      '0x8803565d1ab75cf6a04656e2a638c65a2984f810ce2f5f8270601aca4e25e067',
+    erc20BridgeAddress: '0xB70e15f33275d626fb958b63FcD4AA30d8D55072',
+    arbTokenBridgeAddress: '0x4C4A16436cB80274725861ED798C7f4e3D6C4d55',
+    l1gasPrice: utils.parseUnits('10', 'gwei'),
+    existentTestERC20: '0xFa3933797baF9572c4Cf8fA9a28f09ad3C8d30BB',
+    existentCustomTokenL1: '',
+    existentCustomTokenL2: '',
+    // existentTestERC20: '',
+    // existentCustomTokenL1: '',
+    // existentCustomTokenL2: '',
+    defaultWait: 0,
+  },
+
   devnet: {
     ethRPC: 'https://devnet.arbitrum.io/rpc',
     arbRPC: 'https://devnet-l2.arbitrum.io/rpc',

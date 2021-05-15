@@ -57,16 +57,19 @@ task('create-chain', 'Creates a rollup chain')
       receipt.logs[receipt.logs.length - 1]
     )
     console.log(ev)
-    
+
     // const path = `rollup-${hre.network.name}.json`
     const path = `rollup-${hre.network.name}.json`
     const output = JSON.stringify({
       rollupAddress: ev.args[0],
       inboxAddress: ev.args[1],
     })
-    
+
     fs.writeFileSync(path, output)
-    console.log("New rollup chain created and output written to:", `${process.cwd()}:${path}`)
+    console.log(
+      'New rollup chain created and output written to:',
+      `${process.cwd()}:${path}`
+    )
   })
 
 task('deposit', 'Deposit coins into ethbridge')
@@ -136,6 +139,13 @@ const config = {
     arbkovan4: {
       gasPrice: 0,
       url: 'https://kovan4.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    kovan5: {
+      gasPrice: 0,
+      url: 'https://kovan5.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]
         : [],

@@ -84,7 +84,7 @@ export interface OutBoxTransactionExecuted {
   transactionIndex: BigNumber
 }
 
-enum OutgoingMessageState {
+export enum OutgoingMessageState {
   NOT_FOUND,
   UNCONFIRMED,
   CONFIRMED,

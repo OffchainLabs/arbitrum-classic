@@ -23,12 +23,20 @@ import { PayableOverrides } from '@ethersproject/contracts'
 
 const { Zero } = constants
 
+interface RetryableGasArgs {
+  maxSubmissionPrice?: BigNumber
+  maxGas?: BigNumber
+  gasPriceBid?: BigNumber
+  maxSubmissionPriceIncreaseRatio?: BigNumber
+}
+
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
   walletAddressCache?: string
+  outboxAddressCache?: string
 
   constructor(
     erc20BridgeAddress: string,
@@ -109,13 +117,17 @@ export class Bridge extends L2Bridge {
   public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
+    retryableGasArgs: RetryableGasArgs = {},
     destinationAddress?: string,
-    maxSubmissionPriceIncreaseRatio = BigNumber.from(1.3),
     overrides?: PayableOverrides
   ) {
-    // TODO: this will need to (somehow) input the calldata size
+    const gasPriceBid =
+      retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
+
+    const maxGas = retryableGasArgs.maxGas || BigNumber.from(3000000)
+    const maxSubmissionPriceIncreaseRatio =
+      retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+
     const callDataLen = await this.l1Bridge.getDepositCallDataLength(
       erc20L1Address,
       amount,
@@ -126,7 +138,10 @@ export class Bridge extends L2Bridge {
     )
     const maxSubmissionPrice = (
       await this.getTxnSubmissionPrice(callDataLen)
-    )[0].mul(maxSubmissionPriceIncreaseRatio)
+    )[0]
+      .mul(maxSubmissionPriceIncreaseRatio)
+      .div(BigNumber.from(10))
+
     return this.l1Bridge.deposit(
       erc20L1Address,
       amount,
@@ -306,5 +321,36 @@ export class Bridge extends L2Bridge {
 
   public async getL2ToL1EventData(destinationAddress: string) {
     return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
+  }
+
+  public async getOutboxAddress() {
+    if (this.outboxAddressCache) {
+      return this.outboxAddressCache
+    }
+    const inboxAddress = (await this.l1Bridge.getInbox()).address
+    const coreBridgeAddress = await BridgeHelper.getCoreBridgeFromInbox(
+      inboxAddress,
+      this.l1Bridge.l1Provider
+    )
+    const outboxAddress = await BridgeHelper.getActiveOutbox(
+      coreBridgeAddress,
+      this.l1Bridge.l1Provider
+    )
+    this.outboxAddressCache = outboxAddress
+    return outboxAddress
+  }
+
+  public async getOutGoingMessageState(
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber
+  ) {
+    const outboxAddress = await this.getOutboxAddress()
+    return BridgeHelper.getOutgoingMessageState(
+      batchNumber,
+      indexInBatch,
+      outboxAddress,
+      this.l1Bridge.l1Provider,
+      this.l2Provider
+    )
   }
 }
