@@ -87,10 +87,6 @@ struct InboxState {
 
     void addMessage(const MachineMessage& message) {
         accumulator = message.accumulator;
-        if (message.message.inbox_sequence_number != count) {
-            throw std::runtime_error(
-                "Attempted to add non-sequential message to inbox state");
-        }
         count += 1;
     }
 };
