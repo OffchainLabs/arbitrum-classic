@@ -22,7 +22,7 @@ Chain Launched on May 15, 2021
 
 ## Connecting to the chain
 
-If you're using metamask, add a custom RPC network to connect to the Arbitrum testnet:
+If you're using Metamask, add a custom RPC network to connect to the Arbitrum testnet:
 
 - Network Name: Arbitrum Testnet V5
 - New RPC URL: https://kovan5.arbitrum.io/rpc
@@ -40,16 +40,16 @@ There you'll be able to see all the transactions being executed in Arbitrum and 
 
 In order to deposit and withdraw Eth or tokens, visit https://bridge5.arbitrum.io.
 
-In order to start using the chain, you'll have deposit Eth from kovan so that you can pay for fees in L2. In order to get kovan Eth, use one of the standard faucets from https://github.com/kovan-testnet/faucet.
+In order to start using the chain, you'll have deposit Eth from Kovan so that you can pay for fees in L2. In order to get Kovan Eth, use one of the standard faucets from https://github.com/kovan-testnet/faucet.
 
 ## Interacting with the chain
 
-Once you've added the Arbitrum Testnet V5 network to metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
+Once you've added the Arbitrum Testnet V5 network to Metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
 
 The are a couple things to note on the Arbitrum chain.
 
 - Arbitrum uses an EIP-1559-like gas auction system so the gas price you list in your transaction is a bid, but the actual price may be lower
-- In order to do a ETH transfer through metamask, you must manually enter a higher gas limit than the default 21,000 gas. 800,000 should work well
+- In order to do a ETH transfer through Metamask, you must manually enter a higher gas limit than the default 21,000 gas. 800,000 should work well
 - The majority of gas costs paid in the arbitrum chain go to pay for the cost of posting your transaction data to Ethereum
 
 ## Deploying your contracts
