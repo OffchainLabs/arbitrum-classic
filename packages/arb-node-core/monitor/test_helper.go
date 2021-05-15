@@ -31,7 +31,11 @@ import (
 func PrepareArbCore(t *testing.T) (*Monitor, func()) {
 	arbosPath, err := arbos.Path()
 	test.FailIfError(t, err)
-	monitor, err := NewMonitor(t.TempDir(), arbosPath)
+	return PrepareArbCoreWithMexe(t, arbosPath)
+}
+
+func PrepareArbCoreWithMexe(t *testing.T, mexe string) (*Monitor, func()) {
+	monitor, err := NewMonitor(t.TempDir(), mexe)
 	test.FailIfError(t, err)
 
 	shutdown := func() {

@@ -267,7 +267,7 @@ func startup() error {
 	if err != nil {
 		return errors.Wrap(err, "error loading initial ArbCore machine")
 	}
-	initialMachineHash, err := initialExecutionCursor.MachineHash()
+	initialMachineHash := initialExecutionCursor.MachineHash()
 	if err != nil {
 		return errors.Wrap(err, "error getting initial machine hash")
 	}

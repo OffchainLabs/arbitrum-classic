@@ -30,9 +30,10 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-	"github.com/pkg/errors"
 )
 
 type ExecutionCursor struct {
@@ -135,8 +136,8 @@ func (ec *ExecutionCursor) updateValues() error {
 	return nil
 }
 
-func (ec *ExecutionCursor) MachineHash() (common.Hash, error) {
-	return ec.machineHash, nil
+func (ec *ExecutionCursor) MachineHash() common.Hash {
+	return ec.machineHash
 }
 
 func (ec *ExecutionCursor) InboxAcc() common.Hash {
