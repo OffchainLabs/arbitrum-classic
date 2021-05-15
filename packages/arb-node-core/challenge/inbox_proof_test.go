@@ -11,6 +11,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -146,6 +147,22 @@ func TestInboxProof(t *testing.T) {
 		test.FailIfError(t, err)
 
 		op := proof[0]
+
+		sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddr, client)
+		test.FailIfError(t, err)
+		if op == 0x72 {
+			// INBOX proving
+			seqNum := beforeCursor.TotalMessagesRead()
+			batch, err := LookupBatchContaining(context.Background(), arbCore.Core, sequencerInboxWatcher, seqNum)
+			test.FailIfError(t, err)
+			if batch == nil {
+				t.Fatal("Failed to lookup batch containing message")
+			}
+			inboxProof, err := arbCore.Core.GenInboxProof(seqNum, batch.GetBatchIndex(), batch.GetAfterCount())
+			test.FailIfError(t, err)
+			proof = append(proof, inboxProof...)
+		}
+
 		t.Log("Op", op)
 		ret, err := osp1.ExecuteStep(
 			&bind.CallOpts{},
@@ -158,7 +175,10 @@ func TestInboxProof(t *testing.T) {
 			proof,
 			bproof,
 		)
-		test.FailIfError(t, err)
+		if err != nil {
+			t.Error(err)
+			continue
+		}
 
 		beforeMachineHash := ret.Fields[0]
 		afterMachineHash := ret.Fields[1]
