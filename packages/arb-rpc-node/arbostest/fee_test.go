@@ -357,6 +357,7 @@ func TestFees(t *testing.T) {
 		for _, tx := range ethTxes {
 			compressed := message.NewCompressedECDSAFromEth(tx)
 			compressed.GasLimit = big.NewInt(0)
+			compressed.GasPrice = big.NewInt(0)
 			msg, err := message.NewGasEstimationMessage(aggregator, big.NewInt(100000000), compressed)
 			test.FailIfError(t, err)
 			estimateFeeIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
@@ -393,7 +394,7 @@ func TestFees(t *testing.T) {
 	t.Log("Checking results for fee with agg")
 	feeWithAggResults, feeWithAggSnap, _ := processMessages(feeWithAggIB, 2, aggregator, true)
 	t.Log("Checking results for estimate")
-	estimateFeeResults, _, _ := processMessages(estimateFeeIB, 3, aggregator, false)
+	estimateFeeResults, estimateFeeSnap, _ := processMessages(estimateFeeIB, 3, aggregator, false)
 
 	if unpaidNoFee.Cmp(big.NewInt(0)) != 0 {
 		t.Error("shouldn't have unpaid")
@@ -582,6 +583,10 @@ func TestFees(t *testing.T) {
 	checkPaid(feeSnap, feeResults)
 	checkPaid(feeWithAggSnap, feeWithAggResults)
 
+	estimateUserBal, err := estimateFeeSnap.GetBalance(userAddress)
+	test.FailIfError(t, err)
+	t.Log("Remaining balance", estimateUserBal)
+
 	checkTotalReceived(noFeeSnap, noFeeResults)
 	checkTotalReceived(feeSnap, feeResults)
 	l1PaidWithAgg, l2PaidWithAgg := checkTotalReceived(feeWithAggSnap, feeWithAggResults)
@@ -729,22 +734,12 @@ func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address, l2Unpa
 	l2ComputationUnpaid := new(big.Int).Sub(l2ComputationGoal, paid.L2Computation)
 	l2StorageUnpaid := new(big.Int).Sub(l2StorageGoal, paid.L2Storage)
 
-	if l2Unpaid {
-		if paid.L2Computation.Cmp(big.NewInt(0)) != 0 {
-			t.Error("incorrectly paid computation amount", paid.L2Computation)
-		}
+	if l2ComputationUnpaid.Cmp(big.NewInt(0)) != 0 {
+		t.Error("incorrectly unpaid computation amount", l2ComputationUnpaid)
+	}
 
-		if paid.L2Storage.Cmp(big.NewInt(0)) != 0 {
-			t.Error("incorrectly paid storage amount", paid.L2Storage)
-		}
-	} else {
-		if l2ComputationUnpaid.Cmp(big.NewInt(0)) != 0 {
-			t.Error("incorrectly unpaid computation amount", l2ComputationUnpaid)
-		}
-
-		if l2StorageUnpaid.Cmp(big.NewInt(0)) != 0 {
-			t.Error("incorrectly unpaid storage amount", l2StorageUnpaid)
-		}
+	if l2StorageUnpaid.Cmp(big.NewInt(0)) != 0 {
+		t.Error("incorrectly unpaid storage amount", l2StorageUnpaid)
 	}
 
 	totalUnpaid := new(big.Int).Add(l1TxUnpaid, l1CalldataUnpaid)

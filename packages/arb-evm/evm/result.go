@@ -123,8 +123,10 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 		}
 	} else if res.ResultCode == CongestionCode {
 		return errors.New("tx dropped due to L2 congestion")
-	} else if res.ResultCode == InsufficientTxFundsCode || res.ResultCode == InsufficientGasFundsCode {
+	} else if res.ResultCode == InsufficientTxFundsCode {
 		return vm.ErrInsufficientBalance
+	} else if res.ResultCode == InsufficientGasFundsCode {
+		return errors.New("not enough funds for gas")
 	} else if res.ResultCode == BadSequenceCode {
 		return errors.New("invalid transaction nonce")
 	} else if res.ResultCode == InvalidMessageFormatCode {

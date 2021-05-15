@@ -41,11 +41,13 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "web3").Logger()
 var gasPriceFactor = big.NewInt(2)
+var gasEstimationCushion = 10
 
 type Server struct {
 	srv         *aggregator.Server
 	ganacheMode bool
 	maxCallGas  uint64
+	maxAVMGas   uint64
 	aggregator  *arbcommon.Address
 }
 
@@ -57,6 +59,7 @@ func NewServer(
 		srv:         srv,
 		ganacheMode: ganacheMode,
 		maxCallGas:  1<<31 - 1,
+		maxAVMGas:   500000000,
 		aggregator:  srv.Aggregator(),
 	}
 }
@@ -234,7 +237,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, err := snap.EstimateGas(tx, agg, from, new(big.Int).SetUint64(s.maxCallGas))
+	res, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
 	res, err = handleCallResult(res, err, &blockNum)
 	if err != nil {
 		logging := log.Warn()
@@ -266,7 +269,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes())) * 16
+		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
 		return hexutil.Uint64(res.FeeStats.GasUsed().Uint64() + 1000), nil
