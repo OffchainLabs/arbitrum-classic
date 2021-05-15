@@ -25,8 +25,8 @@ export default {
     preFundedSignerPK:
       process.env['DEVNET_PRIVKEY'] ||
       '0x8803565d1ab75cf6a04656e2a638c65a2984f810ce2f5f8270601aca4e25e067',
-    erc20BridgeAddress: '0xB70e15f33275d626fb958b63FcD4AA30d8D55072',
-    arbTokenBridgeAddress: '0x4C4A16436cB80274725861ED798C7f4e3D6C4d55',
+    erc20BridgeAddress: '0x1d750369c91b129524B68f308512b0FE2C903d71',
+    arbTokenBridgeAddress: '0x2EEBB8EE9c377caBC476654ca4aba016ECA1B9fc',
     l1gasPrice: utils.parseUnits('10', 'gwei'),
     existentTestERC20: '0xFa3933797baF9572c4Cf8fA9a28f09ad3C8d30BB',
     existentCustomTokenL1: '',

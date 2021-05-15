@@ -197,7 +197,7 @@ const tokenWithdrawAmount = BigNumber.from(2)
 const tokenDepositAmountE18 = utils.parseUnits('50', 18)
 const tokenWithdrawAmountE18 = utils.parseUnits('2', 18)
 
-describe('ERC20', () => {
+describe.only('ERC20', () => {
   before('create/ensure l1 erc20 w initial supply', async () => {
     wait(10000)
     const testTokenFactory = await new TestERC20__factory(preFundedWallet)
@@ -254,10 +254,9 @@ describe('ERC20', () => {
       undefined,
       { gasLimit: 210000, gasPrice: l1gasPrice, value: retryableDepositAmount }
     )
-    console.warn('deposit res', depositRes)
 
     const depositRec = await depositRes.wait()
-    console.warn('deposit rec', depositRec)
+    console.warn('deposit rec status', depositRec.status)
 
     await wait()
 
@@ -275,14 +274,15 @@ describe('ERC20', () => {
       await bridge.getDepositTokenEventData(depositRec)
     )[0] as DepositTokenEventResult
     const seqNum = tokenDepositData.seqNum
-
     const l2RetryableHash = await bridge.calculateL2RetryableTransactionHash(
       seqNum
     )
+    console.warn('l2RetryableHash', l2RetryableHash)
 
     const retryableReceipt = await arbProvider.waitForTransaction(
       l2RetryableHash
     )
+    console.warn('retryableReceipt', retryableReceipt)
 
     expect(retryableReceipt.status).to.equal(1)
   })
@@ -662,30 +662,10 @@ describe('CustomToken: no-L2-yet-fallback case', () => {
   })
 })
 
-describe.only('retryable wtf', async () => {
-  it('', async () => {
-    const x = await bridge.getTxnSubmissionPrice(BigNumber.from(100))
-    console.warn('x', x)
-  })
-})
-
 // describe('scrap paper', async () => {
 //   it('', async () => {
-//     const x = await bridge.getTxnSubmissionPrice(BigNumber.from(100))
-//     console.warn('x', x)
+//     const inbox =  Inbox__factory.connect("0x81183C9C61bdf79DB7330BBcda47Be30c0a85064", preFundedWallet)
+//     inbox.depositEth("0xAddA0B73Fe69a6E3e7c1072Bb9523105753e08f8", {value: utils.parseEther("2")})
 
-//     // const ethFromL2WithdrawAmount = parseEther('0.00001')
-
-//     // const withdrawEthRes = await bridge.withdrawETH(ethFromL2WithdrawAmount, "", {gasLimit:2100000})
-//     // console.warn('RES', withdrawEthRes);
-
-//     // const withdrawEthRec = await withdrawEthRes.wait()
-//     // 0x23c6e930Cd0266f1427C9C6f126799E8911945bb
-//     // const inbox =  Inbox__factory.connect("0x23c6e930Cd0266f1427C9C6f126799E8911945bb", preFundedWallet)
-//     // inbox.depositEth("0xAddA0B73Fe69a6E3e7c1072Bb9523105753e08f8", {value: utils.parseEther("2")})
-//     // console.warn(inbox);
-
-//     // const i = await bridge.ethERC20Bridge.inbox()
-//     // console.warn('i', i)
 //   })
 // })
