@@ -21,10 +21,9 @@ pragma solidity ^0.6.11;
 import "../arch/Hashing.sol";
 
 contract HashingTester {
-
     function testMerkleHash(bytes memory buf) public pure returns (bytes32) {
-        (bytes32 res, ) = Hashing.merkleRoot(buf, 0, Hashing.roundUpToPow2(buf.length), true);
+        (bytes32 res, ) =
+            Hashing.merkleRoot(buf, buf.length, 0, Hashing.roundUpToPow2(buf.length), true);
         return res;
     }
-
 }
