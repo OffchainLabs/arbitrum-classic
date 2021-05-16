@@ -27,7 +27,7 @@ var (
 )
 
 // IOneStepProofABI is the input ABI used to generate the binding from.
-const IOneStepProofABI = "[{\"inputs\":[{\"internalType\":\"contractIBridge\",\"name\":\"bridge\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStep\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"totalMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[4]\",\"name\":\"fields\",\"type\":\"bytes32[4]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIBridge\",\"name\":\"bridge\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStepDebug\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"startMachine\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"afterMachine\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const IOneStepProofABI = "[{\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStep\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"gas\",\"type\":\"uint64\"},{\"internalType\":\"uint256\",\"name\":\"afterMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[4]\",\"name\":\"fields\",\"type\":\"bytes32[4]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"},{\"internalType\":\"uint256\",\"name\":\"initialMessagesRead\",\"type\":\"uint256\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"bproof\",\"type\":\"bytes\"}],\"name\":\"executeStepDebug\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"startMachine\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"afterMachine\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // IOneStepProof is an auto generated Go binding around an Ethereum contract.
 type IOneStepProof struct {
@@ -171,20 +171,20 @@ func (_IOneStepProof *IOneStepProofTransactorRaw) Transact(opts *bind.TransactOp
 	return _IOneStepProof.Contract.contract.Transact(opts, method, params...)
 }
 
-// ExecuteStep is a free data retrieval call binding the contract method 0x9d16dd04.
+// ExecuteStep is a free data retrieval call binding the contract method 0x47dda1d6.
 //
-// Solidity: function executeStep(address bridge, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 totalMessagesRead, bytes32[4] fields)
-func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, bridge common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
+// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[4] fields)
+func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	Gas               uint64
-	TotalMessagesRead *big.Int
+	AfterMessagesRead *big.Int
 	Fields            [4][32]byte
 }, error) {
 	var out []interface{}
-	err := _IOneStepProof.contract.Call(opts, &out, "executeStep", bridge, initialMessagesRead, accs, proof, bproof)
+	err := _IOneStepProof.contract.Call(opts, &out, "executeStep", bridges, initialMessagesRead, accs, proof, bproof)
 
 	outstruct := new(struct {
 		Gas               uint64
-		TotalMessagesRead *big.Int
+		AfterMessagesRead *big.Int
 		Fields            [4][32]byte
 	})
 	if err != nil {
@@ -192,44 +192,44 @@ func (_IOneStepProof *IOneStepProofCaller) ExecuteStep(opts *bind.CallOpts, brid
 	}
 
 	outstruct.Gas = *abi.ConvertType(out[0], new(uint64)).(*uint64)
-	outstruct.TotalMessagesRead = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.AfterMessagesRead = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
 	outstruct.Fields = *abi.ConvertType(out[2], new([4][32]byte)).(*[4][32]byte)
 
 	return *outstruct, err
 
 }
 
-// ExecuteStep is a free data retrieval call binding the contract method 0x9d16dd04.
+// ExecuteStep is a free data retrieval call binding the contract method 0x47dda1d6.
 //
-// Solidity: function executeStep(address bridge, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 totalMessagesRead, bytes32[4] fields)
-func (_IOneStepProof *IOneStepProofSession) ExecuteStep(bridge common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
+// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[4] fields)
+func (_IOneStepProof *IOneStepProofSession) ExecuteStep(bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	Gas               uint64
-	TotalMessagesRead *big.Int
+	AfterMessagesRead *big.Int
 	Fields            [4][32]byte
 }, error) {
-	return _IOneStepProof.Contract.ExecuteStep(&_IOneStepProof.CallOpts, bridge, initialMessagesRead, accs, proof, bproof)
+	return _IOneStepProof.Contract.ExecuteStep(&_IOneStepProof.CallOpts, bridges, initialMessagesRead, accs, proof, bproof)
 }
 
-// ExecuteStep is a free data retrieval call binding the contract method 0x9d16dd04.
+// ExecuteStep is a free data retrieval call binding the contract method 0x47dda1d6.
 //
-// Solidity: function executeStep(address bridge, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 totalMessagesRead, bytes32[4] fields)
-func (_IOneStepProof *IOneStepProofCallerSession) ExecuteStep(bridge common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
+// Solidity: function executeStep(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(uint64 gas, uint256 afterMessagesRead, bytes32[4] fields)
+func (_IOneStepProof *IOneStepProofCallerSession) ExecuteStep(bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	Gas               uint64
-	TotalMessagesRead *big.Int
+	AfterMessagesRead *big.Int
 	Fields            [4][32]byte
 }, error) {
-	return _IOneStepProof.Contract.ExecuteStep(&_IOneStepProof.CallOpts, bridge, initialMessagesRead, accs, proof, bproof)
+	return _IOneStepProof.Contract.ExecuteStep(&_IOneStepProof.CallOpts, bridges, initialMessagesRead, accs, proof, bproof)
 }
 
-// ExecuteStepDebug is a free data retrieval call binding the contract method 0x2ccebb7a.
+// ExecuteStepDebug is a free data retrieval call binding the contract method 0xeba67f6e.
 //
-// Solidity: function executeStepDebug(address bridge, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(string startMachine, string afterMachine)
-func (_IOneStepProof *IOneStepProofCaller) ExecuteStepDebug(opts *bind.CallOpts, bridge common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
+// Solidity: function executeStepDebug(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(string startMachine, string afterMachine)
+func (_IOneStepProof *IOneStepProofCaller) ExecuteStepDebug(opts *bind.CallOpts, bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	StartMachine string
 	AfterMachine string
 }, error) {
 	var out []interface{}
-	err := _IOneStepProof.contract.Call(opts, &out, "executeStepDebug", bridge, initialMessagesRead, accs, proof, bproof)
+	err := _IOneStepProof.contract.Call(opts, &out, "executeStepDebug", bridges, initialMessagesRead, accs, proof, bproof)
 
 	outstruct := new(struct {
 		StartMachine string
@@ -246,22 +246,22 @@ func (_IOneStepProof *IOneStepProofCaller) ExecuteStepDebug(opts *bind.CallOpts,
 
 }
 
-// ExecuteStepDebug is a free data retrieval call binding the contract method 0x2ccebb7a.
+// ExecuteStepDebug is a free data retrieval call binding the contract method 0xeba67f6e.
 //
-// Solidity: function executeStepDebug(address bridge, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(string startMachine, string afterMachine)
-func (_IOneStepProof *IOneStepProofSession) ExecuteStepDebug(bridge common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
+// Solidity: function executeStepDebug(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(string startMachine, string afterMachine)
+func (_IOneStepProof *IOneStepProofSession) ExecuteStepDebug(bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	StartMachine string
 	AfterMachine string
 }, error) {
-	return _IOneStepProof.Contract.ExecuteStepDebug(&_IOneStepProof.CallOpts, bridge, initialMessagesRead, accs, proof, bproof)
+	return _IOneStepProof.Contract.ExecuteStepDebug(&_IOneStepProof.CallOpts, bridges, initialMessagesRead, accs, proof, bproof)
 }
 
-// ExecuteStepDebug is a free data retrieval call binding the contract method 0x2ccebb7a.
+// ExecuteStepDebug is a free data retrieval call binding the contract method 0xeba67f6e.
 //
-// Solidity: function executeStepDebug(address bridge, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(string startMachine, string afterMachine)
-func (_IOneStepProof *IOneStepProofCallerSession) ExecuteStepDebug(bridge common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
+// Solidity: function executeStepDebug(address[2] bridges, uint256 initialMessagesRead, bytes32[2] accs, bytes proof, bytes bproof) view returns(string startMachine, string afterMachine)
+func (_IOneStepProof *IOneStepProofCallerSession) ExecuteStepDebug(bridges [2]common.Address, initialMessagesRead *big.Int, accs [2][32]byte, proof []byte, bproof []byte) (struct {
 	StartMachine string
 	AfterMachine string
 }, error) {
-	return _IOneStepProof.Contract.ExecuteStepDebug(&_IOneStepProof.CallOpts, bridge, initialMessagesRead, accs, proof, bproof)
+	return _IOneStepProof.Contract.ExecuteStepDebug(&_IOneStepProof.CallOpts, bridges, initialMessagesRead, accs, proof, bproof)
 }

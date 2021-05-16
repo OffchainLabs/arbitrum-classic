@@ -41,7 +41,7 @@ func RunBindingGen() error {
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "bridge"),
-		[]string{"Bridge", "Inbox", "Outbox", "OutboxEntry"},
+		[]string{"Bridge", "Inbox", "Outbox", "OutboxEntry", "SequencerInbox"},
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "validator"),

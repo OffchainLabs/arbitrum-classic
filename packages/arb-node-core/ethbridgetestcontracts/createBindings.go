@@ -26,6 +26,6 @@ import (
 
 func main() {
 	if err := ethbridgetestcontracts.RunBindingGen(); err != nil {
-		log.Error().Err(err).Msg("error generating ethbridge bindings")
+		log.Error().Err(err).Msg("error generating ethbridge test bindings")
 	}
 }

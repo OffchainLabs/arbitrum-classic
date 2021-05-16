@@ -36,7 +36,7 @@ func RunBindingGen() error {
 	)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "rollup"),
-		[]string{"RollupCreatorNoProxy", "NodeFactory"},
+		[]string{"NodeFactory"},
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "arch"),
@@ -44,7 +44,7 @@ func RunBindingGen() error {
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "test_only"),
-		[]string{"ChallengeTester", "MachineTester", "InboxHelperTester"},
+		[]string{"ChallengeTester", "MachineTester", "InboxHelperTester", "BridgeCreatorNoProxy", "RollupCreatorNoProxy"},
 	)...)
 
 	for _, con := range contracts {
