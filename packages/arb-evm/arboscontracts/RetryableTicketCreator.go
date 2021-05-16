@@ -29,11 +29,6 @@ var (
 // RetryableTicketCreatorABI is the input ABI used to generate the binding from.
 const RetryableTicketCreatorABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2CallValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxSubmissionCost\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"excessFeeRefundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"callValueRefundAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPriceBid\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"createRetryableTicket\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
 
-// RetryableTicketCreatorFuncSigs maps the 4-byte function signature to its string representation.
-var RetryableTicketCreatorFuncSigs = map[string]string{
-	"679b6ded": "createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)",
-}
-
 // RetryableTicketCreator is an auto generated Go binding around an Ethereum contract.
 type RetryableTicketCreator struct {
 	RetryableTicketCreatorCaller     // Read-only binding to the contract

@@ -52,7 +52,7 @@ func RunBindingGen() error {
 
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(periph, "contracts", "rpc-utils"),
-		[]string{"NodeInterface"},
+		[]string{"NodeInterface", "RetryableTicketCreator"},
 	)...)
 
 	for _, con := range contracts {
