@@ -18,10 +18,12 @@
 import { ethers, deployments, run } from 'hardhat'
 import { Signer, BigNumberish } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
+import { TransactionResponse } from '@ethersproject/providers'
 import { assert, expect } from 'chai'
 import { Rollup } from '../build/types/Rollup'
 import { Node as NodeCon } from '../build/types/Node'
 import { RollupCreatorNoProxy } from '../build/types/RollupCreatorNoProxy'
+import { RollupCreatorNoProxy__factory } from '../build/types/factories/RollupCreatorNoProxy__factory'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
 import { initializeAccounts } from './utils'
@@ -46,7 +48,6 @@ const minimumAssertionPeriod = 75
 const sequencerDelayBlocks = 15
 const sequencerDelaySeconds = 900
 
-let rollupCreator: RollupCreatorNoProxy
 let rollup: RollupContract
 let challenge: Challenge
 // let rollupTester: RollupTester
@@ -57,7 +58,12 @@ async function createRollup(): Promise<{
   rollupCon: Rollup
   blockCreated: number
 }> {
-  const tx = rollupCreator.createRollupNoProxy(
+  const ChallengeFactory = await deployments.get('ChallengeFactory')
+  const RollupCreatorNoProxy = (await ethers.getContractFactory(
+    'RollupCreatorNoProxy'
+  )) as RollupCreatorNoProxy__factory
+  const rollupCreator = await RollupCreatorNoProxy.deploy(
+    ChallengeFactory.address,
     initialVmState,
     confirmationPeriodBlocks,
     0,
@@ -71,7 +77,7 @@ async function createRollup(): Promise<{
     '0x'
   )
 
-  const receipt = await (await tx).wait()
+  const receipt = await (rollupCreator.deployTransaction as TransactionResponse).wait()
   if (receipt.logs == undefined) {
     throw Error('expected receipt to have logs')
   }
@@ -141,12 +147,8 @@ let prevNode: Node
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await initializeAccounts()
-    
-    await run("deploy", {"tags": "test"})
 
-    const RollupDeployment = await deployments.get("RollupCreatorNoProxy")
-    const RollupCreatorNoProxy = await ethers.getContractAt("RollupCreatorNoProxy", RollupDeployment.address)
-    rollupCreator = RollupCreatorNoProxy as RollupCreatorNoProxy
+    await run('deploy', { tags: 'test' })
   })
 
   it('should initialize', async function () {

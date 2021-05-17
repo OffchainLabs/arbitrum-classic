@@ -18,44 +18,24 @@
 
 pragma solidity ^0.6.11;
 
-import "./BridgeCreatorNoProxy.sol";
 import "../bridge/Bridge.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 import "../bridge/SequencerInbox.sol";
 import "../rollup/RollupEventBridge.sol";
-
-import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
-import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
+import "../rollup/Rollup.sol";
+import "../rollup/NodeFactory.sol";
 
 import "../rollup/IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "../rollup/RollupLib.sol";
-import "../libraries/CloneFactory.sol";
-import "../libraries/ICloneable.sol";
 
-contract RollupCreatorNoProxy is Ownable, CloneFactory {
+contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress);
 
-    BridgeCreatorNoProxy public bridgeCreator;
-    ICloneable public rollupTemplate;
-    address public challengeFactory;
-    address public nodeFactory;
-
-    function setTemplates(
-        BridgeCreatorNoProxy _bridgeCreator,
-        ICloneable _rollupTemplate,
+    constructor(
         address _challengeFactory,
-        address _nodeFactory
-    ) external onlyOwner {
-        bridgeCreator = _bridgeCreator;
-        rollupTemplate = _rollupTemplate;
-        challengeFactory = _challengeFactory;
-        nodeFactory = _nodeFactory;
-    }
-
-    function createRollupNoProxy(
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
         uint256 _extraChallengeTimeBlocks,
@@ -66,28 +46,28 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
         address _sequencer,
         uint256 _sequencerDelayBlocks,
         uint256 _sequencerDelaySeconds,
-        bytes calldata _extraConfig
-    ) external returns (IRollup) {
-        return
-            createRollupNoProxy(
-                RollupLib.Config(
-                    _machineHash,
-                    _confirmPeriodBlocks,
-                    _extraChallengeTimeBlocks,
-                    _arbGasSpeedLimitPerBlock,
-                    _baseStake,
-                    _stakeToken,
-                    _owner,
-                    _sequencer,
-                    _sequencerDelayBlocks,
-                    _sequencerDelaySeconds,
-                    _extraConfig
-                )
+        bytes memory _extraConfig
+    ) public {
+        RollupLib.Config memory config =
+            RollupLib.Config(
+                _machineHash,
+                _confirmPeriodBlocks,
+                _extraChallengeTimeBlocks,
+                _arbGasSpeedLimitPerBlock,
+                _baseStake,
+                _stakeToken,
+                _owner,
+                _sequencer,
+                _sequencerDelayBlocks,
+                _sequencerDelaySeconds,
+                _extraConfig
             );
+
+        createRollupNoProxy(config, _challengeFactory);
+        selfdestruct(msg.sender);
     }
 
     struct CreateRollupFrame {
-        ProxyAdmin admin;
         Bridge delayedBridge;
         SequencerInbox sequencerInbox;
         Inbox inbox;
@@ -96,16 +76,74 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
         address rollup;
     }
 
-    function createRollupNoProxy(RollupLib.Config memory config) private returns (IRollup) {
+    struct CreateBridgeFrame {
+        Bridge delayedBridge;
+        SequencerInbox sequencerInbox;
+        Inbox inbox;
+        RollupEventBridge rollupEventBridge;
+        Outbox outbox;
+    }
+
+    function createBridge(
+        address rollup,
+        address sequencer,
+        uint256 sequencerDelayBlocks,
+        uint256 sequencerDelaySeconds
+    )
+        private
+        returns (
+            Bridge,
+            SequencerInbox,
+            Inbox,
+            RollupEventBridge,
+            Outbox
+        )
+    {
+        CreateBridgeFrame memory frame;
+        {
+            frame.delayedBridge = new Bridge();
+            frame.sequencerInbox = new SequencerInbox();
+            frame.inbox = new Inbox();
+            frame.rollupEventBridge = new RollupEventBridge();
+            frame.outbox = new Outbox();
+        }
+
+        frame.delayedBridge.initialize();
+        frame.sequencerInbox.initialize(
+            IBridge(frame.delayedBridge),
+            sequencer,
+            sequencerDelayBlocks,
+            sequencerDelaySeconds
+        );
+        frame.inbox.initialize(IBridge(frame.delayedBridge));
+        frame.rollupEventBridge.initialize(address(frame.delayedBridge), rollup);
+        frame.outbox.initialize(rollup, IBridge(frame.delayedBridge));
+
+        frame.delayedBridge.setInbox(address(frame.inbox), true);
+        frame.delayedBridge.transferOwnership(rollup);
+
+        return (
+            frame.delayedBridge,
+            frame.sequencerInbox,
+            frame.inbox,
+            frame.rollupEventBridge,
+            frame.outbox
+        );
+    }
+
+    function createRollupNoProxy(RollupLib.Config memory config, address challengeFactory)
+        private
+        returns (IRollup)
+    {
         CreateRollupFrame memory frame;
-        frame.rollup = createClone(rollupTemplate);
+        frame.rollup = address(new Rollup());
         (
             frame.delayedBridge,
             frame.sequencerInbox,
             frame.inbox,
             frame.rollupEventBridge,
             frame.outbox
-        ) = bridgeCreator.createBridge(
+        ) = createBridge(
             frame.rollup,
             config.sequencer,
             config.sequencerDelayBlocks,
@@ -127,7 +165,7 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
                 address(frame.outbox),
                 address(frame.rollupEventBridge),
                 challengeFactory,
-                nodeFactory
+                address(new NodeFactory())
             ]
         );
         emit RollupCreated(frame.rollup);

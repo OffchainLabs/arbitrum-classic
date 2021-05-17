@@ -29,16 +29,6 @@ var (
 // ArbAggregatorABI is the input ABI used to generate the binding from.
 const ArbAggregatorABI = "[{\"inputs\":[],\"name\":\"getDefaultAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getFeeCollector\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"getPreferredAggregator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newDefault\",\"type\":\"address\"}],\"name\":\"setDefaultAggregator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newFeeCollector\",\"type\":\"address\"}],\"name\":\"setFeeCollector\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"prefAgg\",\"type\":\"address\"}],\"name\":\"setPreferredAggregator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// ArbAggregatorFuncSigs maps the 4-byte function signature to its string representation.
-var ArbAggregatorFuncSigs = map[string]string{
-	"875883f2": "getDefaultAggregator()",
-	"9c2c5bb5": "getFeeCollector(address)",
-	"52f10740": "getPreferredAggregator(address)",
-	"0ffd6650": "setDefaultAggregator(address)",
-	"29149799": "setFeeCollector(address,address)",
-	"6e928a6e": "setPreferredAggregator(address)",
-}
-
 // ArbAggregator is an auto generated Go binding around an Ethereum contract.
 type ArbAggregator struct {
 	ArbAggregatorCaller     // Read-only binding to the contract

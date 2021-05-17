@@ -1,5 +1,7 @@
+// +build ignore
+
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +16,16 @@
  * limitations under the License.
  */
 
-//go:generate ./abigen.sh
+package main
 
-package ethbridgetestcontracts
+import (
+	"github.com/rs/zerolog/log"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+)
+
+func main() {
+	if err := arbostestcontracts.RunBindingGen(); err != nil {
+		log.Error().Err(err).Msg("error generating test contract bindings")
+	}
+}

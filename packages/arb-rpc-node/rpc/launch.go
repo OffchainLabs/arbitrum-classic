@@ -18,9 +18,10 @@ package rpc
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"math/big"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -119,6 +120,12 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
+		feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
+		err = feedBroadcaster.Start(ctx)
+		if err != nil {
+			return nil, errors.Wrap(err, "error starting feed broadcaster")
+		}
+
 		seqBatcher, err := batcher.NewSequencerBatcher(
 			ctx,
 			batcherMode.Core,
@@ -129,7 +136,7 @@ func SetupBatcher(
 			seqInbox,
 			batcherMode.Auth,
 			dataSigner,
-			broadcasterSettings,
+			feedBroadcaster,
 		)
 		if err != nil {
 			return nil, err

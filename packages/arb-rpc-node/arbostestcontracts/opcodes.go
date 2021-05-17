@@ -29,15 +29,6 @@ var (
 // OpCodesABI is the input ABI used to generate the binding from.
 const OpCodesABI = "[{\"inputs\":[],\"name\":\"getBlockHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedSend\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSender\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// OpCodesFuncSigs maps the 4-byte function signature to its string representation.
-var OpCodesFuncSigs = map[string]string{
-	"9663f88f": "getBlockHash()",
-	"03dd3df4": "getNestedOrigin(address)",
-	"84e58c86": "getNestedSend(address)",
-	"df1f29ee": "getOrigin()",
-	"5e01eb5a": "getSender()",
-}
-
 // OpCodesBin is the compiled bytecode used for deploying new contracts.
 var OpCodesBin = "0x608060405234801561001057600080fd5b506101e1806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806303dd3df41461005c5780635e01eb5a1461009e57806384e58c86146100a65780639663f88f146100cc578063df1f29ee146100e6575b600080fd5b6100826004803603602081101561007257600080fd5b50356001600160a01b03166100ee565b604080516001600160a01b039092168252519081900360200190f35b61008261015d565b610082600480360360208110156100bc57600080fd5b50356001600160a01b0316610161565b6100d461019e565b60408051918252519081900360200190f35b6100826101a7565b6000816001600160a01b031663df1f29ee6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561012b57600080fd5b505af115801561013f573d6000803e3d6000fd5b505050506040513d602081101561015557600080fd5b505192915050565b3390565b6000816001600160a01b0316635e01eb5a6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561012b57600080fd5b60001943014090565b329056fea2646970667358221220db04020295ad243f6feb8637234de0c86266105ebfd1d03b6f0037811fa0abe864736f6c634300060c0033"
 

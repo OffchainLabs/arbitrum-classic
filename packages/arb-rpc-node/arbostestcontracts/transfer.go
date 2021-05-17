@@ -29,12 +29,6 @@ var (
 // TransferABI is the input ABI used to generate the binding from.
 const TransferABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"send\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"wrapped\",\"type\":\"address\"}],\"name\":\"send2\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
-// TransferFuncSigs maps the 4-byte function signature to its string representation.
-var TransferFuncSigs = map[string]string{
-	"b46300ec": "send()",
-	"3386b1a2": "send2(address)",
-}
-
 // TransferBin is the compiled bytecode used for deploying new contracts.
 var TransferBin = "0x608060405261016e806100136000396000f3fe60806040526004361061002d5760003560e01c80633386b1a21461006c578063b46300ec146100a157610067565b36610067576040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a1005b600080fd5b34801561007857600080fd5b5061009f6004803603602081101561008f57600080fd5b50356001600160a01b03166100b6565b005b3480156100ad57600080fd5b5061009f61010c565b806001600160a01b031663b46300ec6040518163ffffffff1660e01b8152600401600060405180830381600087803b1580156100f157600080fd5b505af1158015610105573d6000803e3d6000fd5b5050505050565b604051339060009060019082818181858883f19350505050158015610135573d6000803e3d6000fd5b5056fea2646970667358221220d1d89f13d469eedecf3ef86fa714d40ba2b1498fcfeeba68c66d2f31dee63e0064736f6c634300060c0033"
 
