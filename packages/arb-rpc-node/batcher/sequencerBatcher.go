@@ -514,17 +514,13 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		} else {
 			estimatedGasCost += gasCostDelayedMessages
 		}
-		if i != 0 && estimatedGasCost >= gasCostMaximum {
+		if i != 0 && estimatedGasCost >= gasCostMaximum && !skippingImplicitEndOfBlock {
 			break
 		}
 
 		if startDelayedMessagesRead == nil {
 			startDelayedMessagesRead = item.TotalDelayedCount
-		} else if totalDelayedMessagesRead == nil {
-			if item.TotalDelayedCount.Cmp(startDelayedMessagesRead) > 0 {
-				totalDelayedMessagesRead = item.TotalDelayedCount
-			}
-		} else if totalDelayedMessagesRead.Cmp(item.TotalDelayedCount) != 0 {
+		} else if totalDelayedMessagesRead != nil && !skippingImplicitEndOfBlock {
 			break
 		}
 
@@ -532,6 +528,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 			if skippingImplicitEndOfBlock {
 				return false, errors.New("back-to-back delayed messages inserted without end of block")
 			}
+			totalDelayedMessagesRead = item.TotalDelayedCount
 			skippingImplicitEndOfBlock = true
 		} else {
 			if l1BlockNumber == nil {
@@ -559,9 +556,6 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 					return false, errors.New("found non-end-of-block sequencer message after delayed messages")
 				}
 				skippingImplicitEndOfBlock = false
-			} else if totalDelayedMessagesRead != nil {
-				// We're attempting to insert sequencer messages after delayed messages which isn't allowed
-				break
 			} else {
 				transactionsData = append(transactionsData, seqMsg.Data...)
 				transactionsLengths = append(transactionsLengths, big.NewInt(int64(len(seqMsg.Data))))
@@ -640,7 +634,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		return false, err
 	}
 
-	receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, b.client, tx.ToEthHash())
+	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin")
 	if err != nil {
 		return false, err
 	}
