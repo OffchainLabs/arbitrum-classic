@@ -50,7 +50,7 @@ func (m *TestMachine) ExecuteAssertion(
 	for _, d := range debugPrints {
 		parsed, err := handleDebugPrint(d)
 		if err != nil {
-			m.t.Log("raw debugprint", d)
+			m.t.Log("raw debugprint", err, d)
 		} else {
 			m.t.Log("debugprint", parsed)
 		}

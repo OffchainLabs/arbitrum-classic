@@ -18,10 +18,12 @@ package arbosmachine
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -207,6 +209,28 @@ func (e *EVMCallError) MarshalZerologObject(event *zerolog.Event) {
 		Uint64("error_code", e.errorCode)
 }
 
+type EVMTrace struct {
+	Items []evm.TraceItem
+}
+
+func (e *EVMTrace) String() string {
+	builder := &strings.Builder{}
+	builder.WriteString("Tx trace:")
+	for _, item := range e.Items {
+		builder.WriteString("\n")
+		builder.WriteString(item.String())
+	}
+	return builder.String()
+}
+
+func (e *EVMTrace) MarshalZerologObject(event *zerolog.Event) {
+	array := zerolog.Arr()
+	for _, item := range e.Items {
+		array = array.Object(item)
+	}
+	event.Array("items", array)
+}
+
 type ErrorHandlerError struct {
 }
 
@@ -283,6 +307,12 @@ func handleDebugPrint(d value.Value) (EVMLogLine, error) {
 		pc := evmPCInt.BigInt().Uint64()
 
 		return generateLog(txID, currentFrame, parentFrame, "evm_revert", &pc)
+	} else if typ == 20000 {
+		vals, err := evm.NewTraceFromDebugPrint(d)
+		if err != nil {
+			return nil, err
+		}
+		return &EVMTrace{Items: vals}, nil
 	} else {
 		return nil, errors.New("unknown debug print type")
 	}

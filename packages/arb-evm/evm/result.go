@@ -49,8 +49,38 @@ const (
 	InsufficientGasForBaseFee ResultType = 9
 	MinArbGasForContractTx    ResultType = 10
 	GasPriceTooLow            ResultType = 11
-	UnknownErrorCode          ResultType = 255
 )
+
+func (r ResultType) String() string {
+	switch r {
+	case ReturnCode:
+		return "Return"
+	case RevertCode:
+		return "Revert"
+	case CongestionCode:
+		return "Congestion"
+	case InsufficientGasFundsCode:
+		return "InsufficientGasFunds"
+	case InsufficientTxFundsCode:
+		return "InsufficientTxFunds"
+	case BadSequenceCode:
+		return "BadSequence"
+	case InvalidMessageFormatCode:
+		return "InvalidMessageFormat"
+	case ContractAlreadyExists:
+		return "ContractAlreadyExists"
+	case ExceededTxGasLimit:
+		return "ExceededTxGasLimit"
+	case InsufficientGasForBaseFee:
+		return "InsufficientGasForBaseFee"
+	case MinArbGasForContractTx:
+		return "MinArbGasForContractTx"
+	case GasPriceTooLow:
+		return "GasPriceTooLow"
+	default:
+		return "Unknown"
+	}
+}
 
 type Result interface {
 }

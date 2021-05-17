@@ -56,6 +56,21 @@ func BufAndLengthToBytes(sizeInt *big.Int, contents *value.Buffer) ([]byte, erro
 	return data, nil
 }
 
+func BufOffsetAndLengthToBytes(sizeInt, offsetInt *big.Int, contents *value.Buffer) []byte {
+	size := sizeInt.Uint64()
+	offset := offsetInt.Uint64()
+	data := make([]byte, size)
+	if offset > uint64(len(contents.Data())) {
+		return data
+	}
+	max := offset + size
+	if max > uint64(len(contents.Data())) {
+		max = uint64(len(contents.Data()))
+	}
+	copy(data[:], contents.Data()[offset:max])
+	return data
+}
+
 func StackValueToList(val value.Value) ([]value.Value, error) {
 	tupVal, ok := val.(*value.TupleValue)
 	if !ok {
