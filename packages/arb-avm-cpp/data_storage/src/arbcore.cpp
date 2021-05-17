@@ -2149,6 +2149,10 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 delayed_acc);
             if (item.accumulator == 0) {
                 item.accumulator = expected_acc;
+                std::vector<unsigned char> acc_bytes;
+                marshal_uint256_t(item.accumulator, acc_bytes);
+                std::copy(acc_bytes.begin(), acc_bytes.end(),
+                          const_cast<char*>(item_and_slice.second.data()));
             } else if (item.accumulator != expected_acc) {
                 throw std::runtime_error(
                     "Sequencer batch item accumulator didn't match recomputed "
