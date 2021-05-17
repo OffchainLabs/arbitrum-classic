@@ -35,7 +35,6 @@ type SequencerBatchItem struct {
 
 func NewSequencerItem(totalDelayedCount *big.Int, msg InboxMessage, prevAcc common.Hash) SequencerBatchItem {
 	var data []byte
-	data = append(data, "Sequencer message:"...)
 	data = append(data, prevAcc.Bytes()...)
 	data = append(data, math.U256Bytes(msg.InboxSeqNum)...)
 	data = append(data, hashing.SoliditySHA3(

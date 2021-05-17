@@ -40,14 +40,7 @@ uint256_t SequencerBatchItem::computeAccumulator(uint256_t prev_acc,
         marshal_uint256_t(prev_acc, data);
         marshal_uint256_t(last_sequence_number, data);
         auto message = extractInboxMessage(*sequencer_message);
-        std::vector<unsigned char> prefix_data;
-        {
-            prefix_data.insert(prefix_data.end(), message.sender.begin(),
-                               message.sender.end());
-            marshal_uint256_t(message.block_number, prefix_data);
-            marshal_uint256_t(message.timestamp, prefix_data);
-        }
-        marshal_uint256_t(::hash(prefix_data), data);
+        marshal_uint256_t(message.prefixHash(), data);
         marshal_uint256_t(::hash(message.data), data);
     }
     return ::hash(data);

@@ -23,7 +23,14 @@ func TestSequencerGasUsage(t *testing.T) {
 	delayedInboxAddr, _, delayedBridge, err := ethbridgecontracts.DeployBridge(auth, clnt)
 	test.FailIfError(t, err)
 
-	evBridgeAddr, _, evBridge, err := ethbridgecontracts.DeployRollupEventBridge(auth, clnt, delayedInboxAddr, auth.From)
+	_, err = delayedBridge.Initialize(auth)
+	test.FailIfError(t, err)
+
+	evBridgeAddr, _, evBridge, err := ethbridgecontracts.DeployRollupEventBridge(auth, clnt)
+	test.FailIfError(t, err)
+	clnt.Commit()
+
+	_, err = evBridge.Initialize(auth, delayedInboxAddr, auth.From)
 	test.FailIfError(t, err)
 	clnt.Commit()
 
@@ -44,7 +51,11 @@ func TestSequencerGasUsage(t *testing.T) {
 	)
 	test.FailIfError(t, err)
 
-	_, _, seqInbox, err := ethbridgecontracts.DeploySequencerInbox(auth, clnt, delayedInboxAddr, auth.From, big.NewInt(150), big.NewInt(9000))
+	_, _, seqInbox, err := ethbridgecontracts.DeploySequencerInbox(auth, clnt)
+	test.FailIfError(t, err)
+	clnt.Commit()
+
+	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, big.NewInt(150), big.NewInt(9000))
 	test.FailIfError(t, err)
 	clnt.Commit()
 
@@ -59,25 +70,16 @@ func TestSequencerGasUsage(t *testing.T) {
 	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{}, big.NewInt(0))
 	test.FailIfError(t, err)
 
-	initBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        big.NewInt(0),
-		TotalDelayedCount: big.NewInt(1),
-	}
-	err = initBatchItem.RecomputeAccumulator(common.Hash{}, big.NewInt(0), delayedAcc)
+	initBatchItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
 	test.FailIfError(t, err)
-	endBlockBatchItem := inbox.SequencerBatchItem{
-		LastSeqNum:        big.NewInt(1),
-		TotalDelayedCount: big.NewInt(1),
-		SequencerMessage: message.NewInboxMessage(
-			message.EndBlockMessage{},
-			common.Address{},
-			big.NewInt(1),
-			big.NewInt(0),
-			chainTime,
-		).ToBytes(),
-	}
-	err = endBlockBatchItem.RecomputeAccumulator(initBatchItem.Accumulator, big.NewInt(1), common.Hash{})
-	test.FailIfError(t, err)
+	endBlockMsg := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		big.NewInt(1),
+		big.NewInt(0),
+		chainTime,
+	)
+	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endBlockMsg, initBatchItem.Accumulator)
 
 	_, err = seqInbox.AddSequencerL2BatchFromOrigin(
 		auth,
@@ -113,13 +115,7 @@ func TestSequencerGasUsage(t *testing.T) {
 					)
 				}
 
-				batchItem := inbox.SequencerBatchItem{
-					LastSeqNum:        seq,
-					TotalDelayedCount: big.NewInt(1),
-					SequencerMessage:  msg.ToBytes(),
-				}
-				err = batchItem.RecomputeAccumulator(prevAcc, big.NewInt(1), common.Hash{})
-				test.FailIfError(t, err)
+				batchItem := inbox.NewSequencerItem(big.NewInt(1), msg, prevAcc)
 				transactionsData = append(transactionsData, l2Msg.Data...)
 				lengths = append(lengths, big.NewInt(int64(len(l2Msg.Data))))
 				prevAcc = batchItem.Accumulator
