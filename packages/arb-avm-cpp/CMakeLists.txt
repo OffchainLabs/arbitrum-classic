@@ -150,7 +150,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
     if (NOT _isMultiConfig)
         set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
-        set(MIDDLEFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in2)
+        set(MIDDLEFILE ${PROJECT_BINARY_DIR}/cmachine/flags.go.tmp)
         set(OUTFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go)
 
         set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/lib)
