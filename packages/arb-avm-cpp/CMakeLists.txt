@@ -157,8 +157,8 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
         " -L${C_LIBRARY_PATH}"
         " -L${ETHASH_LIB_FOLDER}"
         " -l$<TARGET_FILE_BASE_NAME:cavm>"
-        " -l$<TARGET_FILE_BASE_NAME:avm>"
         " -l$<TARGET_FILE_BASE_NAME:data_storage>"
+        " -l$<TARGET_FILE_BASE_NAME:avm>"
         " -l$<TARGET_FILE_BASE_NAME:avm_values>"
     )
     configure_file( ${INFILE} ${MIDDLEFILE} )
