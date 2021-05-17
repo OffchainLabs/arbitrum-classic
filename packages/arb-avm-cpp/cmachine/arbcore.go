@@ -17,9 +17,6 @@
 package cmachine
 
 /*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
-#cgo linux LDFLAGS: -latomic
 #include "../cavm/carbcore.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
