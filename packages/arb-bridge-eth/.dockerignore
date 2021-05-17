@@ -1,5 +1,7 @@
 arb-provider-ethers
 arb-validator.Dockerfile
+**/arb-avm-cpp/cmachine/flags.go
+**/arb-avm-cpp/cmachine/flags.go.in2
 **/arb-avm-cpp/rocksdb
 **/arb-avm-cpp/rocksdb-prefix
 
