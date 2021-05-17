@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rs/zerolog"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -67,25 +69,11 @@ func deployRollup(
 	test.FailIfError(t, err)
 	challengeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployChallengeFactory(auth, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
-	nodeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployNodeFactory(auth, client)
-	test.FailIfError(t, err)
 
-	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
-	test.FailIfError(t, err)
-
-	bridgeCreatorAddr, _, _, err := ethbridgetestcontracts.DeployBridgeCreatorNoProxy(auth, client)
-	test.FailIfError(t, err)
-
-	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	_, err = rollupCreator.SetTemplates(auth, bridgeCreatorAddr, rollupAddr, challengeFactoryAddr, nodeFactoryAddr)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	tx, err := rollupCreator.CreateRollupNoProxy(
+	_, tx, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(
 		auth,
+		client,
+		challengeFactoryAddr,
 		machineHash,
 		confirmPeriodBlocks,
 		extraChallengeTimeBlocks,
@@ -139,6 +127,9 @@ func generateTxs(t *testing.T, totalCount int, dataSizePerTx int, chainId *big.I
 }
 
 func TestSequencerBatcher(t *testing.T) {
+	zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	defer zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
 	arbosPath, err := arbos.Path()
 	test.FailIfError(t, err)
 
@@ -208,14 +199,6 @@ func TestSequencerBatcher(t *testing.T) {
 	client.Commit()
 	time.Sleep(time.Second)
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
-	}
 	batcher, err := NewSequencerBatcher(
 		ctx,
 		seqMon.Core,
@@ -226,7 +209,7 @@ func TestSequencerBatcher(t *testing.T) {
 		seqInbox,
 		auth,
 		dummyDataSigner,
-		broadcasterSettings,
+		nil,
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true

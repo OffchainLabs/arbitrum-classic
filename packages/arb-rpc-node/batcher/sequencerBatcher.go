@@ -91,7 +91,7 @@ func NewSequencerBatcher(
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
-	broadcasterSettings broadcaster.Settings,
+	broadcaster *broadcaster.Broadcaster,
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -121,13 +121,6 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
-	feedBroadcaster := broadcaster.NewBroadcaster(broadcasterSettings)
-	err = feedBroadcaster.Start(ctx)
-	if err != nil {
-		logger.Warn().Err(err).Msg("error starting feed broadcaster")
-		return nil, err
-	}
-
 	return &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
@@ -136,7 +129,7 @@ func NewSequencerBatcher(
 		sequencerInbox:             sequencerInbox,
 		auth:                       transactAuth,
 		chainTimeCheckInterval:     time.Second,
-		feedBroadcaster:            feedBroadcaster,
+		feedBroadcaster:            broadcaster,
 		dataSigner:                 dataSigner,
 		maxDelayBlocks:             maxDelayBlocks,
 		maxDelaySeconds:            maxDelaySeconds,
@@ -387,9 +380,11 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		return err
 	}
 
-	err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
-	if err != nil {
-		return err
+	if b.feedBroadcaster != nil {
+		err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
+		if err != nil {
+			return err
+		}
 	}
 
 	core.WaitForMachineIdle(b.db)
@@ -464,9 +459,11 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (*b
 		return nil, err
 	}
 
-	err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
-	if err != nil {
-		return nil, err
+	if b.feedBroadcaster != nil {
+		err = b.feedBroadcaster.Broadcast(prevAcc, seqBatchItems, b.dataSigner)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	b.latestChainTime = chainTime
@@ -640,10 +637,12 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		return false, err
 	}
 
-	// Confirm feed messages that are already on chain
-	err = b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
-	if err != nil {
-		return false, err
+	if b.feedBroadcaster != nil {
+		// Confirm feed messages that are already on chain
+		err = b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	if b.logBatchGasCosts {
@@ -656,7 +655,9 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 func (b *SequencerBatcher) Start(ctx context.Context) {
 	logger.Log().Msg("Starting sequencer batch submission thread")
 	firstBoot := true
-	defer b.feedBroadcaster.Stop()
+	if b.feedBroadcaster != nil {
+		defer b.feedBroadcaster.Stop()
+	}
 
 	for {
 		select {
