@@ -17,8 +17,8 @@
 package arbostestcontracts
 
 import (
-	"io/fs"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -28,7 +28,7 @@ import (
 //go:generate go run createBindings.go
 
 func RunBindingGen() error {
-	return filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
+	return filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if filepath.Ext(path) != ".sol" {
 			return nil
 		}
