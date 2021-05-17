@@ -17,9 +17,6 @@
 package cmachine
 
 /*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lkeccak -ldl
-#cgo linux LDFLAGS: -latomic
 #include "../cavm/carbstorage.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,8 +26,9 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )

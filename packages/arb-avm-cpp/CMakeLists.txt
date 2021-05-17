@@ -129,7 +129,8 @@ hunter_add_package(intx)
 find_package(intx CONFIG REQUIRED)
 
 get_target_property(ETHASH_LIB ethash::keccak "LOCATION_Release")
-file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
+get_filename_component(ETHASH_LIB_FOLDER "${ETHASH_LIB}" DIRECTORY)
+
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 
@@ -145,6 +146,24 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm")
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     add_subdirectory(cavm)
+
+    set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
+    set(MIDDLEFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in2)
+    set(OUTFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go)
+
+    set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/lib)
+    set(CFLAGS "-I.")
+    string(CONCAT LDFLAGS
+        " -L${C_LIBRARY_PATH}"
+        " -L${ETHASH_LIB_FOLDER}"
+        " -l$<TARGET_FILE_BASE_NAME:cavm>"
+        " -l$<TARGET_FILE_BASE_NAME:avm>"
+        " -l$<TARGET_FILE_BASE_NAME:data_storage>"
+        " -l$<TARGET_FILE_BASE_NAME:avm_values>"
+    )
+    configure_file( ${INFILE} ${MIDDLEFILE} )
+    file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
+
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app")
     add_subdirectory(app)
