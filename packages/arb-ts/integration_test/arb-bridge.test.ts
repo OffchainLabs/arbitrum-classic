@@ -135,7 +135,7 @@ before('setup', () => {
   })
 })
 
-describe.only('Ether', () => {
+describe('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
 
@@ -367,7 +367,7 @@ describe('ERC20', () => {
   })
 })
 
-describe.skip('CustomToken', () => {
+describe('CustomToken', () => {
   let l1CustomToken: TestCustomTokenL1
   let l2CustomToken: TestArbCustomToken
 
@@ -390,7 +390,7 @@ describe.skip('CustomToken', () => {
       l2CustomToken = await customL2TokenFactory.deploy(
         bridge.arbTokenBridge.address,
         l1CustomToken.address,
-        { gasLimit: utils.parseEther('0.23') }
+        { gasLimit: 100000000 }
       )
       rec = await l2CustomToken.deployTransaction.wait()
       expect(rec.status).to.equal(1)
@@ -398,10 +398,11 @@ describe.skip('CustomToken', () => {
 
       const registerRes = await l1CustomToken.registerTokenOnL2(
         l2CustomToken.address,
-        Zero,
-        BigNumber.from(10000000000000),
-        Zero,
-        l1TestWallet.address
+        BigNumber.from(100000000),
+        BigNumber.from(100000000),
+        BigNumber.from(0),
+        l1TestWallet.address,
+        { gasLimit: 3000000 }
       )
       const registerRec = await registerRes.wait()
       expect(registerRec.status).to.equal(1)
@@ -536,7 +537,8 @@ describe.skip('CustomToken', () => {
   it('withdraw custom token succeeds and emits event data', async () => {
     const withdrawRes = await l2CustomToken.withdraw(
       l1TestWallet.address,
-      tokenWithdrawAmount
+      tokenWithdrawAmount,
+      { gasLimit: 3000000 }
     )
     const withdrawRec = await withdrawRes.wait()
     expect(withdrawRec.status).to.equal(1)
@@ -557,7 +559,7 @@ describe.skip('CustomToken', () => {
   })
 })
 
-describe('CustomToken: no-L2-yet-fallback case', () => {
+describe.skip('CustomToken: no-L2-yet-fallback case', () => {
   let l1CustomToken: TestCustomTokenL1
   before(
     'deploys a new custom token, mints, approves, and registered the L2 side as some rando-address',
