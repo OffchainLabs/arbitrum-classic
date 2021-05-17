@@ -74,11 +74,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 		messages = append(messages, inbox.NewRandomInboxMessage())
 	}
 
-	hash, err := mach.Hash()
-	if err != nil {
-		return nil, nil, err
-	}
-
+	hash := mach.Hash()
 	beforeCut := ExecutionCutJSON{
 		GasUsed:           0,
 		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
@@ -126,11 +122,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return proofs, nil, nil
 		}
 
-		hash, err := mach.Hash()
-		if err != nil {
-			return nil, nil, err
-		}
-
+		hash := mach.Hash()
 		afterCut := ExecutionCutJSON{
 			GasUsed:           beforeCut.GasUsed + a.NumGas,
 			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
@@ -246,7 +238,10 @@ func TestValidateProof(t *testing.T) {
 	test.FailIfError(t, err)
 	delayedBridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
 	test.FailIfError(t, err)
-	sequencerAddr, _, _, err := ethbridgecontracts.DeploySequencerInbox(auth, client, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
+	sequencerAddr, _, sequencerCon, err := ethbridgecontracts.DeploySequencerInbox(auth, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
 	test.FailIfError(t, err)
 	client.Commit()
 

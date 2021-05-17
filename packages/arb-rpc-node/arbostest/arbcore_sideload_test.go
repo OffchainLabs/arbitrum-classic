@@ -55,7 +55,7 @@ package arbostest
 //			},
 //		),
 //	}
-//	_, err = core.DeliverMessagesAndWait(arbCore, messages, common.Hash{}, true)
+//	err = core.DeliverMessagesAndWait(arbCore, messages, common.Hash{}, true)
 //	test.FailIfError(t, err)
 //	for {
 //		if arbCore.MachineIdle() {

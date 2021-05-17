@@ -28,23 +28,38 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //solhint-disable no-inline-assembly
 
 import "./ICloneable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 
 contract CloneFactory {
     using Clones for address;
+    using Address for address;
     string private constant CLONE_MASTER = "CLONE_MASTER";
+    string private constant NO_CLONE_MASTER = "NO_CONTRACT_CLONE_MASTER";
 
-    function createClone(ICloneable target) internal returns (address result) {
+    modifier isCloneable(ICloneable target) {
+        require(address(target).isContract(), NO_CLONE_MASTER);
         require(target.isMaster(), CLONE_MASTER);
+        _;
+    }
+
+    function createClone(ICloneable target) internal isCloneable(target) returns (address result) {
         result = address(target).clone();
     }
 
-    function create2Clone(ICloneable target, bytes32 salt) internal returns (address result) {
-        require(target.isMaster(), CLONE_MASTER);
+    function create2Clone(ICloneable target, bytes32 salt)
+        internal
+        isCloneable(target)
+        returns (address result)
+    {
         result = address(target).cloneDeterministic(salt);
     }
 
-    function calculateCreate2CloneAddress(ICloneable target, bytes32 salt) internal view returns (address calculatedAddress) {
+    function calculateCreate2CloneAddress(ICloneable target, bytes32 salt)
+        internal
+        view
+        returns (address calculatedAddress)
+    {
         calculatedAddress = address(target).predictDeterministicAddress(salt, address(this));
     }
 }

@@ -104,8 +104,11 @@ type ChainConfigOption interface {
 type FeeConfig struct {
 	SpeedLimitPerSecond    *big.Int
 	L1GasPerL2Tx           *big.Int
+	ArbGasPerL2Tx          *big.Int
 	L1GasPerL2Calldata     *big.Int
+	ArbGasPerL2Calldata    *big.Int
 	L1GasPerStorage        *big.Int
+	ArbGasPerStorage       *big.Int
 	ArbGasDivisor          *big.Int
 	NetFeeRecipient        common.Address
 	CongestionFeeRecipient common.Address
@@ -119,8 +122,11 @@ func (c FeeConfig) AsData() []byte {
 	data := make([]byte, 0)
 	data = append(data, math.U256Bytes(c.SpeedLimitPerSecond)...)
 	data = append(data, math.U256Bytes(c.L1GasPerL2Tx)...)
+	data = append(data, math.U256Bytes(c.ArbGasPerL2Tx)...)
 	data = append(data, math.U256Bytes(c.L1GasPerL2Calldata)...)
+	data = append(data, math.U256Bytes(c.ArbGasPerL2Calldata)...)
 	data = append(data, math.U256Bytes(c.L1GasPerStorage)...)
+	data = append(data, math.U256Bytes(c.ArbGasPerStorage)...)
 	data = append(data, math.U256Bytes(c.ArbGasDivisor)...)
 	data = append(data, addressData(c.NetFeeRecipient)...)
 	data = append(data, addressData(c.CongestionFeeRecipient)...)

@@ -21,10 +21,11 @@ pragma solidity ^0.6.11;
 import "./interfaces/ISequencerInbox.sol";
 import "./interfaces/IBridge.sol";
 import "../arch/Marshaling.sol";
+import "../libraries/Cloneable.sol";
 
 import "./Messages.sol";
 
-contract SequencerInbox is ISequencerInbox {
+contract SequencerInbox is ISequencerInbox, Cloneable {
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant END_OF_BLOCK = 6;
 
@@ -38,12 +39,13 @@ contract SequencerInbox is ISequencerInbox {
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
-    constructor(
+    function initialize(
         IBridge _delayedInbox,
         address _sequencer,
         uint256 _maxDelayBlocks,
         uint256 _maxDelaySeconds
-    ) public {
+    ) external {
+        require(address(delayedInbox) == address(0), "ALREADY_INIT");
         delayedInbox = _delayedInbox;
         sequencer = _sequencer;
         maxDelayBlocks = _maxDelayBlocks;

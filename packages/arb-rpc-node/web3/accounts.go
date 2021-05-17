@@ -3,8 +3,9 @@ package web3
 import (
 	"context"
 	"crypto/ecdsa"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -86,7 +87,11 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	}
 	gasPrice := (*big.Int)(args.GasPrice)
 	if gasPrice == nil {
-		gasPrice = (*big.Int)(s.srv.GasPrice())
+		gasPriceRaw, err := s.srv.GasPrice()
+		if err != nil {
+			return [32]byte{}, err
+		}
+		gasPrice = (*big.Int)(gasPriceRaw)
 	}
 	var tx *types.Transaction
 	if args.To != nil {

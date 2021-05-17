@@ -24,7 +24,7 @@ import "../arbitrum/ArbTokenBridge.sol";
 
 contract TestArbCustomToken is aeERC20, IArbToken {
     ArbTokenBridge public bridge;
-    address public l1Address;
+    address public override l1Address;
 
     modifier onlyBridge {
         require(msg.sender == address(bridge), "ONLY_BRIDGE");

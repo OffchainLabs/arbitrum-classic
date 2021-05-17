@@ -75,13 +75,14 @@ func NewForwarder(ctx context.Context, url string) (*Forwarder, error) {
 func (b *Forwarder) PendingTransactionCount(ctx context.Context, account common.Address) *uint64 {
 	nonce, err := b.client.PendingNonceAt(ctx, account.ToEthAddress())
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("Error fetching pending nonce from aggregator")
+		logger.Error().Stack().Err(err).Hex("account", account.Bytes()).Msg("Error fetching pending nonce from arb-node")
 		return nil
 	}
 	return &nonce
 }
 
 func (b *Forwarder) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	logger.Info().Str("hash", tx.Hash().String()).Msg("got user tx")
 	txes := []*types.Transaction{tx}
 	b.newTxFeed.Send(core.NewTxsEvent{Txs: txes})
 	return b.client.SendTransaction(ctx, tx)

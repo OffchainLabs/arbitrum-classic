@@ -4,7 +4,7 @@
 ### Note: run depends on mounting `/home/user/contract.ao` as a volume
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/cpp-base:0.2.5 as arb-avm-cpp
+FROM offchainlabs/cpp-base:0.3.1 as arb-avm-cpp
 
 # Copy external dependencies
 COPY --chown=user arb-avm-cpp/CMakeLists.txt .
@@ -38,7 +38,7 @@ RUN cd build && \
     cd ../ && \
     ./scripts/install-cmachine-build
 
-FROM offchainlabs/backend-base:0.2.8 as arb-validator-builder
+FROM offchainlabs/backend-base:0.3.2 as arb-validator-builder
 
 # Build dependencies
 COPY --chown=user arb-avm-cpp/go.* /home/user/arb-avm-cpp/
@@ -65,10 +65,10 @@ COPY --chown=user arb-rpc-node/ /home/user/arb-rpc-node/
 COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
 
 # Build arb-validator
-RUN cd arb-node-core && go install -v ./cmd/arb-validator && \
+RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
     cd ../arb-rpc-node && go install -v ./cmd/arb-node && go install -v ./cmd/arb-dev-node
 
-FROM offchainlabs/cpp-base:0.2.5 as arb-validator
+FROM offchainlabs/cpp-base:0.3.1 as arb-validator
 # Export binary
 
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin

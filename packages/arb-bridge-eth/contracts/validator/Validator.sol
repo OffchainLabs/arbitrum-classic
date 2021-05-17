@@ -22,22 +22,25 @@ pragma experimental ABIEncoderV2;
 
 import "../rollup/IRollup.sol";
 import "../challenge/IChallenge.sol";
+import "../libraries/Cloneable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract Validator {
-    address owner;
+contract Validator is OwnableUpgradeable, Cloneable {
+    using Address for address;
 
-    constructor() public {
-        owner = msg.sender;
+    function initialize() external initializer {
+        __Ownable_init();
     }
 
     function executeTransactions(
         bytes[] calldata data,
         address[] calldata destination,
         uint256[] calldata amount
-    ) external payable {
-        require(msg.sender == owner, "ONLY_OWNER");
+    ) external payable onlyOwner {
         uint256 numTxes = data.length;
         for (uint256 i = 0; i < numTxes; i++) {
+            if (data[i].length > 0) require(destination[i].isContract(), "NO_CODE_AT_ADDR");
             (bool success, ) = address(destination[i]).call{ value: amount[i] }(data[i]);
             if (!success) {
                 assembly {
@@ -54,8 +57,8 @@ contract Validator {
         bytes calldata data,
         address destination,
         uint256 amount
-    ) external payable {
-        require(msg.sender == owner, "ONLY_OWNER");
+    ) external payable onlyOwner {
+        if (data.length > 0) require(destination.isContract(), "NO_CODE_AT_ADDR");
         (bool success, ) = destination.call{ value: amount }(data);
         if (!success) {
             assembly {
@@ -67,7 +70,10 @@ contract Validator {
         }
     }
 
-    function returnOldDeposits(IRollup rollup, address payable[] calldata stakers) external {
+    function returnOldDeposits(IRollup rollup, address payable[] calldata stakers)
+        external
+        onlyOwner
+    {
         uint256 stakerCount = stakers.length;
         for (uint256 i = 0; i < stakerCount; i++) {
             try rollup.returnOldDeposit(stakers[i]) {} catch (bytes memory error) {
@@ -80,7 +86,7 @@ contract Validator {
         }
     }
 
-    function timeoutChallenges(IChallenge[] calldata challenges) external {
+    function timeoutChallenges(IChallenge[] calldata challenges) external onlyOwner {
         uint256 challengesCount = challenges.length;
         for (uint256 i = 0; i < challengesCount; i++) {
             try challenges[i].timeout() {} catch (bytes memory error) {

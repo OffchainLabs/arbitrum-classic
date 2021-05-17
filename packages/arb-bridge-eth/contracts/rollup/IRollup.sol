@@ -50,6 +50,10 @@ interface IRollup {
         uint256 challengedNode
     );
 
+    event StakerReassigned(address indexed staker, uint256 newNode);
+    event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
+    event OwnerFunctionCalled(uint256 id);
+
     function initialize(
         bytes32 _machineHash,
         uint256 _confirmPeriodBlocks,
@@ -59,7 +63,7 @@ interface IRollup {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[7] calldata connectedContracts
+        address[6] calldata connectedContracts
     ) external;
 
     function completeChallenge(address winningStaker, address losingStaker) external;

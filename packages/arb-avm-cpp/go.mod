@@ -10,3 +10,9 @@ require (
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
+
+replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-core
+
+replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
+
+replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp

@@ -131,6 +131,15 @@ contract RollupCore {
         return _zombies.length;
     }
 
+    function isZombie(address staker) public view returns (bool) {
+        for (uint256 i = 0; i < _zombies.length; i++) {
+            if (staker == _zombies[i].stakerAddress) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * @notice Get the amount of funds withdrawable by the given address
      * @param owner Address to check the funds of
@@ -193,6 +202,10 @@ contract RollupCore {
         return _nodeHashes[index];
     }
 
+    function resetNodeHash(uint256 index) internal {
+        _nodeHashes[index] = 0;
+    }
+
     /**
      * @notice Update the latest node created
      * @param newLatestNodeCreated New value for the latest node created
@@ -212,6 +225,14 @@ contract RollupCore {
         destroyNode(_latestConfirmed);
         _latestConfirmed = _firstUnresolvedNode;
         _firstUnresolvedNode++;
+    }
+
+    /// @notice Confirm the next unresolved node
+    function confirmLatestNode() internal {
+        destroyNode(_latestConfirmed);
+        uint256 latestNode = _latestNodeCreated;
+        _latestConfirmed = latestNode;
+        _firstUnresolvedNode = latestNode + 1;
     }
 
     /**
@@ -342,16 +363,6 @@ contract RollupCore {
     }
 
     /**
-     * @notice Update the latest staked node of the staker at the given addresss
-     * @param stakerAddress Address of the staker to move
-     * @param latest New latest node the staker is staked on
-     */
-    function stakerUpdateLatestStakedNode(address stakerAddress, uint256 latest) internal {
-        Staker storage staker = _stakerMap[stakerAddress];
-        staker.latestStakedNode = latest;
-    }
-
-    /**
      * @notice Advance the given staker to the given node
      * @param stakerAddress Address of the staker adding their stake
      * @param nodeNum Index of the node to stake on
@@ -360,7 +371,7 @@ contract RollupCore {
         address stakerAddress,
         uint256 nodeNum,
         uint256 confirmPeriodBlocks
-    ) internal returns (uint256) {
+    ) internal {
         Staker storage staker = _stakerMap[stakerAddress];
         INode node = _nodes[nodeNum];
         uint256 newStakerCount = node.addStaker(stakerAddress);
@@ -383,6 +394,14 @@ contract RollupCore {
     }
 
     /**
+     * @notice Increase the withdrawable funds for the given address
+     * @param owner Address of the account to add withdrawable funds to
+     */
+    function increaseWithdrawableFunds(address owner, uint256 amount) internal {
+        _withdrawableFunds[owner] = _withdrawableFunds[owner].add(amount);
+    }
+
+    /**
      * @notice Remove the given staker
      * @param stakerAddress Address of the staker to remove
      */
@@ -399,7 +418,7 @@ contract RollupCore {
      * @notice Destroy the given node and clear out its address
      * @param nodeNum Index of the node to remove
      */
-    function destroyNode(uint256 nodeNum) private {
+    function destroyNode(uint256 nodeNum) internal {
         _nodes[nodeNum].destroy();
         _nodes[nodeNum] = INode(0);
     }

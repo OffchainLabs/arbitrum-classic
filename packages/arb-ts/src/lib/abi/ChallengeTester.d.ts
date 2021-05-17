@@ -27,7 +27,7 @@ interface ChallengeTesterInterface extends ethers.utils.Interface {
     'challengeFactory()': FunctionFragment
     'completeChallenge(address,address)': FunctionFragment
     'loser()': FunctionFragment
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)': FunctionFragment
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'winner()': FunctionFragment
   }
 
@@ -54,6 +54,7 @@ interface ChallengeTesterInterface extends ethers.utils.Interface {
       string,
       BigNumberish,
       BigNumberish,
+      string,
       string
     ]
   ): string
@@ -131,18 +132,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -186,18 +189,20 @@ export class ChallengeTester extends Contract {
     challenger: string,
     asserterTimeLeft: BigNumberish,
     challengerTimeLeft: BigNumberish,
-    bridge: string,
+    sequencerBridge: string,
+    delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+  'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
     executionHash: BytesLike,
     maxMessageCount: BigNumberish,
     asserter: string,
     challenger: string,
     asserterTimeLeft: BigNumberish,
     challengerTimeLeft: BigNumberish,
-    bridge: string,
+    sequencerBridge: string,
+    delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -241,18 +246,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -299,18 +306,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -359,18 +368,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

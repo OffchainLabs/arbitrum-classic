@@ -42,31 +42,31 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     bytes32 private cloneableProxyHash;
 
     address public templateERC20;
-    address public l1Pair;
+    address public ethTokenBridge;
 
     // amount of arbgas necessary to send user tokens in case
     // of the "onTokenTransfer" call consumes all available gas
-    uint256 internal constant arbgasReserveIfCallRevert = 250000;
+    uint256 internal constant arbgasReserveIfCallRevert = 2500;
 
     /**
      * @notice This ensures that a method can only be called from the L1 pair of this contract
      */
     modifier onlyEthPair {
-        require(msg.sender == l1Pair, "ONLY_ETH_PAIR");
+        require(msg.sender == ethTokenBridge, "ONLY_ETH_PAIR");
         _;
     }
 
     /**
      * @notice Initialize L2 bridge
-     * @param _l1Pair Address of L1 side of token bridge (EthERC20Bridge.sol)
+     * @param _ethTokenBridge Address of L1 side of token bridge (EthERC20Bridge.sol)
      * @param _templateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
      */
-    function initialize(address _l1Pair, address _templateERC20) external {
-        require(address(l1Pair) == address(0), "already init");
-        require(_l1Pair != address(0), "L1 pair can't be address 0");
+    function initialize(address _ethTokenBridge, address _templateERC20) external {
+        require(_ethTokenBridge != address(0), "L1 pair can't be address 0");
+        require(address(ethTokenBridge) == address(0), "already init");
         templateERC20 = _templateERC20;
 
-        l1Pair = _l1Pair;
+        ethTokenBridge = _ethTokenBridge;
 
         cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
     }
@@ -89,7 +89,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
 
         token.bridgeMint(dest, amount);
 
-        // ~7 300 000 arbgas used to get here
+        // ~73 000 arbgas used to get here
         uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert;
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
@@ -273,7 +273,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     ) internal returns (uint256) {
         uint256 id =
             ArbSys(100).sendTxToL1(
-                l1Pair,
+                ethTokenBridge,
                 abi.encodeWithSelector(
                     IEthERC20Bridge.withdrawFromL2.selector,
                     exitNum,

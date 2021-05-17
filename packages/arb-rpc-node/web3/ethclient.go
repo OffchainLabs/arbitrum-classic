@@ -2,16 +2,19 @@ package web3
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
-	"time"
 )
 
 type EthClient struct {
@@ -82,7 +85,8 @@ func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) 
 }
 
 func (c *EthClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
-	return (*big.Int)(c.srv.GasPrice()), nil
+	gasPriceRaw, err := c.srv.GasPrice()
+	return (*big.Int)(gasPriceRaw), err
 }
 
 func (c *EthClient) EstimateGas(_ context.Context, call ethereum.CallMsg) (uint64, error) {
@@ -140,4 +144,16 @@ func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*
 		return nil, err
 	}
 	return res.ToEthReceipt(arbcommon.NewHashFromEth(block.Header.Hash())), nil
+}
+
+func (c *EthClient) TransactionByHash(_ context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
+	res, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	if err != nil || res == nil {
+		return nil, false, err
+	}
+	tx, err := evm.GetTransaction(res)
+	if err != nil {
+		return nil, false, err
+	}
+	return tx.Tx, false, nil
 }

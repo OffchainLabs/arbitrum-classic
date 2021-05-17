@@ -267,11 +267,6 @@ func (r *RollupWatcher) DelayedBridge(ctx context.Context) (common.Address, erro
 	return common.NewAddressFromEth(addr), errors.WithStack(err)
 }
 
-func (r *RollupWatcher) StakeToken(ctx context.Context) (common.Address, error) {
-	addr, err := r.con.StakeToken(&bind.CallOpts{Context: ctx})
-	return common.NewAddressFromEth(addr), errors.WithStack(err)
-}
-
 func (r *RollupWatcher) StakerCount(ctx context.Context) (*big.Int, error) {
 	count, err := r.con.StakerCount(&bind.CallOpts{Context: ctx})
 	return count, errors.WithStack(err)

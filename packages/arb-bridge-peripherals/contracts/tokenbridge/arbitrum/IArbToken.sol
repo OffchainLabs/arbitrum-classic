@@ -37,4 +37,9 @@ interface IArbToken {
      * @notice withdraw user tokens from L2 to the L1
      */
     function withdraw(address account, uint256 amount) external;
+
+    /**
+     * @return address of layer 1 token
+     */
+    function l1Address() external view returns (address);
 }

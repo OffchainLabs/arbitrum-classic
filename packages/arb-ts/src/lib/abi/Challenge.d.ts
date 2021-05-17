@@ -25,17 +25,18 @@ interface ChallengeInterface extends ethers.utils.Interface {
     'asserter()': FunctionFragment
     'asserterTimeLeft()': FunctionFragment
     'bisectExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32[])': FunctionFragment
-    'bridge()': FunctionFragment
+    'bridges(uint256)': FunctionFragment
     'challengeState()': FunctionFragment
     'challenger()': FunctionFragment
     'challengerTimeLeft()': FunctionFragment
+    'clearChallenge()': FunctionFragment
     'currentResponder()': FunctionFragment
     'currentResponderTimeLeft()': FunctionFragment
     'executors(uint256)': FunctionFragment
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)': FunctionFragment
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'isMaster()': FunctionFragment
     'lastMoveBlock()': FunctionFragment
-    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256[3],bytes,bytes,uint8)': FunctionFragment
+    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32[2],uint256[3],bytes,bytes,uint8)': FunctionFragment
     'proveContinuedExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32)': FunctionFragment
     'timeout()': FunctionFragment
     'turn()': FunctionFragment
@@ -59,7 +60,10 @@ interface ChallengeInterface extends ethers.utils.Interface {
       BytesLike[]
     ]
   ): string
-  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'bridges',
+    values: [BigNumberish]
+  ): string
   encodeFunctionData(
     functionFragment: 'challengeState',
     values?: undefined
@@ -67,6 +71,10 @@ interface ChallengeInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'challenger', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'challengerTimeLeft',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'clearChallenge',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -92,6 +100,7 @@ interface ChallengeInterface extends ethers.utils.Interface {
       string,
       BigNumberish,
       BigNumberish,
+      string,
       string
     ]
   ): string
@@ -109,8 +118,7 @@ interface ChallengeInterface extends ethers.utils.Interface {
       BigNumberish,
       BytesLike,
       BigNumberish,
-      BytesLike,
-      BytesLike,
+      [BytesLike, BytesLike],
       [BigNumberish, BigNumberish, BigNumberish],
       BytesLike,
       BytesLike,
@@ -141,7 +149,7 @@ interface ChallengeInterface extends ethers.utils.Interface {
     functionFragment: 'bisectExecution',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridges', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'challengeState',
     data: BytesLike
@@ -149,6 +157,10 @@ interface ChallengeInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'challenger', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'challengerTimeLeft',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'clearChallenge',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -243,9 +255,12 @@ export class Challenge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    bridge(overrides?: CallOverrides): Promise<[string]>
+    bridges(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
+    'bridges(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[string]>
 
     challengeState(overrides?: CallOverrides): Promise<[string]>
 
@@ -258,6 +273,10 @@ export class Challenge extends Contract {
     challengerTimeLeft(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'challengerTimeLeft()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
 
     currentResponder(overrides?: CallOverrides): Promise<[string]>
 
@@ -285,11 +304,12 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -298,7 +318,8 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -317,8 +338,7 @@ export class Challenge extends Contract {
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -326,15 +346,14 @@ export class Challenge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256[3],bytes,bytes,uint8)'(
+    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32[2],uint256[3],bytes,bytes,uint8)'(
       _merkleNodes: BytesLike[],
       _merkleRoute: BigNumberish,
       _challengedSegmentStart: BigNumberish,
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -405,9 +424,12 @@ export class Challenge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  bridge(overrides?: CallOverrides): Promise<string>
+  bridges(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-  'bridge()'(overrides?: CallOverrides): Promise<string>
+  'bridges(uint256)'(
+    arg0: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   challengeState(overrides?: CallOverrides): Promise<string>
 
@@ -420,6 +442,10 @@ export class Challenge extends Contract {
   challengerTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
   'challengerTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
+
+  clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
+
+  'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
 
   currentResponder(overrides?: CallOverrides): Promise<string>
 
@@ -445,11 +471,12 @@ export class Challenge extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+  'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
     _executors: string[],
     _resultReceiver: string,
     _executionHash: BytesLike,
@@ -458,7 +485,8 @@ export class Challenge extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -477,8 +505,7 @@ export class Challenge extends Contract {
     _challengedSegmentLength: BigNumberish,
     _oldEndHash: BytesLike,
     _initialMessagesRead: BigNumberish,
-    _initialSendAcc: BytesLike,
-    _initialLogAcc: BytesLike,
+    _initialAccs: [BytesLike, BytesLike],
     _initialState: [BigNumberish, BigNumberish, BigNumberish],
     _executionProof: BytesLike,
     _bufferProof: BytesLike,
@@ -486,15 +513,14 @@ export class Challenge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256[3],bytes,bytes,uint8)'(
+  'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32[2],uint256[3],bytes,bytes,uint8)'(
     _merkleNodes: BytesLike[],
     _merkleRoute: BigNumberish,
     _challengedSegmentStart: BigNumberish,
     _challengedSegmentLength: BigNumberish,
     _oldEndHash: BytesLike,
     _initialMessagesRead: BigNumberish,
-    _initialSendAcc: BytesLike,
-    _initialLogAcc: BytesLike,
+    _initialAccs: [BytesLike, BytesLike],
     _initialState: [BigNumberish, BigNumberish, BigNumberish],
     _executionProof: BytesLike,
     _bufferProof: BytesLike,
@@ -565,9 +591,12 @@ export class Challenge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    bridge(overrides?: CallOverrides): Promise<string>
+    bridges(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
-    'bridge()'(overrides?: CallOverrides): Promise<string>
+    'bridges(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
 
     challengeState(overrides?: CallOverrides): Promise<string>
 
@@ -580,6 +609,10 @@ export class Challenge extends Contract {
     challengerTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
     'challengerTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    clearChallenge(overrides?: CallOverrides): Promise<void>
+
+    'clearChallenge()'(overrides?: CallOverrides): Promise<void>
 
     currentResponder(overrides?: CallOverrides): Promise<string>
 
@@ -605,11 +638,12 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -618,7 +652,8 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -637,8 +672,7 @@ export class Challenge extends Contract {
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -646,15 +680,14 @@ export class Challenge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256[3],bytes,bytes,uint8)'(
+    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32[2],uint256[3],bytes,bytes,uint8)'(
       _merkleNodes: BytesLike[],
       _merkleRoute: BigNumberish,
       _challengedSegmentStart: BigNumberish,
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -745,9 +778,12 @@ export class Challenge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<BigNumber>
+    bridges(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>
 
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
+    'bridges(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     challengeState(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -760,6 +796,10 @@ export class Challenge extends Contract {
     challengerTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
     'challengerTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    clearChallenge(overrides?: Overrides): Promise<BigNumber>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<BigNumber>
 
     currentResponder(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -785,11 +825,12 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -798,7 +839,8 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -817,8 +859,7 @@ export class Challenge extends Contract {
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -826,15 +867,14 @@ export class Challenge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256[3],bytes,bytes,uint8)'(
+    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32[2],uint256[3],bytes,bytes,uint8)'(
       _merkleNodes: BytesLike[],
       _merkleRoute: BigNumberish,
       _challengedSegmentStart: BigNumberish,
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -908,9 +948,15 @@ export class Challenge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    bridges(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    'bridges(uint256)'(
+      arg0: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
     challengeState(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
@@ -925,6 +971,10 @@ export class Challenge extends Contract {
     'challengerTimeLeft()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    clearChallenge(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
     currentResponder(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
@@ -959,11 +1009,12 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -972,7 +1023,8 @@ export class Challenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -991,8 +1043,7 @@ export class Challenge extends Contract {
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,
@@ -1000,15 +1051,14 @@ export class Challenge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32,bytes32,uint256[3],bytes,bytes,uint8)'(
+    'oneStepProveExecution(bytes32[],uint256,uint256,uint256,bytes32,uint256,bytes32[2],uint256[3],bytes,bytes,uint8)'(
       _merkleNodes: BytesLike[],
       _merkleRoute: BigNumberish,
       _challengedSegmentStart: BigNumberish,
       _challengedSegmentLength: BigNumberish,
       _oldEndHash: BytesLike,
       _initialMessagesRead: BigNumberish,
-      _initialSendAcc: BytesLike,
-      _initialLogAcc: BytesLike,
+      _initialAccs: [BytesLike, BytesLike],
       _initialState: [BigNumberish, BigNumberish, BigNumberish],
       _executionProof: BytesLike,
       _bufferProof: BytesLike,

@@ -242,7 +242,7 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     if (!machine_hash) {
         return {0, rocksdb::Status::NotFound()};
     }
-    marshal_uint256_t(*machine.hash(), checkpoint_name);
+    marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
 
     auto transactionResult = getRefCountedData(transaction, key);

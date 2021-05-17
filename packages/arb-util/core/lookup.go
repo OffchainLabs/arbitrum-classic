@@ -41,7 +41,7 @@ const (
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
-	MachineHash() (common.Hash, error)
+	MachineHash() common.Hash
 	TotalMessagesRead() *big.Int
 	InboxAcc() common.Hash
 	SendAcc() common.Hash
@@ -86,18 +86,18 @@ type ArbCoreInbox interface {
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) (bool, error) {
+func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
 	if !db.DeliverMessages(previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
-		return false, errors.New("unable to deliver messages")
+		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)
 	if err != nil {
-		return false, err
+		return err
 	}
-	if status == MessagesSuccess {
-		return true, nil
+	if status != MessagesSuccess {
+		return errors.New("Unexpected status")
 	}
-	return false, errors.New("Unexpected status")
+	return nil
 }
 
 func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
@@ -112,6 +112,16 @@ func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
 		return nil
 	}
 	return errors.New("Unexpected status")
+}
+
+func WaitForMachineIdle(db ArbCore) {
+	for {
+		idle := db.MachineIdle()
+		if idle {
+			break
+		}
+		time.Sleep(time.Millisecond * 20)
+	}
 }
 
 func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
@@ -203,12 +213,8 @@ type ExecutionState struct {
 }
 
 func NewExecutionState(c ExecutionCursor) (*ExecutionState, error) {
-	hash, err := c.MachineHash()
-	if err != nil {
-		return nil, errors.New("unable to compute hash for execution state")
-	}
 	return &ExecutionState{
-		MachineHash:       hash,
+		MachineHash:       c.MachineHash(),
 		InboxAcc:          c.InboxAcc(),
 		TotalMessagesRead: c.TotalMessagesRead(),
 		TotalGasConsumed:  c.TotalGasConsumed(),

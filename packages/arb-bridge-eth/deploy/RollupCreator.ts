@@ -27,7 +27,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 }
 
 module.exports = func
-module.exports.tags = ['RollupCreator']
+module.exports.tags = ['RollupCreator', 'live']
 module.exports.dependencies = [
   'Rollup',
   'ChallengeFactory',

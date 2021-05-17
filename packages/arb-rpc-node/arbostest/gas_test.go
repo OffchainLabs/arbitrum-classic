@@ -86,9 +86,7 @@ func TestGas(t *testing.T) {
 		message.NewSafeL2Message(store2FuncCallTx),
 	}
 
-	logs, _, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
-
+	results, _ := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 
 	checkConstructorResult(t, results[1], connAddress1)

@@ -45,6 +45,13 @@ func NewRandomChainTime() ChainTime {
 	}
 }
 
+func (c ChainTime) Clone() ChainTime {
+	return ChainTime{
+		BlockNum:  c.BlockNum.Clone(),
+		Timestamp: new(big.Int).Set(c.Timestamp),
+	}
+}
+
 type InboxMessage struct {
 	Kind        Type
 	Sender      common.Address
@@ -52,6 +59,12 @@ type InboxMessage struct {
 	GasPrice    *big.Int
 	Data        []byte
 	ChainTime   ChainTime
+}
+
+func GetSequenceNumber(data []byte) *big.Int {
+	seqNumOffset := 85
+	sequenceNum := new(big.Int).SetBytes(data[seqNumOffset : seqNumOffset+32])
+	return sequenceNum
 }
 
 func NewInboxMessageFromData(data []byte) (InboxMessage, error) {

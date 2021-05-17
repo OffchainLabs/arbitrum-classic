@@ -34,6 +34,9 @@ class ExecutionCursor {
     explicit ExecutionCursor(MachineStateKeys machine_)
         : machine(std::move(machine_)) {}
 
+    explicit ExecutionCursor(std::unique_ptr<Machine> machine_)
+        : machine(std::move(machine_)) {}
+
     ~ExecutionCursor() = default;
 
     ExecutionCursor(const ExecutionCursor& rhs)

@@ -38,7 +38,7 @@ func TestMinimumGas(t *testing.T) {
 		Data:        hexutil.MustDecode(arbostestcontracts.FailedSendBin),
 	}
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000),
+		MaxGas:      big.NewInt(10),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
@@ -50,8 +50,7 @@ func TestMinimumGas(t *testing.T) {
 		message.NewSafeL2Message(tx1),
 		message.NewSafeL2Message(tx2),
 	}
-	logs, _, _, _ := runSimpleAssertion(t, messages)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 	incoming := extractIncomingMessages(t, results)
 	l2Messages := filterL2Messages(t, incoming)
 	if len(l2Messages) != 2 {

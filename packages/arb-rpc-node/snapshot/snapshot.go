@@ -65,7 +65,7 @@ func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, target
 		Timestamp: big.NewInt(0),
 	}
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), chainTime)
-	res, err := runTx(mach, inboxMsg, targetHash)
+	res, err := runTx(mach, inboxMsg, targetHash, 100000000000)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 	return s.time.BlockNum
 }
 
-func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.Address, maxAVMGas uint64) (*evm.TxResult, error) {
 	if s.arbosVersion < 3 {
 
 		var dest common.Address
@@ -113,24 +113,24 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		}
 		return s.Call(msg, sender)
 	} else {
-		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, message.NewCompressedECDSAFromEth(tx))
+		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, big.NewInt(0), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
 			return nil, err
 		}
 		targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
 		targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
-		return s.TryTx(gasEstimationMessage, sender, targetHash)
+		return s.TryTx(gasEstimationMessage, sender, targetHash, maxAVMGas)
 	}
 }
 
 func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, error) {
 	targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
-	return s.TryTx(message.NewSafeL2Message(msg), sender, targetHash)
+	return s.TryTx(message.NewSafeL2Message(msg), sender, targetHash, 100000000000)
 }
 
-func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
+func (s *Snapshot) TryTx(msg message.Message, sender common.Address, targetHash common.Hash, maxGas uint64) (*evm.TxResult, error) {
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
-	return runTx(s.mach.Clone(), inboxMsg, targetHash)
+	return runTx(s.mach.Clone(), inboxMsg, targetHash, maxGas)
 }
 
 func (s *Snapshot) BasicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
@@ -161,7 +161,7 @@ func (s *Snapshot) GetBalance(account common.Address) (*big.Int, error) {
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseBalanceResult(res)
+	return arbos.ParseBalanceResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error) {
@@ -172,7 +172,7 @@ func (s *Snapshot) GetTransactionCount(account common.Address) (*big.Int, error)
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseTransactionCountResult(res)
+	return arbos.ParseTransactionCountResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
@@ -183,7 +183,7 @@ func (s *Snapshot) GetCode(account common.Address) ([]byte, error) {
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseCodeResult(res)
+	return arbos.ParseCodeResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.Int, error) {
@@ -194,7 +194,7 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseGetStorageAtResult(res)
+	return arbos.ParseGetStorageAtResult(res.ReturnData)
 }
 
 func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
@@ -205,11 +205,22 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 	if err := checkValidResult(res); err != nil {
 		return nil, err
 	}
-	return arbos.ParseArbOSVersionResult(res)
+	return arbos.ParseArbOSVersionResult(res.ReturnData)
 }
 
-func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash) (*evm.TxResult, error) {
-	assertion, _, steps, err := mach.ExecuteAssertionAdvanced(100000000000, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
+	res, err := s.BasicCall(arbos.GetPricesInWeiData(), common.NewAddressFromEth(arbos.ARB_GAS_INFO_ADDRESS))
+	if err != nil {
+		return [6]*big.Int{}, err
+	}
+	if err := checkValidResult(res); err != nil {
+		return [6]*big.Int{}, err
+	}
+	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
+}
+
+func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash, maxGas uint64) (*evm.TxResult, error) {
+	assertion, _, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 	if err != nil {
 		return nil, err
 	}

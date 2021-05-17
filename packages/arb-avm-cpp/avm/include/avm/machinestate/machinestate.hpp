@@ -87,10 +87,6 @@ struct InboxState {
 
     void addMessage(const MachineMessage& message) {
         accumulator = message.accumulator;
-        if (message.message.inbox_sequence_number != count) {
-            throw std::runtime_error(
-                "Attempted to add non-sequential message to inbox state");
-        }
         count += 1;
     }
 };
@@ -137,7 +133,6 @@ struct MachineStateKeys {
           output(std::move(output_)) {}
 
     MachineStateKeys(const MachineState& machine);
-    std::optional<Tuple> getStagedMessageTuple() const;
 
     uint256_t getTotalMessagesRead() const;
     uint256_t getInboxAcc() const;
@@ -182,17 +177,12 @@ struct MachineState {
     std::vector<unsigned char> marshalState() const;
     BlockReason runOp(OpCode opcode);
     BlockReason runOne();
-    std::optional<uint256_t> hash() const {
-        return MachineStateKeys(*this).machineHash();
-    }
+    uint256_t hash() const { return MachineStateKeys(*this).machineHash(); }
     BlockReason isBlocked(bool newMessages) const;
 
     const CodePoint& loadCurrentInstruction() const;
     uint256_t nextGasCost() const;
 
-    bool stagedMessageEmpty() const;
-    std::optional<uint256_t> getStagedMessageBlockHeight() const;
-    std::optional<Tuple> getStagedMessageTuple() const;
     uint256_t getTotalMessagesRead() const;
 
     void addProcessedMessage(const MachineMessage& message);

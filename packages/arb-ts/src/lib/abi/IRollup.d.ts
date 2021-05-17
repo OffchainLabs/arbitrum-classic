@@ -62,17 +62,23 @@ interface IRollupInterface extends ethers.utils.Interface {
 
   events: {
     'NodeConfirmed(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
-    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
+    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
     'NodeRejected(uint256)': EventFragment
+    'NodesDestroyed(uint256,uint256)': EventFragment
+    'OwnerFunctionCalled(uint256)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
+    'StakerReassigned(address,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'NodeConfirmed'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeRejected'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'NodesDestroyed'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupChallengeStarted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'StakerReassigned'): EventFragment
 }
 
 export class IRollup extends Contract {
@@ -251,12 +257,20 @@ export class IRollup extends Contract {
       nodeHash: null,
       executionHash: null,
       inboxMaxCount: null,
-      afterInboxAcc: null,
+      afterInboxBatchEndCount: null,
+      afterInboxBatchAcc: null,
       assertionBytes32Fields: null,
       assertionIntFields: null
     ): EventFilter
 
     NodeRejected(nodeNum: BigNumberish | null): EventFilter
+
+    NodesDestroyed(
+      startNode: BigNumberish | null,
+      endNode: BigNumberish | null
+    ): EventFilter
+
+    OwnerFunctionCalled(id: null): EventFilter
 
     RollupChallengeStarted(
       challengeContract: string | null,
@@ -266,6 +280,8 @@ export class IRollup extends Contract {
     ): EventFilter
 
     RollupCreated(machineHash: null): EventFilter
+
+    StakerReassigned(staker: string | null, newNode: null): EventFilter
   }
 
   estimateGas: {

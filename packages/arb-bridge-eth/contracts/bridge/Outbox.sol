@@ -27,8 +27,9 @@ import "./interfaces/IBridge.sol";
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
+import "../libraries/Cloneable.sol";
 
-contract Outbox is CloneFactory, IOutbox {
+contract Outbox is CloneFactory, IOutbox, Cloneable {
     using BytesLib for bytes;
 
     bytes1 internal constant MSG_ROOT = 0;
@@ -44,12 +45,13 @@ contract Outbox is CloneFactory, IOutbox {
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
     // be empty outside of transactions
-    address private _sender;
-    uint128 private _l2Block;
-    uint128 private _l1Block;
-    uint128 private _timestamp;
+    address internal _sender;
+    uint128 internal _l2Block;
+    uint128 internal _l1Block;
+    uint128 internal _timestamp;
 
-    constructor(address _rollup, IBridge _bridge) public {
+    function initialize(address _rollup, IBridge _bridge) external {
+        require(rollup == address(0), "ALREADY_INIT");
         rollup = _rollup;
         bridge = _bridge;
         outboxEntryTemplate = ICloneable(new OutboxEntry());
@@ -96,7 +98,7 @@ contract Outbox is CloneFactory, IOutbox {
             bytes32 outputRoot = data.toBytes32(65);
 
             address clone = createClone(outboxEntryTemplate);
-            OutboxEntry(clone).initialize(bridge, outputRoot, numInBatch);
+            OutboxEntry(clone).initialize(outputRoot, numInBatch);
             uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));
             emit OutboxEntryCreated(batchNum, outboxIndex, outputRoot, numInBatch);
@@ -127,7 +129,7 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 l2Timestamp,
         uint256 amount,
         bytes calldata calldataForL1
-    ) external {
+    ) external virtual {
         bytes32 userTx =
             calculateItemHash(
                 l2Sender,
@@ -140,6 +142,7 @@ contract Outbox is CloneFactory, IOutbox {
             );
 
         spendOutput(outboxIndex, proof, index, userTx);
+        emit OutBoxTransactionExecuted(destAddr, l2Sender, outboxIndex, index);
 
         address currentSender = _sender;
         uint128 currentL2Block = _l2Block;
@@ -164,7 +167,7 @@ contract Outbox is CloneFactory, IOutbox {
         bytes32[] memory proof,
         uint256 path,
         bytes32 item
-    ) private {
+    ) internal {
         require(proof.length <= 256, "PROOF_TOO_LONG");
         require(path < 2**proof.length, "PATH_NOT_MINIMAL");
 
@@ -177,39 +180,19 @@ contract Outbox is CloneFactory, IOutbox {
         // a unique leaf. The path itself is not enough since the path length to different
         // leaves could potentially be different
         bytes32 uniqueKey = keccak256(abi.encodePacked(path, proof.length));
+        uint256 numRemaining = outbox.spendOutput(calcRoot, uniqueKey);
 
-        executeBridgeSystemCall(
-            address(outbox),
-            0,
-            abi.encodeWithSelector(OutboxEntry.spendOutput.selector, calcRoot, uniqueKey)
-        );
-
-        if (outbox.numRemaining() == 0) {
-            executeBridgeSystemCall(
-                address(outbox),
-                0,
-                abi.encodeWithSelector(OutboxEntry.destroy.selector)
-            );
+        if (numRemaining == 0) {
+            outbox.destroy();
             outboxes[outboxIndex] = OutboxEntry(address(0));
         }
-    }
-
-    function executeBridgeSystemCall(
-        address destAddr,
-        uint256 amount,
-        bytes memory data
-    ) private {
-        address currentSender = _sender;
-        _sender = address(0);
-        executeBridgeCall(destAddr, amount, data);
-        _sender = currentSender;
     }
 
     function executeBridgeCall(
         address destAddr,
         uint256 amount,
         bytes memory data
-    ) private {
+    ) internal {
         (bool success, bytes memory returndata) = bridge.executeCall(destAddr, amount, data);
         if (!success) {
             if (returndata.length > 0) {

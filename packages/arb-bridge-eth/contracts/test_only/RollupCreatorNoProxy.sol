@@ -18,33 +18,33 @@
 
 pragma solidity ^0.6.11;
 
+import "./BridgeCreatorNoProxy.sol";
 import "../bridge/Bridge.sol";
 import "../bridge/Inbox.sol";
 import "../bridge/Outbox.sol";
 import "../bridge/SequencerInbox.sol";
-import "./RollupEventBridge.sol";
-import "./BridgeCreator.sol";
+import "../rollup/RollupEventBridge.sol";
 
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 
-import "./IRollup.sol";
+import "../rollup/IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
-import "./RollupLib.sol";
+import "../rollup/RollupLib.sol";
 import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
 contract RollupCreatorNoProxy is Ownable, CloneFactory {
     event RollupCreated(address rollupAddress);
 
-    BridgeCreator bridgeCreator;
-    ICloneable rollupTemplate;
-    address challengeFactory;
-    address nodeFactory;
+    BridgeCreatorNoProxy public bridgeCreator;
+    ICloneable public rollupTemplate;
+    address public challengeFactory;
+    address public nodeFactory;
 
     function setTemplates(
-        BridgeCreator _bridgeCreator,
+        BridgeCreatorNoProxy _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
         address _nodeFactory
@@ -122,7 +122,6 @@ contract RollupCreatorNoProxy is Ownable, CloneFactory {
             config.owner,
             config.extraConfig,
             [
-                address(0),
                 address(frame.delayedBridge),
                 address(frame.sequencerInbox),
                 address(frame.outbox),

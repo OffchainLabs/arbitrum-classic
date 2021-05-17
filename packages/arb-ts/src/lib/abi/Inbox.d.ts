@@ -27,6 +27,8 @@ interface InboxInterface extends ethers.utils.Interface {
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'depositEth(address)': FunctionFragment
     'depositEthRetryable(address,uint256,uint256,uint256)': FunctionFragment
+    'initialize(address)': FunctionFragment
+    'isMaster()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
@@ -54,6 +56,8 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'depositEthRetryable',
     values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'initialize', values: [string]): string
+  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
     values: [BigNumberish, BigNumberish, string, BigNumberish, BytesLike]
@@ -96,6 +100,8 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'depositEthRetryable',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
     data: BytesLike
@@ -199,6 +205,20 @@ export class Inbox extends Contract {
       maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    initialize(
+      _bridge: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'initialize(address)'(
+      _bridge: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -347,6 +367,20 @@ export class Inbox extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  initialize(
+    _bridge: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'initialize(address)'(
+    _bridge: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  isMaster(overrides?: CallOverrides): Promise<boolean>
+
+  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+
   sendContractTransaction(
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
@@ -490,6 +524,17 @@ export class Inbox extends Contract {
       maxGasPrice: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    initialize(_bridge: string, overrides?: CallOverrides): Promise<void>
+
+    'initialize(address)'(
+      _bridge: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    isMaster(overrides?: CallOverrides): Promise<boolean>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
 
     sendContractTransaction(
       maxGas: BigNumberish,
@@ -650,6 +695,17 @@ export class Inbox extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    initialize(_bridge: string, overrides?: Overrides): Promise<BigNumber>
+
+    'initialize(address)'(
+      _bridge: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
+
     sendContractTransaction(
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
@@ -797,6 +853,20 @@ export class Inbox extends Contract {
       maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    initialize(
+      _bridge: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'initialize(address)'(
+      _bridge: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     sendContractTransaction(
       maxGas: BigNumberish,

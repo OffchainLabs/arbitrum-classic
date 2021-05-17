@@ -25,6 +25,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/pkg/errors"
 )
 
 func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
@@ -49,6 +50,13 @@ func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.Privat
 func FailIfError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
+		type stackTracer interface {
+			StackTrace() errors.StackTrace
+		}
+		sterr, ok := err.(stackTracer)
+		if ok {
+			t.Log("stack trace for error", sterr.StackTrace())
+		}
 		t.Fatal(err)
 	}
 }

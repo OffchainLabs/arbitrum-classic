@@ -13,4 +13,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 }
 
 module.exports = func
-module.exports.tags = ['BridgeCreator']
+module.exports.tags = ['BridgeCreator', 'live']

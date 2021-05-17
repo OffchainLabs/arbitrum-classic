@@ -23,7 +23,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface ChallengeFactoryInterface extends ethers.utils.Interface {
   functions: {
     'challengeTemplate()': FunctionFragment
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)': FunctionFragment
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'executors(uint256)': FunctionFragment
   }
 
@@ -41,6 +41,7 @@ interface ChallengeFactoryInterface extends ethers.utils.Interface {
       string,
       BigNumberish,
       BigNumberish,
+      string,
       string
     ]
   ): string
@@ -88,11 +89,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -100,7 +102,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -124,11 +127,12 @@ export class ChallengeFactory extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+  'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
     _resultReceiver: string,
     _executionHash: BytesLike,
     _maxMessageCount: BigNumberish,
@@ -136,7 +140,8 @@ export class ChallengeFactory extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -160,11 +165,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -172,7 +178,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<string>
 
@@ -199,11 +206,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -211,7 +219,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -238,11 +247,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -250,7 +260,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

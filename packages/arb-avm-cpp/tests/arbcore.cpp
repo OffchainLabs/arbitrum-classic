@@ -27,20 +27,33 @@
 #include <catch2/catch.hpp>
 #include <nlohmann/json.hpp>
 
-void runCheckArbCore(
-    std::shared_ptr<ArbCore>& arbCore,
-    const std::vector<std::vector<unsigned char>>& raw_seq_batch_items,
-    uint256_t prev_inbox_acc,
-    uint256_t target_message_count,
-    int send_count,
-    int log_count) {
-    auto initial_count_res = arbCore->messageEntryInsertedCount();
-    REQUIRE(initial_count_res.status.ok());
+std::vector<unsigned char> serializeForCore(
+    const SequencerBatchItem& batch_item) {
+    std::vector<unsigned char> full_batch_data;
+    marshal_uint256_t(batch_item.last_sequence_number, full_batch_data);
+    auto batch_data_part = serializeSequencerBatchItem(batch_item);
+    full_batch_data.insert(full_batch_data.end(), batch_data_part.begin(),
+                           batch_data_part.end());
+    return full_batch_data;
+}
 
-    REQUIRE(arbCore->deliverMessages(prev_inbox_acc, raw_seq_batch_items,
-                                     std::vector<std::vector<unsigned char>>(),
-                                     std::nullopt));
+std::vector<SequencerBatchItem> buildBatch(
+    const std::vector<InboxMessage>& inbox_messages) {
+    std::vector<SequencerBatchItem> seq_batch_items;
+    seq_batch_items.reserve(inbox_messages.size());
+    uint256_t last_item_acc = 0;
+    for (const auto& msg : inbox_messages) {
+        SequencerBatchItem batch_item = {msg.inbox_sequence_number, 0, 0,
+                                         msg.serialize()};
+        batch_item.accumulator =
+            batch_item.computeAccumulator(last_item_acc, 0, 0);
+        last_item_acc = batch_item.accumulator;
+        seq_batch_items.push_back(batch_item);
+    }
+    return seq_batch_items;
+}
 
+void waitForDelivery(std::shared_ptr<ArbCore>& arbCore) {
     ArbCore::message_status_enum status;
     while (true) {
         status = arbCore->messagesStatus();
@@ -54,6 +67,28 @@ void runCheckArbCore(
         INFO(arbCore->messagesClearError());
     }
     REQUIRE(status == ArbCore::MESSAGES_SUCCESS);
+
+}
+
+void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
+                     const std::vector<SequencerBatchItem>& seq_batch_items,
+                     uint256_t prev_inbox_acc,
+                     uint256_t target_message_count,
+                     int send_count,
+                     int log_count) {
+    auto initial_count_res = arbCore->messageEntryInsertedCount();
+    REQUIRE(initial_count_res.status.ok());
+
+    std::vector<std::vector<unsigned char>> raw_seq_batch_items;
+    for (const auto& batch_item : seq_batch_items) {
+        raw_seq_batch_items.push_back(serializeForCore(batch_item));
+    }
+
+    REQUIRE(arbCore->deliverMessages(prev_inbox_acc, raw_seq_batch_items,
+                                     std::vector<std::vector<unsigned char>>(),
+                                     std::nullopt));
+
+    waitForDelivery(arbCore);
 
     int tries = 0;
     while (true) {
@@ -123,22 +158,6 @@ TEST_CASE("ArbCore tests") {
             inbox_messages.push_back(InboxMessage::fromTuple(msg));
         }
 
-        std::vector<std::vector<unsigned char>> raw_seq_batch_items;
-        raw_seq_batch_items.reserve(inbox_messages.size());
-        uint256_t last_item_acc = 0;
-        for (size_t k = 0; k < inbox_messages.size(); k++) {
-            auto& msg = inbox_messages[k];
-            auto msg_tup = msg.toTuple();
-            REQUIRE(hash(msg_tup) == hash(inbox_message_tuples[k]));
-
-            SequencerBatchItem batch_item = {
-                std::get<uint256_t>(msg_tup.get_element(4)), 0, 0,
-                msg.serialize()};
-            batch_item.accumulator =
-                batch_item.computeAccumulator(last_item_acc, 0, 0);
-            last_item_acc = batch_item.accumulator;
-        }
-
         auto logs_json = j.at("logs");
         std::vector<value> logs;
         for (auto& log_json : logs_json) {
@@ -151,8 +170,8 @@ TEST_CASE("ArbCore tests") {
             sends.push_back(send_from_json(send_json));
         }
 
-        runCheckArbCore(arbCore, raw_seq_batch_items, 0,
-                        raw_seq_batch_items.size(), sends.size(), logs.size());
+        runCheckArbCore(arbCore, buildBatch(inbox_messages), 0,
+                        inbox_messages.size(), sends.size(), logs.size());
 
         auto logsRes = arbCore->getLogs(0, logs.size(), value_cache);
         REQUIRE(logsRes.status.ok());
@@ -235,7 +254,6 @@ TEST_CASE("ArbCore tests") {
  impure func main() {
      let blockNum = 0;
      loop {
-         let sameBlockNum = asm(blockNum,) bool { inboxpeek };
          let rawSideloadMsg = asm(blockNum,) any { sideload };
          if (rawSideloadMsg != ()) {
              panic;
@@ -258,15 +276,19 @@ TEST_CASE("ArbCore inbox") {
     auto arbCore = storage.getArbCore();
     REQUIRE(arbCore->startThread());
 
+    std::vector<InboxMessage> inbox_messages;
+    for (int i = 0; i < 5; i++) {
+        auto message = InboxMessage(0, {}, i, 0, i, 0, {});
+        inbox_messages.push_back(message);
+    }
+    auto items = buildBatch(inbox_messages);
+
     uint256_t inbox_acc = 0;
     for (int i = 0; i < 5; i++) {
-        std::vector<std::vector<unsigned char>> raw_seq_batch_items;
-        auto message = InboxMessage(0, {}, i, 0, i, 0, {});
-        raw_seq_batch_items.push_back(message.serialize());
+        auto batch_item = items[i];
         INFO("RUN " << i);
-        runCheckArbCore(arbCore, raw_seq_batch_items, inbox_acc, i + 1, 0,
-                        i + 1);
-        inbox_acc = hash_inbox(inbox_acc, message.serialize());
+        runCheckArbCore(arbCore, {batch_item}, inbox_acc, i + 1, 0, i + 1);
+        inbox_acc = batch_item.accumulator;
     }
     auto tx = storage.makeReadTransaction();
     auto position = arbCore->getSideloadPosition(*tx, 1);
@@ -287,7 +309,46 @@ TEST_CASE("ArbCore inbox") {
 
     auto machine = arbCore->getLastMachine();
     REQUIRE(machine);
-    auto machine_hash = machine->hash();
-    // staged message cannot be resolved at this point
-    REQUIRE(!machine_hash);
+}
+
+TEST_CASE("ArbCore backwards reorg") {
+    ArbStorage storage(dbpath);
+    REQUIRE(
+        storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
+            .ok());
+    auto arbCore = storage.getArbCore();
+    REQUIRE(arbCore->startThread());
+
+    REQUIRE(arbCore->deliverMessages(0, std::vector<std::vector<unsigned char>>(), std::vector<std::vector<unsigned char>>(), 0));
+    waitForDelivery(arbCore);
+    REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
+
+    ValueCache value_cache{2, 0};
+    auto maxGas = std::numeric_limits<uint256_t>::max();
+    auto initialState = arbCore->getExecutionCursor(maxGas, value_cache);
+    REQUIRE(initialState.status.ok());
+    REQUIRE(initialState.data->getTotalMessagesRead() == 0);
+
+    auto message = InboxMessage(0, {}, 0, 0, 0, 0, {});
+
+    std::vector<std::vector<unsigned char>> rawSeqBatchItems;
+    for (const auto& batch_item : buildBatch(std::vector(1, message))) {
+        rawSeqBatchItems.push_back(serializeForCore(batch_item));
+    }
+
+    REQUIRE(arbCore->deliverMessages(0, rawSeqBatchItems, std::vector<std::vector<unsigned char>>(), std::nullopt));
+    waitForDelivery(arbCore);
+
+    auto newState = arbCore->getExecutionCursor(maxGas, value_cache);
+    REQUIRE(newState.status.ok());
+    REQUIRE(newState.data->getTotalMessagesRead() == 1);
+
+    REQUIRE(arbCore->deliverMessages(0, std::vector<std::vector<unsigned char>>(), std::vector<std::vector<unsigned char>>(), 0));
+    waitForDelivery(arbCore);
+
+    auto reorgState = arbCore->getExecutionCursor(maxGas, value_cache);
+    REQUIRE(reorgState.status.ok());
+    REQUIRE(reorgState.data->getTotalMessagesRead() == 0);
+    REQUIRE(reorgState.data->machineHash() == initialState.data->machineHash());
+    REQUIRE(arbCore->getLastMachine()->machine_state.output.fully_processed_inbox.count == 0);
 }

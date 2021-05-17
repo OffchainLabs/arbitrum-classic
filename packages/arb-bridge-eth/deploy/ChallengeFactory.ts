@@ -17,7 +17,7 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 }
 
 module.exports = func
-module.exports.tags = ['ChallengeFactory']
+module.exports.tags = ['ChallengeFactory', 'live', 'test']
 module.exports.dependencies = [
   'OneStepProof',
   'OneStepProof2',

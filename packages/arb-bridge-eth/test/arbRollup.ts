@@ -15,7 +15,7 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, deployments, run } from 'hardhat'
 import { Signer, BigNumberish } from 'ethers'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { assert, expect } from 'chai'
@@ -24,7 +24,6 @@ import { Node as NodeCon } from '../build/types/Node'
 import { RollupCreatorNoProxy } from '../build/types/RollupCreatorNoProxy'
 import { Challenge } from '../build/types/Challenge'
 // import { RollupTester } from '../build/types/RollupTester'
-import deploy_contracts from '../scripts/deploy'
 import { initializeAccounts } from './utils'
 
 import {
@@ -44,6 +43,8 @@ const stakeToken = '0x0000000000000000000000000000000000000000'
 const confirmationPeriodBlocks = 100
 const arbGasSpeedLimitPerBlock = 1000000
 const minimumAssertionPeriod = 75
+const sequencerDelayBlocks = 15
+const sequencerDelaySeconds = 900
 
 let rollupCreator: RollupCreatorNoProxy
 let rollup: RollupContract
@@ -64,6 +65,9 @@ async function createRollup(): Promise<{
     stakeRequirement,
     stakeToken,
     await accounts[0].getAddress(), // owner
+    await accounts[1].getAddress(), // sequencer
+    sequencerDelayBlocks,
+    sequencerDelaySeconds,
     '0x'
   )
 
@@ -124,6 +128,7 @@ async function makeSimpleNode(
     parentNode,
     challengedAssertion,
     zerobytes32,
+    '0x',
     prevNode
   )
   assert.equal(event.nodeHash, node.nodeHash)
@@ -136,7 +141,11 @@ let prevNode: Node
 describe('ArbRollup', () => {
   it('should deploy contracts', async function () {
     accounts = await initializeAccounts()
-    const { RollupCreatorNoProxy } = await deploy_contracts()
+    
+    await run("deploy", {"tags": "test"})
+
+    const RollupDeployment = await deployments.get("RollupCreatorNoProxy")
+    const RollupCreatorNoProxy = await ethers.getContractAt("RollupCreatorNoProxy", RollupDeployment.address)
     rollupCreator = RollupCreatorNoProxy as RollupCreatorNoProxy
   })
 
@@ -184,7 +193,7 @@ describe('ArbRollup', () => {
 
   it('should place stake', async function () {
     const stake = await rollup.currentRequiredStake()
-    await rollup.newStake(0, { value: stake })
+    await rollup.newStake({ value: stake })
   })
 
   it('should place stake on new node', async function () {
@@ -194,7 +203,7 @@ describe('ArbRollup', () => {
   })
 
   it('should let a new staker place on existing node', async function () {
-    await rollup.connect(accounts[1]).newStake(0, { value: 10 })
+    await rollup.connect(accounts[1]).newStake({ value: 10 })
 
     await rollup.connect(accounts[1]).stakeOnExistingNode(1, prevNode.nodeHash)
   })
@@ -276,7 +285,7 @@ describe('ArbRollup', () => {
 
   it('new staker should make a conflicting node', async function () {
     const stake = await rollup.currentRequiredStake()
-    await rollup.connect(accounts[2]).newStake(0, { value: stake })
+    await rollup.connect(accounts[2]).newStake({ value: stake })
 
     await rollup.connect(accounts[2]).stakeOnExistingNode(3, validNode.nodeHash)
 
@@ -365,7 +374,7 @@ describe('ArbRollup', () => {
   it('can add stake', async function () {
     await rollup
       .connect(accounts[2])
-      .addToDeposit(await accounts[2].getAddress(), 0, { value: 5 })
+      .addToDeposit(await accounts[2].getAddress(), { value: 5 })
   })
 
   it('can reduce stake', async function () {
