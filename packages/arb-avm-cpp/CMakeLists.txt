@@ -146,23 +146,27 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm")
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     add_subdirectory(cavm)
+    
+    get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if (NOT _isMultiConfig)
+        set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
+        set(MIDDLEFILE ${PROJECT_BINARY_DIR}/cmachine/flags.go.tmp)
+        set(OUTFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go)
 
-    set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
-    set(MIDDLEFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in2)
-    set(OUTFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go)
-
-    set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/lib)
-    set(CFLAGS "-I.")
-    string(CONCAT LDFLAGS
-        " -L${C_LIBRARY_PATH}"
-        " -L${ETHASH_LIB_FOLDER}"
-        " -l$<TARGET_FILE_BASE_NAME:cavm>"
-        " -l$<TARGET_FILE_BASE_NAME:data_storage>"
-        " -l$<TARGET_FILE_BASE_NAME:avm>"
-        " -l$<TARGET_FILE_BASE_NAME:avm_values>"
-    )
-    configure_file( ${INFILE} ${MIDDLEFILE} )
-    file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
+        set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/lib)
+        set(CFLAGS "-I.")
+        string(CONCAT LDFLAGS
+            " -L${C_LIBRARY_PATH}"
+            " -L${ETHASH_LIB_FOLDER}"
+            " -l$<TARGET_FILE_BASE_NAME:cavm>"
+            " -l$<TARGET_FILE_BASE_NAME:data_storage>"
+            " -l$<TARGET_FILE_BASE_NAME:avm>"
+            " -l$<TARGET_FILE_BASE_NAME:avm_values>"
+            " -l$<TARGET_FILE_BASE_NAME:ff>"
+        )
+        configure_file( ${INFILE} ${MIDDLEFILE} )
+        file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
+    endif()
 
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app")
