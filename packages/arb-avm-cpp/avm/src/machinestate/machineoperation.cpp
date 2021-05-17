@@ -1040,8 +1040,10 @@ void wasm_compile(MachineState& m) {
     m.stack.prepForMod(2);
     auto len = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
+    std::cerr << "compiling " << md << " len " << len << "\n";
     auto res = m.compile.run_wasm(md, len);
-    
+    std::cerr << "compile success\n";
+
     auto bytes = buf2vec(res.buffer, res.buffer_len);
     auto wasm_bytes = buf2vec(md, len);
     auto wasmcp = wasmAvmToCodePoint(res.extra, wasm_bytes);
@@ -1049,7 +1051,7 @@ void wasm_compile(MachineState& m) {
     uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
     uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
 
-    if (hash_value(wasmcp.data->get_element(0)) != hash1 || hash_value(wasmcp.data->get_element(0)) != hash2) {
+    if (hash_value(wasmcp.data->get_element(0)) != hash1 || hash_value(wasmcp.data->get_element(1)) != hash2) {
         std::cerr << "FAIL\n";
     }
 
@@ -1065,6 +1067,7 @@ void wasm_run(MachineState& m) {
     Buffer& md = assumeBuffer(m.stack[1]);
     WasmCodePoint& wasmcp = assumeWasm(m.stack[2]);
     auto res = wasmcp.runner->run_wasm(md, len);
+    std::cerr << "got result " << res.buffer << " len " << res.buffer_len << " " << int(res.buffer.get(0)) << "\n";
     
     Tuple tpl = Tuple(res.buffer, res.buffer_len);
     m.stack.popClear();

@@ -124,6 +124,8 @@ int main(int argc, char* argv[]) {
     saveMachine(*tx, *mach);
     tx->commit();
 
+    std::cerr << "Saved machine\n";
+
     auto mach_hash = mach->hash();
     if (!mach_hash.has_value()) {
         throw std::runtime_error("Can't get machine hash");

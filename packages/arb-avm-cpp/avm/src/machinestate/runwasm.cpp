@@ -128,6 +128,7 @@ void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
 }
 
 RunWasm::RunWasm(std::string fname) {
+    data = new WasmEnvData();
     // Read our input file, which in this case is a wasm text file.
     FILE* file = fopen(fname.c_str(), "r");
     assert(file != NULL);
@@ -142,6 +143,7 @@ RunWasm::RunWasm(std::string fname) {
 }
 
 RunWasm::RunWasm(std::vector<uint8_t> &buf) {
+    data = new WasmEnvData();
     wasm_byte_vec_t wasm;
     wasm_byte_vec_new_uninitialized(&wasm, buf.size());
     for (int i = 0; i < buf.size(); i++) {
@@ -172,7 +174,7 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         exit_with_error(error, NULL);
     }
 
-    WasmEnvData* env = &this->data;
+    WasmEnvData* env = this->data;
 
     // Create external functions
     // printf("Creating get len callback...\n");
@@ -258,8 +260,8 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
 }
 
 WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
-    data.buffer = buf;
-    data.buffer_len = len;
+    data->buffer = buf;
+    data->buffer_len = len;
     wasm_val_t arg_params[1];
     arg_params[0].kind = WASM_I64;
     arg_params[0].of.i64 = 123;
@@ -272,16 +274,16 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
     res_params[0].of.i64 = 123;
     wasm_val_vec_new(&results_vec, 1, res_params);
 
-    data.gas_left = 1000000;
-    data.extra.resize(0);
+    data->gas_left = 1000000;
+    data->extra.resize(0);
 
-    // std::cerr << "Running wasm\n";
+    std::cerr << "Running wasm\n";
     wasmtime_error_t* error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
     if (error != NULL || trap != NULL)
         exit_with_error(error, trap);
-    // std::cerr << "Ran wasm\n";
+    std::cerr << "Ran wasm\n";
 
-    return {data.buffer_len, data.buffer, data.extra, data.gas_left};
+    return {data->buffer_len, data->buffer, data->extra, data->gas_left};
 
 }
 

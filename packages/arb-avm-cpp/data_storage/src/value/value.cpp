@@ -28,6 +28,7 @@
 #include <data_storage/readtransaction.hpp>
 #include <vector>
 
+constexpr int TUP_WASM_CODEPT_LENGTH = 33;
 constexpr int TUP_TUPLE_LENGTH = 33;
 constexpr int TUP_NUM_LENGTH = 33;
 constexpr int TUP_CODEPT_LENGTH = 49;
@@ -104,6 +105,11 @@ std::vector<ParsedTupVal> parseTuple(
             case HASH_PRE_IMAGE: {
                 throw std::runtime_error("HASH_ONLY item");
             }
+            case WASM_CODE_POINT: {
+                return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
+                it += TUP_WASM_CODEPT_LENGTH;
+                break;
+            }
             case TUPLE: {
                 return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
                 it += TUP_TUPLE_LENGTH;
@@ -156,6 +162,17 @@ std::vector<value> serializeValue(
     }
     return ret;
 }
+std::vector<value> serializeValue(
+    const WasmCodePoint& val,
+    std::vector<unsigned char>& value_vector,
+    std::map<uint64_t, uint64_t>&) {
+    std::vector<value> ret{};
+    value_vector.push_back(WASM_CODE_POINT);
+    marshal_uint256_t(hash_value(*val.data), value_vector);
+    ret.push_back(*val.data);
+    return ret;
+}
+
 std::vector<value> serializeValue(const HashPreImage&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
@@ -279,6 +296,13 @@ GetResults processVal(const ReadTransaction& tx,
                       ValueCache& val_cache);
 
 GetResults processVal(const ReadTransaction& tx,
+                      const WasmValueHash& val_hash,
+                      std::vector<ValueBeingParsed>& val_stack,
+                      std::set<uint64_t>& segment_ids,
+                      const uint32_t,
+                      ValueCache& val_cache);
+
+GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
                       std::vector<ValueBeingParsed>& val_stack,
                       std::set<uint64_t>&,
@@ -287,6 +311,15 @@ GetResults processVal(const ReadTransaction& tx,
 
 GetResults getStoredValue(const ReadTransaction& tx,
                           const ValueHash& val_hash) {
+    std::array<unsigned char, 32> hash_key;
+    marshal_uint256_t(val_hash.hash, hash_key);
+    auto key = vecToSlice(hash_key);
+    auto results = getRefCountedData(tx, key);
+    return results;
+}
+
+GetResults getStoredValue(const ReadTransaction& tx,
+                          const WasmValueHash& val_hash) {
     std::array<unsigned char, 32> hash_key;
     marshal_uint256_t(val_hash.hash, hash_key);
     auto key = vecToSlice(hash_key);
@@ -476,8 +509,65 @@ GetResults processVal(const ReadTransaction& tx,
         record);
 }
 
+GetResults processVal(const ReadTransaction& tx,
+                      const WasmValueHash& val_hash,
+                      std::vector<ValueBeingParsed>& val_stack,
+                      std::set<uint64_t>& segment_ids,
+                      const uint32_t,
+                      ValueCache& val_cache) {
+    if (auto val = val_cache.loadIfExists(val_hash.hash)) {
+        // Use cached value
+        return applyValue(std::move(*val), 0, val_stack);
+    }
+
+    // Value not in cache, so need to load from database
+    auto results = getStoredValue(tx, val_hash);
+    if (!results.status.ok()) {
+        return results;
+    }
+
+    auto it = results.stored_value.cbegin();
+    auto record = parseRecord(it);
+
+    return std::visit(
+        [&](const auto& val) {
+            return processVal(tx, val, val_stack, segment_ids,
+                              results.reference_count, val_cache);
+        },
+        record);
+    
+}
+
 GetResults processFirstVal(const ReadTransaction& tx,
                            const ValueHash& val_hash,
+                           std::vector<ValueBeingParsed>& val_stack,
+                           std::set<uint64_t>& segment_ids,
+                           const uint32_t,
+                           ValueCache& val_cache) {
+    if (auto val = val_cache.loadIfExists(val_hash.hash)) {
+        // Use cached value
+        val_stack.emplace_back(std::move(*val), 0);
+        return GetResults{0, rocksdb::Status::OK(), {}};
+    }
+
+    // Value not in cache, so need to load from database
+    auto results = getStoredValue(tx, val_hash);
+    if (!results.status.ok()) {
+        return results;
+    }
+    auto it = results.stored_value.cbegin();
+    auto record = parseRecord(it);
+
+    return std::visit(
+        [&](const auto& val) {
+            return processFirstVal(tx, val, val_stack, segment_ids,
+                                   results.reference_count, val_cache);
+        },
+        record);
+}
+
+GetResults processFirstVal(const ReadTransaction& tx,
+                           const WasmValueHash& val_hash,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
                            const uint32_t,
@@ -609,6 +699,7 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
     std::vector<value> items_to_save{val};
     while (!items_to_save.empty()) {
         auto next_item = std::move(items_to_save.back());
+        // std::cerr << "saving " << next_item << "\n"; 
         items_to_save.pop_back();
         auto hash = hash_value(next_item);
         std::vector<unsigned char> hash_key;

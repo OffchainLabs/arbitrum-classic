@@ -21,7 +21,7 @@
 #include <avm_values/value.hpp>
 
 struct RunWasm : WasmRunner {
-    WasmEnvData data;
+    WasmEnvData* data;
     wasm_func_t* run;
     wasm_trap_t* trap = NULL;
     RunWasm(std::string);

@@ -1167,6 +1167,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
         case OpCode::WASM_COMPILE:
             machineoperation::wasm_compile(*this);
             break;
+        case OpCode::WASM_RUN:
+            machineoperation::wasm_run(*this);
+            break;
         /*****************/
         /*  Precompiles  */
         /*****************/

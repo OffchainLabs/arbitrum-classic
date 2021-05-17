@@ -35,8 +35,11 @@ TEST_CASE("wasm_compile") {
     }
     */
     SECTION("JIT converter") {
-        RunWasm runner("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
+        RunWasm runner0("/home/sami/arbitrum/compiler.wasm");
+        auto runner = runner0;
         // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
+        // auto m0 = MachineState();
+        // auto m = m0;
         auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
         auto bytes = buf2vec(res.buffer, res.buffer_len);

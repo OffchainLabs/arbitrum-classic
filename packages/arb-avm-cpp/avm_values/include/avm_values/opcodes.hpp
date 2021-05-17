@@ -117,9 +117,10 @@ enum class OpCode : uint8_t {
     SET_BUFFER8,
     SET_BUFFER64,
     SET_BUFFER256,
+    WASM_COMPILE,
+    WASM_RUN,
 
     WASM_TEST = 0xf1,
-    WASM_COMPILE = 0xf2,
 };
 
 const std::unordered_map<OpCode, std::string> InstructionNames = {
@@ -209,6 +210,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
 
     {OpCode::WASM_TEST, "wasm_test"},
     {OpCode::WASM_COMPILE, "wasm_compile"},
+    {OpCode::WASM_RUN, "wasm_run"},
 
     {OpCode::ECRECOVER, "ecrecover"},
     {OpCode::ECADD, "ecadd"},
@@ -319,6 +321,8 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::WASM_COMPILE,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
+        {OpCode::WASM_RUN,
+         {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
 
         {OpCode::ECRECOVER,
          {MarshalLevel::SINGLE, MarshalLevel::SINGLE, MarshalLevel::SINGLE,
@@ -418,6 +422,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
                                {OpCode::WASM_TEST, {}},
                                {OpCode::WASM_COMPILE, {}},
+                               {OpCode::WASM_RUN, {}},
 
                                {OpCode::ECRECOVER, {}},
                                {OpCode::ECADD, {}},
@@ -511,6 +516,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
 
     {OpCode::WASM_TEST, 100000},
     {OpCode::WASM_COMPILE, 1000000},
+    {OpCode::WASM_RUN, 1000000},
 
     {OpCode::ECRECOVER, 20000},
     {OpCode::ECADD, 3500},

@@ -50,13 +50,17 @@ struct ValueHash {
     uint256_t hash;
 };
 
+struct WasmValueHash {
+    uint256_t hash;
+};
+
 struct ParsedBuffer {
     uint64_t depth;
     std::vector<uint256_t> nodes;
 };
 
 using ParsedTupVal =
-    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
+    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, WasmValueHash, ParsedBuffer>;
 
 using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
