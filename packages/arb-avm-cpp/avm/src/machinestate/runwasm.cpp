@@ -128,6 +128,29 @@ void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
 }
 
 RunWasm::RunWasm(std::string fname) {
+    // Read our input file, which in this case is a wasm text file.
+    FILE* file = fopen(fname.c_str(), "r");
+    assert(file != NULL);
+    fseek(file, 0L, SEEK_END);
+    size_t file_size = ftell(file);
+    fseek(file, 0L, SEEK_SET);
+    wasm_byte_vec_t wasm;
+    wasm_byte_vec_new_uninitialized(&wasm, file_size);
+    fread(wasm.data, file_size, 1, file);
+    fclose(file);
+    init(wasm);
+}
+
+RunWasm::RunWasm(std::vector<uint8_t> &buf) {
+    wasm_byte_vec_t wasm;
+    wasm_byte_vec_new_uninitialized(&wasm, buf.size());
+    for (int i = 0; i < buf.size(); i++) {
+        wasm.data[i] = buf[i];
+    }
+    init(wasm);
+}
+
+void RunWasm::init(wasm_byte_vec_t wasm) {
     // printf("Initializing... ????\n");
     wasm_engine_t* engine = wasm_engine_new();
     assert(engine != NULL);
@@ -138,18 +161,6 @@ RunWasm::RunWasm(std::string fname) {
     wasm_store_t* store = wasm_store_new(engine);
     assert(store != NULL);
     // printf("Store...%x \n", store);
-
-    // Read our input file, which in this case is a wasm text file.
-    FILE* file = fopen(fname.c_str(), "r");
-    assert(file != NULL);
-    fseek(file, 0L, SEEK_END);
-    size_t file_size = ftell(file);
-    fseek(file, 0L, SEEK_SET);
-    wasm_byte_vec_t wasm;
-    wasm_byte_vec_new_uninitialized(&wasm, file_size);
-    auto read_bytes = fread(wasm.data, file_size, 1, file);
-    // printf("read bytes %li %li\n", read_bytes, file_size);
-    fclose(file);
 
     // Now that we've got our binary webassembly we can compile our module.
     // printf("Compiling module...\n");
@@ -226,14 +237,14 @@ RunWasm::RunWasm(std::string fname) {
         }
     }
     wasm_extern_vec_t imports_vec;
-    printf("Extracting export...\n");
+    // printf("Extracting export...\n");
     wasm_extern_vec_new(&imports_vec, import_vec.size, imports);
     error = wasmtime_instance_new(store, module, &imports_vec, &instance, &this->trap);
     if (instance == NULL)
         exit_with_error(error, trap);
 
     // Lookup our `run` export function
-    printf("Extracting export...\n");
+    // printf("Extracting export...\n");
     wasm_extern_vec_t externs;
     wasm_instance_exports(instance, &externs);
     for (uint64_t i = 0; i < externs.size; i++) {

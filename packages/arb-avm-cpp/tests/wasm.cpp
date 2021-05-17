@@ -48,11 +48,13 @@ TEST_CASE("wasm_compile") {
         boost::algorithm::hex(bytes.begin(), bytes.end(), hexstr.begin());
         std::cerr << "Result hash " << hexstr << "\n";
         std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
-        auto wasmcp = wasmAvmToCodePoint(res.extra);
+        auto wasmcp = wasmAvmToCodePoint(res.extra, buf);
         if (hash_value(wasmcp.data->get_element(0)) != hash1 || hash_value(wasmcp.data->get_element(1)) != hash2) {
             std::cerr << "FAIL\n";
         }
     }
+
+    /*
 
     SECTION("Testing") {
         std::ifstream input("/home/sami/extra.bin", std::ios::binary);
@@ -60,8 +62,10 @@ TEST_CASE("wasm_compile") {
         std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
 
         input.close();
-        wasmAvmToCodePoint(bytes);
+        std::vector<uint8_t> asd;
+        wasmAvmToCodePoint(bytes, asd);
     }
+    */
 }
 
 TEST_CASE("Wasm") {

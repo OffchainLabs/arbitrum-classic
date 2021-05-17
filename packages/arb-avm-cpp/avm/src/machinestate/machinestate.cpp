@@ -430,7 +430,7 @@ value get_int_value(std::vector<uint8_t> bytes, uint64_t offset) {
     return acc;
 }
 
-WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes) {
+WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_t>& wasm_module) {
     // code to hash
     auto code = std::make_shared<Code>(0);
     CodePointStub stub = code->addSegment();
@@ -493,7 +493,8 @@ WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes) {
     std::cerr << "Buffer hash " << intx::to_string(hash_value(Buffer()), 16)
               << "\n";
     std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(stub, table);
-    return {std::move(tpl)};
+    std::shared_ptr<WasmRunner> runner = std::make_shared<RunWasm>(wasm_module);
+    return {std::move(tpl), std::move(runner)};
 }
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf) {
@@ -552,12 +553,10 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
 }
 
 uint256_t runWasmMachine(MachineState &machine_state) {
-    uint256_t start_steps = machine_state.output.total_steps;
     uint256_t start_gas = machine_state.arb_gas_remaining;
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
-    uint256_t initialConsumed = machine_state.getTotalMessagesRead();
     while (true) {
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
@@ -598,7 +597,6 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
     }
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
-    auto opcode = current_op.opcode;
 
     std::cerr << "Final machine opcode " << current_op << "\n";
 

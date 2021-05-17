@@ -97,6 +97,14 @@ Buffer& assumeBuffer(value& val) {
     return *buf;
 }
 
+WasmCodePoint& assumeWasm(value& val) {
+    auto buf = std::get_if<WasmCodePoint>(&val);
+    if (!buf) {
+        throw bad_pop_type{};
+    }
+    return *buf;
+}
+
 void add(MachineState& m) {
     m.stack.prepForMod(2);
     auto& aNum = assumeInt(m.stack[0]);
@@ -1035,7 +1043,8 @@ void wasm_compile(MachineState& m) {
     auto res = m.compile.run_wasm(md, len);
     
     auto bytes = buf2vec(res.buffer, res.buffer_len);
-    auto wasmcp = wasmAvmToCodePoint(res.extra);
+    auto wasm_bytes = buf2vec(md, len);
+    auto wasmcp = wasmAvmToCodePoint(res.extra, wasm_bytes);
 
     uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
     uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
@@ -1047,6 +1056,21 @@ void wasm_compile(MachineState& m) {
     m.stack.popClear();
     m.stack.popClear();
     m.stack.push(std::move(wasmcp));
+    ++m.pc;
+}
+
+void wasm_run(MachineState& m) {
+    m.stack.prepForMod(3);
+    auto len = assumeInt64(assumeInt(m.stack[0]));
+    Buffer& md = assumeBuffer(m.stack[1]);
+    WasmCodePoint& wasmcp = assumeWasm(m.stack[2]);
+    auto res = wasmcp.runner->run_wasm(md, len);
+    
+    Tuple tpl = Tuple(res.buffer, res.buffer_len);
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.popClear();
+    m.stack.push(tpl);
     ++m.pc;
 }
 

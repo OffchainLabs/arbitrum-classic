@@ -29,8 +29,28 @@ HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
 
+struct WasmEnvData {
+    uint64_t buffer_len;
+    Buffer buffer;
+    std::vector<uint8_t> extra;
+    uint64_t gas_left;
+};
+
+struct WasmResult {
+    uint64_t buffer_len;
+    Buffer buffer;
+    std::vector<uint8_t> extra;
+    uint64_t gas_left;
+};
+
+class WasmRunner {
+   public:
+    virtual WasmResult run_wasm(Buffer buf, uint64_t len) = 0;
+};
+
 struct WasmCodePoint {
     std::shared_ptr<Tuple> data;
+    std::shared_ptr<WasmRunner> runner;
     uint256_t hash() const;
 };
 

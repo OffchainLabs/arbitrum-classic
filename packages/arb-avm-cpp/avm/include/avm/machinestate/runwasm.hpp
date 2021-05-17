@@ -18,28 +18,18 @@
 #define runwasm_hpp
 
 #include <wasm.h>
+#include <avm_values/value.hpp>
 
-struct WasmEnvData {
-    uint64_t buffer_len;
-    Buffer buffer;
-    std::vector<uint8_t> extra;
-    uint64_t gas_left;
-};
-
-struct WasmResult {
-    uint64_t buffer_len;
-    Buffer buffer;
-    std::vector<uint8_t> extra;
-    uint64_t gas_left;
-};
-
-struct RunWasm {
+struct RunWasm : WasmRunner {
     WasmEnvData data;
     wasm_func_t* run;
     wasm_trap_t* trap = NULL;
     RunWasm(std::string);
+    RunWasm(std::vector<uint8_t> &);
 
-    WasmResult run_wasm(Buffer buf, uint64_t len);
+    void init(wasm_byte_vec_t wasm);
+
+    virtual WasmResult run_wasm(Buffer buf, uint64_t len);
 
 };
 
