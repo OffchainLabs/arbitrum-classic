@@ -601,21 +601,20 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 				return false, err
 			}
 		}
-		lastAcc := previousSeqBatchAcc
 		for i := range batchItems {
 			item := batchItems[i]
 			if len(item.SequencerMessage) == 0 {
-				lastAcc = item.Accumulator
-				continue
+				item.Accumulator = common.Hash{}
+			} else {
+				seqMsg, err := inbox.NewInboxMessageFromData(item.SequencerMessage)
+				if err != nil {
+					return false, err
+				}
+				seqMsg.ChainTime = newestChainTime
+				item.SequencerMessage = seqMsg.ToBytes()
+				item.Accumulator = common.Hash{}
 			}
-			seqMsg, err := inbox.NewInboxMessageFromData(item.SequencerMessage)
-			if err != nil {
-				return false, err
-			}
-			seqMsg.ChainTime = newestChainTime
-			newItem := inbox.NewSequencerItem(item.TotalDelayedCount, seqMsg, lastAcc)
-			batchItems[i] = newItem
-			lastAcc = newItem.Accumulator
+			batchItems[i] = item
 		}
 		err = core.DeliverMessagesAndWait(b.db, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 		if err != nil {
