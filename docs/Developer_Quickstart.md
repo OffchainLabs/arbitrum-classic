@@ -17,7 +17,7 @@ If you want to get started using Arbitrum with no setup required, check out our 
 
 ### How Can I Develop Locally
 
-The very first step to start building with Arbitrum is [installing](Installation.md) Arbitrum and its dependencies. Next, you'll need to deploy an Arbitrum chain on an L1 blockchain. Arbitrum Rollup supports deployment both on a [local testnet](Local_Blockchain.md) and on the [Rinkeby Testnet](Rinkeby.md). The following quickstart walks through deployment of an Arbitrum Rollup chain on the local testnet.
+The very first step to start building with Arbitrum is [installing](Installation.md) Arbitrum and its dependencies. Next, you'll need to deploy an Arbitrum chain on an L1 blockchain. You can follow the [local testnet guide](Local_Blockchain.md) for a quickstart walkthrough deployment of an Arbitrum Rollup chain on the local testnet.
 
 Note that Arbitrum chains support dynamic launching of contracts, so you don't need to setup an Arbitrum chain for each application you build, and indeed you may deploy your contracts on a testnet chain which you did not launch. The benefits of having multiple applications on the same Arbitrum Rollup chain is that they'll be able to interact synchronously, just as they would if they were launched directly on Ethereum.
 
