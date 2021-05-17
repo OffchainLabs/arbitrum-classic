@@ -570,19 +570,24 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		lastAcc = item.Accumulator
 	}
 
-	delayBlocks := new(big.Int).Sub(b.latestChainTime.BlockNum.AsInt(), l1BlockNumber)
-	delaySeconds := new(big.Int).Sub(b.latestChainTime.Timestamp, l1Timestamp)
+	newestChainTime, err := getChainTime(ctx, b.client)
+	if err != nil {
+		return false, err
+	}
+	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), l1BlockNumber)
+	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, l1Timestamp)
 	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
 		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
 		b.inboxReader.MessageDeliveryMutex.Lock()
 		defer b.inboxReader.MessageDeliveryMutex.Unlock()
+		b.latestChainTime = newestChainTime
 
 		newestMsgCount, err := b.db.GetMessageCount()
 		if err != nil {
 			return false, err
 		}
 		if newestMsgCount.Cmp(newMsgCount) > 0 {
-			newerBatchItems, err := b.db.GetSequencerBatchItems(newMsgCount, newestMsgCount)
+			newerBatchItems, err := b.db.GetSequencerBatchItems(newMsgCount, new(big.Int).Sub(newestMsgCount, newMsgCount))
 			if err != nil {
 				return false, err
 			}
@@ -600,13 +605,14 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, newMsgCount *big.Int
 		for i := range batchItems {
 			item := batchItems[i]
 			if len(item.SequencerMessage) == 0 {
+				lastAcc = item.Accumulator
 				continue
 			}
 			seqMsg, err := inbox.NewInboxMessageFromData(item.SequencerMessage)
 			if err != nil {
 				return false, err
 			}
-			seqMsg.ChainTime = b.latestChainTime
+			seqMsg.ChainTime = newestChainTime
 			newItem := inbox.NewSequencerItem(item.TotalDelayedCount, seqMsg, lastAcc)
 			batchItems[i] = newItem
 			lastAcc = newItem.Accumulator
