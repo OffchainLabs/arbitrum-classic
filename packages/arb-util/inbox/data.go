@@ -36,7 +36,7 @@ func ByteArrayToBytes(val value.Value) ([]byte, error) {
 
 	sizeInt, ok := sizeVal.(value.IntValue)
 	if !ok {
-		return nil, errors.New("size must be an int")
+		return nil, errors.New("byte array size must be an int")
 	}
 	contentsBuffer, ok := contents.(*value.Buffer)
 	if !ok {

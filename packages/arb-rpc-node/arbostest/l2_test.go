@@ -344,7 +344,7 @@ func TestBatch(t *testing.T) {
 	}
 	messages = append(messages, message.NewSafeL2Message(msg))
 
-	results, _ := runTxAssertionWithCount(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1)
+	results, _, _ := runTxAssertionWithCount(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1)
 
 	for i, result := range results[len(messages)-1:] {
 		if result.IncomingRequest.Sender != senders[i] {

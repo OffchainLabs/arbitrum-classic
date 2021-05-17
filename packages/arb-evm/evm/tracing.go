@@ -21,6 +21,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
@@ -66,6 +67,7 @@ type CallTrace struct {
 	To       *common.Address
 	Gas      *big.Int
 	GasPrice *big.Int
+	PC       *uint64
 }
 
 func (t *CallTrace) String() string {
@@ -98,6 +100,7 @@ type ReturnTrace struct {
 	Result     ResultType
 	ReturnData []byte
 	GasUsed    *big.Int
+	PC         *uint64
 }
 
 func (t *ReturnTrace) String() string {
@@ -114,6 +117,7 @@ func (t *ReturnTrace) MarshalZerologObject(event *zerolog.Event) {
 type CreateTrace struct {
 	Code            []byte
 	ContractAddress common.Address
+	PC              *uint64
 }
 
 func (t *CreateTrace) String() string {
@@ -135,6 +139,7 @@ type Create2Trace struct {
 	Creator         common.Address
 	Salt            *big.Int
 	ContractAddress common.Address
+	PC              *uint64
 }
 
 func (t *Create2Trace) String() string {
@@ -221,7 +226,7 @@ func convertByteArrayToBytes(val value.Value) ([]byte, error) {
 
 	sizeInt, ok := size.(value.IntValue)
 	if !ok {
-		return nil, errors.New("size must be an int")
+		return nil, errors.New("bytearray size must be an int")
 	}
 	offsetInt, ok := offset.(value.IntValue)
 	if !ok {
@@ -234,10 +239,25 @@ func convertByteArrayToBytes(val value.Value) ([]byte, error) {
 	return inbox.BufOffsetAndLengthToBytes(sizeInt.BigInt(), offsetInt.BigInt(), bufferBuf), nil
 }
 
+func parsePc(pcVal value.Value) (*uint64, error) {
+	pcInt, ok := pcVal.(value.IntValue)
+	if !ok {
+		return nil, errors.New("to must be an int")
+	}
+	t := pcInt.BigInt()
+
+	var pc *uint64
+	if t.Cmp(math.MaxBig256) != 0 {
+		v := t.Uint64()
+		pc = &v
+	}
+	return pc, nil
+}
+
 func newCallTraceItem(val value.Value) (*CallTrace, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 7 {
-		return nil, errors.New("expected call trace to be tuple of length 7")
+	if !ok || tup.Len() != 8 {
+		return nil, errors.New("expected call trace to be tuple of length 8")
 	}
 	callTypeVal, _ := tup.GetByInt64(0)
 	callDataVal, _ := tup.GetByInt64(1)
@@ -246,6 +266,7 @@ func newCallTraceItem(val value.Value) (*CallTrace, error) {
 	toVal, _ := tup.GetByInt64(4)
 	gasVal, _ := tup.GetByInt64(5)
 	gasPriceVal, _ := tup.GetByInt64(6)
+	pcVal, _ := tup.GetByInt64(7)
 
 	callTypeInt, ok := callTypeVal.(value.IntValue)
 	if !ok {
@@ -283,6 +304,10 @@ func newCallTraceItem(val value.Value) (*CallTrace, error) {
 	if !ok {
 		return nil, errors.New("gas price must be an int")
 	}
+	pc, err := parsePc(pcVal)
+	if err != nil {
+		return nil, err
+	}
 	return &CallTrace{
 		Type:     callType,
 		Data:     callData,
@@ -291,17 +316,19 @@ func newCallTraceItem(val value.Value) (*CallTrace, error) {
 		To:       to,
 		Gas:      gas.BigInt(),
 		GasPrice: gasPrice.BigInt(),
+		PC:       pc,
 	}, nil
 }
 
 func newReturnTraceItem(val value.Value) (*ReturnTrace, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 3 {
-		return nil, errors.New("expected return trace to be tuple of length 3")
+	if !ok || tup.Len() != 4 {
+		return nil, errors.New("expected return trace to be tuple of length 4")
 	}
 	resultVal, _ := tup.GetByInt64(0)
 	returnDataVal, _ := tup.GetByInt64(1)
 	gasUsedVal, _ := tup.GetByInt64(2)
+	pcVal, _ := tup.GetByInt64(3)
 
 	resultInt, ok := resultVal.(value.IntValue)
 	if !ok {
@@ -315,20 +342,27 @@ func newReturnTraceItem(val value.Value) (*ReturnTrace, error) {
 	if !ok {
 		return nil, errors.New("gas used must be an int")
 	}
+	pc, err := parsePc(pcVal)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ReturnTrace{
 		Result:     ResultType(resultInt.BigInt().Int64()),
 		ReturnData: returnData,
 		GasUsed:    gasUsed.BigInt(),
+		PC:         pc,
 	}, nil
 }
 
 func newCreateTraceItem(val value.Value) (*CreateTrace, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 2 {
-		return nil, errors.New("expected create trace to be tuple of length 2")
+	if !ok || tup.Len() != 3 {
+		return nil, errors.New("expected create trace to be tuple of length 3")
 	}
 	codeVal, _ := tup.GetByInt64(0)
 	contractAddressVal, _ := tup.GetByInt64(1)
+	pcVal, _ := tup.GetByInt64(2)
 
 	code, err := convertByteArrayToBytes(codeVal)
 	if err != nil {
@@ -338,21 +372,28 @@ func newCreateTraceItem(val value.Value) (*CreateTrace, error) {
 	if !ok {
 		return nil, errors.New("contract address must be an int")
 	}
+	pc, err := parsePc(pcVal)
+	if err != nil {
+		return nil, err
+	}
+
 	return &CreateTrace{
 		Code:            code,
 		ContractAddress: inbox.NewAddressFromInt(contractAddress),
+		PC:              pc,
 	}, nil
 }
 
 func newCreate2TraceItem(val value.Value) (*Create2Trace, error) {
 	tup, ok := val.(*value.TupleValue)
-	if !ok || tup.Len() != 2 {
-		return nil, errors.New("expected create2 trace to be tuple of length 2")
+	if !ok || tup.Len() != 5 {
+		return nil, errors.New("expected create2 trace to be tuple of length 5")
 	}
 	codeVal, _ := tup.GetByInt64(0)
 	creatorAddressVal, _ := tup.GetByInt64(1)
 	saltVal, _ := tup.GetByInt64(2)
 	contractAddressVal, _ := tup.GetByInt64(3)
+	pcVal, _ := tup.GetByInt64(4)
 
 	code, err := convertByteArrayToBytes(codeVal)
 	if err != nil {
@@ -370,10 +411,16 @@ func newCreate2TraceItem(val value.Value) (*Create2Trace, error) {
 	if !ok {
 		return nil, errors.New("contract address must be an int")
 	}
+	pc, err := parsePc(pcVal)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Create2Trace{
 		Code:            code,
 		Creator:         inbox.NewAddressFromInt(creatorAddress),
 		Salt:            salt.BigInt(),
 		ContractAddress: inbox.NewAddressFromInt(contractAddress),
+		PC:              pc,
 	}, nil
 }

@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package arbosmachine
+package evm
 
 import (
 	"fmt"
@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
@@ -210,7 +209,7 @@ func (e *EVMCallError) MarshalZerologObject(event *zerolog.Event) {
 }
 
 type EVMTrace struct {
-	Items []evm.TraceItem
+	Items []TraceItem
 }
 
 func (e *EVMTrace) String() string {
@@ -242,11 +241,25 @@ func (e *ErrorHandlerError) MarshalZerologObject(event *zerolog.Event) {
 	event.Str("kind", "error_in_error_handler")
 }
 
+type RawDebugPrint struct {
+	Val value.Value
+}
+
+func (r *RawDebugPrint) String() string {
+	return fmt.Sprintf("RawDebugPrint{%v}", r.Val)
+}
+
+func (r *RawDebugPrint) MarshalZerologObject(event *zerolog.Event) {
+	event.
+		Str("kind", "raw").
+		Str("value", r.Val.String())
+}
+
 type EVMLogLine interface {
 	zerolog.LogObjectMarshaler
 }
 
-func handleDebugPrint(d value.Value) (EVMLogLine, error) {
+func NewLogLineFromValue(d value.Value) (EVMLogLine, error) {
 	tup, ok := d.(*value.TupleValue)
 	if !ok || tup.Len() == 0 {
 		return nil, errors.New("expected debugprint to be tuple")
@@ -308,12 +321,12 @@ func handleDebugPrint(d value.Value) (EVMLogLine, error) {
 
 		return generateLog(txID, currentFrame, parentFrame, "evm_revert", &pc)
 	} else if typ == 20000 {
-		vals, err := evm.NewTraceFromDebugPrint(d)
+		vals, err := NewTraceFromDebugPrint(d)
 		if err != nil {
 			return nil, err
 		}
 		return &EVMTrace{Items: vals}, nil
 	} else {
-		return nil, errors.New("unknown debug print type")
+		return &RawDebugPrint{Val: d}, nil
 	}
 }
