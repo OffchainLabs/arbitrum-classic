@@ -69,25 +69,11 @@ func deployRollup(
 	test.FailIfError(t, err)
 	challengeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployChallengeFactory(auth, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
-	nodeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployNodeFactory(auth, client)
-	test.FailIfError(t, err)
 
-	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
-	test.FailIfError(t, err)
-
-	bridgeCreatorAddr, _, _, err := ethbridgetestcontracts.DeployBridgeCreatorNoProxy(auth, client)
-	test.FailIfError(t, err)
-
-	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	_, err = rollupCreator.SetTemplates(auth, bridgeCreatorAddr, rollupAddr, challengeFactoryAddr, nodeFactoryAddr)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	tx, err := rollupCreator.CreateRollupNoProxy(
+	_, tx, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(
 		auth,
+		client,
+		challengeFactoryAddr,
 		machineHash,
 		confirmPeriodBlocks,
 		extraChallengeTimeBlocks,
