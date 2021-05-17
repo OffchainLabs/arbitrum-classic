@@ -139,11 +139,15 @@ export class BridgeHelper {
       utils.concat([
         utils.zeroPad(l2ChainId.toHexString(), 32),
         utils.zeroPad(
-          inboxSequenceNumber.or(BigNumber.from(1).shl(255)).toHexString(),
+          BridgeHelper.bitFlipSeqNum(inboxSequenceNumber).toHexString(),
           32
         ),
       ])
     )
+  }
+
+  static bitFlipSeqNum = (seqNum: BigNumber) => {
+    return seqNum.or(BigNumber.from(1).shl(255))
   }
   /**
    * Calculates hash of L2 side of a "retryable" transaction (L1 to L2 message, message type 9)
@@ -286,7 +290,7 @@ export class BridgeHelper {
   }
 
   static getInboxSeqNumFromContractTransaction = async (
-    l2Transaction: providers.TransactionReceipt,
+    l1Transaction: providers.TransactionReceipt,
     inboxAddress: string
   ) => {
     const factory = new Inbox__factory()
@@ -304,14 +308,14 @@ export class BridgeHelper {
       ),
     }
 
-    const logs = l2Transaction.logs.filter(
+    const logs = l1Transaction.logs.filter(
       log =>
         log.topics[0] === eventTopics.InboxMessageDelivered ||
         log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
     )
 
     if (logs.length === 0) return undefined
-    return logs.map(log => BigNumber.from(log.topics[1]))
+    return logs.map(log => BigNumber.from(log.topics[1]))[0]
   }
 
   static tryGetProof = async (

@@ -162,14 +162,15 @@ export class L1Bridge {
   public async depositETH(
     value: BigNumber,
     destinationAddress?: string,
-    maxGas: BigNumber = BigNumber.from(5000),
+    maxGas: BigNumber = BigNumber.from(3000000),
+    gasPriceBid: BigNumber = BigNumber.from(0),
     overrides: PayableOverrides = {}
   ) {
     const address = destinationAddress || (await this.getWalletAddress())
     const inbox = await this.getInbox()
     return inbox.functions.sendL1FundedContractTransaction(
       maxGas,
-      BigNumber.from(0),
+      gasPriceBid,
       address,
       '0x',
       {

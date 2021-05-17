@@ -103,13 +103,16 @@ export class Bridge extends L2Bridge {
   public async depositETH(
     value: BigNumber,
     destinationAddress?: string,
-    maxGas: BigNumber = BigNumber.from(5000),
+    maxGas: BigNumber = BigNumber.from(3000000),
+    _gasPriceBid?: BigNumber,
     overrides?: PayableOverrides
   ) {
+    const gasPriceBid = _gasPriceBid || (await this.l2Provider.getGasPrice())
     return this.l1Bridge.depositETH(
       value,
       destinationAddress,
       maxGas,
+      gasPriceBid,
       overrides
     )
   }
@@ -202,13 +205,25 @@ export class Bridge extends L2Bridge {
   }
 
   public async getInboxSeqNumFromContractTransaction(
-    l2Transaction: ethers.providers.TransactionReceipt
-  ): Promise<Array<BigNumber> | undefined> {
+    l1Transaction: ethers.providers.TransactionReceipt
+  ): Promise<BigNumber | undefined> {
     return BridgeHelper.getInboxSeqNumFromContractTransaction(
-      l2Transaction,
+      l1Transaction,
       // TODO: we don't need to actually make this query if random address fetches interface
       (await this.l1Bridge.getInbox()).address
     )
+  }
+  public async getL2TxHashByRetryableTicket(
+    l1Transaction: string | ContractReceipt
+  ) {
+    if (typeof l1Transaction == 'string') {
+      l1Transaction = await this.getL1Transaction(l1Transaction)
+    }
+    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+      l1Transaction
+    )
+    if (!inboxSeqNum) throw new Error('Inbox not triggered')
+    return this.calculateL2RetryableTransactionHash(inboxSeqNum)
   }
 
   public getBuddyDeployInL2Transaction(
