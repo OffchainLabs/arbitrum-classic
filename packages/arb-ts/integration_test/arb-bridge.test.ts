@@ -135,7 +135,7 @@ before('setup', () => {
   })
 })
 
-describe('Ether', () => {
+describe.only('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
 
@@ -158,6 +158,20 @@ describe('Ether', () => {
     expect(rec.status).to.equal(1)
     const finalInboxBalance = await ethProvider.getBalance(inbox.address)
     expect(initialInboxBalance.add(ethToL2DepositAmount).eq(finalInboxBalance))
+
+    const seqNum = await bridge.getInboxSeqNumFromContractTransaction(rec)
+    expect(seqNum).to.exist
+    if (!seqNum) return
+    const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
+    prettyLog('l2TxHash: ' + l2TxHash)
+    prettyLog('waiting for l2 transaction:')
+    const l2TxnRec = await arbProvider.waitForTransaction(
+      l2TxHash,
+      undefined,
+      120 * 1000
+    )
+    prettyLog('l2 transaction found!')
+    expect(l2TxnRec.status).to.equal(1)
   })
   it('L2 address has expected balance after deposit eth', async () => {
     for (let i = 0; i < 60; i++) {
@@ -284,6 +298,7 @@ describe('ERC20', () => {
     console.warn('l2RedeemHash', l2RedeemHash)
     const redeemReceipt = await arbProvider.waitForTransaction(l2RetryableHash)
     console.warn('redeemReceipt', redeemReceipt)
+    expect(redeemReceipt.status).to.equal(1)
 
     console.warn('l2RetryableHash', l2RetryableHash)
 
