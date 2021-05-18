@@ -261,3 +261,37 @@ func TestNonAggregatorFee(t *testing.T) {
 	test.FailIfError(t, err)
 	checkFees(t, backend, tx)
 }
+
+func TestDeposit(t *testing.T) {
+	skipBelowVersion(t, 3)
+	backend, _, client, _, _, _, _, _, cancel := setupFeeChain(t)
+	defer cancel()
+
+	tx := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(5000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.RandAddress(),
+				Payment:     big.NewInt(0),
+				Data:        nil,
+			},
+		}),
+	}
+	txHash, err := backend.AddInboxMessage(tx, common.RandAddress())
+	test.FailIfError(t, err)
+
+	receipt, err := client.TransactionReceipt(context.Background(), txHash.ToEthHash())
+	test.FailIfError(t, err)
+
+	if receipt == nil {
+		t.Fatal("expected receipt")
+	}
+
+	//receipt.BlockHash
+
+	arbRes, err := backend.db.GetRequest(txHash)
+	test.FailIfError(t, err)
+
+	t.Log("arbRes", arbRes.IncomingRequest.Kind)
+}
