@@ -36,7 +36,7 @@ func RunBindingGen() error {
 	)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "rollup"),
-		[]string{"NodeFactory"},
+		[]string{"NodeFactory", "RollupEventBridge"},
 	)...)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "arch"),
