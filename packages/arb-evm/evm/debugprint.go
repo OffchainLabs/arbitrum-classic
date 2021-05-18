@@ -198,7 +198,7 @@ type EVMCallError struct {
 }
 
 func (e *EVMCallError) String() string {
-	return fmt.Sprintf("EVMCallError{description: %v, errorCode: %v", e.description, e.errorCode)
+	return fmt.Sprintf("EVMCallError{description: %v, errorCode: %v}", e.description, e.errorCode)
 }
 
 func (e *EVMCallError) MarshalZerologObject(event *zerolog.Event) {
