@@ -287,8 +287,11 @@ func TestDeposit(t *testing.T) {
 	if receipt == nil {
 		t.Fatal("expected receipt")
 	}
-
-	//receipt.BlockHash
+	block, err := client.BlockByHash(context.Background(), receipt.BlockHash)
+	test.FailIfError(t, err)
+	if len(block.Transactions()) != 1 {
+		t.Fatal("expected 1 tx in block")
+	}
 
 	arbRes, err := backend.db.GetRequest(txHash)
 	test.FailIfError(t, err)
