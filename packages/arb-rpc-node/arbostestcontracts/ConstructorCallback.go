@@ -27,10 +27,10 @@ var (
 )
 
 // ConstructorCallbackABI is the input ABI used to generate the binding from.
-const ConstructorCallbackABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"dataLength\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"data\",\"type\":\"uint256\"}],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ConstructorCallbackABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"dataLength\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"dataLength\",\"type\":\"address\"}],\"name\":\"TestEvent2\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"data\",\"type\":\"address\"}],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ConstructorCallbackBin is the compiled bytecode used for deploying new contracts.
-var ConstructorCallbackBin = "0x608060405234801561001057600080fd5b506040805136815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a13661009c57604080516329e99f0760e01b815261021f6004820152905130916329e99f0791602480830192600092919082900301818387803b15801561008957600080fd5b505af192505050801561009a575060015b505b6082806100aa6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c806329e99f0714602d575b600080fd5b604760048036036020811015604157600080fd5b50356049565b005b5056fea26469706673582212204cfeea3f0eabe97fd1613d9c1a99936ca17bebcade1afbace6003b18e1b8847464736f6c634300060c0033"
+var ConstructorCallbackBin = "0x608060408190523681527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1336001600160a01b03166366e41cb76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561006a57600080fd5b505af115801561007e573d6000803e3d6000fd5b5050505060c7806100906000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb29998e14602d575b600080fd5b605060048036036020811015604157600080fd5b50356001600160a01b03166052565b005b604080516001600160a01b038316815290517fba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d9181900360200190a15056fea2646970667358221220dc241cdf7845b7fdaaaab29fea9f4e5de294eb5ed17f7a4b4e26de97500d9c4464736f6c634300060c0033"
 
 // DeployConstructorCallback deploys a new Ethereum contract, binding an instance of ConstructorCallback to it.
 func DeployConstructorCallback(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ConstructorCallback, error) {
@@ -188,24 +188,24 @@ func (_ConstructorCallback *ConstructorCallbackTransactorRaw) Transact(opts *bin
 	return _ConstructorCallback.Contract.contract.Transact(opts, method, params...)
 }
 
-// Test is a paid mutator transaction binding the contract method 0x29e99f07.
+// Test is a paid mutator transaction binding the contract method 0xbb29998e.
 //
-// Solidity: function test(uint256 data) returns()
-func (_ConstructorCallback *ConstructorCallbackTransactor) Test(opts *bind.TransactOpts, data *big.Int) (*types.Transaction, error) {
+// Solidity: function test(address data) returns()
+func (_ConstructorCallback *ConstructorCallbackTransactor) Test(opts *bind.TransactOpts, data common.Address) (*types.Transaction, error) {
 	return _ConstructorCallback.contract.Transact(opts, "test", data)
 }
 
-// Test is a paid mutator transaction binding the contract method 0x29e99f07.
+// Test is a paid mutator transaction binding the contract method 0xbb29998e.
 //
-// Solidity: function test(uint256 data) returns()
-func (_ConstructorCallback *ConstructorCallbackSession) Test(data *big.Int) (*types.Transaction, error) {
+// Solidity: function test(address data) returns()
+func (_ConstructorCallback *ConstructorCallbackSession) Test(data common.Address) (*types.Transaction, error) {
 	return _ConstructorCallback.Contract.Test(&_ConstructorCallback.TransactOpts, data)
 }
 
-// Test is a paid mutator transaction binding the contract method 0x29e99f07.
+// Test is a paid mutator transaction binding the contract method 0xbb29998e.
 //
-// Solidity: function test(uint256 data) returns()
-func (_ConstructorCallback *ConstructorCallbackTransactorSession) Test(data *big.Int) (*types.Transaction, error) {
+// Solidity: function test(address data) returns()
+func (_ConstructorCallback *ConstructorCallbackTransactorSession) Test(data common.Address) (*types.Transaction, error) {
 	return _ConstructorCallback.Contract.Test(&_ConstructorCallback.TransactOpts, data)
 }
 
@@ -337,6 +337,489 @@ func (_ConstructorCallback *ConstructorCallbackFilterer) WatchTestEvent(opts *bi
 func (_ConstructorCallback *ConstructorCallbackFilterer) ParseTestEvent(log types.Log) (*ConstructorCallbackTestEvent, error) {
 	event := new(ConstructorCallbackTestEvent)
 	if err := _ConstructorCallback.contract.UnpackLog(event, "TestEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ConstructorCallbackTestEvent2Iterator is returned from FilterTestEvent2 and is used to iterate over the raw logs and unpacked data for TestEvent2 events raised by the ConstructorCallback contract.
+type ConstructorCallbackTestEvent2Iterator struct {
+	Event *ConstructorCallbackTestEvent2 // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConstructorCallbackTestEvent2Iterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConstructorCallbackTestEvent2)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConstructorCallbackTestEvent2)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConstructorCallbackTestEvent2Iterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConstructorCallbackTestEvent2Iterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConstructorCallbackTestEvent2 represents a TestEvent2 event raised by the ConstructorCallback contract.
+type ConstructorCallbackTestEvent2 struct {
+	DataLength common.Address
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterTestEvent2 is a free log retrieval operation binding the contract event 0xba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d.
+//
+// Solidity: event TestEvent2(address dataLength)
+func (_ConstructorCallback *ConstructorCallbackFilterer) FilterTestEvent2(opts *bind.FilterOpts) (*ConstructorCallbackTestEvent2Iterator, error) {
+
+	logs, sub, err := _ConstructorCallback.contract.FilterLogs(opts, "TestEvent2")
+	if err != nil {
+		return nil, err
+	}
+	return &ConstructorCallbackTestEvent2Iterator{contract: _ConstructorCallback.contract, event: "TestEvent2", logs: logs, sub: sub}, nil
+}
+
+// WatchTestEvent2 is a free log subscription operation binding the contract event 0xba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d.
+//
+// Solidity: event TestEvent2(address dataLength)
+func (_ConstructorCallback *ConstructorCallbackFilterer) WatchTestEvent2(opts *bind.WatchOpts, sink chan<- *ConstructorCallbackTestEvent2) (event.Subscription, error) {
+
+	logs, sub, err := _ConstructorCallback.contract.WatchLogs(opts, "TestEvent2")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConstructorCallbackTestEvent2)
+				if err := _ConstructorCallback.contract.UnpackLog(event, "TestEvent2", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTestEvent2 is a log parse operation binding the contract event 0xba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d.
+//
+// Solidity: event TestEvent2(address dataLength)
+func (_ConstructorCallback *ConstructorCallbackFilterer) ParseTestEvent2(log types.Log) (*ConstructorCallbackTestEvent2, error) {
+	event := new(ConstructorCallbackTestEvent2)
+	if err := _ConstructorCallback.contract.UnpackLog(event, "TestEvent2", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ConstructorCallback2ABI is the input ABI used to generate the binding from.
+const ConstructorCallback2ABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"name\":\"TestEvent3\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"test\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"test2\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]"
+
+// ConstructorCallback2Bin is the compiled bytecode used for deploying new contracts.
+var ConstructorCallback2Bin = "0x608060405234801561001057600080fd5b5061037c806100206000396000f3fe6080604052600436106100295760003560e01c806366e41cb71461002e578063f8a8fd6d14610038575b600080fd5b610036610040565b005b6100366101b6565b6040805133602480830182905283518084039091018152604490920183526020820180516001600160e01b0316635d94ccc760e11b1781529251825160009460609492918291908083835b602083106100aa5780518252601f19909201916020918201910161008b565b6001836020036101000a0380198251168184511680821785525050505050509050019150506000604051808303816000865af19150503d806000811461010c576040519150601f19603f3d011682016040523d82523d6000602084013e610111565b606091505b50915091508115157fe7713ed83c9f3ef742bc9aec2c297f6bc4c7be68042d4aa69be6ba74848d1882826040518080602001828103825283818151815260200191508051906020019080838360005b83811015610178578181015183820152602001610160565b50505050905090810190601f1680156101a55780820380516001836020036101000a031916815260200191505b509250505060405180910390a25050565b6040516101c2906101e2565b604051809103906000f0801580156101de573d6000803e3d6000fd5b5050565b610157806101f08339019056fe608060408190523681527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1336001600160a01b03166366e41cb76040518163ffffffff1660e01b8152600401600060405180830381600087803b15801561006a57600080fd5b505af115801561007e573d6000803e3d6000fd5b5050505060c7806100906000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063bb29998e14602d575b600080fd5b605060048036036020811015604157600080fd5b50356001600160a01b03166052565b005b604080516001600160a01b038316815290517fba829c4567200650d8324f5576706bb44be221bc498741a8ddaa9a2739407b7d9181900360200190a15056fea2646970667358221220dc241cdf7845b7fdaaaab29fea9f4e5de294eb5ed17f7a4b4e26de97500d9c4464736f6c634300060c0033a2646970667358221220a462b1a9d732c4322f32afeb3a520e81ccc720954479b9c40a40c9d28393137c64736f6c634300060c0033"
+
+// DeployConstructorCallback2 deploys a new Ethereum contract, binding an instance of ConstructorCallback2 to it.
+func DeployConstructorCallback2(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ConstructorCallback2, error) {
+	parsed, err := abi.JSON(strings.NewReader(ConstructorCallback2ABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ConstructorCallback2Bin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ConstructorCallback2{ConstructorCallback2Caller: ConstructorCallback2Caller{contract: contract}, ConstructorCallback2Transactor: ConstructorCallback2Transactor{contract: contract}, ConstructorCallback2Filterer: ConstructorCallback2Filterer{contract: contract}}, nil
+}
+
+// ConstructorCallback2 is an auto generated Go binding around an Ethereum contract.
+type ConstructorCallback2 struct {
+	ConstructorCallback2Caller     // Read-only binding to the contract
+	ConstructorCallback2Transactor // Write-only binding to the contract
+	ConstructorCallback2Filterer   // Log filterer for contract events
+}
+
+// ConstructorCallback2Caller is an auto generated read-only Go binding around an Ethereum contract.
+type ConstructorCallback2Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ConstructorCallback2Transactor is an auto generated write-only Go binding around an Ethereum contract.
+type ConstructorCallback2Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ConstructorCallback2Filterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ConstructorCallback2Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ConstructorCallback2Session is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ConstructorCallback2Session struct {
+	Contract     *ConstructorCallback2 // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts         // Call options to use throughout this session
+	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+}
+
+// ConstructorCallback2CallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ConstructorCallback2CallerSession struct {
+	Contract *ConstructorCallback2Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts               // Call options to use throughout this session
+}
+
+// ConstructorCallback2TransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ConstructorCallback2TransactorSession struct {
+	Contract     *ConstructorCallback2Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts               // Transaction auth options to use throughout this session
+}
+
+// ConstructorCallback2Raw is an auto generated low-level Go binding around an Ethereum contract.
+type ConstructorCallback2Raw struct {
+	Contract *ConstructorCallback2 // Generic contract binding to access the raw methods on
+}
+
+// ConstructorCallback2CallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ConstructorCallback2CallerRaw struct {
+	Contract *ConstructorCallback2Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// ConstructorCallback2TransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ConstructorCallback2TransactorRaw struct {
+	Contract *ConstructorCallback2Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewConstructorCallback2 creates a new instance of ConstructorCallback2, bound to a specific deployed contract.
+func NewConstructorCallback2(address common.Address, backend bind.ContractBackend) (*ConstructorCallback2, error) {
+	contract, err := bindConstructorCallback2(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ConstructorCallback2{ConstructorCallback2Caller: ConstructorCallback2Caller{contract: contract}, ConstructorCallback2Transactor: ConstructorCallback2Transactor{contract: contract}, ConstructorCallback2Filterer: ConstructorCallback2Filterer{contract: contract}}, nil
+}
+
+// NewConstructorCallback2Caller creates a new read-only instance of ConstructorCallback2, bound to a specific deployed contract.
+func NewConstructorCallback2Caller(address common.Address, caller bind.ContractCaller) (*ConstructorCallback2Caller, error) {
+	contract, err := bindConstructorCallback2(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ConstructorCallback2Caller{contract: contract}, nil
+}
+
+// NewConstructorCallback2Transactor creates a new write-only instance of ConstructorCallback2, bound to a specific deployed contract.
+func NewConstructorCallback2Transactor(address common.Address, transactor bind.ContractTransactor) (*ConstructorCallback2Transactor, error) {
+	contract, err := bindConstructorCallback2(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ConstructorCallback2Transactor{contract: contract}, nil
+}
+
+// NewConstructorCallback2Filterer creates a new log filterer instance of ConstructorCallback2, bound to a specific deployed contract.
+func NewConstructorCallback2Filterer(address common.Address, filterer bind.ContractFilterer) (*ConstructorCallback2Filterer, error) {
+	contract, err := bindConstructorCallback2(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ConstructorCallback2Filterer{contract: contract}, nil
+}
+
+// bindConstructorCallback2 binds a generic wrapper to an already deployed contract.
+func bindConstructorCallback2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ConstructorCallback2ABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ConstructorCallback2 *ConstructorCallback2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ConstructorCallback2.Contract.ConstructorCallback2Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ConstructorCallback2 *ConstructorCallback2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.ConstructorCallback2Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ConstructorCallback2 *ConstructorCallback2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.ConstructorCallback2Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ConstructorCallback2 *ConstructorCallback2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ConstructorCallback2.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ConstructorCallback2 *ConstructorCallback2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ConstructorCallback2 *ConstructorCallback2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.contract.Transact(opts, method, params...)
+}
+
+// Test is a paid mutator transaction binding the contract method 0xf8a8fd6d.
+//
+// Solidity: function test() payable returns()
+func (_ConstructorCallback2 *ConstructorCallback2Transactor) Test(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ConstructorCallback2.contract.Transact(opts, "test")
+}
+
+// Test is a paid mutator transaction binding the contract method 0xf8a8fd6d.
+//
+// Solidity: function test() payable returns()
+func (_ConstructorCallback2 *ConstructorCallback2Session) Test() (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.Test(&_ConstructorCallback2.TransactOpts)
+}
+
+// Test is a paid mutator transaction binding the contract method 0xf8a8fd6d.
+//
+// Solidity: function test() payable returns()
+func (_ConstructorCallback2 *ConstructorCallback2TransactorSession) Test() (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.Test(&_ConstructorCallback2.TransactOpts)
+}
+
+// Test2 is a paid mutator transaction binding the contract method 0x66e41cb7.
+//
+// Solidity: function test2() payable returns()
+func (_ConstructorCallback2 *ConstructorCallback2Transactor) Test2(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ConstructorCallback2.contract.Transact(opts, "test2")
+}
+
+// Test2 is a paid mutator transaction binding the contract method 0x66e41cb7.
+//
+// Solidity: function test2() payable returns()
+func (_ConstructorCallback2 *ConstructorCallback2Session) Test2() (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.Test2(&_ConstructorCallback2.TransactOpts)
+}
+
+// Test2 is a paid mutator transaction binding the contract method 0x66e41cb7.
+//
+// Solidity: function test2() payable returns()
+func (_ConstructorCallback2 *ConstructorCallback2TransactorSession) Test2() (*types.Transaction, error) {
+	return _ConstructorCallback2.Contract.Test2(&_ConstructorCallback2.TransactOpts)
+}
+
+// ConstructorCallback2TestEvent3Iterator is returned from FilterTestEvent3 and is used to iterate over the raw logs and unpacked data for TestEvent3 events raised by the ConstructorCallback2 contract.
+type ConstructorCallback2TestEvent3Iterator struct {
+	Event *ConstructorCallback2TestEvent3 // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ConstructorCallback2TestEvent3Iterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ConstructorCallback2TestEvent3)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ConstructorCallback2TestEvent3)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ConstructorCallback2TestEvent3Iterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ConstructorCallback2TestEvent3Iterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ConstructorCallback2TestEvent3 represents a TestEvent3 event raised by the ConstructorCallback2 contract.
+type ConstructorCallback2TestEvent3 struct {
+	Success    bool
+	ReturnData []byte
+	Raw        types.Log // Blockchain specific contextual infos
+}
+
+// FilterTestEvent3 is a free log retrieval operation binding the contract event 0xe7713ed83c9f3ef742bc9aec2c297f6bc4c7be68042d4aa69be6ba74848d1882.
+//
+// Solidity: event TestEvent3(bool indexed success, bytes returnData)
+func (_ConstructorCallback2 *ConstructorCallback2Filterer) FilterTestEvent3(opts *bind.FilterOpts, success []bool) (*ConstructorCallback2TestEvent3Iterator, error) {
+
+	var successRule []interface{}
+	for _, successItem := range success {
+		successRule = append(successRule, successItem)
+	}
+
+	logs, sub, err := _ConstructorCallback2.contract.FilterLogs(opts, "TestEvent3", successRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ConstructorCallback2TestEvent3Iterator{contract: _ConstructorCallback2.contract, event: "TestEvent3", logs: logs, sub: sub}, nil
+}
+
+// WatchTestEvent3 is a free log subscription operation binding the contract event 0xe7713ed83c9f3ef742bc9aec2c297f6bc4c7be68042d4aa69be6ba74848d1882.
+//
+// Solidity: event TestEvent3(bool indexed success, bytes returnData)
+func (_ConstructorCallback2 *ConstructorCallback2Filterer) WatchTestEvent3(opts *bind.WatchOpts, sink chan<- *ConstructorCallback2TestEvent3, success []bool) (event.Subscription, error) {
+
+	var successRule []interface{}
+	for _, successItem := range success {
+		successRule = append(successRule, successItem)
+	}
+
+	logs, sub, err := _ConstructorCallback2.contract.WatchLogs(opts, "TestEvent3", successRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ConstructorCallback2TestEvent3)
+				if err := _ConstructorCallback2.contract.UnpackLog(event, "TestEvent3", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTestEvent3 is a log parse operation binding the contract event 0xe7713ed83c9f3ef742bc9aec2c297f6bc4c7be68042d4aa69be6ba74848d1882.
+//
+// Solidity: event TestEvent3(bool indexed success, bytes returnData)
+func (_ConstructorCallback2 *ConstructorCallback2Filterer) ParseTestEvent3(log types.Log) (*ConstructorCallback2TestEvent3, error) {
+	event := new(ConstructorCallback2TestEvent3)
+	if err := _ConstructorCallback2.contract.UnpackLog(event, "TestEvent3", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

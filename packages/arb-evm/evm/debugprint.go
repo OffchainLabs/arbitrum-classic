@@ -262,7 +262,7 @@ type EVMLogLine interface {
 func NewLogLineFromValue(d value.Value) (EVMLogLine, error) {
 	tup, ok := d.(*value.TupleValue)
 	if !ok || tup.Len() == 0 {
-		return nil, errors.New("expected debugprint to be tuple")
+		return &RawDebugPrint{Val: d}, nil
 	}
 	// Tuple already checked to be at least size 1
 	debugPrintType, _ := tup.GetByInt64(0)
