@@ -34,6 +34,49 @@ type Config struct {
 
 var config *Config
 
+func feeInfo(blockNum *big.Int) error {
+	con, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	opts := &bind.CallOpts{
+		BlockNumber: blockNum,
+	}
+	perL2TxWei,
+		perL1CalldataByteWei,
+		perStorageWei,
+		perArgGasBaseWei,
+		perArbGasCongestionWei,
+		perArbGasTotalWei,
+		err := con.GetPricesInWei(opts)
+	if err != nil {
+		return err
+	}
+	fmt.Println("perL2TxWei:", perL2TxWei)
+	fmt.Println("perL1CalldataByteWei:", perL1CalldataByteWei)
+	fmt.Println("perStorageWei:", perStorageWei)
+	fmt.Println("perArgGasBaseWei:", perArgGasBaseWei)
+	fmt.Println("perArbGasCongestionWei:", perArbGasCongestionWei)
+	fmt.Println("perArbGasTotalWei:", perArbGasTotalWei)
+
+	perL2Tx, perL1CalldataByte, perStorage, err := con.GetPricesInArbGas(opts)
+	if err != nil {
+		return err
+	}
+	fmt.Println("perL2Tx:", perL2Tx)
+	fmt.Println("perL1CalldataByte:", perL1CalldataByte)
+	fmt.Println("perStorage:", perStorage)
+
+	speedLimitPerSecond, gasPoolMax, maxTxGasLimit, err := con.GetGasAccountingParams(opts)
+	if err != nil {
+		return err
+	}
+	fmt.Println("speedLimitPerSecond:", speedLimitPerSecond)
+	fmt.Println("gasPoolMax:", gasPoolMax)
+	fmt.Println("maxTxGasLimit:", maxTxGasLimit)
+	return nil
+}
+
 func switchFees(enabled bool) error {
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
@@ -60,6 +103,24 @@ func setDefaultAggregator(agg ethcommon.Address) error {
 	tx, err := arbAggregator.SetDefaultAggregator(config.auth, agg)
 	fmt.Println("Waiting for receipt")
 	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetDefaultAggregator")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
+func setFairGasPriceSender(sender ethcommon.Address) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.SetFairGasPriceSender(config.auth, sender)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt")
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetFairGasPriceSender")
 	if err != nil {
 		return err
 	}
@@ -122,8 +183,24 @@ func handleCommand(fields []string) error {
 		}
 		agg := ethcommon.HexToAddress(fields[1])
 		return setDefaultAggregator(agg)
+	case "set-fair-gas-sender":
+		if len(fields) != 2 {
+			return errors.New("Expected address argument")
+		}
+		agg := ethcommon.HexToAddress(fields[1])
+		return setFairGasPriceSender(agg)
 	case "deploy-1820":
 		return deploy1820()
+	case "fee-info":
+		var blockNum *big.Int
+		if len(fields) == 2 {
+			var ok bool
+			blockNum, ok = new(big.Int).SetString(fields[1], 10)
+			if !ok {
+				return errors.New("expected arg to be int")
+			}
+		}
+		return feeInfo(blockNum)
 	default:
 		fmt.Println("Unknown command")
 	}
