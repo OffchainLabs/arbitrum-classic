@@ -238,12 +238,12 @@ func runTxAssertionWithCount(t *testing.T, messages []inbox.InboxMessage, logCou
 	if len(txResults) != logCount {
 		t.Fatal("unexpected log count ", len(txResults), "instead of", logCount)
 	}
-	return txResults, debugPrints, snap
+	return txResults, debugPrints[1:], snap
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]evm.Result, [][]byte, [][]evm.EVMLogLine, *snapshot.Snapshot) {
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]evm.Result, [][]byte, *snapshot.Snapshot) {
 	t.Helper()
-	results, sends, debugPrints, snap := runBasicAssertion(t, inboxMessages)
+	results, sends, _, snap := runBasicAssertion(t, inboxMessages)
 	if logCount != math.MaxInt32 && len(results) != logCount+1 {
 		t.Fatal("unexpected log count ", len(results), "instead of", logCount+1)
 	}
@@ -251,7 +251,7 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 	if len(sends) != sendCount {
 		t.Fatal("unxpected send count ", len(sends), "instead of", sendCount)
 	}
-	return results, sends, debugPrints, snap
+	return results, sends, snap
 }
 
 func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.Result, [][]byte, [][]evm.EVMLogLine, *snapshot.Snapshot) {
@@ -269,17 +269,18 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 	failIfError(t, err)
 	logs = append(logs, assertion.Logs...)
 	sends = append(sends, assertion.Sends...)
+	totalExecutionGas := uint64(0)
 	for i, msg := range inboxMessages {
 		t.Log("Message", i)
 		assertion, dPrints, _, err := mach.ExecuteAssertion(10000000000, false, []inbox.InboxMessage{msg})
 		failIfError(t, err)
+		totalExecutionGas += assertion.NumGas
 		parsedDebugPrints := processDebugPrints(t, dPrints)
 		for _, d := range parsedDebugPrints {
 			t.Log("debugprint", d)
 		}
 		logs = append(logs, assertion.Logs...)
 		sends = append(sends, assertion.Sends...)
-
 		debugPrints = append(debugPrints, parsedDebugPrints)
 
 		if len(assertion.Logs) != 1 {
@@ -299,7 +300,7 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 			t.Errorf("didn't charge enough for tx %v=%v (%v uncharged)", chargeRatio, chargeRatio.FloatString(2), uncountedComputation)
 		}
 	}
-
+	t.Log("AVM gas used for execution:", totalExecutionGas)
 	var snap *snapshot.Snapshot
 	if len(inboxMessages) > 0 {
 		lastMessage := inboxMessages[len(inboxMessages)-1]

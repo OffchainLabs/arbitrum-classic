@@ -367,7 +367,7 @@ func TestFees(t *testing.T) {
 
 	processMessages := func(ib *InboxBuilder, index int, aggregator common.Address, calldataExact bool) ([]*evm.TxResult, *snapshot.Snapshot, *big.Int) {
 		t.Helper()
-		results, _, _, snap := runAssertion(t, ib.Messages, math.MaxInt32, 0)
+		results, _, snap := runAssertion(t, ib.Messages, math.MaxInt32, 0)
 		rawResults := extractTxResults(t, results)
 		allResultsSucceeded(t, rawResults[:len(rawResults)-len(rawTxes)])
 		extractedResults := rawResults[len(rawResults)-len(rawTxes):]

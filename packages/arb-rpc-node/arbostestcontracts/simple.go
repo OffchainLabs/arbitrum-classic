@@ -30,7 +30,7 @@ var (
 const ComplexConstructorConABI = "[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getVal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
 // ComplexConstructorConBin is the compiled bytecode used for deploying new contracts.
-var ComplexConstructorConBin = "0x60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea26469706673582212208b96e5cfd207713c60084e294bdfd5e9018168321cfe6cc46fde8cacb76d664364736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea264697066735822122023bcf196056f2e3d90ba733512d35036d838a0cb0abb768b893f5d93acba746364736f6c634300060c0033"
+var ComplexConstructorConBin = "0x60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea26469706673582212205a8165c0289d718bba4831c2af8ea1df76f9a8272eed45c55f6399935a7a73e264736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220ccdf8c0cd52c196694b1884063cfcdc8688255ebc8e2dc11ba2c6bc3d3b337ae64736f6c634300060c0033"
 
 // DeployComplexConstructorCon deploys a new Ethereum contract, binding an instance of ComplexConstructorCon to it.
 func DeployComplexConstructorCon(auth *bind.TransactOpts, backend bind.ContractBackend, salt [32]byte) (common.Address, *types.Transaction, *ComplexConstructorCon, error) {
@@ -234,7 +234,7 @@ func (_ComplexConstructorCon *ComplexConstructorConTransactorSession) Receive() 
 const ComplexConstructorCon2ABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"val\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getVal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ComplexConstructorCon2Bin is the compiled bytecode used for deploying new contracts.
-var ComplexConstructorCon2Bin = "0x60806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea264697066735822122023bcf196056f2e3d90ba733512d35036d838a0cb0abb768b893f5d93acba746364736f6c634300060c0033"
+var ComplexConstructorCon2Bin = "0x60806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220ccdf8c0cd52c196694b1884063cfcdc8688255ebc8e2dc11ba2c6bc3d3b337ae64736f6c634300060c0033"
 
 // DeployComplexConstructorCon2 deploys a new Ethereum contract, binding an instance of ComplexConstructorCon2 to it.
 func DeployComplexConstructorCon2(auth *bind.TransactOpts, backend bind.ContractBackend, val *big.Int) (common.Address, *types.Transaction, *ComplexConstructorCon2, error) {
@@ -413,11 +413,173 @@ func (_ComplexConstructorCon2 *ComplexConstructorCon2TransactorSession) GetVal()
 	return _ComplexConstructorCon2.Contract.GetVal(&_ComplexConstructorCon2.TransactOpts)
 }
 
+// ReverterABI is the input ABI used to generate the binding from.
+const ReverterABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+
+// ReverterBin is the compiled bytecode used for deploying new contracts.
+var ReverterBin = "0x6080604052348015600f57600080fd5b506040805162461bcd60e51b8152602060048201526012602482015271125b9d195b9d1a5bdb985b081c995d995c9d60721b604482015290519081900360640190fdfe"
+
+// DeployReverter deploys a new Ethereum contract, binding an instance of Reverter to it.
+func DeployReverter(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Reverter, error) {
+	parsed, err := abi.JSON(strings.NewReader(ReverterABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ReverterBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Reverter{ReverterCaller: ReverterCaller{contract: contract}, ReverterTransactor: ReverterTransactor{contract: contract}, ReverterFilterer: ReverterFilterer{contract: contract}}, nil
+}
+
+// Reverter is an auto generated Go binding around an Ethereum contract.
+type Reverter struct {
+	ReverterCaller     // Read-only binding to the contract
+	ReverterTransactor // Write-only binding to the contract
+	ReverterFilterer   // Log filterer for contract events
+}
+
+// ReverterCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ReverterCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ReverterTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ReverterTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ReverterFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ReverterFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ReverterSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ReverterSession struct {
+	Contract     *Reverter         // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ReverterCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ReverterCallerSession struct {
+	Contract *ReverterCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts   // Call options to use throughout this session
+}
+
+// ReverterTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ReverterTransactorSession struct {
+	Contract     *ReverterTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+}
+
+// ReverterRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ReverterRaw struct {
+	Contract *Reverter // Generic contract binding to access the raw methods on
+}
+
+// ReverterCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ReverterCallerRaw struct {
+	Contract *ReverterCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ReverterTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ReverterTransactorRaw struct {
+	Contract *ReverterTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewReverter creates a new instance of Reverter, bound to a specific deployed contract.
+func NewReverter(address common.Address, backend bind.ContractBackend) (*Reverter, error) {
+	contract, err := bindReverter(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Reverter{ReverterCaller: ReverterCaller{contract: contract}, ReverterTransactor: ReverterTransactor{contract: contract}, ReverterFilterer: ReverterFilterer{contract: contract}}, nil
+}
+
+// NewReverterCaller creates a new read-only instance of Reverter, bound to a specific deployed contract.
+func NewReverterCaller(address common.Address, caller bind.ContractCaller) (*ReverterCaller, error) {
+	contract, err := bindReverter(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ReverterCaller{contract: contract}, nil
+}
+
+// NewReverterTransactor creates a new write-only instance of Reverter, bound to a specific deployed contract.
+func NewReverterTransactor(address common.Address, transactor bind.ContractTransactor) (*ReverterTransactor, error) {
+	contract, err := bindReverter(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ReverterTransactor{contract: contract}, nil
+}
+
+// NewReverterFilterer creates a new log filterer instance of Reverter, bound to a specific deployed contract.
+func NewReverterFilterer(address common.Address, filterer bind.ContractFilterer) (*ReverterFilterer, error) {
+	contract, err := bindReverter(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ReverterFilterer{contract: contract}, nil
+}
+
+// bindReverter binds a generic wrapper to an already deployed contract.
+func bindReverter(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ReverterABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Reverter *ReverterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Reverter.Contract.ReverterCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Reverter *ReverterRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Reverter.Contract.ReverterTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Reverter *ReverterRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Reverter.Contract.ReverterTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Reverter *ReverterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Reverter.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Reverter *ReverterTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Reverter.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Reverter *ReverterTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Reverter.Contract.contract.Transact(opts, method, params...)
+}
+
 // SimpleABI is the input ABI used to generate the binding from.
 const SimpleABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractSimple\",\"name\":\"con\",\"type\":\"address\"}],\"name\":\"crossCall\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"arg\",\"type\":\"uint256\"}],\"name\":\"trace\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"y\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
 // SimpleBin is the compiled bytecode used for deploying new contracts.
-var SimpleBin = "0x6080604081905234600181905581527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a161067d806100436000396000f3fe60806040526004361061007f5760003560e01c80639b7c9da31161004e5780639b7c9da314610130578063a56dfe4a1461015a578063a68a4fed1461016f578063ae0aba8c1461018c576100c1565b80630324332e146100c6578063267c4ae41461010b5780633bccbbc9146101135780639436bc1f1461011b576100c1565b366100c1576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100d257600080fd5b506100f9600480360360208110156100e957600080fd5b50356001600160a01b0316610194565b60408051918252519081900360200190f35b6100f9610206565b6100bf610246565b34801561012757600080fd5b506100bf610284565b34801561013c57600080fd5b506100bf6004803603602081101561015357600080fd5b5035610286565b34801561016657600080fd5b506100f96102d1565b6100f96004803603602081101561018557600080fd5b50356102d7565b6100bf610284565b6000816001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b1580156101d157600080fd5b505af11580156101e5573d6000803e3d6000fd5b505050506040513d60208110156101fb57600080fd5b505160010192915050565b600560009081556040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d80600081146102c6576040519150601f19603f3d011682016040523d82523d6000602084013e6102cb565b606091505b50505050565b60015481565b600080600234046040516102ea90610389565b660c1e0d0ccc8d4d60ca1b8152604051908190036020019082f0905080158015610318573d6000803e3d6000fd5b509050806001600160a01b031663e1cb0e526040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561035657600080fd5b505af115801561036a573d6000803e3d6000fd5b505050506040513d602081101561038057600080fd5b50519392505050565b6102b1806103978339019056fe60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea26469706673582212208b96e5cfd207713c60084e294bdfd5e9018168321cfe6cc46fde8cacb76d664364736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea264697066735822122023bcf196056f2e3d90ba733512d35036d838a0cb0abb768b893f5d93acba746364736f6c634300060c0033a264697066735822122081452bba4bd90424d5343caccb8cfa59752bf566266fbdb8ef9af0c949194f5864736f6c634300060c0033"
+var SimpleBin = "0x6080604081905234600181905581527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1610706806100436000396000f3fe60806040526004361061007f5760003560e01c80639b7c9da31161004e5780639b7c9da314610130578063a56dfe4a1461015a578063a68a4fed1461016f578063ae0aba8c1461018c576100c1565b80630324332e146100c6578063267c4ae41461010b5780633bccbbc9146101135780639436bc1f1461011b576100c1565b366100c1576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100d257600080fd5b506100f9600480360360208110156100e957600080fd5b50356001600160a01b0316610194565b60408051918252519081900360200190f35b6100f9610206565b6100bf610246565b34801561012757600080fd5b506100bf610284565b34801561013c57600080fd5b506100bf6004803603602081101561015357600080fd5b5035610286565b34801561016657600080fd5b506100f96102d1565b6100f96004803603602081101561018557600080fd5b50356102d7565b6100bf610284565b6000816001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b1580156101d157600080fd5b505af11580156101e5573d6000803e3d6000fd5b505050506040513d60208110156101fb57600080fd5b505160010192915050565b600560009081556040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d80600081146102c6576040519150601f19603f3d011682016040523d82523d6000602084013e6102cb565b606091505b50505050565b60015481565b600080600234046040516102ea906103b3565b660c1e0d0ccc8d4d60ca1b8152604051908190036020019082f0905080158015610318573d6000803e3d6000fd5b509050604051610327906103c0565b604051809103906000f0801561033a5760015b61034357610345565b505b806001600160a01b031663e1cb0e526040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561038057600080fd5b505af1158015610394573d6000803e3d6000fd5b505050506040513d60208110156103aa57600080fd5b50519392505050565b6102b1806103cd83390190565b60538061067e8339019056fe60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea26469706673582212205a8165c0289d718bba4831c2af8ea1df76f9a8272eed45c55f6399935a7a73e264736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea2646970667358221220ccdf8c0cd52c196694b1884063cfcdc8688255ebc8e2dc11ba2c6bc3d3b337ae64736f6c634300060c00336080604052348015600f57600080fd5b506040805162461bcd60e51b8152602060048201526012602482015271125b9d195b9d1a5bdb985b081c995d995c9d60721b604482015290519081900360640190fdfea2646970667358221220cbf4f81378f000eee8c59cba587283548bc8ab971ae86064b25f5c1223dab9c264736f6c634300060c0033"
 
 // DeploySimple deploys a new Ethereum contract, binding an instance of Simple to it.
 func DeploySimple(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Simple, error) {

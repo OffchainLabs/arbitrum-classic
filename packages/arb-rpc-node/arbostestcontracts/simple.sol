@@ -42,6 +42,12 @@ contract ComplexConstructorCon2 {
     }
 }
 
+contract Reverter {
+    constructor() public {
+        require(false, "Intentional revert");
+    }
+}
+
 contract Simple {
     uint256 x;
     uint256 public y;
@@ -81,6 +87,7 @@ contract Simple {
 
     function trace(uint256 arg) external payable returns (uint256) {
         ComplexConstructorCon con = new ComplexConstructorCon{ value: msg.value / 2 }("0x43254");
+        try new Reverter() {} catch {}
         return con.getVal();
     }
 }

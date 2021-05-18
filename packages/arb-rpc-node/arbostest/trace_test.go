@@ -22,11 +22,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -46,36 +45,57 @@ func TestTrace(t *testing.T) {
 	}
 
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
+		MaxGas:      big.NewInt(100000),
+		GasPriceBid: big.NewInt(1),
 		SequenceNum: big.NewInt(1),
 		DestAddress: connAddress1,
-		Payment:     big.NewInt(0),
+		Payment:     big.NewInt(200),
 		Data:        makeFuncData(t, simpleABI.Methods["trace"], big.NewInt(42356)),
 	}
 
 	messages := []message.Message{
-		makeEthDeposit(sender, big.NewInt(10000)),
+		makeEthDeposit(sender, big.NewInt(10000000)),
 		message.NewSafeL2Message(tx1),
 		message.NewSafeL2Message(tx2),
 	}
 	inboxMessages := makeSimpleInbox(t, messages)
 
-	results, _, _ := runTxAssertionWithCount(t, inboxMessages, len(messages))
+	results, debugPrintsLists, _ := runTxAssertionWithCount(t, inboxMessages, len(messages))
 
 	allResultsSucceeded(t, results)
 
 	checkConstructorResult(t, results[1], connAddress1)
-}
 
-func TestConTrace(t *testing.T) {
-	client, keys := test.SimulatedBackend(t)
-	auth, err := bind.NewKeyedTransactorWithChainID(keys[0], big.NewInt(1337))
-	test.FailIfError(t, err)
-	_, _, simple, err := arbostestcontracts.DeploySimple(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
+	debugPrints := debugPrintsLists[2]
+	trace, ok := debugPrints[2].(*evm.EVMTrace)
+	if !ok {
+		t.Fatal("expected trace")
+	}
+	t.Log(len(trace.Items))
 
-	_, err = simple.Trace(auth, big.NewInt(42356))
-	test.FailIfError(t, err)
+	depthCount := 0
+	for i, item := range trace.Items {
+		if _, ok := item.(*evm.CallTrace); ok {
+			depthCount++
+		}
+		if _, ok := item.(*evm.ReturnTrace); ok {
+			if depthCount == 0 {
+				t.Fatal("can only return from inside call")
+			}
+			depthCount--
+		}
+		if _, ok := item.(*evm.CreateTrace); ok {
+			if _, ok := trace.Items[i+1].(*evm.CallTrace); !ok {
+				t.Fatal("call must come after create")
+			}
+		}
+		if _, ok := item.(*evm.Create2Trace); ok {
+			if _, ok := trace.Items[i+1].(*evm.CallTrace); !ok {
+				t.Fatal("call must come after create2")
+			}
+		}
+	}
+	if depthCount != 0 {
+		t.Fatal("must end at depth 0")
+	}
 }
