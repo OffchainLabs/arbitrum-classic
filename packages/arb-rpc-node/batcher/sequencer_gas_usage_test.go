@@ -10,6 +10,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -26,7 +27,7 @@ func TestSequencerGasUsage(t *testing.T) {
 	_, err = delayedBridge.Initialize(auth)
 	test.FailIfError(t, err)
 
-	evBridgeAddr, _, evBridge, err := ethbridgecontracts.DeployRollupEventBridge(auth, clnt)
+	evBridgeAddr, _, evBridge, err := ethbridgetestcontracts.DeployRollupEventBridge(auth, clnt)
 	test.FailIfError(t, err)
 	clnt.Commit()
 
