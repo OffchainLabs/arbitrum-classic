@@ -19,11 +19,12 @@ package ethutils
 import (
 	"context"
 	"encoding/json"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -40,6 +41,7 @@ type EthClient interface {
 	ReceiptFetcher
 
 	HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
 	BlockInfoByNumber(ctx context.Context, number *big.Int) (*BlockInfo, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
 	TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error)
