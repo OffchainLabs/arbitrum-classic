@@ -1,7 +1,7 @@
-// +build ignore
+// SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2012, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-package main
+pragma solidity >=0.4.21 <0.7.0;
 
-import (
-	"fmt"
+contract ConstructorCallback {
+    event TestEvent(uint256 dataLength);
 
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-)
+    constructor() public {
+        emit TestEvent(msg.data.length);
+        if (msg.data.length == 0) {
+            try ConstructorCallback(address(this)).test(543) {} catch {}
+        }
+    }
 
-func main() {
-	if err := arbostestcontracts.RunBindingGen(); err != nil {
-		fmt.Println("Error generating test contract bindings")
-		fmt.Println(err)
-	}
+    function test(uint256 data) external {}
 }

@@ -129,3 +129,28 @@ func TestConstructorExistingBalance(t *testing.T) {
 		t.Fatal("incorrect create2 address which should have been", hexutil.Encode(results[4].ReturnData[12:]))
 	}
 }
+
+func TestConstructorCallback(t *testing.T) {
+	skipBelowVersion(t, 17)
+	tx := message.Transaction{
+		MaxGas:      big.NewInt(10000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(0),
+		DestAddress: common.Address{0},
+		Payment:     big.NewInt(0),
+		Data:        hexutil.MustDecode(arbostestcontracts.ConstructorCallbackBin),
+	}
+
+	messages := []message.Message{
+		message.NewSafeL2Message(tx),
+	}
+
+	results, _ := runSimpleTxAssertion(t, messages)
+	allResultsSucceeded(t, results)
+
+	res := results[0]
+	if len(res.EVMLogs) != 1 {
+		t.Error("expected only a single log")
+	}
+	t.Log(res.EVMLogs)
+}
