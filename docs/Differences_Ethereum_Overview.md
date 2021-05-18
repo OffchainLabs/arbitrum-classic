@@ -4,8 +4,6 @@ title: Overview
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Differences_Ethereum_Overview.md
 ---
 
-# Overview
-
 Arbitrum rollups aim to mantain compatibility with Ethereum. Smart contracts are compatible on the bytecode level, but there are certain aspects of the system that work differently to the EVM.
 
 Some of the opcodes have slightly different behaviours, as seen in [Solidity Support](Solidity_Support.md).  
