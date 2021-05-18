@@ -2571,6 +2571,10 @@ ValueResult<uint256_t> ArbCore::getSideloadPosition(
         return {s, 0};
     }
 
+    if (!it->Valid()) {
+        return {rocksdb::Status::NotFound(), 0};
+    }
+
     auto value_slice = it->value();
 
     return {s, intx::be::unsafe::load<uint256_t>(
