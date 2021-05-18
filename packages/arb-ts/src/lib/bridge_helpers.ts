@@ -458,8 +458,13 @@ export class BridgeHelper {
   ): Promise<string> => {
     const iface = new ethers.utils.Interface([
       'function outboxes(uint256) public view returns (address)',
+      'function outboxesLength() public view returns (uint256)',
     ])
     const outbox = new ethers.Contract(outboxAddress, iface).connect(l1Provider)
+    const len: BigNumber = await outbox.outboxesLength()
+    if (batchNumber.gte(len)) {
+      return constants.AddressZero
+    }
     return outbox.outboxes(batchNumber)
   }
 
@@ -778,35 +783,41 @@ export class BridgeHelper {
     l1Provider: providers.Provider,
     l2Provider: providers.Provider
   ): Promise<OutgoingMessageState> => {
-    const proofData = await BridgeHelper.tryGetProofOnce(
-      batchNumber,
-      indexInBatch,
-      l2Provider
-    )
-    if (!proofData) {
-      return OutgoingMessageState.UNCONFIRMED
-    }
+    try {
+      const proofData = await BridgeHelper.tryGetProofOnce(
+        batchNumber,
+        indexInBatch,
+        l2Provider
+      )
 
-    const messageExecuted = await BridgeHelper.messageHasExecuted(
-      batchNumber,
-      indexInBatch,
-      outBoxAddress,
-      l1Provider
-    )
-    if (messageExecuted) {
-      return OutgoingMessageState.EXECUTED
-    }
+      if (!proofData) {
+        return OutgoingMessageState.UNCONFIRMED
+      }
 
-    const outboxEntry = await BridgeHelper.getOutboxEntry(
-      proofData.path,
-      outBoxAddress,
-      l1Provider
-    )
+      const messageExecuted = await BridgeHelper.messageHasExecuted(
+        batchNumber,
+        indexInBatch,
+        outBoxAddress,
+        l1Provider
+      )
+      if (messageExecuted) {
+        return OutgoingMessageState.EXECUTED
+      }
 
-    if (outboxEntry === constants.AddressZero) {
-      return OutgoingMessageState.UNCONFIRMED
-    } else {
-      return OutgoingMessageState.CONFIRMED
+      const outboxEntry = await BridgeHelper.getOutboxEntry(
+        batchNumber,
+        outBoxAddress,
+        l1Provider
+      )
+
+      if (outboxEntry === constants.AddressZero) {
+        return OutgoingMessageState.UNCONFIRMED
+      } else {
+        return OutgoingMessageState.CONFIRMED
+      }
+    } catch (e) {
+      console.warn('666: error in getOutgoingMessageState:', e)
+      return OutgoingMessageState.NOT_FOUND
     }
   }
 }
