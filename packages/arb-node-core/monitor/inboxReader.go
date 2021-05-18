@@ -110,8 +110,14 @@ func (ir *InboxReader) IsRunning() bool {
 }
 
 // WaitToCatchUp may only be called once
-func (ir *InboxReader) WaitToCatchUp() {
-	<-ir.caughtUpChan
+func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
+	select {
+	case <-ir.caughtUpChan:
+		return
+	case <-ctx.Done():
+		return
+	}
+
 }
 
 func (ir *InboxReader) getMessages(ctx context.Context) error {
@@ -141,6 +147,11 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		}
 
 		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			default:
+			}
 			if !ir.caughtUp && ir.caughtUpTarget != nil {
 				arbCorePosition := ir.db.MachineMessagesRead()
 				if ir.healthChan != nil {
@@ -266,6 +277,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	FeedReadLoop:
 		for {
 			select {
+			case <-ctx.Done():
+				return nil
 			case broadcastItem := <-ir.BroadcastFeed:
 				logger.Debug().Str("prevAcc", broadcastItem.FeedItem.PrevAcc.String()).Str("acc", broadcastItem.FeedItem.BatchItem.Accumulator.String()).Msg("received broadcast feed item")
 				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
