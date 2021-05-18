@@ -109,7 +109,6 @@ export class BridgeHelper {
     const topics = [
       tokenWithdrawTopic,
       null,
-      null,
       utils.hexZeroPad(destinationAddress, 32),
     ]
 
