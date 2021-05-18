@@ -189,7 +189,6 @@ describe('Ether', () => {
   it('withdraw Ether transaction succeeds and emits event', async () => {
     const withdrawEthRes = await bridge.withdrawETH(ethFromL2WithdrawAmount, '')
     const withdrawEthRec = await withdrawEthRes.wait()
-    // console.warn('withdrawEt¬herRec', withdrawEthRec);
 
     expect(withdrawEthRec.status).to.equal(1)
     const withdrawEventData = (

@@ -2,7 +2,7 @@ import { utils } from 'ethers'
 export default {
   kovan4: {
     ethRPC: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
-    arbRPC: 'https://kovan5.arbitrum.io/rpc',
+    arbRPC: 'https://kovan4.arbitrum.io/rpc',
     // arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
     preFundedSignerPK:
       process.env['DEVNET_PRIVKEY'] ||
