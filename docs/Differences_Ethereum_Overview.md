@@ -1,6 +1,6 @@
 ---
 id: Differences_Overview
-title: Ethereum Differences Overview
+title: Overview
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Differences_Ethereum_Overview.md
 ---
 
@@ -8,7 +8,7 @@ custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Diffe
 
 Arbitrum rollups aim to mantain compatibility with Ethereum. Smart contracts are compatible on the bytecode level, but there are certain aspects of the system that work differently to the EVM.
 
-Some of the opcodes have slightly different behaviours, as seen in [Solidity Support](Solidity_Support.md).
+Some of the opcodes have slightly different behaviours, as seen in [Solidity Support](Solidity_Support.md).  
 Concepts such as [Time](Time_In_Arbitrum.md) and [Gas](ArbGas.md) play out differently in Layer 2.  
 Other differences are [cool extra features](Special_Features.md) we squeezed in.
 
