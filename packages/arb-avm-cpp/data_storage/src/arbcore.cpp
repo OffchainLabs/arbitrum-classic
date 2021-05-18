@@ -2135,6 +2135,9 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 auto res =
                     getDelayedInboxAccImpl(tx, item.total_delayed_count - 1);
                 if (!res.status.ok()) {
+                    std::cerr << "ArbCore failed to lookup delayed message "
+                                 "accumulator"
+                              << std::endl;
                     return res.status;
                 }
                 delayed_acc = res.data;
