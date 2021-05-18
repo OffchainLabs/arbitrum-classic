@@ -248,7 +248,7 @@ func TestSequencerBatcher(t *testing.T) {
 		t.Error("Not enough messages, only got", msgCount1.String())
 	}
 
-	timeout := time.Now().Add(time.Second * 5)
+	timeout := time.Now().Add(time.Second * 15)
 	for {
 		msgCount2, err := otherMon.Core.GetMessageCount()
 		test.FailIfError(t, err)
