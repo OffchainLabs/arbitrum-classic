@@ -68,6 +68,7 @@ type SequencerBatcherMode struct {
 	Core                       core.ArbCore
 	InboxReader                *monitor.InboxReader
 	DelayedMessagesTargetDelay *big.Int
+	CreateBatchBlockInterval   *big.Int
 }
 
 func (b SequencerBatcherMode) isBatcherMode() {}
@@ -133,6 +134,7 @@ func SetupBatcher(
 			batcherMode.InboxReader,
 			client,
 			batcherMode.DelayedMessagesTargetDelay,
+			batcherMode.CreateBatchBlockInterval,
 			seqInbox,
 			batcherMode.Auth,
 			dataSigner,

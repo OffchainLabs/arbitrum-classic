@@ -91,6 +91,7 @@ func startup() error {
 	sequencerMode := fs.Bool("sequencer", false, "act as sequencer")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	createBatchBlockInterval := fs.Int64("create-batch-block-interval", 1, "block interval at which to create new batches")
 
 	//Healthcheck Config
 	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
@@ -243,6 +244,7 @@ func startup() error {
 				Core:                       mon.Core,
 				InboxReader:                inboxReader,
 				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
+				CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
 			}
 
 			broadcasterSettings = broadcaster.Settings{

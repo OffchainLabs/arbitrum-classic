@@ -61,6 +61,7 @@ type SequencerBatcher struct {
 	dataSigner                 func([]byte) ([]byte, error)
 	maxDelayBlocks             *big.Int
 	maxDelaySeconds            *big.Int
+	createBatchBlockInterval   *big.Int
 
 	sequencer       common.Address
 	signer          types.Signer
@@ -88,6 +89,7 @@ func NewSequencerBatcher(
 	inboxReader *monitor.InboxReader,
 	client ethutils.EthClient,
 	delayedMessagesTargetDelay *big.Int,
+	createBatchBlockInterval *big.Int,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
@@ -121,6 +123,10 @@ func NewSequencerBatcher(
 		return nil, err
 	}
 
+	if createBatchBlockInterval.Cmp(big.NewInt(0)) <= 0 || createBatchBlockInterval.Cmp(maxDelayBlocks) >= 0 {
+		return nil, errors.New("invalid batch creation block interval")
+	}
+
 	return &SequencerBatcher{
 		db:                         db,
 		inboxReader:                inboxReader,
@@ -133,6 +139,7 @@ func NewSequencerBatcher(
 		dataSigner:                 dataSigner,
 		maxDelayBlocks:             maxDelayBlocks,
 		maxDelaySeconds:            maxDelaySeconds,
+		createBatchBlockInterval:   createBatchBlockInterval,
 
 		sequencer:       common.NewAddressFromEth(sequencer),
 		signer:          types.NewEIP155Signer(chainId),
@@ -671,7 +678,8 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			logger.Warn().Err(err).Msg("Error getting chain time")
 			continue
 		}
-		if chainTime.BlockNum.Cmp(b.latestChainTime.BlockNum) <= 0 && !firstBoot {
+		targetChainTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.createBatchBlockInterval)
+		if chainTime.BlockNum.AsInt().Cmp(targetChainTime) < 0 && !firstBoot {
 			continue
 		}
 		firstBoot = false
