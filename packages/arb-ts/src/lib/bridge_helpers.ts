@@ -766,8 +766,8 @@ export class BridgeHelper {
       log => (iface.parseLog(log).args as unknown) as OutBoxTransactionExecuted
     )
     return (
-      parsedData.filter(
-        executedEvent => executedEvent.transactionIndex === messageIndex
+      parsedData.filter(executedEvent =>
+        executedEvent.transactionIndex.eq(messageIndex)
       ).length === 1
     )
   }
