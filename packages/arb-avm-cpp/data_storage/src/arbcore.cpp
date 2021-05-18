@@ -2567,6 +2567,10 @@ ValueResult<uint256_t> ArbCore::getSideloadPosition(
     it->SeekForPrev(key_slice);
 
     auto s = it->status();
+    if (!it->Valid()) {
+        return {rocksdb::Status::NotFound(), 0};
+    }
+
     if (!s.ok()) {
         return {s, 0};
     }
