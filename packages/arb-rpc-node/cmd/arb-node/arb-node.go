@@ -267,7 +267,7 @@ func startup() error {
 	defer db.Close()
 
 	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp()
+		inboxReader.WaitToCatchUp(ctx)
 	}
 
 	batch, err := rpc.SetupBatcher(
