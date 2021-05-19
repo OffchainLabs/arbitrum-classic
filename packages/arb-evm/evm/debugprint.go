@@ -255,6 +255,18 @@ func (r *RawDebugPrint) MarshalZerologObject(event *zerolog.Event) {
 		Str("value", r.Val.String())
 }
 
+type EVMOpcodeLog struct {
+	pc uint64
+	op uint64
+}
+
+func (r *EVMOpcodeLog) String() string {
+	return fmt.Sprintf("EVMOpcodeLog{0x%x, %x}", r.pc, r.op)
+}
+
+func (r *EVMOpcodeLog) MarshalZerologObject(event *zerolog.Event) {
+}
+
 type EVMLogLine interface {
 	zerolog.LogObjectMarshaler
 }
@@ -326,6 +338,24 @@ func NewLogLineFromValue(d value.Value) (EVMLogLine, error) {
 			return nil, err
 		}
 		return &EVMTrace{Items: vals}, nil
+	} else if typ == 30000 {
+		if tup.Len() != 3 {
+			return nil, errors.New("expected type 30000 to be 3-tuple")
+		}
+		evmPC, _ := tup.GetByInt64(1)
+		evmOp, _ := tup.GetByInt64(2)
+		evmPCInt, ok := evmPC.(value.IntValue)
+		if !ok {
+			return nil, errors.New("expected pc to be int")
+		}
+		evmOpInt, ok := evmOp.(value.IntValue)
+		if !ok {
+			return nil, errors.New("expected op to be int")
+		}
+		return &EVMOpcodeLog{
+			pc: evmPCInt.BigInt().Uint64(),
+			op: evmOpInt.BigInt().Uint64(),
+		}, nil
 	} else {
 		return &RawDebugPrint{Val: d}, nil
 	}

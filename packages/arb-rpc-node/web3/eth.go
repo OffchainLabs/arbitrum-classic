@@ -18,6 +18,7 @@ package web3
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -269,10 +270,14 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
+		extraCalldataUnits := (len(res.CalcGasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
-		return hexutil.Uint64(res.FeeStats.GasUsed().Uint64() + 1000), nil
+		fmt.Println("Estimate", res.CalcGasUsed())
+		fmt.Println("stats", res.FeeStats.PayTarget())
+		fmt.Println("stats", res.FeeStats.Paid)
+		used := new(big.Int).Div(res.FeeStats.Paid.Total(), res.FeeStats.Price.L2Computation)
+		return hexutil.Uint64(used.Uint64() + 1000), nil
 	}
 }
 
@@ -379,7 +384,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		From:              res.IncomingRequest.Sender.ToEthAddress(),
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
-		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		GasUsed:           hexutil.Uint64(res.CalcGasUsed().Uint64()),
 		ContractAddress:   contractAddress,
 		Logs:              receipt.Logs,
 		LogsBloom:         receipt.Bloom.Bytes(),

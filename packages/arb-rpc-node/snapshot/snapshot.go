@@ -220,9 +220,17 @@ func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash, maxGas uint64) (*evm.TxResult, error) {
-	assertion, _, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
 	if err != nil {
 		return nil, err
+	}
+
+	for _, debugPrint := range debugPrints {
+		line, err := evm.NewLogLineFromValue(debugPrint)
+		if err != nil {
+			continue
+		}
+		fmt.Println("DebugPrint:", line)
 	}
 
 	// If the machine wasn't able to run and it reports that it is currently

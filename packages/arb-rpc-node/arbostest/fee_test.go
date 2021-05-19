@@ -661,7 +661,7 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index int, 
 		}
 	} else {
 		// Adjust units used for gas used
-		gasUsed := len(res.FeeStats.GasUsed().Bytes()) * 16
+		gasUsed := len(res.CalcGasUsed().Bytes()) * 16
 		adjustedCalldata := int(unitsUsed.L1Calldata.Int64()) + gasUsed
 
 		if adjustedCalldata < correct.calldata {
