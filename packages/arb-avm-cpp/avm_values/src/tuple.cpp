@@ -32,7 +32,7 @@ Tuple Tuple::createSizedTuple(const size_t size) {
 }
 
 Tuple Tuple::createTuple(std::vector<value> values) {
-    if (!values.empty() && values.size() > 8) {
+    if (values.empty() || values.size() > 8) {
         return {};
     }
 
