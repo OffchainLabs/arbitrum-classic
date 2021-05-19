@@ -30,9 +30,9 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
-                           ByteSliceArray inbox_messages,
                            void* previous_inbox_acc_ptr,
-                           int last_block_complete,
+                           ByteSliceArray sequencer_batch_items_slice,
+                           ByteSliceArray delayed_messages_slice,
                            void* reorg_message_count_ptr);
 
 Uint256Result arbCoreGetLogCount(CArbCore* arbcore_ptr);
@@ -52,16 +52,36 @@ Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr);
 int arbCoreSetCheckpointMinMessageIndex(CArbCore* arbcore_ptr,
                                         const void* message_index);
 
+Uint256Result arbCoreGetTotalDelayedMessagesSequenced(CArbCore* arbcore_ptr);
+
 ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
 
+ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
+                                                   const void* start_index_ptr,
+                                                   const void* count_ptr);
+
+Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
+                                               const void* seq_num_ptr);
+
+ByteSliceResult arbCoreGenInboxProof(CArbCore* arbcore_ptr,
+                                     const void* seq_num_ptr,
+                                     const void* batch_index_ptr,
+                                     const void* batch_end_count_ptr);
+
 int arbCoreGetInboxAcc(CArbCore* arbcore_ptr, const void* index_ptr, void* ret);
+int arbCoreGetDelayedInboxAcc(CArbCore* arbcore_ptr,
+                              const void* index_ptr,
+                              void* ret);
 int arbCoreGetInboxAccPair(CArbCore* arbcore_ptr,
                            const void* index1_ptr,
                            const void* index2_ptr,
                            void* ret1,
                            void* ret2);
+int arbCoreCountMatchingBatchAccs(CArbCore* arbcore_ptr, ByteSlice data);
+Uint256Result arbCoreGetDelayedMessagesToSequence(CArbCore* arbcore_ptr,
+                                                  const void* max_block_number);
 
 Uint256Result arbCoreLogsCursorGetPosition(CArbCore* arbcore_ptr,
                                            const void* index_ptr);

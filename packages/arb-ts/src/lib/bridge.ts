@@ -18,14 +18,14 @@
 import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
-import {
-  TransactionOverrides,
-  BridgeHelper,
-  UpdateTokenEventResult,
-} from './bridge_helpers'
+import { BridgeHelper } from './bridge_helpers'
+import { PayableOverrides } from '@ethersproject/contracts'
 
 const { Zero } = constants
 
+/**
+ * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
+ */
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
   walletAddressCache?: string
@@ -36,6 +36,14 @@ export class Bridge extends L2Bridge {
     ethSigner: Signer,
     arbSigner: Signer
   ) {
+    Promise.all([ethSigner.getAddress(), arbSigner.getAddress()]).then(
+      ([ethSignerAddress, arbSignerAddress]) => {
+        if (ethSignerAddress !== arbSignerAddress) {
+          throw new Error('L1 & L2 wallets must be of the same address')
+        }
+      }
+    )
+
     super(arbERC20BridgeAddress, arbSigner)
 
     this.l1Bridge = new L1Bridge(erc20BridgeAddress, ethSigner)
@@ -45,13 +53,17 @@ export class Bridge extends L2Bridge {
     this.getAndUpdateL1EthBalance()
     this.getAndUpdateL2EthBalance()
   }
-
+  /**
+   * Update state of all tracked tokens (balance, allowance), etc. and returns state
+   */
   public async updateAllTokens() {
     const l1Tokens = await this.l1Bridge.updateAllL1Tokens()
     const l2Tokens = await this.updateAllL2Tokens()
     return { l1Tokens, l2Tokens }
   }
-
+  /**
+   * Update target token (balance, allowance), etc. and state
+   */
   public async updateTokenData(erc20l1Address: string) {
     const l1Data = await this.getAndUpdateL1TokenData(erc20l1Address)
     const l2Data = await this.getAndUpdateL2TokenData(erc20l1Address)
@@ -70,9 +82,12 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.ethERC20Bridge
   }
 
+  /**
+   * Set allowance for L1 bridge contract
+   */
   public async approveToken(
     erc20L1Address: string,
-    overrides?: TransactionOverrides
+    overrides?: PayableOverrides
   ) {
     return this.l1Bridge.approveToken(erc20L1Address, overrides)
   }
@@ -81,7 +96,7 @@ export class Bridge extends L2Bridge {
     value: BigNumber,
     destinationAddress?: string,
     maxGas: BigNumber = BigNumber.from(5000),
-    overrides?: TransactionOverrides
+    overrides?: PayableOverrides
   ) {
     return this.l1Bridge.depositETH(
       value,
@@ -91,17 +106,17 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public async depositAsERC20(
+  public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
     maxGas: BigNumber,
     gasPriceBid: BigNumber,
     destinationAddress?: string,
-    overrides?: TransactionOverrides
+    overrides?: PayableOverrides
   ) {
     // TODO: this will need to (somehow) input the calldata size
     const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
-    return this.l1Bridge.depositAsERC20(
+    return this.l1Bridge.deposit(
       erc20L1Address,
       amount,
       maxSubmissionPrice,
@@ -111,48 +126,7 @@ export class Bridge extends L2Bridge {
       overrides
     )
   }
-  public async depositAsERC777(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
-    overrides?: TransactionOverrides
-  ) {
-    // TODO: this will need to (somehow) input the calldata size
-    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
 
-    return this.l1Bridge.depositAsERC777(
-      erc20L1Address,
-      amount,
-      maxSubmissionPrice,
-      maxGas,
-      gasPriceBid,
-      destinationAddress,
-      overrides
-    )
-  }
-  public async depositAsCustomToken(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
-    overrides?: TransactionOverrides
-  ) {
-    // TODO: this will need to (somehow) input the calldata size
-    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
-
-    return this.l1Bridge.depositAsCustomToken(
-      erc20L1Address,
-      amount,
-      maxSubmissionPrice,
-      maxGas,
-      gasPriceBid,
-      destinationAddress,
-      overrides
-    )
-  }
   public getAndUpdateL1TokenData(erc20l1Address: string) {
     return this.l1Bridge.getAndUpdateL1TokenData(erc20l1Address)
   }
@@ -176,7 +150,7 @@ export class Bridge extends L2Bridge {
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
   ) {
-    return BridgeHelper.calculateL2RetryableTransactionHash(
+    return BridgeHelper.calculateL2TransactionHash(
       inboxSequenceNumber,
       l2ChainId || this.l2Provider
     )
@@ -309,15 +283,6 @@ export class Bridge extends L2Bridge {
 
   public async waitForRetriableReceipt(seqNum: BigNumber) {
     return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
-  }
-
-  public getUpdateTokenInfoEventResult = (
-    l1Transaction: ethers.providers.TransactionReceipt
-  ): Promise<Array<UpdateTokenEventResult>> => {
-    return BridgeHelper.getUpdateTokenInfoEventResult(
-      l1Transaction,
-      this.arbTokenBridge.address
-    )
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {

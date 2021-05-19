@@ -27,7 +27,8 @@ interface IRollup {
         bytes32 nodeHash,
         bytes32 executionHash,
         uint256 inboxMaxCount,
-        bytes32 afterInboxAcc,
+        uint256 afterInboxBatchEndCount,
+        bytes32 afterInboxBatchAcc,
         bytes32[3][2] assertionBytes32Fields,
         uint256[4][2] assertionIntFields
     );
@@ -48,6 +49,10 @@ interface IRollup {
         address challenger,
         uint256 challengedNode
     );
+
+    event StakerReassigned(address indexed staker, uint256 newNode);
+    event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
+    event OwnerFunctionCalled(uint256 id);
 
     function initialize(
         bytes32 _machineHash,

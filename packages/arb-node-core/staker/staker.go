@@ -1,12 +1,30 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package staker
 
 import (
 	"context"
 	"math/big"
+	"runtime"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -14,6 +32,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
+
+var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
 
 type Strategy uint8
 
@@ -37,7 +57,7 @@ func NewStaker(
 	wallet *ethbridge.ValidatorWallet,
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
-) (*Staker, *ethbridge.BridgeWatcher, error) {
+) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
 	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
 	if err != nil {
 		return nil, nil, err
@@ -45,7 +65,7 @@ func NewStaker(
 	return &Staker{
 		Validator: val,
 		strategy:  strategy,
-	}, val.bridge, nil
+	}, val.delayedBridge, nil
 }
 
 func (s *Staker) RunInBackground(ctx context.Context) chan bool {
@@ -75,7 +95,10 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			} else {
 				backoff = time.Second
 			}
-			<-time.After(time.Minute)
+			// Force a GC run to clean up any execution cursors while we wait
+			delay := time.After(time.Minute)
+			runtime.GC()
+			<-delay
 		}
 	}()
 	return done
@@ -202,7 +225,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 			return err
 		}
 
-		s.activeChallenge = challenge.NewChallenger(challengeCon, s.lookup, nodeInfo, s.wallet.Address())
+		s.activeChallenge = challenge.NewChallenger(challengeCon, s.sequencerInbox, s.lookup, nodeInfo, s.wallet.Address())
 	}
 
 	return s.activeChallenge.HandleConflict(ctx)
@@ -241,7 +264,7 @@ func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiv
 		info.CanProgress = false
 		info.LatestStakedNode = nil
 		info.LatestStakedNodeHash = action.hash
-		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount)
+		return s.rollup.StakeOnNewNode(ctx, action.hash, action.assertion, action.prevProposedBlock, action.prevInboxMaxCount, action.sequencerBatchProof)
 	case existingNodeAction:
 		logger.Info().Int("node", int((*big.Int)(action.number).Int64())).Msg("Staking on existing node")
 		info.LatestStakedNode = action.number

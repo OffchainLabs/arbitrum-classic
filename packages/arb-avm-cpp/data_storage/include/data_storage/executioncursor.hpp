@@ -34,6 +34,9 @@ class ExecutionCursor {
     explicit ExecutionCursor(MachineStateKeys machine_)
         : machine(std::move(machine_)) {}
 
+    explicit ExecutionCursor(std::unique_ptr<Machine> machine_)
+        : machine(std::move(machine_)) {}
+
     ~ExecutionCursor() = default;
 
     ExecutionCursor(const ExecutionCursor& rhs)
@@ -75,30 +78,12 @@ class ExecutionCursor {
         }
     }
 
-    [[nodiscard]] const staged_variant& getStaged() const {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
-            return std::get<std::unique_ptr<Machine>>(machine)
-                ->machine_state.staged_message;
-        } else {
-            return std::get<MachineStateKeys>(machine).staged_message;
-        }
-    }
-
-    staged_variant& getStaged() {
-        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
-            return std::get<std::unique_ptr<Machine>>(machine)
-                ->machine_state.staged_message;
-        } else {
-            return std::get<MachineStateKeys>(machine).staged_message;
-        }
-    }
-
     [[nodiscard]] std::optional<uint256_t> getInboxAcc() const {
-        return getOutput().fully_processed_inbox.accWithStaged(getStaged());
+        return getOutput().fully_processed_inbox.accumulator;
     }
 
     [[nodiscard]] uint256_t getTotalMessagesRead() const {
-        return getOutput().fully_processed_inbox.countWithStaged(getStaged());
+        return getOutput().fully_processed_inbox.count;
     }
 };
 

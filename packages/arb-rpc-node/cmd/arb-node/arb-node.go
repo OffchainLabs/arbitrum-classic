@@ -17,35 +17,46 @@
 package main
 
 import (
-	"context"
 	"flag"
+	"fmt"
 	golog "log"
+	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"time"
 
-	gethlog "github.com/ethereum/go-ethereum/log"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 var logger zerolog.Logger
+
 var pprofMux *http.ServeMux
+
+const largeChannelBuffer = 200
 
 func init() {
 	pprofMux = http.DefaultServeMux
@@ -61,17 +72,32 @@ func main() {
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
-	ctx := context.Background()
+	if err := startup(); err != nil {
+		logger.Error().Err(err).Msg("Error running node")
+	}
+}
+
+func startup() error {
+	defer logger.Log().Msg("Cleanly shutting down node")
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
+
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	walletArgs := cmdhelp.AddWalletFlags(fs)
-	rpcVars := utils2.AddRPCFlags(fs)
 	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
+	sequencerMode := fs.Bool("sequencer", false, "act as sequencer")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
+	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	createBatchBlockInterval := fs.Int64("create-batch-block-interval", 1, "block interval at which to create new batches")
+
+	//Healthcheck Config
+	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
+	disableOpenEthereumCheck := fs.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
+	healthcheckMetrics := fs.Bool("metrics", false, "enable prometheus endpoint")
+	healthcheckRPC := fs.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -80,22 +106,41 @@ func main() {
 	)
 	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
-
+	sequencerURL := fs.String("sequencer-url", "", "URL of sequencer feed source")
+	feedOutputAddr := fs.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
+	feedOutputPort := fs.String("feedoutput.port", "9642", "port to bind the relay feed output to")
+	feedOutputPingInterval := fs.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
+	feedOutputTimeout := fs.Duration("feedoutput.timeout", 15*time.Second, "number of seconds for timeout")
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
-
-	//go http.ListenAndServe("localhost:6060", nil)
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error parsing arguments")
+		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 3 {
-		logger.Fatal().Msgf(
-			"usage: arb-node [--maxBatchTime=NumSeconds] %s %s",
-			cmdhelp.WalletArgsString,
-			utils.RollupArgsString,
-		)
+	if fs.NArg() != 3 || (!*sequencerMode && *sequencerURL == "") {
+		fmt.Printf("usage      sequencer: arb-node --sequencer [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or   primary node: arb-node --sequencer.addr=<sequencer address> --inbox=<inbox address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or secondary node: arb-node --sequencer.addr=<sequencer address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		return errors.New("invalid arguments")
+	}
+
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+		return err
+	}
+
+	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
+	if !*sequencerMode {
+		if *sequencerURL == "" {
+			logger.Warn().Msg("Missing --sequencer-url so not subscribing to feed")
+		} else {
+			broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
+			sequencerFeed, err = broadcastClient.Connect()
+			if err != nil {
+				log.Fatal().Err(err).Msg("unable to start broadcastclient")
+			}
+		}
 	}
 
 	if *enablePProf {
@@ -109,67 +154,48 @@ func main() {
 
 	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error running NewRPcEthClient")
+		return errors.Wrap(err, "error running NewRPcEthClient")
 	}
 
-	l1ChainId, err := ethclint.ChainID(context.Background())
+	l1ChainId, err := ethclint.ChainID(ctx)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error getting chain ID")
+		return errors.Wrap(err, "error getting chain ID")
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
 
-	var batcherMode rpc.BatcherMode
-	if *forwardTxURL != "" {
-		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
-	} else {
-		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Error running GetKeystore")
-		}
-
-		if *inboxAddressStr == "" {
-			logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder mode")
-		}
-		inboxAddress := common.HexToAddress(*inboxAddressStr)
-
-		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
-
-		if err := ethbridge.WaitForBalance(
-			ctx,
-			ethclint,
-			common.Address{},
-			common.NewAddressFromEth(auth.From),
-		); err != nil {
-			logger.Fatal().Err(err).Msg("error waiting for balance")
-		}
-
-		if *keepPendingState {
-			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
-		} else {
-			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
-		}
-	}
-
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
 
-	monitor, err := staker.NewMonitor(dbPath, contractFile)
+	mon, err := monitor.NewMonitor(dbPath, contractFile)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
+		return errors.Wrap(err, "error opening monitor")
 	}
-	defer monitor.Close()
+	defer mon.Close()
 
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
+
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
+
+	if *forwardTxURL != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: *forwardTxURL}
 	}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
+	nodehealth.Init(healthChan)
 
-	var inboxReader *staker.InboxReader
+	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}
@@ -180,21 +206,105 @@ func main() {
 		time.Sleep(time.Second * 5)
 	}
 
-	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp()
+	var broadcasterSettings broadcaster.Settings
+	var dataSigner func([]byte) ([]byte, error)
+	var batcherMode rpc.BatcherMode
+	if *forwardTxURL != "" {
+		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
+	} else {
+		var auth *bind.TransactOpts
+		auth, dataSigner, err = cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
+		if err != nil {
+			return errors.Wrap(err, "error running GetKeystore")
+		}
+
+		var inboxAddress common.Address
+		if !*sequencerMode {
+			if *inboxAddressStr == "" {
+				return errors.New("must submit inbox address via --inbox if not running in forwarder or sequencer mode")
+			}
+			inboxAddress = common.HexToAddress(*inboxAddressStr)
+		}
+
+		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
+
+		if err := ethbridge.WaitForBalance(
+			ctx,
+			ethclint,
+			common.Address{},
+			common.NewAddressFromEth(auth.From),
+		); err != nil {
+			return errors.Wrap(err, "error waiting for balance")
+		}
+
+		if *sequencerMode {
+			batcherMode = rpc.SequencerBatcherMode{
+				Auth:                       auth,
+				Core:                       mon.Core,
+				InboxReader:                inboxReader,
+				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
+				CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
+			}
+
+			broadcasterSettings = broadcaster.Settings{
+				Addr:                    *feedOutputAddr + ":" + *feedOutputPort,
+				Workers:                 128,
+				Queue:                   1,
+				IoReadWriteTimeout:      2 * time.Second,
+				ClientPingInterval:      *feedOutputPingInterval,
+				ClientNoResponseTimeout: *feedOutputTimeout,
+			}
+		} else if *keepPendingState {
+			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+		} else {
+			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+		}
 	}
 
-	if err := rpc.LaunchNode(
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	if err != nil {
+		return errors.Wrap(err, "error opening txdb")
+	}
+	defer db.Close()
+
+	if *waitToCatchUp {
+		inboxReader.WaitToCatchUp(ctx)
+	}
+
+	batch, err := rpc.SetupBatcher(
 		ctx,
 		ethclint,
 		rollupArgs.Address,
 		db,
-		"8547",
-		"8548",
-		rpcVars,
 		time.Duration(*maxBatchTime)*time.Second,
 		batcherMode,
-	); err != nil {
-		logger.Fatal().Err(err).Msg("Error running LaunchNode")
+		dataSigner,
+		broadcasterSettings,
+	)
+	if err != nil {
+		return err
+	}
+
+	srv := aggregator.NewServer(batch, rollupArgs.Address, db)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	if err != nil {
+		return err
+	}
+	errChan := make(chan error, 1)
+	go func() {
+		err := rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	select {
+	case err := <-txDBErrChan:
+		return err
+	case err := <-errChan:
+		return err
+	case <-cancelChan:
+		return nil
 	}
 }

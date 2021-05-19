@@ -20,6 +20,7 @@
 #include <avm_values/bigint.hpp>
 
 #include <array>
+#include <memory>
 #include <vector>
 
 class HashPreImage {
@@ -41,6 +42,10 @@ class HashPreImage {
 
 inline uint256_t hash(const HashPreImage& hv) {
     return hv.hash();
+}
+
+inline uint256_t hash(const std::shared_ptr<HashPreImage>& hv) {
+    return hv->hash();
 }
 
 inline bool operator==(const HashPreImage& val1, const HashPreImage& val2) {

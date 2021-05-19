@@ -55,8 +55,13 @@ const _abi = [
         type: 'uint256',
       },
       {
+        internalType: 'contract ISequencerInbox',
+        name: '_sequencerBridge',
+        type: 'address',
+      },
+      {
         internalType: 'contract IBridge',
-        name: '_bridge',
+        name: '_delayedBridge',
         type: 'address',
       },
     ],

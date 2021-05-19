@@ -18,12 +18,13 @@ const (
 type NodeID *big.Int
 
 type NodeInfo struct {
-	NodeNum       NodeID
-	BlockProposed *common.BlockId
-	Assertion     *Assertion
-	InboxMaxCount *big.Int
-	NodeHash      common.Hash
-	AfterInboxAcc [32]byte
+	NodeNum                 NodeID
+	BlockProposed           *common.BlockId
+	Assertion               *Assertion
+	InboxMaxCount           *big.Int
+	NodeHash                common.Hash
+	AfterInboxBatchEndCount *big.Int
+	AfterInboxBatchAcc      [32]byte
 }
 
 func (n *NodeInfo) AfterState() *NodeState {

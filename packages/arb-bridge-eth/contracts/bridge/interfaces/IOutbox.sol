@@ -25,6 +25,12 @@ interface IOutbox {
         bytes32 outputRoot,
         uint256 numInBatch
     );
+    event OutBoxTransactionExecuted(
+        address indexed destAddr,
+        address indexed l2Sender,
+        uint256 indexed outboxIndex,
+        uint256 transactionIndex
+    );
 
     function l2ToL1Sender() external view returns (address);
 

@@ -22,6 +22,7 @@ import { assert, expect } from 'chai'
 import { ChallengeTester } from '../build/types/ChallengeTester'
 import { Challenge } from '../build/types/Challenge'
 import { Bridge } from '../build/types/Bridge'
+import { SequencerInbox } from '../build/types/SequencerInbox'
 import { initializeAccounts } from './utils'
 
 import {
@@ -40,6 +41,7 @@ const zerobytes32 =
 let accounts: Signer[]
 let challengeTester: ChallengeTester
 let bridge: Bridge
+let sequencerInbox: SequencerInbox
 
 describe('Challenge', () => {
   before(async () => {
@@ -68,6 +70,17 @@ describe('Challenge', () => {
     const Bridge = await ethers.getContractFactory('Bridge')
     bridge = (await Bridge.deploy()) as Bridge
     await bridge.deployed()
+    await bridge.initialize()
+
+    const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
+    sequencerInbox = (await SequencerInbox.deploy()) as SequencerInbox
+    await sequencerInbox.deployed()
+    await sequencerInbox.initialize(
+      bridge.address,
+      await accounts[0].getAddress(),
+      15,
+      900
+    )
   })
 
   let challenge: Challenge
@@ -97,6 +110,7 @@ describe('Challenge', () => {
       await accounts[1].getAddress(),
       100,
       100,
+      sequencerInbox.address,
       bridge.address
     )
     const challengeAddress = await challengeTester.challenge()

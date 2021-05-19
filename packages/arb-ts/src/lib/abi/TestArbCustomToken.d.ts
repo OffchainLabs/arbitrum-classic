@@ -22,24 +22,37 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface TestArbCustomTokenInterface extends ethers.utils.Interface {
   functions: {
+    'DOMAIN_SEPARATOR()': FunctionFragment
     'allowance(address,address)': FunctionFragment
     'approve(address,uint256)': FunctionFragment
+    'approveAndCall(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
     'bridge()': FunctionFragment
-    'bridgeMint(address,uint256,bytes)': FunctionFragment
+    'bridgeBurn(address,uint256)': FunctionFragment
+    'bridgeMint(address,uint256)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
+    'initialize(string,string,uint8)': FunctionFragment
     'l1Address()': FunctionFragment
     'name()': FunctionFragment
+    'nonces(address)': FunctionFragment
+    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
     'someWackyCustomStuff()': FunctionFragment
+    'supportsInterface(bytes4)': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
+    'transferAndCall(address,uint256)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
+    'transferFromAndCall(address,address,uint256,bytes)': FunctionFragment
     'withdraw(address,uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'DOMAIN_SEPARATOR',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'allowance',
     values: [string, string]
@@ -48,11 +61,19 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'approve',
     values: [string, BigNumberish]
   ): string
+  encodeFunctionData(
+    functionFragment: 'approveAndCall',
+    values: [string, BigNumberish]
+  ): string
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
+    functionFragment: 'bridgeBurn',
+    values: [string, BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'bridgeMint',
-    values: [string, BigNumberish, BytesLike]
+    values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'decimals', values?: undefined): string
   encodeFunctionData(
@@ -63,11 +84,32 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
   ): string
+  encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [string, string, BigNumberish]
+  ): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
+  encodeFunctionData(functionFragment: 'nonces', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'permit',
+    values: [
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BytesLike,
+      BytesLike
+    ]
+  ): string
   encodeFunctionData(
     functionFragment: 'someWackyCustomStuff',
     values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'supportsInterface',
+    values: [BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
@@ -79,18 +121,35 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'transferAndCall',
+    values: [string, BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'transferFrom',
     values: [string, string, BigNumberish]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'transferFromAndCall',
+    values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'withdraw',
     values: [string, BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'DOMAIN_SEPARATOR',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'approveAndCall',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
   decodeFunctionResult(
@@ -101,17 +160,32 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'someWackyCustomStuff',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'supportsInterface',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result
   decodeFunctionResult(
+    functionFragment: 'transferAndCall',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'transferFrom',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'transferFromAndCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
@@ -139,6 +213,10 @@ export class TestArbCustomToken extends Contract {
   interface: TestArbCustomTokenInterface
 
   functions: {
+    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<[string]>
+
+    'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<[string]>
+
     allowance(
       owner: string,
       spender: string,
@@ -163,6 +241,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    'approveAndCall(address,uint256)'(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'approveAndCall(address,uint256,bytes)'(
+      spender: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     balanceOf(account: string, overrides?: CallOverrides): Promise<[BigNumber]>
 
     'balanceOf(address)'(
@@ -174,17 +265,27 @@ export class TestArbCustomToken extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<[string]>
 
-    bridgeMint(
+    bridgeBurn(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeBurn(address,uint256)'(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    bridgeMint(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -216,6 +317,20 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    initialize(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'initialize(string,string,uint8)'(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     l1Address(overrides?: CallOverrides): Promise<[string]>
 
     'l1Address()'(overrides?: CallOverrides): Promise<[string]>
@@ -224,11 +339,50 @@ export class TestArbCustomToken extends Contract {
 
     'name()'(overrides?: CallOverrides): Promise<[string]>
 
+    nonces(owner: string, overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'nonces(address)'(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
+
+    permit(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     someWackyCustomStuff(overrides?: Overrides): Promise<ContractTransaction>
 
     'someWackyCustomStuff()'(
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    'supportsInterface(bytes4)'(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
 
     symbol(overrides?: CallOverrides): Promise<[string]>
 
@@ -250,6 +404,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    'transferAndCall(address,uint256)'(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'transferAndCall(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     transferFrom(
       sender: string,
       recipient: string,
@@ -258,6 +425,21 @@ export class TestArbCustomToken extends Contract {
     ): Promise<ContractTransaction>
 
     'transferFrom(address,address,uint256)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'transferFromAndCall(address,address,uint256,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,
@@ -276,6 +458,10 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>
+
+  'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<string>
 
   allowance(
     owner: string,
@@ -301,6 +487,19 @@ export class TestArbCustomToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  'approveAndCall(address,uint256)'(
+    spender: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'approveAndCall(address,uint256,bytes)'(
+    spender: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
   'balanceOf(address)'(
@@ -312,17 +511,27 @@ export class TestArbCustomToken extends Contract {
 
   'bridge()'(overrides?: CallOverrides): Promise<string>
 
-  bridgeMint(
+  bridgeBurn(
     account: string,
     amount: BigNumberish,
-    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'bridgeMint(address,uint256,bytes)'(
+  'bridgeBurn(address,uint256)'(
     account: string,
     amount: BigNumberish,
-    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  bridgeMint(
+    account: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'bridgeMint(address,uint256)'(
+    account: string,
+    amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -354,6 +563,20 @@ export class TestArbCustomToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  initialize(
+    name: string,
+    symbol: string,
+    decimals: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'initialize(string,string,uint8)'(
+    name: string,
+    symbol: string,
+    decimals: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   l1Address(overrides?: CallOverrides): Promise<string>
 
   'l1Address()'(overrides?: CallOverrides): Promise<string>
@@ -362,9 +585,48 @@ export class TestArbCustomToken extends Contract {
 
   'name()'(overrides?: CallOverrides): Promise<string>
 
+  nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
+
+  'nonces(address)'(
+    owner: string,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
+
+  permit(
+    owner: string,
+    spender: string,
+    value: BigNumberish,
+    deadline: BigNumberish,
+    v: BigNumberish,
+    r: BytesLike,
+    s: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
+    owner: string,
+    spender: string,
+    value: BigNumberish,
+    deadline: BigNumberish,
+    v: BigNumberish,
+    r: BytesLike,
+    s: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   someWackyCustomStuff(overrides?: Overrides): Promise<ContractTransaction>
 
   'someWackyCustomStuff()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  supportsInterface(
+    interfaceId: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
+  'supportsInterface(bytes4)'(
+    interfaceId: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<boolean>
 
   symbol(overrides?: CallOverrides): Promise<string>
 
@@ -386,6 +648,19 @@ export class TestArbCustomToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  'transferAndCall(address,uint256)'(
+    recipient: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'transferAndCall(address,uint256,bytes)'(
+    recipient: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   transferFrom(
     sender: string,
     recipient: string,
@@ -394,6 +669,21 @@ export class TestArbCustomToken extends Contract {
   ): Promise<ContractTransaction>
 
   'transferFrom(address,address,uint256)'(
+    sender: string,
+    recipient: string,
+    amount: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'transferFromAndCall(address,address,uint256,bytes)'(
+    sender: string,
+    recipient: string,
+    amount: BigNumberish,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'transferFromAndCall(address,address,uint256)'(
     sender: string,
     recipient: string,
     amount: BigNumberish,
@@ -413,6 +703,10 @@ export class TestArbCustomToken extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<string>
+
+    'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<string>
+
     allowance(
       owner: string,
       spender: string,
@@ -437,6 +731,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
+    'approveAndCall(address,uint256)'(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'approveAndCall(address,uint256,bytes)'(
+      spender: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'balanceOf(address)'(
@@ -448,17 +755,27 @@ export class TestArbCustomToken extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<string>
 
-    bridgeMint(
+    bridgeBurn(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeBurn(address,uint256)'(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    bridgeMint(
+      account: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -490,6 +807,20 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
+    initialize(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initialize(string,string,uint8)'(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     l1Address(overrides?: CallOverrides): Promise<string>
 
     'l1Address()'(overrides?: CallOverrides): Promise<string>
@@ -498,9 +829,48 @@ export class TestArbCustomToken extends Contract {
 
     'name()'(overrides?: CallOverrides): Promise<string>
 
+    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'nonces(address)'(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    permit(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     someWackyCustomStuff(overrides?: CallOverrides): Promise<void>
 
     'someWackyCustomStuff()'(overrides?: CallOverrides): Promise<void>
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'supportsInterface(bytes4)'(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
 
     symbol(overrides?: CallOverrides): Promise<string>
 
@@ -522,6 +892,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
+    'transferAndCall(address,uint256)'(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'transferAndCall(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
     transferFrom(
       sender: string,
       recipient: string,
@@ -530,6 +913,21 @@ export class TestArbCustomToken extends Contract {
     ): Promise<boolean>
 
     'transferFrom(address,address,uint256)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'transferFromAndCall(address,address,uint256,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,
@@ -560,6 +958,10 @@ export class TestArbCustomToken extends Contract {
   }
 
   estimateGas: {
+    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<BigNumber>
+
+    'DOMAIN_SEPARATOR()'(overrides?: CallOverrides): Promise<BigNumber>
+
     allowance(
       owner: string,
       spender: string,
@@ -584,6 +986,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    'approveAndCall(address,uint256)'(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'approveAndCall(address,uint256,bytes)'(
+      spender: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     balanceOf(account: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'balanceOf(address)'(
@@ -595,17 +1010,27 @@ export class TestArbCustomToken extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    bridgeMint(
+    bridgeBurn(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeBurn(address,uint256)'(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    bridgeMint(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -637,6 +1062,20 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    initialize(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'initialize(string,string,uint8)'(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     l1Address(overrides?: CallOverrides): Promise<BigNumber>
 
     'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -645,9 +1084,48 @@ export class TestArbCustomToken extends Contract {
 
     'name()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    nonces(owner: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'nonces(address)'(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    permit(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     someWackyCustomStuff(overrides?: Overrides): Promise<BigNumber>
 
     'someWackyCustomStuff()'(overrides?: Overrides): Promise<BigNumber>
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'supportsInterface(bytes4)'(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     symbol(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -669,6 +1147,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    'transferAndCall(address,uint256)'(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'transferAndCall(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     transferFrom(
       sender: string,
       recipient: string,
@@ -677,6 +1168,21 @@ export class TestArbCustomToken extends Contract {
     ): Promise<BigNumber>
 
     'transferFrom(address,address,uint256)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'transferFromAndCall(address,address,uint256,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,
@@ -697,6 +1203,12 @@ export class TestArbCustomToken extends Contract {
   }
 
   populateTransaction: {
+    DOMAIN_SEPARATOR(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'DOMAIN_SEPARATOR()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     allowance(
       owner: string,
       spender: string,
@@ -721,6 +1233,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    'approveAndCall(address,uint256)'(
+      spender: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'approveAndCall(address,uint256,bytes)'(
+      spender: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     balanceOf(
       account: string,
       overrides?: CallOverrides
@@ -735,17 +1260,27 @@ export class TestArbCustomToken extends Contract {
 
     'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    bridgeMint(
+    bridgeBurn(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'bridgeMint(address,uint256,bytes)'(
+    'bridgeBurn(address,uint256)'(
       account: string,
       amount: BigNumberish,
-      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    bridgeMint(
+      account: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'bridgeMint(address,uint256)'(
+      account: string,
+      amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -777,6 +1312,20 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    initialize(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'initialize(string,string,uint8)'(
+      name: string,
+      symbol: string,
+      decimals: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -785,10 +1334,52 @@ export class TestArbCustomToken extends Contract {
 
     'name()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    nonces(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'nonces(address)'(
+      owner: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    permit(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)'(
+      owner: string,
+      spender: string,
+      value: BigNumberish,
+      deadline: BigNumberish,
+      v: BigNumberish,
+      r: BytesLike,
+      s: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     someWackyCustomStuff(overrides?: Overrides): Promise<PopulatedTransaction>
 
     'someWackyCustomStuff()'(
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    supportsInterface(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'supportsInterface(bytes4)'(
+      interfaceId: BytesLike,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -811,6 +1402,19 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    'transferAndCall(address,uint256)'(
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'transferAndCall(address,uint256,bytes)'(
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     transferFrom(
       sender: string,
       recipient: string,
@@ -819,6 +1423,21 @@ export class TestArbCustomToken extends Contract {
     ): Promise<PopulatedTransaction>
 
     'transferFrom(address,address,uint256)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'transferFromAndCall(address,address,uint256,bytes)'(
+      sender: string,
+      recipient: string,
+      amount: BigNumberish,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,

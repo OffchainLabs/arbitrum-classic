@@ -54,9 +54,7 @@ void checkpointStateTwice(ArbStorage& storage, Machine& machine) {
 }
 
 void deleteCheckpoint(ReadWriteTransaction& transaction, Machine& machine) {
-    auto machine_hash = machine.hash();
-    REQUIRE(machine_hash);
-    auto results = deleteMachine(transaction, *machine_hash);
+    auto results = deleteMachine(transaction, machine.hash());
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == 0);
 }
@@ -64,9 +62,7 @@ void deleteCheckpoint(ReadWriteTransaction& transaction, Machine& machine) {
 void restoreCheckpoint(ArbStorage& storage,
                        Machine& expected_machine,
                        ValueCache& value_cache) {
-    auto machine_hash = expected_machine.hash();
-    REQUIRE(machine_hash);
-    auto mach = storage.getMachine(*machine_hash, value_cache);
+    auto mach = storage.getMachine(expected_machine.hash(), value_cache);
     REQUIRE(mach->hash() == expected_machine.hash());
 }
 
@@ -79,22 +75,18 @@ TEST_CASE("Checkpoint State") {
     auto machine = storage.getInitialMachine(value_cache);
     MachineExecutionConfig execConfig;
     execConfig.max_gas = 3;
-    execConfig.next_block_height = 3;
     machine->machine_state.context = AssertionContext(execConfig);
     machine->run();
 
     SECTION("default") { checkpointState(storage, *machine); }
     SECTION("save twice") { checkpointStateTwice(storage, *machine); }
     SECTION("assert machine hash") {
-        auto hash1 = machine->hash();
-        REQUIRE(hash1);
         auto transaction = storage.makeReadWriteTransaction();
         auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());
         REQUIRE(transaction->commit().ok());
-        auto machine2 = storage.getMachine(*hash1, value_cache);
-        auto hash2 = machine2->hash();
-        REQUIRE(hash2 == hash1);
+        auto machine2 = storage.getMachine(machine->hash(), value_cache);
+        REQUIRE(machine2->hash() == machine->hash());
     }
 }
 
@@ -108,7 +100,6 @@ TEST_CASE("Delete machine checkpoint") {
         auto machine = storage.getInitialMachine(value_cache);
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 4;
-        execConfig.next_block_height = 3;
         machine->machine_state.context = AssertionContext(execConfig);
         machine->run();
         auto transaction = storage.makeReadWriteTransaction();
@@ -143,7 +134,6 @@ TEST_CASE("Proof") {
     while (true) {
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 3;
-        execConfig.next_block_height = 3;
         machine.machine_state.context = AssertionContext(execConfig);
         auto assertion = machine.run();
         machine.marshalForProof();
@@ -196,8 +186,8 @@ TEST_CASE("Machine hash") {
                            "817555893843236912662725763451298816577059146210080"
                            "81459572116739688988488432"));
     REQUIRE(machineHash == intx::from_string<uint256_t>(
-                               "12818298244055256727021237632105567892940754157"
-                               "945856618644698870485816765145"));
+                               "56208326812724912066026123588383649819390601658"
+                               "448049319166841561743369815863"));
 }
 
 TEST_CASE("MachineTestVectors") {

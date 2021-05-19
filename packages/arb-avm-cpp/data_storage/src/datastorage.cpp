@@ -16,12 +16,11 @@
 
 #include <data_storage/datastorage.hpp>
 
-#include "value/utils.hpp"
-
 #include <rocksdb/convenience.h>
 #include <rocksdb/filter_policy.h>
 #include <avm_values/value.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <string>
 
@@ -59,14 +58,14 @@ DataStorage::DataStorage(const std::string& db_path) {
     // Increase the number of threads to open files to offset slow disk access
     options.max_file_opening_threads = 200;
 
+    // Set WAL to a non-zero value so that old logs can be cleaned up
+    options.max_total_wal_size = 1024 * 1024 * 50;
+
     // Various settings to constrain memory growth
     /*
     options.max_open_files = 512;
     options.write_buffer_size = 1024 * 1024 * 8;
     options.db_write_buffer_size = 1024 * 1024 * 64;
-
-    // Decrease the WAL log size to improve start time
-    options.max_total_wal_size = 1024 * 1024 * 50;
 
     // No need to wait for manual flush to finish
     flush_options.wait = false;
@@ -101,7 +100,11 @@ DataStorage::DataStorage(const std::string& db_path) {
                                           small_cf_options};
     column_descriptors[STATE_COLUMN] = {"states", small_cf_options};
     column_descriptors[CHECKPOINT_COLUMN] = {"checkpoints", small_cf_options};
-    column_descriptors[MESSAGEENTRY_COLUMN] = {"messageentries", cf_options};
+    column_descriptors[DELAYEDMESSAGE_COLUMN] = {"delayedmessages", cf_options};
+    column_descriptors[SEQUENCERBATCHITEM_COLUMN] = {"sequencerbatchitems",
+                                                     cf_options};
+    column_descriptors[SEQUENCERBATCH_COLUMN] = {"sequencerbatches",
+                                                 cf_options};
     column_descriptors[LOG_COLUMN] = {"logs", cf_options};
     column_descriptors[SEND_COLUMN] = {"sends", cf_options};
     column_descriptors[SIDELOAD_COLUMN] = {"sideloads", small_cf_options};
@@ -117,6 +120,16 @@ DataStorage::DataStorage(const std::string& db_path) {
         throw std::runtime_error(status.ToString());
     }
     assert(status.ok());
+
+    // Compact all family columns on startup
+    // Disabled because of concern over leaving the db in a bad state if
+    // terminated during compaction
+
+    //    auto cr_options = rocksdb::CompactRangeOptions();
+    //    for (size_t i = 0; i < FAMILY_COLUMN_COUNT; i++) {
+    //        db->CompactRange(cr_options, column_handles[i], nullptr, nullptr);
+    //    }
+
     txn_db = std::unique_ptr<rocksdb::TransactionDB>(db);
 }
 

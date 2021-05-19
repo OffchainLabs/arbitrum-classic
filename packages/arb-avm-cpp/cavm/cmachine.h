@@ -75,6 +75,8 @@ ByteSlice machineMarshallState(CMachine* m);
 
 char* machineInfo(CMachine* m);
 
+void machineCodePointHash(CMachine* m, void*);
+
 CMachineExecutionConfig* machineExecutionConfigCreate();
 void machineExecutionConfigDestroy(CMachineExecutionConfig* m);
 void* machineExecutionConfigClone(CMachineExecutionConfig* c);
@@ -83,8 +85,6 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
                                      int go_over_gas);
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
                                             ByteSliceArray bytes);
-void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
-                                              void* next_block_height);
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
                                         ByteSliceArray bytes);
 void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,

@@ -62,7 +62,6 @@ void generateTestMachine(std::unique_ptr<Machine>& mach) {
 void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     MachineExecutionConfig execConfig;
     execConfig.max_gas = gas_count_target;
-    execConfig.next_block_height = 7;
     mach.machine_state.context = AssertionContext(execConfig);
     auto assertion = mach.run();
     REQUIRE(assertion.gasCount <= gas_count_target);
@@ -97,9 +96,7 @@ TEST_CASE("Code serialization") {
         auto save_ret = saveMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
-        auto mach_hash = mach->hash();
-        REQUIRE(mach_hash);
-        auto mach2 = storage.getMachine(*mach_hash, value_cache);
+        auto mach2 = storage.getMachine(mach->hash(), value_cache);
         checkRun(*mach2);
     }
 
@@ -107,7 +104,6 @@ TEST_CASE("Code serialization") {
         auto mach2 = *mach;
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
-        execConfig.next_block_height = 8;
         mach2.machine_state.context = AssertionContext(execConfig);
         mach2.run();
         auto save_ret = saveMachine(*tx, *mach);
@@ -115,25 +111,19 @@ TEST_CASE("Code serialization") {
         save_ret = saveMachine(*tx, mach2);
         REQUIRE(save_ret.status.ok());
 
-        auto mach_hash = mach->hash();
-        REQUIRE(mach_hash.has_value());
-
-        auto mach_hash2 = mach2.hash();
-        REQUIRE(mach_hash2.has_value());
-
         SECTION("Delete first") {
-            auto del_ret = deleteMachine(*tx, *mach_hash);
+            auto del_ret = deleteMachine(*tx, mach->hash());
             REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(*mach_hash2, value_cache);
+            auto mach3 = storage.getMachine(mach2.hash(), value_cache);
             checkRun(*mach3);
         }
 
         SECTION("Delete second") {
-            auto del_ret = deleteMachine(*tx, *mach_hash2);
+            auto del_ret = deleteMachine(*tx, mach2.hash());
             REQUIRE(del_ret.status.ok());
             REQUIRE(tx->commit().ok());
-            auto mach3 = storage.getMachine(*mach_hash, value_cache);
+            auto mach3 = storage.getMachine(mach->hash(), value_cache);
             checkRun(*mach3);
         }
     }
@@ -141,11 +131,9 @@ TEST_CASE("Code serialization") {
     SECTION("Save twice, delete and load") {
         saveMachine(*tx, *mach);
         saveMachine(*tx, *mach);
-        auto mach_hash = mach->hash();
-        REQUIRE(mach_hash);
-        deleteMachine(*tx, *mach_hash);
+        deleteMachine(*tx, mach->hash());
         REQUIRE(tx->commit().ok());
-        auto mach2 = storage.getMachine(*mach_hash, value_cache);
+        auto mach2 = storage.getMachine(mach->hash(), value_cache);
         checkRun(*mach2);
     }
 }

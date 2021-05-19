@@ -13,4 +13,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 }
 
 module.exports = func
-module.exports.tags = ['Rollup']
+module.exports.tags = ['Rollup', 'live', 'test']

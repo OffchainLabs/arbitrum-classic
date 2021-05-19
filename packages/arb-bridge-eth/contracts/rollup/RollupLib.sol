@@ -30,6 +30,9 @@ library RollupLib {
         uint256 baseStake;
         address stakeToken;
         address owner;
+        address sequencer;
+        uint256 sequencerDelayBlocks;
+        uint256 sequencerDelaySeconds;
         bytes extraConfig;
     }
 

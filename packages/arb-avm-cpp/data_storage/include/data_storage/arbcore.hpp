@@ -45,14 +45,26 @@ struct Slice;
 class ColumnFamilyHandle;
 }  // namespace rocksdb
 
+struct RawMessageInfo {
+    std::vector<unsigned char> message;
+    uint256_t sequence_number;
+    uint256_t accumulator;
+
+    RawMessageInfo(std::vector<unsigned char> message_,
+                   uint256_t sequence_number_,
+                   uint256_t accumulator_)
+        : message(std::move(message_)),
+          sequence_number(sequence_number_),
+          accumulator(accumulator_) {}
+};
+
 class ArbCore {
    public:
     typedef enum {
-        MESSAGES_EMPTY,       // Out: Ready to receive messages
-        MESSAGES_READY,       // In:  Messages in vector
-        MESSAGES_SUCCESS,     // Out:  Messages processed successfully
-        MESSAGES_NEED_OLDER,  // Out: Last message invalid, need older messages
-        MESSAGES_ERROR        // Out: Error processing messages
+        MESSAGES_EMPTY,    // Out: Ready to receive messages
+        MESSAGES_READY,    // In:  Messages in vector
+        MESSAGES_SUCCESS,  // Out:  Messages processed successfully
+        MESSAGES_ERROR     // Out: Error processing messages
     } message_status_enum;
 
     struct logscursor_logs {
@@ -63,10 +75,10 @@ class ArbCore {
 
    private:
     struct message_data_struct {
-        std::vector<std::vector<unsigned char>> messages;
-        uint256_t previous_inbox_acc;
-        bool last_block_complete{false};
-        std::optional<uint256_t> reorg_message_count;
+        uint256_t previous_batch_acc;
+        std::vector<std::vector<unsigned char>> sequencer_batch_items;
+        std::vector<std::vector<unsigned char>> delayed_messages;
+        std::optional<uint256_t> reorg_batch_items;
     };
 
    private:
@@ -116,6 +128,11 @@ class ArbCore {
     // checkpoints_min_message_index
     uint256_t checkpoints_min_message_index;
 
+    std::shared_mutex old_machine_cache_mutex;
+    std::map<uint256_t, std::unique_ptr<Machine>> old_machine_cache;
+    // Not protected by mutex! Must only be used by the main ArbCore thread.
+    uint256_t last_old_machine_cache_gas;
+
    public:
     ArbCore() = delete;
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -140,22 +157,15 @@ class ArbCore {
         ReadTransaction& tx,
         const uint256_t& arb_gas_used) const;
     std::variant<rocksdb::Status, MachineStateKeys> getCheckpointUsingGas(
-        ReadSnapshotTransaction& tx,
+        ReadConsistentTransaction& tx,
         const uint256_t& total_gas,
         bool after_gas);
-    rocksdb::Status reorgToMessageOrBefore(
-        const uint256_t& message_sequence_number,
-        bool use_latest,
-        ValueCache& cache);
+    rocksdb::Status reorgToMessageCountOrBefore(const uint256_t& message_count,
+                                                bool use_latest,
+                                                ValueCache& cache);
     template <class T>
     std::unique_ptr<T> getMachineUsingStateKeys(
-        const ReadSnapshotTransaction& tx,
-        const MachineStateKeys& state_data,
-        ValueCache& value_cache) const;
-
-    template <class T>
-    std::unique_ptr<T> getMachineUsingStateKeysUnsafe(
-        const ReadTransaction& tx,
+        const ReadConsistentTransaction& tx,
         const MachineStateKeys& state_data,
         ValueCache& value_cache) const;
 
@@ -184,10 +194,11 @@ class ArbCore {
 
    public:
     // Sending messages to core thread
-    bool deliverMessages(std::vector<std::vector<unsigned char>> messages,
-                         const uint256_t& previous_inbox_acc,
-                         bool last_block_complete,
-                         const std::optional<uint256_t>& reorg_height);
+    bool deliverMessages(
+        const uint256_t& previous_inbox_acc,
+        std::vector<std::vector<unsigned char>> sequencer_batch_items,
+        std::vector<std::vector<unsigned char>> delayed_messages,
+        const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
     std::string messagesClearError();
     void checkpointsSetMinMessageIndex(uint256_t message_index);
@@ -230,7 +241,7 @@ class ArbCore {
         ExecutionCursor& execution_cursor,
         uint256_t total_gas_used,
         bool go_over_gas,
-        uint256_t message_group_size,
+        size_t message_group_size,
         ValueCache& cache);
 
     std::unique_ptr<Machine>& resolveExecutionCursorMachine(
@@ -246,6 +257,7 @@ class ArbCore {
     ValueResult<uint256_t> logInsertedCount() const;
     ValueResult<uint256_t> sendInsertedCount() const;
     ValueResult<uint256_t> messageEntryInsertedCount() const;
+    ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,
                                             ValueCache& valueCache);
@@ -256,24 +268,44 @@ class ArbCore {
     ValueResult<std::vector<std::vector<unsigned char>>> getMessages(
         uint256_t index,
         uint256_t count) const;
+    ValueResult<std::vector<std::vector<unsigned char>>> getSequencerBatchItems(
+        uint256_t index,
+        uint256_t count) const;
+    ValueResult<uint256_t> getSequencerBlockNumberAt(
+        uint256_t sequence_number) const;
+    ValueResult<std::vector<unsigned char>> genInboxProof(
+        uint256_t seq_num,
+        uint256_t batch_index,
+        uint256_t batch_end_count) const;
+
     ValueResult<uint256_t> getInboxAcc(uint256_t index);
+    ValueResult<uint256_t> getDelayedInboxAcc(uint256_t index);
+    ValueResult<uint256_t> getDelayedInboxAccImpl(const ReadTransaction& tx,
+                                                  uint256_t index);
     ValueResult<std::pair<uint256_t, uint256_t>> getInboxAccPair(
         uint256_t index1,
         uint256_t index2);
 
+    ValueResult<size_t> countMatchingBatchAccs(
+        std::vector<std::pair<uint256_t, uint256_t>> seq_nums_and_accs) const;
+
+    ValueResult<uint256_t> getDelayedMessagesToSequence(
+        uint256_t max_block_number) const;
+
    private:
-    ValueResult<std::pair<std::vector<std::vector<unsigned char>>,
-                          std::optional<uint256_t>>>
-    getMessagesImpl(const ReadTransaction& tx,
-                    uint256_t index,
-                    uint256_t count) const;
+    ValueResult<std::vector<RawMessageInfo>> getMessagesImpl(
+        const ReadConsistentTransaction& tx,
+        uint256_t index,
+        uint256_t count,
+        std::optional<uint256_t> start_acc) const;
+    ValueResult<SequencerBatchItem> getNextSequencerBatchItem(
+        const ReadTransaction& tx,
+        uint256_t sequence_number) const;
+
     template <typename T>
     rocksdb::Status resolveStagedMessage(const ReadTransaction& tx,
                                          T& machine_state);
     // Private database interaction
-    ValueResult<MessageEntry> getMessageEntry(
-        const ReadTransaction& tx,
-        uint256_t message_sequence_number) const;
     ValueResult<uint256_t> logInsertedCountImpl(
         const ReadTransaction& tx) const;
 
@@ -288,6 +320,10 @@ class ArbCore {
                                              rocksdb::Slice value_slice);
     ValueResult<uint256_t> messageEntryInsertedCountImpl(
         const ReadTransaction& tx) const;
+    ValueResult<uint256_t> delayedMessageEntryInsertedCountImpl(
+        const ReadTransaction& tx) const;
+    ValueResult<uint256_t> totalDelayedMessagesSequencedImpl(
+        const ReadTransaction& tx) const;
 
     rocksdb::Status saveLogs(ReadWriteTransaction& tx,
                              const std::vector<value>& val);
@@ -296,38 +332,29 @@ class ArbCore {
         const std::vector<std::vector<unsigned char>>& sends);
 
    private:
-    std::optional<rocksdb::Status> addMessages(
-        const std::vector<std::vector<unsigned char>>& new_messages,
-        bool last_block_complete,
-        const uint256_t& prev_inbox_acc,
-        const std::optional<uint256_t>& reorg_message_count,
-        ValueCache& cache);
-    ValueResult<std::vector<value>> getLogsImpl(ReadSnapshotTransaction& tx,
+    rocksdb::Status addMessages(const message_data_struct& data,
+                                ValueCache& cache);
+    ValueResult<std::vector<value>> getLogsImpl(ReadConsistentTransaction& tx,
                                                 uint256_t index,
                                                 uint256_t count,
                                                 ValueCache& valueCache);
 
-    bool isValid(ReadTransaction& tx,
-                 const InboxState& fully_processed_inbox,
-                 const staged_variant& staged_message);
+    ValueResult<std::vector<MachineMessage>> readNextMessages(
+        const ReadConsistentTransaction& tx,
+        const InboxState& fully_processed_inbox,
+        size_t count) const;
 
-    ValueResult<std::pair<bool, std::vector<InboxMessage>>>
-    executionCursorGetMessages(ReadSnapshotTransaction& tx,
-                               const ExecutionCursor& execution_cursor,
-                               const uint256_t& orig_message_group_size);
+    bool isValid(const ReadTransaction& tx,
+                 const InboxState& fully_processed_inbox) const;
 
-    std::variant<rocksdb::Status, MachineStateKeys> getClosestExecutionMachine(
-        ReadSnapshotTransaction& tx,
-        const uint256_t& total_gas_used,
-        bool is_for_sideload = false);
+    std::variant<rocksdb::Status, ExecutionCursor> getClosestExecutionMachine(
+        ReadConsistentTransaction& tx,
+        const uint256_t& total_gas_used);
 
     rocksdb::Status updateLogInsertedCount(ReadWriteTransaction& tx,
                                            const uint256_t& log_index);
     rocksdb::Status updateSendInsertedCount(ReadWriteTransaction& tx,
                                             const uint256_t& send_index);
-    rocksdb::Status updateMessageEntryInsertedCount(
-        ReadWriteTransaction& tx,
-        const uint256_t& message_index);
 
    public:
     // Public sideload interaction

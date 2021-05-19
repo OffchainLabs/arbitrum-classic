@@ -8,6 +8,22 @@ Arbitrum supports standard EVM contract deployment. This allows standard Solidit
 
 To deploy your contracts, you need to set your deployment tool to deploy on an Arbitrum rollup chain instead of Ethereum. While this should be straightforward, we include instructions for some build systems here, and we will add to the list over time. If you're using a build system that's not listed here and having trouble configuring it, please reach out to us on [Discord](https://discord.gg/ZpZuw7p).
 
+## Hardhat
+
+To port an existing hardhat configuring, simply include the Arbitrum RPC url in `hardhat.config.ts`:
+
+```ts
+module.exports = {
+  solidity: '0.7.3',
+  networks: {
+    arbitrum: {
+      url: 'https://kovan4.arbitrum.io/rpc',
+      gasPrice: 0,
+    },
+  },
+}
+```
+
 ## Truffle
 
 To port an existing truffle configuration:
@@ -30,7 +46,6 @@ To port an existing truffle configuration:
       'jar deny prosper gasp flush glass core corn alarm treat leg smart'
     const arbProviderUrl = 'http://localhost:8547/'
     ```
-
 
     - Add the `arbitrum` network to `module.exports`:
 

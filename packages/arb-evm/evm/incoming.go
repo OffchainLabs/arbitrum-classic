@@ -1,10 +1,14 @@
 package evm
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/pkg/errors"
 )
 
 type ProcessedTx struct {
@@ -16,7 +20,26 @@ type ProcessedTx struct {
 
 func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 	msg := res.IncomingRequest
-	if msg.Kind != message.L2Type && msg.Kind != message.RetryableType {
+
+	if msg.Kind == message.RetryableType {
+		retryable := message.NewRetryableTxFromData(msg.Data)
+		txData := arbos.CreateRetryableTicketData(retryable)
+		createTicketTx := &types.LegacyTx{
+			Nonce:    0,
+			GasPrice: big.NewInt(0),
+			Gas:      0,
+			To:       &arbos.ARB_RETRYABLE_ADDRESS,
+			Value:    retryable.Deposit,
+			Data:     txData,
+		}
+		return &ProcessedTx{
+			Result: res,
+			Tx:     types.NewTx(createTicketTx),
+			Kind:   msg.Kind,
+		}, nil
+	}
+
+	if msg.Kind != message.L2Type && msg.Kind != message.EthDepositTxType {
 		return nil, errors.Errorf("result is not a transaction %v", msg.Kind)
 	}
 	l2msg, err := message.L2Message{Data: msg.Data}.AbstractMessage()
@@ -39,11 +62,6 @@ func GetTransaction(res *TxResult) (*ProcessedTx, error) {
 func FilterEthTxResults(results []*TxResult) []*ProcessedTx {
 	filteredResults := make([]*ProcessedTx, 0, len(results))
 	for _, res := range results {
-		kind := res.IncomingRequest.Kind
-		// Ignore other message types
-		if kind != message.L2Type && kind != message.RetryableType {
-			continue
-		}
 		processed, err := GetTransaction(res)
 		if err != nil {
 			logger.Info().

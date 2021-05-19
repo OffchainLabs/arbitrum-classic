@@ -592,7 +592,7 @@ This rent-based mechanism is a bit more cumbersome than direct L1 to L2 transact
 
 ### L2 to L1 ticket-based calls
 
-Calls from L2 to L1 operate in a similar way, with a ticket-based system. An L2 contract can call a method of the precompiled ArbSys contract, to send a transaction to L1. When the execution of the L2 transaction containing the submission is confirmed at L1 (some days later), a ticket is created in the EthBridge. That ticket can be renewed by anyone who calls a certain EthBridge method and submits the ticketID. 
+Calls from L2 to L1 operate in a similar way, with a ticket-based system. An L2 contract can call a method of the precompiled ArbSys contract, to send a transaction to L1. When the execution of the L2 transaction containing the submission is confirmed at L1 (some days later), a ticket is created in the EthBridge. That ticket can be triggered by anyone who calls a certain EthBridge method and submits the ticketID. The ticket is only marked as redeemed if the L1 transaction does not revert.
 
 These tickets have unlimited lifetime, until they’re successfully redeemed. No rent is required, as the costs are covered by network fees that are collected elsewhere in Arbitrum.
 

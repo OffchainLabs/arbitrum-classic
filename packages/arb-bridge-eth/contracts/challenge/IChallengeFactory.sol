@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 interface IChallengeFactory {
     function createChallenge(
@@ -29,6 +30,7 @@ interface IChallengeFactory {
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        ISequencerInbox _sequencerBridge,
+        IBridge _delayedBridge
     ) external returns (address);
 }

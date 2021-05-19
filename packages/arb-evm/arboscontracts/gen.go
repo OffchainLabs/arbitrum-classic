@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,52 @@
  * limitations under the License.
  */
 
-//go:generate ./abigen.sh
-
 package arboscontracts
+
+import (
+	"path/filepath"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/binding"
+)
+
+//go:generate go run createBindings.go
+
+func RunBindingGen() error {
+	base, err := binding.ArbOSArtifactsFolder()
+	if err != nil {
+		return err
+	}
+	periph, err := binding.PeripheralsArtifactsFolder()
+	if err != nil {
+		return err
+	}
+
+	contracts := binding.GenerateContractsList(
+		base,
+		[]string{
+			"ArbAddressTable",
+			"ArbAggregator",
+			"ArbBLS",
+			"ArbFunctionTable",
+			"ArbGasInfo",
+			"ArbInfo",
+			"ArbOwner",
+			"ArbRetryableTx",
+			"ArbStatistics",
+			"ArbSys",
+		},
+	)
+
+	contracts = append(contracts, binding.GenerateContractsList(
+		filepath.Join(periph, "contracts", "rpc-utils"),
+		[]string{"NodeInterface", "RetryableTicketCreator"},
+	)...)
+
+	for _, con := range contracts {
+		err := binding.GenerateBinding(con.File, con.Contract, "arboscontracts")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

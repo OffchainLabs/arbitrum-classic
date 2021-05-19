@@ -26,9 +26,12 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     'addToReserveFunds()': FunctionFragment
     'bindAddressToPluggable(address,uint256)': FunctionFragment
     'continueCodeUpload(bytes)': FunctionFragment
-    'finishCodeUploadAsArbosUpgrade()': FunctionFragment
+    'deployContract(bytes,address,uint256)': FunctionFragment
+    'finishCodeUploadAsArbosUpgrade(bytes32)': FunctionFragment
     'finishCodeUploadAsPluggable(uint256,bool)': FunctionFragment
     'getFeeRecipients()': FunctionFragment
+    'getTotalOfEthBalances()': FunctionFragment
+    'getUploadedCodeHash()': FunctionFragment
     'giveOwnership(address)': FunctionFragment
     'setFairGasPriceSender(address)': FunctionFragment
     'setFeeRecipients(address,address)': FunctionFragment
@@ -51,8 +54,12 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'deployContract',
+    values: [BytesLike, string, BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'finishCodeUploadAsArbosUpgrade',
-    values?: undefined
+    values: [BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'finishCodeUploadAsPluggable',
@@ -60,6 +67,14 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'getFeeRecipients',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getTotalOfEthBalances',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getUploadedCodeHash',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -104,6 +119,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'deployContract',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'finishCodeUploadAsArbosUpgrade',
     data: BytesLike
   ): Result
@@ -113,6 +132,14 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'getFeeRecipients',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getTotalOfEthBalances',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getUploadedCodeHash',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -191,11 +218,27 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
     finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -214,6 +257,14 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+    getTotalOfEthBalances(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<[string]>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<[string]>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -314,11 +365,27 @@ export class ArbOwner extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  deployContract(
+    constructorData: BytesLike,
+    deemedSender: string,
+    deemedNonce: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  'deployContract(bytes,address,uint256)'(
+    constructorData: BytesLike,
+    deemedSender: string,
+    deemedNonce: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
   finishCodeUploadAsArbosUpgrade(
+    requiredCodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'finishCodeUploadAsArbosUpgrade()'(
+  'finishCodeUploadAsArbosUpgrade(bytes32)'(
+    requiredCodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -337,6 +404,14 @@ export class ArbOwner extends Contract {
   getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
   'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+  getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
+
+  'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
+
+  getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
+
+  'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
   giveOwnership(
     newOwnerAddr: string,
@@ -435,9 +510,29 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    finishCodeUploadAsArbosUpgrade(overrides?: CallOverrides): Promise<void>
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
 
-    'finishCodeUploadAsArbosUpgrade()'(overrides?: CallOverrides): Promise<void>
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     finishCodeUploadAsPluggable(
       id: BigNumberish,
@@ -454,6 +549,14 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+    getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -552,9 +655,27 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    finishCodeUploadAsArbosUpgrade(overrides?: Overrides): Promise<BigNumber>
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -573,6 +694,14 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<BigNumber>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<BigNumber>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -673,11 +802,27 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
     finishCodeUploadAsArbosUpgrade(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32)'(
+      requiredCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -696,6 +841,22 @@ export class ArbOwner extends Contract {
     getFeeRecipients(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'getFeeRecipients()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getTotalOfEthBalances(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getTotalOfEthBalances()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getUploadedCodeHash(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getUploadedCodeHash()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 

@@ -279,17 +279,15 @@ export class RollupContract {
     return new RollupContract(this.rollup.connect(signerOrProvider))
   }
 
-  newStake(
-    tokenAmount: BigNumberish,
-    overrides: PayableOverrides = {}
-  ): Promise<ContractTransaction> {
-    return this.rollup.newStake(tokenAmount, overrides)
+  newStake(overrides: PayableOverrides = {}): Promise<ContractTransaction> {
+    return this.rollup.newStake(overrides)
   }
 
   async stakeOnNewNode(
     parentNode: Node,
     assertion: Assertion,
     afterInboxAcc: BytesLike,
+    batchProof: BytesLike,
     prevNode?: Node
   ): Promise<{ tx: ContractTransaction; node: Node; event: NodeCreatedEvent }> {
     if (!prevNode) {
@@ -307,7 +305,8 @@ export class RollupContract {
       assertion.bytes32Fields(),
       assertion.intFields(),
       parentNode.afterState.proposedBlock,
-      parentNode.afterState.inboxMaxCount
+      parentNode.afterState.inboxMaxCount,
+      batchProof
     )
     const receipt = await tx.wait()
     if (receipt.logs == undefined) {
@@ -382,10 +381,9 @@ export class RollupContract {
 
   addToDeposit(
     staker: string,
-    tokenAmount: BigNumberish,
     overrides: PayableOverrides = {}
   ): Promise<ContractTransaction> {
-    return this.rollup.addToDeposit(staker, tokenAmount, overrides)
+    return this.rollup.addToDeposit(staker, overrides)
   }
 
   reduceDeposit(amount: BigNumberish): Promise<ContractTransaction> {

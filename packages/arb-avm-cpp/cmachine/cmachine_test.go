@@ -58,14 +58,8 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hash1, err := mach1.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-	hash2, err := mach2.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
+	hash1 := mach1.Hash()
+	hash2 := mach2.Hash()
 	if hash1 != hash2 {
 		t.Fatal(err)
 	}

@@ -24,21 +24,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
-	"github.com/pkg/errors"
 )
 
-type AggregatorInfo struct {
-	Aggregator    *big.Int
-	CalldataBytes *big.Int
-}
-
-func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error) {
+func NewValueFromOptional(val value.Value) (value.Value, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok {
-		return nil, errors.New("optional aggregator info must be a tuple")
+		return nil, errors.New("optional must be a tuple")
 	}
 	if tup.Len() == 0 {
 		return nil, errors.New("optional too short")
@@ -49,48 +45,118 @@ func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error
 		return nil, errors.New("hasValue must be an int")
 	}
 	if hasValueInt.BigInt().Uint64() == 0 {
+		if tup.Len() != 1 {
+			return nil, errors.New("empty optional should be length 1")
+		}
 		return nil, nil
 	}
 	if hasValueInt.BigInt().Uint64() != 1 {
 		return nil, errors.New("optional had unknown code")
 	}
 	if tup.Len() != 2 {
-		return nil, errors.New("optional with value too short")
+		return nil, errors.New("optional with value wrong length")
 	}
-
 	nestedVal, _ := tup.GetByInt64(1)
+	return nestedVal, nil
+}
+
+func NewBoolFromValue(val value.Value) (bool, error) {
+	intVal, ok := val.(value.IntValue)
+	if !ok {
+		return false, errors.New("expected bool value to be an int")
+	}
+	if intVal.Equal(value.NewInt64Value(0)) {
+		return false, nil
+	} else if intVal.Equal(value.NewInt64Value(1)) {
+		return true, nil
+	} else {
+		return false, errors.Errorf("expected bool to be an integer either 0 or 1, but received integer %v", intVal)
+	}
+}
+
+type AggregatorInfo struct {
+	Aggregator    *common.Address
+	CalldataBytes *big.Int
+}
+
+func NewAggregatorInfoFromOptionalValue(val value.Value) (*AggregatorInfo, error) {
+	nestedVal, err := NewValueFromOptional(val)
+	if err != nil {
+		return nil, err
+	}
+	if nestedVal == nil {
+		return nil, nil
+	}
 	nestedTup, ok := nestedVal.(*value.TupleValue)
 	if !ok || nestedTup.Len() != 2 {
 		return nil, errors.Errorf("expected tuple of length 2, but recieved %v", nestedVal)
 	}
 
-	aggregator, _ := nestedTup.GetByInt64(0)
+	aggregatorVal, _ := nestedTup.GetByInt64(0)
 	calldataBytes, _ := nestedTup.GetByInt64(1)
 
-	aggregatorInt, ok := aggregator.(value.IntValue)
-	if !ok {
-		return nil, errors.New("aggregator must be an int")
+	var aggAddress *common.Address
+
+	// ArbOS version upgrade from https://github.com/OffchainLabs/arb-os/pull/429
+	// Support aggregator field either as an address or and optional address
+	if _, ok := aggregatorVal.(value.IntValue); !ok {
+		aggregatorVal, err = NewValueFromOptional(aggregatorVal)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if aggregatorVal != nil {
+		aggregatorInt, ok := aggregatorVal.(value.IntValue)
+		if !ok {
+			return nil, errors.New("aggregator must be an int")
+		}
+		rawAggregatorAddress := inbox.NewAddressFromInt(aggregatorInt)
+		blankAddress := common.Address{}
+		if rawAggregatorAddress != blankAddress {
+			aggAddress = &rawAggregatorAddress
+		}
 	}
 	calldataBytesInt, ok := calldataBytes.(value.IntValue)
 	if !ok {
 		return nil, errors.New("calldataBytes must be an int")
 	}
 	return &AggregatorInfo{
-		Aggregator:    aggregatorInt.BigInt(),
+		Aggregator:    aggAddress,
 		CalldataBytes: calldataBytesInt.BigInt(),
 	}, nil
 }
 
-func (a *AggregatorInfo) AsOptionalValue() value.Value {
-	if a == nil {
-		return value.NewEmptyTuple()
-	}
-	val := value.NewTuple2(
-		value.NewIntValue(a.Aggregator),
-		value.NewIntValue(a.CalldataBytes),
-	)
-	tup, _ := value.NewTupleFromSlice([]value.Value{val})
+func newEmptyOptional() value.Value {
+	tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(0)})
 	return tup
+}
+
+func newOptional(val value.Value) value.Value {
+	if val == nil {
+		tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(0)})
+		return tup
+	}
+	tup, _ := value.NewTupleFromSlice([]value.Value{value.NewInt64Value(1), val})
+	return tup
+}
+
+func (a *AggregatorInfo) AsOptionalValue() value.Value {
+	var val value.Value
+	if a != nil {
+		var aggVal value.Value
+		if a.Aggregator != nil {
+			aggVal = inbox.NewIntFromAddress(*a.Aggregator)
+		}
+
+		val := value.NewTuple2(
+			newOptional(aggVal),
+			value.NewIntValue(a.CalldataBytes),
+		)
+		tup, _ := value.NewTupleFromSlice([]value.Value{val})
+		val = tup
+	}
+	return newOptional(val)
 }
 
 type Provenance struct {
@@ -158,6 +224,58 @@ func NewProvenanceFromValue(val value.Value) (Provenance, error) {
 	}, nil
 }
 
+type GasEstimationParams struct {
+	ComputeGasLimit *big.Int
+	IgnoreGasPrice  bool
+	IgnoreMaxGas    bool
+}
+
+func NewGasEstimationParamsFromValue(val value.Value) (*GasEstimationParams, error) {
+	tup, ok := val.(*value.TupleValue)
+	if !ok {
+		return nil, errors.New("gas estimation params must be a tuple")
+	}
+	if tup.Len() != 2 && tup.Len() != 3 {
+		return nil, errors.Errorf("expected tuple of length 2 or 3, but recieved tuple of length %v", tup.Len())
+	}
+	computeGasLimitVal, _ := tup.GetByInt64(0)
+	computeGasLimitInt, ok := computeGasLimitVal.(value.IntValue)
+	if !ok {
+		return nil, errors.New("gas estimation params computeGasLimit must be an int")
+	}
+
+	if tup.Len() == 2 {
+		ignoreInsufficientGasFundsVal, _ := tup.GetByInt64(1)
+		ignoreInsufficientGasFunds, err := NewBoolFromValue(ignoreInsufficientGasFundsVal)
+		if err != nil {
+			return nil, err
+		}
+		return &GasEstimationParams{
+			ComputeGasLimit: computeGasLimitInt.BigInt(),
+			IgnoreGasPrice:  ignoreInsufficientGasFunds,
+			IgnoreMaxGas:    ignoreInsufficientGasFunds,
+		}, nil
+	} else {
+		// tup.Len() == 3
+		ignoreGasPriceVal, _ := tup.GetByInt64(1)
+		ignoreMaxGasVal, _ := tup.GetByInt64(2)
+
+		ignoreGasPrice, err := NewBoolFromValue(ignoreGasPriceVal)
+		if err != nil {
+			return nil, err
+		}
+		ignoreMaxGas, err := NewBoolFromValue(ignoreMaxGasVal)
+		if err != nil {
+			return nil, err
+		}
+		return &GasEstimationParams{
+			ComputeGasLimit: computeGasLimitInt.BigInt(),
+			IgnoreGasPrice:  ignoreGasPrice,
+			IgnoreMaxGas:    ignoreMaxGas,
+		}, nil
+	}
+}
+
 type IncomingRequest struct {
 	Kind           inbox.Type
 	Sender         common.Address
@@ -169,11 +287,12 @@ type IncomingRequest struct {
 	Provenance     Provenance
 	AggregatorInfo *AggregatorInfo
 	AdminMode      bool
+	GasEstimation  *GasEstimationParams
 }
 
 func (r IncomingRequest) String() string {
 	return fmt.Sprintf(
-		"IncomingRequest(%v, %v, %v, %v, %v, %v, %v, %v, %v)",
+		"IncomingRequest(kind=%v, sender=%v, id=%v, data=%v, l1Block=%v, l2Block=%v, timestamp=%v, provenance=%v, aggregator=%v)",
 		r.Kind,
 		r.Sender,
 		r.MessageID,
@@ -237,12 +356,27 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 	if !ok {
 		return failRet, errors.New("remaining incoming request values must be a tuple")
 	}
-	if remTup.Len() != 3 {
-		return failRet, errors.Errorf("expected incoming request remaining values to be tuple of length 3, but received tuple of length %v", remTup.Len())
+	if remTup.Len() < 3 || remTup.Len() > 4 {
+		return failRet, errors.Errorf("expected incoming request remaining values to be tuple of at least length 3 and at most 4, but received tuple of length %v", remTup.Len())
 	}
 	provenanceVal, _ := remTup.GetByInt64(0)
 	aggregatorInfoVal, _ := remTup.GetByInt64(1)
 	adminModeVal, _ := remTup.GetByInt64(2)
+
+	var gasEstimationParams *GasEstimationParams
+	if remTup.Len() == 4 {
+		gasEstimationParamsRaw, _ := remTup.GetByInt64(3)
+		gasEstimationParamsVal, err := NewValueFromOptional(gasEstimationParamsRaw)
+		if err != nil {
+			return failRet, err
+		}
+		if gasEstimationParamsVal != nil {
+			gasEstimationParams, err = NewGasEstimationParamsFromValue(gasEstimationParamsVal)
+			if err != nil {
+				return failRet, err
+			}
+		}
+	}
 
 	kindInt, ok := kind.(value.IntValue)
 	if !ok {
@@ -291,17 +425,9 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		return failRet, err
 	}
 
-	adminModeInt, ok := adminModeVal.(value.IntValue)
-	if !ok {
-		return failRet, errors.New("adminMode must be a boolean")
-	}
-	var adminMode bool
-	if adminModeInt.Equal(value.NewInt64Value(0)) {
-		adminMode = false
-	} else if adminModeInt.Equal(value.NewInt64Value(1)) {
-		adminMode = true
-	} else {
-		return failRet, errors.Errorf("expected adminMode to be an integer either 0 or 1, but received integer %v", adminModeInt)
+	adminMode, err := NewBoolFromValue(adminModeVal)
+	if err != nil {
+		return failRet, err
 	}
 
 	return IncomingRequest{
@@ -315,6 +441,7 @@ func NewIncomingRequestFromValue(val value.Value) (IncomingRequest, error) {
 		Provenance:     provenance,
 		AggregatorInfo: aggregatorInfo,
 		AdminMode:      adminMode,
+		GasEstimation:  gasEstimationParams,
 	}, nil
 }
 

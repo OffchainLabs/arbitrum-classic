@@ -17,13 +17,22 @@
 package cmachine
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/gotest"
 )
 
-var codeFile = gotest.OpCodeTestFiles()[0]
+var codeFile string
+
+func init() {
+	files, err := gotest.OpCodeTestFiles()
+	if err != nil {
+		panic(err)
+	}
+	codeFile = files[0]
+}
 
 func TestCheckpoint(t *testing.T) {
 	dePath := "dbPath"

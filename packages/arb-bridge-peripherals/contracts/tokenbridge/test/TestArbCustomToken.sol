@@ -18,13 +18,14 @@
 
 pragma solidity ^0.6.11;
 
-import "../arbitrum/IArbCustomToken.sol";
-import "../arbitrum/open-zeppelin/OZERC20.sol";
+import "../arbitrum/IArbToken.sol";
+import "../libraries/aeERC20.sol";
 import "../arbitrum/ArbTokenBridge.sol";
 
-contract TestArbCustomToken is OZERC20, IArbCustomToken {
+contract TestArbCustomToken is aeERC20, IArbToken {
     ArbTokenBridge public bridge;
-    address public l1Address;
+    address public override l1Address;
+
     modifier onlyBridge {
         require(msg.sender == address(bridge), "ONLY_BRIDGE");
         _;
@@ -33,23 +34,20 @@ contract TestArbCustomToken is OZERC20, IArbCustomToken {
     constructor(address _bridge, address _l1Address) public {
         bridge = ArbTokenBridge(_bridge);
         l1Address = _l1Address;
-        _name = "TestCustomToken";
-        _symbol = "CARB";
-        _decimals = uint8(18);
+        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function someWackyCustomStuff() public {}
 
-    function bridgeMint(
-        address account,
-        uint256 amount,
-        bytes memory data
-    ) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyBridge {
         _mint(account, amount);
     }
 
-    function withdraw(address destination, uint256 amount) external {
-        _burn(msg.sender, amount);
-        bridge.withdraw(l1Address, destination, amount);
+    function bridgeBurn(address account, uint256 amount) external override onlyBridge {
+        _burn(account, amount);
+    }
+
+    function withdraw(address destination, uint256 amount) external override {
+        bridge.withdraw(l1Address, msg.sender, destination, amount);
     }
 }

@@ -12,8 +12,10 @@ docker run -d -it --rm -p 7545:7545 -p 7546:7546 \
        --http.api 'personal,db,eth,net,web3,txpool,miner' \
        --ws --ws.addr 0.0.0.0 --ws.port 7546 --ws.origins '*' \
        --ws.api personal,admin,db,eth,net,web3,miner,shh,txpool,debug \
-       --gcmode=archive
+       --gcmode=archive \
+       --rpc.allow-unprotected-txs
 while ! nc -z localhost 7545; do sleep 2; done;
 echo "Finished waiting for geth on localhost:7545..."
-yarn hardhat deploy --network local_development --export bridge_eth_addresses.json && [ -f bridge_eth_addresses.json ]
+rm -rf deployments/local_development
+yarn deploy:live --network local_development --export bridge_eth_addresses.json && [ -f bridge_eth_addresses.json ]
 docker attach arb-bridge-eth-geth

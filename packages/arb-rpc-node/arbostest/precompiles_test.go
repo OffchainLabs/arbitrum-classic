@@ -21,15 +21,17 @@ import (
 	"context"
 	"crypto"
 	"crypto/rand"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	gethcrypto "github.com/ethereum/go-ethereum/crypto"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"math/big"
-	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -38,7 +40,7 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 	precompileAddress := ethcommon.BytesToAddress([]byte{precompileNum})
 
 	ctx := context.Background()
-	backend, _ := test.SimulatedBackend()
+	backend, _ := test.SimulatedBackend(t)
 
 	ethCall := ethereum.CallMsg{
 		From:     ethcommon.Address{},
@@ -60,10 +62,8 @@ func testPrecompile(t *testing.T, precompileNum byte, data []byte, correct []byt
 		Data:        data,
 	}
 
-	inboxMessages := makeSimpleInbox([]message.Message{message.NewSafeL2Message(tx)})
-
-	logs, _, _, _ := runAssertion(t, inboxMessages, 1, 0)
-	results := processTxResults(t, logs)
+	messages := []message.Message{message.NewSafeL2Message(tx)}
+	results, _ := runSimpleTxAssertion(t, messages)
 
 	res := results[0]
 	succeededTxCheck(t, res)

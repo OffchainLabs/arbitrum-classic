@@ -8,6 +8,7 @@ export interface Config {
   rollup_address: string
   inbox_address: string
   validator_utils_address: string
+  validator_wallet_factory_address: string
   eth_url: string
   password?: string
   blocktime: number
@@ -62,6 +63,11 @@ if (require.main === module) {
           type: 'string',
           demandOption: true,
         })
+        .positional('validatorwallet', {
+          describe: 'address of the validator wallet creator contract',
+          type: 'string',
+          demandOption: true,
+        })
         .positional('ethurl', {
           describe: 'url for ethereum node',
           type: 'string',
@@ -86,6 +92,7 @@ if (require.main === module) {
         rollup_address: args.rollup,
         inbox_address: args.inbox,
         validator_utils_address: args.validatorutils,
+        validator_wallet_factory_address: args.validatorwallet,
         eth_url: args.ethurl,
         blocktime: args.blocktime,
       }

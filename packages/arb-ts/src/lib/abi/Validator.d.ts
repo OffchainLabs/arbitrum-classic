@@ -25,8 +25,13 @@ interface ValidatorInterface extends ethers.utils.Interface {
   functions: {
     'executeTransaction(bytes,address,uint256)': FunctionFragment
     'executeTransactions(bytes[],address[],uint256[])': FunctionFragment
+    'initialize()': FunctionFragment
+    'isMaster()': FunctionFragment
+    'owner()': FunctionFragment
+    'renounceOwnership()': FunctionFragment
     'returnOldDeposits(address,address[])': FunctionFragment
     'timeoutChallenges(address[])': FunctionFragment
+    'transferOwnership(address)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -37,6 +42,13 @@ interface ValidatorInterface extends ethers.utils.Interface {
     functionFragment: 'executeTransactions',
     values: [BytesLike[], string[], BigNumberish[]]
   ): string
+  encodeFunctionData(functionFragment: 'initialize', values?: undefined): string
+  encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
+  encodeFunctionData(functionFragment: 'owner', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'renounceOwnership',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'returnOldDeposits',
     values: [string, string[]]
@@ -44,6 +56,10 @@ interface ValidatorInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'timeoutChallenges',
     values: [string[]]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'transferOwnership',
+    values: [string]
   ): string
 
   decodeFunctionResult(
@@ -54,6 +70,13 @@ interface ValidatorInterface extends ethers.utils.Interface {
     functionFragment: 'executeTransactions',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'renounceOwnership',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'returnOldDeposits',
     data: BytesLike
@@ -62,8 +85,16 @@ interface ValidatorInterface extends ethers.utils.Interface {
     functionFragment: 'timeoutChallenges',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'transferOwnership',
+    data: BytesLike
+  ): Result
 
-  events: {}
+  events: {
+    'OwnershipTransferred(address,address)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'OwnershipTransferred'): EventFragment
 }
 
 export class Validator extends Contract {
@@ -108,6 +139,22 @@ export class Validator extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    initialize(overrides?: Overrides): Promise<ContractTransaction>
+
+    'initialize()'(overrides?: Overrides): Promise<ContractTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<[boolean]>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<[boolean]>
+
+    owner(overrides?: CallOverrides): Promise<[string]>
+
+    'owner()'(overrides?: CallOverrides): Promise<[string]>
+
+    renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
+
+    'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+
     returnOldDeposits(
       rollup: string,
       stakers: string[],
@@ -127,6 +174,16 @@ export class Validator extends Contract {
 
     'timeoutChallenges(address[])'(
       challenges: string[],
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'transferOwnership(address)'(
+      newOwner: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
@@ -159,6 +216,22 @@ export class Validator extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  initialize(overrides?: Overrides): Promise<ContractTransaction>
+
+  'initialize()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  isMaster(overrides?: CallOverrides): Promise<boolean>
+
+  'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+
+  owner(overrides?: CallOverrides): Promise<string>
+
+  'owner()'(overrides?: CallOverrides): Promise<string>
+
+  renounceOwnership(overrides?: Overrides): Promise<ContractTransaction>
+
+  'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
+
   returnOldDeposits(
     rollup: string,
     stakers: string[],
@@ -178,6 +251,16 @@ export class Validator extends Contract {
 
   'timeoutChallenges(address[])'(
     challenges: string[],
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  transferOwnership(
+    newOwner: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'transferOwnership(address)'(
+    newOwner: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -210,6 +293,22 @@ export class Validator extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    initialize(overrides?: CallOverrides): Promise<void>
+
+    'initialize()'(overrides?: CallOverrides): Promise<void>
+
+    isMaster(overrides?: CallOverrides): Promise<boolean>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<boolean>
+
+    owner(overrides?: CallOverrides): Promise<string>
+
+    'owner()'(overrides?: CallOverrides): Promise<string>
+
+    renounceOwnership(overrides?: CallOverrides): Promise<void>
+
+    'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
+
     returnOldDeposits(
       rollup: string,
       stakers: string[],
@@ -231,9 +330,24 @@ export class Validator extends Contract {
       challenges: string[],
       overrides?: CallOverrides
     ): Promise<void>
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'transferOwnership(address)'(
+      newOwner: string,
+      overrides?: CallOverrides
+    ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    OwnershipTransferred(
+      previousOwner: string | null,
+      newOwner: string | null
+    ): EventFilter
+  }
 
   estimateGas: {
     executeTransaction(
@@ -264,6 +378,22 @@ export class Validator extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    initialize(overrides?: Overrides): Promise<BigNumber>
+
+    'initialize()'(overrides?: Overrides): Promise<BigNumber>
+
+    isMaster(overrides?: CallOverrides): Promise<BigNumber>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    owner(overrides?: CallOverrides): Promise<BigNumber>
+
+    'owner()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    renounceOwnership(overrides?: Overrides): Promise<BigNumber>
+
+    'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
+
     returnOldDeposits(
       rollup: string,
       stakers: string[],
@@ -283,6 +413,16 @@ export class Validator extends Contract {
 
     'timeoutChallenges(address[])'(
       challenges: string[],
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'transferOwnership(address)'(
+      newOwner: string,
       overrides?: Overrides
     ): Promise<BigNumber>
   }
@@ -316,6 +456,22 @@ export class Validator extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
+    initialize(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'initialize()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    isMaster(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'isMaster()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    owner(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    renounceOwnership(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
     returnOldDeposits(
       rollup: string,
       stakers: string[],
@@ -335,6 +491,16 @@ export class Validator extends Contract {
 
     'timeoutChallenges(address[])'(
       challenges: string[],
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    transferOwnership(
+      newOwner: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'transferOwnership(address)'(
+      newOwner: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
   }

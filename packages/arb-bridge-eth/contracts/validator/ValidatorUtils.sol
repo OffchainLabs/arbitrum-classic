@@ -35,15 +35,13 @@ contract ValidatorUtils {
             uint256 confirmPeriodBlocks,
             uint256 extraChallengeTimeBlocks,
             uint256 arbGasSpeedLimitPerBlock,
-            uint256 baseStake,
-            address stakeToken
+            uint256 baseStake
         )
     {
         confirmPeriodBlocks = rollup.confirmPeriodBlocks();
         extraChallengeTimeBlocks = rollup.extraChallengeTimeBlocks();
         arbGasSpeedLimitPerBlock = rollup.arbGasSpeedLimitPerBlock();
         baseStake = rollup.baseStake();
-        stakeToken = rollup.stakeToken();
     }
 
     function stakerInfo(Rollup rollup, address stakerAddress)

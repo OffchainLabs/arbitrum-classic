@@ -21,18 +21,30 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface OneStepProof2Interface extends ethers.utils.Interface {
   functions: {
-    'executeStep(address,uint256,bytes32[2],bytes,bytes)': FunctionFragment
-    'executeStepDebug(address,uint256,bytes32[2],bytes,bytes)': FunctionFragment
+    'executeStep(address[2],uint256,bytes32[2],bytes,bytes)': FunctionFragment
+    'executeStepDebug(address[2],uint256,bytes32[2],bytes,bytes)': FunctionFragment
     'parseProof(bytes)': FunctionFragment
   }
 
   encodeFunctionData(
     functionFragment: 'executeStep',
-    values: [string, BigNumberish, [BytesLike, BytesLike], BytesLike, BytesLike]
+    values: [
+      [string, string],
+      BigNumberish,
+      [BytesLike, BytesLike],
+      BytesLike,
+      BytesLike
+    ]
   ): string
   encodeFunctionData(
     functionFragment: 'executeStepDebug',
-    values: [string, BigNumberish, [BytesLike, BytesLike], BytesLike, BytesLike]
+    values: [
+      [string, string],
+      BigNumberish,
+      [BytesLike, BytesLike],
+      BytesLike,
+      BytesLike
+    ]
   ): string
   encodeFunctionData(
     functionFragment: 'parseProof',
@@ -64,7 +76,7 @@ export class OneStepProof2 extends Contract {
 
   functions: {
     executeStep(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -73,13 +85,13 @@ export class OneStepProof2 extends Contract {
     ): Promise<
       [BigNumber, BigNumber, [string, string, string, string]] & {
         gas: BigNumber
-        totalMessagesRead: BigNumber
+        afterMessagesRead: BigNumber
         fields: [string, string, string, string]
       }
     >
 
-    'executeStep(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStep(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -88,13 +100,13 @@ export class OneStepProof2 extends Contract {
     ): Promise<
       [BigNumber, BigNumber, [string, string, string, string]] & {
         gas: BigNumber
-        totalMessagesRead: BigNumber
+        afterMessagesRead: BigNumber
         fields: [string, string, string, string]
       }
     >
 
     executeStepDebug(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -104,8 +116,8 @@ export class OneStepProof2 extends Contract {
       [string, string] & { startMachine: string; afterMachine: string }
     >
 
-    'executeStepDebug(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStepDebug(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -127,7 +139,7 @@ export class OneStepProof2 extends Contract {
   }
 
   executeStep(
-    bridge: string,
+    bridges: [string, string],
     initialMessagesRead: BigNumberish,
     accs: [BytesLike, BytesLike],
     proof: BytesLike,
@@ -136,13 +148,13 @@ export class OneStepProof2 extends Contract {
   ): Promise<
     [BigNumber, BigNumber, [string, string, string, string]] & {
       gas: BigNumber
-      totalMessagesRead: BigNumber
+      afterMessagesRead: BigNumber
       fields: [string, string, string, string]
     }
   >
 
-  'executeStep(address,uint256,bytes32[2],bytes,bytes)'(
-    bridge: string,
+  'executeStep(address[2],uint256,bytes32[2],bytes,bytes)'(
+    bridges: [string, string],
     initialMessagesRead: BigNumberish,
     accs: [BytesLike, BytesLike],
     proof: BytesLike,
@@ -151,13 +163,13 @@ export class OneStepProof2 extends Contract {
   ): Promise<
     [BigNumber, BigNumber, [string, string, string, string]] & {
       gas: BigNumber
-      totalMessagesRead: BigNumber
+      afterMessagesRead: BigNumber
       fields: [string, string, string, string]
     }
   >
 
   executeStepDebug(
-    bridge: string,
+    bridges: [string, string],
     initialMessagesRead: BigNumberish,
     accs: [BytesLike, BytesLike],
     proof: BytesLike,
@@ -165,8 +177,8 @@ export class OneStepProof2 extends Contract {
     overrides?: CallOverrides
   ): Promise<[string, string] & { startMachine: string; afterMachine: string }>
 
-  'executeStepDebug(address,uint256,bytes32[2],bytes,bytes)'(
-    bridge: string,
+  'executeStepDebug(address[2],uint256,bytes32[2],bytes,bytes)'(
+    bridges: [string, string],
     initialMessagesRead: BigNumberish,
     accs: [BytesLike, BytesLike],
     proof: BytesLike,
@@ -186,7 +198,7 @@ export class OneStepProof2 extends Contract {
 
   callStatic: {
     executeStep(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -195,13 +207,13 @@ export class OneStepProof2 extends Contract {
     ): Promise<
       [BigNumber, BigNumber, [string, string, string, string]] & {
         gas: BigNumber
-        totalMessagesRead: BigNumber
+        afterMessagesRead: BigNumber
         fields: [string, string, string, string]
       }
     >
 
-    'executeStep(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStep(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -210,13 +222,13 @@ export class OneStepProof2 extends Contract {
     ): Promise<
       [BigNumber, BigNumber, [string, string, string, string]] & {
         gas: BigNumber
-        totalMessagesRead: BigNumber
+        afterMessagesRead: BigNumber
         fields: [string, string, string, string]
       }
     >
 
     executeStepDebug(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -226,8 +238,8 @@ export class OneStepProof2 extends Contract {
       [string, string] & { startMachine: string; afterMachine: string }
     >
 
-    'executeStepDebug(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStepDebug(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -252,7 +264,7 @@ export class OneStepProof2 extends Contract {
 
   estimateGas: {
     executeStep(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -260,8 +272,8 @@ export class OneStepProof2 extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'executeStep(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStep(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -270,7 +282,7 @@ export class OneStepProof2 extends Contract {
     ): Promise<BigNumber>
 
     executeStepDebug(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -278,8 +290,8 @@ export class OneStepProof2 extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'executeStepDebug(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStepDebug(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -297,7 +309,7 @@ export class OneStepProof2 extends Contract {
 
   populateTransaction: {
     executeStep(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -305,8 +317,8 @@ export class OneStepProof2 extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'executeStep(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStep(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -315,7 +327,7 @@ export class OneStepProof2 extends Contract {
     ): Promise<PopulatedTransaction>
 
     executeStepDebug(
-      bridge: string,
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,
@@ -323,8 +335,8 @@ export class OneStepProof2 extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'executeStepDebug(address,uint256,bytes32[2],bytes,bytes)'(
-      bridge: string,
+    'executeStepDebug(address[2],uint256,bytes32[2],bytes,bytes)'(
+      bridges: [string, string],
       initialMessagesRead: BigNumberish,
       accs: [BytesLike, BytesLike],
       proof: BytesLike,

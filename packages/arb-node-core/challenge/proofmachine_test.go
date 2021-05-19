@@ -29,8 +29,9 @@ import (
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -73,11 +74,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 		messages = append(messages, inbox.NewRandomInboxMessage())
 	}
 
-	hash, err := mach.Hash()
-	if err != nil {
-		return nil, nil, err
-	}
-
+	hash := mach.Hash()
 	beforeCut := ExecutionCutJSON{
 		GasUsed:           0,
 		TotalMessagesRead: (*hexutil.Big)(big.NewInt(0)),
@@ -101,16 +98,18 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 
 		messages := messages[:1]
 
-		a, _, ranSteps := mach.ExecuteAssertionAdvanced(
+		a, _, ranSteps, err := mach.ExecuteAssertionAdvanced(
 			1,
 			true,
 			messages,
-			false,
 			nil,
 			false,
 			common.NewHashFromEth(beforeCut.SendAcc),
 			common.NewHashFromEth(beforeCut.LogAcc),
 		)
+		if err != nil {
+			return nil, nil, err
+		}
 		if ranSteps == 0 {
 			break
 		}
@@ -123,11 +122,7 @@ func generateProofCases(contract string) ([]*proofData, []string, error) {
 			return proofs, nil, nil
 		}
 
-		hash, err := mach.Hash()
-		if err != nil {
-			return nil, nil, err
-		}
-
+		hash := mach.Hash()
 		afterCut := ExecutionCutJSON{
 			GasUsed:           beforeCut.GasUsed + a.NumGas,
 			TotalMessagesRead: (*hexutil.Big)(new(big.Int).Add(beforeCut.TotalMessagesRead.ToInt(), new(big.Int).SetUint64(a.InboxMessagesConsumed))),
@@ -160,7 +155,7 @@ func getProverNum(op uint8) uint8 {
 	}
 }
 
-func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestcontracts.IOneStepProof, bridge ethcommon.Address) {
+func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestcontracts.IOneStepProof, sequencerBridge, delayedBridge ethcommon.Address) {
 	t.Log("proof test contact: ", contract)
 	ctx := context.Background()
 
@@ -192,7 +187,7 @@ func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestco
 			t.Logf("Opcode 0x%x with prover %v", op, prover)
 			machineData, err := osps[prover].ExecuteStep(
 				&bind.CallOpts{Context: ctx},
-				bridge,
+				[2]ethcommon.Address{sequencerBridge, delayedBridge},
 				proof.BeforeCut.TotalMessagesRead.ToInt(),
 				[2][32]byte{
 					proof.BeforeCut.SendAcc,
@@ -206,7 +201,7 @@ func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestco
 			if machineData.Gas != correctGasUsed {
 				t.Fatalf("wrong gas %v instead of %v", machineData.Gas, correctGasUsed)
 			}
-			if machineData.TotalMessagesRead.Cmp(proof.AfterCut.TotalMessagesRead.ToInt()) != 0 {
+			if machineData.AfterMessagesRead.Cmp(proof.AfterCut.TotalMessagesRead.ToInt()) != 0 {
 				t.Fatal("wrong total messages read")
 			}
 			if machineData.Fields[0] != proof.BeforeCut.MachineState {
@@ -226,10 +221,14 @@ func runTestValidateProof(t *testing.T, contract string, osps []*ethbridgetestco
 }
 
 func TestValidateProof(t *testing.T) {
-	testMachines := gotest.OpCodeTestFiles()
-	backend, pks := test.SimulatedBackend()
+	testMachines, err := gotest.OpCodeTestFiles()
+	test.FailIfError(t, err)
+	backend, pks := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
+	sequencer := common.RandAddress().ToEthAddress()
+	maxDelayBlocks := big.NewInt(60)
+	maxDelaySeconds := big.NewInt(900)
 
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
 	test.FailIfError(t, err)
@@ -237,7 +236,12 @@ func TestValidateProof(t *testing.T) {
 	test.FailIfError(t, err)
 	osp3Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProofHash(auth, client)
 	test.FailIfError(t, err)
-	bridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
+	delayedBridgeAddr, _, _, err := ethbridgecontracts.DeployBridge(auth, client)
+	test.FailIfError(t, err)
+	sequencerAddr, _, sequencerCon, err := ethbridgecontracts.DeploySequencerInbox(auth, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
 	test.FailIfError(t, err)
 	client.Commit()
 
@@ -254,7 +258,7 @@ func TestValidateProof(t *testing.T) {
 		machName := machName // capture range variable
 		t.Run(machName, func(t *testing.T) {
 			//t.Parallel()
-			runTestValidateProof(t, machName, provers, bridgeAddr)
+			runTestValidateProof(t, machName, provers, sequencerAddr, delayedBridgeAddr)
 		})
 	}
 }

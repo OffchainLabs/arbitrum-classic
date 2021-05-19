@@ -19,7 +19,6 @@
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { ValueTester } from '../build/types/ValueTester'
-import { ArbValue } from 'arb-provider-ethers'
 
 import testCases from './test_cases.json'
 
@@ -33,12 +32,6 @@ describe('Value', () => {
     const ValueTester = await ethers.getContractFactory('ValueTester')
     valueTester = (await ValueTester.deploy()) as ValueTester
     await valueTester.deployed()
-  })
-
-  it('should initialize', async () => {
-    const val = new ArbValue.IntValue(100)
-    const res = await valueTester.deserializeHash(ArbValue.marshal(val), 0)
-    assert.equal(val.hash(), res['1'], 'value hashes incorrectly')
   })
 
   for (let i = 0; i < testCases.length; i++) {

@@ -15,6 +15,7 @@
  */
 
 #include "carbstorage.h"
+
 #include "utils.hpp"
 
 #include <data_storage/aggregator.hpp>
@@ -37,7 +38,7 @@ CArbStorage* createArbStorage(const char* db_path,
                                       receiveUint256(checkpoint_gas_interval));
         return static_cast<void*>(storage);
     } catch (const std::exception& e) {
-        std::cerr << "Error creating storage " << e.what() << std::endl;
+        std::cerr << "Error creating storage: " << e.what() << std::endl;
         return nullptr;
     }
 }
@@ -48,14 +49,14 @@ int initializeArbStorage(CArbStorage* storage_ptr,
     try {
         auto status = storage->initialize(executable_path);
         if (!status.ok()) {
-            std::cerr << "Error initializing storage" << status.ToString()
+            std::cerr << "Error initializing storage: " << status.ToString()
                       << std::endl;
             return false;
         }
 
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Exception initializing storage" << e.what() << std::endl;
+        std::cerr << "Exception initializing storage:" << e.what() << std::endl;
         return false;
     }
 }
@@ -74,9 +75,9 @@ void destroyArbStorage(CArbStorage* storage_ptr) {
     if (storage == nullptr) {
         return;
     }
-    std::cerr << "closing ArbStorage" << std::endl;
+    std::cerr << "closing ArbStorage:" << std::endl;
     storage->closeArbStorage();
-    std::cerr << "closed ArbStorage" << std::endl;
+    std::cerr << "closed ArbStorage:" << std::endl;
     delete static_cast<ArbStorage*>(storage);
 }
 

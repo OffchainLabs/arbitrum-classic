@@ -20,10 +20,11 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -179,9 +180,9 @@ func NewRandomTransaction() Transaction {
 func (t Transaction) AsEthTx() *types.Transaction {
 	emptyAddress := common.Address{}
 	if t.DestAddress == emptyAddress {
-		return types.NewContractCreation(t.SequenceNum.Uint64(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewContractCreation(t.SequenceNum.Uint64(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	} else {
-		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewTransaction(t.SequenceNum.Uint64(), t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	}
 }
 
@@ -191,7 +192,7 @@ func (t Transaction) Destination() common.Address {
 
 func (t Transaction) String() string {
 	return fmt.Sprintf(
-		"Transaction(%v, %v, %v, %v, %v, %v)",
+		"Transaction(gas=%v, gasprice=%v, seq=%v, dest=%v, payment=%v, data=%v)",
 		t.MaxGas,
 		t.GasPriceBid,
 		t.SequenceNum,
@@ -305,9 +306,9 @@ func (t ContractTransaction) L2Type() L2SubType {
 func (t ContractTransaction) AsEthTx() *types.Transaction {
 	emptyAddress := common.Address{}
 	if t.DestAddress == emptyAddress {
-		return types.NewContractCreation(0, t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewContractCreation(0, t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	} else {
-		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.GasPriceBid, t.MaxGas.Uint64(), t.Payment, t.Data)
+		return types.NewTransaction(0, t.DestAddress.ToEthAddress(), t.Payment, t.MaxGas.Uint64(), t.GasPriceBid, t.Data)
 	}
 }
 
@@ -351,21 +352,19 @@ func ChainAddressToID(chain common.Address) *big.Int {
 	return new(big.Int).SetBytes(chain[14:])
 }
 
-func NewRandomSignedEthTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) *types.Transaction {
+func NewRandomSignedEthTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) (*types.Transaction, error) {
 	tx := NewRandomTransaction()
 	tx.SequenceNum = new(big.Int).SetUint64(nonce)
 	ethTx := tx.AsEthTx()
-	signedTx, err := types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
-	if err != nil {
-		panic(err)
-	}
-	return signedTx
+	return types.SignTx(ethTx, types.NewEIP155Signer(ChainAddressToID(chain)), privKey)
 }
 
-func NewRandomSignedTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) SignedTransaction {
-	return SignedTransaction{
-		Tx: NewRandomSignedEthTx(chain, privKey, nonce),
+func NewRandomSignedTx(chain common.Address, privKey *ecdsa.PrivateKey, nonce uint64) (SignedTransaction, error) {
+	signedTx, err := NewRandomSignedEthTx(chain, privKey, nonce)
+	if err != nil {
+		return SignedTransaction{}, err
 	}
+	return SignedTransaction{Tx: signedTx}, nil
 }
 
 func (t SignedTransaction) String() string {
@@ -584,7 +583,11 @@ func newTransactionBatchFromData(data []byte) TransactionBatch {
 func NewRandomTransactionBatch(txCount int, chain common.Address, privKey *ecdsa.PrivateKey, initialNonce uint64) (TransactionBatch, error) {
 	messages := make([]AbstractL2Message, 0, txCount)
 	for i := 0; i < txCount; i++ {
-		messages = append(messages, NewRandomSignedTx(chain, privKey, initialNonce))
+		tx, err := NewRandomSignedTx(chain, privKey, initialNonce)
+		if err != nil {
+			return TransactionBatch{}, err
+		}
+		messages = append(messages, tx)
 		initialNonce++
 	}
 	return NewTransactionBatchFromMessages(messages)

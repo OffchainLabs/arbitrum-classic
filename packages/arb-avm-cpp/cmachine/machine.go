@@ -28,11 +28,8 @@ package cmachine
 import "C"
 
 import (
-	"math/big"
 	"runtime"
 	"unsafe"
-
-	"github.com/ethereum/go-ethereum/common/math"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -75,12 +72,17 @@ func WrapCMachine(cMachine unsafe.Pointer) *Machine {
 	return ret
 }
 
-func (m *Machine) Hash() (ret common.Hash, err error) {
+func (m *Machine) Hash() (ret common.Hash) {
 	success := C.machineHash(m.c, unsafe.Pointer(&ret[0]))
 	if success == 0 {
-		err = errors.New("Cannot get machine hash")
+		// This should never occur
+		panic("machine hash failed")
 	}
+	return
+}
 
+func (m *Machine) CodePointHash() (ret common.Hash) {
+	C.machineCodePointHash(m.c, unsafe.Pointer(&ret[0]))
 	return
 }
 
@@ -134,13 +136,16 @@ func (m *Machine) String() string {
 	return C.GoString(cStr)
 }
 
-func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	sendsRaw := receiveByteSlice(assertion.sends)
 	sendAcc := receive32Bytes(assertion.sendAcc)
 	logsRaw := receiveByteSlice(assertion.logs)
 	logAcc := receive32Bytes(assertion.logAcc)
-	debugPrints := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
-	return protocol.NewExecutionAssertion(
+	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	goAssertion, err := protocol.NewExecutionAssertion(
 		uint64(assertion.numGas),
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
@@ -149,20 +154,19 @@ func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssert
 		logsRaw,
 		uint64(assertion.logCount),
 		logAcc,
-	), debugPrints, uint64(assertion.numSteps)
+	)
+	return goAssertion, debugPrints, uint64(assertion.numSteps), err
 }
 
 func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	return m.ExecuteAssertionAdvanced(
 		maxGas,
 		goOverGas,
 		messages,
-		finalMessageOfBlock,
 		nil,
 		false,
 		common.Hash{},
@@ -170,9 +174,8 @@ func (m *Machine) ExecuteAssertion(
 	)
 }
 
-func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
-	rawInboxData := encodeInboxMessages(messages)
-	byteSlices := encodeByteSliceList(rawInboxData)
+func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
+	byteSlices := encodeByteSliceList(bytes)
 	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
 	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
 	for i, data := range byteSlices {
@@ -181,16 +184,19 @@ func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteS
 	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
 }
 
+func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeInboxMessages(messages))
+}
+
 func (m *Machine) ExecuteAssertionAdvanced(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
-	finalMessageOfBlock bool,
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
 	beforeSendAcc common.Hash,
 	beforeLogAcc common.Hash,
-) (*protocol.ExecutionAssertion, []value.Value, uint64) {
+) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	conf := C.machineExecutionConfigCreate()
 
 	goOverGasInt := C.int(0)
@@ -199,18 +205,13 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetMaxGas(conf, C.uint64_t(maxGas), goOverGasInt)
 
-	msgData := inboxMessagesToByteSliceArray(messages)
+	msgData := bytesArrayToByteSliceArray(encodeMachineInboxMessages(messages))
 	defer C.free(msgData.slices)
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
 
 	C.machineExecutionConfigSetInboxMessages(conf, msgData)
-	if finalMessageOfBlock && len(messages) > 0 {
-		nextBlockHeight := new(big.Int).Add(messages[len(messages)-1].ChainTime.BlockNum.AsInt(), big.NewInt(1))
-		nextBlockHeightData := math.U256Bytes(nextBlockHeight)
-		C.machineExecutionConfigSetNextBlockHeight(conf, unsafeDataPointer(nextBlockHeightData))
-	}
 
-	sideloadsData := inboxMessagesToByteSliceArray(sideloads)
+	sideloadsData := bytesArrayToByteSliceArray(encodeInboxMessages(sideloads))
 	defer C.free(sideloadsData.slices)
 	C.machineExecutionConfigSetSideloads(conf, sideloadsData)
 

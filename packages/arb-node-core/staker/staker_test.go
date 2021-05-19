@@ -1,7 +1,24 @@
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package staker
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -10,14 +27,19 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -34,6 +56,9 @@ func deployRollup(
 	baseStake *big.Int,
 	stakeToken common.Address,
 	owner common.Address,
+	sequencer common.Address,
+	sequencerDelayBlocks *big.Int,
+	sequencerDelaySeconds *big.Int,
 	extraConfig []byte,
 ) ethcommon.Address {
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
@@ -44,22 +69,11 @@ func deployRollup(
 	test.FailIfError(t, err)
 	challengeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployChallengeFactory(auth, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
-	nodeFactoryAddr, _, _, err := ethbridgetestcontracts.DeployNodeFactory(auth, client)
-	test.FailIfError(t, err)
 
-	rollupAddr, _, _, err := ethbridgecontracts.DeployRollup(auth, client)
-	test.FailIfError(t, err)
-
-	_, _, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	_, err = rollupCreator.SetTemplates(auth, rollupAddr, challengeFactoryAddr, nodeFactoryAddr)
-	test.FailIfError(t, err)
-	client.Commit()
-
-	tx, err := rollupCreator.CreateRollupNoProxy(
+	_, tx, rollupCreator, err := ethbridgetestcontracts.DeployRollupCreatorNoProxy(
 		auth,
+		client,
+		challengeFactoryAddr,
 		machineHash,
 		confirmPeriodBlocks,
 		extraChallengeTimeBlocks,
@@ -67,6 +81,9 @@ func deployRollup(
 		baseStake,
 		stakeToken.ToEthAddress(),
 		owner.ToEthAddress(),
+		sequencer.ToEthAddress(),
+		sequencerDelayBlocks,
+		sequencerDelaySeconds,
 		extraConfig,
 	)
 	test.FailIfError(t, err)
@@ -114,23 +131,28 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
-	mach, err := cmachine.New(arbos.Path())
+	arbosPath, err := arbos.Path()
 	test.FailIfError(t, err)
 
-	hash, err := mach.Hash()
+	mach, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
 
+	hash := mach.Hash()
 	confirmPeriodBlocks := big.NewInt(100)
 	extraChallengeTimeBlocks := big.NewInt(0)
 	arbGasSpeedLimitPerBlock := maxGasPerNode
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
 	var owner common.Address
+	sequencerDelayBlocks := big.NewInt(60)
+	sequencerDelaySeconds := big.NewInt(900)
 	var extraConfig []byte
 
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
 	auth2 := bind.NewKeyedTransactor(pks[1])
+	seqAuth := bind.NewKeyedTransactor(pks[2])
+	sequencer := common.NewAddressFromEth(seqAuth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
 	rollupAddr := deployRollup(
@@ -144,16 +166,25 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		baseStake,
 		stakeToken,
 		owner,
+		sequencer,
+		sequencerDelayBlocks,
+		sequencerDelaySeconds,
 		extraConfig,
 	)
 
 	validatorUtilsAddr, _, _, err := ethbridgecontracts.DeployValidatorUtils(auth, client)
 	test.FailIfError(t, err)
 
-	validatorAddress, _, _, err := ethbridgecontracts.DeployValidator(auth, client)
+	validatorAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(auth, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = validatorCon.Initialize(auth)
 	test.FailIfError(t, err)
 
-	validatorAddress2, _, _, err := ethbridgecontracts.DeployValidator(auth2, client)
+	validatorAddress2, _, validatorCon2, err := ethbridgecontracts.DeployValidator(auth2, client)
+	test.FailIfError(t, err)
+	client.Commit()
+	_, err = validatorCon2.Initialize(auth2)
 	test.FailIfError(t, err)
 
 	client.Commit()
@@ -168,26 +199,77 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	core, shutdown := test.PrepareArbCore(t, []inbox.InboxMessage{})
+	mon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
-	staker, bridge, err := NewStaker(ctx, core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
+	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
-	faultyCore := challenge.NewFaultyCore(core, faultConfig)
+	seqInboxAddr, err := staker.rollup.SequencerBridge(ctx)
+	test.FailIfError(t, err)
+
+	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
+	test.FailIfError(t, err)
+
+	delayedBridgeAddr, err := staker.rollup.DelayedBridge(ctx)
+	test.FailIfError(t, err)
+
+	delayedBridge, err := ethbridgecontracts.NewBridge(delayedBridgeAddr.ToEthAddress(), client)
+	test.FailIfError(t, err)
+
+	delayedAcc, err := delayedBridge.InboxAccs(&bind.CallOpts{Context: ctx}, big.NewInt(0))
+	test.FailIfError(t, err)
+	batchItem := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc)
+
+	latestHeader, err := client.HeaderByNumber(ctx, nil)
+	test.FailIfError(t, err)
+	currentBlockNumber := latestHeader.Number
+	currentTimestamp := big.NewInt(int64(latestHeader.Time))
+
+	endOfBlockMessage := message.NewInboxMessage(
+		message.EndBlockMessage{},
+		common.Address{},
+		big.NewInt(1),
+		big.NewInt(0),
+		inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(currentBlockNumber),
+			Timestamp: currentTimestamp,
+		},
+	)
+
+	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, batchItem.Accumulator)
+	_, err = seqInbox.AddSequencerL2Batch(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
+	test.FailIfError(t, err)
+	client.Commit()
+
+	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
-	reader, err := NewInboxReader(ctx, bridge, core)
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
+	nodehealth.Init(healthChan)
+
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		test.FailIfError(t, err)
+	}()
+
+	// Make a dummy feed for now
+	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, sequencerFeed)
 	test.FailIfError(t, err)
-	reader.Start(ctx)
-	defer reader.Stop()
 
 	for i := 1; i <= 10; i++ {
-		msgCount, err := core.GetMessageCount()
+		msgCount, err := mon.Core.GetMessageCount()
 		test.FailIfError(t, err)
-		logCount, err := core.GetLogCount()
+		logCount, err := mon.Core.GetLogCount()
 		test.FailIfError(t, err)
 		if msgCount.Cmp(big.NewInt(1)) >= 0 && logCount.Cmp(big.NewInt(1)) >= 0 {
 			// We've found the inbox message
@@ -200,6 +282,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	}
 
 	faultsExist := faultConfig != challenge.FaultConfig{}
+	t.Log("faultsExist:", faultsExist)
 
 	var targetNode *big.Int
 	if faultsExist {
@@ -211,11 +294,18 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	var lastChallenge *common.Address
 	faultyStakerAlive := false
 	faultyStakerDead := false
+
+	stakerMadeFirstMove := false
 	for i := 400; i >= 0; i-- {
 		if (i % 2) == 0 {
-			_, err := staker.Act(ctx)
+			fmt.Println("Honest staker acting")
+			tx, err := staker.Act(ctx)
 			test.FailIfError(t, err)
-		} else if !faultyStakerAlive || !faultyStakerDead {
+			if tx != nil {
+				stakerMadeFirstMove = true
+			}
+		} else if (!faultyStakerAlive || !faultyStakerDead) && stakerMadeFirstMove {
+			fmt.Println("Malicious staker acting")
 			_, err = faultyStaker.Act(ctx)
 			if err != nil {
 				errString := err.Error()
@@ -291,12 +381,27 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	}
 }
 
+func calculateGasToFirstInbox(t *testing.T) *big.Int {
+	mon, shutdown := monitor.PrepareArbCore(t)
+	defer shutdown()
+	cursor, err := mon.Core.GetExecutionCursor(big.NewInt(100000000))
+	test.FailIfError(t, err)
+	inboxGas := new(big.Int).Add(cursor.TotalGasConsumed(), big.NewInt(1))
+	t.Logf("Found first inbox instruction starting at %v", inboxGas)
+	return inboxGas
+}
+
 func TestChallengeToOSP(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), OneStepProof)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(390), OneStepProof)
+}
+
+func TestChallengeToInboxOSP(t *testing.T) {
+	inboxGas := calculateGasToFirstInbox(t)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: inboxGas}, new(big.Int).Add(inboxGas, big.NewInt(10000)), OneStepProof)
 }
 
 func TestChallengeTimeout(t *testing.T) {
-	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(400*2), Timeout)
+	runStakersTest(t, challenge.FaultConfig{DistortMachineAtGas: big.NewInt(1)}, big.NewInt(2), Timeout)
 }
 
 func TestStakersCooperative(t *testing.T) {

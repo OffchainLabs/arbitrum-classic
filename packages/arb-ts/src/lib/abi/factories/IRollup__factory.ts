@@ -89,8 +89,14 @@ const _abi = [
       },
       {
         indexed: false,
+        internalType: 'uint256',
+        name: 'afterInboxBatchEndCount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
         internalType: 'bytes32',
-        name: 'afterInboxAcc',
+        name: 'afterInboxBatchAcc',
         type: 'bytes32',
       },
       {
@@ -120,6 +126,38 @@ const _abi = [
       },
     ],
     name: 'NodeRejected',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'startNode',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'endNode',
+        type: 'uint256',
+      },
+    ],
+    name: 'NodesDestroyed',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+    ],
+    name: 'OwnerFunctionCalled',
     type: 'event',
   },
   {
@@ -164,6 +202,25 @@ const _abi = [
       },
     ],
     name: 'RollupCreated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'staker',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'newNode',
+        type: 'uint256',
+      },
+    ],
+    name: 'StakerReassigned',
     type: 'event',
   },
   {

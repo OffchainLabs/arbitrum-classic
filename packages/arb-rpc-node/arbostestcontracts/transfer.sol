@@ -19,9 +19,13 @@
 pragma solidity >=0.4.21 <0.7.0;
 
 contract Transfer {
+    event TestEvent(uint256 value);
+
     constructor() public payable {}
 
-    receive() external payable {}
+    receive() external payable {
+        emit TestEvent(msg.value);
+    }
 
     function send() external {
         msg.sender.transfer(1);

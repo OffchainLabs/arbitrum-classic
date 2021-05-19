@@ -18,10 +18,11 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -141,6 +142,10 @@ func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth
 	}, nil
 }
 
+func (s *StandardInbox) Sender() common.Address {
+	return common.NewAddressFromEth(s.auth.auth.From)
+}
+
 func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error) {
 	tx, err := s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return s.con.SendL2MessageFromOrigin(auth, data)
@@ -149,4 +154,14 @@ func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte
 		return common.Hash{}, err
 	}
 	return common.NewHashFromEth(tx.Hash()), nil
+}
+
+func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, transactions []byte, lengths []*big.Int, l1BlockNumber *big.Int, timestamp *big.Int, _totalDelayedMessagesRead *big.Int, afterAcc [32]byte) (*types.Transaction, error) {
+	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, l1BlockNumber, timestamp, _totalDelayedMessagesRead, afterAcc)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
 }

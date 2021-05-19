@@ -13,4 +13,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 }
 
 module.exports = func
-module.exports.tags = ['ValidatorUtils']
+module.exports.tags = ['ValidatorUtils', 'live', 'test']
