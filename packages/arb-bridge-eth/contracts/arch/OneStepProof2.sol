@@ -745,8 +745,7 @@ contract OneStepProof2 is OneStepProofCommon {
          uint256 len,) = decodeWasmData(context.bufProof);
         // Return value must come from the final machine
         require(stackVals.length >= 2, "Not enough wasm stack returns");
-        pushVal(context.stack, stackVals[1]);
-        pushVal(context.stack, stackVals[0]);
+        pushVal(context.stack, mkPair(stackVals[0], stackVals[1]));
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         context.nextLength = len;
@@ -776,6 +775,10 @@ contract OneStepProof2 is OneStepProofCommon {
         } else if (opCode == OP_SETBUFFER256) {
             return (3, 0, 100, executeSetBuffer256);
         } else if (opCode == OP_WASMTEST) {
+            return (2, 0, 100, executeWasmTest);
+        } else if (opCode == OP_WASMCOMPILE) {
+            return (2, 0, 100, executeWasmTest);
+        } else if (opCode == OP_WASMRUN) {
             return (2, 0, 100, executeWasmTest);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
