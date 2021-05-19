@@ -650,7 +650,7 @@ describe('Ether', () => {
     const finalInboxBalance = await ethProvider.getBalance(inbox.address)
     expect(initialInboxBalance.add(ethToL2DepositAmount).eq(finalInboxBalance))
 
-    const seqNum = await bridge.getInboxSeqNumFromContractTransaction(rec)
+    const seqNum = (await bridge.getInboxSeqNumFromContractTransaction(rec))[0]
     expect(seqNum).to.exist
     if (!seqNum) return
     const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)

@@ -314,7 +314,7 @@ export class BridgeHelper {
     )
 
     if (logs.length === 0) return undefined
-    return logs.map(log => BigNumber.from(log.topics[1]))[0]
+    return logs.map(log => BigNumber.from(log.topics[1]))
   }
 
   static tryGetProof = async (

@@ -226,7 +226,7 @@ export class Bridge extends L2Bridge {
 
   public async getInboxSeqNumFromContractTransaction(
     l1Transaction: ethers.providers.TransactionReceipt
-  ): Promise<BigNumber | undefined> {
+  ): Promise<BigNumber[] | undefined> {
     return BridgeHelper.getInboxSeqNumFromContractTransaction(
       l1Transaction,
       // TODO: we don't need to actually make this query if random address fetches interface
@@ -242,8 +242,9 @@ export class Bridge extends L2Bridge {
     const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
       l1Transaction
     )
+
     if (!inboxSeqNum) throw new Error('Inbox not triggered')
-    return this.calculateL2RetryableTransactionHash(inboxSeqNum)
+    return this.calculateL2RetryableTransactionHash(inboxSeqNum[0])
   }
 
   public getBuddyDeployInL2Transaction(
