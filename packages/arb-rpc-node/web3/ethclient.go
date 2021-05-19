@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -88,6 +89,10 @@ func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) 
 func (c *EthClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
 	gasPriceRaw, err := c.srv.GasPrice()
 	return (*big.Int)(gasPriceRaw), err
+}
+
+func (c *EthClient) ChainID(_ context.Context) (*big.Int, error) {
+	return message.ChainAddressToID(arbcommon.NewAddressFromEth(c.srv.srv.GetChainAddress())), nil
 }
 
 func (c *EthClient) EstimateGas(_ context.Context, call ethereum.CallMsg) (uint64, error) {

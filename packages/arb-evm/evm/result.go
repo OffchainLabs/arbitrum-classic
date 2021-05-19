@@ -241,7 +241,7 @@ func (r *TxResult) CalcGasUsed() *big.Int {
 	if r.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return r.GasUsed
 	} else {
-		return new(big.Int).Div(r.FeeStats.PayTarget().Total(), r.FeeStats.Price.L2Computation)
+		return r.FeeStats.GasUsed()
 	}
 }
 
@@ -351,7 +351,7 @@ func (fs *FeeStats) PayTarget() *FeeSet {
 }
 
 func (fs *FeeStats) GasUsed() *big.Int {
-	return new(big.Int).Div(fs.PayTarget().Total(), fs.Price.L2Computation)
+	return new(big.Int).Div(fs.Paid.Total(), fs.Price.L2Computation)
 }
 
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
