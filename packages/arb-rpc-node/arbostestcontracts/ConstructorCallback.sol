@@ -20,13 +20,30 @@ pragma solidity >=0.4.21 <0.7.0;
 
 contract ConstructorCallback {
     event TestEvent(uint256 dataLength);
+    event TestEvent2(address dataLength);
 
-    constructor() public {
+    constructor() public payable {
         emit TestEvent(msg.data.length);
-        if (msg.data.length == 0) {
-            try ConstructorCallback(address(this)).test(543) {} catch {}
-        }
+        ConstructorCallback2(msg.sender).test2();
     }
 
-    function test(uint256 data) external {}
+    function test(address data) external {
+        emit TestEvent2(data);
+    }
+}
+
+contract ConstructorCallback2 {
+    event TestEvent3(bool indexed success, bytes returnData);
+
+    function test() external payable {
+        new ConstructorCallback();
+    }
+
+    function test2() external payable {
+        (bool success, bytes memory returnData) =
+            address(msg.sender).call(
+                abi.encodeWithSelector(ConstructorCallback.test.selector, msg.sender)
+            );
+        emit TestEvent3(success, returnData);
+    }
 }
