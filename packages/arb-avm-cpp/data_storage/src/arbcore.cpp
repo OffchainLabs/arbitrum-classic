@@ -18,7 +18,6 @@
 
 #include <avm/inboxmessage.hpp>
 #include <avm/machinethread.hpp>
-#include <data_storage/aggregator.hpp>
 #include <data_storage/datastorage.hpp>
 #include <data_storage/readsnapshottransaction.hpp>
 #include <data_storage/readwritetransaction.hpp>
@@ -48,9 +47,11 @@ constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 constexpr auto sideload_cache_size = 20;
 }  // namespace
 
-ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
+ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
+                 uint256_t checkpoint_min_gas_interval)
     : data_storage(std::move(data_storage_)),
-      code(std::make_shared<Code>(getNextSegmentID(data_storage))) {
+      code(std::make_shared<Code>(getNextSegmentID(data_storage))),
+      checkpoint_min_gas_interval(checkpoint_min_gas_interval) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
@@ -235,16 +236,22 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
+void ArbCore::checkpointsMinMessageIndex(uint256_t message_index) {
+    const std::lock_guard<std::mutex> lock(cleanup_mutex);
+    checkpoints_min_message_index_input = message_index;
+    update_cleanup = true;
+}
+
 // triggerSaveCheckpoint is meant for unit tests and should not be called from
 // multiple threads at the same time.
 rocksdb::Status ArbCore::triggerSaveCheckpoint() {
-    save_checkpoint = true;
+    manual_save_checkpoint = true;
     std::cerr << "Triggering checkpoint save" << std::endl;
-    while (save_checkpoint) {
+    while (manual_save_checkpoint) {
         // Wait until snapshot has been saved
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
-    std::cerr << "Checkpoint saved" << std::endl;
+    std::cerr << "Manual checkpoint saved" << std::endl;
 
     return save_checkpoint_status;
 }
@@ -651,6 +658,9 @@ void ArbCore::operator()() {
     MachineExecutionConfig execConfig;
     execConfig.stop_on_sideload = true;
     size_t max_message_batch_size = 10;
+    uint256_t save_checkpoint_after_gas =
+        machine->machine_state.output.arb_gas_used +
+        checkpoint_min_gas_interval;
 
     while (!arbcore_abort) {
         bool isMachineValid;
@@ -756,17 +766,38 @@ void ArbCore::operator()() {
                     }
                 }
 
-                // Save checkpoint for every sideload
-                status = saveCheckpoint(tx);
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    std::cerr << "ArbCore checkpoint saving failed: "
-                              << core_error_string << "\n";
-                    break;
+                // Adjust next checkpoint gas if a large reorg happened.
+                auto possible_new_save_checkpoint_after_gas =
+                    machine->machine_state.output.arb_gas_used +
+                    checkpoint_min_gas_interval;
+                if (possible_new_save_checkpoint_after_gas <
+                    save_checkpoint_after_gas) {
+                    save_checkpoint_after_gas =
+                        possible_new_save_checkpoint_after_gas;
                 }
 
-                // Clear oldest cache and start populating next cache
-                cache.nextCache();
+                // Save checkpoint for sideload after configured gas has been
+                // used
+                if (machine->machine_state.output.arb_gas_used >
+                        save_checkpoint_after_gas ||
+                    manual_save_checkpoint) {
+                    status = saveCheckpoint(tx);
+                    if (!status.ok()) {
+                        core_error_string = status.ToString();
+                        std::cerr << "ArbCore checkpoint saving failed: "
+                                  << core_error_string << "\n";
+                        break;
+                    }
+
+                    // Cycle LRU cache every time checkpoint is saved
+                    cache.nextCache();
+
+                    save_checkpoint_after_gas =
+                        machine->machine_state.output.arb_gas_used +
+                        checkpoint_min_gas_interval;
+
+                    manual_save_checkpoint = false;
+                }
 
                 // Machine was stopped to save sideload, update execConfig
                 // and start machine back up where it stopped
@@ -795,6 +826,19 @@ void ArbCore::operator()() {
         }
 
         if (machine->status() == MachineThread::MACHINE_NONE) {
+            if (manual_save_checkpoint) {
+                ReadWriteTransaction tx(data_storage);
+                auto status = saveCheckpoint(tx);
+                if (!status.ok()) {
+                    core_error_string = status.ToString();
+                    std::cerr << "ArbCore manual checkpoint saving failed: "
+                              << core_error_string << "\n";
+                    break;
+                }
+
+                manual_save_checkpoint = false;
+            }
+
             // Start execution of machine if new message available
             ReadSnapshotTransaction tx(data_storage);
             auto messages_result = readNextMessages(
@@ -819,15 +863,14 @@ void ArbCore::operator()() {
                     break;
                 }
 
-                if (delete_checkpoints_before_message != uint256_t(0)) {
-                    /*
-                    deleteOldCheckpoints(delete_checkpoints_before_message,
-                                         save_checkpoint_message_interval,
-                                         ignore_checkpoints_after_message);
-                    */
-                    ignore_checkpoints_after_message = 0;
-                    save_checkpoint_message_interval = 0;
-                    delete_checkpoints_before_message = 0;
+                auto status =
+                    deleteOldCheckpoints(checkpoints_min_message_index);
+                if (!status.ok()) {
+                    core_error_string = "error deleting old checkpoints";
+                    machine_error = true;
+                    std::cerr << "ArbCore error: " << core_error_string << ": "
+                              << status.ToString() << "\n";
+                    break;
                 }
             } else {
                 // Machine all caught up, no messages to process
@@ -842,11 +885,10 @@ void ArbCore::operator()() {
             }
         }
 
-        if (save_checkpoint) {
-            ReadWriteTransaction tx(data_storage);
-            save_checkpoint_status = saveCheckpoint(tx);
-            tx.commit();
-            save_checkpoint = false;
+        if (update_cleanup) {
+            const std::lock_guard<std::mutex> lock(cleanup_mutex);
+            checkpoints_min_message_index = checkpoints_min_message_index_input;
+            update_cleanup = false;
         }
 
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
@@ -2659,4 +2701,92 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
     ReadSnapshotTransaction tx(data_storage);
     return {status,
             takeExecutionCursorMachineImpl(tx, *execution_cursor, cache)};
+}
+
+rocksdb::Status ArbCore::deleteOldCheckpoints(
+    uint256_t delete_checkpoints_before_message_index) {
+    ReadWriteTransaction tx(data_storage);
+    auto delete_checkpoints_before_message_count =
+        delete_checkpoints_before_message_index + 1;
+
+    auto it = tx.checkpointGetIterator();
+    if (!it->status().ok()) {
+        std::cerr << "unable to delete old checkpoints, iterator error: "
+                  << it->status().ToString() << std::endl;
+        return it->status();
+    }
+
+    it->SeekToFirst();
+    if (!it->status().ok()) {
+        std::cerr << "unable to delete old checkpoints, SeekToFirst error: "
+                  << it->status().ToString() << std::endl;
+        return it->status();
+    }
+    if (!it->Valid()) {
+        std::cerr << "unable to delete old checkpoints, invalid SeekToFirst."
+                  << std::endl;
+        return rocksdb::Status::NotFound();
+    }
+
+    // Always leave checkpoint zero
+    it->Next();
+    if (!it->status().ok()) {
+        if (it->status().IsNotFound()) {
+            // Nothing to cleanup
+            return rocksdb::Status::OK();
+        }
+        std::cerr << "unable to delete old checkpoints, Prev error: "
+                  << it->status().ToString() << std::endl;
+        return it->status();
+    }
+
+    rocksdb::Slice start = nullptr;
+    auto end = it->key();
+    while (it->Valid()) {
+        std::vector<unsigned char> checkpoint_vector(
+            it->value().data(), it->value().data() + it->value().size());
+        auto checkpoint = extractMachineStateKeys(checkpoint_vector.begin());
+
+        if (checkpoint.getTotalMessagesRead() >=
+            delete_checkpoints_before_message_count) {
+            // No more messages to delete
+            break;
+        }
+
+        // Old checkpoint, need to delete referenced machine
+        deleteMachineState(tx, checkpoint);
+
+        // Found checkpoints to delete
+        start = it->key();
+        it->Next();
+    }
+    if (!it->status().ok()) {
+        if (it->status().IsNotFound()) {
+            // Nothing to cleanup
+            return rocksdb::Status::OK();
+        }
+        std::cerr << "unable to delete old checkpoints, iterator error: "
+                  << it->status().ToString() << std::endl;
+        return it->status();
+    }
+
+    if (start != nullptr) {
+        auto status = tx.checkpointDeleteRange(start, end);
+        if (!status.ok()) {
+            std::cerr << "unable to delete old checkpoints, "
+                      << "error calling checkpointDeleteRange: "
+                      << status.ToString() << std::endl;
+            return status;
+        }
+
+        status = tx.commit();
+        if (!status.ok()) {
+            std::cerr << "unable to delete old checkpoints, "
+                      << "error calling commit: " << status.ToString()
+                      << std::endl;
+            return status;
+        }
+    }
+
+    return rocksdb::Status::OK();
 }

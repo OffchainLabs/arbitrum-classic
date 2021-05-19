@@ -40,7 +40,7 @@ func TestMachineCreation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	arbStorage, err := NewArbStorage(dePath)
+	arbStorage, err := NewArbStorage(dePath, big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}
