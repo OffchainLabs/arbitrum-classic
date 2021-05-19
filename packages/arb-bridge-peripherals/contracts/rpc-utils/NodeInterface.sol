@@ -13,7 +13,7 @@ interface NodeInterface {
      * @param batchNum index of outbox entry (i.e., outgoing messages Merkle root) in array of outbox entries
      * @param index index of outgoing message in outbox entry
      * @return proof Merkle proof of message inclusion in outbox entry
-     * @return path Index of message in outbox entry
+     * @return path Merkle path to message
      * @return l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
      * @return l1Dest destination address for L1 contract call
      * @return l2Block l2 block number at which sendTxToL1 call was made
