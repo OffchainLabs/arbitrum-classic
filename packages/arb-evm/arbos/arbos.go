@@ -25,6 +25,7 @@ func Path() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	return filepath.Join(dir, "arbos.mexe"), nil
 }
 
