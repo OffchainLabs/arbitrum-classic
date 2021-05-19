@@ -492,7 +492,7 @@ WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_
     // convert table
     std::cerr << "Buffer hash " << intx::to_string(hash_value(Buffer()), 16)
               << "\n";
-    std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(stub, table, vec2buf(wasm_module));
+    std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(stub, table, vec2buf(wasm_module), wasm_module.size());
     std::shared_ptr<WasmRunner> runner = std::make_shared<RunWasm>(wasm_module);
     return {std::move(tpl), std::move(runner)};
 }

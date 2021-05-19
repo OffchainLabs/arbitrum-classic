@@ -67,6 +67,7 @@ using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 using ParsedSerializedVal = std::variant<uint256_t,
                                          CodePointStub,
                                          Buffer,
+                                         WasmValueHash,
                                          std::vector<ParsedTupVal>,
                                          ParsedBuffer>;
 

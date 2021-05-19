@@ -226,6 +226,18 @@ void marshalForProof(const Buffer& val,
     marshal_uint256_t(val.hash(), buf);
 }
 
+void marshalForProof(const WasmCodePoint& val,
+                     MarshalLevel,
+                     std::vector<unsigned char>& buf,
+                     const Code&) {
+    buf.push_back(WASM_CODE_POINT);
+    marshal_uint256_t(hash_value(val.data->get_element(0)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(1)), buf);
+    marshal_uint256_t(getSize(val.data->get_element(1)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(2)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(3)), buf);
+}
+
 }  // namespace
 
 void marshalForProof(const value& val,

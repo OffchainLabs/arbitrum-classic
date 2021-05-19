@@ -27,6 +27,7 @@
 #include <cstdint>
 #include <data_storage/readtransaction.hpp>
 #include <vector>
+#include <avm/machinestate/runwasm.hpp>
 
 constexpr int TUP_WASM_CODEPT_LENGTH = 33;
 constexpr int TUP_TUPLE_LENGTH = 33;
@@ -45,6 +46,13 @@ struct ValueBeingParsed {
         if (std::holds_alternative<Tuple>(val)) {
             std::get<Tuple>(val).unsafe_set_element(pos, std::move(newval));
         }
+    }
+};
+
+struct ParsedWasm {
+    uint256_t hash;
+    ParsedWasm(uint256_t hash_) {
+        hash = hash_;
     }
 };
 
@@ -106,7 +114,7 @@ std::vector<ParsedTupVal> parseTuple(
                 throw std::runtime_error("HASH_ONLY item");
             }
             case WASM_CODE_POINT: {
-                return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
+                return_vector.emplace_back(WasmValueHash{deserializeUint256t(buf)});
                 it += TUP_WASM_CODEPT_LENGTH;
                 break;
             }
@@ -166,6 +174,7 @@ std::vector<value> serializeValue(
     const WasmCodePoint& val,
     std::vector<unsigned char>& value_vector,
     std::map<uint64_t, uint64_t>&) {
+    std::cerr << "serilaize wasm value\n";
     std::vector<value> ret{};
     value_vector.push_back(WASM_CODE_POINT);
     marshal_uint256_t(hash_value(*val.data), value_vector);
@@ -196,6 +205,9 @@ void deleteParsedValue(const uint256_t&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
 void deleteParsedValue(const Buffer&,
+                       std::vector<uint256_t>&,
+                       std::map<uint64_t, uint64_t>&) {}
+void deleteParsedValue(const WasmValueHash&,
                        std::vector<uint256_t>&,
                        std::map<uint64_t, uint64_t>&) {}
 void deleteParsedValue(const ParsedBuffer& parsed,
@@ -251,6 +263,11 @@ ParsedSerializedVal parseRecord(
             it += len;
             return res;
         }
+        case WASM_CODE_POINT: {
+            it += TUP_NUM_LENGTH;
+            std::cerr << "deserialize here\n";
+            return WasmValueHash{deserializeUint256t(buf)};
+        }
         default: {
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
@@ -301,6 +318,13 @@ GetResults processVal(const ReadTransaction& tx,
                       std::set<uint64_t>& segment_ids,
                       const uint32_t,
                       ValueCache& val_cache);
+
+GetResults processFirstVal(const ReadTransaction& tx,
+                           const WasmValueHash& val_hash,
+                           std::vector<ValueBeingParsed>& val_stack,
+                           std::set<uint64_t>& segment_ids,
+                           const uint32_t,
+                           ValueCache& val_cache);
 
 GetResults processVal(const ReadTransaction& tx,
                       const ParsedBuffer& val,
@@ -521,29 +545,35 @@ GetResults processVal(const ReadTransaction& tx,
     }
 
     // Value not in cache, so need to load from database
-    auto results = getStoredValue(tx, val_hash);
-    if (!results.status.ok()) {
-        return results;
+    auto results = getValue(tx, val_hash.hash, val_cache);
+    // auto results = getStoredValue(tx, val_hash);
+    if (std::holds_alternative<rocksdb::Status>(results)) {
+        return GetResults{0, std::get<rocksdb::Status>(results), {}};
     }
-
-    auto it = results.stored_value.cbegin();
-    auto record = parseRecord(it);
-
-    return std::visit(
-        [&](const auto& val) {
-            return processVal(tx, val, val_stack, segment_ids,
-                              results.reference_count, val_cache);
-        },
-        record);
-    
+    auto val_result = std::get<CountedData<value>>(results).data;
+    if (std::holds_alternative<Tuple>(val_result)) {
+        auto tup = std::get<Tuple>(val_result);
+        std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(tup);
+        auto wasm_module = tup.get_element(2);
+        auto wasm_module_size = tup.get_element(3);
+        if (!std::holds_alternative<Buffer>(wasm_module) || !std::holds_alternative<uint256_t>(wasm_module_size)) {
+            std::cerr << "bad tuple for wasm";
+        }
+        auto wasm_str = buf2vec(std::get<Buffer>(wasm_module), static_cast<uint64_t>(std::get<uint256_t>(wasm_module_size)));
+        std::shared_ptr<WasmRunner> runner = std::make_shared<RunWasm>(wasm_str);
+        auto val = WasmCodePoint{std::move(tpl), std::move(runner)};
+        auto res = applyValue(val, 0, val_stack);
+        return res;
+    }
 }
 
 GetResults processFirstVal(const ReadTransaction& tx,
-                           const ValueHash& val_hash,
+                           const WasmValueHash& val_hash,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
                            const uint32_t,
                            ValueCache& val_cache) {
+    std::cerr << "process first wasm\n";
     if (auto val = val_cache.loadIfExists(val_hash.hash)) {
         // Use cached value
         val_stack.emplace_back(std::move(*val), 0);
@@ -551,23 +581,22 @@ GetResults processFirstVal(const ReadTransaction& tx,
     }
 
     // Value not in cache, so need to load from database
-    auto results = getStoredValue(tx, val_hash);
-    if (!results.status.ok()) {
-        return results;
+    auto results = getValue(tx, val_hash.hash, val_cache);
+    // auto results = getStoredValue(tx, val_hash);
+    if (std::holds_alternative<rocksdb::Status>(results)) {
+        return GetResults{0, std::get<rocksdb::Status>(results), {}};
     }
-    auto it = results.stored_value.cbegin();
-    auto record = parseRecord(it);
-
-    return std::visit(
-        [&](const auto& val) {
-            return processFirstVal(tx, val, val_stack, segment_ids,
-                                   results.reference_count, val_cache);
-        },
-        record);
+    auto val_result = std::get<CountedData<value>>(results).data;
+    if (std::holds_alternative<Tuple>(val_result)) {
+        auto tpl = std::get<Tuple>(val_result);
+        auto val = WasmCodePoint{};
+        val_stack.emplace_back(std::move(val), 0);
+        return GetResults{0, rocksdb::Status::OK(), {}};
+    }
 }
 
 GetResults processFirstVal(const ReadTransaction& tx,
-                           const WasmValueHash& val_hash,
+                           const ValueHash& val_hash,
                            std::vector<ValueBeingParsed>& val_stack,
                            std::set<uint64_t>& segment_ids,
                            const uint32_t,
