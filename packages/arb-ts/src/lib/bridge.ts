@@ -145,6 +145,26 @@ export class Bridge extends L2Bridge {
       .mul(maxSubmissionPriceIncreaseRatio)
       .div(BigNumber.from(10))
 
+    // calculate required forwarding gas
+    let ethDeposit = overrides && (await overrides.value)
+
+    if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
+      const l2Balance = await this.getAndUpdateL2EthBalance()
+
+      const requiredEth = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
+
+      if (l2Balance.lt(requiredEth)) {
+        console.info(
+          'insufficient L2 balance to pay for retryable:',
+          l2Balance.toNumber(),
+          'Depositing additional ETH'
+        )
+        ethDeposit = requiredEth.sub(l2Balance)
+      } else {
+        console.info('l2 account adequately funded for retryable')
+      }
+    }
+
     return this.l1Bridge.deposit(
       erc20L1Address,
       amount,
@@ -152,7 +172,7 @@ export class Bridge extends L2Bridge {
       maxGas,
       gasPriceBid,
       destinationAddress,
-      overrides
+      { ...overrides, value: ethDeposit }
     )
   }
 

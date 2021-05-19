@@ -17,6 +17,8 @@ export default {
     // existentCustomTokenL1: '',
     // existentCustomTokenL2: '',
     defaultWait: 0,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 10000,
   },
   kovan5: {
     ethRPC: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
@@ -31,10 +33,10 @@ export default {
     existentTestERC20: '0xFa3933797baF9572c4Cf8fA9a28f09ad3C8d30BB',
     existentCustomTokenL1: '0x2091C1d0d20270e4cA15270b737421Ba90Cf0470',
     existentCustomTokenL2: '0x88692aE036594c95F723204c3DB070E2fB4d8eE4',
-    // existentTestERC20: '',
-    // existentCustomTokenL1: '',
-    // existentCustomTokenL2: '',
+
     defaultWait: 0,
+    executeOutGoingMessages: true,
+    outBoxUpdateTimeout: 10000,
   },
 
   devnet: {
@@ -50,5 +52,7 @@ export default {
     existentCustomTokenL1: '',
     existentCustomTokenL2: '',
     defaultWait: 10000,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 10000,
   },
 }

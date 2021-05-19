@@ -3,6 +3,7 @@ import { Bridge } from '../src/lib/bridge'
 import {
   DepositTokenEventResult,
   BridgeHelper,
+  L2ToL1EventResult,
 } from '../src/lib/bridge_helpers'
 
 import { expect } from 'chai'
@@ -10,8 +11,11 @@ import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
 import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
+import { Rollup__factory } from '../src/lib/abi/factories/Rollup__factory'
 
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
+import { Outbox__factory } from '../src/lib/abi/factories/Outbox__factory'
+
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 
 import { StandardArbERC20 } from '../src/lib/abi/StandardArbERC20'
@@ -73,6 +77,7 @@ const {
   existentCustomTokenL1,
   existentCustomTokenL2,
   defaultWait,
+  executeOutGoingMessages,
 } = config[network]
 
 if (
@@ -99,7 +104,6 @@ const wait = (ms = 0) => {
 
 const depositAmount = '0.1'
 
-const retryableDepositAmount = utils.parseEther('0.01')
 let erc20Address = existentTestERC20
 prettyLog('Using preFundedWallet: ' + preFundedWallet.address)
 prettyLog('Randomly generated test wallet: ' + l1TestWallet.address)
@@ -110,6 +114,8 @@ const bridge = new Bridge(
   l1TestWallet,
   l2TestWallet
 )
+
+const outGoingMessages: L2ToL1EventResult[] = []
 
 before('setup', () => {
   it("'pre-funded wallet' is indeed pre-funded", async () => {
@@ -135,75 +141,6 @@ before('setup', () => {
   })
 })
 
-describe('Ether', () => {
-  let testWalletL1EthBalance: BigNumber
-  let testWalletL2EthBalance: BigNumber
-
-  before('has expected initial values', async () => {
-    testWalletL1EthBalance = await bridge.getAndUpdateL1EthBalance()
-    testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
-    expect(testWalletL1EthBalance.eq(parseEther(depositAmount))).to.be.true
-    expect(testWalletL2EthBalance.eq(Zero)).to.be.true
-  })
-
-  const ethToL2DepositAmount = parseEther('0.05')
-  const ethFromL2WithdrawAmount = parseEther('0.00001')
-
-  it('deposit ether transaction succeeds', async () => {
-    const inbox = await bridge.l1Bridge.getInbox()
-    const initialInboxBalance = await ethProvider.getBalance(inbox.address)
-    const res = await bridge.depositETH(ethToL2DepositAmount)
-    const rec = await res.wait()
-
-    expect(rec.status).to.equal(1)
-    const finalInboxBalance = await ethProvider.getBalance(inbox.address)
-    expect(initialInboxBalance.add(ethToL2DepositAmount).eq(finalInboxBalance))
-
-    const seqNum = await bridge.getInboxSeqNumFromContractTransaction(rec)
-    expect(seqNum).to.exist
-    if (!seqNum) return
-    const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
-    prettyLog('l2TxHash: ' + l2TxHash)
-    prettyLog('waiting for l2 transaction:')
-    const l2TxnRec = await arbProvider.waitForTransaction(
-      l2TxHash,
-      undefined,
-      120 * 1000
-    )
-    prettyLog('l2 transaction found!')
-    expect(l2TxnRec.status).to.equal(1)
-  })
-  it('L2 address has expected balance after deposit eth', async () => {
-    for (let i = 0; i < 60; i++) {
-      prettyLog('balance check attempt ' + (i + 1))
-      await wait(5000)
-      testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
-      if (!testWalletL2EthBalance.eq(Zero)) {
-        prettyLog('balance updated!')
-        break
-      }
-    }
-
-    expect(testWalletL2EthBalance.eq(ethToL2DepositAmount)).to.be.true
-  })
-  it('withdraw Ether transaction succeeds and emits event', async () => {
-    const withdrawEthRes = await bridge.withdrawETH(ethFromL2WithdrawAmount, '')
-    const withdrawEthRec = await withdrawEthRes.wait()
-
-    expect(withdrawEthRec.status).to.equal(1)
-    const withdrawEventData = (
-      await bridge.getWithdrawalsInL2Transaction(withdrawEthRec)
-    )[0]
-    expect(withdrawEventData).to.exist
-  })
-
-  it('balance deducted after withdraw eth', async () => {
-    wait()
-    const bal = await bridge.getAndUpdateL2EthBalance()
-    // lazy check, will update once gasPrice is activated
-    expect(bal.lt(ethToL2DepositAmount)).to.be.true
-  })
-})
 const tokenDepositAmount = BigNumber.from(50)
 const tokenWithdrawAmount = BigNumber.from(2)
 
@@ -265,11 +202,16 @@ describe('ERC20', () => {
       tokenDepositAmount,
       {},
       undefined,
-      { gasLimit: 210000, gasPrice: l1gasPrice, value: retryableDepositAmount }
+      { gasLimit: 210000, gasPrice: l1gasPrice }
     )
 
     const depositRec = await depositRes.wait()
-    console.warn('deposit rec status', depositRec.status)
+
+    console.warn(
+      'deposit receipt',
+      depositRec.transactionHash,
+      depositRec.status
+    )
 
     await wait()
 
@@ -296,7 +238,6 @@ describe('ERC20', () => {
     )
     console.warn('l2RedeemHash', l2RedeemHash)
     const redeemReceipt = await arbProvider.waitForTransaction(l2RetryableHash)
-    console.warn('redeemReceipt', redeemReceipt)
     expect(redeemReceipt.status).to.equal(1)
 
     console.warn('l2RetryableHash', l2RetryableHash)
@@ -304,7 +245,7 @@ describe('ERC20', () => {
     const retryableReceipt = await arbProvider.waitForTransaction(
       l2RetryableHash
     )
-    console.warn('retryableReceipt', retryableReceipt)
+    console.info('retryableReceipt found')
 
     expect(retryableReceipt.status).to.equal(1)
   })
@@ -353,6 +294,7 @@ describe('ERC20', () => {
     )[0]
 
     expect(withdrawEventData).to.exist
+    outGoingMessages.push(withdrawEventData)
   })
 
   it('balance properly deducted after erc20 withdraw', async () => {
@@ -495,7 +437,7 @@ describe('CustomToken', () => {
       tokenDepositAmount,
       {},
       undefined,
-      { gasLimit: 210000, gasPrice: l1gasPrice, value: retryableDepositAmount }
+      { gasLimit: 210000, gasPrice: l1gasPrice }
     )
 
     const depositRec = await depositRes.wait()
@@ -545,6 +487,7 @@ describe('CustomToken', () => {
       await bridge.getWithdrawalsInL2Transaction(withdrawRec)
     )[0]
     expect(withdrawEventData).to.exist
+    outGoingMessages.push(withdrawEventData)
   })
 
   it('balance properly deducted after custom withdraw', async () => {
@@ -643,7 +586,7 @@ describe.skip('CustomToken: no-L2-yet-fallback case', () => {
       tokenDepositAmount,
       {},
       undefined,
-      { gasLimit: 210000, gasPrice: l1gasPrice, value: retryableDepositAmount }
+      { gasLimit: 210000, gasPrice: l1gasPrice }
     )
     const depositRec = await depositRes.wait()
     await wait()
@@ -685,6 +628,93 @@ describe.skip('CustomToken: no-L2-yet-fallback case', () => {
     // user should be able to withdraw
     // or migrate to custom token once deployed
   })
+})
+
+describe('Ether', () => {
+  let testWalletL1EthBalance: BigNumber
+  let testWalletL2EthBalance: BigNumber
+  let initialTestWalletEth2Balance: BigNumber
+  let preWithdrawalL2Balance: BigNumber
+
+  const ethToL2DepositAmount = parseEther('0.05')
+  const ethFromL2WithdrawAmount = parseEther('0.00001')
+
+  it('deposit ether transaction succeeds', async () => {
+    initialTestWalletEth2Balance = await bridge.getAndUpdateL2EthBalance()
+    const inbox = await bridge.l1Bridge.getInbox()
+    const initialInboxBalance = await ethProvider.getBalance(inbox.address)
+    const res = await bridge.depositETH(ethToL2DepositAmount)
+    const rec = await res.wait()
+
+    expect(rec.status).to.equal(1)
+    const finalInboxBalance = await ethProvider.getBalance(inbox.address)
+    expect(initialInboxBalance.add(ethToL2DepositAmount).eq(finalInboxBalance))
+
+    const seqNum = await bridge.getInboxSeqNumFromContractTransaction(rec)
+    expect(seqNum).to.exist
+    if (!seqNum) return
+    const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
+    prettyLog('l2TxHash: ' + l2TxHash)
+    // Note:these will pass once the node is updated to deliver this tx format
+    prettyLog('waiting for l2 transaction:')
+    const l2TxnRec = await arbProvider.waitForTransaction(
+      l2TxHash,
+      undefined,
+      120 * 1000
+    )
+    prettyLog('l2 transaction found!')
+    expect(l2TxnRec.status).to.equal(1)
+  })
+  it('L2 address has expected balance after deposit eth', async () => {
+    for (let i = 0; i < 60; i++) {
+      prettyLog('balance check attempt ' + (i + 1))
+      await wait(5000)
+      testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
+      if (!initialTestWalletEth2Balance.eq(testWalletL2EthBalance)) {
+        prettyLog('balance updated!')
+        break
+      }
+    }
+
+    expect(testWalletL2EthBalance.gte(ethToL2DepositAmount)).to.be.true
+  })
+  it('withdraw Ether transaction succeeds and emits event', async () => {
+    preWithdrawalL2Balance = await bridge.getAndUpdateL2EthBalance()
+    const withdrawEthRes = await bridge.withdrawETH(ethFromL2WithdrawAmount, '')
+    const withdrawEthRec = await withdrawEthRes.wait()
+
+    expect(withdrawEthRec.status).to.equal(1)
+    const withdrawEventData = (
+      await bridge.getWithdrawalsInL2Transaction(withdrawEthRec)
+    )[0]
+    expect(withdrawEventData).to.exist
+    outGoingMessages.push(withdrawEventData)
+  })
+
+  it('balance deducted after withdraw eth', async () => {
+    wait()
+    const bal = await bridge.getAndUpdateL2EthBalance()
+    // lazy check, will update once gasPrice is activated
+    expect(bal.lt(preWithdrawalL2Balance)).to.be.true
+  })
+})
+
+// wip:
+describe.skip('trigger outgoing messages', async () => {
+  if (!executeOutGoingMessages) {
+    return
+  }
+  const outboxAddress = await bridge.getOutboxAddress()
+  const outbox = Outbox__factory.connect(outboxAddress, ethProvider)
+
+  const targetBatchNumber = outGoingMessages.reduce(
+    (highestBatchNumber, message) => {
+      return message.batchNumber.gte(highestBatchNumber)
+        ? message.batchNumber
+        : highestBatchNumber
+    },
+    BigNumber.from(0)
+  )
 })
 
 // describe('scrap paper', async () => {
