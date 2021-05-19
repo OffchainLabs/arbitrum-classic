@@ -556,7 +556,8 @@ contract OneStepProof2 is OneStepProofCommon {
         Machine.Data memory finalMachine,
         Value.Data[] memory stackVals,
         Value.Data[] memory auxstackVals,
-        uint256 len
+        uint256 len,
+        uint256 ret_offset
     ) {
         require(proof.length >= 3, "wasm proof empty");
         uint8 opCode = uint8(proof[0]);
@@ -597,6 +598,7 @@ contract OneStepProof2 is OneStepProofCommon {
         for (i = 0; i < auxstackCount; i++) {
             mach.addAuxStackValue(auxstackVals[i]);
         }
+        ret_offset = offset;
 
     }
 
@@ -642,8 +644,105 @@ contract OneStepProof2 is OneStepProofCommon {
         // Final machine is given
         (Machine.Data memory finalMachine,
          Value.Data[] memory stackVals,
-         Value.Data[] memory auxstackVals,
-         uint256 len) = decodeWasmData(context.bufProof);
+         /* Value.Data[] memory auxstackVals */,
+         uint256 len,) = decodeWasmData(context.bufProof);
+        // Return value must come from the final machine
+        require(stackVals.length >= 2, "Not enough wasm stack returns");
+        pushVal(context.stack, stackVals[1]);
+        pushVal(context.stack, stackVals[0]);
+        context.startState = Machine.hash(initialMachine);
+        context.endState = Machine.hash(finalMachine);
+        context.nextLength = len;
+    }
+
+    bytes32 constant compilerProgram = 0x4932d554b80820e294814bd0674558bd57fa55b750456622dc6e1793390c01ec;
+    bytes32 constant compilerProgramLink = 0x71b400febf23e3973c60191ccf470be8c754bb923d10851420f550782a6b72c4;
+    uint256 constant compilerProgramLinkSize = 37449;
+
+    function executeWasmCompile(AssertionContext memory context) internal pure {
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isBuffer()) {
+            handleOpcodeError(context);
+            return;
+        }
+        if (!val2.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        Value.Data[] memory init = new Value.Data[](2);
+        init[0] = val1;
+        init[1] = Value.newEmptyTuple();
+        // Construct initial machine
+        Machine.Data memory initialMachine = Machine.Data(
+            compilerProgram,
+            mkPair(Value.newHashedValue(compilerProgramLink, compilerProgramLinkSize),
+              mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
+            Value.newEmptyTuple(), //    machine.auxStack,
+            Value.newEmptyTuple(), //    machine.registerVal,
+            Value.newInt(0), //    machine.staticVal,
+            1000000, //    machine.arbGasRemaining,
+            errHandlerHash, //    machine.errHandlerHash,
+            Value.newEmptyTuple(), //    machine.pendingMessage,
+            Machine.MACHINE_EXTENSIVE //    machine.status
+        );
+        // Final machine is given
+        (Machine.Data memory finalMachine,
+         Value.Data[] memory stackVals,
+         ,
+         uint256 len,
+         uint256 offset) = decodeWasmData(context.bufProof);
+        // Wasm codepoint given as hint
+        (, Value.Data memory cp) = Marshaling.deserializeWasm(context.bufProof, offset);
+
+        // Check that corresponds to what is given in the return buffer
+
+        require(stackVals.length >= 1, "Not enough wasm stack returns");
+        require(keccak256(abi.encodePacked(uint256(123), cp.hash())) == stackVals[0].hash());
+        pushVal(context.stack, cp);
+        context.startState = Machine.hash(initialMachine);
+        context.endState = Machine.hash(finalMachine);
+        context.nextLength = len;
+    }
+
+    function executeWasmRun(AssertionContext memory context) internal pure {
+        Value.Data memory val3 = popVal(context.stack);
+        Value.Data memory val2 = popVal(context.stack);
+        Value.Data memory val1 = popVal(context.stack);
+        if (!val1.isBuffer()) {
+            handleOpcodeError(context);
+            return;
+        }
+        if (!val2.isInt()) {
+            handleOpcodeError(context);
+            return;
+        }
+        if (!val3.isWasm()) {
+            handleOpcodeError(context);
+            return;
+        }
+        Value.Data[] memory init = new Value.Data[](2);
+        init[0] = val1;
+        init[1] = Value.newEmptyTuple();
+        Value.WasmCodePoint memory wasm = val3.wasmVal;
+        // Construct initial machine
+        Machine.Data memory initialMachine = Machine.Data(
+            wasm.codept,
+            mkPair(Value.newHashedValue(wasm.table, wasm.tableSize),
+              mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
+            Value.newEmptyTuple(), //    machine.auxStack,
+            Value.newEmptyTuple(), //    machine.registerVal,
+            Value.newInt(0), //    machine.staticVal,
+            1000000, //    machine.arbGasRemaining,
+            errHandlerHash, //    machine.errHandlerHash,
+            Value.newEmptyTuple(), //    machine.pendingMessage,
+            Machine.MACHINE_EXTENSIVE //    machine.status
+        );
+        // Final machine is given
+        (Machine.Data memory finalMachine,
+         Value.Data[] memory stackVals,
+         /* Value.Data[] memory auxstackVals */,
+         uint256 len,) = decodeWasmData(context.bufProof);
         // Return value must come from the final machine
         require(stackVals.length >= 2, "Not enough wasm stack returns");
         pushVal(context.stack, stackVals[1]);

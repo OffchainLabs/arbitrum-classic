@@ -150,12 +150,14 @@ library Marshaling {
         uint256 offset = startOffset;
         bytes32 codept;
         bytes32 table;
+        uint256 tableSize;
         bytes32 extra;
 
         (offset, codept) = extractBytes32(data, offset);
         (offset, table) = extractBytes32(data, offset);
+        (offset, tableSize) = deserializeInt(data, offset);
         (offset, extra) = extractBytes32(data, offset);
-        return (offset, Value.newWasmCode(codept, table, extra));
+        return (offset, Value.newWasmCode(codept, table, tableSize, extra));
     }
 
     function deserializeTuple(
