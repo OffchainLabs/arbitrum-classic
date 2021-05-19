@@ -91,6 +91,18 @@ library Hashing {
         return keccak256(abi.encodePacked(val));
     }
 
+    function hashWasm(Value.WasmCodePoint memory cp) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    Value.wasmTypeCode(),
+                    cp.codept,
+                    cp.table,
+                    cp.buffer
+                )
+            );
+    }
+
     function hashCodePoint(Value.CodePoint memory cp) internal pure returns (bytes32) {
         assert(cp.immediate.length < 2);
         if (cp.immediate.length == 0) {
@@ -130,6 +142,8 @@ library Hashing {
             return bytes32(val.intVal);
         } else if (val.typeCode == Value.bufferTypeCode()) {
             return keccak256(abi.encodePacked(uint256(123), val.bufferHash));
+        } else if (val.typeCode == Value.wasmTypeCode()) {
+            return hashWasm(val.wasmVal);
         } else {
             require(false, "Invalid type code");
         }

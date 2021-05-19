@@ -140,6 +140,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
     uint8 internal constant OP_SETBUFFER64 = 0xa5;
     uint8 internal constant OP_SETBUFFER256 = 0xa6;
 
+    uint8 internal constant OP_WASMCOMPILE = 0xa7;
+    uint8 internal constant OP_WASMRUN = 0xa8;
     uint8 internal constant OP_WASMTEST = 0xf1;
 
     uint8 internal constant CODE_POINT_TYPECODE = 1;

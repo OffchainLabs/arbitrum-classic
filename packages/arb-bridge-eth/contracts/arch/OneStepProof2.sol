@@ -642,7 +642,7 @@ contract OneStepProof2 is OneStepProofCommon {
         // Final machine is given
         (Machine.Data memory finalMachine,
          Value.Data[] memory stackVals,
-         Value.Data[] memory auxstackVals, 
+         Value.Data[] memory auxstackVals,
          uint256 len) = decodeWasmData(context.bufProof);
         // Return value must come from the final machine
         require(stackVals.length >= 2, "Not enough wasm stack returns");
