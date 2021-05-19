@@ -20,9 +20,18 @@
 
 #include <iostream>
 
-
 uint256_t WasmCodePoint::hash() const {
-    return hash_value(*data);
+    std::array<unsigned char, 1+32*3> valData;
+    valData[0] = WASM_CODE_POINT;
+    auto hash0 = hash_value(data->get_element(0));
+    auto hash1 = hash_value(data->get_element(1));
+    auto hash2 = hash_value(data->get_element(2));
+    auto it = valData.begin() + 1;
+    it = to_big_endian(hash0, it);
+    it = to_big_endian(hash1, it);
+    it = to_big_endian(hash2, it);
+    auto hash_val = ethash::keccak256(valData.data(), valData.size());
+    return intx::be::load<uint256_t>(hash_val);
 }
 
 Tuple Tuple::createSizedTuple(const size_t size) {
@@ -169,13 +178,6 @@ HashPreImage calcHashPreImage(const Tuple& tup) {
     auto hash_val = ethash::keccak256(
         tupData.data(),
         static_cast<unsigned int>(1 + hash_size * (tup.tuple_size())));
-/*
-    std::cerr << "tuple hash size " << 1 + hash_size * (tup.tuple_size()) << "\n";
-    auto len = 1 + hash_size * (tup.tuple_size());
-    for (int i = 0; i < len; i++) {
-        std::cerr << ", " << int(tupData[i]);
-    }
-    std::cerr << "\n"; */
     std::array<unsigned char, 32> hashData{};
     std::copy(&hash_val.bytes[0], &hash_val.bytes[32], hashData.begin());
 
