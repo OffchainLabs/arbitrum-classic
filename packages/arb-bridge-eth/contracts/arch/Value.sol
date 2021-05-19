@@ -43,6 +43,7 @@ library Value {
         bytes32 table;
         uint256 tableSize;
         bytes32 buffer;
+        uint256 bufferSize;
     }
 
     struct Data {
@@ -144,7 +145,7 @@ library Value {
     }
 
     function emptyWasmCode() internal pure returns (WasmCodePoint memory) {
-        return WasmCodePoint(0,0,0,0);
+        return WasmCodePoint(0,0,0,0,0);
     }
 
     function newInt(uint256 _val) internal pure returns (Data memory) {
@@ -228,14 +229,14 @@ library Value {
             );
     }
 
-    function newWasmCode(bytes32 codept, bytes32 table, uint256 tableSize, bytes32 extra) internal pure returns (Data memory) {
+    function newWasmCode(bytes32 codept, bytes32 table, uint256 tableSize, bytes32 buf, uint256 bufSize) internal pure returns (Data memory) {
         return
             Data(
                 uint256(0),
                 CodePoint(0, 0, new Data[](0)),
                 new Data[](0),
                 0,
-                WasmCodePoint(codept, table, tableSize, extra), 
+                WasmCodePoint(codept, table, tableSize, buf, bufSize), 
                 WASM_TYPECODE,
                 uint256(1)
             );

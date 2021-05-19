@@ -98,7 +98,8 @@ library Hashing {
                     Value.wasmTypeCode(),
                     cp.codept,
                     cp.table,
-                    cp.buffer
+                    cp.buffer,
+                    cp.bufferSize
                 )
             );
     }
