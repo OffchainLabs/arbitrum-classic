@@ -222,7 +222,7 @@ func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
 }
 
 func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash, maxGas uint64) (*evm.TxResult, []value.Value, error) {
-	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true, common.Hash{}, common.Hash{})
+	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true)
 	if err != nil {
 		return nil, nil, err
 	}
