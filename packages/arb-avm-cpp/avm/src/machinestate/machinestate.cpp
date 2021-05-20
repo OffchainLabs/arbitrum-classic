@@ -267,6 +267,12 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
     }
 }
 
+value MachineState::getStackOrImmed(uint64_t num, Operation op) const {
+    if (num == 0 && op.immediate) return *op.immediate;
+    if (op.immediate) num = num - 1;
+    return stack[num];
+}
+
 void MachineState::marshalBufferProof(OneStepProof& proof) const {
     auto op = loadCurrentInstruction().op;
     auto opcode = op.opcode;
@@ -421,7 +427,7 @@ value make_table(std::vector<value> tab) {
     return table_to_tuple2(tab, 0, 0, LEVEL-1, tab.size());
 }
 
-value get_int_value(std::vector<uint8_t> bytes, uint64_t offset) {
+value get_int_value(std::vector<uint8_t> &bytes, uint64_t offset) {
     uint256_t acc = 0;
     for (int i = 0; i < 32; i++) {
         acc = acc*256;
@@ -430,7 +436,13 @@ value get_int_value(std::vector<uint8_t> bytes, uint64_t offset) {
     return acc;
 }
 
-WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_t>& wasm_module) {
+struct CodeResult {
+    std::shared_ptr<Code> code;
+    value table;
+    CodePointStub stub;
+};
+
+CodeResult wasmAvmToCode(std::vector<uint8_t>& bytes) {
     // code to hash
     auto code = std::make_shared<Code>(0);
     CodePointStub stub = code->addSegment();
@@ -462,9 +474,6 @@ WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_
             op = {opcode, Tuple::createTuple(v)};
         }
         stub = code->addOperation(stub.pc, op);
-        if (++num % 1000 == 0) {
-            // std::cerr << "Loaded " << num << " ops at " << i << "\n";
-        }
         /*
         if (op.immediate) {
             std::cerr << "Immed hash " << op << " hash "
@@ -489,10 +498,12 @@ WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_
     // intx::to_string(hash_value(table), 16) << "\n";
     std::cerr << "Table hash " << intx::to_string(hash_value(table), 16)
               << " size " << getSize(table) << "\n";
-    // convert table
-    std::cerr << "Buffer hash " << intx::to_string(hash_value(Buffer()), 16)
-              << "\n";
-    std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(stub, table, vec2buf(wasm_module), wasm_module.size());
+    return {std::move(code), table, stub};
+}
+
+WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_t>& wasm_module) {
+    auto res = wasmAvmToCode(bytes);
+    std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(res.stub, res.table, vec2buf(wasm_module), wasm_module.size());
     std::shared_ptr<WasmRunner> runner = std::make_shared<RunWasm>(wasm_module);
     return {std::move(tpl), std::move(runner)};
 }
@@ -544,6 +555,20 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
     state.stack.push(len);
     state.stack.push(buf);
     state.stack.push(std::move(table));
+    state.arb_gas_remaining = 1000000;
+    state.output.arb_gas_used = 0;
+
+    std::cerr << state;
+
+    return state;
+}
+
+MachineState makeWasmMachine(std::vector<uint8_t> arr, uint64_t len, Buffer buf) {
+    auto res = wasmAvmToCode(arr);
+    MachineState state(res.code, 0);
+    state.stack.push(len);
+    state.stack.push(buf);
+    state.stack.push(std::move(res.table));
     state.arb_gas_remaining = 1000000;
     state.output.arb_gas_used = 0;
 
@@ -636,11 +661,47 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
 }
 
 MachineState MachineState::initialWasmMachine() const {
-    // TODO: take immeds into account
-    uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&stack[0]));
-    Buffer buf = *std::get_if<Buffer>(&stack[1]);
+    auto currentInstruction = loadCurrentInstruction();
+    auto& op = currentInstruction.op;
+    if (op.opcode == OpCode::WASM_TEST) {
+        auto elem0 = getStackOrImmed(0, op);
+        auto elem1 = getStackOrImmed(1, op);
+        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+        Buffer buf = *std::get_if<Buffer>(&elem1);
 
-    return makeWasmMachine(len, buf);
+        return makeWasmMachine(len, buf);
+    } else if (op.opcode == OpCode::WASM_RUN) {
+        auto elem0 = getStackOrImmed(0, op);
+        auto elem1 = getStackOrImmed(1, op);
+        auto elem2 = getStackOrImmed(2, op);
+        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+        Buffer buf = *std::get_if<Buffer>(&elem1);
+        WasmCodePoint cp = *std::get_if<WasmCodePoint>(&elem2);
+
+        auto tpl3 = cp.data->get_element(3);
+        auto tpl2 = cp.data->get_element(2);
+        // Looks like the table and jump point are useless, need to recreate them for the "submachine"
+        uint64_t code_len = static_cast<uint64_t>(*std::get_if<uint256_t>(&tpl3));
+        Buffer code_buffer = *std::get_if<Buffer>(&tpl2);
+        RunWasm copy = compile;
+        auto res = copy.run_wasm(code_buffer, code_len);
+
+        return makeWasmMachine(res.extra, len, buf);
+    } else if (op.opcode == OpCode::WASM_COMPILE) {
+        auto elem0 = getStackOrImmed(0, op);
+        auto elem1 = getStackOrImmed(1, op);
+        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+        Buffer buf = *std::get_if<Buffer>(&elem1);
+
+        std::ifstream input("/home/sami/arbitrum/compiler.wasm", std::ios::binary);
+        std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
+        input.close();
+
+        RunWasm copy = compile;
+        auto res = copy.run_wasm(vec2buf(bytes), bytes.size());
+
+        return makeWasmMachine(res.extra, len, buf);
+    }
 }
 
 MachineState MachineState::finalWasmMachine() const {
@@ -711,13 +772,9 @@ OneStepProof MachineState::marshalForProof() const {
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
-    if (current_op.opcode == OpCode::WASM_TEST) {
+    if (current_op.opcode == OpCode::WASM_TEST || current_op.opcode == OpCode::WASM_RUN || current_op.opcode == OpCode::WASM_COMPILE) {
 
-        // TODO: take immeds into account
-        uint64_t len = static_cast<uint64_t>(*std::get_if<uint256_t>(&stack[0]));
-        Buffer buf = *std::get_if<Buffer>(&stack[1]);
-
-        auto state = makeWasmMachine(len, buf);
+        auto state = initialWasmMachine();
 
         std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
 
