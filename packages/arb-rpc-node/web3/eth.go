@@ -18,7 +18,6 @@ package web3
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 
 	"github.com/pkg/errors"
@@ -273,11 +272,10 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		extraCalldataUnits := (len(res.CalcGasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
-		fmt.Println("Estimate", res.CalcGasUsed())
-		fmt.Println("stats", res.FeeStats.PayTarget())
-		fmt.Println("stats", res.FeeStats.Paid)
-		used := new(big.Int).Div(res.FeeStats.Paid.Total(), res.FeeStats.Price.L2Computation)
-		return hexutil.Uint64(used.Uint64() + 1000), nil
+		used := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
+		used = used.Mul(used, big.NewInt(11))
+		used = used.Div(used, big.NewInt(10))
+		return hexutil.Uint64(used.Uint64() + 100), nil
 	}
 }
 
