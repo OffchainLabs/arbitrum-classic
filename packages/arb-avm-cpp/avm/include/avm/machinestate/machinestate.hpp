@@ -249,6 +249,7 @@ struct MachineState {
 WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_t>& wasm_module);
 
 MachineState makeWasmMachine(uint64_t len, Buffer buf);
+MachineState makeWasmMachine(std::vector<uint8_t>, uint64_t len, Buffer buf);
 uint256_t runWasmMachine(MachineState &machine_state);
 value make_table(std::vector<value> tab);
 

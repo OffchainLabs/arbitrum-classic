@@ -40,9 +40,9 @@ TEST_CASE("wasm_compile") {
         // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
         // auto m0 = MachineState();
         // auto m = m0;
-        // auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
         // auto buf = getFile("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
-        auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
+        // auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
         auto bytes = buf2vec(res.buffer, res.buffer_len);
         uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
@@ -57,6 +57,35 @@ TEST_CASE("wasm_compile") {
         if (hash_value(wasmcp.data->get_element(0)) != hash1 || hash_value(wasmcp.data->get_element(1)) != hash2) {
             std::cerr << "FAIL\n";
         }
+    }
+
+    SECTION("Making machine") {
+        RunWasm runner0("/home/sami/arbitrum/compiler.wasm");
+        auto runner = runner0;
+        // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
+        // auto m0 = MachineState();
+        // auto m = m0;
+        auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        // auto buf = getFile("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
+        // auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
+        auto res = runner.run_wasm(vec2buf(buf), buf.size());
+        auto bytes = buf2vec(res.buffer, res.buffer_len);
+        uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
+        uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
+        std::cerr << "Result len " << bytes.size() << "\n";
+        std::string hexstr;
+        hexstr.resize(bytes.size()*2);
+        boost::algorithm::hex(bytes.begin(), bytes.end(), hexstr.begin());
+        std::cerr << "Result hash " << hexstr << "\n";
+        std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
+        
+        auto m = makeWasmMachine(res.extra, 0, Buffer());
+        runWasmMachine(m);
+
+        std::cerr << "Result stack " << m.stack[0] << "\n";
+        std::cerr << "Result stack " << m.stack[1] << "\n";
+        std::cerr << "Result stack " << m.stack[2] << "\n";
+
     }
 
     /*
