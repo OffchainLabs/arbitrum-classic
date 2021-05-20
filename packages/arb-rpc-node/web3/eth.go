@@ -208,7 +208,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 	}
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
 
-	res, err := snap.Call(msg, from)
+	res, _, err := snap.Call(msg, from)
 	res, err = handleCallResult(res, err, blockNum)
 	if err != nil {
 		return nil, err
@@ -237,7 +237,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
+	res, _, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
 	res, err = handleCallResult(res, err, &blockNum)
 	if err != nil {
 		logging := log.Warn()
