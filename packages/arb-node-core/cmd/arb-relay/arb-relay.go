@@ -22,6 +22,7 @@ import (
 	golog "log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -40,9 +41,9 @@ var logger zerolog.Logger
 var pprofMux *http.ServeMux
 
 type ArbRelay struct {
-	SequencerFeedAddress string
-	broadcastClient      *broadcastclient.BroadcastClient
-	broadcaster          *broadcaster.Broadcaster
+	SequencerFeedAddresses []string
+	broadcastClients       []*broadcastclient.BroadcastClient
+	broadcaster            *broadcaster.Broadcaster
 }
 
 func init() {
@@ -78,7 +79,7 @@ func startup() error {
 
 	// Relay Config
 	enableDebug := flagSet.Bool("debug", false, "Enable debug logging")
-	sequencerURL := flagSet.String("sequencer-url", "", "URL of sequencer feed source")
+	sequencerURLs := flagSet.String("sequencer-urls", "", "Comma separated URL list of sequencer feed sources")
 	feedOutputAddr := flagSet.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := flagSet.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 	feedOutputPingInterval := flagSet.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
@@ -91,8 +92,8 @@ func startup() error {
 		return err
 	}
 
-	if *sequencerURL == "" {
-		return errors.New("Missing --sequencer-url")
+	if *sequencerURLs == "" {
+		return errors.New("Missing --sequencer-urls")
 	}
 
 	if *enablePProf {
@@ -112,7 +113,7 @@ func startup() error {
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay(*sequencerURL, relaySettings)
+	arbRelay := NewArbRelay(*sequencerURLs, relaySettings)
 	relayDone, err := arbRelay.Start(ctx, *enableDebug)
 	if err != nil {
 		return err
@@ -127,13 +128,47 @@ func startup() error {
 	}
 }
 
-func NewArbRelay(sequencerFeedAddress string, rebroadcastSettings broadcaster.Settings) *ArbRelay {
-	broadcastClient := broadcastclient.NewBroadcastClient(sequencerFeedAddress, nil)
-	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
+func NewArbRelay(sequencerFeedAddresses string, rebroadcastSettings broadcaster.Settings) *ArbRelay {
+	feedAddresses := strings.Split(sequencerFeedAddresses, ",")
+	broadcastClients := make([]*broadcastclient.BroadcastClient, len(feedAddresses))
+	for i := range feedAddresses {
+		broadcastClients[i] = broadcastclient.NewBroadcastClient(feedAddresses[i], nil)
+		broadcastClients[i].ConfirmedAccumulatorListener = make(chan common.Hash, 1)
+	}
+
 	return &ArbRelay{
-		SequencerFeedAddress: sequencerFeedAddress,
-		broadcaster:          broadcaster.NewBroadcaster(rebroadcastSettings),
-		broadcastClient:      broadcastClient,
+		SequencerFeedAddresses: feedAddresses,
+		broadcaster:            broadcaster.NewBroadcaster(rebroadcastSettings),
+		broadcastClients:       broadcastClients,
+	}
+}
+
+func (ar *ArbRelay) handleConfirmedAccumulator(confirmedAccumulator common.Hash, debug bool) {
+	if debug {
+		logger.Info().Hex("acc", confirmedAccumulator.Bytes()).Msg("confirmed accumulator")
+	}
+	err := ar.broadcaster.ConfirmedAccumulator(confirmedAccumulator)
+	if err != nil {
+		logger.
+			Error().
+			Err(err).
+			Hex("acc", confirmedAccumulator.Bytes()).
+			Msg("unable to broadcast confirmed accumulator")
+	}
+}
+
+func (ar *ArbRelay) handleMessageReceived(message broadcaster.BroadcastFeedMessage, debug bool) {
+	if debug {
+		logger.Info().Hex("acc", message.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
+	}
+	err := ar.broadcaster.BroadcastSingle(message.FeedItem.PrevAcc, message.FeedItem.BatchItem, message.Signature)
+	if err != nil {
+		logger.
+			Error().
+			Err(err).
+			Hex("PrevAcc", message.FeedItem.PrevAcc.Bytes()).
+			Hex("BatchItem", message.FeedItem.BatchItem.ToBytesWithSeqNum()).
+			Msg("unable to broadcast batch item")
 	}
 }
 
@@ -144,54 +179,36 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 	if err != nil {
 		return nil, errors.New("broadcast unable to start")
 	}
+	for i := range ar.broadcastClients {
+		// connect returns
+		messages, err := ar.broadcastClients[i].Connect()
+		if err != nil {
+			return nil, errors.Wrap(err, "broadcast client unable to start")
+		}
 
-	// connect returns
-	messages, err := ar.broadcastClient.Connect()
-	if err != nil {
-		return nil, errors.Wrap(err, "broadcast client unable to start")
-	}
-
-	go func() {
-		defer func() {
-			done <- true
-		}()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case msg := <-messages:
-				if debug {
-					logger.Info().Hex("acc", msg.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
-				}
-				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
-				if err != nil {
-					logger.
-						Error().
-						Err(err).
-						Hex("PrevAcc", msg.FeedItem.PrevAcc.Bytes()).
-						Hex("BatchItem", msg.FeedItem.BatchItem.ToBytesWithSeqNum()).
-						Msg("unable to broadcast batch item")
-				}
-			case ca := <-ar.broadcastClient.ConfirmedAccumulatorListener:
-				if debug {
-					logger.Info().Hex("acc", ca.Bytes()).Msg("confirmed accumulator")
-				}
-				err = ar.broadcaster.ConfirmedAccumulator(ca)
-				if err != nil {
-					logger.
-						Error().
-						Err(err).
-						Hex("acc", ca.Bytes()).
-						Msg("unable to broadcast confirmed accumulator")
+		go func() {
+			defer func() {
+				done <- true
+			}()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case msg := <-messages:
+					ar.handleMessageReceived(msg, debug)
+				case confirmedAccumulator := <-ar.broadcastClients[i].ConfirmedAccumulatorListener:
+					ar.handleConfirmedAccumulator(confirmedAccumulator, debug)
 				}
 			}
-		}
-	}()
-
+		}()
+	}
 	return done, nil
 }
 
 func (ar *ArbRelay) Stop() {
-	ar.broadcastClient.Close()
+	for i := range ar.broadcastClients {
+		ar.broadcastClients[i].Close()
+	}
+
 	ar.broadcaster.Stop()
 }

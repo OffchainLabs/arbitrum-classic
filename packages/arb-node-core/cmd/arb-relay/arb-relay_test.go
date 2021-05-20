@@ -40,13 +40,32 @@ func TestRelayRebroadcasts(t *testing.T) {
 		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
-	bc := broadcaster.NewBroadcaster(broadcasterSettings)
+	broadcasterServer1 := broadcaster.NewBroadcaster(broadcasterSettings)
 
-	err := bc.Start(ctx)
+	err := broadcasterServer1.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer bc.Stop()
+	defer broadcasterServer1.Stop()
+
+	// this isn't working
+	// Start up another Arbitrum sequencer broadcaster
+	broadcaster2Settings := broadcaster.Settings{
+		Addr:                    ":9744",
+		Workers:                 128,
+		Queue:                   1,
+		IoReadWriteTimeout:      2 * time.Second,
+		ClientPingInterval:      5 * time.Second,
+		ClientNoResponseTimeout: 15 * time.Second,
+	}
+
+	broadcasterServer2 := broadcaster.NewBroadcaster(broadcaster2Settings)
+
+	err = broadcasterServer2.Start(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer broadcasterServer2.Stop()
 
 	relaySettings := broadcaster.Settings{
 		Addr:                    ":7429",
@@ -58,7 +77,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay("ws://127.0.0.1:9742/", relaySettings)
+	arbRelay := NewArbRelay("ws://127.0.0.1:9742/,ws://127.0.0.1:9744/", relaySettings)
 	_, err = arbRelay.Start(ctx, false)
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +86,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 
 	// Create RandomMessageGenerator
 	tmb := broadcaster.NewRandomMessageGenerator(10, 100)
-	tmb.SetBroadcaster(bc)
+	tmb.SetBroadcaster(broadcasterServer1)
 
 	var wg sync.WaitGroup
 	for i := 0; i < 1; i++ {
