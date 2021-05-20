@@ -148,6 +148,23 @@ export class BridgeHelper {
   static bitFlipSeqNum = (seqNum: BigNumber) => {
     return seqNum.or(BigNumber.from(1).shl(255))
   }
+
+  private static _calculateRetryableHashInternal = async (
+    inboxSequenceNumber: BigNumber,
+    chainIdOrL2Provider: ChainIdOrProvider,
+    txnType: 0 | 1
+  ): Promise<string> => {
+    const requestID = await BridgeHelper.calculateL2TransactionHash(
+      inboxSequenceNumber,
+      chainIdOrL2Provider
+    )
+    return utils.keccak256(
+      utils.concat([
+        utils.zeroPad(requestID, 32),
+        utils.zeroPad(BigNumber.from(txnType).toHexString(), 32),
+      ])
+    )
+  }
   /**
    * Calculates hash of L2 side of a "retryable" transaction (L1 to L2 message, message type 9)
    */
@@ -155,15 +172,10 @@ export class BridgeHelper {
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider
   ): Promise<string> => {
-    const requestID = await BridgeHelper.calculateL2TransactionHash(
+    return BridgeHelper._calculateRetryableHashInternal(
       inboxSequenceNumber,
-      chainIdOrL2Provider
-    )
-    return utils.keccak256(
-      utils.concat([
-        utils.zeroPad(requestID, 32),
-        utils.zeroPad(BigNumber.from(1).toHexString(), 32),
-      ])
+      chainIdOrL2Provider,
+      0
     )
   }
 
@@ -171,15 +183,10 @@ export class BridgeHelper {
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider
   ): Promise<string> => {
-    const requestID = await BridgeHelper.calculateL2TransactionHash(
+    return BridgeHelper._calculateRetryableHashInternal(
       inboxSequenceNumber,
-      chainIdOrL2Provider
-    )
-    return utils.keccak256(
-      utils.concat([
-        utils.zeroPad(requestID, 32),
-        utils.zeroPad(BigNumber.from(0).toHexString(), 32),
-      ])
+      chainIdOrL2Provider,
+      1
     )
   }
 

@@ -650,9 +650,13 @@ describe('Ether', () => {
     const finalInboxBalance = await ethProvider.getBalance(inbox.address)
     expect(initialInboxBalance.add(ethToL2DepositAmount).eq(finalInboxBalance))
 
-    const seqNum = (await bridge.getInboxSeqNumFromContractTransaction(rec))[0]
-    expect(seqNum).to.exist
-    if (!seqNum) return
+    const seqNumArr = await bridge.getInboxSeqNumFromContractTransaction(rec)
+    if (seqNumArr === undefined) {
+      throw new Error('no seq num')
+    }
+    expect(seqNumArr.length).to.exist
+
+    const seqNum = seqNumArr[0]
     const l2TxHash = await bridge.calculateL2TransactionHash(seqNum)
     prettyLog('l2TxHash: ' + l2TxHash)
     // Note:these will pass once the node is updated to deliver this tx format
