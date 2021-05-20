@@ -19,10 +19,13 @@ package dev
 import (
 	"context"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -235,29 +238,29 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 
 func TestNonAggregatorFee(t *testing.T) {
 	skipBelowVersion(t, 3)
-	_, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	backend, web3SServer, client, auth, _, _, _, _, cancel := setupFeeChain(t)
 	defer cancel()
 
-	_, _, _, err := arbostestcontracts.DeploySimple(auth, client)
+	simpleAddr, _, simple, err := arbostestcontracts.DeploySimple(auth, client)
 	test.FailIfError(t, err)
-	//backend.currentAggregator = common.Address{}
-	//
-	//simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
-	//test.FailIfError(t, err)
-	//data := simpleABI.Methods["exists"].ID
-	//emptyAgg := ethcommon.Address{}
-	//
-	//estimatedGas, err := web3SServer.EstimateGas(web3.CallTxArgs{
-	//	From:       &auth.From,
-	//	To:         &simpleAddr,
-	//	Data:       (*hexutil.Bytes)(&data),
-	//	Aggregator: &emptyAgg,
-	//})
-	//test.FailIfError(t, err)
-	//auth.GasLimit = uint64(estimatedGas)
-	//tx, err := simple.Exists(auth)
-	//test.FailIfError(t, err)
-	//checkFees(t, backend, tx)
+	backend.currentAggregator = common.Address{}
+
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+	data := simpleABI.Methods["exists"].ID
+	emptyAgg := ethcommon.Address{}
+
+	estimatedGas, err := web3SServer.EstimateGas(web3.CallTxArgs{
+		From:       &auth.From,
+		To:         &simpleAddr,
+		Data:       (*hexutil.Bytes)(&data),
+		Aggregator: &emptyAgg,
+	})
+	test.FailIfError(t, err)
+	auth.GasLimit = uint64(estimatedGas)
+	tx, err := simple.Exists(auth)
+	test.FailIfError(t, err)
+	checkFees(t, backend, tx)
 }
 
 func TestDeposit(t *testing.T) {
