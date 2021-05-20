@@ -49,6 +49,7 @@ const (
 	InsufficientGasForBaseFee ResultType = 9
 	MinArbGasForContractTx    ResultType = 10
 	GasPriceTooLow            ResultType = 11
+	NoGasForAutoRedeem        ResultType = 12
 )
 
 func (r ResultType) String() string {
@@ -77,8 +78,10 @@ func (r ResultType) String() string {
 		return "MinArbGasForContractTx"
 	case GasPriceTooLow:
 		return "GasPriceTooLow"
+	case NoGasForAutoRedeem:
+		return "NoGasForAutoRedeem"
 	default:
-		return "Unknown"
+		return fmt.Sprintf("%v", int(r))
 	}
 }
 
