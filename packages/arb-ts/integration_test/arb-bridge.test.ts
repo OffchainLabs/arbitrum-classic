@@ -5,7 +5,6 @@ import {
   BridgeHelper,
   L2ToL1EventResult,
 } from '../src/lib/bridge_helpers'
-
 import { expect } from 'chai'
 import config from './config'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
@@ -78,6 +77,7 @@ const {
   existentCustomTokenL2,
   defaultWait,
   executeOutGoingMessages,
+  outBoxUpdateTimeout,
 } = config[network]
 
 if (
@@ -699,7 +699,6 @@ describe('Ether', () => {
   })
 })
 
-// wip:
 describe.skip('trigger outgoing messages', async () => {
   if (!executeOutGoingMessages) {
     return
@@ -715,6 +714,28 @@ describe.skip('trigger outgoing messages', async () => {
     },
     BigNumber.from(0)
   )
+  prettyLog(
+    `I will wait a total of ${
+      outBoxUpdateTimeout / 1000
+    } seconds for the outbox entry to arrive:`
+  )
+
+  for (let i = 0; i < 10; i++) {
+    const len = await outbox.outboxesLength()
+    if (len.lte(targetBatchNumber)) {
+      wait(outBoxUpdateTimeout / 10)
+      prettyLog(`not yet...`)
+    } else {
+      prettyLog(`outbox entry created! executing:`)
+      for (const outgoingMessage of outGoingMessages) {
+        const receipt = await bridge.triggerL2ToL1Transaction(
+          outgoingMessage.batchNumber,
+          outgoingMessage.indexInBatch
+        )
+        expect(receipt.status).to.equal(1)
+      }
+    }
+  }
 })
 
 // describe('scrap paper', async () => {

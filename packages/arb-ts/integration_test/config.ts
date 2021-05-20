@@ -35,8 +35,8 @@ export default {
     existentCustomTokenL2: '0x88692aE036594c95F723204c3DB070E2fB4d8eE4',
 
     defaultWait: 0,
-    executeOutGoingMessages: true,
-    outBoxUpdateTimeout: 10000,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 100000,
   },
 
   devnet: {
