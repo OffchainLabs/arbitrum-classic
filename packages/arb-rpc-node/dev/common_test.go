@@ -93,6 +93,7 @@ func NewTestDevNode(
 		t.TempDir(),
 		arbosPath,
 		agg,
+		0,
 	)
 	test.FailIfError(t, err)
 	initMsg, err := message.NewInitMessage(params, owner, config)

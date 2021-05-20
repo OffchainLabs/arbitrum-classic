@@ -50,13 +50,13 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(ctx context.Context, dir string, arbosPath string, agg common.Address) (*Backend, *txdb.TxDB, common.Address, func(), <-chan error, error) {
+func NewDevNode(ctx context.Context, dir string, arbosPath string, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, common.Address, func(), <-chan error, error) {
 	mon, err := monitor.NewMonitor(dir, arbosPath)
 	if err != nil {
 		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
-	l1 := NewL1Emulator()
+	l1 := NewL1Emulator(initialL1Height)
 	rollupAddress := common.RandAddress()
 	backendCore := NewBackendCore(ctx, mon.Core, message.ChainAddressToID(rollupAddress))
 
@@ -90,7 +90,7 @@ func (s *EVM) Snapshot() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	latestHeight := s.backend.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
+	latestHeight := s.backend.l1Emulator.LatestHeight()
 	s.snapshots[messageCount.Uint64()] = latestHeight
 	logger.Info().Uint64("count", messageCount.Uint64()).Msg("created snapshot")
 	return hexutil.Uint64(messageCount.Uint64()), nil
@@ -292,7 +292,7 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		Hex("hash", tx.Hash().Bytes()).
 		Msg("sent transaction")
 
-	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
+	startHeight := b.l1Emulator.LatestHeight()
 	startCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
 		return err
@@ -359,40 +359,37 @@ type L1BlockInfo struct {
 
 type L1Emulator struct {
 	sync.Mutex
-	l1Blocks     []L1BlockInfo
 	timeIncrease int64
+	latestHeight uint64
 }
 
-func NewL1Emulator() *L1Emulator {
-	b := &L1Emulator{}
+func NewL1Emulator(initialHeight uint64) *L1Emulator {
+	b := &L1Emulator{
+		latestHeight: initialHeight,
+	}
 	b.addBlock()
 	return b
 }
 
-func (b *L1Emulator) Latest() L1BlockInfo {
-	return b.l1Blocks[uint64(len(b.l1Blocks))-1]
+func (b *L1Emulator) LatestHeight() uint64 {
+	return b.latestHeight
 }
 
 func (b *L1Emulator) Reorg(height uint64) {
 	b.Lock()
 	defer b.Unlock()
-	b.l1Blocks = b.l1Blocks[:height+1]
-
-	latestHeight := b.Latest().blockId.Height.AsInt().Uint64()
-	if latestHeight != height {
-		panic("wrong height")
-	}
+	b.latestHeight = height
 }
 
 func (b *L1Emulator) addBlock() L1BlockInfo {
 	info := L1BlockInfo{
 		blockId: &common.BlockId{
-			Height:     common.NewTimeBlocksInt(int64(len(b.l1Blocks))),
+			Height:     common.NewTimeBlocksInt(int64(b.latestHeight + 1)),
 			HeaderHash: common.RandHash(),
 		},
 		timestamp: big.NewInt(time.Now().Unix() + b.timeIncrease),
 	}
-	b.l1Blocks = append(b.l1Blocks, info)
+	b.latestHeight += 1
 	return info
 }
 

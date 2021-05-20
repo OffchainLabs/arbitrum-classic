@@ -171,6 +171,7 @@ func startup() error {
 		*dbDir,
 		*arbosPath,
 		agg,
+		0,
 	)
 	if err != nil {
 		return err
