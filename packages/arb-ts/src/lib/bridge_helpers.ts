@@ -91,6 +91,13 @@ export enum OutgoingMessageState {
   EXECUTED,
 }
 
+export interface OutboxEntryCreated {
+  indexed: BigNumber
+  outboxIndex: BigNumber
+  outputRoot: string
+  numInBatch: BigNumber
+}
+
 export type ChainIdOrProvider = BigNumber | providers.Provider
 
 const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
@@ -747,7 +754,9 @@ export class BridgeHelper {
       utils.defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
     )
   }
-
+  /**
+   * Check if given outbox message has already been executed
+   */
   static messageHasExecuted = async (
     outboxIndex: BigNumber,
     messageIndex: BigNumber,
@@ -759,6 +768,37 @@ export class BridgeHelper {
     const iface = contract
     const executedEvent = iface.getEvent('OutBoxTransactionExecuted')
     const executedTopic = iface.getEventTopic(executedEvent)
+    const createdEvent = iface.getEvent('OutboxEntryCreated')
+    const createdTopic = iface.getEventTopic(createdEvent)
+
+    const outBoxCreatedLogs = await l1Provider.getLogs({
+      address: outboxAddress,
+
+      topics: [
+        createdTopic,
+        ethers.utils.hexZeroPad(outboxIndex.toHexString(), 32),
+      ],
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    if (outBoxCreatedLogs.length !== 1) {
+      console.warn(
+        'messageHasExecuted warning: OutboxEntryCreated event log not found'
+      )
+      return false
+    }
+    const parsedOutboxCreatedLogs = outBoxCreatedLogs.map(
+      log => (iface.parseLog(log).args as unknown) as OutboxEntryCreated
+    )
+    const outboxEntrySize = parsedOutboxCreatedLogs[0].numInBatch
+    const path = BigNumber.from(
+      BridgeHelper.generateEncodedMerklePath(
+        messageIndex.toNumber(),
+        outboxEntrySize.toNumber()
+      )
+    )
+
     const logs = await l1Provider.getLogs({
       address: outboxAddress,
 
@@ -778,7 +818,7 @@ export class BridgeHelper {
     )
     return (
       parsedData.filter(executedEvent =>
-        executedEvent.transactionIndex.eq(messageIndex)
+        executedEvent.transactionIndex.eq(path)
       ).length === 1
     )
   }
@@ -826,5 +866,20 @@ export class BridgeHelper {
       console.warn('666: error in getOutgoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
     }
+  }
+
+  static generateEncodedMerklePath(leafIndex: number, batchSize: number) {
+    let treeHeight = 0
+    let path = 0
+    while (1 << treeHeight < batchSize) {
+      treeHeight += 1
+    }
+    for (let i = 0; i < treeHeight; i++) {
+      if (((1 << i) & leafIndex) != 0) {
+        // path = path | (1 << (roundedUpBatchSize-1-i));
+        path = path | (1 << i)
+      }
+    }
+    return path
   }
 }
