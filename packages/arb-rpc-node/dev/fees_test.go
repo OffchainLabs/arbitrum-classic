@@ -225,9 +225,9 @@ func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
 	arbRes, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 	test.FailIfError(t, err)
 	t.Log("Gas used:", arbRes.CalcGasUsed().Uint64())
-	extra := tx.Gas() - arbRes.CalcGasUsed().Uint64()
-	t.Log("gas remaining", extra)
-	if extra > 5000000 {
+	used := new(big.Rat).SetFrac(arbRes.CalcGasUsed(), new(big.Int).SetUint64(tx.Gas()))
+	t.Log("percentage", used.FloatString(2))
+	if used.Cmp(big.NewRat(85, 100)) < 0 {
 		t.Error("too much extra gas estimated")
 	}
 	return arbRes.FeeStats.Paid.Total()
