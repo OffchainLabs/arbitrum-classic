@@ -97,6 +97,8 @@ func startup() error {
 	walletbalance := fs.Int64("walletbalance", 100, "amount of funds in each wallet (Eth)")
 	arbosPath := fs.String("arbos", "", "ArbOS version")
 	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
+	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use tempory if empty")
+	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -120,21 +122,10 @@ func startup() error {
 		}()
 	}
 
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	if err != nil {
-		return errors.Wrap(err, "error generating temporary directory")
-	}
-
 	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
 	if err != nil {
 		return err
 	}
-
-	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
-	if !ok {
-		return errors.New("invalid value for deposit amount")
-	}
-	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 
 	accounts := make([]accounts2.Account, 0)
 	for i := 0; i < *walletcount; i++ {
@@ -154,69 +145,104 @@ func startup() error {
 		arbosPath = &arbosPathStr
 	}
 
-	errChan := make(chan error, 10)
-	defer close(errChan)
+	deleteDir := false
+	if *dbDir == "" {
+		tmpDir, err := ioutil.TempDir(".", "arbitrum")
+		if err != nil {
+			return errors.Wrap(err, "error generating temporary directory")
+		}
+		*dbDir = tmpDir
+		deleteDir = true
+	}
 
 	ctx := context.Background()
 
-	config := protocol.ChainParams{
-		StakeRequirement:          big.NewInt(10),
-		StakeToken:                common.Address{},
-		GracePeriod:               common.NewTimeBlocksInt(3),
-		MaxExecutionSteps:         10000000000,
-		ArbGasSpeedLimitPerSecond: 2000000000000,
-	}
-
-	var configOptions []message.ChainConfigOption
-	aggInit := message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(accounts[1].Address)}
-	if *enableFees {
-		configOptions = append(configOptions, aggInit)
-
-		netFeeRecipient := common.RandAddress()
-		congestionFeeRecipient := common.RandAddress()
-		feeConfigInit := message.FeeConfig{
-			SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
-			L1GasPerL2Tx:           big.NewInt(3700),
-			ArbGasPerL2Tx:          big.NewInt(0),
-			L1GasPerL2Calldata:     big.NewInt(1),
-			ArbGasPerL2Calldata:    big.NewInt(0),
-			L1GasPerStorage:        big.NewInt(2000),
-			ArbGasPerStorage:       big.NewInt(0),
-			ArbGasDivisor:          big.NewInt(10000),
-			NetFeeRecipient:        netFeeRecipient,
-			CongestionFeeRecipient: congestionFeeRecipient,
+	var agg common.Address
+	if *aggStr != "" {
+		agg = common.HexToAddress(*aggStr)
+	} else {
+		if len(accounts) < 2 {
+			return errors.New("must have at least 2 accounts")
 		}
-
-		configOptions = append(configOptions, feeConfigInit)
+		agg = common.NewAddressFromEth(accounts[1].Address)
 	}
-
 	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
 		ctx,
-		tmpDir,
+		*dbDir,
 		*arbosPath,
-		config,
-		common.NewAddressFromEth(accounts[0].Address),
-		configOptions,
+		agg,
 	)
 	if err != nil {
 		return err
 	}
 
-	go func() {
-		errChan <- <-devNodeErrChan
-	}()
-
 	cancel := func() {
 		if !canceled {
 			cancelDevNode()
-			if err := os.RemoveAll(tmpDir); err != nil {
-				panic(err)
+			if deleteDir {
+				if err := os.RemoveAll(*dbDir); err != nil {
+					panic(err)
+				}
 			}
 			canceled = true
 		}
 	}
 	defer cancel()
 
+	errChan := make(chan error, 10)
+	defer close(errChan)
+
+	if deleteDir {
+		owner := common.NewAddressFromEth(accounts[0].Address)
+		config := protocol.ChainParams{
+			StakeRequirement:          big.NewInt(10),
+			StakeToken:                common.Address{},
+			GracePeriod:               common.NewTimeBlocksInt(3),
+			MaxExecutionSteps:         10000000000,
+			ArbGasSpeedLimitPerSecond: 2000000000000,
+		}
+
+		var configOptions []message.ChainConfigOption
+		aggInit := message.DefaultAggConfig{Aggregator: agg}
+		if *enableFees {
+			configOptions = append(configOptions, aggInit)
+
+			netFeeRecipient := common.RandAddress()
+			congestionFeeRecipient := common.RandAddress()
+			feeConfigInit := message.FeeConfig{
+				SpeedLimitPerSecond:    new(big.Int).SetUint64(config.ArbGasSpeedLimitPerSecond),
+				L1GasPerL2Tx:           big.NewInt(3700),
+				ArbGasPerL2Tx:          big.NewInt(0),
+				L1GasPerL2Calldata:     big.NewInt(1),
+				ArbGasPerL2Calldata:    big.NewInt(0),
+				L1GasPerStorage:        big.NewInt(2000),
+				ArbGasPerStorage:       big.NewInt(0),
+				ArbGasDivisor:          big.NewInt(10000),
+				NetFeeRecipient:        netFeeRecipient,
+				CongestionFeeRecipient: congestionFeeRecipient,
+			}
+
+			configOptions = append(configOptions, feeConfigInit)
+		}
+
+		initMsg, err := message.NewInitMessage(config, owner, configOptions)
+		if err != nil {
+			return err
+		}
+		if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
+			return errors.Wrap(err, "error adding init message to inbox")
+		}
+	}
+
+	go func() {
+		errChan <- <-devNodeErrChan
+	}()
+
+	depositSize, ok := new(big.Int).SetString("1000000000000000000", 10)
+	if !ok {
+		return errors.New("invalid value for deposit amount")
+	}
+	depositSize = depositSize.Mul(depositSize, big.NewInt(*walletbalance))
 	for _, account := range accounts {
 		deposit := message.EthDepositTx{
 			L2Message: message.NewSafeL2Message(message.ContractTransaction{
@@ -252,32 +278,34 @@ func startup() error {
 
 	srv := aggregator.NewServer(backend, rollupAddress, db)
 
-	client := web3.NewEthClient(srv, true)
-	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
-	if err != nil {
-		return err
-	}
-
-	tx1820 := new(types.Transaction)
-	if err := rlp.DecodeBytes(hexutil.MustDecode(eip1820Tx), tx1820); err != nil {
-		return err
-	}
-	sender1820, err := types.Sender(signer, tx1820)
-	if err != nil {
-		return err
-	}
-
-	_, err = arbOwner.DeployContract(ownerAuth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
-	if err != nil {
-		return err
-	}
-
-	if *enableFees {
-		if err := dev.EnableFees(srv, ownerAuth, aggInit.Aggregator.ToEthAddress()); err != nil {
+	if deleteDir {
+		client := web3.NewEthClient(srv, true)
+		arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+		if err != nil {
 			return err
 		}
-		if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+
+		tx1820 := new(types.Transaction)
+		if err := rlp.DecodeBytes(hexutil.MustDecode(eip1820Tx), tx1820); err != nil {
 			return err
+		}
+		sender1820, err := types.Sender(signer, tx1820)
+		if err != nil {
+			return err
+		}
+
+		_, err = arbOwner.DeployContract(ownerAuth, tx1820.Data(), sender1820, new(big.Int).SetUint64(tx1820.Nonce()))
+		if err != nil {
+			return err
+		}
+
+		if *enableFees {
+			if err := dev.EnableFees(srv, ownerAuth, agg.ToEthAddress()); err != nil {
+				return err
+			}
+			if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+				return err
+			}
 		}
 	}
 
