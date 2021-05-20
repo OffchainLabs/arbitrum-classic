@@ -88,10 +88,12 @@ func NewTestDevNode(
 			break
 		}
 	}
-	backend, db, rollupAddress, cancelDevNode, txDBErrChan, err := NewDevNode(
+	rollupAddress := common.RandAddress()
+	backend, db, cancelDevNode, txDBErrChan, err := NewDevNode(
 		ctx,
 		t.TempDir(),
 		arbosPath,
+		rollupAddress,
 		agg,
 		0,
 	)

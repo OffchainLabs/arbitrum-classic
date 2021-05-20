@@ -50,20 +50,22 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(ctx context.Context, dir string, arbosPath string, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, common.Address, func(), <-chan error, error) {
+func NewDevNode(ctx context.Context, dir string, arbosPath string, rollupAddress, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
 	mon, err := monitor.NewMonitor(dir, arbosPath)
 	if err != nil {
-		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening monitor")
+		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
-	l1 := NewL1Emulator(initialL1Height)
-	rollupAddress := common.RandAddress()
-	backendCore := NewBackendCore(ctx, mon.Core, message.ChainAddressToID(rollupAddress))
+	backendCore, err := NewBackendCore(ctx, mon.Core, message.ChainAddressToID(rollupAddress))
+	if err != nil {
+		mon.Close()
+		return nil, nil, nil, nil, err
+	}
 
 	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
 	if err != nil {
 		mon.Close()
-		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening txdb")
+		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
 
 	cancel := func() {
@@ -71,9 +73,10 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, agg common.Ad
 		mon.Close()
 	}
 	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
+	l1 := NewL1Emulator(initialL1Height)
 	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000))
 
-	return backend, db, rollupAddress, cancel, errChan, nil
+	return backend, db, cancel, errChan, nil
 }
 
 type EVM struct {
@@ -124,17 +127,23 @@ func (s *EVM) IncreaseTime(amount int64) (string, error) {
 }
 
 type BackendCore struct {
-	ctx     context.Context
-	arbcore core.ArbCore
-	chainID *big.Int
+	ctx          context.Context
+	arbcore      core.ArbCore
+	chainID      *big.Int
+	delayedCount *big.Int
 }
 
-func NewBackendCore(ctx context.Context, arbcore core.ArbCore, chainID *big.Int) *BackendCore {
-	return &BackendCore{
-		ctx:     ctx,
-		arbcore: arbcore,
-		chainID: chainID,
+func NewBackendCore(ctx context.Context, arbcore core.ArbCore, chainID *big.Int) (*BackendCore, error) {
+	delayedCount, err := arbcore.GetTotalDelayedMessagesSequenced()
+	if err != nil {
+		return nil, err
 	}
+	return &BackendCore{
+		ctx:          ctx,
+		arbcore:      arbcore,
+		chainID:      chainID,
+		delayedCount: delayedCount,
+	}, nil
 }
 
 func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address, gasPrice *big.Int, block L1BlockInfo) (common.Hash, error) {
@@ -156,7 +165,7 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 			return common.Hash{}, err
 		}
 	}
-	seqBatchItem := inbox.NewSequencerItem(big.NewInt(0), inboxMessage, prevHash)
+	seqBatchItem := inbox.NewSequencerItem(b.delayedCount, inboxMessage, prevHash)
 	nextBlockMessage := inbox.InboxMessage{
 		Kind:        6,
 		Sender:      common.Address{},
@@ -168,7 +177,7 @@ func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address
 			Timestamp: big.NewInt(0),
 		},
 	}
-	nextBlockBatchItem := inbox.NewSequencerItem(big.NewInt(0), nextBlockMessage, seqBatchItem.Accumulator)
+	nextBlockBatchItem := inbox.NewSequencerItem(b.delayedCount, nextBlockMessage, seqBatchItem.Accumulator)
 	err = core.DeliverMessagesAndWait(b.arbcore, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
 	if err != nil {
 		return common.Hash{}, err
