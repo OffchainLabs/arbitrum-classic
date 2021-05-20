@@ -99,6 +99,8 @@ func startup() error {
 	enableFees := fs.Bool("with-fees", false, "Run arbos with fees on")
 	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use tempory if empty")
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
+	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
+	rollupStr := fs.String("rollup", "", "address of rollup contract")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -157,6 +159,11 @@ func startup() error {
 
 	ctx := context.Background()
 
+	rollupAddress := common.RandAddress()
+	if *rollupStr != "" {
+		rollupAddress = common.HexToAddress(*rollupStr)
+	}
+
 	var agg common.Address
 	if *aggStr != "" {
 		agg = common.HexToAddress(*aggStr)
@@ -166,12 +173,13 @@ func startup() error {
 		}
 		agg = common.NewAddressFromEth(accounts[1].Address)
 	}
-	backend, db, rollupAddress, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
+	backend, db, cancelDevNode, devNodeErrChan, err := dev.NewDevNode(
 		ctx,
 		*dbDir,
 		*arbosPath,
+		rollupAddress,
 		agg,
-		0,
+		*initialL1Height,
 	)
 	if err != nil {
 		return err
@@ -189,9 +197,6 @@ func startup() error {
 		}
 	}
 	defer cancel()
-
-	errChan := make(chan error, 10)
-	defer close(errChan)
 
 	if deleteDir {
 		owner := common.NewAddressFromEth(accounts[0].Address)
@@ -235,6 +240,7 @@ func startup() error {
 		}
 	}
 
+	errChan := make(chan error, 10)
 	go func() {
 		errChan <- <-devNodeErrChan
 	}()
