@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
@@ -33,6 +35,70 @@ type Config struct {
 }
 
 var config *Config
+
+type upgrade struct {
+	Instructions []string `json:"instructions"`
+}
+
+func upgradeArbOS(upgradeFile string) error {
+	updateBytes, err := ioutil.ReadFile(upgradeFile)
+	if err != nil {
+		return err
+	}
+	upgrade := upgrade{}
+	err = json.Unmarshal(updateBytes, &upgrade)
+	if err != nil {
+		return err
+	}
+	chunkSize := 50000
+	chunks := []string{"0x"}
+	for _, insn := range upgrade.Instructions {
+		if len(chunks[len(chunks)-1])+len(insn) > chunkSize {
+			chunks = append(chunks, "0x")
+		}
+		chunks[len(chunks)-1] += insn
+	}
+
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	_, err = arbOwner.StartCodeUpload(config.auth)
+	if err != nil {
+		return err
+	}
+
+	for _, upgradeChunk := range chunks {
+		_, err = arbOwner.ContinueCodeUpload(config.auth, hexutil.MustDecode(upgradeChunk))
+		if err != nil {
+			return err
+		}
+	}
+
+	codeHash, err := arbOwner.GetUploadedCodeHash(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+
+	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, codeHash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func version() error {
+	con, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	version, err := con.ArbOSVersion(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	fmt.Println("ArbOS Version:", version)
+	return nil
+}
 
 func feeInfo(blockNum *big.Int) error {
 	con, err := arboscontracts.NewArbGasInfo(arbos.ARB_GAS_INFO_ADDRESS, config.client)
@@ -201,6 +267,13 @@ func handleCommand(fields []string) error {
 			}
 		}
 		return feeInfo(blockNum)
+	case "upgrade":
+		if len(fields) != 2 {
+			return errors.New("Expected file argument")
+		}
+		return upgradeArbOS(fields[1])
+	case "version":
+		return version()
 	default:
 		fmt.Println("Unknown command")
 	}
