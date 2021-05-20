@@ -127,7 +127,24 @@ export class Bridge extends L2Bridge {
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
 
-    const maxGas = retryableGasArgs.maxGas || BigNumber.from(3000000)
+    const sender = await this.l1Bridge.l1Signer.getAddress()
+
+    const [
+      isDeployed,
+      depositCalldata,
+    ] = await this.ethERC20Bridge.getDepositCalldata(
+      erc20L1Address,
+      sender,
+      destinationAddress ? destinationAddress : sender,
+      amount,
+      '0x'
+    )
+    const expectedGas = await this.l2Provider.estimateGas({
+      from: this.ethERC20Bridge.address,
+      data: depositCalldata,
+    })
+    const maxGas = retryableGasArgs.maxGas || expectedGas
+
     const maxSubmissionPriceIncreaseRatio =
       retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
 
