@@ -150,16 +150,16 @@ func SetupBatcher(
 	}
 }
 
-func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, web3RPCPort string, web3WSPort string) error {
+func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, web3RPCAddr string, web3RPCPort string, web3WSAddr, web3WSPort string) error {
 	errChan := make(chan error, 1)
 	if web3RPCPort != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(ctx, web3Server, web3RPCPort)
+			errChan <- utils2.LaunchRPC(ctx, web3Server, web3RPCAddr, web3RPCPort)
 		}()
 	}
 	if web3WSPort != "" {
 		go func() {
-			errChan <- utils2.LaunchWS(ctx, web3Server, web3WSPort)
+			errChan <- utils2.LaunchWS(ctx, web3Server, web3WSAddr, web3WSPort)
 		}()
 	}
 	return <-errChan

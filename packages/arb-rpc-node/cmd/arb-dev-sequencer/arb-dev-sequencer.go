@@ -345,7 +345,7 @@ func startup() error {
 	errChan := make(chan error, 1)
 	defer close(errChan)
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		err := rpc.LaunchPublicServer(ctx, web3Server, "127.0.0.1", "8547", "127.0.0.1", "8548")
 		if err != nil {
 			errChan <- err
 		}

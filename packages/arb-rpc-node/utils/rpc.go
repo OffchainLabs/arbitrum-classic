@@ -29,17 +29,17 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
-func LaunchRPC(ctx context.Context, handler http.Handler, port string) error {
+func LaunchRPC(ctx context.Context, handler http.Handler, addr string, port string) error {
 	r := mux.NewRouter()
 	r.Handle("/", handler).Methods("GET", "POST", "OPTIONS")
-	return launchServer(ctx, r, port, "rpc")
+	return launchServer(ctx, r, addr, port, "rpc")
 }
 
-func LaunchWS(ctx context.Context, server *rpc.Server, port string) error {
-	return launchServer(ctx, server.WebsocketHandler([]string{"*"}), port, "websocket")
+func LaunchWS(ctx context.Context, server *rpc.Server, addr string, port string) error {
+	return launchServer(ctx, server.WebsocketHandler([]string{"*"}), addr, port, "websocket")
 }
 
-func launchServer(ctx context.Context, handler http.Handler, port string, serverType string) error {
+func launchServer(ctx context.Context, handler http.Handler, addr string, port string, serverType string) error {
 	headersOk := handlers.AllowedHeaders(
 		[]string{"X-Requested-With", "Content-Type", "Authorization"},
 	)
@@ -50,7 +50,7 @@ func launchServer(ctx context.Context, handler http.Handler, port string, server
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
 	logger.Info().Str("port", port).Msgf("Launching %s server over http", serverType)
-	server := &http.Server{Addr: "127.0.0.1:" + port, Handler: h}
+	server := &http.Server{Addr: addr + ":" + port, Handler: h}
 
 	errChan := make(chan error, 1)
 	defer close(errChan)

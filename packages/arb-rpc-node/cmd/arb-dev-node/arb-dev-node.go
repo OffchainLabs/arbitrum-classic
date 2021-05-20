@@ -328,7 +328,7 @@ func startup() error {
 	}
 
 	go func() {
-		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "127.0.0.1", "8547", "127.0.0.1", "8548")
 	}()
 
 	err = <-errChan

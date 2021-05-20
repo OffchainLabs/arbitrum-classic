@@ -106,7 +106,11 @@ func startup() error {
 	)
 	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
-	sequencerURL := fs.String("sequencer-url", "", "URL of sequencer feed source")
+	feedURL := fs.String("feed-url", "", "URL of sequencer feed source")
+	rpcAddr := fs.String("rpc.addr", "0.0.0.0", "RPC address")
+	rpcPort := fs.String("rpc.port", "8547", "RPC port")
+	wsAddr := fs.String("ws.addr", "0.0.0.0", "websocket address")
+	wsPort := fs.String("ws.port", "8548", "websocket port")
 	feedOutputAddr := fs.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := fs.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 	feedOutputPingInterval := fs.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
@@ -119,10 +123,9 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 3 || (!*sequencerMode && *sequencerURL == "") {
-		fmt.Printf("usage      sequencer: arb-node --sequencer [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or   primary node: arb-node --sequencer.addr=<sequencer address> --inbox=<inbox address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or secondary node: arb-node --sequencer.addr=<sequencer address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+	if fs.NArg() != 3 || (!*sequencerMode && *feedURL == "") {
+		fmt.Printf("usage      sequencer: arb-node --sequencer [optional arguments] <ethereum node> <rollup chain address> %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("             or node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> state <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		return errors.New("invalid arguments")
 	}
 
@@ -132,10 +135,10 @@ func startup() error {
 
 	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
 	if !*sequencerMode {
-		if *sequencerURL == "" {
+		if *feedURL == "" {
 			logger.Warn().Msg("Missing --sequencer-url so not subscribing to feed")
 		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
+			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
 			sequencerFeed, err = broadcastClient.Connect()
 			if err != nil {
 				log.Fatal().Err(err).Msg("unable to start broadcastclient")
@@ -293,7 +296,7 @@ func startup() error {
 	}
 	errChan := make(chan error, 1)
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		err := rpc.LaunchPublicServer(ctx, web3Server, *rpcAddr, *rpcPort, *wsAddr, *wsPort)
 		if err != nil {
 			errChan <- err
 		}
