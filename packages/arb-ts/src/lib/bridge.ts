@@ -141,6 +141,7 @@ export class Bridge extends L2Bridge {
     )
     const expectedGas = await this.l2Provider.estimateGas({
       from: this.ethERC20Bridge.address,
+      to: this.arbTokenBridge.address,
       data: depositCalldata,
     })
     const maxGas = retryableGasArgs.maxGas || expectedGas
@@ -148,16 +149,8 @@ export class Bridge extends L2Bridge {
     const maxSubmissionPriceIncreaseRatio =
       retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
 
-    const callDataLen = await this.l1Bridge.getDepositCallDataLength(
-      erc20L1Address,
-      amount,
-      maxGas,
-      gasPriceBid,
-      destinationAddress,
-      overrides
-    )
     const maxSubmissionPrice = (
-      await this.getTxnSubmissionPrice(callDataLen)
+      await this.getTxnSubmissionPrice(depositCalldata.length - 2)
     )[0]
       .mul(maxSubmissionPriceIncreaseRatio)
       .div(BigNumber.from(10))
