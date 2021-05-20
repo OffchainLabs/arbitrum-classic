@@ -225,7 +225,7 @@ export class L2Bridge {
     }
   }
 
-  public getTxnSubmissionPrice(dataSize: BigNumber) {
+  public getTxnSubmissionPrice(dataSize: BigNumber | number) {
     return this.arbRetryableTx.functions.getSubmissionPrice(dataSize)
   }
 

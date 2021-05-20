@@ -23,12 +23,20 @@ import { PayableOverrides } from '@ethersproject/contracts'
 
 const { Zero } = constants
 
+interface RetryableGasArgs {
+  maxSubmissionPrice?: BigNumber
+  maxGas?: BigNumber
+  gasPriceBid?: BigNumber
+  maxSubmissionPriceIncreaseRatio?: BigNumber
+}
+
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
 export class Bridge extends L2Bridge {
   l1Bridge: L1Bridge
   walletAddressCache?: string
+  outboxAddressCache?: string
 
   constructor(
     erc20BridgeAddress: string,
@@ -95,13 +103,16 @@ export class Bridge extends L2Bridge {
   public async depositETH(
     value: BigNumber,
     destinationAddress?: string,
-    maxGas: BigNumber = BigNumber.from(5000),
+    maxGas: BigNumber = BigNumber.from(3000000),
+    _gasPriceBid?: BigNumber,
     overrides?: PayableOverrides
   ) {
+    const gasPriceBid = _gasPriceBid || (await this.l2Provider.getGasPrice())
     return this.l1Bridge.depositETH(
       value,
       destinationAddress,
       maxGas,
+      gasPriceBid,
       overrides
     )
   }
@@ -109,13 +120,61 @@ export class Bridge extends L2Bridge {
   public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
+    retryableGasArgs: RetryableGasArgs = {},
     destinationAddress?: string,
     overrides?: PayableOverrides
   ) {
-    // TODO: this will need to (somehow) input the calldata size
-    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(Zero))[0]
+    const gasPriceBid =
+      retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
+
+    const sender = await this.l1Bridge.l1Signer.getAddress()
+
+    const [
+      isDeployed,
+      depositCalldata,
+    ] = await this.ethERC20Bridge.getDepositCalldata(
+      erc20L1Address,
+      sender,
+      destinationAddress ? destinationAddress : sender,
+      amount,
+      '0x'
+    )
+    const expectedGas = await this.l2Provider.estimateGas({
+      from: this.ethERC20Bridge.address,
+      to: this.arbTokenBridge.address,
+      data: depositCalldata,
+    })
+    const maxGas = retryableGasArgs.maxGas || expectedGas
+
+    const maxSubmissionPriceIncreaseRatio =
+      retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+
+    const maxSubmissionPrice = (
+      await this.getTxnSubmissionPrice(depositCalldata.length - 2)
+    )[0]
+      .mul(maxSubmissionPriceIncreaseRatio)
+      .div(BigNumber.from(10))
+
+    // calculate required forwarding gas
+    let ethDeposit = overrides && (await overrides.value)
+
+    if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
+      const l2Balance = await this.getAndUpdateL2EthBalance()
+
+      const requiredEth = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
+
+      if (l2Balance.lt(requiredEth)) {
+        console.info(
+          'insufficient L2 balance to pay for retryable:',
+          l2Balance.toNumber(),
+          'Depositing additional ETH'
+        )
+        ethDeposit = requiredEth.sub(l2Balance)
+      } else {
+        console.info('l2 account adequately funded for retryable')
+      }
+    }
+
     return this.l1Bridge.deposit(
       erc20L1Address,
       amount,
@@ -123,7 +182,7 @@ export class Bridge extends L2Bridge {
       maxGas,
       gasPriceBid,
       destinationAddress,
-      overrides
+      { ...overrides, value: ethDeposit }
     )
   }
 
@@ -165,15 +224,37 @@ export class Bridge extends L2Bridge {
       l2ChainId || this.l2Provider
     )
   }
+  public calculateRetryableAutoReedemTxnHash(
+    inboxSequenceNumber: BigNumber,
+    l2ChainId?: BigNumber
+  ): Promise<string> {
+    return BridgeHelper.calculateRetryableAutoReedemTxnHash(
+      inboxSequenceNumber,
+      l2ChainId || this.l2Provider
+    )
+  }
 
   public async getInboxSeqNumFromContractTransaction(
-    l2Transaction: ethers.providers.TransactionReceipt
-  ): Promise<Array<BigNumber> | undefined> {
+    l1Transaction: ethers.providers.TransactionReceipt
+  ): Promise<BigNumber[] | undefined> {
     return BridgeHelper.getInboxSeqNumFromContractTransaction(
-      l2Transaction,
+      l1Transaction,
       // TODO: we don't need to actually make this query if random address fetches interface
       (await this.l1Bridge.getInbox()).address
     )
+  }
+  public async getL2TxHashByRetryableTicket(
+    l1Transaction: string | ContractReceipt
+  ) {
+    if (typeof l1Transaction == 'string') {
+      l1Transaction = await this.getL1Transaction(l1Transaction)
+    }
+    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+      l1Transaction
+    )
+
+    if (!inboxSeqNum) throw new Error('Inbox not triggered')
+    return this.calculateL2RetryableTransactionHash(inboxSeqNum[0])
   }
 
   public getBuddyDeployInL2Transaction(
@@ -295,5 +376,36 @@ export class Bridge extends L2Bridge {
 
   public async getL2ToL1EventData(destinationAddress: string) {
     return BridgeHelper.getL2ToL1EventData(destinationAddress, this.l2Provider)
+  }
+
+  public async getOutboxAddress() {
+    if (this.outboxAddressCache) {
+      return this.outboxAddressCache
+    }
+    const inboxAddress = (await this.l1Bridge.getInbox()).address
+    const coreBridgeAddress = await BridgeHelper.getCoreBridgeFromInbox(
+      inboxAddress,
+      this.l1Bridge.l1Provider
+    )
+    const outboxAddress = await BridgeHelper.getActiveOutbox(
+      coreBridgeAddress,
+      this.l1Bridge.l1Provider
+    )
+    this.outboxAddressCache = outboxAddress
+    return outboxAddress
+  }
+
+  public async getOutGoingMessageState(
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber
+  ) {
+    const outboxAddress = await this.getOutboxAddress()
+    return BridgeHelper.getOutgoingMessageState(
+      batchNumber,
+      indexInBatch,
+      outboxAddress,
+      this.l1Bridge.l1Provider,
+      this.l2Provider
+    )
   }
 }
