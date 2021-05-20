@@ -51,8 +51,7 @@ Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr);
 
 Uint256Result arbCoreGetTotalDelayedMessagesSequenced(CArbCore* arbcore_ptr);
 
-int arbCoreCheckpointMinMessageIndex(CArbCore* arbcore_ptr,
-                                     const void* message_index);
+int arbCoreCheckpointMinLogCount(CArbCore* arbcore_ptr, const void* log_count);
 
 ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,

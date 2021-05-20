@@ -67,9 +67,9 @@ func (ac *ArbCore) MachineIdle() bool {
 	return status == 1
 }
 
-func (ac *ArbCore) CheckpointMinMessageIndex(messageIndex *big.Int) error {
+func (ac *ArbCore) CheckpointMinLogCount(messageIndex *big.Int) error {
 	messageIndexData := math.U256Bytes(messageIndex)
-	success := C.arbCoreCheckpointMinMessageIndex(ac.c, unsafeDataPointer(messageIndexData))
+	success := C.arbCoreCheckpointMinLogCount(ac.c, unsafeDataPointer(messageIndexData))
 	if success == 0 {
 		return errors.New("failed to set checkpoint min message index")
 	}

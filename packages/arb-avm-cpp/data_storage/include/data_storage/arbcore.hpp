@@ -138,11 +138,11 @@ class ArbCore {
     // Core thread input for cleanup related data
     std::atomic<bool> update_cleanup{false};
     std::mutex cleanup_mutex;
-    uint256_t checkpoints_min_message_index_input;
+    uint256_t checkpoints_min_log_count_input;
 
     // Delete checkpoints containing messages older than
-    // checkpoints_min_message_index
-    uint256_t checkpoints_min_message_index;
+    // checkpoints_min_log_count
+    uint256_t checkpoints_min_log_count;
 
    public:
     ArbCore() = delete;
@@ -216,7 +216,7 @@ class ArbCore {
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
     std::string messagesClearError();
-    void checkpointsMinMessageIndex(uint256_t message_index);
+    void checkpointsMinLogCount(uint256_t log_count);
 
    public:
     // Logs Cursor interaction

@@ -236,9 +236,9 @@ template std::unique_ptr<Machine> ArbCore::getMachine(uint256_t, ValueCache&);
 template std::unique_ptr<MachineThread> ArbCore::getMachine(uint256_t,
                                                             ValueCache&);
 
-void ArbCore::checkpointsMinMessageIndex(uint256_t message_index) {
+void ArbCore::checkpointsMinLogCount(uint256_t log_count) {
     const std::lock_guard<std::mutex> lock(cleanup_mutex);
-    checkpoints_min_message_index_input = message_index;
+    checkpoints_min_log_count_input = log_count;
     update_cleanup = true;
 }
 
@@ -863,8 +863,7 @@ void ArbCore::operator()() {
                     break;
                 }
 
-                auto status =
-                    deleteOldCheckpoints(checkpoints_min_message_index);
+                auto status = deleteOldCheckpoints(checkpoints_min_log_count);
                 if (!status.ok()) {
                     core_error_string = "error deleting old checkpoints";
                     machine_error = true;
@@ -887,7 +886,7 @@ void ArbCore::operator()() {
 
         if (update_cleanup) {
             const std::lock_guard<std::mutex> lock(cleanup_mutex);
-            checkpoints_min_message_index = checkpoints_min_message_index_input;
+            checkpoints_min_log_count = checkpoints_min_log_count_input;
             update_cleanup = false;
         }
 
@@ -2704,10 +2703,8 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
 }
 
 rocksdb::Status ArbCore::deleteOldCheckpoints(
-    uint256_t delete_checkpoints_before_message_index) {
+    uint256_t delete_checkpoints_before_log_count) {
     ReadWriteTransaction tx(data_storage);
-    auto delete_checkpoints_before_message_count =
-        delete_checkpoints_before_message_index + 1;
 
     auto it = tx.checkpointGetIterator();
     if (!it->status().ok()) {
@@ -2730,63 +2727,34 @@ rocksdb::Status ArbCore::deleteOldCheckpoints(
 
     // Always leave checkpoint zero
     it->Next();
-    if (!it->status().ok()) {
-        if (it->status().IsNotFound()) {
-            // Nothing to cleanup
-            return rocksdb::Status::OK();
-        }
-        std::cerr << "unable to delete old checkpoints, Prev error: "
-                  << it->status().ToString() << std::endl;
-        return it->status();
-    }
 
-    rocksdb::Slice start = nullptr;
-    auto end = it->key();
     while (it->Valid()) {
         std::vector<unsigned char> checkpoint_vector(
             it->value().data(), it->value().data() + it->value().size());
         auto checkpoint = extractMachineStateKeys(checkpoint_vector.begin());
 
-        if (checkpoint.getTotalMessagesRead() >=
-            delete_checkpoints_before_message_count) {
+        if (checkpoint.output.log_count >=
+            delete_checkpoints_before_log_count) {
             // No more messages to delete
             break;
         }
 
-        // Old checkpoint, need to delete referenced machine
+        // Delete old checkpoint
         deleteMachineState(tx, checkpoint);
+        tx.checkpointDelete(it->key());
 
-        // Found checkpoints to delete
-        start = it->key();
         it->Next();
     }
     if (!it->status().ok()) {
-        if (it->status().IsNotFound()) {
-            // Nothing to cleanup
-            return rocksdb::Status::OK();
-        }
         std::cerr << "unable to delete old checkpoints, iterator error: "
                   << it->status().ToString() << std::endl;
         return it->status();
     }
 
-    if (start != nullptr) {
-        auto status = tx.checkpointDeleteRange(start, end);
-        if (!status.ok()) {
-            std::cerr << "unable to delete old checkpoints, "
-                      << "error calling checkpointDeleteRange: "
-                      << status.ToString() << std::endl;
-            return status;
-        }
-
-        status = tx.commit();
-        if (!status.ok()) {
-            std::cerr << "unable to delete old checkpoints, "
-                      << "error calling commit: " << status.ToString()
-                      << std::endl;
-            return status;
-        }
+    auto status = tx.commit();
+    if (!status.ok()) {
+        std::cerr << "unable to delete old checkpoints, "
+                  << "error calling commit: " << status.ToString() << std::endl;
     }
-
-    return rocksdb::Status::OK();
+    return status;
 }

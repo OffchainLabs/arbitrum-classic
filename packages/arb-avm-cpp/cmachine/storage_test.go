@@ -17,6 +17,7 @@
 package cmachine
 
 import (
+	"math/big"
 	"os"
 	"testing"
 

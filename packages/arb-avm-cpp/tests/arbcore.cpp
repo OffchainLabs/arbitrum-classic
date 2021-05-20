@@ -107,7 +107,8 @@ void runCheckArbCore(std::shared_ptr<ArbCore>& arbCore,
 
     while (!arbCore->machineIdle()) {
         auto err_str = arbCore->machineClearError();
-        REQUIRE(!err_str.has_value());
+        REQUIRE(err_str.value_or(std::string("[no error]")) ==
+                std::string("[no error]"));
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
@@ -137,7 +138,7 @@ TEST_CASE("ArbCore tests") {
         REQUIRE(storage.initialize(arb_os_path).ok());
         auto arbCore = storage.getArbCore();
         REQUIRE(arbCore->startThread());
-        arbCore->checkpointsMinMessageIndex(500);
+        arbCore->checkpointsMinLogCount(500);
 
         auto test_file =
             std::string{arb_os_test_cases_path} + "/" + filename + ".aoslog";

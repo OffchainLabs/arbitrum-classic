@@ -48,7 +48,7 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	ckp, err := cmachine.NewArbStorage(b.TempDir())
+	ckp, err := cmachine.NewArbStorage(b.TempDir(), big.NewInt(0))
 	if err != nil {
 		b.Fatal(err)
 	}

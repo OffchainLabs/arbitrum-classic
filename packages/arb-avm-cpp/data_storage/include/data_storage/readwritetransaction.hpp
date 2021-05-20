@@ -60,9 +60,6 @@ class ReadWriteTransaction : public ReadConsistentTransaction {
     rocksdb::Status refCountedDelete(const rocksdb::Slice& key);
     rocksdb::Status sequencerBatchItemDelete(const rocksdb::Slice& key);
     rocksdb::Status delayedMessageDelete(const rocksdb::Slice& key);
-
-    rocksdb::Status checkpointDeleteRange(const rocksdb::Slice& start,
-                                          const rocksdb::Slice& end);
 };
 
 #endif  // data_storage_readwritetransaction_hpp
