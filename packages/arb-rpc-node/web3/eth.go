@@ -269,10 +269,10 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	if res.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return hexutil.Uint64(res.GasUsed.Uint64() + 10000), nil
 	} else {
-		extraCalldataUnits := (len(res.CalcGasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
+		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
-		used := new(big.Int).Div(res.FeeStats.PayTarget().Total(), res.FeeStats.Price.L2Computation)
+		used := res.FeeStats.TargetGasUsed()
 		used = used.Mul(used, big.NewInt(11))
 		used = used.Div(used, big.NewInt(10))
 		return hexutil.Uint64(used.Uint64() + 100), nil

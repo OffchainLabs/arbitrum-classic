@@ -354,6 +354,10 @@ func (fs *FeeStats) GasUsed() *big.Int {
 	return new(big.Int).Div(fs.Paid.Total(), fs.Price.L2Computation)
 }
 
+func (fs *FeeStats) TargetGasUsed() *big.Int {
+	return new(big.Int).Div(fs.PayTarget().Total(), fs.Price.L2Computation)
+}
+
 func NewFeeStatsFromValue(val value.Value) (*FeeStats, error) {
 	tup, ok := val.(*value.TupleValue)
 	if !ok || tup.Len() < 4 || tup.Len() > 5 {
