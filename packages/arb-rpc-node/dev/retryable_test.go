@@ -76,7 +76,7 @@ func setupTest(t *testing.T) (
 				MaxGas:      big.NewInt(1000000),
 				GasPriceBid: big.NewInt(0),
 				DestAddress: common.NewAddressFromEth(otherAuth.From),
-				Payment:     big.NewInt(100),
+				Payment:     new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil),
 				Data:        nil,
 			},
 		}),
@@ -507,12 +507,12 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 	retryableTx := message.RetryableTx{
 		Destination:       common.NewAddressFromEth(dest),
 		Value:             big.NewInt(20),
-		Deposit:           big.NewInt(100),
+		Deposit:           big.NewInt(1000000000),
 		MaxSubmissionCost: big.NewInt(30),
 		CreditBack:        common.RandAddress(),
 		Beneficiary:       common.NewAddressFromEth(beneficiaryAuth.From),
 		MaxGas:            big.NewInt(1000000),
-		GasPriceBid:       big.NewInt(0),
+		GasPriceBid:       big.NewInt(10),
 		Data:              simpleABI.Methods["exists"].ID,
 	}
 
@@ -697,7 +697,14 @@ func checkRetryableRedeem(t *testing.T, client *web3.EthClient, requestId, redee
 		t.Fatal("expected receipt")
 	}
 
-	if !successful {
+	if successful {
+		if redeemReceipt.Status != 1 {
+			t.Fatal("expected successful redeem")
+		}
+	} else {
+		if redeemReceipt.Status != 0 {
+			t.Fatal("expected failed redeem")
+		}
 		if len(redeemReceipt.Logs) != 0 {
 			t.Fatal("unexpected log count", len(redeemReceipt.Logs))
 		}
