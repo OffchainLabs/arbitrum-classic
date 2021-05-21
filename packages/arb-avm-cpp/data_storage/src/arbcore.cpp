@@ -324,15 +324,15 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
     {
         ReadWriteTransaction tx(data_storage);
 
-        auto it = tx.checkpointGetIterator();
+        auto checkpoint_it = tx.checkpointGetIterator();
 
         // Find first checkpoint to delete
-        it->SeekToLast();
-        if (!it->status().ok()) {
-            return it->status();
+        checkpoint_it->SeekToLast();
+        if (!checkpoint_it->status().ok()) {
+            return checkpoint_it->status();
         }
 
-        if (!it->Valid()) {
+        if (!checkpoint_it->Valid()) {
             return rocksdb::Status::NotFound();
         }
 
@@ -340,32 +340,34 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         // message_sequence_number
         {
             std::unique_lock<std::shared_mutex> guard(old_machine_cache_mutex);
-            auto it = old_machine_cache.end();
-            while (it != old_machine_cache.begin()) {
-                it--;
-                auto& inbox =
-                    it->second->machine_state.output.fully_processed_inbox;
+            auto old_machine_it = old_machine_cache.end();
+            while (old_machine_it != old_machine_cache.begin()) {
+                old_machine_it--;
+                auto& inbox = old_machine_it->second->machine_state.output
+                                  .fully_processed_inbox;
                 if (use_latest || message_count >= inbox.count) {
                     if (isValid(tx, inbox)) {
                         setup = std::make_unique<MachineThread>(
-                            it->second->machine_state);
+                            old_machine_it->second->machine_state);
                         break;
                     }
 
                     std::cerr
                         << "Error: Invalid cached old machine found at gas: "
-                        << it->second->machine_state.output.arb_gas_used
+                        << old_machine_it->second->machine_state.output
+                               .arb_gas_used
                         << std::endl;
                     assert(false);
                 }
-                it = old_machine_cache.erase(it);
+                old_machine_it = old_machine_cache.erase(old_machine_it);
             }
         }
 
         // Delete each checkpoint until at or below message_sequence_number
-        while (it->Valid()) {
+        while (checkpoint_it->Valid()) {
             std::vector<unsigned char> checkpoint_vector(
-                it->value().data(), it->value().data() + it->value().size());
+                checkpoint_it->value().data(),
+                checkpoint_it->value().data() + checkpoint_it->value().size());
             auto checkpoint =
                 extractMachineStateKeys(checkpoint_vector.begin());
             if (checkpoint.getTotalMessagesRead() == 0 || use_latest ||
@@ -394,15 +396,15 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             deleteMachineState(tx, checkpoint);
 
             // Delete checkpoint to make sure it isn't used later
-            tx.checkpointDelete(it->key());
+            tx.checkpointDelete(checkpoint_it->key());
 
-            it->Prev();
+            checkpoint_it->Prev();
         }
-        if (!it->Valid()) {
-            setup = it->status();
+        if (!checkpoint_it->Valid()) {
+            setup = checkpoint_it->status();
         }
 
-        it = nullptr;
+        checkpoint_it = nullptr;
         if (std::holds_alternative<rocksdb::Status>(setup)) {
             return std::get<rocksdb::Status>(setup);
         }
@@ -687,8 +689,8 @@ void ArbCore::operator()() {
             } catch (const std::exception& e) {
                 core_error_string = e.what();
                 message_data_status = MESSAGES_ERROR;
-                std::cerr << "ArbCore addMessages error: " << core_error_string
-                          << "\n";
+                std::cerr << "ArbCore addMessages exception: "
+                          << core_error_string << "\n";
             }
         }
 
