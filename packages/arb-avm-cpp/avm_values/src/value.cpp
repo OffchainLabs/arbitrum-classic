@@ -167,6 +167,15 @@ void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
     }
 }
 
+void marshalWasmCodePoint(const WasmCodePoint& val, std::vector<unsigned char>& buf) {
+    marshal_uint256_t(hash_value(val.data->get_element(0)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(1)), buf);
+    marshal_uint256_t(getSize(val.data->get_element(1)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(2)), buf);
+    marshal_uint256_t(hash_value(val.data->get_element(3)), buf);
+}
+
+
 namespace {
 void marshalForProof(const HashPreImage& val,
                      MarshalLevel,
@@ -231,11 +240,7 @@ void marshalForProof(const WasmCodePoint& val,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(WASM_CODE_POINT);
-    marshal_uint256_t(hash_value(val.data->get_element(0)), buf);
-    marshal_uint256_t(hash_value(val.data->get_element(1)), buf);
-    marshal_uint256_t(getSize(val.data->get_element(1)), buf);
-    marshal_uint256_t(hash_value(val.data->get_element(2)), buf);
-    marshal_uint256_t(hash_value(val.data->get_element(3)), buf);
+    marshalWasmCodePoint(val, buf);
 }
 
 }  // namespace

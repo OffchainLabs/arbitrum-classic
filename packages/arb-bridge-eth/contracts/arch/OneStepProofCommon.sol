@@ -334,6 +334,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
             cp = Value.newCodePoint(uint8(opCode), context.startMachine.instructionStackHash);
         } else {
             // If we have an immediate, there must be at least one stack value
+            // TODO: we should check that the immediate is not a wasm codepoint
             require(stackVals.length > 0, NO_IMM);
             cp = Value.newCodePoint(
                 uint8(opCode),

@@ -655,8 +655,8 @@ contract OneStepProof2 is OneStepProofCommon {
         context.nextLength = len;
     }
 
-    bytes32 constant compilerProgram = 0x4932d554b80820e294814bd0674558bd57fa55b750456622dc6e1793390c01ec;
-    bytes32 constant compilerProgramLink = 0x71b400febf23e3973c60191ccf470be8c754bb923d10851420f550782a6b72c4;
+    bytes32 constant compilerProgram = 0x9035048daf60a7f343b8078730a8859bcccc481f657dadff27411ae58e65b7cb;
+    bytes32 constant compilerProgramLink = 0x97e073b103571a1794a6e51e9ca3464c07686628b9b59f59a0791bd9b3c5329d;
     uint256 constant compilerProgramLinkSize = 37449;
 
     function executeWasmCompile(AssertionContext memory context) internal pure {
@@ -777,9 +777,9 @@ contract OneStepProof2 is OneStepProofCommon {
         } else if (opCode == OP_WASMTEST) {
             return (2, 0, 100, executeWasmTest);
         } else if (opCode == OP_WASMCOMPILE) {
-            return (2, 0, 100, executeWasmTest);
+            return (2, 0, 1000000, executeWasmCompile);
         } else if (opCode == OP_WASMRUN) {
-            return (2, 0, 100, executeWasmTest);
+            return (2, 0, 1000000, executeWasmRun);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {

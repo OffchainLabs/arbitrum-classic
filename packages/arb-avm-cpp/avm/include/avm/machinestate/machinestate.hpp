@@ -244,6 +244,7 @@ struct MachineState {
    private:
     void marshalBufferProof(OneStepProof& proof) const;
     value getStackOrImmed(uint64_t num, Operation op) const;
+    WasmCodePoint compiledWasmCodePoint() const;
 };
 
 WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_t>& wasm_module);

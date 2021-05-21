@@ -53,6 +53,7 @@ value deserialize_value(const char*& srccode);
 void marshal_uint64_t(uint64_t val, std::vector<unsigned char>& buf);
 
 void marshal_value(const value& val, std::vector<unsigned char>& buf);
+void marshalWasmCodePoint(const WasmCodePoint& val, std::vector<unsigned char>& buf);
 
 void marshalForProof(const value& val,
                      MarshalLevel marshal_level,

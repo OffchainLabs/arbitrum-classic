@@ -598,11 +598,13 @@ uint256_t runWasmMachine(MachineState &machine_state) {
             }
         }
 
+        /*
         auto op = machine_state.loadCurrentInstruction();
         std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
         if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
             std::cerr << "stack top " << machine_state.stack[0] << "\n";
         }
+        */
 
         block_reason = machine_state.runOne();
         if (!std::get_if<NotBlocked>(&block_reason)) {
@@ -702,6 +704,20 @@ MachineState MachineState::initialWasmMachine() const {
     }
 }
 
+WasmCodePoint MachineState::compiledWasmCodePoint() const {
+    auto currentInstruction = loadCurrentInstruction();
+    auto& op = currentInstruction.op;
+    auto elem0 = getStackOrImmed(0, op);
+    auto elem1 = getStackOrImmed(1, op);
+    uint64_t code_len = static_cast<uint64_t>(*std::get_if<uint256_t>(&elem0));
+    Buffer code_buf = *std::get_if<Buffer>(&elem1);
+    RunWasm m = compile;
+    auto res = m.run_wasm(code_buf, code_len);
+    auto bytes = buf2vec(res.buffer, res.buffer_len);
+    auto wasm_bytes = buf2vec(code_buf, code_len);
+    return wasmAvmToCodePoint(res.extra, wasm_bytes);
+}
+
 MachineState MachineState::finalWasmMachine() const {
     auto state = initialWasmMachine();
     runWasmMachine(state);
@@ -784,6 +800,11 @@ OneStepProof MachineState::marshalForProof() const {
         std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
 
+        if (current_op.opcode == OpCode::WASM_COMPILE) {
+            auto cp = compiledWasmCodePoint();
+            marshalWasmCodePoint(cp, proof.buffer_proof);
+        }
+
     } else if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
@@ -848,7 +869,7 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
-    // std::cerr << "running " << instruction.op.opcode << " gas left " << arb_gas_remaining << "\n";
+    std::cerr << "running " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];

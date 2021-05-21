@@ -40,9 +40,9 @@ TEST_CASE("wasm_compile") {
         // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
         // auto m0 = MachineState();
         // auto m = m0;
-        auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        // auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
         // auto buf = getFile("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
-        // auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
+        auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
         auto bytes = buf2vec(res.buffer, res.buffer_len);
         uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
