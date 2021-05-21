@@ -171,6 +171,8 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
                 "EXTERNAL_CALL_FAIL"
             );
         }
+
+        emit WithdrawRedirected(expectedSender, to, erc20, amount, exitNum, data.length > 0);
     }
 
     /**

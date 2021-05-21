@@ -25,10 +25,11 @@ interface IEthERC20Bridge {
 
     event WithdrawRedirected(
         address indexed user,
-        address indexed liquidityProvider,
+        address indexed to,
         address erc20,
         uint256 amount,
-        uint256 indexed exitNum
+        uint256 indexed exitNum,
+        bool madeExternalCall
     );
 
     event WithdrawExecuted(
