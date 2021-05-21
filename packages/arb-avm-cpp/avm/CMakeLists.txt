@@ -83,7 +83,7 @@ PUBLIC
         secp256k1
         ff
         picosha2
-        wasmtime
+        wasmer
         ${GMP_LIBRARY}
         ${GMPXX_LIBRARY}
         ${LIBATOMIC_LIBRARY}

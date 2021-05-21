@@ -17,7 +17,7 @@
 #ifndef runwasm_hpp
 #define runwasm_hpp
 
-#include <wasm.h>
+#include <wasmer/wasm.h>
 #include <avm_values/value.hpp>
 
 struct RunWasm : WasmRunner {

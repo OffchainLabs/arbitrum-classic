@@ -5,8 +5,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wasm.hh>
-#include <wasmtime.h>
+#include <wasmer/wasmer.hh>
+// #include <wasmtime.h>
 
 wasm_trap_t* cb_get_length(void* env,
                            const wasm_val_vec_t*,
@@ -112,6 +112,7 @@ wasm_trap_t* cb_write_extra(void* env,
     return NULL;
 }
 
+/*
 void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
     wasm_byte_vec_t error_message;
     if (error != NULL) {
@@ -126,6 +127,7 @@ void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
     wasm_byte_vec_delete(&error_message);
     exit(1);
 }
+*/
 
 RunWasm::RunWasm(std::string fname) {
     data = new WasmEnvData();
@@ -166,13 +168,13 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
 
     // Now that we've got our binary webassembly we can compile our module.
     // printf("Compiling module...\n");
-    wasm_module_t* module = NULL;
-    wasmtime_error_t* error = wasmtime_module_new(engine, &wasm, &module);
+    wasm_module_t* module = wasm_module_new(store, &wasm);
     wasm_byte_vec_delete(&wasm);
+    /*
     if (error != NULL) {
         std::cerr << "failed to compile module\n";
         exit_with_error(error, NULL);
-    }
+    }*/
 
     WasmEnvData* env = this->data;
 
@@ -216,7 +218,6 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     wasm_importtype_vec_t import_vec;
     wasm_module_imports(module, &import_vec);
 
-    wasm_instance_t* instance = NULL;
     wasm_extern_t* imports[import_vec.size];
     for (uint64_t i = 0; i < import_vec.size; i++) {
         auto imp = import_vec.data[i];
@@ -241,9 +242,11 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     wasm_extern_vec_t imports_vec;
     // printf("Extracting export...\n");
     wasm_extern_vec_new(&imports_vec, import_vec.size, imports);
-    error = wasmtime_instance_new(store, module, &imports_vec, &instance, &this->trap);
-    if (instance == NULL)
-        exit_with_error(error, trap);
+    wasm_instance_t* instance = wasm_instance_new(store, module, &imports_vec, &this->trap);
+    if (instance == NULL) {
+        std::cerr << "Cannot instantiate\n";
+        exit(1);
+    }
 
     // Lookup our `run` export function
     // printf("Extracting export...\n");
@@ -278,9 +281,9 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
     data->extra.resize(0);
 
     std::cerr << "Running wasm\n";
-    wasmtime_error_t* error = wasmtime_func_call(run, &args_vec, &results_vec, &trap);
-    if (error != NULL || trap != NULL)
-        exit_with_error(error, trap);
+    if (wasm_func_call(run, &args_vec, &results_vec)) {
+        std::cerr << "Error running wasm\n";
+    }
     std::cerr << "Ran wasm\n";
 
     return {data->buffer_len, data->buffer, data->extra, data->gas_left};
