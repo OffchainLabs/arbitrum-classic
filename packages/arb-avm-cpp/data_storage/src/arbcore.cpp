@@ -2692,6 +2692,13 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
         gas_target = position_res.data;
         execution_cursor = std::make_unique<ExecutionCursor>(
             std::get<ExecutionCursor>(closest_checkpoint));
+
+        if (execution_cursor->getTotalMessagesRead() == 0 &&
+            gas_target - execution_cursor->getOutput().arb_gas_used >
+                checkpoint_load_gas_cost) {
+            // The checkpoint we're looking for has presumably been deleted
+            return {rocksdb::Status::NotFound(), nullptr};
+        }
     }
 
     auto status = advanceExecutionCursorImpl(*execution_cursor, gas_target,
@@ -2728,6 +2735,8 @@ rocksdb::Status ArbCore::deleteOldCheckpoints(
     // Always leave checkpoint zero
     it->Next();
 
+    std::optional<MachineStateKeys> last_checkpoint;
+    std::vector<unsigned char> last_key;
     while (it->Valid()) {
         std::vector<unsigned char> checkpoint_vector(
             it->value().data(), it->value().data() + it->value().size());
@@ -2739,9 +2748,19 @@ rocksdb::Status ArbCore::deleteOldCheckpoints(
             break;
         }
 
-        // Delete old checkpoint
-        deleteMachineState(tx, checkpoint);
-        tx.checkpointDelete(it->key());
+        // Delete previous checkpoint
+        if (last_checkpoint) {
+            deleteMachineState(tx, *last_checkpoint);
+            tx.checkpointDelete(vecToSlice(last_key));
+        }
+
+        // Save last_checkpoint and last_key
+        // Don't delete immediately so we ensure we always have a usable
+        // checkpoint
+        last_checkpoint = checkpoint;
+        last_key.clear();
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        last_key.insert(last_key.end(), key_ptr, key_ptr + it->key().size());
 
         it->Next();
     }
