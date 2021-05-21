@@ -323,8 +323,8 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
     for (const auto& item : code_segments_to_save) {
         auto key_vec = segment_key(item.first);
         auto results =
-            saveRefCountedData(tx, vecToSlice(key_vec), item.second,
-                               total_segment_counts[item.first], true);
+            saveRefCountedDataReplaced(tx, vecToSlice(key_vec), item.second,
+                                       total_segment_counts[item.first]);
         if (!results.status.ok()) {
             return results.status;
         }

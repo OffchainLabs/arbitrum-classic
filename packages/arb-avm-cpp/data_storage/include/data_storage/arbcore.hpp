@@ -313,7 +313,7 @@ class ArbCore {
         uint256_t index,
         uint256_t count,
         std::optional<uint256_t> start_acc) const;
-    ValueResult<SequencerBatchItem> getNextSequencerBatchItem(
+    ValueResult<uint256_t> getNextSequencerBatchItemAccumulator(
         const ReadTransaction& tx,
         uint256_t sequence_number) const;
 

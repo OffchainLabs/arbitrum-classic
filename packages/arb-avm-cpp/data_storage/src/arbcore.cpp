@@ -1290,7 +1290,7 @@ ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
     return {rocksdb::Status::OK(), messages};
 }
 
-ValueResult<SequencerBatchItem> ArbCore::getNextSequencerBatchItem(
+ValueResult<uint256_t> ArbCore::getNextSequencerBatchItemAccumulator(
     const ReadTransaction& tx,
     uint256_t sequence_number) const {
     std::vector<unsigned char> tmp;
@@ -1306,20 +1306,16 @@ ValueResult<SequencerBatchItem> ArbCore::getNextSequencerBatchItem(
     seq_batch_it->Seek(seq_batch_lower_bound);
     if (!seq_batch_it->Valid()) {
         if (seq_batch_it->status().ok()) {
-            return {rocksdb::Status::NotFound(), SequencerBatchItem{}};
+            return {rocksdb::Status::NotFound(), 0};
         } else {
-            return {seq_batch_it->status(), SequencerBatchItem{}};
+            return {seq_batch_it->status(), 0};
         }
     }
-    auto key_ptr =
-        reinterpret_cast<const unsigned char*>(seq_batch_it->key().data());
+
     auto value_ptr =
         reinterpret_cast<const unsigned char*>(seq_batch_it->value().data());
-    auto value_end_ptr = value_ptr + seq_batch_it->value().size();
-    auto last_sequence_number = extractUint256(key_ptr);
-    auto item = deserializeSequencerBatchItem(last_sequence_number, value_ptr,
-                                              value_end_ptr);
-    return {rocksdb::Status::OK(), item};
+    auto accumulator = extractUint256(value_ptr);
+    return {rocksdb::Status::OK(), accumulator};
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
@@ -1354,12 +1350,12 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getSends(
 ValueResult<uint256_t> ArbCore::getInboxAcc(uint256_t index) {
     ReadTransaction tx(data_storage);
 
-    auto result = getNextSequencerBatchItem(tx, index);
+    auto result = getNextSequencerBatchItemAccumulator(tx, index);
     if (!result.status.ok()) {
         return {result.status, 0};
     }
 
-    return {rocksdb::Status::OK(), result.data.accumulator};
+    return {rocksdb::Status::OK(), result.data};
 }
 
 ValueResult<uint256_t> ArbCore::getDelayedInboxAcc(uint256_t index) {
@@ -1390,18 +1386,17 @@ ValueResult<std::pair<uint256_t, uint256_t>> ArbCore::getInboxAccPair(
     uint256_t index2) {
     ReadSnapshotTransaction tx(data_storage);
 
-    auto result1 = getNextSequencerBatchItem(tx, index1);
+    auto result1 = getNextSequencerBatchItemAccumulator(tx, index1);
     if (!result1.status.ok()) {
         return {result1.status, {0, 0}};
     }
 
-    auto result2 = getNextSequencerBatchItem(tx, index2);
+    auto result2 = getNextSequencerBatchItemAccumulator(tx, index2);
     if (!result2.status.ok()) {
         return {result2.status, {0, 0}};
     }
 
-    return {rocksdb::Status::OK(),
-            {result1.data.accumulator, result2.data.accumulator}};
+    return {rocksdb::Status::OK(), {result1.data, result2.data}};
 }
 
 ValueResult<size_t> ArbCore::countMatchingBatchAccs(
@@ -1764,10 +1759,10 @@ bool ArbCore::isValid(const ReadTransaction& tx,
     if (fully_processed_inbox.count == 0) {
         return true;
     }
-    auto result =
-        getNextSequencerBatchItem(tx, fully_processed_inbox.count - 1);
+    auto result = getNextSequencerBatchItemAccumulator(
+        tx, fully_processed_inbox.count - 1);
     return result.status.ok() &&
-           result.data.accumulator == fully_processed_inbox.accumulator;
+           result.data == fully_processed_inbox.accumulator;
 }
 
 ValueResult<uint256_t> ArbCore::logInsertedCount() const {
