@@ -122,6 +122,7 @@ func (c *Challenge) OneStepProveExecution(
 		// OSP
 		prover = 0
 	}
+	fmt.Printf("Old end hash %v\n", prevCutHashes[segmentToChallenge+1])
 	_, err := c.builderCon.OneStepProveExecution(
 		authWithContext(ctx, c.builderAuth),
 		nodes,

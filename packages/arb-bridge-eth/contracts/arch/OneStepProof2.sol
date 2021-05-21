@@ -751,7 +751,7 @@ contract OneStepProof2 is OneStepProofCommon {
         // Buffer, len
         require(stackVals[1].isInt(), "stack top not int");
         require(stackVals[0].isBuffer(), "stack next not buf");
-        pushVal(context.stack, mkPair(stackVals[1], stackVals[0]));
+        pushVal(context.stack, mkPair(stackVals[0], stackVals[1]));
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         // require(context.startState == 0xb0433db4cf3783d418ea2618aa80dedaa18348efa9ce16fc9e4e9a7ea3ac31c3, "whats this?");

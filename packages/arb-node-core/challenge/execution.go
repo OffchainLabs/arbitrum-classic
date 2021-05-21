@@ -22,9 +22,9 @@ var unreachableCut core.SimpleCut = core.NewSimpleCut([32]byte{})
 
 func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, gasTarget *big.Int) (core.Cut, *big.Int, error) {
 	state, steps, err := execTracker.GetExecutionState(gasTarget)
-	mach, err := execTracker.GetMachine(gasTarget)
-	mach_hash, err := mach.Hash()
-	fmt.Printf("got cut %v gas target %v machine %v\n", state, gasTarget, mach_hash)
+	// mach, err := execTracker.GetMachine(gasTarget)
+	// mach_hash, err := mach.Hash()
+	// fmt.Printf("got cut %v gas target %v machine %v\n", state, gasTarget, mach_hash)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,8 +76,8 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		if err != nil {
 			return errRes, err
 		}
-		fmt.Printf("found cut at %v: %v hash %v other hash %v\n", offsets, localCut, localCut.CutHash(), cuts[i].CutHash())
 		if localCut.CutHash() != cuts[i].CutHash() {
+			fmt.Printf("found divergent cut at %v from %v: local %v other %v hash %v other hash %v\n", offset, offsets, localCut, cuts[i], localCut.CutHash(), cuts[i].CutHash())
 			return DivergenceInfo{
 				DifferentIndex:   i,
 				SegmentSteps:     new(big.Int).Sub(newSteps, lastSteps),
