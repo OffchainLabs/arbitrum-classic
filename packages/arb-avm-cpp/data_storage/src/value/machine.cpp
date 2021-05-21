@@ -160,22 +160,19 @@ DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto results = getRefCountedData(tx, key);
 
+    auto results = deleteRefCountedData(tx, key);
     if (!results.status.ok()) {
         return DeleteResults{0, results.status,
                              std::move(results.stored_value)};
     }
-
-    auto delete_results = deleteRefCountedData(tx, key);
-
-    if (delete_results.reference_count < 1) {
+    if (results.reference_count < 1) {
         auto iter = results.stored_value.cbegin();
         auto parsed_state = extractMachineStateKeys(iter);
 
         deleteMachineState(tx, parsed_state);
     }
-    return delete_results;
+    return results;
 }
 
 DbResult<MachineStateKeys> getMachineStateKeys(
@@ -245,11 +242,9 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
 
-    auto transactionResult = getRefCountedData(transaction, key);
-    if (transactionResult.status.ok()) {
-        // Already saved so just increment reference count
-        return saveRefCountedData(transaction, key,
-                                  transactionResult.stored_value);
+    auto save_res = incrementReference(transaction, key);
+    if (save_res.status.ok()) {
+        return save_res;
     }
 
     auto status = saveMachineState(transaction, machine);
@@ -259,7 +254,7 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
                               serialized_state);
-    return saveRefCountedData(transaction, key, serialized_state);
+    return saveValueWithRefCount(transaction, 1, key, serialized_state);
 }
 
 uint256_t MachineStateKeys::getInboxAcc() const {
