@@ -61,6 +61,9 @@ type ArbCoreLookup interface {
 
 	MachineMessagesRead() *big.Int
 
+	// GetLastMachine gets a copy of the machine from the last time machinethread stopped or the last reorg
+	GetLastMachine() (machine.Machine, error)
+
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
 	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)
@@ -200,10 +203,10 @@ type ExecutionState struct {
 	LogAcc            common.Hash
 }
 
-func NewExecutionState(c ExecutionCursor) *ExecutionState {
+func NewExecutionState(c ExecutionCursor) (*ExecutionState, error) {
 	hash, err := c.MachineHash()
 	if err != nil {
-		panic("Unable to compute hash for execution state")
+		return nil, errors.New("unable to compute hash for execution state")
 	}
 	return &ExecutionState{
 		MachineHash:       hash,
@@ -214,7 +217,7 @@ func NewExecutionState(c ExecutionCursor) *ExecutionState {
 		TotalLogCount:     c.TotalLogCount(),
 		SendAcc:           c.SendAcc(),
 		LogAcc:            c.LogAcc(),
-	}
+	}, nil
 }
 
 func (e *ExecutionState) IsPermanentlyBlocked() bool {

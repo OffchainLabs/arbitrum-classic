@@ -414,7 +414,9 @@ struct ValueTypeVisitor {
     ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
     ValueTypes operator()(const Tuple&) const { return TUPLE; }
     ValueTypes operator()(const WasmCodePoint&) const { return WASM_CODE_POINT; }
-    ValueTypes operator()(const HashPreImage&) const { return TUPLE; }
+    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
+        return TUPLE;
+    }
     ValueTypes operator()(const Buffer&) const { return BUFFER; }
 };
 
@@ -1040,7 +1042,7 @@ void wasm_compile(MachineState& m) {
     m.stack.prepForMod(2);
     auto len = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
-    std::cerr << "compiling " << md << " len " << len << "...\n";
+    std::cerr << "compiling " << value(md) << " len " << len << "...\n";
     RunWasm compiler{"/home/sami/arbitrum/compiler.wasm"};
     auto res = compiler.run_wasm(md, len);
     // auto res = m.compile.run_wasm(md, len);
@@ -1069,7 +1071,7 @@ void wasm_run(MachineState& m) {
     Buffer& md = assumeBuffer(m.stack[1]);
     WasmCodePoint& wasmcp = assumeWasm(m.stack[2]);
     auto res = wasmcp.runner->run_wasm(md, len);
-    std::cerr << "got result " << res.buffer << " len " << res.buffer_len << " " << int(res.buffer.get(0)) << "\n";
+    std::cerr << "got result " << value(res.buffer) << " len " << res.buffer_len << " " << int(res.buffer.get(0)) << "\n";
     
     Tuple tpl = Tuple(res.buffer, res.buffer_len);
     m.stack.popClear();

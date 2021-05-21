@@ -17,13 +17,15 @@
 package arbostest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"math/big"
 	"strings"
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
@@ -66,22 +68,19 @@ func TestFib(t *testing.T) {
 		},
 	}
 
-	inboxMessages := makeSimpleInbox([]message.Message{
-		message.Eth{
-			Dest:  sender,
-			Value: big.NewInt(1000),
-		},
+	messages := []message.Message{
+		makeEthDeposit(sender, big.NewInt(1000)),
 		message.NewSafeL2Message(constructTx),
 		message.NewSafeL2Message(generateTx),
 		message.NewSafeL2Message(getFibTx),
-	})
+	}
 
-	logs, _, snap, _ := runAssertion(t, inboxMessages, 3, 0)
+	logs, _, snap := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 	allResultsSucceeded(t, results)
-	checkConstructorResult(t, results[0], connAddress1)
+	checkConstructorResult(t, results[1], connAddress1)
 
-	generateResult := results[1]
+	generateResult := results[2]
 	if len(generateResult.EVMLogs) != 1 {
 		t.Fatal("incorrect log count")
 	}
@@ -96,7 +95,7 @@ func TestFib(t *testing.T) {
 		t.Fatal("incorrect log data")
 	}
 
-	if hexutil.Encode(results[2].ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
+	if hexutil.Encode(results[3].ReturnData) != "0x0000000000000000000000000000000000000000000000000000000000000008" {
 		t.Fatal("getFib had incorrect result")
 	}
 
@@ -109,13 +108,10 @@ func TestFib(t *testing.T) {
 func TestDeposit(t *testing.T) {
 	amount := big.NewInt(1000)
 	messages := []message.Message{
-		message.Eth{
-			Dest:  sender,
-			Value: amount,
-		},
+		makeEthDeposit(sender, amount),
 	}
 
-	_, _, snap, _ := runAssertion(t, makeSimpleInbox(messages), 0, 0)
+	_, _, snap := runSimpleAssertion(t, messages)
 	checkBalance(t, snap, sender, amount)
 }
 
@@ -128,12 +124,12 @@ func TestBlocks(t *testing.T) {
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), startTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	messages = append(
 		messages,
-		message.NewInboxMessage(message.Eth{Value: big.NewInt(1000), Dest: sender}, chain, big.NewInt(0), big.NewInt(0), startTime),
+		message.NewInboxMessage(makeEthDeposit(sender, big.NewInt(1000)), chain, big.NewInt(0), big.NewInt(0), startTime),
 	)
 
 	halfSendCount := int64(5)
@@ -205,7 +201,7 @@ func TestBlocks(t *testing.T) {
 
 	targetBlocks := []TargetBlockInfo{
 		{
-			txCount:       0,
+			txCount:       1,
 			includesBatch: false,
 		},
 		{
@@ -237,8 +233,10 @@ func TestBlocks(t *testing.T) {
 			resultTypes = append(resultTypes, txRes)
 		}
 		if i != len(targetBlocks)-1 {
-			for i := 0; i < targetBlock.txCount; i++ {
-				resultTypes = append(resultTypes, sendRes)
+			if i != 0 {
+				for i := 0; i < targetBlock.txCount; i++ {
+					resultTypes = append(resultTypes, sendRes)
+				}
 			}
 			if targetBlock.includesBatch {
 				resultTypes = append(resultTypes, merkleRes)
@@ -249,7 +247,7 @@ func TestBlocks(t *testing.T) {
 	}
 
 	// Last value returned is not an error type
-	avmLogs, sends, _, _ := runAssertion(t, messages, len(resultTypes), sendCount)
+	avmLogs, sends, _ := runAssertion(t, messages, len(resultTypes), sendCount)
 	results := make([]evm.Result, 0)
 	for _, avmLog := range avmLogs {
 		res, err := evm.NewResultFromValue(avmLog)
@@ -427,7 +425,7 @@ func TestBlocks(t *testing.T) {
 		txCount := block.BlockStats.TxCount.Uint64()
 
 		if uint64(target.txCount) != txCount {
-			t.Fatal("wrong tx count in block")
+			t.Fatal("wrong tx count in block, got", txCount, "but expected", target.txCount, "in block", i)
 		}
 
 		startLog := block.FirstAVMLog().Uint64()

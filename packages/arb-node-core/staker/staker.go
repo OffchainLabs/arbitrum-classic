@@ -3,6 +3,7 @@ package staker
 import (
 	"context"
 	"math/big"
+	"runtime"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core/types"
@@ -66,7 +67,7 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 				}
 			}
 			if err != nil {
-				logger.Warn().Stack().Err(err).Send()
+				logger.Warn().Err(err).Send()
 				<-time.After(backoff)
 				if backoff < 60*time.Second {
 					backoff *= 2
@@ -75,7 +76,10 @@ func (s *Staker) RunInBackground(ctx context.Context) chan bool {
 			} else {
 				backoff = time.Second
 			}
-			<-time.After(time.Minute)
+			// Force a GC run to clean up any execution cursors while we wait
+			delay := time.After(time.Minute)
+			runtime.GC()
+			<-delay
 		}
 	}()
 	return done

@@ -3,7 +3,7 @@
 ### cpp-base
 ### --------------------------------------------------------------------
 
-FROM debian:buster-slim
+FROM debian:bullseye-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     apt-get install -y cmake curl git g++ libboost-dev libboost-filesystem-dev \

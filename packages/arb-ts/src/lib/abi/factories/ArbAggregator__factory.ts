@@ -34,6 +34,25 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
+        name: 'aggregator',
+        type: 'address',
+      },
+    ],
+    name: 'getFeeCollector',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
         name: 'addr',
         type: 'address',
       },
@@ -63,6 +82,24 @@ const _abi = [
       },
     ],
     name: 'setDefaultAggregator',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'aggregator',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'newFeeCollector',
+        type: 'address',
+      },
+    ],
+    name: 'setFeeCollector',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

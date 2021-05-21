@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -36,12 +37,14 @@ import (
 
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 
-func TestContructor(t *testing.T) {
-	client, pks := test.SimulatedBackend()
+func TestConstructor(t *testing.T) {
+	client, pks := test.SimulatedBackend(t)
 
-	tx := types.NewContractCreation(0, big.NewInt(0), 1000000, big.NewInt(0), constructorData)
+	tx := types.NewContractCreation(0, big.NewInt(0), 5000000, big.NewInt(0), constructorData)
 	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
 	failIfError(t, err)
+
+	targetAddress := crypto.CreateAddress(crypto.PubkeyToAddress(pks[0].PublicKey), 0)
 
 	ctx := context.Background()
 	if err := client.SendTransaction(ctx, signedTx); err != nil {
@@ -51,11 +54,15 @@ func TestContructor(t *testing.T) {
 	ethReceipt, err := client.TransactionReceipt(ctx, signedTx.Hash())
 	failIfError(t, err)
 
+	if ethReceipt.ContractAddress != targetAddress {
+		t.Error("ethereum contract address incorrect")
+	}
+
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
 
-	inboxMessages := makeSimpleInbox([]message.Message{l2Message})
-	logs, _, snap, _ := runAssertion(t, inboxMessages, 1, 0)
+	messages := []message.Message{l2Message}
+	logs, _, snap := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	res := results[0]
@@ -77,7 +84,7 @@ func TestContructor(t *testing.T) {
 		return
 	}
 
-	arbAddress := common.NewAddressFromEth(ethReceipt.ContractAddress)
+	arbAddress := common.NewAddressFromEth(targetAddress)
 	checkConstructorResult(t, res, arbAddress)
 
 	ethCode, err := client.CodeAt(ctx, ethReceipt.ContractAddress, nil)
@@ -91,7 +98,7 @@ func TestContructor(t *testing.T) {
 	}
 }
 
-func TestContructorExistingBalance(t *testing.T) {
+func TestConstructorExistingBalance(t *testing.T) {
 	factoryABI, err := abi.JSON(strings.NewReader(arbostestcontracts.CloneFactoryABI))
 	failIfError(t, err)
 
@@ -107,20 +114,20 @@ func TestContructorExistingBalance(t *testing.T) {
 	}
 
 	messages := []message.Message{
-		message.Eth{Value: big.NewInt(100), Dest: connAddress1},
-		message.Eth{Value: big.NewInt(100), Dest: create2Address},
+		makeEthDeposit(connAddress1, big.NewInt(100)),
+		makeEthDeposit(create2Address, big.NewInt(100)),
 		message.NewSafeL2Message(makeSimpleConstructorTx(constructorData, big.NewInt(0))),
 		message.NewSafeL2Message(makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.CloneFactoryBin), big.NewInt(1))),
 		message.NewSafeL2Message(tx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 3, 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
-	checkConstructorResult(t, results[0], connAddress1)
-	checkConstructorResult(t, results[1], connAddress2)
-	succeededTxCheck(t, results[2])
-	if !bytes.Equal(results[2].ReturnData[12:], create2Address.Bytes()) {
-		t.Fatal("incorrect create2 address which should have been", hexutil.Encode(results[2].ReturnData[12:]))
+	checkConstructorResult(t, results[2], connAddress1)
+	checkConstructorResult(t, results[3], connAddress2)
+	succeededTxCheck(t, results[4])
+	if !bytes.Equal(results[4].ReturnData[12:], create2Address.Bytes()) {
+		t.Fatal("incorrect create2 address which should have been", hexutil.Encode(results[4].ReturnData[12:]))
 	}
 }

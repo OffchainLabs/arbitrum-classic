@@ -16,7 +16,7 @@
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
     "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
-    "build": "yarn workspace arb-ts build && yarn workspace arb-provider-ethers build",
+    "build": "yarn workspace arb-ts build",
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
     "run:local:geth": "yarn workspace arb-bridge-eth run:local:geth",
@@ -25,7 +25,7 @@
     "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
     "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
     "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
-    "prepare": "yarn workspace arb-provider-ethers prepare",
+    "prepare": "yarn workspace arb-ts prepare",
     "go:vet": "./scripts/run-go-packages \"go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts' | xargs go vet\"",
     "go:generate": "./scripts/run-go-packages 'go generate ./...'",
     "go:tidy": "./scripts/run-go-packages 'go mod tidy'",
@@ -33,7 +33,8 @@
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
-    "deploy:validators": "./scripts/arb_deploy.py"
+    "deploy:validators": "./scripts/arb_deploy.py",
+    "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
   },
   "engines": {
     "node": ">= 8.0.0 < 13.0.0",
@@ -58,7 +59,8 @@
     "eslint-plugin-mocha": "^7.0.1",
     "eslint-plugin-prettier": "^3.1.4",
     "prettier": "^2.0.5",
-    "prettier-plugin-solidity": "^1.0.0-alpha.54"
+    "prettier-plugin-solidity": "^1.0.0-alpha.54",
+    "solidity-docgen": "^0.5.11"
   },
   "resolutions": {
     "arb-provider-ethers/ethers": "~4.0.47",

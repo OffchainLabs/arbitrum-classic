@@ -19,11 +19,13 @@ package txdb
 import (
 	"context"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
-	"sync"
 	"time"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	lru "github.com/hashicorp/golang-lru"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -44,7 +46,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Caller().Str("component", "txdb").Logger()
+var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type ChainTimeGetter interface {
 	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
@@ -65,7 +67,7 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	callMut sync.Mutex
+	snapshotCache *lru.Cache
 }
 
 func New(
@@ -74,28 +76,21 @@ func New(
 	as machine.NodeStore,
 	chain common.Address,
 	updateFrequency time.Duration,
-) (*TxDB, error) {
+) (*TxDB, <-chan error, error) {
+	snapshotCache, err := lru.New(100)
+	if err != nil {
+		return nil, nil, err
+	}
 	db := &TxDB{
-		Lookup: arbCore,
-		as:     as,
-		chain:  chain,
+		Lookup:        arbCore,
+		as:            as,
+		chain:         chain,
+		snapshotCache: snapshotCache,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
-	go func() {
-		err := <-errChan
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if err == nil {
-				return
-			}
-			log.Fatal().Err(err).Msg("error reading logs")
-		}
-	}()
 	db.logReader = logReader
-	return db, nil
+	return db, errChan, nil
 }
 
 func (db *TxDB) Close() {
@@ -149,7 +144,7 @@ func processBlockResults(block *evm.BlockInfo, avmLogs []value.Value) ([]*evm.Tx
 		if !ok {
 			return nil, errors.Errorf("expected tx result but got %T", res)
 		}
-		if txRes.IncomingRequest.L2BlockNumber.Cmp(block.BlockNum) != 0 {
+		if txRes.ResultCode != evm.RevertCode && txRes.IncomingRequest.L2BlockNumber.Cmp(block.BlockNum) != 0 {
 			return nil, errors.New("tx from wrong block")
 		}
 		results = append(results, txRes)
@@ -231,7 +226,7 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 func (db *TxDB) HandleLog(logIndex uint64, avmLog value.Value) error {
 	res, err := evm.NewResultFromValue(avmLog)
 	if err != nil {
-		logger.Error().Stack().Err(err).Msg("Error parsing log result")
+		logger.Error().Err(err).Msg("Error parsing log result")
 		return nil
 	}
 
@@ -333,7 +328,8 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 	requests := make([]machine.EVMRequestInfo, 0, len(txResults))
 
 	for i, txRes := range txResults {
-		if txRes.ResultCode != evm.ReturnCode && txRes.ResultCode != evm.RevertCode {
+		// && txRes.ResultCode != evm.RevertCode
+		if txRes.ResultCode != evm.ReturnCode {
 			// If this log was for an invalid transaction, only save the request if it hasn't been saved before
 			if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) != nil {
 				continue
@@ -462,6 +458,10 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
+	cachedSnap, found := db.snapshotCache.Get(info.Header.Number.Uint64())
+	if found {
+		return cachedSnap.(*snapshot.Snapshot), nil
+	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
@@ -470,7 +470,11 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}
-	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	snap, err := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	if err != nil {
+		return nil, err
+	}
+	db.snapshotCache.Add(info.Header.Number.Uint64(), snap)
 	return snap, nil
 }
 

@@ -43,58 +43,23 @@ struct CachedCalculation {
     }
 };
 
-class Buffer {
-   public:
-    static constexpr uint64_t leaf_size = 32;
-    static constexpr uint64_t children_size = 2;
-    using LeafData = std::array<unsigned char, leaf_size>;
-    using NodeData =
-        std::pair<std::shared_ptr<Buffer>, std::shared_ptr<Buffer>>;
+class RawBuffer;
+
+class Buffer : private std::shared_ptr<RawBuffer> {
+    friend RawBuffer;
 
    private:
-    mutable CachedCalculation hash_cache;
-    mutable CachedCalculation packed_size_cache;
-
-    // The depth of this buffer as a tree. A leaf node (32 bytes) is depth 0.
-    size_t depth;
-
-    // The components of this buffer. If this is a leaf (at the bottom of the
-    // tree, depth == 0), it'll contain raw bytes. If it's a branch (higher up
-    // in the tree, depth > 0), it'll contain child buffers.
-    std::variant<LeafData, NodeData> components;
-
-    // Returns a pointer to this buffer's children, or null if this is a leaf
-    NodeData* get_children();
-    // Like get_children but const
-    const NodeData* get_children_const() const;
-
-    // The size of this buffer after trimming any zero bytes at the end
-    uint256_t packed_size() const;
-
-    // Returns a buffer with a depth of at least new_depth and the same data
-    [[nodiscard]] Buffer grow(uint64_t new_depth) const;
-
-    // Returns the smallest possible buffer representing the same data
-    [[nodiscard]] Buffer trim() const;
-
-    // Like the public method, but requires that the buffer must not need
-    // growing or trimming, and specifying an offset and length to the passed
-    // in array. The bytes set must be within a single 32 byte chunk.
-    [[nodiscard]] Buffer set_many_without_resize(
-        uint64_t offset,
-        const std::vector<uint8_t>& arr,
-        uint64_t arr_offset,
-        uint64_t arr_length) const;
+    explicit Buffer(RawBuffer raw);
 
    public:
     // Creates an "empty" buffer (actually has 32 zero bytes)
     Buffer();
 
     // Create a leaf node
-    explicit Buffer(LeafData bytes);
+    explicit Buffer(std::array<unsigned char, 32> bytes);
 
     // Create a branch node composed of two buffers with equal depths
-    Buffer(std::shared_ptr<Buffer> left, std::shared_ptr<Buffer> right);
+    Buffer(Buffer left, Buffer right);
 
     // Creates a buffer representing the given bytes
     static Buffer fromData(const std::vector<uint8_t>& data);
@@ -137,6 +102,79 @@ class Buffer {
     std::vector<Buffer> serialize(
         std::vector<unsigned char>& value_vector) const;
 };
+
+class RawBuffer {
+    friend Buffer;
+
+   public:
+    static constexpr uint64_t leaf_size = 32;
+    static constexpr uint64_t children_size = 2;
+    using LeafData = std::array<unsigned char, leaf_size>;
+    using NodeData = std::pair<Buffer, Buffer>;
+
+   private:
+    mutable CachedCalculation hash_cache;
+    mutable CachedCalculation packed_size_cache;
+
+    // The depth of this buffer as a tree. A leaf node (32 bytes) is depth 0.
+    size_t depth;
+
+    // The components of this buffer. If this is a leaf (at the bottom of the
+    // tree, depth == 0), it'll contain raw bytes. If it's a branch (higher up
+    // in the tree, depth > 0), it'll contain child buffers.
+    std::variant<LeafData, NodeData> components;
+
+    // Returns a pointer to this buffer's children, or null if this is a leaf
+    NodeData* get_children();
+    // Like get_children but const
+    const NodeData* get_children_const() const;
+
+    // The size of this buffer after trimming any zero bytes at the end
+    uint256_t packed_size() const;
+
+    // Returns a buffer with a depth of at least new_depth and the same data
+    [[nodiscard]] RawBuffer grow(uint64_t new_depth) const;
+
+    // Returns the smallest possible buffer representing the same data
+    [[nodiscard]] RawBuffer trim() const;
+
+    // Like the public method, but requires that the buffer must not need
+    // growing or trimming, and specifying an offset and length to the passed
+    // in array. The bytes set must be within a single 32 byte chunk.
+    [[nodiscard]] RawBuffer set_many_without_resize(
+        uint64_t offset,
+        const std::vector<uint8_t>& arr,
+        uint64_t arr_offset,
+        uint64_t arr_length) const;
+
+    // Sets bytes at a given offset, growing or shrinking as needed. The bytes
+    // set must be within a single 32 byte chunk.
+    [[nodiscard]] RawBuffer set_many(uint64_t offset,
+                                     std::vector<uint8_t> arr) const;
+
+    // Creates a buffer representing the given bytes
+    static RawBuffer fromData(const std::vector<uint8_t>& data);
+
+    // Returns the size of the buffer, **including** any trailing zeroes
+    [[nodiscard]] uint256_t size() const;
+
+    // Creates an "empty" buffer (actually has 32 zero bytes)
+    RawBuffer();
+
+    // Create a leaf node
+    explicit RawBuffer(LeafData bytes);
+
+    // Create a branch node composed of two buffers with equal depths
+    RawBuffer(Buffer left, Buffer right);
+
+   public:
+    // Returns the hash of the buffer, "packing" any trailing zero segments
+    [[nodiscard]] uint256_t hash() const;
+};
+
+inline uint256_t hash(const RawBuffer& b) {
+    return hash(123, b.hash());
+}
 
 inline uint256_t hash(const Buffer& b) {
     return hash(123, b.hash());

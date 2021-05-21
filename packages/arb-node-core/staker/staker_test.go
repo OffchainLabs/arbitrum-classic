@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
@@ -17,6 +18,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -114,7 +116,10 @@ func requireChallengeLogs(ctx context.Context, t *testing.T, client ethutils.Eth
 func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNode *big.Int, expectedEnd ExpectedChallengeEnd) {
 	ctx := context.Background()
 
-	mach, err := cmachine.New(arbos.Path())
+	arbosPath, err := arbos.Path()
+	test.FailIfError(t, err)
+
+	mach, err := cmachine.New(arbosPath)
 	test.FailIfError(t, err)
 
 	hash, err := mach.Hash()
@@ -128,7 +133,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	var owner common.Address
 	var extraConfig []byte
 
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
 	auth2 := bind.NewKeyedTransactor(pks[1])
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
@@ -158,10 +163,14 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	client.Commit()
 
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, ethbridge.NewTransactAuth(auth))
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	test.FailIfError(t, err)
+	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	test.FailIfError(t, err)
 
-	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, ethbridge.NewTransactAuth(auth2))
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
+	test.FailIfError(t, err)
+	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
 	core, shutdown := test.PrepareArbCore(t, []inbox.InboxMessage{})
@@ -175,7 +184,19 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
-	reader, err := NewInboxReader(ctx, bridge, core)
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: true}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: false}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: "0.0.0.0:8080"}
+	nodehealth.Init(healthChan)
+
+	go func() {
+		nodehealth.StartNodeHealthCheck(ctx, healthChan)
+	}()
+
+	reader, err := NewInboxReader(ctx, bridge, core, healthChan)
 	test.FailIfError(t, err)
 	reader.Start(ctx)
 	defer reader.Stop()

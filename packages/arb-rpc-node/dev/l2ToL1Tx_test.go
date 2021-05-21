@@ -1,40 +1,45 @@
+/*
+* Copyright 2021, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package dev
 
 import (
 	"bytes"
 	"context"
+	"math/big"
+	"math/rand"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-	"io/ioutil"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
 )
 
 func TestL2ToL1Tx(t *testing.T) {
-	tmpDir, err := ioutil.TempDir(".", "arbitrum")
-	if err != nil {
-		logger.Fatal().Err(err).Msg("error generating temporary directory")
-	}
-	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
-	}()
-
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(10),
 		StakeToken:                common.Address{},
@@ -42,11 +47,10 @@ func TestL2ToL1Tx(t *testing.T) {
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	monitor, backend, db, rollupAddress := NewDevNode(tmpDir, config)
-	defer monitor.Close()
-	defer db.Close()
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
+	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, common.RandAddress(), nil)
+	defer cancelDevNode()
+
 	client := web3.NewEthClient(srv, true)
 	arbSys, err := arboscontracts.NewArbSys(arbos.ARB_SYS_ADDRESS, client)
 	if err != nil {
@@ -58,7 +62,7 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	auth := bind.NewKeyedTransactor(privkey)
 
-	clnt, pks := test.SimulatedBackend()
+	clnt, pks := test.SimulatedBackend(t)
 	ethAuth := bind.NewKeyedTransactor(pks[0])
 
 	deposit := message.EthDepositTx{
@@ -73,7 +77,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		}),
 	}
 	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
-		logger.Fatal().Stack().Err(err).Send()
+		t.Fatal(err)
 	}
 
 	latest, err := backend.db.LatestBlock()

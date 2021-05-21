@@ -18,9 +18,7 @@ package test
 
 import (
 	"crypto/ecdsa"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -28,25 +26,21 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "test").Logger()
-
-func SimulatedBackend() (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
 	genesisAlloc := make(map[ethcommon.Address]ethcore.GenesisAccount)
 	pks := make([]*ecdsa.PrivateKey, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
 	for i := 0; i < 15; i++ {
 		privateKey, err := crypto.GenerateKey()
-		if err != nil {
-			logger.Fatal().Stack().Err(err).Send()
-		}
+		FailIfError(t, err)
 		pks = append(pks, privateKey)
 
 		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = ethcore.GenesisAccount{
@@ -67,22 +61,16 @@ func FailIfError(t *testing.T, err error) {
 }
 
 func PrepareArbCore(t *testing.T, messages []inbox.InboxMessage) (core.ArbCore, func()) {
-	return PrepareArbCoreGen(t, messages, arbos.Path())
+	arbosPath, err := arbos.Path()
+	FailIfError(t, err)
+	return PrepareArbCoreGen(t, messages, arbosPath)
 }
 
 func PrepareArbCoreGen(t *testing.T, messages []inbox.InboxMessage, path string) (core.ArbCore, func()) {
-	tmpDir, err := ioutil.TempDir("", "arbitrum")
-	FailIfError(t, err)
-	storage, err := cmachine.NewArbStorage(tmpDir)
-	if err != nil {
-		os.RemoveAll(tmpDir)
-	}
+	storage, err := cmachine.NewArbStorage(t.TempDir())
 	FailIfError(t, err)
 	shutdown := func() {
 		storage.CloseArbStorage()
-		if err := os.RemoveAll(tmpDir); err != nil {
-			panic(err)
-		}
 	}
 	returning := false
 	defer (func() {

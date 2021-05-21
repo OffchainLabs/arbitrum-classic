@@ -44,10 +44,10 @@ contract Outbox is CloneFactory, IOutbox {
     // Note, these variables are set and then wiped during a single transaction.
     // Therefore their values don't need to be maintained, and their slots will
     // be empty outside of transactions
-    address private _sender;
-    uint128 private _l2Block;
-    uint128 private _l1Block;
-    uint128 private _timestamp;
+    address internal _sender;
+    uint128 internal _l2Block;
+    uint128 internal _l1Block;
+    uint128 internal _timestamp;
 
     constructor(address _rollup, IBridge _bridge) public {
         rollup = _rollup;
@@ -103,6 +103,19 @@ contract Outbox is CloneFactory, IOutbox {
         }
     }
 
+    /**
+     * @notice Executes a messages in an Outbox entry. Reverts if dispute period hasn't expired and
+     * @param outboxIndex Index of OutboxEntry in outboxes array
+     * @param proof Merkle proof of message inclusion in outbox entry
+     * @param index Merkle path to message
+     * @param l2Sender sender if original message (i.e., caller of ArbSys.sendTxToL1)
+     * @param destAddr destination address for L1 contract call
+     * @param l2Block l2 block number at which sendTxToL1 call was made
+     * @param l1Block l1 block number at which sendTxToL1 call was made
+     * @param l2Timestamp l2 Timestamp at which sendTxToL1 call was made
+     * @param amount value in L1 message in wei
+     * @param calldataForL1 abi-encoded L1 message data
+     */
     function executeTransaction(
         uint256 outboxIndex,
         bytes32[] calldata proof,
@@ -114,16 +127,17 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 l2Timestamp,
         uint256 amount,
         bytes calldata calldataForL1
-    ) external {
-        bytes32 userTx = calculateItemHash(
-            l2Sender,
-            destAddr,
-            l2Block,
-            l1Block,
-            l2Timestamp,
-            amount,
-            calldataForL1
-        );
+    ) external virtual {
+        bytes32 userTx =
+            calculateItemHash(
+                l2Sender,
+                destAddr,
+                l2Block,
+                l1Block,
+                l2Timestamp,
+                amount,
+                calldataForL1
+            );
 
         spendOutput(outboxIndex, proof, index, userTx);
 
@@ -150,7 +164,7 @@ contract Outbox is CloneFactory, IOutbox {
         bytes32[] memory proof,
         uint256 path,
         bytes32 item
-    ) private {
+    ) internal {
         require(proof.length <= 256, "PROOF_TOO_LONG");
         require(path < 2**proof.length, "PATH_NOT_MINIMAL");
 
@@ -195,7 +209,7 @@ contract Outbox is CloneFactory, IOutbox {
         address destAddr,
         uint256 amount,
         bytes memory data
-    ) private {
+    ) internal {
         (bool success, bytes memory returndata) = bridge.executeCall(destAddr, amount, data);
         if (!success) {
             if (returndata.length > 0) {
@@ -219,18 +233,19 @@ contract Outbox is CloneFactory, IOutbox {
         uint256 amount,
         bytes calldata calldataForL1
     ) public pure returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(
-                SendType_sendTxToL1,
-                uint256(uint160(bytes20(l2Sender))),
-                uint256(uint160(bytes20(destAddr))),
-                l2Block,
-                l1Block,
-                l2Timestamp,
-                amount,
-                calldataForL1
-            )
-        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    SendType_sendTxToL1,
+                    uint256(uint160(bytes20(l2Sender))),
+                    uint256(uint160(bytes20(destAddr))),
+                    l2Block,
+                    l1Block,
+                    l2Timestamp,
+                    amount,
+                    calldataForL1
+                )
+            );
     }
 
     function calculateMerkleRoot(

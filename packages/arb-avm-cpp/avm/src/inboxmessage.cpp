@@ -95,6 +95,14 @@ InboxMessage extractInboxMessageImpl(
         gas_price_l1, data};
 }
 
+uint256_t extractInboxMessageBlockNumber(
+    const std::vector<unsigned char>& stored_state) {
+    auto iter = stored_state.begin();
+    iter++;      // skip kind
+    iter += 20;  // skip sender
+    return extractUint256(iter);
+}
+
 void InboxMessage::serializeHeader(
     std::vector<unsigned char>& state_data_vector) const {
     state_data_vector.push_back(kind);

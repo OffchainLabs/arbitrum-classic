@@ -140,14 +140,18 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 	test.FailIfError(t, err)
 	inboxMaxCount, err := lookup.GetMessageCount()
 	test.FailIfError(t, err)
+	prevExecState, err := core.NewExecutionState(cursor)
+	test.FailIfError(t, err)
 	prevState := &core.NodeState{
 		ProposedBlock:  big.NewInt(0),
 		InboxMaxCount:  inboxMaxCount,
-		ExecutionState: core.NewExecutionState(cursor),
+		ExecutionState: prevExecState,
 	}
 
-	lookup.AdvanceExecutionCursor(cursor, endGas, true)
-	after := core.NewExecutionState(cursor)
+	err = lookup.AdvanceExecutionCursor(cursor, endGas, true)
+	test.FailIfError(t, err)
+	after, err := core.NewExecutionState(cursor)
+	test.FailIfError(t, err)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +179,8 @@ func initializeChallengeTest(
 	asserterTime *big.Int,
 	challengerTime *big.Int,
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, ethcommon.Address) {
-	clnt, pks := test.SimulatedBackend()
+	ctx := context.Background()
+	clnt, pks := test.SimulatedBackend(t)
 	deployer := bind.NewKeyedTransactor(pks[0])
 	asserter := bind.NewKeyedTransactor(pks[1])
 	challenger := bind.NewKeyedTransactor(pks[2])
@@ -197,10 +202,14 @@ func initializeChallengeTest(
 	challengerWalletAddress, _, _, err := ethbridgecontracts.DeployValidator(challenger, client)
 	test.FailIfError(t, err)
 
-	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, ethbridge.NewTransactAuth(asserter))
+	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)
+	test.FailIfError(t, err)
+	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
 	test.FailIfError(t, err)
 
-	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, ethbridge.NewTransactAuth(challenger))
+	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger)
+	test.FailIfError(t, err)
+	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)
 
 	_, err = tester.StartChallenge(

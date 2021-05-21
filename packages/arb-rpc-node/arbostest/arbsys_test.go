@@ -18,15 +18,18 @@ package arbostest
 
 import (
 	"bytes"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"math/big"
 	"strings"
 	"testing"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -57,7 +60,7 @@ func makeTxCountCall(account common.Address) message.L2Message {
 func checkTxCountResult(t *testing.T, res *evm.TxResult, correctCount *big.Int) {
 	t.Helper()
 	succeededTxCheck(t, res)
-	txCount, err := arbos.ParseTransactionCountResult(res)
+	txCount, err := arbos.ParseTransactionCountResult(res.ReturnData)
 	failIfError(t, err)
 	if correctCount.Cmp(txCount) != 0 {
 		t.Fatal("unexpected tx count")
@@ -153,9 +156,9 @@ func TestTransactionCount(t *testing.T) {
 	}
 
 	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
+		message.NewInboxMessage(initMsg(t, nil), chain, big.NewInt(0), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(1), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.Eth{Dest: sender, Value: big.NewInt(1000)}, sender, big.NewInt(2), big.NewInt(0), chainTime),
+		message.NewInboxMessage(makeEthDeposit(sender, big.NewInt(1000)), sender, big.NewInt(2), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(3), big.NewInt(0), chainTime),
 		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(4), big.NewInt(0), chainTime),
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(5), big.NewInt(0), chainTime),
@@ -175,45 +178,45 @@ func TestTransactionCount(t *testing.T) {
 		message.NewInboxMessage(makeTxCountCall(sender), common.Address{}, big.NewInt(19), big.NewInt(0), chainTime),
 	}
 
-	logs, _, _, _ := runAssertion(t, messages, len(messages)-2, 0)
+	logs, _, _ := runAssertion(t, messages, len(messages)-1, 0)
 	results := processTxResults(t, logs)
 
 	checkTxCountResult(t, results[0], big.NewInt(0))
 
 	// Deposit doesn't increase tx count
-	checkTxCountResult(t, results[1], big.NewInt(0))
+	checkTxCountResult(t, results[2], big.NewInt(0))
 
 	// Contract deployment increases tx count
-	succeededTxCheck(t, results[2])
-	checkTxCountResult(t, results[3], big.NewInt(1))
+	succeededTxCheck(t, results[3])
+	checkTxCountResult(t, results[4], big.NewInt(1))
 
 	// Payment to EOA increases tx count
-	succeededTxCheck(t, results[4])
-	checkTxCountResult(t, results[5], big.NewInt(2))
+	succeededTxCheck(t, results[5])
+	checkTxCountResult(t, results[6], big.NewInt(2))
 
 	// Payment to EOA with incorrect sequence number shouldn't increase tx count
-	txResultCheck(t, results[6], evm.BadSequenceCode)
-	checkTxCountResult(t, results[7], big.NewInt(2))
+	txResultCheck(t, results[7], evm.BadSequenceCode)
+	checkTxCountResult(t, results[8], big.NewInt(2))
 
 	// Payment to EOA with insufficient funds shouldn't increase tx count
-	txResultCheck(t, results[8], evm.InsufficientTxFundsCode)
-	checkTxCountResult(t, results[9], big.NewInt(2))
+	txResultCheck(t, results[9], evm.InsufficientTxFundsCode)
+	checkTxCountResult(t, results[10], big.NewInt(2))
 
 	// Contract to contract increases tx count
-	succeededTxCheck(t, results[10])
-	checkTxCountResult(t, results[11], big.NewInt(3))
+	succeededTxCheck(t, results[11])
+	checkTxCountResult(t, results[12], big.NewInt(3))
 
 	// Tx call with incorrect sequence number doesn't affect the count
-	txResultCheck(t, results[12], evm.BadSequenceCode)
-	checkTxCountResult(t, results[13], big.NewInt(3))
+	txResultCheck(t, results[13], evm.BadSequenceCode)
+	checkTxCountResult(t, results[14], big.NewInt(3))
 
 	// Tx call with insufficient balance doesn't affect the count
-	txResultCheck(t, results[14], evm.InsufficientTxFundsCode)
-	checkTxCountResult(t, results[15], big.NewInt(3))
+	txResultCheck(t, results[15], evm.InsufficientTxFundsCode)
+	checkTxCountResult(t, results[16], big.NewInt(3))
 
 	// Tx call with insufficient gas funds doesn't affect the count
-	txResultCheck(t, results[16], evm.InsufficientGasFundsCode)
-	checkTxCountResult(t, results[17], big.NewInt(3))
+	txResultCheck(t, results[17], evm.InsufficientGasFundsCode)
+	checkTxCountResult(t, results[18], big.NewInt(3))
 
 	t.Log(crypto.CreateAddress(ethcommon.HexToAddress("0x3fab184622dc19b6109349b94811493bf2a45362"), 0).Hex())
 }
@@ -283,7 +286,7 @@ func TestAddressTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(addressTableCalls), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -407,7 +410,7 @@ func TestArbSysBLS(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])
@@ -475,7 +478,7 @@ func TestArbSysFunctionTable(t *testing.T) {
 		senderSeq++
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(arbSysCalls), 0)
+	logs, _, _ := runSimpleAssertion(t, messages)
 	results := processTxResults(t, logs)
 
 	revertedTxCheck(t, results[0])

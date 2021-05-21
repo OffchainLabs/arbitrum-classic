@@ -37,7 +37,7 @@ func getCut(execTracker *core.ExecutionTracker, maxTotalMessagesRead *big.Int, g
 }
 
 func (e *ExecutionImpl) GetCuts(lookup core.ArbCoreLookup, assertion *core.Assertion, offsets []*big.Int) ([]core.Cut, error) {
-	execTracker := core.NewExecutionTracker(lookup, true, offsets)
+	execTracker := core.NewExecutionTracker(lookup, true, offsets, true)
 	cuts := make([]core.Cut, 0, len(offsets))
 	for i, offset := range offsets {
 		cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
@@ -69,7 +69,7 @@ func (e *ExecutionImpl) FindFirstDivergence(lookup core.ArbCoreLookup, assertion
 		EndIsUnreachable: false,
 	}
 	fmt.Printf("search divergence %v cuts %v\n", offsets, cuts)
-	execTracker := core.NewExecutionTracker(lookup, true, offsets)
+	execTracker := core.NewExecutionTracker(lookup, true, offsets, true)
 	lastSteps := big.NewInt(0)
 	for i, offset := range offsets {
 		localCut, newSteps, err := getCut(execTracker, assertion.After.TotalMessagesRead, offset)
@@ -108,7 +108,7 @@ func (e *ExecutionImpl) Bisect(
 }
 
 func (e *ExecutionImpl) getSegmentStartInfo(lookup core.ArbCoreLookup, assertion *core.Assertion, segment *core.ChallengeSegment) (*core.ExecutionState, machine.Machine, error) {
-	execTracker := core.NewExecutionTracker(lookup, true, []*big.Int{segment.Start})
+	execTracker := core.NewExecutionTracker(lookup, true, []*big.Int{segment.Start}, true)
 	cut, _, err := getCut(execTracker, assertion.After.TotalMessagesRead, segment.Start)
 	if err != nil {
 		return nil, nil, err

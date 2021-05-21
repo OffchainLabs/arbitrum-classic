@@ -68,7 +68,7 @@ contract Inbox is IInbox {
         uint256 nonce,
         address destAddr,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -90,7 +90,7 @@ contract Inbox is IInbox {
         uint256 gasPriceBid,
         address destAddr,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -113,7 +113,7 @@ contract Inbox is IInbox {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external override returns (uint256) {
+    ) external virtual override returns (uint256) {
         return
             _deliverMessage(
                 L2_MSG,
@@ -136,7 +136,7 @@ contract Inbox is IInbox {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external override returns (uint256) {
+    ) external virtual override returns (uint256) {
         return
             _deliverMessage(
                 L2_MSG,
@@ -152,7 +152,7 @@ contract Inbox is IInbox {
             );
     }
 
-    function depositEth(address destAddr) external payable override returns (uint256) {
+    function depositEth(address destAddr) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -172,7 +172,7 @@ contract Inbox is IInbox {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 maxGasPrice
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             this.createRetryableTicket(
                 destAddr,
@@ -186,6 +186,19 @@ contract Inbox is IInbox {
             );
     }
 
+    /**
+    @notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
+    * @dev all msg.value will deposited to callValueRefundAddress on L2
+    * @param destAddr destination L2 contract address
+    * @param l2CallValue call value for retryable L2 message 
+    * @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+    * @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance
+    * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
+    * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+    * @param gasPriceBid price bid for L2 execution
+    * @param data ABI encoded data of L2 message 
+    * @return unique id for retryable transaction (keccak256(requestID, uint(0) )
+     */
     function createRetryableTicket(
         address destAddr,
         uint256 l2CallValue,
@@ -195,7 +208,7 @@ contract Inbox is IInbox {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_submitRetryableTx,
@@ -219,7 +232,7 @@ contract Inbox is IInbox {
         uint8 _kind,
         address _sender,
         bytes memory _messageData
-    ) private returns (uint256) {
+    ) internal returns (uint256) {
         uint256 msgNum = deliverToBridge(_kind, _sender, keccak256(_messageData));
         emit InboxMessageDelivered(msgNum, _messageData);
         return msgNum;
@@ -229,7 +242,7 @@ contract Inbox is IInbox {
         uint8 kind,
         address sender,
         bytes32 messageDataHash
-    ) private returns (uint256) {
+    ) internal returns (uint256) {
         return bridge.deliverMessageToInbox{ value: msg.value }(kind, sender, messageDataHash);
     }
 }

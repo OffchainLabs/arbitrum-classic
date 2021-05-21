@@ -65,7 +65,7 @@ func NewExecutionCursor(c unsafe.Pointer) (*ExecutionCursor, error) {
 }
 
 func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
-	return &ExecutionCursor{
+	newEc := &ExecutionCursor{
 		c:                 C.executionCursorClone(ec.c),
 		machineHash:       ec.machineHash,
 		totalMessagesRead: ec.totalMessagesRead,
@@ -77,6 +77,8 @@ func (ec *ExecutionCursor) Clone() core.ExecutionCursor {
 		totalLogCount:     ec.totalLogCount,
 		totalSteps:        ec.totalSteps,
 	}
+	runtime.SetFinalizer(newEc, deleteExecutionCursor)
+	return newEc
 }
 
 func (ec *ExecutionCursor) updateValues() error {

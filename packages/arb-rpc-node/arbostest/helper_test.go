@@ -20,11 +20,14 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/math"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbosmachine"
@@ -35,29 +38,19 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-func initMsg() message.Init {
-	return message.Init{
-		ChainParams: protocol.ChainParams{
-			StakeRequirement:          big.NewInt(0),
-			StakeToken:                common.Address{},
-			GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
-			MaxExecutionSteps:         0,
-			ArbGasSpeedLimitPerSecond: 1000000000,
-		},
-		Owner:       owner,
-		ExtraConfig: []byte{},
-	}
-}
+const printArbOSLog = false
 
-func withdrawEthTx(sequenceNum *big.Int, amount *big.Int, dest common.Address) message.Transaction {
-	return message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: sequenceNum,
-		DestAddress: common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS),
-		Payment:     amount,
-		Data:        arbos.WithdrawEthData(dest),
+func initMsg(t *testing.T, options []message.ChainConfigOption) message.Init {
+	params := protocol.ChainParams{
+		StakeRequirement:          big.NewInt(0),
+		StakeToken:                common.Address{},
+		GracePeriod:               common.NewTimeBlocks(big.NewInt(3)),
+		MaxExecutionSteps:         0,
+		ArbGasSpeedLimitPerSecond: 1000000000,
 	}
+	init, err := message.NewInitMessage(params, owner, options)
+	test.FailIfError(t, err)
+	return init
 }
 
 func makeSimpleConstructorTx(code []byte, sequenceNum *big.Int) message.Transaction {
@@ -72,6 +65,20 @@ func makeConstructorTx(code []byte, sequenceNum *big.Int, payment *big.Int) mess
 		DestAddress: common.Address{},
 		Payment:     payment,
 		Data:        code,
+	}
+}
+
+func makeEthDeposit(dest common.Address, amount *big.Int) message.EthDepositTx {
+	return message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: dest,
+				Payment:     amount,
+				Data:        nil,
+			},
+		}),
 	}
 }
 
@@ -114,10 +121,30 @@ func processTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
 	return txResults
 }
 
+func extractTxResults(t *testing.T, logs []value.Value) []*evm.TxResult {
+	t.Helper()
+	results := processResults(t, logs)
+	txResults := make([]*evm.TxResult, 0, len(results))
+	for _, res := range results {
+		txRes, ok := res.(*evm.TxResult)
+		if !ok {
+			continue
+		}
+		txResults = append(txResults, txRes)
+	}
+	return txResults
+}
+
 func txResultCheck(t *testing.T, res *evm.TxResult, correct evm.ResultType) {
 	t.Helper()
 	if res.ResultCode != correct {
 		t.Log("result", res)
+		nested, err := message.NestedMessage(res.IncomingRequest.Data, res.IncomingRequest.Kind)
+		if err != nil {
+			t.Log("Invalid nested", err)
+		} else {
+			t.Log("Nested:", nested)
+		}
 		t.Log("data", hexutil.Encode(res.ReturnData))
 		t.Fatal("unexpected result", res.ResultCode)
 	}
@@ -141,6 +168,31 @@ func allResultsSucceeded(t *testing.T, results []*evm.TxResult) {
 	}
 }
 
+func extractIncomingMessages(t *testing.T, results []*evm.TxResult) []message.Message {
+	t.Helper()
+	var messages []message.Message
+	for _, res := range results {
+		incoming, err := message.NestedMessage(res.IncomingRequest.Data, res.IncomingRequest.Kind)
+		test.FailIfError(t, err)
+		messages = append(messages, incoming)
+	}
+	return messages
+}
+
+func filterL2Messages(t *testing.T, messages []message.Message) []message.AbstractL2Message {
+	var l2Messages []message.AbstractL2Message
+	for _, msg := range messages {
+		nested, ok := msg.(message.L2Message)
+		if !ok {
+			continue
+		}
+		abs, err := nested.AbstractMessage()
+		test.FailIfError(t, err)
+		l2Messages = append(l2Messages, abs)
+	}
+	return l2Messages
+}
+
 func failIfError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
@@ -148,23 +200,62 @@ func failIfError(t *testing.T, err error) {
 	}
 }
 
-func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot, *protocol.ExecutionAssertion) {
+func runSimpleAssertion(t *testing.T, messages []message.Message) ([]value.Value, [][]byte, *snapshot.Snapshot) {
 	t.Helper()
-	cmach, err := cmachine.New(arbos.Path())
-	failIfError(t, err)
-	mach := arbosmachine.New(cmach)
+	return runAssertion(t, makeSimpleInbox(t, messages), len(messages), 0)
+}
 
-	assertion, _, _ := mach.ExecuteAssertion(10000000000, false, inboxMessages, false)
-	testCase, err := inbox.TestVectorJSON(inboxMessages, assertion.Logs, assertion.Sends)
-	failIfError(t, err)
-	t.Log(string(testCase))
+func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot) {
+	t.Helper()
+	logs, sends, snap := runAssertionWithoutPrint(t, inboxMessages, logCount, sendCount)
+	if printArbOSLog {
+		testCase, err := inbox.TestVectorJSON(inboxMessages, logs, sends)
+		failIfError(t, err)
+		t.Log(string(testCase))
+	}
+	return logs, sends, snap
+}
 
-	if len(assertion.Logs) != logCount {
-		t.Fatal("unexpected log count ", len(assertion.Logs), "instead of", logCount)
+func runAssertionWithoutPrint(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int, sendCount int) ([]value.Value, [][]byte, *snapshot.Snapshot) {
+	t.Helper()
+	if inboxMessages[0].Kind != message.InitType {
+		t.Fatal("inbox must start with init message")
+	}
+	cmach, err := cmachine.New(*arbosfile)
+	failIfError(t, err)
+	mach := arbosmachine.NewTestMachine(t, cmach)
+
+	var logs []value.Value
+	var sends [][]byte
+	for i, msg := range inboxMessages {
+		t.Log("Message", i)
+		assertion, _, _, err := mach.ExecuteAssertion(10000000000, false, []inbox.InboxMessage{msg}, false)
+		failIfError(t, err)
+		logs = append(logs, assertion.Logs...)
+		sends = append(sends, assertion.Sends...)
+
+		if len(assertion.Logs) != 1 {
+			continue
+		}
+		res, err := evm.NewTxResultFromValue(assertion.Logs[0])
+		if err != nil {
+			continue
+		}
+		uncountedComputation := new(big.Int).Sub(new(big.Int).SetUint64(assertion.NumGas), res.FeeStats.UnitsUsed.L2Computation)
+		chargeRatio := new(big.Rat).SetFrac(res.FeeStats.UnitsUsed.L2Computation, new(big.Int).SetUint64(assertion.NumGas))
+		// Note: These ratio's were set based on measurements to prevent any regressions
+		// If in the future arbos tries to provide a stronger bound on unmetered computation, this can be adjusted
+		if arbosVersion >= 8 && chargeRatio.Cmp(big.NewRat(7, 10)) < 0 && uncountedComputation.Cmp(big.NewInt(300000)) > 0 {
+			t.Errorf("didn't charge enough for tx %v=%v (%v uncharged)", chargeRatio, chargeRatio.FloatString(2), uncountedComputation)
+		}
 	}
 
-	if len(assertion.Sends) != sendCount {
-		t.Fatal("unxpected send count ", len(assertion.Sends), "instead of", sendCount)
+	if logCount != math.MaxInt32 && len(logs) != logCount {
+		t.Fatal("unexpected log count ", len(logs), "instead of", logCount)
+	}
+
+	if len(sends) != sendCount {
+		t.Fatal("unxpected send count ", len(sends), "instead of", sendCount)
 	}
 
 	var snap *snapshot.Snapshot
@@ -172,24 +263,35 @@ func runAssertion(t *testing.T, inboxMessages []inbox.InboxMessage, logCount int
 		lastMessage := inboxMessages[len(inboxMessages)-1]
 		seq := new(big.Int).Add(lastMessage.InboxSeqNum, big.NewInt(1))
 		msg := message.NewInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), sender, seq, big.NewInt(0), lastMessage.ChainTime)
-		mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, true, nil, true, common.Hash{}, common.Hash{})
-		snap = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
+		_, _, _, err = mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, true, nil, true, common.Hash{}, common.Hash{})
+		test.FailIfError(t, err)
+		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
+		test.FailIfError(t, err)
 	}
-	return assertion.Logs, assertion.Sends, snap, assertion
+	return logs, sends, snap
 }
 
-func makeSimpleInbox(messages []message.Message) []inbox.InboxMessage {
+type InboxBuilder struct {
+	Messages []inbox.InboxMessage
+}
+
+func (ib *InboxBuilder) AddMessage(msg message.Message, sender common.Address, gasPrice *big.Int, time inbox.ChainTime) {
+	newMsg := message.NewInboxMessage(msg, sender, big.NewInt(int64(len(ib.Messages))), gasPrice, time)
+	ib.Messages = append(ib.Messages, newMsg)
+}
+
+func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMessage {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 
-	inboxMessages := make([]inbox.InboxMessage, 0)
-	inboxMessages = append(inboxMessages, message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime))
-	for i, msg := range messages {
-		inboxMessages = append(inboxMessages, message.NewInboxMessage(msg, sender, big.NewInt(int64(1+i)), big.NewInt(0), chainTime))
+	ib := &InboxBuilder{}
+	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+	for _, msg := range messages {
+		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
 	}
-	return inboxMessages
+	return ib.Messages
 }
 
 func checkBalance(t *testing.T, snap *snapshot.Snapshot, account common.Address, balance *big.Int) {

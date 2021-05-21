@@ -26,30 +26,25 @@ func TestMachineCreation(t *testing.T) {
 	dePath := "dbPath"
 
 	if err := os.RemoveAll(dePath); err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	defer func() {
 		if err := os.RemoveAll(dePath); err != nil {
-			logger.Error().Stack().Err(err).Send()
 			t.Fatal(err)
 		}
 	}()
 
 	mach1, err := New(codeFile)
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 
 	arbStorage, err := NewArbStorage(dePath)
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	if err := arbStorage.Initialize(codeFile); err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	defer arbStorage.CloseArbStorage()
@@ -65,16 +60,13 @@ func TestMachineCreation(t *testing.T) {
 
 	hash1, err := mach1.Hash()
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	hash2, err := mach2.Hash()
 	if err != nil {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 	if hash1 != hash2 {
-		logger.Error().Stack().Err(err).Send()
 		t.Fatal(err)
 	}
 }

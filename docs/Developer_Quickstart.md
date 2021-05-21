@@ -27,7 +27,7 @@ Once you have deployed Arbitrum, you can [build and run the demo app](#hello-arb
 
 ## Setup Local Geth and Rollup Blockchain
 
-See [Local Blockchain Setup](https://github.com/OffchainLabs/arbitrum/blob/master/docs/Local_Blockchain.md).
+See [Local Blockchain Setup](Local_Blockchain.md).
 
 ## Hello, Arbitrum
 
