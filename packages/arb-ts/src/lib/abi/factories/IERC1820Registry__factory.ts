@@ -2,9 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
+import { Contract } from '@ethersproject/contracts'
 import type { IERC1820Registry } from '../IERC1820Registry'
 
 export class IERC1820Registry__factory {

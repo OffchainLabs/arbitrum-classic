@@ -2,9 +2,10 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
+import { Contract } from '@ethersproject/contracts'
 import type { ICloneable } from '../ICloneable'
 
 export class ICloneable__factory {

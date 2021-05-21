@@ -2,9 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
+import { Contract } from '@ethersproject/contracts'
 import type { ERC165Upgradeable } from '../ERC165Upgradeable'
 
 export class ERC165Upgradeable__factory {

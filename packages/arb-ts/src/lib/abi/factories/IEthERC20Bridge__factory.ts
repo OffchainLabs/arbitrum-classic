@@ -2,10 +2,11 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
 import type { IEthERC20Bridge } from '../IEthERC20Bridge'
+import { Contract } from '@ethersproject/contracts'
 
 export class IEthERC20Bridge__factory {
   static connect(

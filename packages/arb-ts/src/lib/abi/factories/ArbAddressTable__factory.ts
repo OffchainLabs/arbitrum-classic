@@ -2,9 +2,9 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
-
+import { Contract } from '@ethersproject/contracts'
 import type { ArbAddressTable } from '../ArbAddressTable'
 
 export class ArbAddressTable__factory {

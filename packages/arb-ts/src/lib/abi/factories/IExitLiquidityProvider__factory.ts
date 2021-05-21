@@ -2,10 +2,11 @@
 /* tslint:disable */
 /* eslint-disable */
 
-import { Contract, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
 import type { IExitLiquidityProvider } from '../IExitLiquidityProvider'
+import { Contract } from '@ethersproject/contracts'
 
 export class IExitLiquidityProvider__factory {
   static connect(
