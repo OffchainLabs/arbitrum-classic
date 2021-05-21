@@ -706,6 +706,9 @@ contract OneStepProof2 is OneStepProofCommon {
     }
 
     function executeWasmRun(AssertionContext memory context) internal pure {
+
+        // require(Machine.hash(context.startMachine) == bytes32(uint256(0x78d4e5dcdec1a54b7b3afdabc972f706b1ca14062146c98af8a781d686e5aa92)), "init hash?");
+
         Value.Data memory val3 = popVal(context.stack);
         Value.Data memory val2 = popVal(context.stack);
         Value.Data memory val1 = popVal(context.stack);
@@ -745,7 +748,10 @@ contract OneStepProof2 is OneStepProofCommon {
          uint256 len,) = decodeWasmData(context.bufProof);
         // Return value must come from the final machine
         require(stackVals.length >= 2, "Not enough wasm stack returns");
-        pushVal(context.stack, mkPair(stackVals[0], stackVals[1]));
+        // Buffer, len
+        require(stackVals[0].isInt(), "stack top not int");
+        require(stackVals[1].isBuffer(), "stack next not buf");
+        pushVal(context.stack, mkPair(stackVals[1], stackVals[0]));
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         context.nextLength = len;
@@ -779,7 +785,7 @@ contract OneStepProof2 is OneStepProofCommon {
         } else if (opCode == OP_WASMCOMPILE) {
             return (2, 0, 1000000, executeWasmCompile);
         } else if (opCode == OP_WASMRUN) {
-            return (2, 0, 1000000, executeWasmRun);
+            return (3, 0, 1000000, executeWasmRun);
         } else if (opCode == OP_SEND) {
             return (2, 0, 100, executeSendInsn);
         } else {

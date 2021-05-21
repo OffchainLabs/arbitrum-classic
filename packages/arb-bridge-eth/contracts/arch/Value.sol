@@ -24,9 +24,9 @@ library Value {
     uint8 internal constant HASH_PRE_IMAGE_TYPECODE = 2;
     uint8 internal constant TUPLE_TYPECODE = 3;
     uint8 internal constant BUFFER_TYPECODE = TUPLE_TYPECODE + 9;
+    uint8 internal constant WASM_TYPECODE = TUPLE_TYPECODE + 11;
     // All values received from clients will have type codes less than the VALUE_TYPE_COUNT
-    uint8 internal constant WASM_TYPECODE = TUPLE_TYPECODE + 10;
-    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 11;
+    uint8 internal constant VALUE_TYPE_COUNT = TUPLE_TYPECODE + 12;
 
     // The following types do not show up in the marshalled format and is
     // only used for internal tracking purposes

@@ -635,6 +635,8 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
         stackPops.erase(stackPops.cbegin());
     }
 
+    std::cerr << "Got results " << stack[0] << " and " << stack[1] << "\n";
+
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
 
@@ -754,11 +756,14 @@ OneStepProof MachineState::marshalForProof() const {
     }
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
     if (current_op.immediate && !stackPops.empty()) {
+        std::cerr << "Has immediate\n";
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());
     }
 
     OneStepProof proof;
+
+    std::cerr << "Stack pops " << stackPops.size() << " op " << current_op.opcode << "\n";
 
     auto stackProof = stack.marshalForProof(stackPops, *code);
     auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
@@ -804,6 +809,8 @@ OneStepProof MachineState::marshalForProof() const {
             auto cp = compiledWasmCodePoint();
             marshalWasmCodePoint(cp, proof.buffer_proof);
         }
+
+        std::cerr << "state before " << *this << "\n";
 
     } else if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
@@ -870,6 +877,7 @@ BlockReason MachineState::runOne() {
     auto& instruction = loadCurrentInstruction();
 
     std::cerr << "running " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
+//    std::cerr << "state " << *this << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
