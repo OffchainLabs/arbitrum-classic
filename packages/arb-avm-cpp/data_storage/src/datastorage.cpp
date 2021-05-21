@@ -49,6 +49,8 @@ DataStorage::DataStorage(const std::string& db_path) {
         rocksdb::NewBlockBasedTableFactory(table_options));
     table_options.format_version = 4;
 
+    options.compression = rocksdb::CompressionType::kZSTD;
+
     // No need to keep old log files
     options.keep_log_file_num = 3;
 
@@ -59,8 +61,11 @@ DataStorage::DataStorage(const std::string& db_path) {
 
     // Settings for refcounted data table
     hashkey_cf_options = cf_options;
-    hashkey_cf_options.OptimizeForPointLookup(16);
-    hashkey_cf_options.level_compaction_dynamic_level_bytes = true;
+    //
+
+    // OptimizeForPointLookup slows down when database gets large
+    // hashkey_cf_options.OptimizeForPointLookup(16);
+    // hashkey_cf_options.level_compaction_dynamic_level_bytes = true;
 
     txn_db_path = db_path;
 
@@ -127,7 +132,8 @@ std::unique_ptr<Transaction> Transaction::makeTransaction(
 
 rocksdb::Status DataStorage::clearDBExceptInbox() {
     for (int i = 0; i < FAMILY_COLUMN_COUNT; i++) {
-        if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN || i == SEQUENCERBATCHITEM_COLUMN || i == SEQUENCERBATCH_COLUMN) {
+        if (i == DEFAULT_COLUMN || i == DELAYEDMESSAGE_COLUMN ||
+            i == SEQUENCERBATCHITEM_COLUMN || i == SEQUENCERBATCH_COLUMN) {
             continue;
         }
         auto s = txn_db->DropColumnFamily(column_handles[i]);
