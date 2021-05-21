@@ -140,14 +140,31 @@ describe('Bridge peripherals layer 1', () => {
     const prevUserBalance = await token.balanceOf(accounts[0].address)
 
     // request liquidity from them
-    await testBridge.fastWithdrawalFromL2(
-      fastExitMock.address,
-      liquidityProof,
+    const PassiveFastExitManager = await ethers.getContractFactory(
+      'PassiveFastExitManager'
+    )
+    const passiveFastExitManager = await PassiveFastExitManager.deploy()
+    await passiveFastExitManager.setBridge(testBridge.address)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'uint256', 'uint256', 'address', 'bytes', 'bytes'],
+      [
+        accounts[0].address,
+        exitNum,
+        maxFee,
+        fastExitMock.address,
+        liquidityProof,
+        '0x',
+      ]
+    )
+
+    await testBridge.transferExitAndCall(
       accounts[0].address,
       token.address,
       tokenAmount,
       exitNum,
-      maxFee
+      passiveFastExitManager.address,
+      data
     )
 
     const postUserBalance = await token.balanceOf(accounts[0].address)

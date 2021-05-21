@@ -28,7 +28,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "../arbitrum/IArbTokenBridge.sol";
 
-import "./IExitLiquidityProvider.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
 import "../../buddybridge/ethereum/L1Buddy.sol";
