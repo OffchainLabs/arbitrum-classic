@@ -606,12 +606,18 @@ uint256_t runWasmMachine(MachineState &machine_state) {
         }
         */
 
+        auto& instruction = machine_state.loadCurrentInstruction();
+        if (instruction.op.opcode == OpCode::HALT) {
+            break;
+        }
+
         block_reason = machine_state.runOne();
         if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
         }
     }    
-    return start_gas - machine_state.arb_gas_remaining - 10;
+    // return start_gas - machine_state.arb_gas_remaining - 10;
+    return start_gas - machine_state.arb_gas_remaining;
 }
 
 void MachineState::marshalWasmProof(OneStepProof &proof) const {
@@ -631,6 +637,7 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
 
     MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
     if (current_op.immediate && !stackPops.empty()) {
+        std::cerr << "??? here shouldn't be immeds\n";
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());
     }

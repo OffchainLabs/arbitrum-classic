@@ -141,6 +141,7 @@ func (c *Challenge) OneStepProveExecution(
 		bufferProof,
 		prover,
 	)
+	fmt.Printf("Error %v\n", err)
 	return errors.WithStack(err)
 }
 

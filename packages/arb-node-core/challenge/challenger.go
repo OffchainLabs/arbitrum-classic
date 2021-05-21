@@ -71,7 +71,7 @@ func (c *Challenger) HandleConflict(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if opcode == 241 {
+		if opcode == 241 || opcode == 167 || opcode == 168 {
 			// Get new lookup
 			fmt.Printf("Found wasm test, making new lookup\n")
 			storage, err := cmachine.NewArbStorage("/tmp/arbStorage2")

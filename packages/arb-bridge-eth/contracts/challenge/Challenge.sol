@@ -315,7 +315,8 @@ contract Challenge is Cloneable, IChallenge {
 
         verifySegmentProof(rootHash, _merkleNodes, _merkleRoute);
 
-        if (kludge1 == 0) {
+        if (kludge1 == 0 && kludge2 == 0) {
+            require(false, "?????");
             emit OneStepProofCompleted();
             _currentWin();
         } else {
