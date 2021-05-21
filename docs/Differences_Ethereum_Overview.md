@@ -1,14 +1,15 @@
 ---
 id: Differences_Overview
-title: Overview
+sidebar_label: Overview
+title: Overview of Differences with Ethereum
 custom_edit_url: https://github.com/OffchainLabs/arbitrum/edit/master/docs/Differences_Ethereum_Overview.md
 ---
 
 Arbitrum rollups aim to mantain compatibility with Ethereum. Smart contracts are compatible on the bytecode level, but there are certain aspects of the system that work differently to the EVM.
 
 Some of the opcodes have slightly different behaviours, as seen in [Solidity Support](Solidity_Support.md).  
-Concepts such as [Time](Time_In_Arbitrum.md) and [Gas](ArbGas.md) play out differently in Layer 2.  
-Other differences are [cool extra features](Special_Features.md) we squeezed in.
+Concepts such as [Time in Arbitrum](Time_in_Arbitrum.md) and [Gas](ArbGas.md) play out differently in Layer 2.  
+Other differences are cool [Special Features](Special_Features.md) we squeezed in.
 
 ## Ethereum Accounts
 
@@ -44,18 +45,18 @@ This includes the data from a smart contract return or the revert reason if you 
 
 #### Return Code
 
-| Return Code | Meaning                                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------------------------- |
-| 0           | Transaction success                                                                                           |
-| 1           | EVM revert                                                                                                    |
-| 2           | Arbitrum is too congested to process your transaction                                                         |
-| 3           | Not enough balance to pay for maxGas at gasPrice                                                              |
-| 4           | Not enough balance for execution                                                                              |
-| 5           | Wrong nonce used in transaction                                                                               |
-| 6           | Transaction was not formatted correctly                                                                       |
-| 7           | Cannot deploy to specified address ( ** defensive code that should never be triggered ** )                    |
-| 8           | Exceeded transaction gas limit                                                                                |
-| 9           | Amount of ArbGas provided for the tx is less than the L1 charges (the base tx charge plus L1 calldata charge) |
-| 10          | Transaction is below the minimum required arbgas                                                              |
-| 11          | Transaction set an arbgas price that was too low                                                              |
-| 255         | Unknown failure                                                                                               |
+| Return Code | Meaning                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 0           | Transaction success                                                                                                                  |
+| 1           | EVM revert                                                                                                                           |
+| 2           | Arbitrum is too congested to process your transaction                                                                                |
+| 3           | Not enough balance to pay for maxGas at gasPrice                                                                                     |
+| 4           | Not enough balance for execution                                                                                                     |
+| 5           | Wrong nonce used in transaction                                                                                                      |
+| 6           | Transaction was not formatted correctly                                                                                              |
+| 7           | Cannot deploy to specified address ( ** defensive code that should never be triggered ** )                                           |
+| 8           | Exceeded transaction gas limit                                                                                                       |
+| 9           | Amount of ArbGas provided for the tx is less than the amount required to cover L1 costs (the base tx charge plus L1 calldata charge) |
+| 10          | Transaction is below the minimum required arbgas                                                                                     |
+| 11          | Transaction set an arbgas price that was too low                                                                                     |
+| 255         | Unknown failure                                                                                                                      |
