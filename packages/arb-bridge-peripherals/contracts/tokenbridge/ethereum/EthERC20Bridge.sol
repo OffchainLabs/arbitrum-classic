@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "../libraries/ClonableBeaconProxy.sol";
 import "../libraries/TokenAddressHandler.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
@@ -44,6 +45,7 @@ import "./IEthERC20Bridge.sol";
  */
 contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     using SafeERC20 for IERC20;
+    using Address for address;
 
     address internal constant USED_ADDRESS = address(0x01);
 
@@ -135,55 +137,41 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
     }
 
     /**
-     * @notice Allows a user to redirect their right to claim a withdrawal to a liquidityProvider, in exchange for a fee.
-     * @dev This method expects the liquidityProvider to verify the liquidityProof, but it ensures the withdrawer's balance
-     * is appropriately updated. It is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity.
-     * @param liquidityProvider address of an IExitLiquidityProvider
-     * @param liquidityProof encoded data required by the liquidityProvider in order to validate a fast withdrawal.
+     * @notice Allows a user to redirect their right to claim a withdrawal to another address
+     * @dev This method also allows you to make an arbitrary call after the transfer, similar to ERC677
      * @param initialDestination address the L2 withdrawal call initially set as the destination.
      * @param erc20 L1 token address
      * @param amount token amount (should match amount in previously-initiated withdrawal)
      * @param exitNum Sequentially increasing exit counter determined by the L2 bridge
-     * @param maxFee max mount of erc20 token user will pay for fast exit
+     * @param data optional data for external call upon transfering the exit
      */
-    function fastWithdrawalFromL2(
-        address liquidityProvider,
-        bytes memory liquidityProof,
+    function transferExitAndCall(
         address initialDestination,
         address erc20,
         uint256 amount,
         uint256 exitNum,
-        uint256 maxFee
+        address to,
+        bytes calldata data
     ) external override {
-        require(
-            initialDestination == msg.sender,
-            "You must own the exit to trigger a fast withdrawal"
-        );
         bytes32 withdrawData = encodeWithdrawal(exitNum, initialDestination, erc20, amount);
+        address redirectedAddress = redirectedExits[withdrawData];
+        require(redirectedAddress != USED_ADDRESS, "ALREADY_EXITED");
 
-        require(redirectedExits[withdrawData] != USED_ADDRESS, "ALREADY_EXITED");
-        redirectedExits[withdrawData] = liquidityProvider;
+        address expectedSender =
+            redirectedAddress == address(0) ? initialDestination : redirectedAddress;
+        require(msg.sender == expectedSender, "EXPECTED_SENDER");
 
-        uint256 balancePrior = IERC20(erc20).balanceOf(initialDestination);
+        redirectedExits[withdrawData] = to;
 
-        // Liquidity provider is responsible for validating if this is a valid exit
-        IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-            initialDestination,
-            erc20,
-            amount,
-            exitNum,
-            liquidityProof
-        );
-
-        uint256 balancePost = IERC20(erc20).balanceOf(initialDestination);
-
-        // User must be sent at least (amount - maxFee) or execution reverts
-        require(
-            SafeMath.sub(balancePost, balancePrior) >= SafeMath.sub(amount, maxFee),
-            "User did not get credited with enough tokens"
-        );
-
-        emit WithdrawRedirected(initialDestination, liquidityProvider, erc20, amount, exitNum);
+        if (data.length > 0) {
+            require(to.isContract(), "TO_NOT_CONTRACT");
+            bytes4 res =
+                IExitTransferCallReceiver(to).onExitTransfered(expectedSender, amount, erc20, data);
+            require(
+                res == IExitTransferCallReceiver.onExitTransfered.selector,
+                "EXTERNAL_CALL_FAIL"
+            );
+        }
     }
 
     /**
