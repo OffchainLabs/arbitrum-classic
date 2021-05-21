@@ -1,5 +1,5 @@
 ---
-id: Developer_Quickstart
+id: User_Quickstart
 title: Arbitrum User Quickstart
 sidebar_label: User Quickstart
 custom_edit_url:https://github.com/OffchainLabs/arbitrum/edit/master/docs/Developer_Quickstart.md
