@@ -124,6 +124,7 @@ func startup() error {
 	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
 	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
+	cleanConfirmedBlocksAsOf := flagSet.Int64("clean-confirmed-blocks-as-of", 12, "if positive, erase blocks once they've been confirmed for this many L1 blocks")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
 
 	//Healthcheck Config
@@ -244,6 +245,9 @@ func startup() error {
 		return errors.Wrap(err, "error opening monitor")
 	}
 	defer mon.Close()
+	if *cleanConfirmedBlocksAsOf > 0 {
+		mon.CleanConfirmedBlocksAsOf = big.NewInt(*cleanConfirmedBlocksAsOf)
+	}
 
 	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
 	if err != nil {

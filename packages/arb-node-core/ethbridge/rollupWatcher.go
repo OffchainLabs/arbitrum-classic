@@ -38,6 +38,7 @@ import (
 
 var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
+var nodeConfirmedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
 
 func init() {
@@ -47,6 +48,7 @@ func init() {
 	}
 	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
+	nodeConfirmedID = parsedRollup.Events["NodeConfirmed"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
 }
 
@@ -229,6 +231,29 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 	}
 
 	return challenge.ChallengedNode, nil
+}
+
+func (r *RollupWatcher) LookupConfirmedLogCount(ctx context.Context, from *big.Int, to *big.Int) (*big.Int, error) {
+	var query = ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: from,
+		ToBlock:   to,
+		Addresses: []ethcommon.Address{r.address},
+		Topics:    [][]ethcommon.Hash{{nodeConfirmedID}},
+	}
+	logs, err := r.client.FilterLogs(ctx, query)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if len(logs) == 0 {
+		return nil, nil
+	}
+	ethLog := logs[len(logs)-1]
+	parsedLog, err := r.con.ParseNodeConfirmed(ethLog)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return parsedLog.AfterLogCount, nil
 }
 
 func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (*StakerInfo, error) {

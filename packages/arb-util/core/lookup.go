@@ -157,6 +157,7 @@ type ArbCore interface {
 	StartThread() bool
 	StopThread()
 	MachineIdle() bool
+	CheckpointMinLogCount(*big.Int) error
 }
 
 func GetSingleMessage(lookup ArbOutputLookup, index *big.Int) (inbox.InboxMessage, error) {

@@ -54,10 +54,11 @@ type ChainTimeGetter interface {
 }
 
 type TxDB struct {
-	Lookup    core.ArbOutputLookup
-	as        machine.NodeStore
-	chain     common.Address
-	logReader *core.LogReader
+	ArbCore         core.ArbCore
+	as              machine.NodeStore
+	chain           common.Address
+	logReader       *core.LogReader
+	retainOldBlocks *big.Int
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -76,16 +77,18 @@ func New(
 	as machine.NodeStore,
 	chain common.Address,
 	updateFrequency time.Duration,
+	retainOldBlocks *big.Int,
 ) (*TxDB, <-chan error, error) {
 	snapshotCache, err := lru.New(100)
 	if err != nil {
 		return nil, nil, err
 	}
 	db := &TxDB{
-		Lookup:        arbCore,
-		as:            as,
-		chain:         chain,
-		snapshotCache: snapshotCache,
+		ArbCore:         arbCore,
+		as:              as,
+		chain:           chain,
+		snapshotCache:   snapshotCache,
+		retainOldBlocks: retainOldBlocks,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
@@ -101,7 +104,7 @@ func (db *TxDB) GetBlockResults(block *machine.BlockInfo) (*evm.BlockInfo, []*ev
 	startLog := new(big.Int).SetUint64(block.InitialLogIndex())
 	logCount := new(big.Int).SetUint64(block.LogCount + 1)
 
-	avmLogs, err := db.Lookup.GetLogs(startLog, logCount)
+	avmLogs, err := db.ArbCore.GetLogs(startLog, logCount)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,7 +129,7 @@ func (db *TxDB) GetBlockResults(block *machine.BlockInfo) (*evm.BlockInfo, []*ev
 }
 
 func (db *TxDB) getBlockResultsUnsafe(res *evm.BlockInfo) ([]*evm.TxResult, error) {
-	avmLogs, err := db.Lookup.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
+	avmLogs, err := db.ArbCore.GetLogs(res.FirstAVMLog(), res.BlockStats.TxCount)
 	if err != nil {
 		return nil, err
 	}
@@ -302,6 +305,21 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		prevHash = prev.Header.Hash()
 	}
 
+	if db.retainOldBlocks != nil && blockInfo.BlockNum.Cmp(db.retainOldBlocks) > 0 {
+		oldNum := blockInfo.BlockNum.Uint64() - db.retainOldBlocks.Uint64()
+		old, err := db.GetBlock(oldNum)
+		if err != nil {
+			return err
+		}
+		if old == nil {
+			return errors.Errorf("trying to add block %v, but block %v header was not found", blockInfo.BlockNum.Uint64(), oldNum)
+		}
+		err = db.ArbCore.CheckpointMinLogCount(big.NewInt(int64(old.BlockLog)))
+		if err != nil {
+			return err
+		}
+	}
+
 	header := &types.Header{
 		ParentHash: prevHash,
 		Difficulty: big.NewInt(0),
@@ -353,7 +371,7 @@ func (db *TxDB) GetMessageBatch(index *big.Int) (*evm.MerkleRootResult, error) {
 	if logIndex == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(*logIndex))
+	logVal, err := core.GetZeroOrOneLog(db.ArbCore, new(big.Int).SetUint64(*logIndex))
 	if err != nil || logVal == nil {
 		return nil, err
 	}
@@ -391,7 +409,7 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	if requestCandidate == nil {
 		return nil, nil
 	}
-	logVal, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(*requestCandidate))
+	logVal, err := core.GetZeroOrOneLog(db.ArbCore, new(big.Int).SetUint64(*requestCandidate))
 	if err != nil || logVal == nil {
 		return nil, err
 	}
@@ -410,7 +428,7 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 }
 
 func (db *TxDB) GetL2Block(block *machine.BlockInfo) (*evm.BlockInfo, error) {
-	blockLog, err := core.GetZeroOrOneLog(db.Lookup, new(big.Int).SetUint64(block.BlockLog))
+	blockLog, err := core.GetZeroOrOneLog(db.ArbCore, new(big.Int).SetUint64(block.BlockLog))
 	if err != nil || blockLog == nil {
 		return nil, err
 	}
@@ -437,7 +455,7 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	totalLogCountBig, err := db.Lookup.GetLogCount()
+	totalLogCountBig, err := db.ArbCore.GetLogCount()
 	if err != nil {
 		return nil, err
 	}
@@ -460,7 +478,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if found {
 		return cachedSnap.(*snapshot.Snapshot), nil
 	}
-	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
+	mach, err := db.ArbCore.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
 	}

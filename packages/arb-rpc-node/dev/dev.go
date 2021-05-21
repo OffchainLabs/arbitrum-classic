@@ -78,7 +78,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, params protoc
 	l1 := NewL1Emulator()
 	backendCore := NewBackendCore(ctx, mon.Core, signer.ChainID())
 
-	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond, nil)
 	if err != nil {
 		mon.Close()
 		return nil, nil, [20]byte{}, nil, nil, errors.Wrap(err, "error opening txdb")

@@ -35,15 +35,17 @@ import (
 
 type InboxReader struct {
 	// Only in run thread
-	delayedBridge      *ethbridge.DelayedBridgeWatcher
-	sequencerInbox     *ethbridge.SequencerInboxWatcher
-	db                 core.ArbCore
-	firstMessageBlock  *big.Int
-	caughtUp           bool
-	caughtUpTarget     *big.Int
-	healthChan         chan nodehealth.Log
-	lastAcc            common.Hash
-	sequencerFeedQueue []broadcaster.SequencerFeedItem
+	rollup                   *ethbridge.RollupWatcher
+	delayedBridge            *ethbridge.DelayedBridgeWatcher
+	sequencerInbox           *ethbridge.SequencerInboxWatcher
+	db                       core.ArbCore
+	firstMessageBlock        *big.Int
+	caughtUp                 bool
+	caughtUpTarget           *big.Int
+	healthChan               chan nodehealth.Log
+	lastAcc                  common.Hash
+	sequencerFeedQueue       []broadcaster.SequencerFeedItem
+	cleanConfirmedBlocksAsOf *big.Int
 
 	// Only in main thread
 	running    bool
@@ -58,25 +60,29 @@ type InboxReader struct {
 
 func NewInboxReader(
 	ctx context.Context,
+	rollup *ethbridge.RollupWatcher,
 	bridge *ethbridge.DelayedBridgeWatcher,
 	sequencerInbox *ethbridge.SequencerInboxWatcher,
 	db core.ArbCore,
 	healthChan chan nodehealth.Log,
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
+	cleanConfirmedBlocksAsOf *big.Int,
 ) (*InboxReader, error) {
 	firstMessageBlock, err := bridge.LookupMessageBlock(ctx, big.NewInt(0))
 	if err != nil {
 		return nil, err
 	}
 	return &InboxReader{
-		delayedBridge:     bridge,
-		sequencerInbox:    sequencerInbox,
-		db:                db,
-		firstMessageBlock: firstMessageBlock.Height.AsInt(),
-		completed:         make(chan bool, 1),
-		caughtUpChan:      make(chan bool, 1),
-		healthChan:        healthChan,
-		BroadcastFeed:     broadcastFeed,
+		rollup:                   rollup,
+		delayedBridge:            bridge,
+		sequencerInbox:           sequencerInbox,
+		db:                       db,
+		firstMessageBlock:        firstMessageBlock.Height.AsInt(),
+		completed:                make(chan bool, 1),
+		caughtUpChan:             make(chan bool, 1),
+		healthChan:               healthChan,
+		BroadcastFeed:            broadcastFeed,
+		cleanConfirmedBlocksAsOf: cleanConfirmedBlocksAsOf,
 	}, nil
 }
 
@@ -271,6 +277,20 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					}
 				}
 				from = from.Add(to, big.NewInt(1))
+			}
+			if ir.cleanConfirmedBlocksAsOf != nil && from.Cmp(ir.cleanConfirmedBlocksAsOf) > 0 {
+				confFrom := new(big.Int).Sub(from, ir.cleanConfirmedBlocksAsOf)
+				confTo := new(big.Int).Sub(to, ir.cleanConfirmedBlocksAsOf)
+				logCount, err := ir.rollup.LookupConfirmedLogCount(ctx, confFrom, confTo)
+				if err != nil {
+					return err
+				}
+				if logCount != nil {
+					err = ir.db.CheckpointMinLogCount(logCount)
+					if err != nil {
+						return err
+					}
+				}
 			}
 		}
 		sleepChan := time.After(time.Second * 5)

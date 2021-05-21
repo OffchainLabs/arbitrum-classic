@@ -93,6 +93,7 @@ func startup() error {
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
 	fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
+	retainOldBlocks := fs.Int64("retain-old-blocks", 0, "if positive, only keep the N latest blocks")
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
@@ -289,7 +290,11 @@ func startup() error {
 		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 100*time.Millisecond)
+	var bigRetainOldBlocks *big.Int
+	if *retainOldBlocks > 0 {
+		bigRetainOldBlocks = big.NewInt(*retainOldBlocks)
+	}
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 100*time.Millisecond, bigRetainOldBlocks)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}

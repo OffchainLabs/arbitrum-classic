@@ -18,6 +18,7 @@ package monitor
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -36,13 +37,14 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
 
 type Monitor struct {
-	Storage machine.ArbStorage
-	Core    core.ArbCore
-	Reader  *InboxReader
+	Storage                  machine.ArbStorage
+	Core                     core.ArbCore
+	Reader                   *InboxReader
+	CleanConfirmedBlocksAsOf *big.Int
 }
 
 func NewMonitor(dbDir string, contractFile string) (*Monitor, error) {
-	storage, err := cmachine.NewArbStorage(dbDir)
+	storage, err := cmachine.NewArbStorage(dbDir, big.NewInt(0))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +101,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerFeed)
+	reader, err := NewInboxReader(ctx, rollup, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerFeed, m.CleanConfirmedBlocksAsOf)
 	if err != nil {
 		return nil, err
 	}

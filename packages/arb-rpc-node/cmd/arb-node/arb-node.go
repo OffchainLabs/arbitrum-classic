@@ -116,6 +116,7 @@ func startup() error {
 	feedOutputPingInterval := fs.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
 	feedOutputTimeout := fs.Duration("feedoutput.timeout", 15*time.Second, "number of seconds for timeout")
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+	retainOldBlocks := fs.Int64("retain-old-blocks", 0, "if positive, only keep the N latest blocks")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
@@ -266,7 +267,11 @@ func startup() error {
 		}
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	var bigRetainOldBlocks *big.Int
+	if *retainOldBlocks > 0 {
+		bigRetainOldBlocks = big.NewInt(*retainOldBlocks)
+	}
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond, bigRetainOldBlocks)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}

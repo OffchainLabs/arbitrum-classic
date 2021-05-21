@@ -24,9 +24,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 
+	"math/big"
+
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -130,7 +131,7 @@ func (m *Server) GetMachineBlockResults(block *machine.BlockInfo) (*evm.BlockInf
 }
 
 func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64) (*evm.TxResult, error) {
-	avmLog, err := core.GetZeroOrOneLog(m.db.Lookup, new(big.Int).SetUint64(res.InitialLogIndex()+index))
+	avmLog, err := core.GetZeroOrOneLog(m.db.ArbCore, new(big.Int).SetUint64(res.InitialLogIndex()+index))
 	if err != nil || avmLog == nil {
 		return nil, err
 	}
