@@ -1774,7 +1774,15 @@ ArbCore::getClosestExecutionMachine(ReadTransaction& tx,
             return std::get<rocksdb::Status>(checkpoint_result);
         }
 
-        return ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+        auto cursor =
+            ExecutionCursor(std::get<MachineStateKeys>(checkpoint_result));
+        if (cursor.getTotalMessagesRead() == 0 &&
+            total_gas_used - cursor.getOutput().arb_gas_used >
+                checkpoint_load_gas_cost) {
+            // The checkpoint we're looking for has presumably been deleted
+            return rocksdb::Status::NotFound();
+        }
+        return cursor;
     }
 }
 
@@ -2692,13 +2700,6 @@ ValueResult<std::unique_ptr<Machine>> ArbCore::getMachineForSideload(
         gas_target = position_res.data;
         execution_cursor = std::make_unique<ExecutionCursor>(
             std::get<ExecutionCursor>(closest_checkpoint));
-
-        if (execution_cursor->getTotalMessagesRead() == 0 &&
-            gas_target - execution_cursor->getOutput().arb_gas_used >
-                checkpoint_load_gas_cost) {
-            // The checkpoint we're looking for has presumably been deleted
-            return {rocksdb::Status::NotFound(), nullptr};
-        }
     }
 
     auto status = advanceExecutionCursorImpl(*execution_cursor, gas_target,
