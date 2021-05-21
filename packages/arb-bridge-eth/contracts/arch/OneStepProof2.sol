@@ -754,8 +754,8 @@ contract OneStepProof2 is OneStepProofCommon {
         pushVal(context.stack, mkPair(stackVals[1], stackVals[0]));
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
-        require(context.startState == 0xb0433db4cf3783d418ea2618aa80dedaa18348efa9ce16fc9e4e9a7ea3ac31c3, "whats this?");
-        require(context.endState == 0xdb99063852d1435dbce6d181fda4e157236e9f3cd35b76088898fe1b222354e5, "end state bad");
+        // require(context.startState == 0xb0433db4cf3783d418ea2618aa80dedaa18348efa9ce16fc9e4e9a7ea3ac31c3, "whats this?");
+        // require(context.endState == 0xdb99063852d1435dbce6d181fda4e157236e9f3cd35b76088898fe1b222354e5, "end state bad");
         context.nextLength = len;
     }
 
