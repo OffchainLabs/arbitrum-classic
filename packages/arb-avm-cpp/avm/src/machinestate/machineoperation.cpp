@@ -1040,8 +1040,10 @@ void wasm_compile(MachineState& m) {
     m.stack.prepForMod(2);
     auto len = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
-    std::cerr << "compiling " << md << " len " << len << "\n";
-    auto res = m.compile.run_wasm(md, len);
+    std::cerr << "compiling " << md << " len " << len << "...\n";
+    RunWasm compiler{"/home/sami/arbitrum/compiler.wasm"};
+    auto res = compiler.run_wasm(md, len);
+    // auto res = m.compile.run_wasm(md, len);
     std::cerr << "compile success\n";
 
     auto bytes = buf2vec(res.buffer, res.buffer_len);

@@ -59,6 +59,32 @@ func TestWasmChallenge(t *testing.T) {
 	)
 }
 
+func TestWasmRunChallenge(t *testing.T) {
+	messages := []inbox.InboxMessage{makeInitMsg()}
+	startGas := big.NewInt(0)
+	endGas := big.NewInt(2005657)
+	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arbitrum/wasm-run.mexe")
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(2000000)}
+	defer shutdown()
+	faultyCore := NewFaultyCore(arbCore, faultConfig)
+
+	challengedNode, err := initializeChallengeData(t, faultyCore, startGas, endGas)
+	if err != nil {
+		t.Fatal("Error with initializeChallengeData")
+	}
+
+	time := big.NewInt(100)
+	executeChallenge(
+		t,
+		challengedNode,
+		time,
+		time,
+		arbCore,
+		faultyCore,
+		false,
+	)
+}
+
 func TestChallengeToOSP(t *testing.T) {
 	runExecutionTest(t, []inbox.InboxMessage{}, big.NewInt(0), big.NewInt(400*2), FaultConfig{DistortMachineAtGas: big.NewInt(1)}, false)
 }
