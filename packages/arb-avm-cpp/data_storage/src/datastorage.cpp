@@ -33,6 +33,8 @@ DataStorage::DataStorage(const std::string& db_path) {
     options.create_if_missing = true;
     options.create_missing_column_families = true;
 
+    options.compression = rocksdb::CompressionType::kZSTD;
+    cf_options.compression = rocksdb::CompressionType::kZSTD;
     cf_options.target_file_size_multiplier = 10;
 
     // As recommended for new applications by
@@ -48,8 +50,6 @@ DataStorage::DataStorage(const std::string& db_path) {
     options.table_factory.reset(
         rocksdb::NewBlockBasedTableFactory(table_options));
     table_options.format_version = 4;
-
-    options.compression = rocksdb::CompressionType::kZSTD;
 
     // No need to keep old log files
     options.keep_log_file_num = 3;
