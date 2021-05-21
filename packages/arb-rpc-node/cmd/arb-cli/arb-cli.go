@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -36,11 +37,26 @@ type Config struct {
 
 var config *Config
 
+func waitForTx(tx *types.Transaction, method string) error {
+	fmt.Println("Waiting for receipt")
+	_, err := ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, method)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
 type upgrade struct {
 	Instructions []string `json:"instructions"`
 }
 
-func upgradeArbOS(upgradeFile string) error {
+func upgradeArbOS(upgradeFile string, targetMexe string) error {
+	targetMach, err := cmachine.New(targetMexe)
+	if err != nil {
+		return err
+	}
+
 	updateBytes, err := ioutil.ReadFile(upgradeFile)
 	if err != nil {
 		return err
@@ -63,14 +79,21 @@ func upgradeArbOS(upgradeFile string) error {
 	if err != nil {
 		return err
 	}
-	_, err = arbOwner.StartCodeUpload(config.auth)
+	tx, err := arbOwner.StartCodeUpload(config.auth)
 	if err != nil {
 		return err
 	}
+	if err := waitForTx(tx, "StartCodeUpload"); err != nil {
+		return err
+	}
 
+	fmt.Println("Submitting upgrade in", len(chunks), "chunks")
 	for _, upgradeChunk := range chunks {
-		_, err = arbOwner.ContinueCodeUpload(config.auth, hexutil.MustDecode(upgradeChunk))
+		tx, err = arbOwner.ContinueCodeUpload(config.auth, hexutil.MustDecode(upgradeChunk))
 		if err != nil {
+			return err
+		}
+		if err := waitForTx(tx, "ContinueCodeUpload"); err != nil {
 			return err
 		}
 	}
@@ -79,9 +102,15 @@ func upgradeArbOS(upgradeFile string) error {
 	if err != nil {
 		return err
 	}
+	if codeHash != targetMach.CodePointHash() {
+		return errors.New("incorrect code segment uploaded")
+	}
 
-	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, codeHash)
+	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, targetMach.CodePointHash())
 	if err != nil {
+		return err
+	}
+	if err := waitForTx(tx, "FinishCodeUploadAsArbosUpgrade"); err != nil {
 		return err
 	}
 	return nil
@@ -268,10 +297,10 @@ func handleCommand(fields []string) error {
 		}
 		return feeInfo(blockNum)
 	case "upgrade":
-		if len(fields) != 2 {
-			return errors.New("Expected file argument")
+		if len(fields) != 3 {
+			return errors.New("Expected upgrade file and target mexe arguments")
 		}
-		return upgradeArbOS(fields[1])
+		return upgradeArbOS(fields[1], fields[2])
 	case "version":
 		return version()
 	default:
