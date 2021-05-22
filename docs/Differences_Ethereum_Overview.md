@@ -19,9 +19,9 @@ Every transaction submitted to Arbitrum will burn a nonce, except if the transac
 
 ### L1 to L2 Deposits
 
-Ether can be depositted using two methods: retryable transactions or L2 funded by L1 transactions. For end users these behave similarly, but have subtle differences.
+Ether can be depositted using two methods: [retryable transactions](L1_L2_Messages.md) or L2 funded by L1 transactions. For end users these behave similarly, but have subtle differences.
 
-When depositing funds it is possible to send ether into a contract address without executing its fallback function - a scenario similar to when contracts _self destruct_ sending funds to a contract address.
+When depositing funds it is possible to send ether into a contract address without executing its fallback function - a scenario similar to when contracts _self destruct_, sending funds to a contract address.
 
 ## JSON RPC API
 
@@ -37,7 +37,7 @@ The Layer 1 block number for the transaction, as specified in [Time in Arbitrum]
 
 #### Fee Stats
 
-An object summarising fee charges for the current transaction. It includes the units used, price paid, and price per unit.
+An object summarizing fee charges for the current transaction. It includes the units used, price paid, and price per unit.
 
 #### Return Data
 
