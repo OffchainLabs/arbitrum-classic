@@ -122,11 +122,14 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan BatchItemAndPre
 		}
 
 		if res.Version == 2 {
+			// TODO: check signature
 			var prevAcc common.Hash
 			if res.SequencedMetadata != nil {
 				prevAcc = res.SequencedMetadata.PrevAcc
 			}
-			// TODO: check signature
+			for _, message := range res.DelayedMessages {
+				delayedMessageReceiver <- message
+			}
 			for _, message := range res.Messages {
 				messageReceiver <- BatchItemAndPrevAcc{
 					BatchItem: message,

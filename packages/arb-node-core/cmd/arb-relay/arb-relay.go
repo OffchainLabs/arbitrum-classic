@@ -161,15 +161,15 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 				return
 			case msg := <-messages:
 				if debug {
-					logger.Info().Hex("acc", msg.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
+					logger.Info().Hex("acc", msg.BatchItem.Accumulator.Bytes()).Msg("batch sent")
 				}
-				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
+				err = ar.broadcaster.Broadcast(msg.PrevAcc, msg.BatchItem, msg.Signature)
 				if err != nil {
 					logger.
 						Error().
 						Err(err).
-						Hex("PrevAcc", msg.FeedItem.PrevAcc.Bytes()).
-						Hex("BatchItem", msg.FeedItem.BatchItem.ToBytesWithSeqNum()).
+						Hex("PrevAcc", msg.PrevAcc.Bytes()).
+						Hex("BatchItem", msg.BatchItem.ToBytesWithSeqNum()).
 						Msg("unable to broadcast batch item")
 				}
 			case ca := <-ar.broadcastClient.ConfirmedAccumulatorListener:
