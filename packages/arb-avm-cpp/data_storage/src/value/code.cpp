@@ -80,14 +80,6 @@ std::vector<RawCodePoint> extractRawCodeSegment(
     return cps;
 }
 
-void serializeCodePoint(const CodePoint& cp,
-                        std::vector<unsigned char>& serialized_code) {
-    // Ignore referemces to other code segments
-    serialized_code.push_back(cp.op.immediate ? 1 : 0);
-    serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
-    marshal_uint256_t(cp.nextHash, serialized_code);
-}
-
 std::vector<unsigned char> prepareToSaveCodeSegment(
     ReadWriteTransaction& tx,
     const CodeSegmentSnapshot& snapshot,
@@ -118,11 +110,21 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
     val.Reset();
 
     for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
-        auto cp = snapshot.segment->loadCodePoint(i);
-        serializeCodePoint(cp, serialized_code);
-        if (cp.op.immediate) {
-            auto values = serializeValue(*cp.op.immediate, serialized_code,
-                                         segment_counts);
+        if (i > 1 && i % 10 == 0) {
+            auto cp = snapshot.segment->loadCodePoint(i);
+            serialized_code.push_back(cp.op.immediate ? 1 : 0);
+            serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
+            marshal_uint256_t(cp.nextHash, serialized_code);
+        } else {
+            auto& op = snapshot.segment->loadOperation(i);
+            serialized_code.push_back(op.immediate ? 1 : 0);
+            serialized_code.push_back(static_cast<unsigned char>(op.opcode));
+            marshal_uint256_t(0, serialized_code);
+        }
+        auto& op = snapshot.segment->loadOperation(i);
+        if (op.immediate) {
+            auto values =
+                serializeValue(*op.immediate, serialized_code, segment_counts);
             // Save the immediate values, that weren't already saved for this
             // code segment
             for (const auto& val : values) {

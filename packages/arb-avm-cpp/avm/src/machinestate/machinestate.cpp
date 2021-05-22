@@ -490,10 +490,9 @@ BlockReason MachineState::runOne() {
     bool is_valid_instruction =
         instructionValidity()[static_cast<size_t>(op.opcode)];
 
-    uint64_t stack_arg_count =
-        is_valid_instruction ? InstructionStackPops.at(op.opcode).size() : 0;
+    uint64_t stack_arg_count = stackArgCount()[static_cast<size_t>(op.opcode)];
     uint64_t auxstack_arg_count =
-        is_valid_instruction ? InstructionAuxStackPops.at(op.opcode).size() : 0;
+        auxstackArgCount()[static_cast<size_t>(op.opcode)];
 
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
