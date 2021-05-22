@@ -192,6 +192,7 @@ struct MachineState {
 
    private:
     void marshalBufferProof(OneStepProof& proof) const;
+    uint256_t gasCost(const Operation& op) const;
 };
 
 #endif /* machinestate_hpp */
