@@ -34,6 +34,10 @@ struct LoadedExecutable;
 // when you initially load it
 class CodeSegment {
     uint64_t segment_id;
+    static_assert(std::is_nothrow_move_constructible<Operation>::value,
+                  "Operation should be noexcept MoveConstructible");
+    static_assert(std::is_nothrow_move_constructible<uint256_t>::value,
+                  "uint256_t should be noexcept MoveConstructible");
     std::vector<Operation> operations;
     std::vector<uint256_t> cached_hashes;
     uint256_t prev_hash;
