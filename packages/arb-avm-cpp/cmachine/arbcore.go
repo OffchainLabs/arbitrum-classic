@@ -140,6 +140,15 @@ func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
+func (ac *ArbCore) GetDelayedMessageCount() (*big.Int, error) {
+	result := C.arbCoreGetDelayedMessageCount(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
 	result := C.arbCoreGetTotalDelayedMessagesSequenced(ac.c)
 	if result.found == 0 {
@@ -212,6 +221,29 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 		}
 	}
 
+	return messages, nil
+}
+
+func (ac *ArbCore) GetDelayedMessages(startIndex *big.Int, count *big.Int) ([]inbox.DelayedMessage, error) {
+	startIndexData := math.U256Bytes(startIndex)
+	countData := math.U256Bytes(count)
+
+	result := C.arbCoreGetDelayedMessages(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
+	if result.found == 0 {
+		return nil, errors.New("failed to get messages")
+	}
+
+	data := receiveByteSliceArray(result.array)
+	messages := make([]inbox.DelayedMessage, len(data))
+	for i, slice := range data {
+		var acc common.Hash
+		copy(acc[:], slice[32:64])
+		messages[i] = inbox.DelayedMessage{
+			DelayedSequenceNumber: new(big.Int).SetBytes(slice[:32]),
+			DelayedAccumulator:    acc,
+			Message:               slice[64:],
+		}
+	}
 	return messages, nil
 }
 

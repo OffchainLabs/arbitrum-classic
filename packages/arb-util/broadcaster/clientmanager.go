@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"math/big"
 	"net"
 	"sync"
 	"time"
@@ -42,7 +43,9 @@ type ClientManagerSettings struct {
 type ClientManager struct {
 	mu                sync.RWMutex
 	clientPtrMap      map[*ClientConnection]bool
-	broadcastMessages []*BroadcastFeedMessage
+	delayedMessages   []inbox.DelayedMessage
+	sequencerItems    []inbox.SequencerBatchItem
+	sequencedMetadata SequencedMetadata
 	pool              *gopool.Pool
 	poller            netpoll.Poller
 	out               chan []byte
@@ -68,9 +71,18 @@ func (cm *ClientManager) Register(ctx context.Context, conn net.Conn, desc *netp
 
 		cm.clientPtrMap[clientConnection] = true
 
-		if len(cm.broadcastMessages) > 0 {
+		if len(cm.sequencerItems) > 0 {
+			var seqMetadataPtr *SequencedMetadata
+			if cm.sequencedMetadata.PrevAcc != (common.Hash{}) {
+				seqMetadataPtr = &cm.sequencedMetadata
+			}
 			// send the newly connected client all the messages we've got...
-			bm := BroadcastMessage{Version: 1, Messages: cm.broadcastMessages}
+			bm := BroadcastMessage{
+				Version:           1,
+				DelayedMessages:   cm.delayedMessages,
+				Messages:          cm.sequencerItems,
+				SequencedMetadata: seqMetadataPtr,
+			}
 
 			_ = clientConnection.write(bm)
 		}
@@ -110,29 +122,47 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 }
 
 // ConfirmedAccumulator clears out entry that matches accumulator and all older entries
-func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
+func (cm *ClientManager) confirmedAccumulators(accumulators [2]common.Hash) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	for i, msg := range cm.broadcastMessages {
-		if msg.FeedItem.BatchItem.Accumulator == accumulator {
-			// This entry was confirmed, so this and all previous messages should be removed from cache
-			unconfirmedIndex := i + 1
-			if unconfirmedIndex >= len(cm.broadcastMessages) {
-				//  Nothing newer, so clear entire cache
-				cm.broadcastMessages = cm.broadcastMessages[:0]
-			} else {
-				cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
+	seqAcc := accumulators[0]
+	if seqAcc != (common.Hash{}) {
+		for i, msg := range cm.sequencerItems {
+			if msg.Accumulator == seqAcc {
+				// This entry was confirmed, so this and all previous messages should be removed from cache
+				unconfirmedIndex := i + 1
+				if unconfirmedIndex >= len(cm.sequencerItems) {
+					//  Nothing newer, so clear entire cache
+					cm.sequencerItems = cm.sequencerItems[:0]
+				} else {
+					cm.sequencedMetadata.PrevAcc = seqAcc
+					cm.sequencerItems = cm.sequencerItems[unconfirmedIndex:]
+				}
+				break
 			}
-			break
 		}
 	}
 
-	bm := BroadcastMessage{Version: 1}
-	bm.ConfirmedAccumulator = ConfirmedAccumulator{
-		IsConfirmed: true,
-		Accumulator: accumulator,
+	delayedAcc := accumulators[1]
+	if delayedAcc != (common.Hash{}) {
+		for i, msg := range cm.delayedMessages {
+			if msg.DelayedAccumulator == delayedAcc {
+				// This entry was confirmed, so this and all previous messages should be removed from cache
+				unconfirmedIndex := i + 1
+				if unconfirmedIndex >= len(cm.delayedMessages) {
+					//  Nothing newer, so clear entire cache
+					cm.delayedMessages = cm.delayedMessages[:0]
+				} else {
+					cm.delayedMessages = cm.delayedMessages[unconfirmedIndex:]
+				}
+				break
+			}
+		}
 	}
+
+	bm := BroadcastMessage{Version: 2}
+	bm.ConfirmedAccumulators = &accumulators
 
 	var buf bytes.Buffer
 	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
@@ -151,52 +181,68 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
 }
 
 // Broadcast sends message to all clients.
-func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
+func (cm *ClientManager) Broadcast(prevAcc common.Hash, delayedMessages []inbox.DelayedMessage, batchItems []inbox.SequencerBatchItem, signature []byte) error {
 	var buf bytes.Buffer
 
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
+	if len(batchItems) > 0 {
+		logger.Debug().Hex("acc", batchItems[len(batchItems)-1].Accumulator.Bytes()).Int("count", len(batchItems)).Msg("sending batch items")
+	}
 
 	writer := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(writer)
-
-	var broadcastMessages []*BroadcastFeedMessage
-
-	msg := BroadcastFeedMessage{
-		FeedItem:  SequencerFeedItem{BatchItem: batchItem, PrevAcc: prevAcc},
-		Signature: signature,
-	}
-
-	broadcastMessages = append(broadcastMessages, &msg)
 
 	// also add this to our global list for broadcasting to clients when connecting
 	{
 		cm.mu.Lock()
 
-		if len(cm.broadcastMessages) == 0 {
-			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
-		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == prevAcc {
-			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
-		} else {
-			// We need to do a re-org
-			logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
-			i := len(cm.broadcastMessages) - 1
-			for ; i >= 0; i-- {
-				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == prevAcc {
-					cm.broadcastMessages = append(cm.broadcastMessages[:i+1], &msg)
-					break
+		if len(delayedMessages) > 0 {
+			var cmDelayedCount *big.Int
+			if len(cm.delayedMessages) == 0 {
+				cmDelayedCount = big.NewInt(0)
+			} else {
+				cmDelayedCount = new(big.Int).Add(cm.delayedMessages[len(cm.delayedMessages)-1].DelayedSequenceNumber, big.NewInt(1))
+			}
+			diff := new(big.Int).Sub(cmDelayedCount, delayedMessages[0].DelayedSequenceNumber)
+			if diff.Sign() != 0 {
+				logger.Debug().Str("prevCount", cmDelayedCount.String()).Str("newSeqNum", delayedMessages[0].DelayedSequenceNumber.String()).Int("cacheCount", len(cm.delayedMessages)).Msg("broadcaster delayed reorg")
+				if diff.Sign() > 0 && diff.IsInt64() && diff.Int64() <= int64(len(cm.delayedMessages)) {
+					// Go back to where the sequence numbers match up
+					newPos := len(cm.delayedMessages) - int(diff.Int64())
+					cm.delayedMessages = cm.delayedMessages[:newPos]
+				} else {
+					// The sequence numbers don't match up anywhere, clear our cache
+					cm.delayedMessages = cm.delayedMessages[:0]
 				}
 			}
-
-			if i == -1 {
-				// Don't use anything in existing slice
-				cm.broadcastMessages = append(cm.broadcastMessages[:0], &msg)
-			}
+			cm.delayedMessages = append(cm.delayedMessages, delayedMessages...)
 		}
+
+		if len(cm.sequencerItems) > 0 {
+			if len(batchItems) > 0 && cm.sequencerItems[len(cm.sequencerItems)-1].Accumulator != prevAcc {
+				// We need to do a re-org
+				logger.Debug().Hex("prevAcc", prevAcc.Bytes()).Hex("acc", batchItems[0].Accumulator.Bytes()).Msg("broadcaster reorg")
+				i := len(cm.sequencerItems) - 1
+				for ; i >= 0; i-- {
+					if cm.sequencerItems[i].Accumulator == prevAcc {
+						cm.sequencerItems = cm.sequencerItems[:i+1]
+						break
+					}
+				}
+
+				if i == -1 {
+					// Don't use anything in existing slice
+					cm.sequencerItems = cm.sequencerItems[:0]
+				}
+			}
+			cm.sequencedMetadata.Signature = signature
+			cm.sequencedMetadata.PrevAcc = prevAcc
+		}
+		cm.sequencerItems = append(cm.sequencerItems, batchItems...)
 
 		cm.mu.Unlock()
 	}
 
-	bm := BroadcastMessage{Version: 1, Messages: broadcastMessages}
+	bm := BroadcastMessage{Version: 2, DelayedMessages: delayedMessages, Messages: batchItems}
 
 	if err := encoder.Encode(bm); err != nil {
 		return err
@@ -207,7 +253,9 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 
 	cm.out <- buf.Bytes()
 
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("batch item queued")
+	if len(batchItems) > 0 {
+		logger.Debug().Int("count", len(batchItems)).Hex("acc", batchItems[len(batchItems)-1].Accumulator.Bytes()).Msg("batch items queued")
+	}
 
 	return nil
 }

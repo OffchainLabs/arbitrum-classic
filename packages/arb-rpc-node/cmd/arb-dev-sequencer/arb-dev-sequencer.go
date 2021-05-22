@@ -28,7 +28,9 @@ import (
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -223,10 +225,11 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	dummySequencerFeed := make(chan broadcastclient.BatchItemAndPrevAcc)
+	dummyDelayedFeed := make(chan inbox.DelayedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, nil, dummySequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, nil, dummySequencerFeed, dummyDelayedFeed)
 		if err == nil {
 			break
 		}

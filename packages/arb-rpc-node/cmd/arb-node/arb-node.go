@@ -31,6 +31,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/pkg/errors"
 
@@ -129,13 +130,14 @@ func startup() error {
 		return err
 	}
 
-	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
+	sequencerFeed := make(chan broadcastclient.BatchItemAndPrevAcc)
+	delayedFeed := make(chan inbox.DelayedMessage)
 	if !*sequencerMode {
 		if *sequencerURL == "" {
 			logger.Warn().Msg("Missing --sequencer-url so not subscribing to feed")
 		} else {
 			broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
-			sequencerFeed, err = broadcastClient.Connect()
+			sequencerFeed, delayedFeed, err = broadcastClient.Connect()
 			if err != nil {
 				log.Fatal().Err(err).Msg("unable to start broadcastclient")
 			}
@@ -194,7 +196,7 @@ func startup() error {
 
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed, delayedFeed)
 		if err == nil {
 			break
 		}

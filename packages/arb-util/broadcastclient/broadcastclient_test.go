@@ -55,7 +55,7 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 		t.Errorf("Can not connect: %v\n", err)
 	}
 
-	accListener := broadcastClient.ConfirmedAccumulatorListener
+	accListener := broadcastClient.ConfirmedAccumulatorsListener
 
 	for {
 		select {

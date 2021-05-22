@@ -21,23 +21,15 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
-type ConfirmedAccumulator struct {
-	IsConfirmed bool        `json:"isConfirmed"`
-	Accumulator common.Hash `json:"accumulator"`
-}
-
-type BroadcastFeedMessage struct {
-	FeedItem  SequencerFeedItem `json:"feedItem"`
-	Signature []byte            `json:"signature"`
-}
-
-type SequencerFeedItem struct {
-	BatchItem inbox.SequencerBatchItem `json:"batchItem"`
-	PrevAcc   common.Hash              `json:"prevAcc"`
+type SequencedMetadata struct {
+	Signature []byte      `json:"signature"`
+	PrevAcc   common.Hash `json:"prevAcc"`
 }
 
 type BroadcastMessage struct {
-	Version              int                     `json:"version"`
-	Messages             []*BroadcastFeedMessage `json:"messages"`
-	ConfirmedAccumulator ConfirmedAccumulator    `json:"confirmedAccumulator"`
+	Version               int                        `json:"version"`
+	Messages              []inbox.SequencerBatchItem `json:"messages"`
+	DelayedMessages       []inbox.DelayedMessage     `json:"delayedMessages"`
+	ConfirmedAccumulators *[2]common.Hash            `json:"confirmedAccumulators"`
+	SequencedMetadata     *SequencedMetadata         `json:"sequencerMetadata"`
 }

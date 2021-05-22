@@ -37,6 +37,9 @@ type ArbOutputLookup interface {
 	GetMessageCount() (*big.Int, error)
 	GetMessages(startIndex, count *big.Int) ([]inbox.InboxMessage, error)
 
+	GetDelayedMessageCount() (*big.Int, error)
+	GetDelayedMessages(startIndex, count *big.Int) ([]inbox.DelayedMessage, error)
+
 	GetSequencerBatchItems(startIndex, count *big.Int) ([]inbox.SequencerBatchItem, error)
 
 	GetTotalDelayedMessagesSequenced() (*big.Int, error)

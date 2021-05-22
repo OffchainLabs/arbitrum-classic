@@ -259,29 +259,17 @@ func (b *Broadcaster) ClientConnectionCount() int {
 	return b.clientManager.ClientConnectionCount()
 }
 
-func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
-	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
-}
-
-func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.SequencerBatchItem, dataSigner func([]byte) ([]byte, error)) error {
-	for _, item := range batchItems {
-		signature, err := dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(item.Accumulator)).Bytes())
+func (b *Broadcaster) Broadcast(prevAcc common.Hash, delayedItems []inbox.DelayedMessage, batchItems []inbox.SequencerBatchItem, dataSigner func([]byte) ([]byte, error)) error {
+	var signature []byte
+	if len(batchItems) > 0 {
+		var err error
+		signature, err = dataSigner(hashing.SoliditySHA3WithPrefix(hashing.Bytes32(batchItems[len(batchItems)-1].Accumulator)).Bytes())
 		if err != nil {
 			return err
 		}
-
-		err = b.BroadcastSingle(prevAcc, item, signature)
-		if err != nil {
-			return err
-		}
-		prevAcc = item.Accumulator
 	}
 
-	return nil
-}
-
-func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {
-	err := b.clientManager.confirmedAccumulator(accumulator)
+	err := b.clientManager.Broadcast(prevAcc, delayedItems, batchItems, signature)
 	if err != nil {
 		return err
 	}
@@ -289,9 +277,13 @@ func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {
 	return nil
 }
 
-func (b *Broadcaster) messageCacheCount() int {
-	count := len(b.clientManager.broadcastMessages)
-	return count
+func (b *Broadcaster) ConfirmedAccumulators(accumulators [2]common.Hash) error {
+	err := b.clientManager.confirmedAccumulators(accumulators)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (b *Broadcaster) Stop() {
