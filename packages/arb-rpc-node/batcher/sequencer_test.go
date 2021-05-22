@@ -26,7 +26,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -187,13 +188,14 @@ func TestSequencerBatcher(t *testing.T) {
 	seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr.ToEthAddress(), client)
 	test.FailIfError(t, err)
 
-	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+	dummySequencerFeed := make(chan broadcastclient.BatchItemAndPrevAcc)
+	dummyDelayedFeed := make(chan inbox.DelayedMessage)
 	dummyDataSigner := func([]byte) ([]byte, error) { return make([]byte, 0), nil }
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
+	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed, dummyDelayedFeed)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
+	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed, dummyDelayedFeed)
 	test.FailIfError(t, err)
 
 	client.Commit()

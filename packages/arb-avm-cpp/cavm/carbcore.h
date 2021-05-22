@@ -49,11 +49,17 @@ ByteSliceArrayResult arbCoreGetSends(CArbCore* arbcore_ptr,
 
 Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr);
 
+Uint256Result arbCoreGetDelayedMessageCount(CArbCore* arbcore_ptr);
+
 Uint256Result arbCoreGetTotalDelayedMessagesSequenced(CArbCore* arbcore_ptr);
 
 ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* start_index_ptr,
                                         const void* count_ptr);
+
+ByteSliceArrayResult arbCoreGetDelayedMessages(CArbCore* arbcore_ptr,
+                                               const void* start_index_ptr,
+                                               const void* count_ptr);
 
 ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
                                                    const void* start_index_ptr,

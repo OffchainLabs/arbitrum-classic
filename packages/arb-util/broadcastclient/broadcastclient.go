@@ -29,18 +29,24 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/rs/zerolog/log"
 )
 
 type BroadcastClient struct {
-	websocketUrl                 string
-	lastInboxSeqNum              *big.Int
-	conn                         net.Conn
-	startingBroadcastClientMutex *sync.Mutex
-	RetryCount                   int
-	retrying                     bool
-	shuttingDown                 bool
-	ConfirmedAccumulatorListener chan common.Hash
+	websocketUrl                  string
+	lastInboxSeqNum               *big.Int
+	conn                          net.Conn
+	startingBroadcastClientMutex  *sync.Mutex
+	RetryCount                    int
+	retrying                      bool
+	shuttingDown                  bool
+	ConfirmedAccumulatorsListener chan [2]common.Hash
+}
+
+type BatchItemAndPrevAcc struct {
+	BatchItem inbox.SequencerBatchItem
+	PrevAcc   common.Hash
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
@@ -60,34 +66,35 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	}
 }
 
-func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastFeedMessage, error) {
-	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
-	return bc.connect(messageReceiver)
+func (bc *BroadcastClient) Connect() (chan BatchItemAndPrevAcc, chan inbox.DelayedMessage, error) {
+	messageReceiver := make(chan BatchItemAndPrevAcc, 128)
+	delayedMessageReceiver := make(chan inbox.DelayedMessage, 1024)
+	return messageReceiver, delayedMessageReceiver, bc.connect(messageReceiver, delayedMessageReceiver)
 }
 
-func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) connect(messageReceiver chan BatchItemAndPrevAcc, delayedMessageReceiver chan inbox.DelayedMessage) error {
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
-		return nil, nil
+		return nil
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
 	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
 	if err != nil {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
-		return nil, err
+		return err
 	} else {
 		logger.Info().Msg("Connected")
 	}
 
 	bc.conn = conn
 
-	go bc.backgroundReader(messageReceiver)
+	go bc.backgroundReader(messageReceiver, delayedMessageReceiver)
 
-	return messageReceiver, err
+	return err
 }
 
-func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) backgroundReader(messageReceiver chan BatchItemAndPrevAcc, delayedMessageReceiver chan inbox.DelayedMessage) {
 	for {
 		msg, op, err := wsutil.ReadServerData(bc.conn)
 		if err != nil {
@@ -97,7 +104,7 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.Bro
 			logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
 			_ = bc.conn.Close()
 			// Starts up a new backgroundReader
-			bc.RetryConnect(messageReceiver)
+			bc.RetryConnect(messageReceiver, delayedMessageReceiver)
 			return
 		}
 
@@ -109,24 +116,35 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.Bro
 		}
 
 		if len(res.Messages) > 0 {
-			logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
+			logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[len(res.Messages)-1].Accumulator.Bytes()).Msg("received batch items")
 		} else {
 			logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
 		}
 
-		if res.Version == 1 {
+		if res.Version == 2 {
+			// TODO: check signature
+			var prevAcc common.Hash
+			if res.SequencedMetadata != nil {
+				prevAcc = res.SequencedMetadata.PrevAcc
+			}
+			for _, message := range res.DelayedMessages {
+				delayedMessageReceiver <- message
+			}
 			for _, message := range res.Messages {
-				messageReceiver <- *message
+				messageReceiver <- BatchItemAndPrevAcc{
+					BatchItem: message,
+					PrevAcc:   prevAcc,
+				}
 			}
 
-			if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
-				bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
+			if res.ConfirmedAccumulators != nil && bc.ConfirmedAccumulatorsListener != nil {
+				bc.ConfirmedAccumulatorsListener <- *res.ConfirmedAccumulators
 			}
 		}
 	}
 }
 
-func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) RetryConnect(messageReceiver chan BatchItemAndPrevAcc, delayedMessageReceiver chan inbox.DelayedMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true
@@ -134,7 +152,7 @@ func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.Broadca
 		time.Sleep(time.Duration(waitMs) * time.Millisecond)
 
 		bc.RetryCount++
-		_, err := bc.connect(messageReceiver)
+		err := bc.connect(messageReceiver, delayedMessageReceiver)
 		if err == nil {
 			bc.retrying = false
 			return

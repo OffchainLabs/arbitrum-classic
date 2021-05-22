@@ -1154,6 +1154,30 @@ ValueResult<std::vector<std::vector<unsigned char>>> ArbCore::getMessages(
     return {result.status, bytes_vec};
 }
 
+ValueResult<std::vector<std::vector<unsigned char>>>
+ArbCore::getDelayedMessages(uint256_t index, uint256_t count) const {
+    ReadSnapshotTransaction tx(data_storage);
+
+    std::vector<unsigned char> start_vec;
+    marshal_uint256_t(index, start_vec);
+    auto start_slice = vecToSlice(start_vec);
+    auto it = tx.delayedMessageGetIterator(&start_slice);
+    it->Seek(start_slice);
+
+    std::vector<std::vector<unsigned char>> messages;
+    while (it->Valid() && messages.size() < count) {
+        auto key = it->key();
+        auto value = it->value();
+        std::vector<unsigned char> message;
+        message.reserve(key.size() + value.size());
+        message.insert(message.end(), key.data(), key.data() + key.size());
+        message.insert(message.end(), value.data(),
+                       value.data() + value.size());
+        messages.push_back(message);
+    }
+    return {it->status(), messages};
+}
+
 ValueResult<std::vector<RawMessageInfo>> ArbCore::getMessagesImpl(
     const ReadConsistentTransaction& tx,
     uint256_t index,
@@ -1840,6 +1864,12 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     } else {
         return {it->status(), 0};
     }
+}
+
+ValueResult<uint256_t> ArbCore::delayedMessageEntryInsertedCount() const {
+    ReadTransaction tx(data_storage);
+
+    return delayedMessageEntryInsertedCountImpl(tx);
 }
 
 ValueResult<uint256_t> ArbCore::delayedMessageEntryInsertedCountImpl(

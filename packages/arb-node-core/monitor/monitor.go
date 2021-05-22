@@ -19,7 +19,8 @@ package monitor
 import (
 	"context"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -77,7 +78,8 @@ func (m *Monitor) StartInboxReader(
 	ethClient ethutils.EthClient,
 	rollupAddress common.Address,
 	healthChan chan nodehealth.Log,
-	sequencerFeed chan broadcaster.BroadcastFeedMessage,
+	sequencerBroadcastFeed chan broadcastclient.BatchItemAndPrevAcc,
+	delayedBroadcastFeed chan inbox.DelayedMessage,
 ) (*InboxReader, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), ethClient)
 	if err != nil {
@@ -99,7 +101,7 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerFeed)
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerBroadcastFeed, delayedBroadcastFeed)
 	if err != nil {
 		return nil, err
 	}
