@@ -25,7 +25,10 @@
 #include <unordered_map>
 #include <vector>
 
-class Code;
+template <typename T>
+class CodeBase;
+
+class CoreCode;
 class Transaction;
 struct LoadedExecutable;
 
@@ -42,8 +45,8 @@ class CodeSegment {
     std::vector<uint256_t> cached_hashes;
     uint256_t prev_hash;
 
-    friend class Code;
     friend class CoreCode;
+    friend class CodeBase<CoreCode>;
 
     friend LoadedExecutable loadExecutable(
         const std::string& executable_filename);
@@ -155,10 +158,76 @@ class Code {
     virtual CodePointStub addOperation(const CodePointRef& ref, Operation op);
 };
 
-class CoreCode : public Code {
+template <typename T>
+class CodeBase {
+    const T* getThis() const { return static_cast<const T*>(this); }
+
+    T* getThis() { return static_cast<T*>(this); }
+
+   protected:
+    CodeSegmentSnapshot loadCodeSegmentImpl(uint64_t segment_num) const {
+        auto& segment = getThis()->getSegment(segment_num);
+        return {segment, segment->size()};
+    }
+
+    CodePoint loadCodePointImpl(const CodePointRef& ref) const {
+        auto& segment = getThis()->getSegment(ref.segment);
+        return segment->loadCodePoint(ref.pc);
+    }
+
+    CodePointStub addSegmentImpl() {
+        uint64_t segment_num = getThis()->nextSegmentNum();
+        auto new_segment = std::make_shared<CodeSegment>(segment_num);
+        auto stub = new_segment->initialCodePointStub();
+        getThis()->storeSegment(std::move(new_segment));
+        return stub;
+    }
+
+    CodePointStub addOperationImpl(const CodePointRef& ref, Operation op) {
+        auto& segment = getThis()->getSegment(ref.segment);
+        auto initial_pc = segment->size() - 1;
+        if (ref.pc == initial_pc) {
+            if (segment.use_count() == 1) {
+                // No other code has a reference to this segment. That means we
+                // can modify the segment even if it forces a reallocation
+                return segment->addOperation(std::move(op));
+            }
+
+            if (segment->size() < segment->capacity()) {
+                // The segment has extra capacity so we can add to it even if
+                // other code has references to it
+                return segment->addOperation(std::move(op));
+            }
+
+            // Fall back to making a copy as there are other references and no
+            // space to add this operation
+        }
+        // This segment was already mutated elsewhere, therefore we must
+        // make a copy
+        uint64_t new_segment_num = getThis()->nextSegmentNum();
+        auto new_segment = segment->getSubset(new_segment_num, ref.pc);
+        auto stub = new_segment->addOperation(std::move(op));
+        getThis()->storeSegment(std::move(new_segment));
+        return stub;
+    }
+};
+
+class CoreCode : public CodeBase<CoreCode>, public Code {
+    friend CodeBase<CoreCode>;
+
     mutable std::mutex mutex;
     std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
     uint64_t next_segment_num;
+
+    const std::shared_ptr<CodeSegment>& getSegment(uint64_t segment_num) const {
+        return segments.at(segment_num);
+    }
+
+    uint64_t nextSegmentNum() { return next_segment_num++; }
+
+    void storeSegment(std::shared_ptr<CodeSegment> segment) {
+        segments[segment->segmentID()] = std::move(segment);
+    }
 
    public:
     CoreCode() : CoreCode(0) {}
@@ -200,16 +269,12 @@ class CoreCode : public Code {
 
     CodePoint loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return segments.at(ref.segment)->loadCodePoint(ref.pc);
+        return loadCodePointImpl(ref);
     }
 
     CodePointStub addSegment() {
         const std::lock_guard<std::mutex> lock(mutex);
-        uint64_t segment_num = next_segment_num++;
-        auto new_segment = std::make_shared<CodeSegment>(segment_num);
-        auto stub = new_segment->initialCodePointStub();
-        segments[segment_num] = std::move(new_segment);
-        return stub;
+        return addSegmentImpl();
     }
 
     void addSegment(std::shared_ptr<CodeSegment> segment) {
@@ -221,31 +286,7 @@ class CoreCode : public Code {
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
         const std::lock_guard<std::mutex> lock(mutex);
-        auto& segment = segments[ref.segment];
-        auto initial_pc = segment->size() - 1;
-        if (ref.pc == initial_pc) {
-            if (segment.use_count() == 1) {
-                // No other code has a reference to this segment. That means we
-                // can modify the segment even if it forces a reallocation
-                return segment->addOperation(std::move(op));
-            }
-
-            if (segment->size() < segment->capacity()) {
-                // The segment has extra capacity so we can add to it even if
-                // other code has references to it
-                return segment->addOperation(std::move(op));
-            }
-
-            // Fall back to making a copy as there are other references and no
-            // space to add this operation
-        }
-        // This segment was already mutated elsewhere, therefore we must
-        // make a copy
-        uint64_t new_segment_num = next_segment_num++;
-        auto new_segment = segment->getSubset(new_segment_num, ref.pc);
-        auto stub = new_segment->addOperation(std::move(op));
-        segments[new_segment_num] = std::move(new_segment);
-        return stub;
+        return addOperationImpl(ref, std::move(op));
     }
 
     CodePointRef initialCodePointRef() const {
