@@ -16,6 +16,8 @@
 
 #include <avm_values/code.hpp>
 
+Code::~Code() = default;
+
 void CoreCode::commitChanges(
     RunningCode& code,
     const std::map<uint64_t, uint64_t>& segment_counts) {

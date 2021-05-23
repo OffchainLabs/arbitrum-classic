@@ -153,17 +153,18 @@ struct CodeSnapshot {
 
 class Code {
    public:
-    virtual ~Code() = default;
+    virtual ~Code();
 
-    virtual uint64_t getNextSegmentNum() const;
+    virtual uint64_t getNextSegmentNum() const = 0;
 
-    virtual CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const;
+    virtual CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const = 0;
 
-    virtual CodePoint loadCodePoint(const CodePointRef& ref) const;
+    virtual CodePoint loadCodePoint(const CodePointRef& ref) const = 0;
 
-    virtual CodePointStub addSegment();
+    virtual CodePointStub addSegment() = 0;
 
-    virtual CodePointStub addOperation(const CodePointRef& ref, Operation op);
+    virtual CodePointStub addOperation(const CodePointRef& ref,
+                                       Operation op) = 0;
 };
 
 template <typename T>
