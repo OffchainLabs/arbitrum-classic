@@ -111,6 +111,9 @@ class CodeSegment {
     }
 
     const Operation& loadOperation(uint64_t pc) const { return operations[pc]; }
+    const uint256_t& loadCachedHash(uint64_t i) const {
+        return cached_hashes[i];
+    }
 
     //    const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
     //
@@ -131,6 +134,7 @@ class CodeSegment {
 struct CodeSegmentSnapshot {
     std::shared_ptr<const CodeSegment> segment;
     uint64_t op_count;
+    uint64_t cached_hash_count;
 };
 
 struct CodeSnapshot {
@@ -150,7 +154,7 @@ class Code {
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
         auto& segment = segments.at(segment_num);
-        return {segment, segment->size()};
+        return {segment, segment->size(), segment->cached_hashes.size()};
     }
 
     bool containsSegment(uint64_t segment_id) const {
@@ -173,8 +177,9 @@ class Code {
         const std::lock_guard<std::mutex> lock(mutex);
         std::unordered_map<uint64_t, CodeSegmentSnapshot> copied_segments;
         for (const auto& key_val : segments) {
-            copied_segments[key_val.first] = {key_val.second,
-                                              key_val.second->size()};
+            copied_segments[key_val.first] = {
+                key_val.second, key_val.second->size(),
+                key_val.second->cached_hashes.size()};
         }
         return {std::move(copied_segments), next_segment_num};
     }
