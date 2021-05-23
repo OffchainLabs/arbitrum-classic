@@ -256,9 +256,10 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     if (!machine_save_res.first.ok()) {
         return {0, machine_save_res.first};
     }
-    auto code_status = saveCode(
-        transaction, *dynamic_cast<CoreCode*>(machine.machine_state.code.get()),
-        machine_save_res.second);
+    auto core_code = dynamic_cast<CoreCode*>(machine.machine_state.code.get());
+    assert(core_code != nullptr);
+    auto code_status =
+        saveCode(transaction, *core_code, machine_save_res.second);
     if (!code_status.ok()) {
         return {0, code_status};
     }

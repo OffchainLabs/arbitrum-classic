@@ -160,6 +160,7 @@ rocksdb::Status ArbCore::initialize(const LoadedExecutable& executable) {
     core_code->addSegment(executable.code);
     core_machine = std::make_unique<MachineThread>(
         MachineState{core_code, executable.static_val});
+    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
 
     last_machine = std::make_unique<Machine>(*core_machine);
 
@@ -266,6 +267,12 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     if (!save_res.first.ok()) {
         return save_res.first;
     }
+
+    auto machine_code =
+        dynamic_cast<RunningCode*>(core_machine->machine_state.code.get());
+    assert(machine_code != nullptr);
+    core_code->commitChanges(*machine_code, save_res.second);
+    core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
     auto code_status = saveCode(tx, *core_code, save_res.second);
     if (!code_status.ok()) {
         return code_status;
@@ -624,7 +631,7 @@ std::unique_ptr<T> ArbCore::getMachineUsingStateKeys(
         segment_ids = std::move(next_segment_ids);
     };
     auto state = MachineState{
-        core_code,
+        std::make_shared<RunningCode>(core_code),
         std::move(std::get<CountedData<value>>(register_results).data),
         std::move(std::get<CountedData<value>>(static_results).data),
         Datastack(

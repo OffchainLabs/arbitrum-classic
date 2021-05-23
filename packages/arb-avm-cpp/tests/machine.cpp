@@ -73,6 +73,9 @@ TEST_CASE("Checkpoint State") {
     ValueCache value_cache{1, 0};
 
     auto machine = storage.getInitialMachine(value_cache);
+    machine->machine_state.code =
+        std::dynamic_pointer_cast<RunningCode>(machine->machine_state.code)
+            ->getParent();
     MachineExecutionConfig execConfig;
     execConfig.max_gas = 3;
     machine->machine_state.context = AssertionContext(execConfig);
@@ -98,6 +101,9 @@ TEST_CASE("Delete machine checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
+        machine->machine_state.code =
+            std::dynamic_pointer_cast<RunningCode>(machine->machine_state.code)
+                ->getParent();
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 4;
         machine->machine_state.context = AssertionContext(execConfig);
@@ -121,6 +127,9 @@ TEST_CASE("Restore checkpoint") {
 
     SECTION("default") {
         auto machine = storage.getInitialMachine(value_cache);
+        machine->machine_state.code =
+            std::dynamic_pointer_cast<RunningCode>(machine->machine_state.code)
+                ->getParent();
         auto transaction = storage.makeReadWriteTransaction();
         auto results = saveMachine(*transaction, *machine);
         REQUIRE(results.status.ok());

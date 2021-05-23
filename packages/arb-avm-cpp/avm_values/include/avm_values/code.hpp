@@ -20,6 +20,7 @@
 #include <avm_values/codepoint.hpp>
 
 #include <cassert>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -257,6 +258,9 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
         return segments.find(segment_id) != segments.end();
     }
 
+    void commitChanges(RunningCode& code,
+                       const std::map<uint64_t, uint64_t>& segment_counts);
+
     void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_id = segment->segmentID();
@@ -307,7 +311,7 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
     }
 };
 
-class RunningCode : public CodeBase<RunningCode> {
+class RunningCode : public CodeBase<RunningCode>, public Code {
     friend CodeBase<RunningCode>;
 
     mutable std::mutex mutex;
@@ -332,6 +336,21 @@ class RunningCode : public CodeBase<RunningCode> {
     RunningCode(std::shared_ptr<Code> parent_)
         : first_segment(parent_->getNextSegmentNum()),
           parent(std::move(parent_)) {}
+
+    uint64_t fillInCode(
+        std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>>&
+            parent_segments,
+        const std::map<uint64_t, uint64_t>& segment_counts) const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        auto it = segment_counts.lower_bound(first_segment);
+        auto end = segment_counts.end();
+        for (; it != end; ++it) {
+            parent_segments[it->first] = getSegment(it->first);
+        }
+        return nextSegmentNum();
+    }
+
+    std::shared_ptr<Code> getParent() const { return parent; }
 
     uint64_t getNextSegmentNum() const {
         const std::lock_guard<std::mutex> lock(mutex);
