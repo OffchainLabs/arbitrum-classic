@@ -428,7 +428,7 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
 }
 
 rocksdb::Status saveCode(ReadWriteTransaction& tx,
-                         const Code& code,
+                         const CoreCode& code,
                          std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
     saveNextSegmentID(tx, snapshots.op_count);

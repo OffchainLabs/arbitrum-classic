@@ -483,7 +483,7 @@ TEST_CASE("OPCODE: POP opcode is correct") {
 
 TEST_CASE("OPCODE: SPUSH opcode is correct") {
     SECTION("spush") {
-        auto code = std::make_shared<Code>();
+        auto code = std::make_shared<CoreCode>();
         code->addSegment();
         MachineState m{std::move(code), uint256_t{5}};
         m.runOp(OpCode::SPUSH);
@@ -572,7 +572,7 @@ TEST_CASE("OPCODE: STACKEMPTY opcode is correct") {
 
 TEST_CASE("OPCODE: PCPUSH opcode is correct") {
     SECTION("pcpush") {
-        auto code = std::make_shared<Code>();
+        auto code = std::make_shared<CoreCode>();
         auto stub = code->addSegment();
         code->addOperation(stub.pc, Operation(OpCode::ADD));
         MachineState m{std::move(code), uint256_t(5)};
@@ -631,7 +631,7 @@ TEST_CASE("OPCODE: AUXSTACKEMPTY opcode is correct") {
 }
 
 MachineState createTestMachineState(OpCode op) {
-    auto code = std::make_shared<Code>();
+    auto code = std::make_shared<CoreCode>();
     auto stub = code->addSegment();
     stub = code->addOperation(stub.pc, {OpCode::HALT});
     code->addOperation(stub.pc, {op});
@@ -651,7 +651,7 @@ TEST_CASE("OPCODE: NOP opcode is correct") {
 
 TEST_CASE("OPCODE: ERRPUSH opcode is correct") {
     SECTION("errpush") {
-        auto code = std::make_shared<Code>();
+        auto code = std::make_shared<CoreCode>();
         auto stub = code->addSegment();
         stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
         MachineState m{std::move(code), uint256_t(5)};
@@ -1060,7 +1060,7 @@ TEST_CASE("OPCODE: HALT opcode is correct") {
 }
 
 TEST_CASE("OPCODE: KECCAKF opcode is correct") {
-    auto code = std::make_shared<Code>();
+    auto code = std::make_shared<CoreCode>();
     SECTION("Inverts correctly") {
         Tuple input_data(intx::from_string<uint256_t>(
                              "94370651106686220754648249265079798778273"
@@ -1245,7 +1245,7 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
     }
 
     SECTION("Hashes correctly") {
-        auto code = std::make_shared<Code>();
+        auto code = std::make_shared<CoreCode>();
         auto stub = code->addSegment();
         stub = code->addOperation(stub.pc, Operation(OpCode::SHA256F));
         MachineState m{std::move(code), Tuple()};
@@ -1269,7 +1269,7 @@ TEST_CASE("OPCODE: SHA256F opcode is correct") {
 TEST_CASE("OPCODE: Stack underflow") {
     for (uint8_t op = static_cast<uint8_t>(OpCode::ADD);
          op <= static_cast<uint8_t>(OpCode::ECRECOVER); ++op) {
-        auto code = std::make_shared<Code>();
+        auto code = std::make_shared<CoreCode>();
         auto stub = code->addSegment();
         code->addOperation(stub.pc, Operation(static_cast<OpCode>(op)));
         MachineState m{std::move(code), uint256_t{5}};

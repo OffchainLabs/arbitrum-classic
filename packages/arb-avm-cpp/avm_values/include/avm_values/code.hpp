@@ -43,6 +43,7 @@ class CodeSegment {
     uint256_t prev_hash;
 
     friend class Code;
+    friend class CoreCode;
 
     friend LoadedExecutable loadExecutable(
         const std::string& executable_filename);
@@ -143,13 +144,26 @@ struct CodeSnapshot {
 };
 
 class Code {
+   public:
+    virtual ~Code() = default;
+    virtual CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const;
+
+    virtual CodePoint loadCodePoint(const CodePointRef& ref) const;
+
+    virtual CodePointStub addSegment();
+
+    virtual CodePointStub addOperation(const CodePointRef& ref, Operation op);
+};
+
+class CoreCode : public Code {
     mutable std::mutex mutex;
     std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
     uint64_t next_segment_num;
 
    public:
-    Code() : Code(0) {}
-    Code(uint64_t next_segment_num_) : next_segment_num(next_segment_num_) {}
+    CoreCode() : CoreCode(0) {}
+    CoreCode(uint64_t next_segment_num_)
+        : next_segment_num(next_segment_num_) {}
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);

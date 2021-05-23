@@ -52,7 +52,7 @@ constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
     : data_storage(std::move(data_storage_)),
-      core_code(std::make_shared<Code>(getNextSegmentID(data_storage))) {
+      core_code(std::make_shared<CoreCode>(getNextSegmentID(data_storage))) {
     if (logs_cursors.size() > 255) {
         throw std::runtime_error("Too many logscursors");
     }
@@ -262,9 +262,13 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
         return rocksdb::Status::OK();
     }
 
-    auto status = saveMachineState(tx, *core_machine);
-    if (!status.ok()) {
-        return status;
+    auto save_res = saveMachineState(tx, *core_machine);
+    if (!save_res.first.ok()) {
+        return save_res.first;
+    }
+    auto code_status = saveCode(tx, *core_code, save_res.second);
+    if (!code_status.ok()) {
+        return code_status;
     }
 
     std::vector<unsigned char> key;

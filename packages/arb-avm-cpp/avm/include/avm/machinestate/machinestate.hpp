@@ -140,6 +140,7 @@ struct MachineStateKeys {
 };
 
 struct MachineState {
+    CodePointRef pc{0, 0};
     std::shared_ptr<Code> code;
     mutable std::optional<CodeSegmentSnapshot> loaded_segment;
     value registerVal;
@@ -148,7 +149,6 @@ struct MachineState {
     Datastack auxstack;
     uint256_t arb_gas_remaining;
     Status state{Status::Extensive};
-    CodePointRef pc{0, 0};
     CodePointStub errpc{{0, 0}, getErrCodePoint()};
 
     MachineOutput output;
@@ -159,7 +159,7 @@ struct MachineState {
 
     MachineState();
 
-    MachineState(std::shared_ptr<Code> code_, value static_val);
+    MachineState(std::shared_ptr<CoreCode> code_, value static_val);
 
     MachineState(std::shared_ptr<Code> code_,
                  value register_val_,

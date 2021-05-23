@@ -41,8 +41,9 @@ MachineStateKeys extractMachineStateKeys(
     std::vector<unsigned char>::const_iterator iter);
 void serializeMachineStateKeys(const MachineStateKeys& state_data,
                                std::vector<unsigned char>& state_data_vector);
-rocksdb::Status saveMachineState(ReadWriteTransaction& transaction,
-                                 const Machine& machine);
+std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
+    ReadWriteTransaction& transaction,
+    const Machine& machine);
 SaveResults saveMachine(ReadWriteTransaction& transaction,
                         const Machine& machine);
 void deleteMachineState(ReadWriteTransaction& transaction,

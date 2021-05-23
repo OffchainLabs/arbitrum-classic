@@ -63,8 +63,6 @@ class Machine {
     Machine() = default;
     explicit Machine(MachineState machine_state_)
         : machine_state(std::move(machine_state_)) {}
-    Machine(std::shared_ptr<Code> code, value static_val)
-        : machine_state(std::move(code), std::move(static_val)) {}
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return Machine{MachineState::loadFromFile(executable_filename)};
