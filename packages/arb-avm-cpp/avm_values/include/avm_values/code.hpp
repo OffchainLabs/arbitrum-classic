@@ -29,6 +29,7 @@ template <typename T>
 class CodeBase;
 
 class CoreCode;
+class RunningCode;
 class Transaction;
 struct LoadedExecutable;
 
@@ -47,6 +48,9 @@ class CodeSegment {
 
     friend class CoreCode;
     friend class CodeBase<CoreCode>;
+
+    friend class RunningCode;
+    friend class CodeBase<RunningCode>;
 
     friend LoadedExecutable loadExecutable(
         const std::string& executable_filename);
@@ -149,6 +153,9 @@ struct CodeSnapshot {
 class Code {
    public:
     virtual ~Code() = default;
+
+    virtual uint64_t getNextSegmentNum() const;
+
     virtual CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const;
 
     virtual CodePoint loadCodePoint(const CodePointRef& ref) const;
@@ -167,7 +174,7 @@ class CodeBase {
    protected:
     CodeSegmentSnapshot loadCodeSegmentImpl(uint64_t segment_num) const {
         auto& segment = getThis()->getSegment(segment_num);
-        return {segment, segment->size()};
+        return {segment, segment->size(), segment->cached_hashes.size()};
     }
 
     CodePoint loadCodePointImpl(const CodePointRef& ref) const {
@@ -234,6 +241,11 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
     CoreCode(uint64_t next_segment_num_)
         : next_segment_num(next_segment_num_) {}
 
+    uint64_t getNextSegmentNum() const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return next_segment_num;
+    }
+
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
         auto& segment = segments.at(segment_num);
@@ -292,6 +304,67 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
     CodePointRef initialCodePointRef() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return {0, segments.at(0)->size() - 1};
+    }
+};
+
+class RunningCode : public CodeBase<RunningCode> {
+    friend CodeBase<RunningCode>;
+
+    mutable std::mutex mutex;
+    uint64_t first_segment;
+    std::vector<std::shared_ptr<CodeSegment>> segment_list;
+
+    std::shared_ptr<Code> parent;
+
+    const std::shared_ptr<CodeSegment>& getSegment(uint64_t segment_num) const {
+        return segment_list.at(segment_num - first_segment);
+    }
+
+    uint64_t nextSegmentNum() const {
+        return first_segment + segment_list.size();
+    }
+
+    void storeSegment(std::shared_ptr<CodeSegment> segment) {
+        segment_list.push_back(std::move(segment));
+    }
+
+   public:
+    RunningCode(std::shared_ptr<Code> parent_)
+        : first_segment(parent_->getNextSegmentNum()),
+          parent(std::move(parent_)) {}
+
+    uint64_t getNextSegmentNum() const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return first_segment + segment_list.size();
+    }
+
+    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        if (segment_num < first_segment) {
+            return parent->loadCodeSegment(segment_num);
+        }
+        return loadCodeSegmentImpl(segment_num);
+    }
+
+    CodePoint loadCodePoint(const CodePointRef& ref) const {
+        const std::lock_guard<std::mutex> lock(mutex);
+        if (ref.segment < first_segment) {
+            return parent->loadCodePoint(ref);
+        }
+        return loadCodePointImpl(ref);
+    }
+
+    CodePointStub addSegment() {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return addSegmentImpl();
+    }
+
+    CodePointStub addOperation(const CodePointRef& ref, Operation op) {
+        const std::lock_guard<std::mutex> lock(mutex);
+        if (ref.segment < first_segment) {
+            return parent->addOperation(ref, std::move(op));
+        }
+        return addOperationImpl(ref, std::move(op));
     }
 };
 
