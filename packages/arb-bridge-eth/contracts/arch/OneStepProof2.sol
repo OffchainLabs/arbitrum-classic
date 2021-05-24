@@ -681,7 +681,7 @@ contract OneStepProof2 is OneStepProofCommon {
             Value.newEmptyTuple(), //    machine.auxStack,
             Value.newEmptyTuple(), //    machine.registerVal,
             Value.newInt(0), //    machine.staticVal,
-            1000000, //    machine.arbGasRemaining,
+            1000000000000, //    machine.arbGasRemaining,
             errHandlerHash, //    machine.errHandlerHash,
             Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status
@@ -698,7 +698,8 @@ contract OneStepProof2 is OneStepProofCommon {
         // Check that corresponds to what is given in the return buffer
 
         require(stackVals.length >= 1, "Not enough wasm stack returns");
-        require(keccak256(abi.encodePacked(uint256(123), cp.hash())) == stackVals[0].hash());
+        bytes32 cpHash = keccak2(cp.wasmVal.codept, cp.wasmVal.table);
+        require(keccak2(bytes32(uint256(123)), cpHash) == stackVals[0].hash());
         pushVal(context.stack, cp);
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
@@ -736,7 +737,7 @@ contract OneStepProof2 is OneStepProofCommon {
             Value.newEmptyTuple(), //    machine.auxStack,
             Value.newEmptyTuple(), //    machine.registerVal,
             Value.newInt(0), //    machine.staticVal,
-            1000000, //    machine.arbGasRemaining,
+            1000000000000, //    machine.arbGasRemaining,
             errHandlerHash, //    machine.errHandlerHash,
             Value.newEmptyTuple(), //    machine.pendingMessage,
             Machine.MACHINE_EXTENSIVE //    machine.status

@@ -102,6 +102,34 @@ TEST_CASE("wasm_compile") {
     */
 }
 
+TEST_CASE("wasm_2") {
+    SECTION("Making compiler machine") {
+        RunWasm runner("/home/sami/arbitrum/compiler.wasm");
+        auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
+        auto res = runner.run_wasm(vec2buf(buf), buf.size());
+        auto bytes = buf2vec(res.buffer, res.buffer_len);
+        uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
+        uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
+        std::cerr << "Result len " << bytes.size() << "\n";
+        std::string hexstr;
+        hexstr.resize(bytes.size()*2);
+        boost::algorithm::hex(bytes.begin(), bytes.end(), hexstr.begin());
+        std::cerr << "Result hash " << hexstr << "\n";
+        std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
+        
+        auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        auto m = makeWasmMachine(res.extra, arg_buf.size(), vec2buf(arg_buf));
+        runWasmMachine(m);
+
+        std::cerr << "Result stack " << m.stack[0] << "\n";
+        std::cerr << "Result stack " << m.stack[1] << "\n";
+        std::cerr << "Result stack " << m.stack[2] << "\n";
+
+    }
+
+
+}
+
 TEST_CASE("Wasm") {
     SECTION("Code to hash") {
         /*

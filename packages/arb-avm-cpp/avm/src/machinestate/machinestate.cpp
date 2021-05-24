@@ -569,7 +569,7 @@ MachineState makeWasmMachine(std::vector<uint8_t> arr, uint64_t len, Buffer buf)
     state.stack.push(len);
     state.stack.push(buf);
     state.stack.push(std::move(res.table));
-    state.arb_gas_remaining = 1000000;
+    state.arb_gas_remaining = 1000000000000;
     state.output.arb_gas_used = 0;
 
     std::cerr << state;
@@ -582,6 +582,7 @@ uint256_t runWasmMachine(MachineState &machine_state) {
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
+    uint64_t counter = 0;
     while (true) {
         if (has_gas_limit) {
             if (!machine_state.context.go_over_gas) {
@@ -606,12 +607,21 @@ uint256_t runWasmMachine(MachineState &machine_state) {
         }
         */
 
+       if (counter++ % 1000000 == 0) {
+           std::cerr << "step " << counter << "\n";
+       }
+
         auto& instruction = machine_state.loadCurrentInstruction();
         if (instruction.op.opcode == OpCode::HALT) {
             break;
         }
 
         block_reason = machine_state.runOne();
+        
+        if (machine_state.stack.stacksize() > 0 && getSize(machine_state.stack[0]) < 100) {
+            std::cerr << "stack top " << machine_state.stack[0] << "\n";
+        }
+
         if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
         }
@@ -884,7 +894,7 @@ BlockReason MachineState::runOne() {
     auto& instruction = loadCurrentInstruction();
 
     std::cerr << "running " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
-//    std::cerr << "state " << *this << "\n";
+    // std::cerr << "state " << *this << "\n";
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
