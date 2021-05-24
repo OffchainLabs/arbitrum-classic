@@ -13,7 +13,7 @@ If you're an user looking forward to using Arbitrum, this is the perfect place f
 
 ### Where to Start
 
-For starters, you should get your favorite wallet set up and connected to Arbitrum's latest testnet. How about open up Metamask and add Arbitrum as a network? You can find the needed information [here](Public_Testnet.md#Connection-Information).
+For starters, you should get your favorite wallet set up and connected to Arbitrum's latest testnet. How about open up Metamask and add Arbitrum as a network? You can find the needed information [here](Public_Testnet.md#connection-information).
 
 Once that is out of the way you should header over to our [Token Faucet](https://faucet.arbitrum.io/) to grab some tokens. In this dApp you are able to claim some ERC20 tokens and ether to start interacting with the testnet.
 

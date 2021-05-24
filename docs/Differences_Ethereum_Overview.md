@@ -39,6 +39,17 @@ The Layer 1 block number for the transaction, as specified in [Time in Arbitrum]
 
 An object summarizing fee charges for the current transaction. It includes the units used, price paid, and price per unit.
 
+The arbgas charges will vary depending on how a user interacts with Arbitrum, but the following table can be used as a general reference:
+
+| Key           | Cost source                              | Meaning                                                                                                                                   |
+| ------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| l1Transaction | Fixed cost of inclusion to Layer 1 inbox | There is a fixed cost of including your transaction into the Layer 1 inbox contract. This is amortised by batching transactions together. |
+| l1Calldata    | Layer 1 transaction calldata             | The calldata included in each Layer 1 transaction has a cost associated to it. Aggregators are reimbursed for their costs.                |
+| l2Storage     | Layer 2 storage                          | Users are charged whenever a storage slot is written to with a non-zero value.                                                            |
+| l2Computation | Layer 2 computation                      | Users are charged per unit of computation used (measured in arbgas).                                                                      |
+
+For more in-depth explanations head over to the [Gas](ArbGas.md) docs page, or the [Inside Arbitrum](Inside_Arbitrum.md#arbgas-and-fees) section on arbgas.
+
 #### Return Data
 
 This includes the data from a smart contract return or the revert reason if you hit an EVM revert statement.
