@@ -272,10 +272,6 @@ func startup() error {
 	}
 	defer db.Close()
 
-	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp(ctx)
-	}
-
 	batch, err := rpc.SetupBatcher(
 		ctx,
 		ethclint,
@@ -288,6 +284,10 @@ func startup() error {
 	)
 	if err != nil {
 		return err
+	}
+
+	if *waitToCatchUp {
+		inboxReader.WaitToCatchUp(ctx)
 	}
 
 	srv := aggregator.NewServer(batch, rollupArgs.Address, db)
