@@ -742,10 +742,68 @@ describe.skip('trigger outgoing messages', async () => {
   }
 })
 
-// describe('scrap paper', async () => {
-//   it('', async () => {
-//     const inbox =  Inbox__factory.connect("0x81183C9C61bdf79DB7330BBcda47Be30c0a85064", preFundedWallet)
-//     inbox.depositEth("0xAddA0B73Fe69a6E3e7c1072Bb9523105753e08f8", {value: utils.parseEther("2")})
+describe('deposit erc20 part 2: L2 already funded', () => {
+  it('initial erc20 deposit txns — L1 and L2 — both succeed', async () => {
+    const tokenContract = TestERC20__factory.connect(erc20Address, ethProvider)
+    const initialBridgeTokenBalance = await tokenContract.balanceOf(
+      bridge.ethERC20Bridge.address
+    )
+    const depositRes = await bridge.deposit(
+      erc20Address,
+      tokenDepositAmount,
+      {},
+      undefined,
+      { gasLimit: 210000, gasPrice: l1gasPrice }
+    )
 
-//   })
-// })
+    const depositRec = await depositRes.wait()
+
+    await wait()
+
+    expect(depositRec.status).to.equal(1)
+    const finalBridgeTokenBalance = await tokenContract.balanceOf(
+      bridge.ethERC20Bridge.address
+    )
+    expect(
+      initialBridgeTokenBalance
+        .add(tokenDepositAmount)
+        .eq(finalBridgeTokenBalance)
+    )
+
+    const tokenDepositData = (
+      await bridge.getDepositTokenEventData(depositRec)
+    )[0] as DepositTokenEventResult
+    const seqNum = tokenDepositData.seqNum
+    const l2RetryableHash = await bridge.calculateL2RetryableTransactionHash(
+      seqNum
+    )
+
+    const l2RedeemHash = await bridge.calculateRetryableAutoReedemTxnHash(
+      seqNum
+    )
+    console.warn('l2RedeemHash', l2RedeemHash)
+    const redeemReceipt = await arbProvider.waitForTransaction(l2RetryableHash)
+    expect(redeemReceipt.status).to.equal(1)
+
+    console.warn('l2RetryableHash', l2RetryableHash)
+
+    const retryableReceipt = await arbProvider.waitForTransaction(
+      l2RetryableHash
+    )
+    console.info('retryableReceipt found')
+
+    expect(retryableReceipt.status).to.equal(1)
+  })
+})
+
+// describe.only('scrap paper', async () => {
+//   const rec = await ethProvider.getTransactionReceipt("0x5718b9f631f0a7777e8520248fa556bb12c1a2b2573271e2c0c2225ec9447033")
+//   const _seqNum = (await bridge.getInboxSeqNumFromContractTransaction(rec))
+//   if(_seqNum === undefined){
+//     return
+//   }
+//   const seqNum= _seqNum[0]
+
+//   const autoHash = await bridge.calculateRetryableAutoReedemTxnHash(seqNum)
+//   const autoRec = await arbProvider.getTransactionReceipt(autoHash)
+//   console.warn('seqNum',autoHash, autoRec );
