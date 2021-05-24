@@ -2435,6 +2435,7 @@ ValueResult<ArbCore::logscursor_logs> ArbCore::logsCursorGetLogs(
     logs.deleted_logs = std::move(logs_cursors[cursor_index].deleted_data);
     logs_cursors[cursor_index].data.clear();
     logs_cursors[cursor_index].deleted_data.clear();
+    logs_cursors[cursor_index].status = DataCursor::DELIVERED;
 
     return {rocksdb::Status::OK(), std::move(logs)};
 }
@@ -2448,7 +2449,7 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+    if (logs_cursors[cursor_index].status != DataCursor::DELIVERED) {
         logs_cursors[cursor_index].error_string =
             "logsCursorConfirmReceived called at wrong state";
         std::cerr << "logsCursorConfirmReceived called at wrong state: "
@@ -2471,10 +2472,12 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         return false;
     }
 
-    ReadWriteTransaction tx(data_storage);
-    auto status = logsCursorSaveCurrentTotalCount(
-        tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
-    tx.commit();
+    if (logs_cursors[cursor_index].deleted_data.empty()) {
+        ReadWriteTransaction tx(data_storage);
+        auto status = logsCursorSaveCurrentTotalCount(
+            tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
+        tx.commit();
+    }
 
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
