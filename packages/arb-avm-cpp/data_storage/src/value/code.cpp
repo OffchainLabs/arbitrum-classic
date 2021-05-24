@@ -111,7 +111,7 @@ std::vector<unsigned char> prepareToSaveCodeSegment(
         marshal_uint64_t(snapshot.op_count, serialized_code);
         auto offset = sizeof(uint32_t) + sizeof(uint64_t);
         serialized_code.insert(serialized_code.end(), val.data() + offset,
-                               val.data() + val.size() - offset);
+                               val.data() + val.size());
     } else {
         marshal_uint64_t(snapshot.op_count, serialized_code);
     }
