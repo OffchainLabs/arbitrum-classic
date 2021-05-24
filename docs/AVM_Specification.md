@@ -289,6 +289,6 @@ The result of the specified function is a single Integer.
 
 The blake2f function is computed by the blake2f instruction. The function takes a Buffer as input, and produces a Buffer as output.
 
-The input Buffer must not have any non-zero bytes at offset > 213; otherwise an Error is generated. The first four bytes of the Buffer, interpreted as a 32-bit big-endian integer, must not be greater than 100,000; otherwise an Error is generated.
+The input Buffer must not have any non-zero bytes at offset > 212; otherwise an Error is generated. The first four bytes of the Buffer, interpreted as a 32-bit big-endian integer, must not be greater than 100,000; otherwise an Error is generated.
 
 If the Buffer passes the above tests, its contents are processed as specified in EIP-152 (Ethereum's Blake2 precompile), and the resulting Buffer is returned.
