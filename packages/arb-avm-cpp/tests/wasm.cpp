@@ -24,16 +24,6 @@ std::vector<uint8_t> getFile(std::string fname) {
 }
 
 TEST_CASE("wasm_compile") {
-    /*
-    SECTION("Compiler") {
-        std::ifstream input("/home/sami/arbitrum/compiler.bin", std::ios::binary);
-
-        std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(input)), (std::istreambuf_iterator<char>()));
-
-        input.close();
-        compile(bytes);
-    }
-    */
     SECTION("JIT converter") {
         RunWasm runner0("/home/sami/arbitrum/compiler.wasm");
         auto runner = runner0;
@@ -65,8 +55,8 @@ TEST_CASE("wasm_compile") {
         // RunWasm runner("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
         // auto m0 = MachineState();
         // auto m = m0;
-        auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
-        // auto buf = getFile("/home/sami/wasm-hash/pkg/wasm_hash_bg.wasm");
+        // auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        auto buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
         // auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
         auto bytes = buf2vec(res.buffer, res.buffer_len);
@@ -105,7 +95,7 @@ TEST_CASE("wasm_compile") {
 TEST_CASE("wasm_2") {
     SECTION("Making compiler machine") {
         RunWasm runner("/home/sami/arbitrum/compiler.wasm");
-        auto buf = getFile("/home/sami/arbitrum/compiler.wasm");
+        auto buf = getFile("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
         auto bytes = buf2vec(res.buffer, res.buffer_len);
         uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
@@ -117,6 +107,7 @@ TEST_CASE("wasm_2") {
         std::cerr << "Result hash " << hexstr << "\n";
         std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
         
+        // auto arg_buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
         auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
         auto m = makeWasmMachine(res.extra, arg_buf.size(), vec2buf(arg_buf));
         runWasmMachine(m);

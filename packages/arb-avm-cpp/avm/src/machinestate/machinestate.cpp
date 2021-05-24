@@ -242,7 +242,7 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             nbuffer1 = nbuffer;
             aligned = false;
         }
-        std::cerr << "setting " << (loc+i) << ":" << int(static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff)) << "\n";
+        // std::cerr << "setting " << (loc+i) << ":" << int(static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff)) << "\n";
         nbuffer = nbuffer.set(
             loc + i,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
@@ -464,7 +464,7 @@ CodeResult wasmAvmToCode(std::vector<uint8_t>& bytes) {
             v.push_back(0);
             v.push_back(Buffer());
             v.push_back(0);
-            v.push_back(100000);  // check that these are the same
+            v.push_back(1000000);  // check that these are the same
             op = {opcode, Tuple::createTuple(v)};
         } else if (immed == 3) {
             std::vector<value> v;
@@ -479,15 +479,16 @@ CodeResult wasmAvmToCode(std::vector<uint8_t>& bytes) {
             std::cerr << "Immed hash " << op << " hash "
                       << intx::to_string(hash_value(*op.immediate), 16) << "\n";
         }
+        std::cerr << num << " Loaded op " << op << " codept " << stub << "\n";
         std::cerr << "Loaded op " << op << " hash "
                   << intx::to_string(stub.hash, 16) << "\n";
         */
         if (bytes[i]) {
-            // std::cerr << "Label " << stub << " at " << labels.size() <<
-            // "\n";
+            // std::cerr << "Label " << stub << " at " << labels.size() << "\n";
             labels.push_back(stub);
         }
         i++;
+        num++;
     }
 
     std::reverse(labels.begin(), labels.end());
@@ -618,9 +619,10 @@ uint256_t runWasmMachine(MachineState &machine_state) {
 
         block_reason = machine_state.runOne();
         
+        /*
         if (machine_state.stack.stacksize() > 0 && getSize(machine_state.stack[0]) < 100) {
             std::cerr << "stack top " << machine_state.stack[0] << "\n";
-        }
+        }*/
 
         if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
@@ -893,7 +895,7 @@ BlockReason MachineState::runOne() {
 
     auto& instruction = loadCurrentInstruction();
 
-    std::cerr << "running " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
+    // std::cerr << "running " << instruction.op.opcode << " gas used " << output.arb_gas_used << "\n";
     // std::cerr << "state " << *this << "\n";
 
     static const auto error_gas_cost =
