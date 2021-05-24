@@ -82,13 +82,7 @@ class CodeSegment {
         : segment_id(segment_id_),
           operations(std::move(operations_)),
           cached_hashes(std::move(next_hashes_)) {
-        if (!cached_hashes.empty()) {
-            prev_hash = cached_hashes.back();
-        }
-        for (uint64_t i = cached_hashes.size() * 10; i < operations.size();
-             i++) {
-            prev_hash = hash(CodePoint(operations[i], prev_hash));
-        }
+        prev_hash = ::hash(loadCodePoint(operations.size() - 1));
     }
 
     CodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
