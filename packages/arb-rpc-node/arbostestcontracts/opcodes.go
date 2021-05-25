@@ -27,10 +27,10 @@ var (
 )
 
 // OpCodesABI is the input ABI used to generate the binding from.
-const OpCodesABI = "[{\"inputs\":[],\"name\":\"getBlockHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedSend\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSender\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const OpCodesABI = "[{\"inputs\":[],\"name\":\"getBlockHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGasLeft\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"conn\",\"type\":\"address\"}],\"name\":\"getNestedSend\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOrigin\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getSender\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // OpCodesBin is the compiled bytecode used for deploying new contracts.
-var OpCodesBin = "0x608060405234801561001057600080fd5b506101e1806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806303dd3df41461005c5780635e01eb5a1461009e57806384e58c86146100a65780639663f88f146100cc578063df1f29ee146100e6575b600080fd5b6100826004803603602081101561007257600080fd5b50356001600160a01b03166100ee565b604080516001600160a01b039092168252519081900360200190f35b61008261015d565b610082600480360360208110156100bc57600080fd5b50356001600160a01b0316610161565b6100d461019e565b60408051918252519081900360200190f35b6100826101a7565b6000816001600160a01b031663df1f29ee6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561012b57600080fd5b505af115801561013f573d6000803e3d6000fd5b505050506040513d602081101561015557600080fd5b505192915050565b3390565b6000816001600160a01b0316635e01eb5a6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561012b57600080fd5b60001943014090565b329056fea2646970667358221220db04020295ad243f6feb8637234de0c86266105ebfd1d03b6f0037811fa0abe864736f6c634300060c0033"
+var OpCodesBin = "0x608060405234801561001057600080fd5b506101fc806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c806303dd3df41461006757806351be4eaa146100a95780635e01eb5a146100c357806384e58c86146100cb5780639663f88f146100f1578063df1f29ee146100f9575b600080fd5b61008d6004803603602081101561007d57600080fd5b50356001600160a01b0316610101565b604080516001600160a01b039092168252519081900360200190f35b6100b1610170565b60408051918252519081900360200190f35b61008d610178565b61008d600480360360208110156100e157600080fd5b50356001600160a01b031661017c565b6100b16101b9565b61008d6101c2565b6000816001600160a01b031663df1f29ee6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561013e57600080fd5b505af1158015610152573d6000803e3d6000fd5b505050506040513d602081101561016857600080fd5b505192915050565b60005a905090565b3390565b6000816001600160a01b0316635e01eb5a6040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561013e57600080fd5b60001943014090565b329056fea26469706673582212204166b6173dacc8365955ede6f319adebd7ea285941b302c0273b199fc378aaa464736f6c634300060c0033"
 
 // DeployOpCodes deploys a new Ethereum contract, binding an instance of OpCodes to it.
 func DeployOpCodes(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *OpCodes, error) {
@@ -207,6 +207,27 @@ func (_OpCodes *OpCodesSession) GetBlockHash() (*types.Transaction, error) {
 // Solidity: function getBlockHash() returns(bytes32)
 func (_OpCodes *OpCodesTransactorSession) GetBlockHash() (*types.Transaction, error) {
 	return _OpCodes.Contract.GetBlockHash(&_OpCodes.TransactOpts)
+}
+
+// GetGasLeft is a paid mutator transaction binding the contract method 0x51be4eaa.
+//
+// Solidity: function getGasLeft() returns(uint256)
+func (_OpCodes *OpCodesTransactor) GetGasLeft(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _OpCodes.contract.Transact(opts, "getGasLeft")
+}
+
+// GetGasLeft is a paid mutator transaction binding the contract method 0x51be4eaa.
+//
+// Solidity: function getGasLeft() returns(uint256)
+func (_OpCodes *OpCodesSession) GetGasLeft() (*types.Transaction, error) {
+	return _OpCodes.Contract.GetGasLeft(&_OpCodes.TransactOpts)
+}
+
+// GetGasLeft is a paid mutator transaction binding the contract method 0x51be4eaa.
+//
+// Solidity: function getGasLeft() returns(uint256)
+func (_OpCodes *OpCodesTransactorSession) GetGasLeft() (*types.Transaction, error) {
+	return _OpCodes.Contract.GetGasLeft(&_OpCodes.TransactOpts)
 }
 
 // GetNestedOrigin is a paid mutator transaction binding the contract method 0x03dd3df4.
