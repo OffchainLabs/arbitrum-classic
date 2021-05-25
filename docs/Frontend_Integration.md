@@ -75,7 +75,7 @@ const bridge = new Bridge(
 )
 ```
 
-See [library documentation here], (https://arb-ts-docs.netlify.app/) or [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.
+See [library documentation here](https://arb-ts-docs.netlify.app/), or [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.
 
 (Note that we've deprecated the old `arb-provider-ethers` library; arb-ts is the recommended replacement)
 
