@@ -106,7 +106,7 @@ TEST_CASE("ARBOS test vectors") {
             CHECK(assertion.gasCount == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
-                saveMachine(*tx, *mach);
+                saveTestMachine(*tx, *mach);
                 tx->commit();
             }
 

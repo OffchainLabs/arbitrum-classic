@@ -237,8 +237,8 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
     return {rocksdb::Status::OK(), std::move(segment_counts)};
 }
 
-SaveResults saveMachine(ReadWriteTransaction& transaction,
-                        const Machine& machine) {
+SaveResults saveTestMachine(ReadWriteTransaction& transaction,
+                            const Machine& machine) {
     std::vector<unsigned char> checkpoint_name;
     auto machine_hash = machine.hash();
     if (!machine_hash) {

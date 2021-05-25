@@ -96,7 +96,7 @@ TEST_CASE("Code serialization") {
     auto tx = storage.makeReadWriteTransaction();
 
     SECTION("Save and load") {
-        auto save_ret = saveMachine(*tx, *mach);
+        auto save_ret = saveTestMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach->hash(), value_cache);
@@ -109,9 +109,9 @@ TEST_CASE("Code serialization") {
         execConfig.max_gas = 7;
         mach2.machine_state.context = AssertionContext(execConfig);
         mach2.run();
-        auto save_ret = saveMachine(*tx, *mach);
+        auto save_ret = saveTestMachine(*tx, *mach);
         REQUIRE(save_ret.status.ok());
-        save_ret = saveMachine(*tx, mach2);
+        save_ret = saveTestMachine(*tx, mach2);
         REQUIRE(save_ret.status.ok());
 
         SECTION("Delete first") {
@@ -132,8 +132,8 @@ TEST_CASE("Code serialization") {
     }
 
     SECTION("Save twice, delete and load") {
-        saveMachine(*tx, *mach);
-        saveMachine(*tx, *mach);
+        saveTestMachine(*tx, *mach);
+        saveTestMachine(*tx, *mach);
         deleteMachine(*tx, mach->hash());
         REQUIRE(tx->commit().ok());
         auto mach2 = storage.getMachine(mach->hash(), value_cache);

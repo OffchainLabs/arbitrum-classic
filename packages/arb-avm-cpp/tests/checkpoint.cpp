@@ -324,7 +324,7 @@ TEST_CASE("Checkpoint Benchmark") {
 void saveState(ReadWriteTransaction& transaction,
                const Machine& machine,
                uint256_t expected_ref_count) {
-    auto results = saveMachine(transaction, machine);
+    auto results = saveTestMachine(transaction, machine);
     REQUIRE(results.status.ok());
     REQUIRE(results.reference_count == expected_ref_count);
     REQUIRE(transaction.commit().ok());

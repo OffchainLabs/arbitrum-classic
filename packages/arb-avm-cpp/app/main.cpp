@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
               << static_cast<int>(mach->currentStatus()) << "\n";
 
     auto tx = storage.makeReadWriteTransaction();
-    saveMachine(*tx, *mach);
+    saveTestMachine(*tx, *mach);
     tx->commit();
 
     auto mach2 = storage.getMachine(mach->hash(), value_cache);
