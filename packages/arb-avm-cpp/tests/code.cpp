@@ -89,9 +89,6 @@ TEST_CASE("Code serialization") {
     ValueCache value_cache{1, 0};
 
     auto mach = storage.getInitialMachine(value_cache);
-    mach->machine_state.code =
-        std::dynamic_pointer_cast<RunningCode>(mach->machine_state.code)
-            ->getParent();
     generateTestMachine(mach);
     auto tx = storage.makeReadWriteTransaction();
 

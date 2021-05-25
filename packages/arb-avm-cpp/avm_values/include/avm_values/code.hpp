@@ -171,6 +171,8 @@ class Code {
         const CodePointRef& ref,
         Operation op,
         uint64_t new_segment_num) = 0;
+
+    virtual CodeSnapshot snapshot() const = 0;
 };
 
 template <typename T>
@@ -391,6 +393,17 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
     uint64_t getNextSegmentNum() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return first_segment + segment_list.size();
+    }
+
+    CodeSnapshot snapshot() const {
+        auto snap = parent->snapshot();
+        const std::lock_guard<std::mutex> lock(mutex);
+        for (const auto& segment : segment_list) {
+            snap.segments[segment->segmentID()] = {
+                segment, segment->size(), segment->cached_hashes.size()};
+        }
+        snap.next_segment_num = first_segment + segment_list.size();
+        return snap;
     }
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {

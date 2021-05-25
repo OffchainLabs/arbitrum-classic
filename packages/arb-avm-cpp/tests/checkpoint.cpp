@@ -386,7 +386,8 @@ void deleteCheckpoint(ReadWriteTransaction& transaction,
 }
 
 Machine getComplexMachine() {
-    auto code = std::make_shared<CoreCode>();
+    auto core_code = std::make_shared<CoreCode>();
+    auto code = std::make_shared<RunningCode>(core_code);
     auto stub = code->addSegment();
     stub = code->addOperation(stub.pc, Operation(OpCode::ADD));
     stub = code->addOperation(stub.pc, Operation(OpCode::MUL));
@@ -416,7 +417,8 @@ Machine getComplexMachine() {
 }
 
 Machine getDefaultMachine() {
-    auto code = std::make_shared<CoreCode>();
+    auto core_code = std::make_shared<CoreCode>();
+    auto code = std::make_shared<RunningCode>(core_code);
     code->addSegment();
     auto static_val = Tuple();
     auto register_val = Tuple();

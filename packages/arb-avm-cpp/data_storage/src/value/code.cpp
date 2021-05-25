@@ -318,11 +318,10 @@ uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store) {
     return deserialize_uint64_t(ptr);
 }
 
-template <typename Func>
-std::unordered_map<uint64_t, uint64_t> breadthFirstSearch(
-    std::map<uint64_t, uint64_t>& segment_counts,
-    Func&& func) {
-    std::unordered_map<uint64_t, uint64_t> total_segment_counts{};
+template <typename Map = std::unordered_map<uint64_t, uint64_t>, typename Func>
+Map breadthFirstSearch(std::map<uint64_t, uint64_t>& segment_counts,
+                       Func&& func) {
+    Map total_segment_counts{};
     auto current_segment_counts = segment_counts;
 
     bool found = true;
@@ -423,32 +422,36 @@ rocksdb::Status deleteCode(ReadWriteTransaction& tx,
 }
 
 rocksdb::Status saveCode(ReadWriteTransaction& tx,
-                         const CoreCode& code,
+                         const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
     saveNextSegmentID(tx, snapshots.next_segment_num);
 
     std::unordered_map<uint64_t, CodeSegmentData> code_segments_to_save{};
 
-    auto total_segment_counts = breadthFirstSearch(
-        segment_counts, [&](uint64_t segment_id, uint64_t total_reference_count,
-                            std::map<uint64_t, uint64_t>& next_segment_counts) {
-            if (total_reference_count == 0) {
-                // If there are no references, don't bother saving
-                return false;
-            }
-            if (code_segments_to_save.find(segment_id) !=
-                code_segments_to_save.end()) {
-                // If we've already saved this segment, there's nothing to do
-                return false;
-            }
-            uint64_t current_segment_count = next_segment_counts[segment_id];
-            code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
-                tx, snapshots.segments[segment_id], next_segment_counts);
-            // Ignore internal references to this segment
-            next_segment_counts[segment_id] = current_segment_count;
-            return true;
-        });
+    auto total_segment_counts =
+        breadthFirstSearch<std::map<uint64_t, uint64_t>>(
+            segment_counts,
+            [&](uint64_t segment_id, uint64_t total_reference_count,
+                std::map<uint64_t, uint64_t>& next_segment_counts) {
+                if (total_reference_count == 0) {
+                    // If there are no references, don't bother saving
+                    return false;
+                }
+                if (code_segments_to_save.find(segment_id) !=
+                    code_segments_to_save.end()) {
+                    // If we've already saved this segment, there's nothing to
+                    // do
+                    return false;
+                }
+                uint64_t current_segment_count =
+                    next_segment_counts[segment_id];
+                code_segments_to_save[segment_id] = prepareToSaveCodeSegment(
+                    tx, snapshots.segments[segment_id], next_segment_counts);
+                // Ignore internal references to this segment
+                next_segment_counts[segment_id] = current_segment_count;
+                return true;
+            });
 
     // Now that we've handled all references, save all the serialized segments
     for (auto& item : code_segments_to_save) {
@@ -483,5 +486,6 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
             }
         }
     }
+    segment_counts = std::move(total_segment_counts);
     return rocksdb::Status::OK();
 }

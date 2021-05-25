@@ -67,9 +67,6 @@ TEST_CASE("ARBOS test vectors") {
             ArbStorage storage(dbpath);
             REQUIRE(storage.initialize(arb_os_path).ok());
             auto mach = storage.getInitialMachine(value_cache);
-            mach->machine_state.code =
-                std::dynamic_pointer_cast<RunningCode>(mach->machine_state.code)
-                    ->getParent();
             MachineExecutionConfig config;
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);

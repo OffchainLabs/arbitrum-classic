@@ -273,10 +273,6 @@ rocksdb::Status ArbCore::saveCheckpoint(ReadWriteTransaction& tx) {
     assert(machine_code != nullptr);
     core_code->commitChanges(*machine_code, save_res.second);
     core_machine->machine_state.code = std::make_shared<RunningCode>(core_code);
-    auto code_status = saveCode(tx, *core_code, save_res.second);
-    if (!code_status.ok()) {
-        return code_status;
-    }
 
     std::vector<unsigned char> key;
     marshal_uint256_t(state.output.arb_gas_used, key);

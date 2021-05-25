@@ -234,6 +234,12 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
     ++segment_counts[machinestate.pc.segment];
     ++segment_counts[machinestate.errpc.pc.segment];
 
+    auto code_status =
+        saveCode(tx, *machine.machine_state.code, segment_counts);
+    if (!code_status.ok()) {
+        return {code_status, {}};
+    }
+
     return {rocksdb::Status::OK(), std::move(segment_counts)};
 }
 
@@ -256,13 +262,13 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
     if (!machine_save_res.first.ok()) {
         return {0, machine_save_res.first};
     }
-    auto core_code = dynamic_cast<CoreCode*>(machine.machine_state.code.get());
+    auto machine_code =
+        dynamic_cast<RunningCode*>(machine.machine_state.code.get());
+    assert(machine_code != nullptr);
+    auto core_code = dynamic_cast<CoreCode*>(machine_code->getParent().get());
     assert(core_code != nullptr);
-    auto code_status =
-        saveCode(transaction, *core_code, machine_save_res.second);
-    if (!code_status.ok()) {
-        return {0, code_status};
-    }
+
+    core_code->commitChanges(*machine_code, machine_save_res.second);
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
                               serialized_state);

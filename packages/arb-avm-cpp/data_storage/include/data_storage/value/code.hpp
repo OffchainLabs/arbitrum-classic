@@ -38,7 +38,7 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
                                             std::set<uint64_t>& segment_ids,
                                             ValueCache& value_cache);
 rocksdb::Status saveCode(ReadWriteTransaction& tx,
-                         const CoreCode& code,
+                         const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts);
 rocksdb::Status deleteCode(ReadWriteTransaction& tx,
                            std::map<uint64_t, uint64_t>& segment_counts);
