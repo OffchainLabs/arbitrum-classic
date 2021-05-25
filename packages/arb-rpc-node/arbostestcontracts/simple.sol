@@ -81,6 +81,12 @@ contract Simple {
         address(this).call{ value: value }("");
     }
 
+    function nestedCall2(uint256 value, address dest) external returns (bytes memory) {
+        Simple(this).exists();
+        (, bytes memory data) = address(dest).call{ value: value }("");
+        return data;
+    }
+
     function crossCall(Simple con) external returns (uint256) {
         return con.exists() + 1;
     }
