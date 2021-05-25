@@ -92,6 +92,7 @@ func startup() error {
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	createBatchBlockInterval := fs.Int64("create-batch-block-interval", 1, "block interval at which to create new batches")
+	gasPriceUrl := fs.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
 	//Healthcheck Config
 	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
@@ -281,6 +282,7 @@ func startup() error {
 		batcherMode,
 		dataSigner,
 		broadcasterSettings,
+		*gasPriceUrl,
 	)
 	if err != nil {
 		return err

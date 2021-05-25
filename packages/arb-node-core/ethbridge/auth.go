@@ -18,11 +18,15 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"encoding/json"
+	"io"
 	"math/big"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -40,10 +44,11 @@ const (
 
 type TransactAuth struct {
 	sync.Mutex
-	auth *bind.TransactOpts
+	auth        *bind.TransactOpts
+	gasPriceUrl string
 }
 
-func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts) (*TransactAuth, error) {
+func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.TransactOpts, gasPriceUrl string) (*TransactAuth, error) {
 	if auth.Nonce == nil {
 		nonce, err := client.PendingNonceAt(ctx, auth.From)
 		if err != nil {
@@ -52,12 +57,16 @@ func NewTransactAuth(ctx context.Context, client ethutils.EthClient, auth *bind.
 		auth.Nonce = new(big.Int).SetUint64(nonce)
 	}
 	return &TransactAuth{
-		auth: auth,
+		auth:        auth,
+		gasPriceUrl: gasPriceUrl,
 	}, nil
 }
 
 func (t *TransactAuth) makeContract(ctx context.Context, contractFunc func(auth *bind.TransactOpts) (ethcommon.Address, *types.Transaction, interface{}, error)) (ethcommon.Address, *types.Transaction, error) {
-	auth := t.getAuth(ctx)
+	auth, err := t.getAuth(ctx)
+	if err != nil {
+		return ethcommon.Address{}, nil, err
+	}
 
 	addr, tx, _, err := contractFunc(auth)
 	err = errors.WithStack(err)
@@ -106,14 +115,47 @@ func (t *TransactAuth) makeTx(ctx context.Context, txFunc func(auth *bind.Transa
 	return tx, err
 }
 
-func (t *TransactAuth) getAuth(ctx context.Context) *bind.TransactOpts {
+type gasPriceResult struct {
+	SafeGasPrice    string `json:"SafeGasPrice"`
+	ProposeGasPrice string `json:"ProposeGasPrice"`
+	FastGasPrice    string `json:"FastGasPrice"`
+}
+
+type gasPriceInfo struct {
+	Result gasPriceResult `json:"result"`
+}
+
+// May use Etherscan's API to get gas price: https://etherscan.io/apis
+func (t *TransactAuth) getAuth(ctx context.Context) (*bind.TransactOpts, error) {
+	gasPrice := t.auth.GasPrice
+	if t.gasPriceUrl != "" {
+		resp, err := http.Get(t.gasPriceUrl)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get gas price")
+		}
+		defer resp.Body.Close()
+		text, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get gas price")
+		}
+		info := gasPriceInfo{}
+		err = json.Unmarshal(text, &info)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get gas price")
+		}
+		gasPriceFloat, ok := new(big.Float).SetString(info.Result.ProposeGasPrice)
+		if !ok {
+			return nil, errors.New("failed to parse gas price")
+		}
+		gasPrice, _ = gasPriceFloat.Mul(gasPriceFloat, big.NewFloat(1e9)).Int(new(big.Int))
+	}
 	return &bind.TransactOpts{
 		From:     t.auth.From,
 		Nonce:    t.auth.Nonce,
 		Signer:   t.auth.Signer,
 		Value:    t.auth.Value,
-		GasPrice: t.auth.GasPrice,
+		GasPrice: gasPrice,
 		GasLimit: t.auth.GasLimit,
 		Context:  ctx,
-	}
+	}, nil
 }
