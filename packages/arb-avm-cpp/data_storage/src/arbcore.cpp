@@ -46,6 +46,8 @@ constexpr auto send_processed_key = std::array<char, 1>{-63};
 constexpr auto logscursor_current_prefix = std::array<char, 1>{-66};
 
 constexpr auto sideload_cache_size = 20;
+constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
+constexpr uint256_t max_checkpoint_frequency = 1'000'000'000;
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_)
@@ -656,6 +658,7 @@ void ArbCore::operator()() {
     execConfig.stop_on_sideload = true;
     size_t max_message_batch_size = 10;
 
+    uint256_t last_checkpoint_gas = maxCheckpointGas();
     while (!arbcore_abort) {
         bool isMachineValid;
         {
@@ -760,17 +763,21 @@ void ArbCore::operator()() {
                     }
                 }
 
-                // Save checkpoint for every sideload
-                status = saveCheckpoint(tx);
-                if (!status.ok()) {
-                    core_error_string = status.ToString();
-                    std::cerr << "ArbCore checkpoint saving failed: "
-                              << core_error_string << "\n";
-                    break;
+                if (core_machine->machine_state.output.arb_gas_used >
+                    last_checkpoint_gas + max_checkpoint_frequency) {
+                    // Save checkpoint for every sideload
+                    status = saveCheckpoint(tx);
+                    if (!status.ok()) {
+                        core_error_string = status.ToString();
+                        std::cerr << "ArbCore checkpoint saving failed: "
+                                  << core_error_string << "\n";
+                        break;
+                    }
+                    last_checkpoint_gas =
+                        core_machine->machine_state.output.arb_gas_used;
+                    // Clear oldest cache and start populating next cache
+                    cache.nextCache();
                 }
-
-                // Clear oldest cache and start populating next cache
-                cache.nextCache();
 
                 // Machine was stopped to save sideload, update execConfig
                 // and start machine back up where it stopped
@@ -1536,8 +1543,6 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
 
     return {status, std::move(execution_cursor)};
 }
-
-constexpr uint256_t checkpoint_load_gas_cost = 1'000'000'000;
 
 rocksdb::Status ArbCore::advanceExecutionCursor(
     ExecutionCursor& execution_cursor,
