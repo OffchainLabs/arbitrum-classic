@@ -426,7 +426,7 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
                          const CoreCode& code,
                          std::map<uint64_t, uint64_t>& segment_counts) {
     auto snapshots = code.snapshot();
-    saveNextSegmentID(tx, snapshots.op_count);
+    saveNextSegmentID(tx, snapshots.next_segment_num);
 
     std::unordered_map<uint64_t, CodeSegmentData> code_segments_to_save{};
 

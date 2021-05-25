@@ -144,7 +144,7 @@ struct CodeSegmentSnapshot {
 
 struct CodeSnapshot {
     std::unordered_map<uint64_t, CodeSegmentSnapshot> segments;
-    uint64_t op_count;
+    uint64_t next_segment_num;
 };
 
 struct CopiedSegment {
