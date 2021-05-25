@@ -124,10 +124,6 @@ class CodeSegment {
         return cached_hashes[i];
     }
 
-    //    const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
-    //
-    //    const CodePoint& at(uint64_t pc) const { return code.at(pc); }
-
     friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
 
     CodePointStub initialCodePointStub() const {
@@ -151,6 +147,11 @@ struct CodeSnapshot {
     uint64_t op_count;
 };
 
+struct CopiedSegment {
+    std::shared_ptr<CodeSegment> segment;
+    CodePointStub stub;
+};
+
 class Code {
    public:
     virtual ~Code();
@@ -165,6 +166,11 @@ class Code {
 
     virtual CodePointStub addOperation(const CodePointRef& ref,
                                        Operation op) = 0;
+
+    virtual std::variant<CodePointStub, CopiedSegment> tryAddOperation(
+        const CodePointRef& ref,
+        Operation op,
+        uint64_t new_segment_num) = 0;
 };
 
 template <typename T>
@@ -192,32 +198,53 @@ class CodeBase {
         return stub;
     }
 
+    bool canAppendOperation(const std::shared_ptr<CodeSegment>& segment,
+                            const CodePointRef& ref) {
+        auto initial_pc = segment->size() - 1;
+        if (ref.pc != initial_pc) {
+            return false;
+        }
+        if (segment.use_count() == 1) {
+            // No other code has a reference to this segment. That means we
+            // can modify the segment even if it forces a reallocation
+            return true;
+        }
+
+        if (segment->size() < segment->capacity()) {
+            // The segment has extra capacity so we can add to it even if
+            // other code has references to it
+            return true;
+        }
+
+        // Fall back to making a copy as there are other references and no
+        // space to add this operation
+        return false;
+    }
+
     CodePointStub addOperationImpl(const CodePointRef& ref, Operation op) {
         auto& segment = getThis()->getSegment(ref.segment);
-        auto initial_pc = segment->size() - 1;
-        if (ref.pc == initial_pc) {
-            if (segment.use_count() == 1) {
-                // No other code has a reference to this segment. That means we
-                // can modify the segment even if it forces a reallocation
-                return segment->addOperation(std::move(op));
-            }
-
-            if (segment->size() < segment->capacity()) {
-                // The segment has extra capacity so we can add to it even if
-                // other code has references to it
-                return segment->addOperation(std::move(op));
-            }
-
-            // Fall back to making a copy as there are other references and no
-            // space to add this operation
+        if (canAppendOperation(segment, ref)) {
+            return segment->addOperation(std::move(op));
         }
-        // This segment was already mutated elsewhere, therefore we must
-        // make a copy
+
         uint64_t new_segment_num = getThis()->nextSegmentNum();
         auto new_segment = segment->getSubset(new_segment_num, ref.pc);
         auto stub = new_segment->addOperation(std::move(op));
         getThis()->storeSegment(std::move(new_segment));
         return stub;
+    }
+
+    std::variant<CodePointStub, CopiedSegment> tryAddOperationImpl(
+        const CodePointRef& ref,
+        Operation op,
+        uint64_t new_segment_num) {
+        auto& segment = getThis()->getSegment(ref.segment);
+        if (canAppendOperation(segment, ref)) {
+            return segment->addOperation(std::move(op));
+        }
+        auto new_segment = segment->getSubset(new_segment_num, ref.pc);
+        auto stub = new_segment->addOperation(std::move(op));
+        return CopiedSegment{std::move(new_segment), stub};
     }
 };
 
@@ -306,6 +333,14 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
         return addOperationImpl(ref, std::move(op));
     }
 
+    std::variant<CodePointStub, CopiedSegment> tryAddOperation(
+        const CodePointRef& ref,
+        Operation op,
+        uint64_t new_segment_num) {
+        const std::lock_guard<std::mutex> lock(mutex);
+        return tryAddOperationImpl(ref, op, new_segment_num);
+    }
+
     CodePointRef initialCodePointRef() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return {0, segments.at(0)->size() - 1};
@@ -382,9 +417,28 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
         const std::lock_guard<std::mutex> lock(mutex);
         if (ref.segment < first_segment) {
-            return parent->addOperation(ref, std::move(op));
+            auto add_var = parent->tryAddOperation(ref, std::move(op),
+                                                   getNextSegmentNum());
+            if (std::holds_alternative<CodePointStub>(add_var)) {
+                return std::get<CodePointStub>(add_var);
+            } else {
+                auto& added = std::get<CopiedSegment>(add_var);
+                storeSegment(std::move(added.segment));
+                return added.stub;
+            }
         }
         return addOperationImpl(ref, std::move(op));
+    }
+
+    std::variant<CodePointStub, CopiedSegment> tryAddOperation(
+        const CodePointRef& ref,
+        Operation op,
+        uint64_t new_segment_num) {
+        const std::lock_guard<std::mutex> lock(mutex);
+        if (ref.segment < first_segment) {
+            return parent->tryAddOperation(ref, std::move(op), new_segment_num);
+        }
+        return tryAddOperationImpl(ref, op, new_segment_num);
     }
 };
 
