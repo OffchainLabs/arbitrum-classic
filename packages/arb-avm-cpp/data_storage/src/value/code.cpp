@@ -136,26 +136,21 @@ struct RawOperation {
     std::optional<ParsedSerializedVal> parsed_immediate;
 };
 
-RawOperation extractRawOperation(
-    std::vector<unsigned char>::const_iterator& it) {
-    bool is_immediate = *it;
-    ++it;
-    auto opcode = static_cast<OpCode>(*it);
-    ++it;
+RawOperation extractRawOperation(const char*& buf) {
+    bool is_immediate = *buf;
+    ++buf;
+    auto opcode = static_cast<OpCode>(*buf);
+    ++buf;
     if (!is_immediate) {
         return {opcode, std::nullopt};
     }
-    return {opcode, parseRecord(it)};
+    return {opcode, parseRecord(buf)};
 }
 
-void extractRawOperations(std::vector<RawOperation>& cps,
-                          const std::vector<unsigned char>& stored_value) {
-    auto iter = stored_value.cbegin();
-    auto ptr = reinterpret_cast<const char*>(&*iter);
-    auto op_count = deserialize_uint64_t(ptr);
-    iter += sizeof(op_count);
+void extractRawOperations(std::vector<RawOperation>& cps, const char*& buf) {
+    auto op_count = deserialize_uint64_t(buf);
     for (uint64_t i = 0; i < op_count; i++) {
-        cps.push_back(extractRawOperation(iter));
+        cps.push_back(extractRawOperation(buf));
     }
 }
 
@@ -235,9 +230,9 @@ std::vector<RawOperation> loadRawOperations(
         if (!s.ok()) {
             throw std::runtime_error("failed to load segment op chunk");
         }
-        std::vector<unsigned char> data{val.data(), val.data() + val.size()};
+        auto buf = val.data();
+        extractRawOperations(raw_ops, buf);
         val.Reset();
-        extractRawOperations(raw_ops, data);
     }
     return raw_ops;
 }

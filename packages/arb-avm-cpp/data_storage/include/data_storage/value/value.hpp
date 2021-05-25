@@ -70,7 +70,7 @@ DbResult<value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
                                ValueCache& value_cache);
-ParsedSerializedVal parseRecord(std::vector<unsigned char>::const_iterator& it);
+ParsedSerializedVal parseRecord(const char*& buf);
 std::vector<value> serializeValue(const value& val,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>& segment_counts);

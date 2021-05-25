@@ -28,10 +28,6 @@
 #include <data_storage/readtransaction.hpp>
 #include <vector>
 
-constexpr int TUP_TUPLE_LENGTH = 33;
-constexpr int TUP_NUM_LENGTH = 33;
-constexpr int TUP_CODEPT_LENGTH = 49;
-
 struct ValueBeingParsed {
     value val;
     uint32_t reference_count;
@@ -70,35 +66,26 @@ T parseBuffer(const char* buf, int& len) {
     return ParsedBuffer{depth, res};
 }
 
-std::vector<ParsedTupVal> parseTuple(
-    std::vector<unsigned char>::const_iterator& it) {
+std::vector<ParsedTupVal> parseTupleData(const char*& buf, uint8_t count) {
     std::vector<ParsedTupVal> return_vector{};
-
-    uint8_t count = *it - TUPLE;
-    ++it;
-
     for (uint8_t i = 0; i < count; i++) {
-        auto value_type = static_cast<ValueTypes>(*it);
-        auto buf = reinterpret_cast<const char*>(&*it);
+        auto value_type = static_cast<ValueTypes>(*buf);
         ++buf;
 
         switch (value_type) {
             case BUFFER: {
                 int len = 0;
                 auto res = parseBuffer<ParsedTupVal>(buf, len);
-
                 return_vector.push_back(res);
-                it += len + 1;
+                buf += len;
                 break;
             }
             case NUM: {
                 return_vector.emplace_back(deserializeUint256t(buf));
-                it += TUP_NUM_LENGTH;
                 break;
             }
             case CODE_POINT_STUB: {
                 return_vector.emplace_back(deserializeCodePointStub(buf));
-                it += TUP_CODEPT_LENGTH;
                 break;
             }
             case HASH_PRE_IMAGE: {
@@ -106,7 +93,6 @@ std::vector<ParsedTupVal> parseTuple(
             }
             case TUPLE: {
                 return_vector.emplace_back(ValueHash{deserializeUint256t(buf)});
-                it += TUP_TUPLE_LENGTH;
                 break;
             }
             default: {
@@ -210,19 +196,15 @@ void deleteParsedValue(const std::vector<ParsedTupVal>& tup,
 }
 }  // namespace
 
-ParsedSerializedVal parseRecord(
-    std::vector<unsigned char>::const_iterator& it) {
-    auto buf = reinterpret_cast<const char*>(&*it);
+ParsedSerializedVal parseRecord(const char*& buf) {
     auto value_type = static_cast<ValueTypes>(*buf);
     ++buf;
 
     switch (value_type) {
         case NUM: {
-            it += TUP_NUM_LENGTH;
             return deserializeUint256t(buf);
         }
         case CODE_POINT_STUB: {
-            it += TUP_CODEPT_LENGTH;
             return deserializeCodePointStub(buf);
         }
         case HASH_PRE_IMAGE: {
@@ -231,14 +213,14 @@ ParsedSerializedVal parseRecord(
         case BUFFER: {
             int len = 0;
             auto res = parseBuffer<ParsedSerializedVal>(buf, len);
-            it += len;
+            buf += len;
             return res;
         }
         default: {
             if (value_type - TUPLE > 8) {
                 throw std::runtime_error("can't get value with invalid type");
             }
-            return parseTuple(it);
+            return parseTupleData(buf, value_type - TUPLE);
         }
     }
 }
@@ -353,8 +335,8 @@ Buffer processBuffer(const ReadTransaction& tx,
                       << static_cast<uint64_t>(val_hash.hash) << std::endl;
             return Buffer();
         }
-        auto it = results.stored_value.cbegin();
-        auto record = parseRecord(it);
+        auto buf = reinterpret_cast<const char*>(results.stored_value.data());
+        auto record = parseRecord(buf);
 
         if (std::holds_alternative<Buffer>(record)) {
             Buffer buf = std::get<Buffer>(record);
@@ -464,8 +446,8 @@ GetResults processVal(const ReadTransaction& tx,
         return results;
     }
 
-    auto it = results.stored_value.cbegin();
-    auto record = parseRecord(it);
+    auto buf = reinterpret_cast<const char*>(results.stored_value.data());
+    auto record = parseRecord(buf);
 
     return std::visit(
         [&](const auto& val) {
@@ -492,8 +474,8 @@ GetResults processFirstVal(const ReadTransaction& tx,
     if (!results.status.ok()) {
         return results;
     }
-    auto it = results.stored_value.cbegin();
-    auto record = parseRecord(it);
+    auto buf = reinterpret_cast<const char*>(results.stored_value.data());
+    auto record = parseRecord(buf);
 
     return std::visit(
         [&](const auto& val) {
@@ -651,12 +633,13 @@ DeleteResults deleteValues(ReadWriteTransaction& tx,
         auto key = vecToSlice(hash_key);
         auto results = deleteRefCountedData(tx, key);
         if (results.status.ok() && results.reference_count == 0) {
-            auto it = results.stored_value.cbegin();
+            auto buf =
+                reinterpret_cast<const char*>(results.stored_value.data());
             std::visit(
                 [&](const auto& val) {
                     deleteParsedValue(val, items_to_delete, segment_counts);
                 },
-                parseRecord(it));
+                parseRecord(buf));
         }
         if (first) {
             ret = results;
