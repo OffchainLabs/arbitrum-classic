@@ -60,19 +60,19 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	}
 }
 
-func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
-	return bc.connect(messageReceiver)
+	return bc.connect(ctx, messageReceiver)
 }
 
-func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
 		return nil, nil
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
+	conn, _, _, err := ws.DefaultDialer.Dial(ctx, bc.websocketUrl)
 	if err != nil {
 		logger.Error().Err(err).Msg("broadcast client unable to connect")
 		return nil, err
@@ -82,12 +82,12 @@ func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFee
 
 	bc.conn = conn
 
-	go bc.backgroundReader(messageReceiver)
+	go bc.backgroundReader(ctx, messageReceiver)
 
 	return messageReceiver, err
 }
 
-func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) backgroundReader(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	for {
 		msg, op, err := wsutil.ReadServerData(bc.conn)
 		if err != nil {
@@ -97,7 +97,7 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.Bro
 			logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
 			_ = bc.conn.Close()
 			// Starts up a new backgroundReader
-			bc.RetryConnect(messageReceiver)
+			bc.RetryConnect(ctx, messageReceiver)
 			return
 		}
 
@@ -126,7 +126,7 @@ func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.Bro
 	}
 }
 
-func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true
@@ -134,7 +134,7 @@ func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.Broadca
 		time.Sleep(time.Duration(waitMs) * time.Millisecond)
 
 		bc.RetryCount++
-		_, err := bc.connect(messageReceiver)
+		_, err := bc.connect(ctx, messageReceiver)
 		if err == nil {
 			bc.retrying = false
 			return

@@ -48,9 +48,10 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9742/", nil)
 	defer wg.Done()
 	messageCount := 0
+	ctx := context.Background()
 
 	// connect returns
-	messageReceiver, err := broadcastClient.Connect()
+	messageReceiver, err := broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Errorf("Can not connect: %v\n", err)
 	}
@@ -97,7 +98,7 @@ func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
 
 	// connect returns
-	_, err = broadcastClient.Connect()
+	_, err = broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Errorf("Can not connect: %v\n", err)
 	}
@@ -148,7 +149,7 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
 
 	// connect returns
-	_, err = broadcastClient.Connect()
+	_, err = broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Errorf("Can not connect: %v\n", err)
 	}
