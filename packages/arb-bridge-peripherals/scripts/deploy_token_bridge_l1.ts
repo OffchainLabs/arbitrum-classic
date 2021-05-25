@@ -104,7 +104,8 @@ const main = async () => {
   const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
     inboxAddress,
     deployments.standardArbERC20,
-    arbTokenBridgeProxy.address
+    arbTokenBridgeProxy.address,
+    l2Signer.address
   )
   console.log('init L1 hash', initL1Bridge.hash)
   console.log('init L2 hash', initL2Bridge.hash)

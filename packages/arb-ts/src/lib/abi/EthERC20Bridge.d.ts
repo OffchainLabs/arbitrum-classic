@@ -26,15 +26,16 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'calculateL2TokenAddress(address)': FunctionFragment
     'customL2Token(address)': FunctionFragment
     'deposit(address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
-    'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)': FunctionFragment
     'getDepositCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'hasTriedDeploy(address)': FunctionFragment
     'inbox()': FunctionFragment
-    'initialize(address,address,address)': FunctionFragment
+    'initialize(address,address,address,address)': FunctionFragment
     'isCustomToken(address)': FunctionFragment
     'l2ArbTokenBridgeAddress()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
     'registerCustomL2Token(address,uint256,uint256,uint256,address)': FunctionFragment
+    'registerCustomL2TokenAdmin(address,address,uint256,uint256,uint256,address)': FunctionFragment
+    'transferExitAndCall(address,address,uint256,uint256,address,bytes)': FunctionFragment
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
 
@@ -59,18 +60,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
-    functionFragment: 'fastWithdrawalFromL2',
-    values: [
-      string,
-      BytesLike,
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish
-    ]
-  ): string
-  encodeFunctionData(
     functionFragment: 'getDepositCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
@@ -81,7 +70,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [string, string, string]
+    values: [string, string, string, string]
   ): string
   encodeFunctionData(
     functionFragment: 'isCustomToken',
@@ -100,6 +89,14 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     values: [string, BigNumberish, BigNumberish, BigNumberish, string]
   ): string
   encodeFunctionData(
+    functionFragment: 'registerCustomL2TokenAdmin',
+    values: [string, string, BigNumberish, BigNumberish, BigNumberish, string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'transferExitAndCall',
+    values: [string, string, BigNumberish, BigNumberish, string, BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'withdrawFromL2',
     values: [BigNumberish, string, string, BigNumberish]
   ): string
@@ -113,10 +110,6 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'fastWithdrawalFromL2',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(
     functionFragment: 'getDepositCalldata',
     data: BytesLike
@@ -144,6 +137,14 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'registerCustomL2TokenAdmin',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'transferExitAndCall',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'withdrawFromL2',
     data: BytesLike
   ): Result
@@ -153,7 +154,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'DeployToken(uint256,address)': EventFragment
     'DepositToken(address,address,uint256,uint256,address)': EventFragment
     'WithdrawExecuted(address,address,address,uint256,uint256)': EventFragment
-    'WithdrawRedirected(address,address,address,uint256,uint256)': EventFragment
+    'WithdrawRedirected(address,address,address,uint256,uint256,bool)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'ActivateCustomToken'): EventFragment
@@ -216,28 +217,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    fastWithdrawalFromL2(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)'(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     getDepositCalldata(
       erc20: string,
       sender: string,
@@ -275,13 +254,15 @@ export class EthERC20Bridge extends Contract {
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,address)'(
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
@@ -325,6 +306,46 @@ export class EthERC20Bridge extends Contract {
       gasPriceBid: BigNumberish,
       refundAddress: string,
       overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    registerCustomL2TokenAdmin(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    'registerCustomL2TokenAdmin(address,address,uint256,uint256,uint256,address)'(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    transferExitAndCall(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'transferExitAndCall(address,address,uint256,uint256,address,bytes)'(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: Overrides
     ): Promise<ContractTransaction>
 
     withdrawFromL2(
@@ -383,28 +404,6 @@ export class EthERC20Bridge extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  fastWithdrawalFromL2(
-    liquidityProvider: string,
-    liquidityProof: BytesLike,
-    initialDestination: string,
-    erc20: string,
-    amount: BigNumberish,
-    exitNum: BigNumberish,
-    maxFee: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)'(
-    liquidityProvider: string,
-    liquidityProof: BytesLike,
-    initialDestination: string,
-    erc20: string,
-    amount: BigNumberish,
-    exitNum: BigNumberish,
-    maxFee: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   getDepositCalldata(
     erc20: string,
     sender: string,
@@ -442,13 +441,15 @@ export class EthERC20Bridge extends Contract {
     _inbox: string,
     _l2TemplateERC20: string,
     _l2ArbTokenBridgeAddress: string,
+    _adminAddress: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'initialize(address,address,address)'(
+  'initialize(address,address,address,address)'(
     _inbox: string,
     _l2TemplateERC20: string,
     _l2ArbTokenBridgeAddress: string,
+    _adminAddress: string,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
@@ -486,6 +487,46 @@ export class EthERC20Bridge extends Contract {
     gasPriceBid: BigNumberish,
     refundAddress: string,
     overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  registerCustomL2TokenAdmin(
+    l1CustomTokenAddress: string,
+    l2CustomTokenAddress: string,
+    maxSubmissionCost: BigNumberish,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    refundAddress: string,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  'registerCustomL2TokenAdmin(address,address,uint256,uint256,uint256,address)'(
+    l1CustomTokenAddress: string,
+    l2CustomTokenAddress: string,
+    maxSubmissionCost: BigNumberish,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    refundAddress: string,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  transferExitAndCall(
+    initialDestination: string,
+    erc20: string,
+    amount: BigNumberish,
+    exitNum: BigNumberish,
+    to: string,
+    data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'transferExitAndCall(address,address,uint256,uint256,address,bytes)'(
+    initialDestination: string,
+    erc20: string,
+    amount: BigNumberish,
+    exitNum: BigNumberish,
+    to: string,
+    data: BytesLike,
+    overrides?: Overrides
   ): Promise<ContractTransaction>
 
   withdrawFromL2(
@@ -554,28 +595,6 @@ export class EthERC20Bridge extends Contract {
       }
     >
 
-    fastWithdrawalFromL2(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)'(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     getDepositCalldata(
       erc20: string,
       sender: string,
@@ -613,13 +632,15 @@ export class EthERC20Bridge extends Contract {
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,address)'(
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -658,6 +679,46 @@ export class EthERC20Bridge extends Contract {
       refundAddress: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    registerCustomL2TokenAdmin(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'registerCustomL2TokenAdmin(address,address,uint256,uint256,uint256,address)'(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    transferExitAndCall(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'transferExitAndCall(address,address,uint256,uint256,address,bytes)'(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     withdrawFromL2(
       exitNum: BigNumberish,
@@ -706,10 +767,11 @@ export class EthERC20Bridge extends Contract {
 
     WithdrawRedirected(
       user: string | null,
-      liquidityProvider: string | null,
+      to: string | null,
       erc20: null,
       amount: null,
-      exitNum: BigNumberish | null
+      exitNum: BigNumberish | null,
+      madeExternalCall: null
     ): EventFilter
   }
 
@@ -753,28 +815,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    fastWithdrawalFromL2(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)'(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     getDepositCalldata(
       erc20: string,
       sender: string,
@@ -808,13 +848,15 @@ export class EthERC20Bridge extends Contract {
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,address)'(
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
@@ -858,6 +900,46 @@ export class EthERC20Bridge extends Contract {
       gasPriceBid: BigNumberish,
       refundAddress: string,
       overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    registerCustomL2TokenAdmin(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    'registerCustomL2TokenAdmin(address,address,uint256,uint256,uint256,address)'(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    transferExitAndCall(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'transferExitAndCall(address,address,uint256,uint256,address,bytes)'(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: Overrides
     ): Promise<BigNumber>
 
     withdrawFromL2(
@@ -920,28 +1002,6 @@ export class EthERC20Bridge extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    fastWithdrawalFromL2(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'fastWithdrawalFromL2(address,bytes,address,address,uint256,uint256,uint256)'(
-      liquidityProvider: string,
-      liquidityProof: BytesLike,
-      initialDestination: string,
-      erc20: string,
-      amount: BigNumberish,
-      exitNum: BigNumberish,
-      maxFee: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     getDepositCalldata(
       erc20: string,
       sender: string,
@@ -978,13 +1038,15 @@ export class EthERC20Bridge extends Contract {
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,address)'(
       _inbox: string,
       _l2TemplateERC20: string,
       _l2ArbTokenBridgeAddress: string,
+      _adminAddress: string,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1032,6 +1094,46 @@ export class EthERC20Bridge extends Contract {
       gasPriceBid: BigNumberish,
       refundAddress: string,
       overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    registerCustomL2TokenAdmin(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    'registerCustomL2TokenAdmin(address,address,uint256,uint256,uint256,address)'(
+      l1CustomTokenAddress: string,
+      l2CustomTokenAddress: string,
+      maxSubmissionCost: BigNumberish,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      refundAddress: string,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    transferExitAndCall(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'transferExitAndCall(address,address,uint256,uint256,address,bytes)'(
+      initialDestination: string,
+      erc20: string,
+      amount: BigNumberish,
+      exitNum: BigNumberish,
+      to: string,
+      data: BytesLike,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     withdrawFromL2(
