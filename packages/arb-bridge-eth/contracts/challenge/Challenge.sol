@@ -67,7 +67,7 @@ contract Challenge is Cloneable, IChallenge {
     IOneStepProof[] public executors;
     address[2] public bridges;
 
-    IRollup internal resultReceiver;
+    IRollupUser internal resultReceiver;
 
     uint256 maxMessageCount;
 
@@ -115,7 +115,7 @@ contract Challenge is Cloneable, IChallenge {
 
         executors = _executors;
 
-        resultReceiver = IRollup(_resultReceiver);
+        resultReceiver = IRollupUser(_resultReceiver);
 
         maxMessageCount = _maxMessageCount;
 

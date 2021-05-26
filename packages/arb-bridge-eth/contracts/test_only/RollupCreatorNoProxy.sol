@@ -26,6 +26,7 @@ import "../rollup/RollupEventBridge.sol";
 import "../rollup/Rollup.sol";
 import "../rollup/NodeFactory.sol";
 
+import "../rollup/Rollup.sol";
 import "../rollup/IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
@@ -150,7 +151,7 @@ contract RollupCreatorNoProxy {
             config.sequencerDelaySeconds
         );
 
-        IRollup(frame.rollup).initialize(
+        Rollup(payable(frame.rollup)).initialize(
             config.machineHash,
             config.confirmPeriodBlocks,
             config.extraChallengeTimeBlocks,

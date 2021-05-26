@@ -30,6 +30,7 @@ import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./IRollup.sol";
+import "./Rollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "./RollupLib.sol";
@@ -128,7 +129,7 @@ contract RollupCreator is Ownable, CloneFactory {
         );
 
         frame.admin.transferOwnership(config.owner);
-        IRollup(frame.rollup).initialize(
+        Rollup(payable(frame.rollup)).initialize(
             config.machineHash,
             config.confirmPeriodBlocks,
             config.extraChallengeTimeBlocks,

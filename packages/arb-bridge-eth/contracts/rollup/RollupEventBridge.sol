@@ -111,10 +111,10 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
     }
 
     function claimNode(uint256 nodeNum, address staker) external onlyRollup {
-        Rollup r = Rollup(rollup);
+        Rollup r = Rollup(payable(rollup));
         INode node = r.getNode(nodeNum);
         require(node.stakers(staker), "NOT_STAKED");
-        r.requireUnresolved(nodeNum);
+        IRollupUser(address(r)).requireUnresolved(nodeNum);
 
         deliverToBridge(
             abi.encodePacked(CLAIM_NODE_EVENT, nodeNum, uint256(uint160(bytes20(staker))))

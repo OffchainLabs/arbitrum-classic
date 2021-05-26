@@ -26,6 +26,7 @@ import "./RollupEventBridge.sol";
 
 import "../bridge/interfaces/IBridge.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
 contract BridgeCreator is Ownable {
     Bridge delayedBridgeTemplate;

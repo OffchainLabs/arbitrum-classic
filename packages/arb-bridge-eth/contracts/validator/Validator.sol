@@ -70,7 +70,7 @@ contract Validator is OwnableUpgradeable, Cloneable {
         }
     }
 
-    function returnOldDeposits(IRollup rollup, address payable[] calldata stakers)
+    function returnOldDeposits(IRollupUser rollup, address payable[] calldata stakers)
         external
         onlyOwner
     {

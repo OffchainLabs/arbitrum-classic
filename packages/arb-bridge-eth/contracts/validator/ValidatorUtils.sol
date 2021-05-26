@@ -94,7 +94,7 @@ contract ValidatorUtils {
     }
 
     function requireRejectable(Rollup rollup) external view returns (bool) {
-        rollup.requireUnresolvedExists();
+        IRollupUser(address(rollup)).requireUnresolvedExists();
         INode node = rollup.getNode(rollup.firstUnresolvedNode());
         bool inOrder = node.prev() == rollup.latestConfirmed();
         if (inOrder) {
@@ -103,13 +103,16 @@ contract ValidatorUtils {
             rollup.getNode(node.prev()).requirePastChildConfirmDeadline();
 
             // Verify that no staker is staked on this node
-            require(node.stakerCount() == rollup.countStakedZombies(node), "HAS_STAKERS");
+            require(
+                node.stakerCount() == IRollupUser(address(rollup)).countStakedZombies(node),
+                "HAS_STAKERS"
+            );
         }
         return inOrder;
     }
 
     function requireConfirmable(Rollup rollup) external view {
-        rollup.requireUnresolvedExists();
+        IRollupUser(address(rollup)).requireUnresolvedExists();
 
         uint256 stakerCount = rollup.stakerCount();
         // There is at least one non-zombie staker
@@ -125,7 +128,8 @@ contract ValidatorUtils {
         // Check that prev is latest confirmed
         require(node.prev() == rollup.latestConfirmed(), "INVALID_PREV");
         require(
-            node.stakerCount() == stakerCount + rollup.countStakedZombies(node),
+            node.stakerCount() ==
+                stakerCount + IRollupUser(address(rollup)).countStakedZombies(node),
             "NOT_ALL_STAKED"
         );
     }
