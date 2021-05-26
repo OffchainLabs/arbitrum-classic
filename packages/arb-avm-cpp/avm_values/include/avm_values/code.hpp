@@ -65,7 +65,7 @@ class CodeSegment {
         auto code_copy = std::vector<Operation>{operations.begin(),
                                                 operations.begin() + ops + 1};
         auto hashes_copy = std::vector<uint256_t>{
-            cached_hashes.begin(), cached_hashes.begin() + ops / 10 + 1};
+            cached_hashes.begin(), cached_hashes.begin() + ops / 10};
         // Make endpoint pc + 1 since pc should be included in segment
         return std::make_shared<CodeSegment>(
             new_segment_id, std::move(code_copy), std::move(hashes_copy));
