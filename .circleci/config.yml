@@ -170,13 +170,13 @@ jobs:
             cd packages/arb-avm-cpp/debug
             cmake -DCMAKE_BUILD_TYPE=Debug -DCODE_COVERAGE=True ..
             cmake --build . -j 2
-            cd ../
-            ./scripts/install-cmachine-debug
+      # COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
       - persist_to_workspace: # store the built files into the workspace for other jobs.
-          root: /home/user/project/packages/arb-avm-cpp/
+          root: /home/user/
           paths:
-            - ./cmachine/*.a
-            - ./debug/*
+            - ./.hunter
+            - ./project/packages/arb-avm-cpp/cmachine/flags.go
+            - ./project/packages/arb-avm-cpp/debug/*
   cpp-avm:
     docker:
       - image: offchainlabs/cpp-base:0.3.1
@@ -190,10 +190,7 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
-      - run:
-          command: cp -r /home/user/workspace/debug /home/user/project/packages/arb-avm-cpp/
-          working_directory: /home/user/project
+          at: /home/user/
       - run:
           name: test arb-avm-cpp
           command: |
@@ -218,15 +215,13 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
+          at: /home/user/
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - run:
-          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           name: test arb-util
@@ -261,15 +256,13 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
+          at: /home/user/
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - run:
-          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           name: test arb-rpc-node
@@ -292,15 +285,13 @@ jobs:
             git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - attach_workspace:
-          at: /home/user/workspace
+          at: /home/user/
       - run:
           name: 'Setup Enviroment'
           command: |
             export ARB_PACKAGES_VAR=$(go list ./... | awk -vORS=, '{ print "github.com/offchainlabs/arbitrum/"substr($1,21) }' | sed 's/,$/\n/')
             echo "export ARB_PACKAGES=$ARB_PACKAGES_VAR" >> $BASH_ENV
             echo "export CGO_LDFLAGS='-lgcov --coverage'" >> $BASH_ENV
-      - run:
-          command: cp /home/user/workspace/cmachine/*.a /home/user/project/packages/arb-avm-cpp/cmachine
       - restore_cache: *restore_go_cache
       - run:
           name: Run dev node
