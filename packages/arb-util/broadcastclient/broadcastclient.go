@@ -36,7 +36,7 @@ type BroadcastClient struct {
 	websocketUrl                 string
 	lastInboxSeqNum              *big.Int
 	conn                         net.Conn
-	startingBroadcastClientMutex *sync.Mutex
+	connMutex                    *sync.Mutex
 	RetryCount                   int
 	retrying                     bool
 	shuttingDown                 bool
@@ -54,79 +54,103 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	}
 
 	return &BroadcastClient{
-		startingBroadcastClientMutex: &sync.Mutex{},
-		websocketUrl:                 websocketUrl,
-		lastInboxSeqNum:              seqNum,
+		connMutex:       &sync.Mutex{},
+		websocketUrl:    websocketUrl,
+		lastInboxSeqNum: seqNum,
 	}
 }
 
-func (bc *BroadcastClient) Connect() (chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) Connect(ctx context.Context) chan broadcaster.BroadcastFeedMessage {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
-	return bc.connect(messageReceiver)
+	return bc.connect(ctx, messageReceiver)
 }
 
-func (bc *BroadcastClient) connect(messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) chan broadcaster.BroadcastFeedMessage {
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
-		return nil, nil
+		return nil
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), bc.websocketUrl)
-	if err != nil {
-		logger.Error().Err(err).Msg("broadcast client unable to connect")
-		return nil, err
-	} else {
-		logger.Info().Msg("Connected")
-	}
+	go func() {
+		timeoutDialer := ws.Dialer{
+			Timeout: 10 * time.Second,
+		}
 
-	bc.conn = conn
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(10 * time.Second):
+			}
 
-	go bc.backgroundReader(messageReceiver)
+			conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
+			if err != nil {
+				logger.Warn().Err(err).Msg("broadcast client unable to connect, retrying")
+			} else {
+				bc.connMutex.Lock()
+				bc.conn = conn
+				bc.connMutex.Unlock()
 
-	return messageReceiver, err
+				logger.Info().Msg("Connected")
+				break
+			}
+		}
+
+		bc.startBackgroundReader(ctx, messageReceiver)
+	}()
+
+	return messageReceiver
 }
 
-func (bc *BroadcastClient) backgroundReader(messageReceiver chan broadcaster.BroadcastFeedMessage) {
-	for {
-		msg, op, err := wsutil.ReadServerData(bc.conn)
-		if err != nil {
-			if bc.shuttingDown {
+func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			msg, op, err := wsutil.ReadServerData(bc.conn)
+			if err != nil {
+				if bc.shuttingDown {
+					return
+				}
+				logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
+				_ = bc.conn.Close()
+				// Starts up a new backgroundReader
+				bc.RetryConnect(ctx, messageReceiver)
 				return
 			}
-			logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
-			_ = bc.conn.Close()
-			// Starts up a new backgroundReader
-			bc.RetryConnect(messageReceiver)
-			return
-		}
 
-		res := broadcaster.BroadcastMessage{}
-		err = json.Unmarshal(msg, &res)
-		if err != nil {
-			logger.Error().Err(err).Msg("error unmarshalling message")
-			continue
-		}
-
-		if len(res.Messages) > 0 {
-			logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
-		} else {
-			logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
-		}
-
-		if res.Version == 1 {
-			for _, message := range res.Messages {
-				messageReceiver <- *message
+			res := broadcaster.BroadcastMessage{}
+			err = json.Unmarshal(msg, &res)
+			if err != nil {
+				logger.Error().Err(err).Msg("error unmarshalling message")
+				continue
 			}
 
-			if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
-				bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
+			if len(res.Messages) > 0 {
+				logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
+			} else {
+				logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
+			}
+
+			if res.Version == 1 {
+				for _, message := range res.Messages {
+					messageReceiver <- *message
+				}
+
+				if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
+					bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
+				}
 			}
 		}
-	}
+	}()
 }
 
-func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	MaxWaitMs := 15000
 	waitMs := 500
 	bc.retrying = true
@@ -134,11 +158,7 @@ func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.Broadca
 		time.Sleep(time.Duration(waitMs) * time.Millisecond)
 
 		bc.RetryCount++
-		_, err := bc.connect(messageReceiver)
-		if err == nil {
-			bc.retrying = false
-			return
-		}
+		_ = bc.connect(ctx, messageReceiver)
 
 		if waitMs < MaxWaitMs {
 			waitMs += 500
@@ -149,5 +169,9 @@ func (bc *BroadcastClient) RetryConnect(messageReceiver chan broadcaster.Broadca
 func (bc *BroadcastClient) Close() {
 	logger.Debug().Msg("closing broadcaster client connection")
 	bc.shuttingDown = true
-	_ = bc.conn.Close()
+	bc.connMutex.Lock()
+	if bc.conn != nil {
+		_ = bc.conn.Close()
+	}
+	bc.connMutex.Unlock()
 }

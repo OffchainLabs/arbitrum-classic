@@ -13,6 +13,8 @@ validator-states
 docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
 packages/arb-avm-cpp/rocksdb
+packages/arb-avm-cpp/cmachine/flags.go.in2
+packages/arb-avm-cpp/cmachine/flags.go
 bridge_eth_addresses.json
 packages/arb-bridge-eth/rollup-*
 keys.json

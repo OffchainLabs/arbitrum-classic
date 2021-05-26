@@ -75,10 +75,8 @@ typedef struct {
     uint64_t inbox_messages_consumed;
     ByteSlice sends;
     int sendCount;
-    void* sendAcc;
     ByteSlice logs;
     int logCount;
-    void* logAcc;
     ByteSlice debugPrints;
     int debugPrintCount;
     uint64_t numSteps;

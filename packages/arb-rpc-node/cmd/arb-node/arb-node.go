@@ -125,8 +125,8 @@ func startup() error {
 
 	if fs.NArg() != 3 || (!*sequencerMode && *feedURL == "") {
 		fmt.Printf("usage       sequencer: arb-node --sequencer [optional arguments] <ethereum node> <rollup chain address> %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> state <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> state <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> <database directory> <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> <database directory> <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		return errors.New("invalid arguments")
 	}
 
@@ -140,10 +140,7 @@ func startup() error {
 			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
 		} else {
 			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
-			sequencerFeed, err = broadcastClient.Connect()
-			if err != nil {
-				log.Fatal().Err(err).Msg("unable to start broadcastclient")
-			}
+			sequencerFeed = broadcastClient.Connect(ctx)
 		}
 	}
 
