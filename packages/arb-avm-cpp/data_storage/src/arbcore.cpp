@@ -2458,20 +2458,6 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         return false;
     }
 
-    if (!logs_cursors[cursor_index].data.empty()) {
-        // Still have logs to get
-        std::cerr << "logs cursor " << cursor_index
-                  << " has messages left in cursor when trying to confirm"
-                  << std::endl;
-        return false;
-    }
-
-    if (!logs_cursors[cursor_index].data.empty() ||
-        !logs_cursors[cursor_index].deleted_data.empty()) {
-        // Still have logs to get
-        return false;
-    }
-
     if (logs_cursors[cursor_index].deleted_data.empty()) {
         ReadWriteTransaction tx(data_storage);
         auto status = logsCursorSaveCurrentTotalCount(
