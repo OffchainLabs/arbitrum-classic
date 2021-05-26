@@ -31,6 +31,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./IRollup.sol";
 import "./Rollup.sol";
+import "./facets/RollupUser.sol";
+import "./facets/RollupAdmin.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "./RollupLib.sol";
@@ -45,6 +47,8 @@ contract RollupCreator is Ownable, CloneFactory {
     ICloneable public rollupTemplate;
     address public challengeFactory;
     address public nodeFactory;
+    address public rollupAdminFacet;
+    address public rollupUserFacet;
 
     constructor() public Ownable() {}
 
@@ -52,12 +56,16 @@ contract RollupCreator is Ownable, CloneFactory {
         BridgeCreator _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
-        address _nodeFactory
+        address _nodeFactory,
+        address _rollupAdminFacet,
+        address _rollupUserFacet
     ) external onlyOwner {
         bridgeCreator = _bridgeCreator;
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
+        rollupAdminFacet = _rollupAdminFacet;
+        rollupUserFacet = _rollupUserFacet;
         emit TemplatesUpdated();
     }
 
@@ -145,7 +153,8 @@ contract RollupCreator is Ownable, CloneFactory {
                 address(frame.rollupEventBridge),
                 challengeFactory,
                 nodeFactory
-            ]
+            ],
+            [rollupAdminFacet, rollupUserFacet]
         );
         emit RollupCreated(frame.rollup, address(frame.inbox), address(frame.admin));
         return IRollup(frame.rollup);

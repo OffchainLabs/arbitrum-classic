@@ -53,7 +53,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable, IRollup {
     address public owner;
     address public stakeToken;
     // function signature => facet address
-    mapping(bytes4 => address) facets;
+    address[] facets;
 }
 
 contract Rollup is RollupBase {
@@ -67,7 +67,8 @@ contract Rollup is RollupBase {
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
-        address[6] calldata connectedContracts
+        address[6] calldata connectedContracts,
+        address[2] calldata _facets
     ) public {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
         require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
@@ -100,6 +101,8 @@ contract Rollup is RollupBase {
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
         owner = _owner;
+        // facets[0] == admin, facets[1] == user
+        facets = _facets;
 
         emit RollupCreated(_machineHash);
         // TODO: initialize facets? ie erc20
@@ -132,13 +135,9 @@ contract Rollup is RollupBase {
             );
     }
 
-    function addFacet(bytes4[] memory _sigs, address[] memory _facet) external {
+    function updateFacets(address[] memory _facets) external {
         require(msg.sender == owner, "ONLY_OWNER");
-        require(_sigs.length == _facet.length, "WRONG_LENGTH");
-
-        for (uint256 i = 0; i < _sigs.length; i++) {
-            facets[_sigs[i]] = _facet[i];
-        }
+        facets = _facets;
     }
 
     /**
@@ -164,7 +163,7 @@ contract Rollup is RollupBase {
      */
     function _fallback() internal virtual {
         require(msg.data.length > 4, "NO_FUNC_SIG");
-        address target = facets[msg.sig];
+        address target = msg.sender == owner ? facets[0] : facets[1];
         _delegate(target);
     }
 

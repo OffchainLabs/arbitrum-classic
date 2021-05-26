@@ -31,6 +31,8 @@ import "../rollup/IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "../rollup/RollupLib.sol";
+import "../rollup/facets/RollupUser.sol";
+import "../rollup/facets/RollupAdmin.sol";
 
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress);
@@ -167,7 +169,8 @@ contract RollupCreatorNoProxy {
                 address(frame.rollupEventBridge),
                 challengeFactory,
                 address(new NodeFactory())
-            ]
+            ],
+            [address(new RollupUserFacet()), address(new RollupAdminFacet())]
         );
         emit RollupCreated(frame.rollup);
         return IRollup(frame.rollup);
