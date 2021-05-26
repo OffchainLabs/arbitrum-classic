@@ -88,10 +88,7 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	ctx := context.Background()
 
 	// connect returns
-	messageReceiver, err := broadcastClient.Connect(ctx)
-	if err != nil {
-		t.Errorf("Can not connect: %v\n", err)
-	}
+	messageReceiver := broadcastClient.Connect(ctx)
 
 	for {
 		select {
