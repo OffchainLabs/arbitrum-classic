@@ -140,10 +140,7 @@ func startup() error {
 			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
 		} else {
 			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
-			sequencerFeed, err = broadcastClient.Connect(ctx)
-			if err != nil {
-				log.Error().Err(err).Msg("unable to start broadcastclient")
-			}
+			sequencerFeed = broadcastClient.Connect(ctx)
 		}
 	}
 
