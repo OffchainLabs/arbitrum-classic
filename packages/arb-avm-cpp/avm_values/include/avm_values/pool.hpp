@@ -31,7 +31,8 @@ struct RawTuple {
     bool deferredHashing = true;
 
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}
-
+    RawTuple(const RawTuple&) = delete;
+    RawTuple& operator=(const RawTuple&) = delete;
     ~RawTuple();
 };
 
