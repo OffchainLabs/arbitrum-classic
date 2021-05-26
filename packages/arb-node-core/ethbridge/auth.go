@@ -19,7 +19,7 @@ package ethbridge
 import (
 	"context"
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"math/big"
 	"net/http"
 	"strings"
@@ -134,7 +134,7 @@ func (t *TransactAuth) getAuth(ctx context.Context) (*bind.TransactOpts, error) 
 			return nil, errors.Wrap(err, "failed to get gas price")
 		}
 		defer resp.Body.Close()
-		text, err := io.ReadAll(resp.Body)
+		text, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get gas price")
 		}
