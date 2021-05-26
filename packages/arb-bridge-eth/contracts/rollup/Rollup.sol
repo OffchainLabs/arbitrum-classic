@@ -162,7 +162,7 @@ contract Rollup is RollupBase {
      * This function does not return to its internall call site, it will return directly to the external caller.
      */
     function _fallback() internal virtual {
-        require(msg.data.length > 4, "NO_FUNC_SIG");
+        require(msg.data.length >= 4, "NO_FUNC_SIG");
         address target = msg.sender == owner ? facets[0] : facets[1];
         _delegate(target);
     }
