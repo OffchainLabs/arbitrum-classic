@@ -122,8 +122,10 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	test.FailIfError(t, err)
 	auth.GasLimit = 0
 
-	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
-		t.Fatal(err)
+	if arbosVersion < 22 {
+		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+			t.Fatal(err)
+		}
 	}
 	return backend, web3Server, client, auth, aggAuth, feeConfigInit, config, feeCollector, cancelDevNode
 }
@@ -142,11 +144,52 @@ func TestFees(t *testing.T) {
 	test.FailIfError(t, err)
 
 	totalPaid := big.NewInt(0)
+
+	checkPaid := func() {
+		t.Helper()
+		netFeeBal, err := client.BalanceAt(context.Background(), feeConfig.NetFeeRecipient.ToEthAddress(), nil)
+		test.FailIfError(t, err)
+
+		aggBal, err := client.BalanceAt(context.Background(), agg.ToEthAddress(), nil)
+		test.FailIfError(t, err)
+
+		feeCollectorBal, err := client.BalanceAt(context.Background(), feeCollector.ToEthAddress(), nil)
+		test.FailIfError(t, err)
+
+		totalReceived := new(big.Int).Add(netFeeBal, aggBal)
+		totalReceived = totalReceived.Add(totalReceived, feeCollectorBal)
+		if totalReceived.Cmp(totalPaid) != 0 {
+			t.Error("amount paid different than amount received", totalReceived, totalPaid)
+		}
+
+		if arbosVersion <= 4 {
+			if aggBal.Cmp(big.NewInt(0)) <= 0 {
+				t.Error("currentAggregator should have nonzero balance")
+			}
+			if feeCollectorBal.Cmp(big.NewInt(0)) != 0 {
+				t.Error("fee collector should have 0 balance")
+			}
+		} else {
+			if aggBal.Cmp(big.NewInt(0)) != 0 {
+				t.Error("currentAggregator should have 0 balance")
+			}
+			if feeCollectorBal.Cmp(big.NewInt(0)) <= 0 {
+				t.Error("fee collector should have nonzero balance")
+			}
+		}
+		t.Log("Paid", totalPaid)
+		t.Log("Net bal", netFeeBal)
+		t.Log("Agg bal", aggBal)
+		t.Log("Fee col bal", feeCollectorBal)
+	}
+
 	for i := 0; i < 5; i++ {
+		t.Log("tx", i)
 		tx, err := arbOwner.GiveOwnership(auth, auth.From)
 		test.FailIfError(t, err)
 		paid := checkFees(t, backend, tx)
 		totalPaid = totalPaid.Add(totalPaid, paid)
+		checkPaid()
 	}
 
 	networkDest, congestionDest, err := arbOwner.GetFeeRecipients(&bind.CallOpts{})
@@ -186,41 +229,7 @@ func TestFees(t *testing.T) {
 
 	paid := checkFees(t, backend, tx)
 	totalPaid = totalPaid.Add(totalPaid, paid)
-
-	netFeeBal, err := client.BalanceAt(context.Background(), feeConfig.NetFeeRecipient.ToEthAddress(), nil)
-	test.FailIfError(t, err)
-
-	aggBal, err := client.BalanceAt(context.Background(), agg.ToEthAddress(), nil)
-	test.FailIfError(t, err)
-
-	feeCollectorBal, err := client.BalanceAt(context.Background(), feeCollector.ToEthAddress(), nil)
-	test.FailIfError(t, err)
-
-	totalReceived := new(big.Int).Add(netFeeBal, aggBal)
-	totalReceived = totalReceived.Add(totalReceived, feeCollectorBal)
-	if totalReceived.Cmp(totalPaid) != 0 {
-		t.Error("amount paid different than amount received")
-	}
-
-	if arbosVersion <= 4 {
-		if aggBal.Cmp(big.NewInt(0)) <= 0 {
-			t.Error("currentAggregator should have nonzero balance")
-		}
-		if feeCollectorBal.Cmp(big.NewInt(0)) != 0 {
-			t.Error("fee collector should have 0 balance")
-		}
-	} else {
-		if aggBal.Cmp(big.NewInt(0)) != 0 {
-			t.Error("currentAggregator should have 0 balance")
-		}
-		if feeCollectorBal.Cmp(big.NewInt(0)) <= 0 {
-			t.Error("fee collector should have nonzero balance")
-		}
-	}
-	t.Log("Paid", totalPaid)
-	t.Log("Net bal", netFeeBal)
-	t.Log("Agg bal", aggBal)
-	t.Log("Fee col bal", feeCollectorBal)
+	checkPaid()
 }
 
 func checkFees(t *testing.T, backend *Backend, tx *types.Transaction) *big.Int {
