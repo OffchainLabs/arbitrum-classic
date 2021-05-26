@@ -48,11 +48,6 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
-type ChainTimeGetter interface {
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
-	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
-}
-
 type TxDB struct {
 	Lookup    core.ArbOutputLookup
 	as        machine.NodeStore
