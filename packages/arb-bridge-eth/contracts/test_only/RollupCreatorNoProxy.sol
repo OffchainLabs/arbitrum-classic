@@ -170,7 +170,7 @@ contract RollupCreatorNoProxy {
                 challengeFactory,
                 address(new NodeFactory())
             ],
-            [address(new RollupUserFacet()), address(new RollupAdminFacet())]
+            [address(new RollupAdminFacet()), address(new RollupUserFacet())]
         );
         emit RollupCreated(frame.rollup);
         return IRollup(frame.rollup);
