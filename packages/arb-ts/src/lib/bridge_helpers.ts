@@ -85,9 +85,21 @@ export interface OutBoxTransactionExecuted {
 }
 
 export enum OutgoingMessageState {
+  /**
+   * No corresponding {@link L2ToL1EventResult} emitted
+   */
   NOT_FOUND,
+  /**
+   * ArbSys.sendTxToL1 called, but assertion not yet confirmed
+   */
   UNCONFIRMED,
+  /**
+   * Assertion for outgoing message confirmed, but message not yet executed
+   */
   CONFIRMED,
+  /**
+   * Outgoing message executed (terminal state)
+   */
   EXECUTED,
 }
 
@@ -95,6 +107,9 @@ export type ChainIdOrProvider = BigNumber | providers.Provider
 
 const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
 
+/**
+ * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
+ */
 export class BridgeHelper {
   static getTokenWithdrawEventData = async (
     destinationAddress: string,
@@ -165,9 +180,7 @@ export class BridgeHelper {
       ])
     )
   }
-  /**
-   * Calculates hash of L2 side of a "retryable" transaction (L1 to L2 message, message type 9)
-   */
+
   static calculateL2RetryableTransactionHash = async (
     inboxSequenceNumber: BigNumber,
     chainIdOrL2Provider: ChainIdOrProvider
@@ -190,9 +203,6 @@ export class BridgeHelper {
     )
   }
 
-  /**
-   * Return receipt of retryable transaction after execution
-   */
   static waitForRetriableReceipt = async (
     seqNum: BigNumber,
     l2Provider: providers.Provider
@@ -324,6 +334,9 @@ export class BridgeHelper {
     return logs.map(log => BigNumber.from(log.topics[1]))
   }
 
+  /**
+   * Attempt to retrieve data necessary to execute outbox message; available before outbox entry is created /confirmed
+   */
   static tryGetProof = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -549,7 +562,6 @@ export class BridgeHelper {
     )
 
     const outbox = Outbox__factory.connect(activeOutboxAddress, l1Signer)
-
     try {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
@@ -578,9 +590,6 @@ export class BridgeHelper {
       throw e
     }
   }
-  /**
-   * Attempt to execute an outbox message; must be confirmed to succeed (i.e., confirmation delay must have passed)
-   */
   static triggerL2ToL1Transaction = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -664,6 +673,9 @@ export class BridgeHelper {
     )
   }
 
+  /**
+   * Check if given assertion has been confirmed
+   */
   static assertionIsConfirmed = async (
     nodeNum: BigNumber,
     rollupAddress: string,
@@ -739,6 +751,9 @@ export class BridgeHelper {
     return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
   }
 
+  /**
+   * Get outgoing message Id (key to in OutboxEntry.spentOutput)
+   */
   static calculateOutgoingMessageId = (
     path: BigNumber,
     proofLength: BigNumber
@@ -747,7 +762,9 @@ export class BridgeHelper {
       utils.defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
     )
   }
-
+  /**
+   * Check if given outbox message has already been executed
+   */
   static messageHasExecuted = async (
     outboxIndex: BigNumber,
     path: BigNumber,

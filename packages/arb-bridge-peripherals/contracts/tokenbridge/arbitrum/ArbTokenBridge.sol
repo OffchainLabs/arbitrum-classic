@@ -32,7 +32,7 @@ import "./IArbToken.sol";
 import "./IArbTokenBridge.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
-import "../libraries/IERC1363.sol";
+import "../libraries/IERC677.sol";
 
 contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
     using Address for address;
@@ -93,19 +93,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
         uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert;
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
-        // TODO: should the operator be L1 or L2 bridge instead of the user?
-        bytes4 retval =
-            IERC1363Receiver(dest).onTransferReceived{ gas: gasAvailable }(
-                sender,
-                sender,
-                amount,
-                data
-            );
-
-        require(
-            retval == IERC1363Receiver.onTransferReceived.selector,
-            "external logic on call fail"
-        );
+        IERC677Receiver(dest).onTokenTransfer{ gas: gasAvailable }(sender, amount, data);
     }
 
     /**

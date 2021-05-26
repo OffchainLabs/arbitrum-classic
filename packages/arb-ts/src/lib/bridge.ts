@@ -100,6 +100,9 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.approveToken(erc20L1Address, overrides)
   }
 
+  /**
+   * Deposit ether from L1 to L2. Users L1MessageType_L2FundedByL1 txn type ( type 7)
+   */
   public async depositETH(
     value: BigNumber,
     destinationAddress?: string,
@@ -117,6 +120,9 @@ export class Bridge extends L2Bridge {
     )
   }
 
+  /**
+   * Token deposit; if no value given, calculates and includes minimum necessary value to fund L2 side of execution
+   */
   public async deposit(
     erc20L1Address: string,
     amount: BigNumber,
@@ -157,22 +163,23 @@ export class Bridge extends L2Bridge {
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
-
     if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
-      const l2Balance = await this.getAndUpdateL2EthBalance()
+      ethDeposit = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
+      // TODO: might reactivate if we switch to arb-os deducting from sender's EOA
+      // const l2Balance = await this.getAndUpdateL2EthBalance()
 
-      const requiredEth = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
+      // const requiredEth = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
 
-      if (l2Balance.lt(requiredEth)) {
-        console.info(
-          'insufficient L2 balance to pay for retryable:',
-          l2Balance.toNumber(),
-          'Depositing additional ETH'
-        )
-        ethDeposit = requiredEth.sub(l2Balance)
-      } else {
-        console.info('l2 account adequately funded for retryable')
-      }
+      // if (l2Balance.lt(requiredEth)) {
+      //   console.info(
+      //     'insufficient L2 balance to pay for retryable:',
+      //     l2Balance.toNumber(),
+      //     'Depositing additional ETH'
+      //   )
+      //   ethDeposit = requiredEth.sub(l2Balance)
+      // } else {
+      //   console.info('l2 account adequately funded for retryable')
+      // }
     }
 
     return this.l1Bridge.deposit(
@@ -205,6 +212,9 @@ export class Bridge extends L2Bridge {
     )
   }
 
+  /**
+   * get hash of regular L2 txn from corresponding inbox sequence number
+   */
   public calculateL2TransactionHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
@@ -214,7 +224,9 @@ export class Bridge extends L2Bridge {
       l2ChainId || this.l2Provider
     )
   }
-
+  /**
+   * Hash of L2 side of retryable txn; txn gets generated automatically and is formatted as tho user submitted
+   */
   public calculateL2RetryableTransactionHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
@@ -224,6 +236,10 @@ export class Bridge extends L2Bridge {
       l2ChainId || this.l2Provider
     )
   }
+
+  /**
+   * Hash of L2 ArbOs generated "auto-redeem" transaction; if it succeeded, a transaction queryable by {@link calculateL2RetryableTransactionHash} will then be created
+   */
   public calculateRetryableAutoReedemTxnHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
@@ -243,6 +259,10 @@ export class Bridge extends L2Bridge {
       (await this.l1Bridge.getInbox()).address
     )
   }
+
+  /**
+   * Convenience method to directly retrieve retryable hash from an l1 transaction
+   */
   public async getL2TxHashByRetryableTicket(
     l1Transaction: string | ContractReceipt
   ) {
@@ -281,6 +301,9 @@ export class Bridge extends L2Bridge {
     )
   }
 
+  /**
+   * Attempt to execute an outbox message; must be confirmed to succeed (i.e., confirmation delay must have passed)
+   */
   public async triggerL2ToL1Transaction(
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -362,6 +385,9 @@ export class Bridge extends L2Bridge {
     )
   }
 
+  /**
+   * Return receipt of retryable transaction after execution
+   */
   public async waitForRetriableReceipt(seqNum: BigNumber) {
     return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
   }
@@ -395,6 +421,9 @@ export class Bridge extends L2Bridge {
     return outboxAddress
   }
 
+  /**
+   * Returns {@link OutgoingMessageState} for given outgoing message
+   */
   public async getOutGoingMessageState(
     batchNumber: BigNumber,
     indexInBatch: BigNumber
