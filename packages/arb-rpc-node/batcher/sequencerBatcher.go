@@ -303,6 +303,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	}
 	if successCount == len(batchTxs) {
 		sequencedTxs = batchTxs
+		msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 		prevAcc = txBatchItem.Accumulator
 		sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
 		for _, c := range resultChans {
@@ -371,16 +372,15 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		}
 	}
 
-	newBlockSeqNum := new(big.Int).Add(msgCount, big.NewInt(1))
 	newBlockMessage := message.NewInboxMessage(
 		message.EndBlockMessage{},
 		b.sequencer,
-		newBlockSeqNum,
+		new(big.Int).Set(msgCount),
 		big.NewInt(0),
 		b.latestChainTime.Clone(),
 	)
 
-	newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, txBatchItem.Accumulator)
+	newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
 	sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
 	err = core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 	if err != nil {
