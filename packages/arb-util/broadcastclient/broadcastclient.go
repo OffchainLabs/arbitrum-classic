@@ -36,7 +36,7 @@ type BroadcastClient struct {
 	websocketUrl                 string
 	lastInboxSeqNum              *big.Int
 	conn                         net.Conn
-	startingBroadcastClientMutex *sync.Mutex
+	connMutex                    *sync.Mutex
 	RetryCount                   int
 	retrying                     bool
 	shuttingDown                 bool
@@ -54,9 +54,9 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	}
 
 	return &BroadcastClient{
-		startingBroadcastClientMutex: &sync.Mutex{},
-		websocketUrl:                 websocketUrl,
-		lastInboxSeqNum:              seqNum,
+		connMutex:       &sync.Mutex{},
+		websocketUrl:    websocketUrl,
+		lastInboxSeqNum: seqNum,
 	}
 }
 
@@ -88,7 +88,9 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 			if err != nil {
 				logger.Warn().Err(err).Msg("broadcast client unable to connect, retrying")
 			} else {
+				bc.connMutex.Lock()
 				bc.conn = conn
+				bc.connMutex.Unlock()
 
 				logger.Info().Msg("Connected")
 				break
@@ -167,5 +169,9 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 func (bc *BroadcastClient) Close() {
 	logger.Debug().Msg("closing broadcaster client connection")
 	bc.shuttingDown = true
-	_ = bc.conn.Close()
+	bc.connMutex.Lock()
+	if bc.conn != nil {
+		_ = bc.conn.Close()
+	}
+	bc.connMutex.Unlock()
 }
