@@ -165,7 +165,7 @@ func TestInboxProof(t *testing.T) {
 
 	err = core.DeliverMessagesAndWait(
 		arbCore.Core,
-		big.NewInt(1),
+		big.NewInt(2),
 		endBlockBatchItem1.Accumulator,
 		[]inbox.SequencerBatchItem{seqMsgItem, delayedItem2, endBlockBatchItem2},
 		[]inbox.DelayedMessage{delayed2},
