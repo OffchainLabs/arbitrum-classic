@@ -195,7 +195,7 @@ func startup() error {
 		if *feedURL == "" {
 			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
 		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
+			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil, 20*time.Second)
 			for {
 				sequencerFeed, err = broadcastClient.Connect(ctx)
 				if err == nil {
