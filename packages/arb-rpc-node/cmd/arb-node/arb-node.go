@@ -29,6 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -269,18 +270,23 @@ func startup() error {
 	}
 	defer db.Close()
 
-	batch, err := rpc.SetupBatcher(
-		ctx,
-		ethclint,
-		rollupArgs.Address,
-		db,
-		time.Duration(*maxBatchTime)*time.Second,
-		batcherMode,
-		dataSigner,
-		broadcasterSettings,
-	)
-	if err != nil {
-		return err
+	var batch batcher.TransactionBatcher
+	for {
+		batch, err = rpc.SetupBatcher(
+			ctx,
+			ethclint,
+			rollupArgs.Address,
+			db,
+			time.Duration(*maxBatchTime)*time.Second,
+			batcherMode,
+			dataSigner,
+			broadcasterSettings,
+		)
+		if err == nil {
+			break
+		}
+		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
+		time.Sleep(time.Second * 5)
 	}
 
 	if *waitToCatchUp {
