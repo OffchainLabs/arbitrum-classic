@@ -150,6 +150,30 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         emit OwnerFunctionCalled(13);
     }
 
+    /**
+     * @notice Set max delay in blocks for sequencer inbox
+     * @param newSequencerInboxMaxDelayBlocks max number of blocks
+     */
+    function setSequencerInboxMaxDelayBlocks(uint256 newSequencerInboxMaxDelayBlocks)
+        external
+        override
+    {
+        sequencerInboxMaxDelayBlocks = newSequencerInboxMaxDelayBlocks;
+        emit OwnerFunctionCalled(14);
+    }
+
+    /**
+     * @notice Set max delay in seconds for sequencer inbox
+     * @param newSequencerInboxMaxDelaySeconds max number of seconds
+     */
+    function setSequencerInboxMaxDelaySeconds(uint256 newSequencerInboxMaxDelaySeconds)
+        external
+        override
+    {
+        sequencerInboxMaxDelaySeconds = newSequencerInboxMaxDelaySeconds;
+        emit OwnerFunctionCalled(15);
+    }
+
     /*
     function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external override whenPaused {
         require(stackerA.length == stackerB.length, "WRONG_LENGTH");

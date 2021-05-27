@@ -53,6 +53,10 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address public owner;
     address public stakeToken;
     uint256 public minimumAssertionPeriod;
+
+    uint256 public sequencerInboxMaxDelayBlocks;
+    uint256 public sequencerInboxMaxDelaySeconds;
+
     address[] internal facets;
 
     mapping(address => bool) isValidator;
@@ -94,21 +98,20 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 }
 
 contract Rollup is RollupBase {
+    // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
         bytes32 _machineHash,
-        uint256 _confirmPeriodBlocks,
-        uint256 _extraChallengeTimeBlocks,
-        uint256 _arbGasSpeedLimitPerBlock,
-        uint256 _baseStake,
+        uint256[4] calldata _rollupParams,
         address _stakeToken,
         address _owner,
         bytes calldata _extraConfig,
         address[6] calldata connectedContracts,
-        address[2] calldata _facets
+        address[2] calldata _facets,
+        uint256[2] calldata sequencerInboxParams
     ) public {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
-        require(_confirmPeriodBlocks != 0, "BAD_CONF_PERIOD");
+        require(_rollupParams[0] != 0, "BAD_CONF_PERIOD");
 
         delayedBridge = IBridge(connectedContracts[0]);
         sequencerBridge = ISequencerInbox(connectedContracts[1]);
@@ -118,10 +121,10 @@ contract Rollup is RollupBase {
         delayedBridge.setInbox(connectedContracts[3], true);
 
         rollupEventBridge.rollupInitialized(
-            _confirmPeriodBlocks,
-            _extraChallengeTimeBlocks,
-            _arbGasSpeedLimitPerBlock,
-            _baseStake,
+            _rollupParams[0],
+            _rollupParams[1],
+            _rollupParams[2],
+            _rollupParams[3],
             _stakeToken,
             _owner,
             _extraConfig
@@ -133,13 +136,17 @@ contract Rollup is RollupBase {
         INode node = createInitialNode(_machineHash);
         initializeCore(node);
 
-        confirmPeriodBlocks = _confirmPeriodBlocks;
-        extraChallengeTimeBlocks = _extraChallengeTimeBlocks;
-        arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
-        baseStake = _baseStake;
+        confirmPeriodBlocks = _rollupParams[0];
+        extraChallengeTimeBlocks = _rollupParams[1];
+        arbGasSpeedLimitPerBlock = _rollupParams[2];
+        baseStake = _rollupParams[3];
         owner = _owner;
         // A little over 15 minutes
         minimumAssertionPeriod = 75;
+
+        sequencerInboxMaxDelayBlocks = sequencerInboxParams[0];
+        sequencerInboxMaxDelaySeconds = sequencerInboxParams[1];
+
         // facets[0] == admin, facets[1] == user
         facets = _facets;
 

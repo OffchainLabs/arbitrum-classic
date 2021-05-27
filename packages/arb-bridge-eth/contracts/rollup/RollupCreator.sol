@@ -127,23 +127,19 @@ contract RollupCreator is Ownable, CloneFactory {
             frame.inbox,
             frame.rollupEventBridge,
             frame.outbox
-        ) = bridgeCreator.createBridge(
-            address(frame.admin),
-            frame.rollup,
-            config.sequencer,
-            config.sequencerDelayBlocks,
-            config.sequencerDelaySeconds
-        );
+        ) = bridgeCreator.createBridge(address(frame.admin), frame.rollup, config.sequencer);
 
         frame.admin.transferOwnership(config.owner);
         Rollup(payable(frame.rollup)).initialize(
             config.machineHash,
-            config.confirmPeriodBlocks,
-            config.extraChallengeTimeBlocks,
-            config.arbGasSpeedLimitPerBlock,
-            config.baseStake,
+            [
+                config.confirmPeriodBlocks,
+                config.extraChallengeTimeBlocks,
+                config.arbGasSpeedLimitPerBlock,
+                config.baseStake
+            ],
             config.stakeToken,
-            config.owner,
+            address(this),
             config.extraConfig,
             [
                 address(frame.delayedBridge),
@@ -153,8 +149,12 @@ contract RollupCreator is Ownable, CloneFactory {
                 challengeFactory,
                 nodeFactory
             ],
-            [rollupAdminFacet, rollupUserFacet]
+            [rollupAdminFacet, rollupUserFacet],
+            [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
+
+        // RollupAdminFacet(frame.rollup).set(config.owner);
+        RollupAdminFacet(frame.rollup).setOwner(config.owner);
         emit RollupCreated(frame.rollup, address(frame.inbox), address(frame.admin));
         return frame.rollup;
     }

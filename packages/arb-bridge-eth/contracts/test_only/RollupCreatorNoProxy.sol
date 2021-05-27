@@ -86,12 +86,7 @@ contract RollupCreatorNoProxy {
         Outbox outbox;
     }
 
-    function createBridge(
-        address rollup,
-        address sequencer,
-        uint256 sequencerDelayBlocks,
-        uint256 sequencerDelaySeconds
-    )
+    function createBridge(address rollup, address sequencer)
         private
         returns (
             Bridge,
@@ -111,12 +106,7 @@ contract RollupCreatorNoProxy {
         }
 
         frame.delayedBridge.initialize();
-        frame.sequencerInbox.initialize(
-            IBridge(frame.delayedBridge),
-            sequencer,
-            sequencerDelayBlocks,
-            sequencerDelaySeconds
-        );
+        frame.sequencerInbox.initialize(IBridge(frame.delayedBridge), sequencer, rollup);
         frame.inbox.initialize(IBridge(frame.delayedBridge));
         frame.rollupEventBridge.initialize(address(frame.delayedBridge), rollup);
         frame.outbox.initialize(rollup, IBridge(frame.delayedBridge));
@@ -145,19 +135,16 @@ contract RollupCreatorNoProxy {
             frame.inbox,
             frame.rollupEventBridge,
             frame.outbox
-        ) = createBridge(
-            frame.rollup,
-            config.sequencer,
-            config.sequencerDelayBlocks,
-            config.sequencerDelaySeconds
-        );
+        ) = createBridge(frame.rollup, config.sequencer);
 
         Rollup(payable(frame.rollup)).initialize(
             config.machineHash,
-            config.confirmPeriodBlocks,
-            config.extraChallengeTimeBlocks,
-            config.arbGasSpeedLimitPerBlock,
-            config.baseStake,
+            [
+                config.confirmPeriodBlocks,
+                config.extraChallengeTimeBlocks,
+                config.arbGasSpeedLimitPerBlock,
+                config.baseStake
+            ],
             config.stakeToken,
             config.owner,
             config.extraConfig,
@@ -169,7 +156,8 @@ contract RollupCreatorNoProxy {
                 challengeFactory,
                 address(new NodeFactory())
             ],
-            [address(new RollupAdminFacet()), address(new RollupUserFacet())]
+            [address(new RollupAdminFacet()), address(new RollupUserFacet())],
+            [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
         emit RollupCreated(frame.rollup);
         return frame.rollup;
