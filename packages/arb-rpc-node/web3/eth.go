@@ -208,7 +208,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 	}
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
 
-	res, err := snap.Call(msg, from)
+	res, _, err := snap.Call(msg, from)
 	res, err = handleCallResult(res, err, blockNum)
 	if err != nil {
 		return nil, err
@@ -237,7 +237,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
+	res, _, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
 	res, err = handleCallResult(res, err, &blockNum)
 	if err != nil {
 		logging := log.Warn()
@@ -272,7 +272,10 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		extraCalldataUnits := (len(res.FeeStats.GasUsed().Bytes()) + len(new(big.Int).Mul(res.FeeStats.Price.L2Computation, gasPriceFactor).Bytes()) + gasEstimationCushion) * 16
 		// Adjust calldata units used for calldata from gas limit
 		res.FeeStats.UnitsUsed.L1Calldata = res.FeeStats.UnitsUsed.L1Calldata.Add(res.FeeStats.UnitsUsed.L1Calldata, big.NewInt(int64(extraCalldataUnits)))
-		return hexutil.Uint64(res.FeeStats.GasUsed().Uint64() + 1000), nil
+		used := res.FeeStats.TargetGasUsed()
+		used = used.Mul(used, big.NewInt(11))
+		used = used.Div(used, big.NewInt(10))
+		return hexutil.Uint64(used.Uint64() + 100), nil
 	}
 }
 
@@ -379,7 +382,7 @@ func (s *Server) GetTransactionReceipt(txHash hexutil.Bytes) (*GetTransactionRec
 		From:              res.IncomingRequest.Sender.ToEthAddress(),
 		To:                tx.Tx.To(),
 		CumulativeGasUsed: hexutil.Uint64(receipt.CumulativeGasUsed),
-		GasUsed:           hexutil.Uint64(receipt.GasUsed),
+		GasUsed:           hexutil.Uint64(res.CalcGasUsed().Uint64()),
 		ContractAddress:   contractAddress,
 		Logs:              receipt.Logs,
 		LogsBloom:         receipt.Bloom.Bytes(),

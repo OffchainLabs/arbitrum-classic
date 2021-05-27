@@ -11,8 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -89,6 +91,10 @@ func (c *EthClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
 	return (*big.Int)(gasPriceRaw), err
 }
 
+func (c *EthClient) ChainID(_ context.Context) (*big.Int, error) {
+	return message.ChainAddressToID(arbcommon.NewAddressFromEth(c.srv.srv.GetChainAddress())), nil
+}
+
 func (c *EthClient) EstimateGas(_ context.Context, call ethereum.CallMsg) (uint64, error) {
 	args := CallTxArgs{
 		From:     &call.From,
@@ -156,4 +162,23 @@ func (c *EthClient) TransactionByHash(_ context.Context, txHash common.Hash) (*t
 		return nil, false, err
 	}
 	return tx.Tx, false, nil
+}
+
+func (c *EthClient) BlockByHash(_ context.Context, hash common.Hash) (*types.Block, error) {
+	info, err := c.srv.srv.BlockInfoByHash(arbcommon.NewHashFromEth(hash))
+	if err != nil || info == nil {
+		return nil, err
+	}
+	_, results, err := c.srv.srv.GetMachineBlockResults(info)
+	if err != nil || results == nil {
+		return nil, err
+	}
+	processedTxes := evm.FilterEthTxResults(results)
+	txes := make([]*types.Transaction, 0, len(processedTxes))
+	receipts := make([]*types.Receipt, 0, len(processedTxes))
+	for _, res := range processedTxes {
+		txes = append(txes, res.Tx)
+		receipts = append(receipts, res.Result.ToEthReceipt(arbcommon.NewHashFromEth(hash)))
+	}
+	return types.NewBlock(info.Header, txes, nil, receipts, new(trie.Trie)), nil
 }

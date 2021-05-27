@@ -29,6 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -91,6 +92,7 @@ func startup() error {
 	sequencerMode := fs.Bool("sequencer", false, "act as sequencer")
 	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	createBatchBlockInterval := fs.Int64("create-batch-block-interval", 1, "block interval at which to create new batches")
 
 	//Healthcheck Config
 	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
@@ -105,7 +107,11 @@ func startup() error {
 	)
 	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
 	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
-	sequencerURL := fs.String("sequencer-url", "", "URL of sequencer feed source")
+	feedURL := fs.String("feed-url", "", "URL of sequencer feed source")
+	rpcAddr := fs.String("rpc.addr", "0.0.0.0", "RPC address")
+	rpcPort := fs.String("rpc.port", "8547", "RPC port")
+	wsAddr := fs.String("ws.addr", "0.0.0.0", "websocket address")
+	wsPort := fs.String("ws.port", "8548", "websocket port")
 	feedOutputAddr := fs.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
 	feedOutputPort := fs.String("feedoutput.port", "9642", "port to bind the relay feed output to")
 	feedOutputPingInterval := fs.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
@@ -118,28 +124,15 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 3 || (!*sequencerMode && *sequencerURL == "") {
-		fmt.Printf("usage      sequencer: arb-node --sequencer [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or   primary node: arb-node --sequencer.addr=<sequencer address> --inbox=<inbox address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or secondary node: arb-node --sequencer.addr=<sequencer address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+	if fs.NArg() != 3 || (!*sequencerMode && *feedURL == "") {
+		fmt.Printf("usage       sequencer: arb-node --sequencer [optional arguments] <ethereum node> <rollup chain address> %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> <database directory> <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> <database directory> <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		return errors.New("invalid arguments")
 	}
 
 	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
 		return err
-	}
-
-	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
-	if !*sequencerMode {
-		if *sequencerURL == "" {
-			logger.Warn().Msg("Missing --sequencer-url so not subscribing to feed")
-		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(*sequencerURL, nil)
-			sequencerFeed, err = broadcastClient.Connect()
-			if err != nil {
-				log.Fatal().Err(err).Msg("unable to start broadcastclient")
-			}
-		}
 	}
 
 	if *enablePProf {
@@ -192,6 +185,23 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
 	nodehealth.Init(healthChan)
 
+	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+	if !*sequencerMode {
+		if *feedURL == "" {
+			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
+		} else {
+			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
+			for {
+				sequencerFeed, err = broadcastClient.Connect(ctx)
+				if err == nil {
+					break
+				}
+				logger.Warn().Err(err).
+					Msg("failed connect to sequencer broadcast, waiting and retrying")
+				time.Sleep(time.Second * 5)
+			}
+		}
+	}
 	var inboxReader *monitor.InboxReader
 	for {
 		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
@@ -243,6 +253,7 @@ func startup() error {
 				Core:                       mon.Core,
 				InboxReader:                inboxReader,
 				DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
+				CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
 			}
 
 			broadcasterSettings = broadcaster.Settings{
@@ -266,22 +277,27 @@ func startup() error {
 	}
 	defer db.Close()
 
-	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp()
+	var batch batcher.TransactionBatcher
+	for {
+		batch, err = rpc.SetupBatcher(
+			ctx,
+			ethclint,
+			rollupArgs.Address,
+			db,
+			time.Duration(*maxBatchTime)*time.Second,
+			batcherMode,
+			dataSigner,
+			broadcasterSettings,
+		)
+		if err == nil {
+			break
+		}
+		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
+		time.Sleep(time.Second * 5)
 	}
 
-	batch, err := rpc.SetupBatcher(
-		ctx,
-		ethclint,
-		rollupArgs.Address,
-		db,
-		time.Duration(*maxBatchTime)*time.Second,
-		batcherMode,
-		dataSigner,
-		broadcasterSettings,
-	)
-	if err != nil {
-		return err
+	if *waitToCatchUp {
+		inboxReader.WaitToCatchUp(ctx)
 	}
 
 	srv := aggregator.NewServer(batch, rollupArgs.Address, db)
@@ -291,7 +307,7 @@ func startup() error {
 	}
 	errChan := make(chan error, 1)
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		err := rpc.LaunchPublicServer(ctx, web3Server, *rpcAddr, *rpcPort, *wsAddr, *wsPort)
 		if err != nil {
 			errChan <- err
 		}

@@ -144,58 +144,11 @@ inline ByteSlice returnValueResult(const DbResult<value>& res) {
     return {void_data, static_cast<int>(serialized_value.size())};
 }
 
-inline RawAssertion makeRawAssertion(Assertion& assertion,
-                                     uint256_t before_send_acc,
-                                     uint256_t before_log_acc) {
-    std::vector<unsigned char> sendData;
-    uint256_t sendAcc = before_send_acc;
-    for (const auto& send : assertion.sends) {
-        auto big_size =
-            boost::endian::native_to_big(static_cast<uint64_t>(send.size()));
-        auto big_size_ptr = reinterpret_cast<const char*>(&big_size);
-        sendData.insert(sendData.end(), big_size_ptr,
-                        big_size_ptr + sizeof(big_size));
-        sendData.insert(sendData.end(), send.begin(), send.end());
-        sendAcc = hash(sendAcc, hash(send));
-    }
-
-    std::vector<unsigned char> logData;
-    uint256_t logAcc = before_log_acc;
-    for (const auto& log : assertion.logs) {
-        marshal_value(log, logData);
-        logAcc = hash(logAcc, hash_value(log));
-    }
-
-    std::vector<unsigned char> debugPrintData;
-    for (const auto& debugPrint : assertion.debugPrints) {
-        marshal_value(debugPrint, debugPrintData);
-    }
-
-    // TODO extend usage of uint256
-    return {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
-            returnCharVector(sendData),
-            static_cast<int>(assertion.sends.size()),
-            returnUint256(sendAcc),
-            returnCharVector(logData),
-            static_cast<int>(assertion.logs.size()),
-            returnUint256(logAcc),
-            returnCharVector(debugPrintData),
-            static_cast<int>(assertion.debugPrints.size()),
-            intx::narrow_cast<uint64_t>(assertion.stepCount),
-            intx::narrow_cast<uint64_t>(assertion.gasCount)};
-}
-
 inline RawAssertion makeEmptyAssertion() {
-    return {0,
-            returnCharVector(std::vector<char>{}),
-            0,
-            0,
-            returnCharVector(std::vector<char>{}),
-            0,
-            0,
-            returnCharVector(std::vector<char>{}),
-            0,
-            0,
+    return {0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
+            0, returnCharVector(std::vector<char>{}),
+            0, 0,
             0};
 }
 

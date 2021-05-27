@@ -17,9 +17,6 @@
 package cmachine
 
 /*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -lsecp256k1 -lff -lgmp -lkeccak -ldl
-#cgo linux LDFLAGS: -latomic
 #include "../cavm/cmachine.h"
 #include "../cavm/carbstorage.h"
 #include <stdio.h>
@@ -32,7 +29,6 @@ import (
 	"unsafe"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -40,8 +36,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
-
-var logger = log.With().Caller().Stack().Str("component", "cmachine").Logger()
 
 type Machine struct {
 	c unsafe.Pointer
@@ -138,9 +132,7 @@ func (m *Machine) String() string {
 
 func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	sendsRaw := receiveByteSlice(assertion.sends)
-	sendAcc := receive32Bytes(assertion.sendAcc)
 	logsRaw := receiveByteSlice(assertion.logs)
-	logAcc := receive32Bytes(assertion.logAcc)
 	debugPrints, err := protocol.BytesArrayToVals(receiveByteSlice(assertion.debugPrints), uint64(assertion.debugPrintCount))
 	if err != nil {
 		return nil, nil, 0, err
@@ -150,10 +142,8 @@ func makeExecutionAssertion(assertion C.RawAssertion) (*protocol.ExecutionAssert
 		uint64(assertion.inbox_messages_consumed),
 		sendsRaw,
 		uint64(assertion.sendCount),
-		sendAcc,
 		logsRaw,
 		uint64(assertion.logCount),
-		logAcc,
 	)
 	return goAssertion, debugPrints, uint64(assertion.numSteps), err
 }
@@ -169,8 +159,6 @@ func (m *Machine) ExecuteAssertion(
 		messages,
 		nil,
 		false,
-		common.Hash{},
-		common.Hash{},
 	)
 }
 
@@ -184,18 +172,12 @@ func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
 	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
 }
 
-func inboxMessagesToByteSliceArray(messages []inbox.InboxMessage) C.struct_ByteSliceArrayStruct {
-	return bytesArrayToByteSliceArray(encodeInboxMessages(messages))
-}
-
 func (m *Machine) ExecuteAssertionAdvanced(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
-	beforeSendAcc common.Hash,
-	beforeLogAcc common.Hash,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	conf := C.machineExecutionConfigCreate()
 
@@ -221,12 +203,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	}
 	C.machineExecutionConfigSetStopOnSideload(conf, stopOnSideloadInt)
 
-	assertion := C.executeAssertion(
-		m.c,
-		conf,
-		unsafeDataPointer(beforeSendAcc.Bytes()),
-		unsafeDataPointer(beforeLogAcc.Bytes()),
-	)
+	assertion := C.executeAssertion(m.c, conf)
 
 	return makeExecutionAssertion(assertion)
 }

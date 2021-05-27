@@ -102,7 +102,7 @@ type txTemplate struct {
 }
 
 func TestFees(t *testing.T) {
-	skipBelowVersion(t, 3)
+	skipBelowVersion(t, 22)
 
 	var countCalldataFunc func(data []byte) int
 	var l1GasPerL2Calldata *big.Int
@@ -346,6 +346,34 @@ func TestFees(t *testing.T) {
 	addEnableFeesMessages(feeWithAggIB)
 	addUserTxesLoc(feeWithAggIB, aggregator)
 
+	feeWithContractTxIB := &InboxBuilder{}
+	addInitializationLoc(feeWithContractTxIB)
+	addEnableFeesMessages(feeWithContractTxIB)
+	contractTxData := make([]int, 0, len(ethTxes))
+	{
+		chainTime := inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(int64(len(feeWithContractTxIB.Messages))),
+			Timestamp: big.NewInt(0),
+		}
+		for _, tx := range ethTxes {
+			var dest common.Address
+			if tx.To() != nil {
+				dest = common.NewAddressFromEth(*tx.To())
+			}
+			l2msg := message.ContractTransaction{BasicTx: message.BasicTx{
+				MaxGas:      new(big.Int).SetUint64(tx.Gas()),
+				GasPriceBid: tx.GasPrice(),
+				DestAddress: dest,
+				Payment:     tx.Value(),
+				Data:        tx.Data(),
+			}}
+			msg := message.NewSafeL2Message(l2msg)
+			feeWithContractTxIB.AddMessage(msg, userAddress, big.NewInt(0), chainTime)
+			chainTime.BlockNum = common.NewTimeBlocksInt(int64(len(feeWithContractTxIB.Messages)))
+			contractTxData = append(contractTxData, countCalldataFunc(msg.Data))
+		}
+	}
+
 	estimateFeeIB := &InboxBuilder{}
 	addInitializationLoc(estimateFeeIB)
 	addEnableFeesMessages(estimateFeeIB)
@@ -365,7 +393,7 @@ func TestFees(t *testing.T) {
 		}
 	}
 
-	processMessages := func(ib *InboxBuilder, index int, aggregator common.Address, calldataExact bool) ([]*evm.TxResult, *snapshot.Snapshot, *big.Int) {
+	processMessages := func(ib *InboxBuilder, index int, aggregator *common.Address) ([]*evm.TxResult, *snapshot.Snapshot, *big.Int) {
 		t.Helper()
 		results, _, snap := runAssertion(t, ib.Messages, math.MaxInt32, 0)
 		rawResults := extractTxResults(t, results)
@@ -380,31 +408,51 @@ func TestFees(t *testing.T) {
 			if res.ResultCode != resType {
 				t.Fatal("unexpected result got", res.ResultCode, "", "but expected", resType, "for", i)
 			}
-			checkUnits(t, res, rawTxes[i], index, calldataExact)
 			unpaid := checkGas(t, res, aggregator, index == 3)
 			amountUnpaid = amountUnpaid.Add(amountUnpaid, unpaid)
 		}
 		return extractedResults, snap, amountUnpaid
 	}
 
+	checkAllUnits := func(results []*evm.TxResult, index int, calldataExact bool) {
+		t.Helper()
+		for i, res := range results {
+			checkUnits(t, res, rawTxes[i], index, rawTxes[i].calldata, calldataExact)
+		}
+	}
+
 	t.Log("Checking results for no fee")
-	noFeeResults, noFeeSnap, unpaidNoFee := processMessages(noFeeIB, 0, aggregator, true)
+	noFeeResults, noFeeSnap, unpaidNoFee := processMessages(noFeeIB, 0, &aggregator)
 	t.Log("Checking results for fee")
-	feeResults, feeSnap, unpaidFeed := processMessages(feeIB, 1, otherAgg, true)
+	feeResults, feeSnap, unpaidFee := processMessages(feeIB, 1, &otherAgg)
 	t.Log("Checking results for fee with agg")
-	feeWithAggResults, feeWithAggSnap, _ := processMessages(feeWithAggIB, 2, aggregator, true)
+	feeWithAggResults, feeWithAggSnap, _ := processMessages(feeWithAggIB, 2, &aggregator)
+	t.Log("Checking results for fee with contract")
+	feeWithContractResults, feeWithContractSnap, unpaidFeeWithContract := processMessages(feeWithContractTxIB, 1, nil)
 	t.Log("Checking results for estimate")
-	estimateFeeResults, estimateFeeSnap, _ := processMessages(estimateFeeIB, 3, aggregator, false)
+	estimateFeeResults, estimateFeeSnap, _ := processMessages(estimateFeeIB, 3, &aggregator)
 
 	if unpaidNoFee.Cmp(big.NewInt(0)) != 0 {
 		t.Error("shouldn't have unpaid")
 	}
-	if unpaidFeed.Cmp(big.NewInt(0)) != 0 {
+	if unpaidFee.Cmp(big.NewInt(0)) != 0 {
+		t.Error("shouldn't have unpaid")
+	}
+	if unpaidFeeWithContract.Cmp(big.NewInt(0)) != 0 {
 		t.Error("shouldn't have unpaid")
 	}
 
+	checkAllUnits(noFeeResults, 0, true)
+	checkAllUnits(feeResults, 1, true)
+	checkAllUnits(feeWithAggResults, 2, true)
+	for i, res := range feeWithContractResults {
+		checkUnits(t, res, rawTxes[i], 1, contractTxData[i], true)
+	}
+	checkAllUnits(estimateFeeResults, 3, false)
+
 	checkSameL2ComputationUnits(t, noFeeResults, feeResults)
 	checkSameL2ComputationUnits(t, noFeeResults, feeWithAggResults)
+	checkSameL2ComputationUnits(t, noFeeResults, feeWithContractResults)
 	checkSameL2ComputationUnits(t, noFeeResults, estimateFeeResults)
 
 	calcDiff := func(a, b *big.Rat) *big.Rat {
@@ -455,7 +503,7 @@ func TestFees(t *testing.T) {
 	}
 	t.Log("Finished checking estimate")
 
-	checkPaid := func(snap *snapshot.Snapshot, results []*evm.TxResult) *big.Int {
+	checkTxCount := func(snap *snapshot.Snapshot, results []*evm.TxResult) {
 		t.Helper()
 
 		correctCount := int64(0)
@@ -477,6 +525,10 @@ func TestFees(t *testing.T) {
 		if txCount.Cmp(big.NewInt(correctCount)) != 0 {
 			t.Error("wrong tx count", txCount)
 		}
+	}
+
+	checkPaid := func(snap *snapshot.Snapshot, results []*evm.TxResult) *big.Int {
+		t.Helper()
 
 		userBal, err := snap.GetBalance(userAddress)
 		test.FailIfError(t, err)
@@ -575,6 +627,10 @@ func TestFees(t *testing.T) {
 	checkNoCongestionFee(feeWithAggSnap)
 	checkNoNonPreferredAggFee(feeWithAggSnap)
 
+	checkNoCongestionFee(feeWithContractSnap)
+	checkNoNonPreferredAggFee(feeWithContractSnap)
+	checkNoAggFee(feeWithContractSnap)
+
 	noFeePaid := checkPaid(noFeeSnap, noFeeResults)
 	if noFeePaid.Cmp(big.NewInt(0)) != 0 {
 		t.Error("paid fee with fees disabled")
@@ -582,6 +638,11 @@ func TestFees(t *testing.T) {
 
 	checkPaid(feeSnap, feeResults)
 	checkPaid(feeWithAggSnap, feeWithAggResults)
+	checkPaid(feeWithContractSnap, feeWithContractResults)
+
+	checkTxCount(noFeeSnap, noFeeResults)
+	checkTxCount(feeSnap, noFeeResults)
+	checkTxCount(feeWithAggSnap, feeWithAggResults)
 
 	estimateUserBal, err := estimateFeeSnap.GetBalance(userAddress)
 	test.FailIfError(t, err)
@@ -651,27 +712,27 @@ func checkL2UnitsEqual(t *testing.T, unitsUsed1 *evm.FeeSet, unitsUsed2 *evm.Fee
 		t.Error("different storage count used", unitsUsed1.L2Storage, unitsUsed2.L2Storage)
 	}
 }
-func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index int, calldataExact bool) {
+func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index, calldataUnits int, calldataExact bool) {
 	t.Helper()
 	unitsUsed := res.FeeStats.UnitsUsed
 	t.Log("UnitsUsed", res.FeeStats.UnitsUsed)
 	if calldataExact {
-		if unitsUsed.L1Calldata.Cmp(big.NewInt(int64(correct.calldata))) != 0 {
-			t.Error("wrong calldata used, got", unitsUsed.L1Calldata, "but expected", correct.calldata)
+		if unitsUsed.L1Calldata.Cmp(big.NewInt(int64(calldataUnits))) != 0 {
+			t.Error("wrong calldata used, got", unitsUsed.L1Calldata, "but expected", calldataUnits)
 		}
 	} else {
 		// Adjust units used for gas used
-		gasUsed := len(res.FeeStats.GasUsed().Bytes()) * 16
+		gasUsed := len(res.CalcGasUsed().Bytes()) * 16
 		adjustedCalldata := int(unitsUsed.L1Calldata.Int64()) + gasUsed
 
-		if adjustedCalldata < correct.calldata {
-			t.Error("calldata used should be upper bound, got", adjustedCalldata, "but expected", correct.calldata)
+		if adjustedCalldata < calldataUnits {
+			t.Error("calldata used should be upper bound, got", adjustedCalldata, "but expected", calldataUnits)
 		}
-		unitsDifference := adjustedCalldata - correct.calldata
+		unitsDifference := adjustedCalldata - calldataUnits
 		if unitsDifference > 200 {
 			t.Error("calldata difference too large", unitsDifference)
 		} else {
-			t.Log("estimate was over by", unitsDifference)
+			t.Log("calldata estimate was over by", unitsDifference)
 		}
 	}
 
@@ -696,19 +757,22 @@ func checkUnits(t *testing.T, res *evm.TxResult, correct txTemplate, index int, 
 	}
 }
 
-func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address, l2Unpaid bool) *big.Int {
+func checkGas(t *testing.T, res *evm.TxResult, aggregator *common.Address, l2Unpaid bool) *big.Int {
 	t.Helper()
 	unitsUsed := res.FeeStats.UnitsUsed
 	prices := res.FeeStats.Price
 	paid := res.FeeStats.Paid
+	t.Log("Units", res.FeeStats.UnitsUsed)
 	t.Log("Price", res.FeeStats.Price)
 	t.Log("Paid", res.FeeStats.Paid, "Total", res.FeeStats.Paid.Total())
 
 	if res.IncomingRequest.AggregatorInfo == nil {
 		t.Error("expected aggregator info")
-	} else if res.IncomingRequest.AggregatorInfo.Aggregator == nil {
+	} else if aggregator != nil && res.IncomingRequest.AggregatorInfo.Aggregator == nil {
 		t.Error("should come from aggregator")
-	} else if *res.IncomingRequest.AggregatorInfo.Aggregator != aggregator {
+	} else if aggregator == nil && res.IncomingRequest.AggregatorInfo.Aggregator != nil {
+		t.Error("should not come from aggregator")
+	} else if aggregator != nil && *res.IncomingRequest.AggregatorInfo.Aggregator != *aggregator {
 		t.Error("wrong aggregator", *res.IncomingRequest.AggregatorInfo.Aggregator)
 	}
 
@@ -744,7 +808,8 @@ func checkGas(t *testing.T, res *evm.TxResult, aggregator common.Address, l2Unpa
 
 	totalUnpaid := new(big.Int).Add(l1TxUnpaid, l1CalldataUnpaid)
 	if totalUnpaid.Cmp(big.NewInt(0)) != 0 && res.ResultCode != evm.InsufficientGasForBaseFee && res.ResultCode != evm.InsufficientGasFundsCode {
-		t.Error("gas left unpaid, but got wrong error")
+		t.Log("totalUnpaid: ", l1TxUnpaid, "+", l1CalldataUnpaid)
+		t.Error("gas left unpaid, but got wrong result", res.ResultCode)
 	}
 	return totalUnpaid
 }

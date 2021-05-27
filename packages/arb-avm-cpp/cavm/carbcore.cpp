@@ -65,11 +65,13 @@ Uint256Result arbCoreGetDelayedMessagesToSequence(
 }
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
+                           void* previous_message_count_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,
                            ByteSliceArray delayed_messages_slice,
                            void* reorg_message_count_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto previous_message_count = receiveUint256(previous_message_count_ptr);
     auto previous_inbox_acc = receiveUint256(previous_inbox_acc_ptr);
     auto sequencer_batch_items =
         receiveByteSliceArray(sequencer_batch_items_slice);
@@ -81,8 +83,9 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
 
     try {
         auto status = arb_core->deliverMessages(
-            previous_inbox_acc, std::move(sequencer_batch_items),
-            std::move(delayed_messages), reorg_message_count);
+            previous_message_count, previous_inbox_acc,
+            std::move(sequencer_batch_items), std::move(delayed_messages),
+            reorg_message_count);
         return status;
     } catch (const std::exception& e) {
         return false;
@@ -199,14 +202,13 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
     }
 }
 
-ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
-                                                   const void* start_index_ptr,
-                                                   const void* count_ptr) {
+ByteSliceArrayResult arbCoreGetSequencerBatchItems(
+    CArbCore* arbcore_ptr,
+    const void* start_index_ptr) {
     try {
         auto messages =
             static_cast<const ArbCore*>(arbcore_ptr)
-                ->getSequencerBatchItems(receiveUint256(start_index_ptr),
-                                         receiveUint256(count_ptr));
+                ->getSequencerBatchItems(receiveUint256(start_index_ptr));
         if (!messages.status.ok()) {
             return {{}, false};
         }

@@ -20,9 +20,12 @@
 #include <string>
 
 void sleep() {
-    std::chrono::seconds dura(2000);
+    std::chrono::hours dura{20};
+    //    std::chrono::seconds dura(2000);
     std::this_thread::sleep_for(dura);  // this makes this thread sleep for 2s
 }
+
+constexpr bool clearDb = false;
 
 int main(int argc, char* argv[]) {
     using namespace std::chrono_literals;
@@ -32,6 +35,42 @@ int main(int argc, char* argv[]) {
     }
     auto dbpath = std::string(argv[1]);
     auto arbospath = std::string(argv[2]);
+
+    if (clearDb) {
+        {
+            ArbStorage storage{dbpath};
+            {
+                auto tx = storage.makeReadWriteTransaction();
+                saveNextSegmentID(*tx, 0);
+                auto s = tx->commit();
+                if (!s.ok()) {
+                    std::cerr << "Error overwriting segment: " << s.ToString()
+                              << std::endl;
+                    return -1;
+                }
+            }
+        }
+        {
+            DataStorage storage{dbpath};
+            auto s = storage.clearDBExceptInbox();
+            if (!s.ok()) {
+                std::cerr << "Error deleting columns: " << s.ToString()
+                          << std::endl;
+                return -1;
+            }
+            storage.closeDb();
+        }
+        {
+            ArbStorage storage{dbpath};
+            auto s = storage.initialize(arbospath);
+            if (!s.ok()) {
+                std::cerr << "Failed to get initialize storage" << s.ToString()
+                          << std::endl;
+                return -1;
+            }
+        }
+    }
+
     std::cout << "Loading db\n";
     ArbStorage storage{dbpath};
     std::cout << "Initializing arbstorage\n";

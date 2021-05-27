@@ -46,8 +46,9 @@ class ReadTransaction {
                                   std::string* value) const;
     rocksdb::Status refCountedGet(const rocksdb::Slice& key,
                                   std::string* value) const;
+    rocksdb::Status refCountedGet(const rocksdb::Slice& key,
+                                  rocksdb::PinnableSlice* pinnable_val) const;
 
-    [[nodiscard]] std::unique_ptr<rocksdb::Iterator> defaultGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> stateGetIterator() const;
     [[nodiscard]] std::unique_ptr<rocksdb::Iterator> checkpointGetIterator()
         const;

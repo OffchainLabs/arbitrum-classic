@@ -85,13 +85,13 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	defer wg.Done()
 	messageCount := 0
+	ctx := context.Background()
 
 	// connect returns
-	messageReceiver, err := broadcastClient.Connect()
+	messageReceiver, err := broadcastClient.Connect(ctx)
 	if err != nil {
-		t.Errorf("Can not connect: %v\n", err)
+		t.Fatal(err)
 	}
-
 	for {
 		select {
 		case receivedMsg := <-messageReceiver:

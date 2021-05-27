@@ -140,7 +140,7 @@ func TestCallTx(t *testing.T) {
 	// After call to contract, balance should still be 0
 	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
-	callRes, err := snap.Call(message.ContractTransaction{
+	callRes, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -154,7 +154,7 @@ func TestCallTx(t *testing.T) {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
 	}
 
-	call2Res, err := snap.Call(message.ContractTransaction{
+	call2Res, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -168,7 +168,7 @@ func TestCallTx(t *testing.T) {
 		t.Errorf("Storage was updated")
 	}
 
-	_, err = snap.Call(message.ContractTransaction{
+	_, _, err = snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -212,7 +212,7 @@ func TestContractTx(t *testing.T) {
 	checkBalance(t, snap, tx.DestAddress, tx.Payment)
 	checkBalance(t, snap, tx2.DestAddress, tx2.Payment)
 
-	callRes, err := snap.Call(message.ContractTransaction{
+	callRes, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -226,7 +226,7 @@ func TestContractTx(t *testing.T) {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
 	}
 
-	callRes2, err := snap.Call(message.ContractTransaction{
+	callRes2, _, err := snap.Call(message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -344,7 +344,7 @@ func TestBatch(t *testing.T) {
 	}
 	messages = append(messages, message.NewSafeL2Message(msg))
 
-	results, _ := runTxAssertionWithCount(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1)
+	results, _, _ := runTxAssertionWithCount(t, makeSimpleInbox(t, messages), len(messages)+len(txes)-1)
 
 	for i, result := range results[len(messages)-1:] {
 		if result.IncomingRequest.Sender != senders[i] {

@@ -233,7 +233,12 @@ const _abi = [
     outputs: [
       {
         internalType: 'uint256',
-        name: '',
+        name: 'seqNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'depositCalldataLength',
         type: 'uint256',
       },
     ],
@@ -281,6 +286,50 @@ const _abi = [
     name: 'fastWithdrawalFromL2',
     outputs: [],
     stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'erc20',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'destination',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: 'callHookData',
+        type: 'bytes',
+      },
+    ],
+    name: 'getDepositCalldata',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: 'isDeployed',
+        type: 'bool',
+      },
+      {
+        internalType: 'bytes',
+        name: 'depositCalldata',
+        type: 'bytes',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
   {

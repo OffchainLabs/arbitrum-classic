@@ -64,10 +64,7 @@ CMachine* machineClone(CMachine* m);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
-RawAssertion executeAssertion(CMachine* m,
-                              const CMachineExecutionConfig* c,
-                              void* before_send_acc_data,
-                              void* before_log_acc_data);
+RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c);
 
 COneStepProof machineMarshallForProof(CMachine* m);
 

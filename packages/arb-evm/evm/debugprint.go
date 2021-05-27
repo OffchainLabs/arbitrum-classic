@@ -14,10 +14,11 @@
 * limitations under the License.
  */
 
-package arbosmachine
+package evm
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -197,7 +198,7 @@ type EVMCallError struct {
 }
 
 func (e *EVMCallError) String() string {
-	return fmt.Sprintf("EVMCallError{description: %v, errorCode: %v", e.description, e.errorCode)
+	return fmt.Sprintf("EVMCallError{description: %v, errorCode: %v}", e.description, e.errorCode)
 }
 
 func (e *EVMCallError) MarshalZerologObject(event *zerolog.Event) {
@@ -205,6 +206,28 @@ func (e *EVMCallError) MarshalZerologObject(event *zerolog.Event) {
 		Str("description", e.description).
 		Str("kind", "evm_call_error").
 		Uint64("error_code", e.errorCode)
+}
+
+type EVMTrace struct {
+	Items []TraceItem
+}
+
+func (e *EVMTrace) String() string {
+	builder := &strings.Builder{}
+	builder.WriteString("Tx trace:")
+	for _, item := range e.Items {
+		builder.WriteString("\n")
+		builder.WriteString(item.String())
+	}
+	return builder.String()
+}
+
+func (e *EVMTrace) MarshalZerologObject(event *zerolog.Event) {
+	array := zerolog.Arr()
+	for _, item := range e.Items {
+		array = array.Object(item)
+	}
+	event.Array("items", array)
 }
 
 type ErrorHandlerError struct {
@@ -218,14 +241,40 @@ func (e *ErrorHandlerError) MarshalZerologObject(event *zerolog.Event) {
 	event.Str("kind", "error_in_error_handler")
 }
 
+type RawDebugPrint struct {
+	Val value.Value
+}
+
+func (r *RawDebugPrint) String() string {
+	return fmt.Sprintf("RawDebugPrint{%v}", r.Val)
+}
+
+func (r *RawDebugPrint) MarshalZerologObject(event *zerolog.Event) {
+	event.
+		Str("kind", "raw").
+		Str("value", r.Val.String())
+}
+
+type EVMOpcodeLog struct {
+	pc uint64
+	op uint64
+}
+
+func (r *EVMOpcodeLog) String() string {
+	return fmt.Sprintf("EVMOpcodeLog{0x%x, %x}", r.pc, r.op)
+}
+
+func (r *EVMOpcodeLog) MarshalZerologObject(event *zerolog.Event) {
+}
+
 type EVMLogLine interface {
 	zerolog.LogObjectMarshaler
 }
 
-func handleDebugPrint(d value.Value) (EVMLogLine, error) {
+func NewLogLineFromValue(d value.Value) (EVMLogLine, error) {
 	tup, ok := d.(*value.TupleValue)
 	if !ok || tup.Len() == 0 {
-		return nil, errors.New("expected debugprint to be tuple")
+		return &RawDebugPrint{Val: d}, nil
 	}
 	// Tuple already checked to be at least size 1
 	debugPrintType, _ := tup.GetByInt64(0)
@@ -283,7 +332,31 @@ func handleDebugPrint(d value.Value) (EVMLogLine, error) {
 		pc := evmPCInt.BigInt().Uint64()
 
 		return generateLog(txID, currentFrame, parentFrame, "evm_revert", &pc)
+	} else if typ == 20000 {
+		vals, err := NewTraceFromDebugPrint(d)
+		if err != nil {
+			return nil, err
+		}
+		return &EVMTrace{Items: vals}, nil
+	} else if typ == 30000 {
+		if tup.Len() != 3 {
+			return nil, errors.New("expected type 30000 to be 3-tuple")
+		}
+		evmPC, _ := tup.GetByInt64(1)
+		evmOp, _ := tup.GetByInt64(2)
+		evmPCInt, ok := evmPC.(value.IntValue)
+		if !ok {
+			return nil, errors.New("expected pc to be int")
+		}
+		evmOpInt, ok := evmOp.(value.IntValue)
+		if !ok {
+			return nil, errors.New("expected op to be int")
+		}
+		return &EVMOpcodeLog{
+			pc: evmPCInt.BigInt().Uint64(),
+			op: evmOpInt.BigInt().Uint64(),
+		}, nil
 	} else {
-		return nil, errors.New("unknown debug print type")
+		return &RawDebugPrint{Val: d}, nil
 	}
 }

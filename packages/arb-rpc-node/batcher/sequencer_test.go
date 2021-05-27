@@ -206,6 +206,7 @@ func TestSequencerBatcher(t *testing.T) {
 		seqMon.Reader,
 		client,
 		big.NewInt(1),
+		big.NewInt(1),
 		seqInbox,
 		auth,
 		dummyDataSigner,
@@ -232,27 +233,23 @@ func TestSequencerBatcher(t *testing.T) {
 		}
 	}
 
-	for _, totalCount := range []int{1, 10, 100} {
-		for _, dataSizePerTx := range []int{1, 10, 100} {
-			txs := generateTxs(t, totalCount, dataSizePerTx, message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)))
-			for _, tx := range txs {
-				if err := batcher.SendTransaction(ctx, tx); err != nil {
-					t.Fatal(err)
-				}
-			}
-			client.Commit()
-			<-time.After(time.Second)
-			client.Commit()
+	txs := generateTxs(t, 5, 10, message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)))
+	for _, tx := range txs {
+		if err := batcher.SendTransaction(ctx, tx); err != nil {
+			t.Fatal(err)
 		}
 	}
+	client.Commit()
+	<-time.After(time.Second)
+	client.Commit()
 
 	msgCount1, err := seqMon.Core.GetMessageCount()
 	test.FailIfError(t, err)
-	if msgCount1.Cmp(big.NewInt(668)) < 0 {
+	if msgCount1.Cmp(big.NewInt(10)) < 0 {
 		t.Error("Not enough messages, only got", msgCount1.String())
 	}
 
-	timeout := time.Now().Add(time.Second * 5)
+	timeout := time.Now().Add(time.Second * 15)
 	for {
 		msgCount2, err := otherMon.Core.GetMessageCount()
 		test.FailIfError(t, err)

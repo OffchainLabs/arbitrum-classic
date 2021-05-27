@@ -19,10 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "../arbitrum/ArbTokenBridge.sol";
-import "../libraries/IERC1363.sol";
+import "../libraries/IERC677.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract L2Called is IERC1363Receiver {
+contract L2Called is IERC677Receiver {
     event Called(uint256 num);
 
     constructor() public {}
@@ -32,25 +32,22 @@ contract L2Called is IERC1363Receiver {
         emit Called(num);
     }
 
-    function onTransferReceived(
-        address operator,
+    function onTokenTransfer(
         address sender,
         uint256 amount,
         bytes calldata data
-    ) external override returns (bytes4) {
+    ) external override {
         uint256 num = abi.decode(data, (uint256));
 
         if (num == 5) {
             postDepositHook(num);
-            return IERC1363Receiver.onTransferReceived.selector;
         } else if (num == 7) {
-            revert();
+            revert("should fail because 7");
         } else if (num == 9) {
             // this should use all gas
             while (gasleft() > 0) {}
-            return IERC1363Receiver.onTransferReceived.selector;
         } else {
-            return bytes4(0x00);
+            revert("should fail");
         }
     }
 }

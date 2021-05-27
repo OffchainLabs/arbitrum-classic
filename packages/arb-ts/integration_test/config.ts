@@ -17,7 +17,28 @@ export default {
     // existentCustomTokenL1: '',
     // existentCustomTokenL2: '',
     defaultWait: 0,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 10000,
   },
+  kovan5: {
+    ethRPC: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
+    arbRPC: 'https://kovan5.arbitrum.io/rpc',
+    // arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
+    preFundedSignerPK:
+      process.env['DEVNET_PRIVKEY'] ||
+      '0x8803565d1ab75cf6a04656e2a638c65a2984f810ce2f5f8270601aca4e25e067',
+    erc20BridgeAddress: '0x1d750369c91b129524B68f308512b0FE2C903d71',
+    arbTokenBridgeAddress: '0x2EEBB8EE9c377caBC476654ca4aba016ECA1B9fc',
+    l1gasPrice: utils.parseUnits('10', 'gwei'),
+    existentTestERC20: '0xFa3933797baF9572c4Cf8fA9a28f09ad3C8d30BB',
+    existentCustomTokenL1: '0x2091C1d0d20270e4cA15270b737421Ba90Cf0470',
+    existentCustomTokenL2: '0x88692aE036594c95F723204c3DB070E2fB4d8eE4',
+
+    defaultWait: 0,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 100000,
+  },
+
   devnet: {
     ethRPC: 'https://devnet.arbitrum.io/rpc',
     arbRPC: 'https://devnet-l2.arbitrum.io/rpc',
@@ -31,5 +52,7 @@ export default {
     existentCustomTokenL1: '',
     existentCustomTokenL2: '',
     defaultWait: 10000,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 10000,
   },
 }
