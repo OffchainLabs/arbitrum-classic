@@ -284,8 +284,7 @@ class ArbCore {
         uint256_t index,
         uint256_t count) const;
     ValueResult<std::vector<std::vector<unsigned char>>> getSequencerBatchItems(
-        uint256_t index,
-        uint256_t count) const;
+        uint256_t index) const;
     ValueResult<uint256_t> getSequencerBlockNumberAt(
         uint256_t sequence_number) const;
     ValueResult<std::vector<unsigned char>> genInboxProof(

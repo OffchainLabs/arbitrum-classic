@@ -199,14 +199,13 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
     }
 }
 
-ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
-                                                   const void* start_index_ptr,
-                                                   const void* count_ptr) {
+ByteSliceArrayResult arbCoreGetSequencerBatchItems(
+    CArbCore* arbcore_ptr,
+    const void* start_index_ptr) {
     try {
         auto messages =
             static_cast<const ArbCore*>(arbcore_ptr)
-                ->getSequencerBatchItems(receiveUint256(start_index_ptr),
-                                         receiveUint256(count_ptr));
+                ->getSequencerBatchItems(receiveUint256(start_index_ptr));
         if (!messages.status.ok()) {
             return {{}, false};
         }
