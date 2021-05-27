@@ -2125,7 +2125,13 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             auto& item_and_slice = seq_batch_items[i];
             auto& item = item_and_slice.first;
             uint256_t delayed_acc;
+            uint256_t expected_last_seq_num = 0;
+            if (prev_item.accumulator != 0) {
+                expected_last_seq_num = prev_item.last_sequence_number + 1;
+            }
             if (item.total_delayed_count > prev_item.total_delayed_count) {
+                expected_last_seq_num += item.total_delayed_count -
+                                         prev_item.total_delayed_count - 1;
                 if (item.sequencer_message) {
                     throw std::runtime_error(
                         "Attempted to add sequencer batch item with both "
@@ -2145,6 +2151,11 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 throw std::runtime_error(
                     "Attempted to add sequencer batch item that decreases "
                     "total messages read");
+            }
+            if (item.last_sequence_number != expected_last_seq_num) {
+                throw std::runtime_error(
+                    "Attempted to add sequencer batch item with unexpected "
+                    "sequence number");
             }
             auto expected_acc = item.computeAccumulator(
                 prev_item.accumulator, prev_item.total_delayed_count,
