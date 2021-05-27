@@ -11,9 +11,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
-    // A little over 15 minutes
-    uint256 public constant minimumAssertionPeriod = 75;
-
     modifier onlyValidator {
         require(isValidator[msg.sender], "NOT_VALIDATOR");
         _;

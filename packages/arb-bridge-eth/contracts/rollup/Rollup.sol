@@ -52,7 +52,9 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     INodeFactory public nodeFactory;
     address public owner;
     address public stakeToken;
-    address[] facets;
+    uint256 public minimumAssertionPeriod;
+    address[] internal facets;
+
     mapping(address => bool) isValidator;
 
     event RollupCreated(bytes32 machineHash);
@@ -88,7 +90,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 
     event StakerReassigned(address indexed staker, uint256 newNode);
     event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
-    event OwnerFunctionCalled(uint256 id);
+    event OwnerFunctionCalled(uint256 indexed id);
 }
 
 contract Rollup is RollupBase {
@@ -136,6 +138,8 @@ contract Rollup is RollupBase {
         arbGasSpeedLimitPerBlock = _arbGasSpeedLimitPerBlock;
         baseStake = _baseStake;
         owner = _owner;
+        // A little over 15 minutes
+        minimumAssertionPeriod = 75;
         // facets[0] == admin, facets[1] == user
         facets = _facets;
 

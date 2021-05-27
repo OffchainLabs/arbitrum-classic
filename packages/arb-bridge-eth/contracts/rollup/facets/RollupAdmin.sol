@@ -94,6 +94,62 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         emit OwnerFunctionCalled(7);
     }
 
+    /**
+     * @notice Set minimum assertion period for the rollup
+     * @param newPeriod new minimum period for assertions
+     */
+    function setMinimumAssertionPeriod(uint256 newPeriod) external override {
+        minimumAssertionPeriod = newPeriod;
+        emit OwnerFunctionCalled(8);
+    }
+
+    /**
+     * @notice Set number of blocks until a node is considered confirmed
+     * @param newConfirmPeriod new number of blocks
+     */
+    function setConfirmPeriodBlocks(uint256 newConfirmPeriod) external override {
+        confirmPeriodBlocks = newConfirmPeriod;
+        emit OwnerFunctionCalled(9);
+    }
+
+    /**
+     * @notice Set number of extra blocks after a challenge
+     * @param newExtraTimeBlocks new number of blocks
+     */
+    function setExtraChallengeTimeBlocks(uint256 newExtraTimeBlocks) external override {
+        extraChallengeTimeBlocks = newExtraTimeBlocks;
+        emit OwnerFunctionCalled(10);
+    }
+
+    /**
+     * @notice Set speed limit per block
+     * @param newArbGasSpeedLimitPerBlock maximum arbgas to be used per block
+     */
+    function setArbGasSpeedLimitPerBlock(uint256 newArbGasSpeedLimitPerBlock) external override {
+        arbGasSpeedLimitPerBlock = newArbGasSpeedLimitPerBlock;
+        emit OwnerFunctionCalled(11);
+    }
+
+    /**
+     * @notice Set base stake required for an assertion
+     * @param newBaseStake maximum arbgas to be used per block
+     */
+    function setBaseStake(uint256 newBaseStake) external override {
+        baseStake = newBaseStake;
+        emit OwnerFunctionCalled(12);
+    }
+
+    /**
+     * @notice Set the token used for stake, where address(0) == eth
+     * @dev Before changing the base stake token, you might need to change the
+     * implementation of the Rollup User facet!
+     * @param newStakeToken address of token used for staking
+     */
+    function setStakeToken(address newStakeToken) external override {
+        stakeToken = newStakeToken;
+        emit OwnerFunctionCalled(13);
+    }
+
     /*
     function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external override whenPaused {
         require(stackerA.length == stackerB.length, "WRONG_LENGTH");

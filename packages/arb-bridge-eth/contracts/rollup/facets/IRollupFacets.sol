@@ -86,4 +86,42 @@ interface IRollupAdmin {
      * @param newOwner address of new rollup owner
      */
     function setOwner(address newOwner) external;
+
+    /**
+     * @notice Set minimum assertion period for the rollup
+     * @param newPeriod new minimum period for assertions
+     */
+    function setMinimumAssertionPeriod(uint256 newPeriod) external;
+
+    /**
+     * @notice Set number of blocks until a node is considered confirmed
+     * @param newConfirmPeriod new number of blocks until a node is confirmed
+     */
+    function setConfirmPeriodBlocks(uint256 newConfirmPeriod) external;
+
+    /**
+     * @notice Set number of extra blocks after a challenge
+     * @param newExtraTimeBlocks new number of blocks
+     */
+    function setExtraChallengeTimeBlocks(uint256 newExtraTimeBlocks) external;
+
+    /**
+     * @notice Set speed limit per block
+     * @param newArbGasSpeedLimitPerBlock maximum arbgas to be used per block
+     */
+    function setArbGasSpeedLimitPerBlock(uint256 newArbGasSpeedLimitPerBlock) external;
+
+    /**
+     * @notice Set base stake required for an assertion
+     * @param newBaseStake maximum arbgas to be used per block
+     */
+    function setBaseStake(uint256 newBaseStake) external;
+
+    /**
+     * @notice Set the token used for stake, where address(0) == eth
+     * @dev Before changing the base stake token, you might need to change the
+     * implementation of the Rollup User facet!
+     * @param newStakeToken address of token used for staking
+     */
+    function setStakeToken(address newStakeToken) external;
 }
