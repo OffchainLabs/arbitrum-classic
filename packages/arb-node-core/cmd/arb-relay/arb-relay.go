@@ -146,7 +146,10 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 	}
 
 	// connect returns
-	messages := ar.broadcastClient.Connect(ctx)
+	messages, err := ar.broadcastClient.Connect(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	go func() {
 		defer func() {
