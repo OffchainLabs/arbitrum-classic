@@ -78,23 +78,25 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 		}
 
 		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(10 * time.Second):
-			}
-
 			conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
 			if err != nil {
 				logger.Warn().Err(err).Msg("broadcast client unable to connect, retrying")
-			} else {
-				bc.connMutex.Lock()
-				bc.conn = conn
-				bc.connMutex.Unlock()
 
-				logger.Info().Msg("Connected")
-				break
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(10 * time.Second):
+				}
+
+				continue
 			}
+
+			bc.connMutex.Lock()
+			bc.conn = conn
+			bc.connMutex.Unlock()
+
+			logger.Info().Msg("Connected")
+			break
 		}
 
 		bc.startBackgroundReader(ctx, messageReceiver)
@@ -151,17 +153,21 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 }
 
 func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
-	MaxWaitMs := 15000
-	waitMs := 500
+	maxWaitDuration := 15 * time.Second
+	waitDuration := 500 * time.Millisecond
 	bc.retrying = true
 	for !bc.shuttingDown {
-		time.Sleep(time.Duration(waitMs) * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(waitDuration):
+		}
 
 		bc.RetryCount++
 		_ = bc.connect(ctx, messageReceiver)
 
-		if waitMs < MaxWaitMs {
-			waitMs += 500
+		if waitDuration < maxWaitDuration {
+			waitDuration += 500 * time.Millisecond
 		}
 	}
 }
