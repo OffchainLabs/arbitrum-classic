@@ -27,7 +27,6 @@ import "../rollup/Rollup.sol";
 import "../rollup/NodeFactory.sol";
 
 import "../rollup/Rollup.sol";
-import "../rollup/IRollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "../rollup/RollupLib.sol";
@@ -136,7 +135,7 @@ contract RollupCreatorNoProxy {
 
     function createRollupNoProxy(RollupLib.Config memory config, address challengeFactory)
         private
-        returns (IRollup)
+        returns (address)
     {
         CreateRollupFrame memory frame;
         frame.rollup = address(new Rollup());
@@ -173,6 +172,6 @@ contract RollupCreatorNoProxy {
             [address(new RollupAdminFacet()), address(new RollupUserFacet())]
         );
         emit RollupCreated(frame.rollup);
-        return IRollup(frame.rollup);
+        return frame.rollup;
     }
 }

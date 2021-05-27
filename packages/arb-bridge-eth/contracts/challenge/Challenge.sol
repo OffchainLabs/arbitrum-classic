@@ -22,7 +22,6 @@ import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./IChallenge.sol";
-import "../rollup/IRollup.sol";
 import "../rollup/facets/IRollupFacets.sol";
 import "../arch/IOneStepProof.sol";
 

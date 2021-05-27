@@ -29,7 +29,6 @@ import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./IRollup.sol";
 import "./Rollup.sol";
 import "./facets/RollupUser.sol";
 import "./facets/RollupAdmin.sol";
@@ -81,7 +80,7 @@ contract RollupCreator is Ownable, CloneFactory {
         uint256 _sequencerDelayBlocks,
         uint256 _sequencerDelaySeconds,
         bytes calldata _extraConfig
-    ) external returns (IRollup) {
+    ) external returns (address) {
         return
             createRollup(
                 RollupLib.Config(
@@ -115,7 +114,7 @@ contract RollupCreator is Ownable, CloneFactory {
     // RollupOwner should be the owner of Rollup's ProxyAdmin
     // RollupOwner should be the owner of Rollup
     // Bridge should have a single inbox and outbox
-    function createRollup(RollupLib.Config memory config) private returns (IRollup) {
+    function createRollup(RollupLib.Config memory config) private returns (address) {
         CreateRollupFrame memory frame;
         frame.admin = new ProxyAdmin();
         frame.rollup = address(
@@ -157,6 +156,6 @@ contract RollupCreator is Ownable, CloneFactory {
             [rollupAdminFacet, rollupUserFacet]
         );
         emit RollupCreated(frame.rollup, address(frame.inbox), address(frame.admin));
-        return IRollup(frame.rollup);
+        return frame.rollup;
     }
 }

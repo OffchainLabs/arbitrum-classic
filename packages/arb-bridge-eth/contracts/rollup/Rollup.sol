@@ -23,7 +23,6 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "./RollupEventBridge.sol";
 
-import "./IRollup.sol";
 import "./INode.sol";
 import "./INodeFactory.sol";
 import "../challenge/IChallenge.sol";
@@ -37,7 +36,7 @@ import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
 import "./facets/IRollupFacets.sol";
 
-abstract contract RollupBase is Cloneable, RollupCore, Pausable, IRollup {
+abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     // Rollup Config
     uint256 public confirmPeriodBlocks;
     uint256 public extraChallengeTimeBlocks;
@@ -60,6 +59,41 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable, IRollup {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
     }
+
+    event RollupCreated(bytes32 machineHash);
+
+    event NodeCreated(
+        uint256 indexed nodeNum,
+        bytes32 indexed parentNodeHash,
+        bytes32 nodeHash,
+        bytes32 executionHash,
+        uint256 inboxMaxCount,
+        uint256 afterInboxBatchEndCount,
+        bytes32 afterInboxBatchAcc,
+        bytes32[3][2] assertionBytes32Fields,
+        uint256[4][2] assertionIntFields
+    );
+
+    event NodeConfirmed(
+        uint256 indexed nodeNum,
+        bytes32 afterSendAcc,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    );
+
+    event NodeRejected(uint256 indexed nodeNum);
+
+    event RollupChallengeStarted(
+        address indexed challengeContract,
+        address asserter,
+        address challenger,
+        uint256 challengedNode
+    );
+
+    event StakerReassigned(address indexed staker, uint256 newNode);
+    event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
+    event OwnerFunctionCalled(uint256 id);
 }
 
 contract Rollup is RollupBase {

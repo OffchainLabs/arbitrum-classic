@@ -18,9 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../IRollup.sol";
+import "../INode.sol";
+import "../../bridge/interfaces/IOutbox.sol";
 
-interface IRollupUser is IRollup {
+interface IRollupUser {
     function initialize(address _stakeToken) external;
 
     function completeChallenge(address winningStaker, address losingStaker) external;
@@ -32,4 +33,35 @@ interface IRollupUser is IRollup {
     function requireUnresolvedExists() external view;
 
     function countStakedZombies(INode node) external view returns (uint256);
+}
+
+interface IRollupAdmin {
+    /**
+     * @notice Add a contract authorized to put messages into this rollup's inbox
+     * @param _outbox Outbox contract to add
+     */
+    function setOutbox(IOutbox _outbox) external;
+
+    /**
+     * @notice Disable an old outbox from interacting with the bridge
+     * @param _outbox Outbox contract to remove
+     */
+    function removeOldOutbox(address _outbox) external;
+
+    /**
+     * @notice Enable or disable an inbox contract
+     * @param _inbox Inbox contract to add or remove
+     * @param _enabled New status of inbox
+     */
+    function setInbox(address _inbox, bool _enabled) external;
+
+    /**
+     * @notice Pause interaction with the rollup contract
+     */
+    function pause() external;
+
+    /**
+     * @notice Resume interaction with the rollup contract
+     */
+    function resume() external;
 }

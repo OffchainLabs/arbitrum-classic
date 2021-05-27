@@ -3,13 +3,15 @@
 pragma solidity ^0.6.11;
 
 import "../Rollup.sol";
+import "./IRollupFacets.sol";
+import "../../bridge/interfaces/IOutbox.sol";
 
-contract RollupAdminFacet is RollupBase {
+contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add
      */
-    function setOutbox(IOutbox _outbox) external onlyOwner {
+    function setOutbox(IOutbox _outbox) external override onlyOwner {
         outbox = _outbox;
         delayedBridge.setOutbox(address(_outbox), true);
         emit OwnerFunctionCalled(0);
@@ -19,7 +21,7 @@ contract RollupAdminFacet is RollupBase {
      * @notice Disable an old outbox from interacting with the bridge
      * @param _outbox Outbox contract to remove
      */
-    function removeOldOutbox(address _outbox) external onlyOwner {
+    function removeOldOutbox(address _outbox) external override onlyOwner {
         require(_outbox != address(outbox), "CUR_OUTBOX");
         delayedBridge.setOutbox(_outbox, false);
         emit OwnerFunctionCalled(1);
@@ -30,7 +32,7 @@ contract RollupAdminFacet is RollupBase {
      * @param _inbox Inbox contract to add or remove
      * @param _enabled New status of inbox
      */
-    function setInbox(address _inbox, bool _enabled) external onlyOwner {
+    function setInbox(address _inbox, bool _enabled) external override onlyOwner {
         delayedBridge.setInbox(address(_inbox), _enabled);
         emit OwnerFunctionCalled(2);
     }
@@ -38,7 +40,7 @@ contract RollupAdminFacet is RollupBase {
     /**
      * @notice Pause interaction with the rollup contract
      */
-    function pause() external onlyOwner {
+    function pause() external override onlyOwner {
         _pause();
         emit OwnerFunctionCalled(3);
     }
@@ -46,13 +48,13 @@ contract RollupAdminFacet is RollupBase {
     /**
      * @notice Resume interaction with the rollup contract
      */
-    function resume() external onlyOwner {
+    function resume() external override onlyOwner {
         _unpause();
         emit OwnerFunctionCalled(4);
     }
 
     /*
-    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external onlyOwner whenPaused {
+    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external override onlyOwner whenPaused {
         require(stackerA.length == stackerB.length, "WRONG_LENGTH");
         for (uint256 i = 0; i < stackerA.length; i++) {
             address chall = inChallenge(stackerA[i], stackerB[i]);
@@ -65,7 +67,7 @@ contract RollupAdminFacet is RollupBase {
         }
     }
 
-    function forceRefundStaker(address[] memory stacker) external onlyOwner whenPaused {
+    function forceRefundStaker(address[] memory stacker) external override onlyOwner whenPaused {
         for (uint256 i = 0; i < stacker.length; i++) {
             withdrawStaker(stacker[i]);
         }
@@ -81,7 +83,7 @@ contract RollupAdminFacet is RollupBase {
         uint256 deadlineBlock,
         uint256 sequencerBatchEnd,
         bytes32 sequencerBatchAcc
-    ) external onlyOwner whenPaused {
+    ) external override onlyOwner whenPaused {
         require(prevNode == latestConfirmed(), "ONLY_LATEST_CONFIRMED");
 
         RollupLib.Assertion memory assertion =
@@ -111,7 +113,7 @@ contract RollupAdminFacet is RollupBase {
     function forceConfirmNode(
         bytes calldata sendsData,
         uint256[] calldata sendLengths
-    ) external onlyOwner whenPaused {
+    ) external override onlyOwner whenPaused {
         outbox.processOutgoingMessages(sendsData, sendLengths);
 
         confirmLatestNode();
