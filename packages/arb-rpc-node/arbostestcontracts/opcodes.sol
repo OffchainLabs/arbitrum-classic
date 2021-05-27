@@ -38,4 +38,8 @@ contract OpCodes {
     function getOrigin() external returns (address) {
         return tx.origin;
     }
+
+    function getGasLeft() external returns (uint256) {
+        return gasleft();
+    }
 }
