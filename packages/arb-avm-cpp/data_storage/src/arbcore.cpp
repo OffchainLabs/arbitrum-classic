@@ -980,7 +980,7 @@ rocksdb::Status ArbCore::saveSends(
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
-ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
+ArbCore::getSequencerBatchItems(uint256_t index) const {
     ReadTransaction tx(data_storage);
 
     std::vector<unsigned char> first_key_vec;
@@ -990,7 +990,7 @@ ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
     it->Seek(first_key_slice);
 
     std::vector<std::vector<unsigned char>> ret;
-    while (it->Valid() && ret.size() < count) {
+    while (it->Valid()) {
         auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
         auto value_ptr =
             reinterpret_cast<const unsigned char*>(it->value().data());
