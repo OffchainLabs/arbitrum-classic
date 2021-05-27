@@ -139,7 +139,7 @@ contract RollupCreator is Ownable, CloneFactory {
                 config.baseStake
             ],
             config.stakeToken,
-            address(this),
+            config.owner,
             config.extraConfig,
             [
                 address(frame.delayedBridge),
@@ -153,8 +153,6 @@ contract RollupCreator is Ownable, CloneFactory {
             [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
 
-        // RollupAdminFacet(frame.rollup).set(config.owner);
-        RollupAdminFacet(frame.rollup).setOwner(config.owner);
         emit RollupCreated(frame.rollup, address(frame.inbox), address(frame.admin));
         return frame.rollup;
     }
