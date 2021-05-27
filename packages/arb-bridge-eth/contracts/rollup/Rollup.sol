@@ -52,13 +52,8 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     INodeFactory public nodeFactory;
     address public owner;
     address public stakeToken;
-    // function signature => facet address
     address[] facets;
-
-    modifier onlyOwner {
-        require(msg.sender == owner, "ONLY_OWNER");
-        _;
-    }
+    mapping(address => bool) isValidator;
 
     event RollupCreated(bytes32 machineHash);
 
@@ -190,11 +185,6 @@ contract Rollup is RollupBase {
 
     function getUserFacet() public view returns (address) {
         return facets[1];
-    }
-
-    function setFacets(address newAdminFacet, address newUserFacet) external onlyOwner {
-        facets[0] = newAdminFacet;
-        facets[1] = newUserFacet;
     }
 
     /**

@@ -87,11 +87,28 @@ async function createRollup(): Promise<{
   )
   expect(ev.name).to.equal('RollupCreated')
   const parsedEv = (ev as any) as { args: { rollupAddress: string } }
-  const Rollup = await (
-    await ethers.getContractFactory('RollupUserFacet')
-  ).connect(accounts[8])
+
+  const Rollup = (await ethers.getContractFactory('RollupUserFacet')).connect(
+    accounts[8]
+  )
+  const RollupAdmin = (
+    await ethers.getContractFactory('RollupAdminFacet')
+  ).connect(accounts[0])
+
+  const rollupAdminCon = RollupAdmin.attach(parsedEv.args.rollupAddress)
+  await rollupAdminCon.setValidator(
+    [
+      await accounts[1].getAddress(),
+      await accounts[2].getAddress(),
+      await accounts[8].getAddress(),
+    ],
+    [true, true, true]
+  )
+
+  const rollupCon = Rollup.attach(parsedEv.args.rollupAddress) as Rollup
+
   return {
-    rollupCon: Rollup.attach(parsedEv.args.rollupAddress) as Rollup,
+    rollupCon: rollupCon,
     blockCreated: receipt.blockNumber!,
   }
 }

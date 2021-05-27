@@ -64,4 +64,6 @@ interface IRollupAdmin {
      * @notice Resume interaction with the rollup contract
      */
     function resume() external;
+
+    function setValidator(address[] memory _validator, bool[] memory _val) external;
 }

@@ -14,11 +14,16 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     // A little over 15 minutes
     uint256 public constant minimumAssertionPeriod = 75;
 
+    modifier onlyValidator {
+        require(isValidator[msg.sender], "NOT_VALIDATOR");
+        _;
+    }
+
     /**
      * @notice Reject the next unresolved node
      * @param stakerAddress Example staker staked on sibling
      */
-    function rejectNextNode(address stakerAddress) external whenNotPaused {
+    function rejectNextNode(address stakerAddress) external onlyValidator whenNotPaused {
         requireUnresolvedExists();
         uint256 latest = latestConfirmed();
         uint256 firstUnresolved = firstUnresolvedNode();
@@ -61,7 +66,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         uint256 afterSendCount,
         bytes32 afterLogAcc,
         uint256 afterLogCount
-    ) external whenNotPaused {
+    ) external onlyValidator whenNotPaused {
         requireUnresolvedExists();
 
         // There is at least one non-zombie staker
@@ -118,7 +123,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @notice Create a new stake
      * @param depositAmount The amount of either eth or tokens staked
      */
-    function _newStake(uint256 depositAmount) internal whenNotPaused {
+    function _newStake(uint256 depositAmount) internal onlyValidator whenNotPaused {
         // Verify that sender is not already a staker
         require(!isStaked(msg.sender), "ALREADY_STAKED");
         require(!isZombie(msg.sender), "STAKER_IS_ZOMBIE");
@@ -134,7 +139,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param nodeNum Inbox of the node to move stake to. This must by a child of the node the staker is currently staked on
      * @param nodeHash Node hash of nodeNum (protects against reorgs)
      */
-    function stakeOnExistingNode(uint256 nodeNum, bytes32 nodeHash) external whenNotPaused {
+    function stakeOnExistingNode(uint256 nodeNum, bytes32 nodeHash)
+        external
+        onlyValidator
+        whenNotPaused
+    {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         require(getNodeHash(nodeNum) == nodeHash, "NODE_REORG");
@@ -166,7 +175,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         uint256 beforeProposedBlock,
         uint256 beforeInboxMaxCount,
         bytes calldata sequencerBatchProof
-    ) external whenNotPaused {
+    ) external onlyValidator whenNotPaused {
         require(isStaked(msg.sender), "NOT_STAKED");
 
         uint256 prevNodeNum = latestStakedNode(msg.sender);
@@ -326,7 +335,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * and move it to the desired node.
      * @param stakerAddress Address of the staker whose stake is refunded
      */
-    function returnOldDeposit(address stakerAddress) external override whenNotPaused {
+    function returnOldDeposit(address stakerAddress) external override onlyValidator whenNotPaused {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
         requireUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
@@ -337,7 +346,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param stakerAddress Address of the staker whose stake is increased
      * @param depositAmount The amount of either eth or tokens deposited
      */
-    function _addToDeposit(address stakerAddress, uint256 depositAmount) internal whenNotPaused {
+    function _addToDeposit(address stakerAddress, uint256 depositAmount)
+        internal
+        onlyValidator
+        whenNotPaused
+    {
         requireUnchallengedStaker(stakerAddress);
         increaseStakeBy(stakerAddress, depositAmount);
     }
@@ -346,7 +359,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @notice Reduce the amount staked for the sender
      * @param target Target amount of stake for the staker. If this is below the current minimum, it will be set to minimum instead
      */
-    function reduceDeposit(uint256 target) external whenNotPaused {
+    function reduceDeposit(uint256 target) external onlyValidator whenNotPaused {
         requireUnchallengedStaker(msg.sender);
         uint256 currentRequired = currentRequiredStake();
         if (target < currentRequired) {
@@ -369,7 +382,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         bytes32[2] calldata executionHashes,
         uint256[2] calldata proposedTimes,
         uint256[2] calldata maxMessageCounts
-    ) external whenNotPaused {
+    ) external onlyValidator whenNotPaused {
         require(nodeNums[0] < nodeNums[1], "WRONG_ORDER");
         require(nodeNums[1] <= latestNodeCreated(), "NOT_PROPOSED");
         require(latestConfirmed() < nodeNums[0], "ALREADY_CONFIRMED");
@@ -439,7 +452,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param winningStaker Address of the winning staker
      * @param losingStaker Address of the losing staker
      */
-    function completeChallenge(address winningStaker, address losingStaker) external override {
+    function completeChallenge(address winningStaker, address losingStaker)
+        external
+        override
+        whenNotPaused
+    {
         // Only the challenge contract can declare winners and losers
         require(msg.sender == inChallenge(winningStaker, losingStaker), "WRONG_SENDER");
 
@@ -467,7 +484,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @param zombieNum Index of the zombie to remove
      * @param maxNodes Maximum number of nodes to remove the zombie from (to limit the cost of this transaction)
      */
-    function removeZombie(uint256 zombieNum, uint256 maxNodes) external whenNotPaused {
+    function removeZombie(uint256 zombieNum, uint256 maxNodes)
+        external
+        onlyValidator
+        whenNotPaused
+    {
         require(zombieNum <= zombieCount(), "NO_SUCH_ZOMBIE");
         address zombieStakerAddress = zombieAddress(zombieNum);
         uint256 latestStakedNode = zombieLatestStakedNode(zombieNum);
@@ -631,7 +652,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
      * @dev It is recomended to call stakeOnExistingNode after creating a new stake
      * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
      */
-    function newStake() external payable whenNotPaused {
+    function newStake() external payable onlyValidator whenNotPaused {
         _newStake(msg.value);
     }
 
@@ -639,7 +660,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
      * @notice Increase the amount staked eth for the given staker
      * @param stakerAddress Address of the staker whose stake is increased
      */
-    function addToDeposit(address stakerAddress) external payable whenNotPaused {
+    function addToDeposit(address stakerAddress) external payable onlyValidator whenNotPaused {
         _addToDeposit(stakerAddress, msg.value);
     }
 
@@ -650,6 +671,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
     function withdrawStakerFunds(address payable destination)
         external
         override
+        onlyValidator
         whenNotPaused
         returns (uint256)
     {
@@ -674,7 +696,7 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
      * so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
      * @param tokenAmount the amount of tokens staked
      */
-    function newStake(uint256 tokenAmount) external whenNotPaused {
+    function newStake(uint256 tokenAmount) external onlyValidator whenNotPaused {
         _newStake(tokenAmount);
         require(
             IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
@@ -687,7 +709,11 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
      * @param stakerAddress Address of the staker whose stake is increased
      * @param tokenAmount the amount of tokens staked
      */
-    function addToDeposit(address stakerAddress, uint256 tokenAmount) external whenNotPaused {
+    function addToDeposit(address stakerAddress, uint256 tokenAmount)
+        external
+        onlyValidator
+        whenNotPaused
+    {
         _addToDeposit(stakerAddress, tokenAmount);
         require(
             IERC20(stakeToken).transferFrom(msg.sender, address(this), tokenAmount),
@@ -702,6 +728,7 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
     function withdrawStakerFunds(address payable destination)
         external
         override
+        onlyValidator
         whenNotPaused
         returns (uint256)
     {

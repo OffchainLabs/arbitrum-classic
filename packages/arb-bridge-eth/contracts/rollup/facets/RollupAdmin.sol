@@ -7,6 +7,11 @@ import "./IRollupFacets.sol";
 import "../../bridge/interfaces/IOutbox.sol";
 
 contract RollupAdminFacet is RollupBase, IRollupAdmin {
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
+
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add
@@ -51,6 +56,25 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     function resume() external override onlyOwner {
         _unpause();
         emit OwnerFunctionCalled(4);
+    }
+
+    function setFacets(address newAdminFacet, address newUserFacet) external onlyOwner {
+        facets[0] = newAdminFacet;
+        facets[1] = newUserFacet;
+        emit OwnerFunctionCalled(5);
+    }
+
+    function setValidator(address[] memory _validator, bool[] memory _val)
+        external
+        override
+        onlyOwner
+    {
+        require(_validator.length == _val.length, "WRONG_LENGTH");
+
+        for (uint256 i = 0; i < _validator.length; i++) {
+            isValidator[_validator[i]] = _val[i];
+        }
+        emit OwnerFunctionCalled(6);
     }
 
     /*
