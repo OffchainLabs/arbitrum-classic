@@ -135,16 +135,6 @@ func startup() error {
 		return err
 	}
 
-	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
-	if !*sequencerMode {
-		if *feedURL == "" {
-			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
-		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
-			sequencerFeed = broadcastClient.Connect(ctx)
-		}
-	}
-
 	if *enablePProf {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
@@ -195,6 +185,7 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
 	nodehealth.Init(healthChan)
 
+	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
 	var inboxReader *monitor.InboxReader
 	for {
 		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
@@ -269,6 +260,23 @@ func startup() error {
 		return errors.Wrap(err, "error opening txdb")
 	}
 	defer db.Close()
+
+	if !*sequencerMode {
+		if *feedURL == "" {
+			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
+		} else {
+			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
+			for {
+				sequencerFeed, err = broadcastClient.Connect(ctx)
+				if err == nil {
+					break
+				}
+				logger.Warn().Err(err).
+					Msg("failed to sequencer broadcast, waiting and retrying")
+				time.Sleep(time.Second * 5)
+			}
+		}
+	}
 
 	var batch batcher.TransactionBatcher
 	for {

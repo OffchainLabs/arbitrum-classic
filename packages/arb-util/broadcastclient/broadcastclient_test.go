@@ -51,8 +51,10 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	ctx := context.Background()
 
 	// connect returns
-	messageReceiver := broadcastClient.Connect(ctx)
-
+	messageReceiver, err := broadcastClient.Connect(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	accListener := broadcastClient.ConfirmedAccumulatorListener
 
 	for {
@@ -95,7 +97,10 @@ func TestServerDisconnectsAClientIfItDoesNotRespondToPings(t *testing.T) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
 
 	// connect returns
-	feed := broadcastClient.Connect(ctx)
+	feed, err := broadcastClient.Connect(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	newBroadcastMessage := broadcaster.SequencedMessages()
 	hash1, feedItem1, signature1 := newBroadcastMessage()
@@ -148,7 +153,10 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil)
 
 	// connect returns
-	_ = broadcastClient.Connect(ctx)
+	_, err = broadcastClient.Connect(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	b1.Stop()
 

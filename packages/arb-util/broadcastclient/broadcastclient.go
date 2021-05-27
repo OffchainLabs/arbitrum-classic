@@ -27,9 +27,10 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/rs/zerolog/log"
 )
 
 type BroadcastClient struct {
@@ -60,49 +61,37 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 	}
 }
 
-func (bc *BroadcastClient) Connect(ctx context.Context) chan broadcaster.BroadcastFeedMessage {
+func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
 	return bc.connect(ctx, messageReceiver)
 }
 
-func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) chan broadcaster.BroadcastFeedMessage {
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
-		return nil
+		return nil, nil
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
-	go func() {
-		timeoutDialer := ws.Dialer{
-			Timeout: 10 * time.Second,
-		}
+	timeoutDialer := ws.Dialer{
+		Timeout: 10 * time.Second,
+	}
 
-		for {
-			conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
-			if err != nil {
-				logger.Warn().Err(err).Msg("broadcast client unable to connect, retrying")
+	conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
+	if err != nil {
+		logger.Warn().Err(err).Msg("broadcast client unable to connect")
+		return nil, err
+	}
 
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(10 * time.Second):
-				}
+	bc.connMutex.Lock()
+	bc.conn = conn
+	bc.connMutex.Unlock()
 
-				continue
-			}
+	logger.Info().Msg("Connected")
 
-			bc.connMutex.Lock()
-			bc.conn = conn
-			bc.connMutex.Unlock()
+	bc.startBackgroundReader(ctx, messageReceiver)
 
-			logger.Info().Msg("Connected")
-			break
-		}
-
-		bc.startBackgroundReader(ctx, messageReceiver)
-	}()
-
-	return messageReceiver
+	return messageReceiver, nil
 }
 
 func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
@@ -164,7 +153,11 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 		}
 
 		bc.RetryCount++
-		_ = bc.connect(ctx, messageReceiver)
+		_, err := bc.connect(ctx, messageReceiver)
+		if err == nil {
+			bc.retrying = false
+			return
+		}
 
 		if waitDuration < maxWaitDuration {
 			waitDuration += 500 * time.Millisecond
