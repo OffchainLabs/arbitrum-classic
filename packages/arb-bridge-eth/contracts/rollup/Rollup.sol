@@ -56,6 +56,7 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 
     uint256 public sequencerInboxMaxDelayBlocks;
     uint256 public sequencerInboxMaxDelaySeconds;
+    uint256 public challengeExecutionBisectionDegree;
 
     address[] internal facets;
 
@@ -143,6 +144,7 @@ contract Rollup is RollupBase {
         owner = _owner;
         // A little over 15 minutes
         minimumAssertionPeriod = 75;
+        challengeExecutionBisectionDegree = 400;
 
         sequencerInboxMaxDelayBlocks = sequencerInboxParams[0];
         sequencerInboxMaxDelaySeconds = sequencerInboxParams[1];

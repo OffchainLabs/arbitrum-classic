@@ -136,4 +136,11 @@ interface IRollupAdmin {
      * @param newSequencerInboxMaxDelaySeconds max number of seconds
      */
     function setSequencerInboxMaxDelaySeconds(uint256 newSequencerInboxMaxDelaySeconds) external;
+
+    /**
+     * @notice Set execution bisection degree
+     * @param newChallengeExecutionBisectionDegree execution bisection degree
+     */
+    function setChallengeExecutionBisectionDegree(uint256 newChallengeExecutionBisectionDegree)
+        external;
 }

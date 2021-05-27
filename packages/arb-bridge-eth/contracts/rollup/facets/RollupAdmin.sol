@@ -174,6 +174,18 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         emit OwnerFunctionCalled(15);
     }
 
+    /**
+     * @notice Set execution bisection degree
+     * @param newChallengeExecutionBisectionDegree execution bisection degree
+     */
+    function setChallengeExecutionBisectionDegree(uint256 newChallengeExecutionBisectionDegree)
+        external
+        override
+    {
+        challengeExecutionBisectionDegree = newChallengeExecutionBisectionDegree;
+        emit OwnerFunctionCalled(16);
+    }
+
     /*
     function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external override whenPaused {
         require(stackerA.length == stackerB.length, "WRONG_LENGTH");

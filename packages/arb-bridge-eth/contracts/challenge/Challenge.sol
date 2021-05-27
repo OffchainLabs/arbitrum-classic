@@ -22,7 +22,7 @@ import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 import "./IChallenge.sol";
-import "../rollup/facets/IRollupFacets.sol";
+import "../rollup/facets/RollupUser.sol";
 import "../arch/IOneStepProof.sol";
 
 import "./ChallengeLib.sol";
@@ -59,15 +59,12 @@ contract Challenge is Cloneable, IChallenge {
     // Can't timeout before deadline
     string private constant TIMEOUT_DEADLINE = "TIMEOUT_DEADLINE";
 
-    uint256 private constant INBOX_CONSISTENCY_BISECTION_DEGREE = 400;
-    uint256 private constant INBOX_DELTA_BISECTION_DEGREE = 250;
-    uint256 private constant EXECUTION_BISECTION_DEGREE = 400;
     bytes32 private constant UNREACHABLE_ASSERTION = bytes32(uint256(0));
 
     IOneStepProof[] public executors;
     address[2] public bridges;
 
-    IRollupUser internal resultReceiver;
+    RollupUserFacet internal resultReceiver;
 
     uint256 maxMessageCount;
 
@@ -115,7 +112,7 @@ contract Challenge is Cloneable, IChallenge {
 
         executors = _executors;
 
-        resultReceiver = IRollupUser(_resultReceiver);
+        resultReceiver = RollupUserFacet(_resultReceiver);
 
         maxMessageCount = _maxMessageCount;
 
@@ -161,9 +158,11 @@ contract Challenge is Cloneable, IChallenge {
         if (_chainHashes[_chainHashes.length - 1] != UNREACHABLE_ASSERTION) {
             require(_challengedSegmentLength > 1, "TOO_SHORT");
         }
+        uint256 challengeExecutionBisectionDegree =
+            resultReceiver.challengeExecutionBisectionDegree();
         require(
             _chainHashes.length ==
-                bisectionDegree(_challengedSegmentLength, EXECUTION_BISECTION_DEGREE) + 1,
+                bisectionDegree(_challengedSegmentLength, challengeExecutionBisectionDegree) + 1,
             "CUT_COUNT"
         );
         require(_chainHashes[_chainHashes.length - 1] != _oldEndHash, "SAME_END");
