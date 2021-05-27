@@ -116,9 +116,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 				logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
 				_ = bc.conn.Close()
-				// Starts up a new backgroundReader
 				bc.RetryConnect(ctx, messageReceiver)
-				return
 			}
 
 			res := broadcaster.BroadcastMessage{}
