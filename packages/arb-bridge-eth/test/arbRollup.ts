@@ -87,7 +87,9 @@ async function createRollup(): Promise<{
   )
   expect(ev.name).to.equal('RollupCreated')
   const parsedEv = (ev as any) as { args: { rollupAddress: string } }
-  const Rollup = await ethers.getContractFactory('Rollup')
+  const Rollup = await (
+    await ethers.getContractFactory('RollupUserFacet')
+  ).connect(accounts[8])
   return {
     rollupCon: Rollup.attach(parsedEv.args.rollupAddress) as Rollup,
     blockCreated: receipt.blockNumber!,
@@ -263,7 +265,7 @@ describe('ArbRollup', () => {
   let challenge: Challenge
   it('should initiate a challenge', async function () {
     const tx = rollup.createChallenge(
-      await accounts[0].getAddress(),
+      await accounts[8].getAddress(),
       3,
       await accounts[1].getAddress(),
       4,
@@ -318,7 +320,7 @@ describe('ArbRollup', () => {
 
   it('should initiate another challenge', async function () {
     const tx = rollup.createChallenge(
-      await accounts[0].getAddress(),
+      await accounts[8].getAddress(),
       5,
       await accounts[2].getAddress(),
       6,
