@@ -180,8 +180,13 @@ func TestValidateProof(t *testing.T) {
 	test.FailIfError(t, err)
 	sequencerAddr, _, sequencerCon, err := ethbridgecontracts.DeploySequencerInbox(auth, client)
 	test.FailIfError(t, err)
+	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(auth, client)
+	test.FailIfError(t, err)
 	client.Commit()
-	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
+
+	_, err = rollup.SetMock(auth, maxDelayBlocks, maxDelaySeconds)
+	test.FailIfError(t, err)
+	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, rollupAddr)
 	test.FailIfError(t, err)
 	client.Commit()
 
