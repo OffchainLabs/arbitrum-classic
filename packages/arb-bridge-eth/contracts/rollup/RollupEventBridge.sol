@@ -19,7 +19,6 @@
 pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
-import "./IRollup.sol";
 
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IMessageProvider.sol";
