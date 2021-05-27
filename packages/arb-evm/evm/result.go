@@ -49,8 +49,41 @@ const (
 	InsufficientGasForBaseFee ResultType = 9
 	MinArbGasForContractTx    ResultType = 10
 	GasPriceTooLow            ResultType = 11
-	UnknownErrorCode          ResultType = 255
+	NoGasForAutoRedeem        ResultType = 12
 )
+
+func (r ResultType) String() string {
+	switch r {
+	case ReturnCode:
+		return "Return"
+	case RevertCode:
+		return "Revert"
+	case CongestionCode:
+		return "Congestion"
+	case InsufficientGasFundsCode:
+		return "InsufficientGasFunds"
+	case InsufficientTxFundsCode:
+		return "InsufficientTxFunds"
+	case BadSequenceCode:
+		return "BadSequence"
+	case InvalidMessageFormatCode:
+		return "InvalidMessageFormat"
+	case ContractAlreadyExists:
+		return "ContractAlreadyExists"
+	case ExceededTxGasLimit:
+		return "ExceededTxGasLimit"
+	case InsufficientGasForBaseFee:
+		return "InsufficientGasForBaseFee"
+	case MinArbGasForContractTx:
+		return "MinArbGasForContractTx"
+	case GasPriceTooLow:
+		return "GasPriceTooLow"
+	case NoGasForAutoRedeem:
+		return "NoGasForAutoRedeem"
+	default:
+		return fmt.Sprintf("%v", int(r))
+	}
+}
 
 type Result interface {
 }
@@ -211,7 +244,7 @@ func (r *TxResult) CalcGasUsed() *big.Int {
 	if r.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
 		return r.GasUsed
 	} else {
-		return new(big.Int).Div(r.FeeStats.PayTarget().Total(), r.FeeStats.Price.L2Computation)
+		return r.FeeStats.GasUsed()
 	}
 }
 
@@ -321,6 +354,10 @@ func (fs *FeeStats) PayTarget() *FeeSet {
 }
 
 func (fs *FeeStats) GasUsed() *big.Int {
+	return new(big.Int).Div(fs.Paid.Total(), fs.Price.L2Computation)
+}
+
+func (fs *FeeStats) TargetGasUsed() *big.Int {
 	return new(big.Int).Div(fs.PayTarget().Total(), fs.Price.L2Computation)
 }
 

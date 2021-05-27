@@ -30,7 +30,8 @@ const main = async () => {
   console.log('EthERC20Bridge logic deployed to:', ethERC20Bridge.address)
   const l2Provider = new providers.JsonRpcProvider(
     // 'https://kovan4.arbitrum.io/rpc'
-    'https://devnet-l2.arbitrum.io/rpc'
+    // 'https://devnet-l2.arbitrum.io/rpc'
+    'https://kovan5.arbitrum.io/rpc'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
@@ -109,7 +110,11 @@ const main = async () => {
   console.log('init L2 hash', initL2Bridge.hash)
   // wait for inits
   await initL1Bridge.wait()
+  console.warn('l1 bridge proxy initted')
+
   await initL2Bridge.wait()
+  console.warn('l2 bridge proxy initted')
+
   // console.log("inbox after init", await ethERC20BridgeConnectedAsProxy.inbox())
   console.log('Proxies have been initted')
 

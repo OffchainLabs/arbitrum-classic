@@ -80,32 +80,49 @@ std::vector<RawCodePoint> extractRawCodeSegment(
     return cps;
 }
 
-std::vector<value> serializeCodePoint(
-    const CodePoint& cp,
-    std::vector<unsigned char>& serialized_code,
-    std::map<uint64_t, uint64_t>& segment_counts) {
+void serializeCodePoint(const CodePoint& cp,
+                        std::vector<unsigned char>& serialized_code) {
     // Ignore referemces to other code segments
     serialized_code.push_back(cp.op.immediate ? 1 : 0);
     serialized_code.push_back(static_cast<unsigned char>(cp.op.opcode));
     marshal_uint256_t(cp.nextHash, serialized_code);
-    if (cp.op.immediate) {
-        return serializeValue(*cp.op.immediate, serialized_code,
-                              segment_counts);
-    }
-    return {};
 }
 
-std::vector<unsigned char> serializeCodeSegment(
+std::vector<unsigned char> prepareToSaveCodeSegment(
     ReadWriteTransaction& tx,
     const CodeSegmentSnapshot& snapshot,
-    uint64_t existing_cp_count,
     std::map<uint64_t, uint64_t>& segment_counts) {
+    uint64_t segment_id = snapshot.segment->segmentID();
+    auto key = segment_key(segment_id);
+    uint64_t existing_cp_count = 0;
+    rocksdb::PinnableSlice val;
+    auto s = tx.refCountedGet(vecToSlice(key), &val);
     std::vector<unsigned char> serialized_code;
-    marshal_uint64_t(snapshot.op_count, serialized_code);
-    for (uint64_t i = 0; i < snapshot.op_count; ++i) {
-        auto values = serializeCodePoint((*snapshot.segment)[i],
-                                         serialized_code, segment_counts);
-        if (i > existing_cp_count) {
+    if (s.ok()) {
+        auto iter = val.data();
+        iter += sizeof(uint32_t);
+        existing_cp_count = deserialize_uint64_t(iter);
+        if (existing_cp_count >= snapshot.op_count) {
+            // If this segment is already saved with at least as many ops as is
+            // currently contains, just increment the reference count
+            val.Reset();
+            return {};
+        }
+        marshal_uint64_t(snapshot.op_count, serialized_code);
+        auto offset = sizeof(uint32_t) + sizeof(uint64_t);
+        serialized_code.insert(serialized_code.end(), val.data() + offset,
+                               val.data() + val.size());
+    } else {
+        marshal_uint64_t(snapshot.op_count, serialized_code);
+    }
+    val.Reset();
+
+    for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
+        auto cp = snapshot.segment->loadCodePoint(i);
+        serializeCodePoint(cp, serialized_code);
+        if (cp.op.immediate) {
+            auto values = serializeValue(*cp.op.immediate, serialized_code,
+                                         segment_counts);
             // Save the immediate values, that weren't already saved for this
             // code segment
             for (const auto& val : values) {
@@ -117,41 +134,6 @@ std::vector<unsigned char> serializeCodeSegment(
         }
     }
     return serialized_code;
-}
-
-std::vector<unsigned char> prepareToSaveCodeSegment(
-    ReadWriteTransaction& tx,
-    const CodeSegmentSnapshot& snapshot,
-    std::map<uint64_t, uint64_t>& segment_counts) {
-    uint64_t segment_id = snapshot.segment->segmentID();
-    auto key = segment_key(segment_id);
-    auto results = getRefCountedData(tx, vecToSlice(key));
-
-    uint64_t existing_cp_count = 0;
-
-    if (results.status.ok() && results.reference_count > 0) {
-        auto iter = results.stored_value.begin();
-        auto ptr = reinterpret_cast<const char*>(&*iter);
-        existing_cp_count = deserialize_uint64_t(ptr);
-        if (existing_cp_count >= snapshot.op_count) {
-            // If this segment is already saved with at least as many ops as is
-            // currently contains, just increment the reference count
-            return std::move(results.stored_value);
-        }
-    }
-
-    for (uint64_t i = existing_cp_count; i < snapshot.op_count; ++i) {
-        const auto& cp = (*snapshot.segment)[i];
-        if (cp.op.immediate) {
-            auto result = saveValueImpl(tx, *cp.op.immediate, segment_counts);
-            if (!result.status.ok()) {
-                throw std::runtime_error("failed to save immediate value");
-            }
-        }
-    }
-
-    return serializeCodeSegment(tx, snapshot, existing_cp_count,
-                                segment_counts);
 }
 }  // namespace
 
@@ -168,23 +150,27 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
     }
 
     auto raw_cps = extractRawCodeSegment(results.stored_value);
-    std::vector<CodePoint> cps;
-    cps.reserve(raw_cps.size());
+    std::vector<Operation> ops;
+    std::vector<uint256_t> next_hashes;
+    ops.reserve(raw_cps.size());
     for (const auto& raw_cp : raw_cps) {
         if (!raw_cp.parsed_immediate) {
-            cps.emplace_back(Operation{raw_cp.opcode}, raw_cp.next_hash);
+            ops.emplace_back(raw_cp.opcode);
         } else {
             auto imm = getValueRecord(tx, *raw_cp.parsed_immediate, segment_ids,
                                       value_cache);
             if (std::holds_alternative<rocksdb::Status>(imm)) {
                 throw std::runtime_error("failed to load immediate value");
             }
-            cps.emplace_back(Operation{raw_cp.opcode,
-                                       std::get<CountedData<value>>(imm).data},
-                             raw_cp.next_hash);
+            ops.emplace_back(raw_cp.opcode,
+                             std::get<CountedData<value>>(imm).data);
+        }
+        if (ops.size() > 1 && ops.size() % 10 == 1) {
+            next_hashes.push_back(raw_cp.next_hash);
         }
     }
-    return std::make_shared<CodeSegment>(segment_id, std::move(cps));
+    return std::make_shared<CodeSegment>(segment_id, std::move(ops),
+                                         std::move(next_hashes));
 }
 
 void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
@@ -318,9 +304,14 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
     // Now that we've handled all references, save all the serialized segments
     for (const auto& item : code_segments_to_save) {
         auto key_vec = segment_key(item.first);
-        auto results =
-            saveRefCountedData(tx, vecToSlice(key_vec), item.second,
-                               total_segment_counts[item.first], true);
+        SaveResults results;
+        if (item.second.empty()) {
+            results = incrementReference(tx, vecToSlice(key_vec));
+        } else {
+            results =
+                saveRefCountedDataReplaced(tx, vecToSlice(key_vec), item.second,
+                                           total_segment_counts[item.first]);
+        }
         if (!results.status.ok()) {
             return results.status;
         }

@@ -25,10 +25,11 @@ interface IEthERC20Bridge {
 
     event WithdrawRedirected(
         address indexed user,
-        address indexed liquidityProvider,
+        address indexed to,
         address erc20,
         uint256 amount,
-        uint256 indexed exitNum
+        uint256 indexed exitNum,
+        bool madeExternalCall
     );
 
     event WithdrawExecuted(
@@ -57,16 +58,6 @@ interface IEthERC20Bridge {
         address refundAddress
     ) external payable returns (uint256);
 
-    function fastWithdrawalFromL2(
-        address liquidityProvider,
-        bytes memory liquidityProof,
-        address initialDestination,
-        address erc20,
-        uint256 amount,
-        uint256 exitNum,
-        uint256 maxFee
-    ) external;
-
     function withdrawFromL2(
         uint256 exitNum,
         address erc20,
@@ -92,5 +83,24 @@ interface IEthERC20Bridge {
         bytes calldata callHookData
     ) external view returns (bool isDeployed, bytes memory depositCalldata);
 
+    function transferExitAndCall(
+        address initialDestination,
+        address erc20,
+        uint256 amount,
+        uint256 exitNum,
+        address to,
+        bytes calldata data
+    ) external;
+
     function calculateL2TokenAddress(address erc20) external view returns (address);
+}
+
+interface IExitTransferCallReceiver {
+    // expects magic number to be returned if success ( IExitTransferCallReceiver.onExitTransfered.selector )
+    function onExitTransfered(
+        address sender,
+        uint256 amount,
+        address erc20,
+        bytes calldata data
+    ) external returns (bytes4);
 }

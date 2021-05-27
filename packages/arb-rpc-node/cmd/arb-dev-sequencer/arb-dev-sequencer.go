@@ -88,6 +88,7 @@ func startup() error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	createBatchBlockInterval := fs.Int64("create-batch-block-interval", 1, "block interval at which to create new batches")
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
@@ -277,6 +278,7 @@ func startup() error {
 		Core:                       mon.Core,
 		InboxReader:                inboxReader,
 		DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
+		CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
 	}
 	broadcasterSettings := broadcaster.Settings{
 		Addr:                    "127.0.0.1:9642",
@@ -343,7 +345,7 @@ func startup() error {
 	errChan := make(chan error, 1)
 	defer close(errChan)
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, "8547", "8548")
+		err := rpc.LaunchPublicServer(ctx, web3Server, "127.0.0.1", "8547", "127.0.0.1", "8548")
 		if err != nil {
 			errChan <- err
 		}

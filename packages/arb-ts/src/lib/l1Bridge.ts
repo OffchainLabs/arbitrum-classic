@@ -162,14 +162,15 @@ export class L1Bridge {
   public async depositETH(
     value: BigNumber,
     destinationAddress?: string,
-    maxGas: BigNumber = BigNumber.from(5000),
+    maxGas: BigNumber = BigNumber.from(3000000),
+    gasPriceBid: BigNumber = BigNumber.from(0),
     overrides: PayableOverrides = {}
   ) {
     const address = destinationAddress || (await this.getWalletAddress())
     const inbox = await this.getInbox()
     return inbox.functions.sendL1FundedContractTransaction(
       maxGas,
-      BigNumber.from(0),
+      gasPriceBid,
       address,
       '0x',
       {
@@ -192,6 +193,32 @@ export class L1Bridge {
       MIN_APPROVAL,
       overrides
     )
+  }
+
+  public async getDepositCallDataLength(
+    erc20L1Address: string,
+    amount: BigNumber,
+    maxGas: BigNumber,
+    gasPriceBid: BigNumber,
+    destinationAddress?: string,
+    overrides: PayableOverrides = {}
+  ) {
+    const destination = destinationAddress || (await this.getWalletAddress())
+    const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
+    if (!tokenData.ERC20) {
+      throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
+    }
+    const [seqNum, len] = await this.ethERC20Bridge.callStatic.deposit(
+      erc20L1Address,
+      destination,
+      amount,
+      0,
+      maxGas,
+      gasPriceBid,
+      '0x',
+      overrides
+    )
+    return len
   }
 
   public async deposit(

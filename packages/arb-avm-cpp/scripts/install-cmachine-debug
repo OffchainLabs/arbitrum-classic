@@ -1,9 +1,0 @@
-#!/bin/bash
-
-\cp debug/lib/libavm_valuesd.a cmachine/libavm_values.a
-\cp debug/lib/libavmd.a cmachine/libavm.a
-\cp debug/lib/libcavmd.a cmachine/libcavm.a
-\cp debug/lib/libdata_storaged.a cmachine/libdata_storage.a
-\cp debug/lib/libffd.a cmachine/libff.a
-\cp debug/lib/libsecp256k1.a cmachine/libsecp256k1.a
-\cp debug/lib/libzmd.a cmachine/libzmd.a

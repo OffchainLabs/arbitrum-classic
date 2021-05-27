@@ -19,13 +19,14 @@
 package main
 
 import (
-	"github.com/rs/zerolog/log"
+	"fmt"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 )
 
 func main() {
 	if err := arbostestcontracts.RunBindingGen(); err != nil {
-		log.Error().Err(err).Msg("error generating test contract bindings")
+		fmt.Println("Error generating test contract bindings")
+		fmt.Println(err)
 	}
 }

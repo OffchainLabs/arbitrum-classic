@@ -180,7 +180,8 @@ struct MachineState {
     uint256_t hash() const { return MachineStateKeys(*this).machineHash(); }
     BlockReason isBlocked(bool newMessages) const;
 
-    const CodePoint& loadCurrentInstruction() const;
+    CodePoint loadCurrentInstruction() const;
+    const Operation& loadCurrentOperation() const;
     uint256_t nextGasCost() const;
 
     uint256_t getTotalMessagesRead() const;

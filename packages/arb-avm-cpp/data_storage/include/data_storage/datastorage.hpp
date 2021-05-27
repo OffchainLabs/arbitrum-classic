@@ -59,6 +59,7 @@ class DataStorage {
 
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
+    rocksdb::Status clearDBExceptInbox();
 
    private:
     [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction()

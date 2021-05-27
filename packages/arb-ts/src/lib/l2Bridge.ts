@@ -81,6 +81,9 @@ export class L2Bridge {
     this.l2EthBalance = BigNumber.from(0)
   }
 
+  /**
+   * Initiate Ether withdrawal (via ArbSys)
+   */
   public async withdrawETH(
     value: BigNumber,
     destinationAddress?: string,
@@ -96,6 +99,9 @@ export class L2Bridge {
   public getLatestBlock() {
     return this.l2Provider.getBlock('latest')
   }
+  /**
+   * Initiate token withdrawal (via ArbTokenBridge)
+   */
   public async withdrawERC20(
     erc20l1Address: string,
     amount: BigNumber,
@@ -225,7 +231,7 @@ export class L2Bridge {
     }
   }
 
-  public getTxnSubmissionPrice(dataSize: BigNumber) {
+  public getTxnSubmissionPrice(dataSize: BigNumber | number) {
     return this.arbRetryableTx.functions.getSubmissionPrice(dataSize)
   }
 

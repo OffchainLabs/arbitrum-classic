@@ -34,44 +34,56 @@ struct LoadedExecutable;
 // when you initially load it
 class CodeSegment {
     uint64_t segment_id;
-    std::vector<CodePoint> code;
+    std::vector<Operation> operations;
+    std::vector<uint256_t> cached_hashes;
+    uint256_t prev_hash;
 
     friend class Code;
+
     friend LoadedExecutable loadExecutable(
         const std::string& executable_filename);
 
-    size_t capacity() const { return code.capacity(); }
+    size_t capacity() const { return operations.capacity(); }
 
-    size_t size() const { return code.size(); }
+    size_t size() const { return operations.size(); }
 
     CodePointStub addOperation(Operation op) {
-        uint256_t prev_hash = 0;
-        if (code.size() > 0) {
-            prev_hash = hash(code.back());
+        CodePoint cp{std::move(op), prev_hash};
+        prev_hash = hash(cp);
+        operations.push_back(std::move(cp.op));
+        if (operations.size() % 10 == 0) {
+            cached_hashes.push_back(prev_hash);
         }
-        code.emplace_back(std::move(op), prev_hash);
-        return codePointStub(code.size() - 1);
+        return {{segment_id, operations.size() - 1}, prev_hash};
     }
 
     // Return the subset of this code segment starting in the given pc
     std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment_id,
                                            uint64_t pc) const {
+        auto ops = static_cast<std::vector<CodePoint>::difference_type>(pc);
+        std::vector<Operation> copy_copy;
+        auto code_copy = std::vector<Operation>{operations.begin(),
+                                                operations.begin() + ops + 1};
+        auto hashes_copy = std::vector<uint256_t>{
+            cached_hashes.begin(), cached_hashes.begin() + ops / 10};
         // Make endpoint pc + 1 since pc should be included in segment
         return std::make_shared<CodeSegment>(
-            new_segment_id,
-            std::vector<CodePoint>{
-                code.begin(),
-                code.begin() +
-                    static_cast<std::vector<CodePoint>::difference_type>(pc) +
-                    1});
+            new_segment_id, std::move(code_copy), std::move(hashes_copy));
     }
 
    public:
     CodeSegment(uint64_t segment_id_) : segment_id(segment_id_) {
-        code.push_back(getErrCodePoint());
+        addOperation(getErrOperation());
     }
-    CodeSegment(uint64_t segment_id_, std::vector<CodePoint> code_)
-        : segment_id(segment_id_), code(std::move(code_)) {}
+
+    CodeSegment(uint64_t segment_id_,
+                std::vector<Operation> operations_,
+                std::vector<uint256_t> next_hashes_)
+        : segment_id(segment_id_),
+          operations(std::move(operations_)),
+          cached_hashes(std::move(next_hashes_)) {
+        prev_hash = ::hash(loadCodePoint(operations.size() - 1));
+    }
 
     CodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
         : CodeSegment(segment_id_) {
@@ -82,14 +94,33 @@ class CodeSegment {
 
     uint64_t segmentID() const { return segment_id; }
 
-    const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
+    CodePoint loadCodePoint(uint64_t pc) const {
+        uint256_t prev_hash;
 
-    const CodePoint& at(uint64_t pc) const { return code.at(pc); }
+        if (pc / 10 > 0) {
+            prev_hash = cached_hashes.at(pc / 10 - 1);
+        }
+        for (uint64_t i = (pc / 10) * 10; i < pc; i++) {
+            prev_hash = hash(CodePoint(operations[i], prev_hash));
+        }
+        return {operations[pc], prev_hash};
+    }
+
+    const Operation& loadOperation(uint64_t pc) const { return operations[pc]; }
+
+    //    const CodePoint& operator[](uint64_t pc) const { return code.at(pc); }
+    //
+    //    const CodePoint& at(uint64_t pc) const { return code.at(pc); }
 
     friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
 
-    CodePointStub codePointStub(uint64_t pc) const {
-        return {{segment_id, pc}, hash(code.at(pc))};
+    CodePointStub initialCodePointStub() const {
+        return {{segment_id, 0}, getErrCodePointHash()};
+    }
+
+    void reserve(size_t size) {
+        operations.reserve(size);
+        cached_hashes.reserve(size / 10);
     }
 };
 
@@ -144,16 +175,16 @@ class Code {
         return {std::move(copied_segments), next_segment_num};
     }
 
-    const CodePoint& loadCodePoint(const CodePointRef& ref) const {
+    CodePoint loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return (*segments.at(ref.segment))[ref.pc];
+        return segments.at(ref.segment)->loadCodePoint(ref.pc);
     }
 
     CodePointStub addSegment() {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_num = next_segment_num++;
         auto new_segment = std::make_shared<CodeSegment>(segment_num);
-        auto stub = new_segment->codePointStub(0);
+        auto stub = new_segment->initialCodePointStub();
         segments[segment_num] = std::move(new_segment);
         return stub;
     }

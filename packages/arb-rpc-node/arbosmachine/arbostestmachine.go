@@ -19,6 +19,7 @@ package arbosmachine
 import (
 	"testing"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -48,9 +49,9 @@ func (m *TestMachine) ExecuteAssertion(
 		return nil, nil, 0, err
 	}
 	for _, d := range debugPrints {
-		parsed, err := handleDebugPrint(d)
+		parsed, err := evm.NewLogLineFromValue(d)
 		if err != nil {
-			m.t.Log("raw debugprint", d)
+			m.t.Log("raw debugprint", err, d)
 		} else {
 			m.t.Log("debugprint", parsed)
 		}

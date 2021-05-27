@@ -48,11 +48,6 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
-type ChainTimeGetter interface {
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
-	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
-}
-
 type TxDB struct {
 	Lookup    core.ArbOutputLookup
 	as        machine.NodeStore
@@ -395,14 +390,18 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	if err != nil || logVal == nil {
 		return nil, err
 	}
-	res, err := evm.NewTxResultFromValue(logVal)
+	res, err := evm.NewResultFromValue(logVal)
 	if err != nil {
 		return nil, err
 	}
-	if res.IncomingRequest.MessageID != requestId {
+	txRes, ok := res.(*evm.TxResult)
+	if !ok {
 		return nil, nil
 	}
-	return res, nil
+	if txRes.IncomingRequest.MessageID != requestId {
+		return nil, nil
+	}
+	return txRes, nil
 }
 
 func (db *TxDB) GetL2Block(block *machine.BlockInfo) (*evm.BlockInfo, error) {
