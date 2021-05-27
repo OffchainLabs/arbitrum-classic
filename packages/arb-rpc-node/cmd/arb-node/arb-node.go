@@ -29,6 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -134,16 +135,6 @@ func startup() error {
 		return err
 	}
 
-	sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 128)
-	if !*sequencerMode {
-		if *feedURL == "" {
-			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
-		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
-			sequencerFeed = broadcastClient.Connect(ctx)
-		}
-	}
-
 	if *enablePProf {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
@@ -194,6 +185,23 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: rollupArgs.EthURL}
 	nodehealth.Init(healthChan)
 
+	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+	if !*sequencerMode {
+		if *feedURL == "" {
+			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
+		} else {
+			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
+			for {
+				sequencerFeed, err = broadcastClient.Connect(ctx)
+				if err == nil {
+					break
+				}
+				logger.Warn().Err(err).
+					Msg("failed connect to sequencer broadcast, waiting and retrying")
+				time.Sleep(time.Second * 5)
+			}
+		}
+	}
 	var inboxReader *monitor.InboxReader
 	for {
 		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
@@ -269,18 +277,23 @@ func startup() error {
 	}
 	defer db.Close()
 
-	batch, err := rpc.SetupBatcher(
-		ctx,
-		ethclint,
-		rollupArgs.Address,
-		db,
-		time.Duration(*maxBatchTime)*time.Second,
-		batcherMode,
-		dataSigner,
-		broadcasterSettings,
-	)
-	if err != nil {
-		return err
+	var batch batcher.TransactionBatcher
+	for {
+		batch, err = rpc.SetupBatcher(
+			ctx,
+			ethclint,
+			rollupArgs.Address,
+			db,
+			time.Duration(*maxBatchTime)*time.Second,
+			batcherMode,
+			dataSigner,
+			broadcasterSettings,
+		)
+		if err == nil {
+			break
+		}
+		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
+		time.Sleep(time.Second * 5)
 	}
 
 	if *waitToCatchUp {

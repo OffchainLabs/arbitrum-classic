@@ -88,8 +88,10 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	ctx := context.Background()
 
 	// connect returns
-	messageReceiver := broadcastClient.Connect(ctx)
-
+	messageReceiver, err := broadcastClient.Connect(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for {
 		select {
 		case receivedMsg := <-messageReceiver:
