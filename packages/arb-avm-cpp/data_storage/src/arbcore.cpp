@@ -121,6 +121,7 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(
+    const uint256_t& previous_message_count,
     const uint256_t& previous_batch_acc,
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
@@ -129,6 +130,7 @@ bool ArbCore::deliverMessages(
         return false;
     }
 
+    message_data.previous_message_count = previous_message_count;
     message_data.previous_batch_acc = previous_batch_acc;
     message_data.sequencer_batch_items = std::move(sequencer_batch_items);
     message_data.delayed_messages = std::move(delayed_messages);
@@ -1932,7 +1934,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
         }
 
         if (seq_batch_items.size() > 0) {
-            uint256_t start = seq_batch_items[0].first.last_sequence_number;
+            uint256_t start = message_data.previous_message_count;
             bool checking_prev = false;
             if (start > 0) {
                 start -= 1;

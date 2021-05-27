@@ -160,11 +160,12 @@ func TestInboxProof(t *testing.T) {
 	test.FailIfError(t, err)
 	client.Commit()
 
-	err = core.DeliverMessagesAndWait(arbCore.Core, common.Hash{}, []inbox.SequencerBatchItem{delayedItem1, endBlockBatchItem1}, []inbox.DelayedMessage{delayed1}, nil)
+	err = core.DeliverMessagesAndWait(arbCore.Core, big.NewInt(0), common.Hash{}, []inbox.SequencerBatchItem{delayedItem1, endBlockBatchItem1}, []inbox.DelayedMessage{delayed1}, nil)
 	test.FailIfError(t, err)
 
 	err = core.DeliverMessagesAndWait(
 		arbCore.Core,
+		big.NewInt(1),
 		endBlockBatchItem1.Accumulator,
 		[]inbox.SequencerBatchItem{seqMsgItem, delayedItem2, endBlockBatchItem2},
 		[]inbox.DelayedMessage{delayed2},
