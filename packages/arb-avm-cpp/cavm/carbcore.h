@@ -56,8 +56,7 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* count_ptr);
 
 ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
-                                                   const void* start_index_ptr,
-                                                   const void* count_ptr);
+                                                   const void* start_index_ptr);
 
 Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
                                                const void* seq_num_ptr);
