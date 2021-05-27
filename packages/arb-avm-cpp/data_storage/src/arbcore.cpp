@@ -1951,6 +1951,8 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                     return seq_batch_it->status();
                 }
                 if (!seq_batch_it->Valid()) {
+                    std::cerr << "addMessages: previous batch item not found"
+                              << std::endl;
                     return rocksdb::Status::NotFound();
                 }
                 auto key_ptr = reinterpret_cast<const unsigned char*>(
