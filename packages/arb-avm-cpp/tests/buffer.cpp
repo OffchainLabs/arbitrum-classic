@@ -118,7 +118,7 @@ TEST_CASE("Buffer") {
         std::random_device rd;
         std::mt19937 gen(rd());
         const int SIZE = 1024 * 32;
-        std::uniform_int_distribution<uint64_t> distrib(0, SIZE);
+        std::uniform_int_distribution<uint64_t> distrib(0, SIZE - 1);
         for (int i = 0; i < 100; i++) {
             Buffer buf;
             uint8_t arr[SIZE] = {};
