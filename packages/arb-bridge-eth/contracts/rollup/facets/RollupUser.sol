@@ -3,9 +3,11 @@
 pragma solidity ^0.6.11;
 
 import "../Rollup.sol";
-import "../IRollup.sol";
+import "./IRollupFacets.sol";
 
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
+    function initialize(address _stakeToken) public virtual override;
+
     // TODO: Configure this value based on the cost of sends
     uint8 internal constant MAX_SEND_COUNT = 100;
 
@@ -619,6 +621,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 }
 
 contract RollupUserFacet is AbsRollupUserFacet {
+    function initialize(address _stakeToken) public override {
+        require(_stakeToken == address(0), "NO_TOKEN_ALLOWED");
+        // stakeToken = _stakeToken;
+    }
+
     /**
      * @notice Create a new stake
      * @dev It is recomended to call stakeOnExistingNode after creating a new stake
@@ -655,7 +662,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
 }
 
 contract ERC20RollupUserFacet is AbsRollupUserFacet {
-    function initialize(address _stakeToken) public {
+    function initialize(address _stakeToken) public override {
         require(_stakeToken != address(0), "NEED_STAKE_TOKEN");
         require(stakeToken == address(0), "ALREADY_INIT");
         stakeToken = _stakeToken;

@@ -55,28 +55,4 @@ interface IRollup {
     event StakerReassigned(address indexed staker, uint256 newNode);
     event NodesDestroyed(uint256 indexed startNode, uint256 indexed endNode);
     event OwnerFunctionCalled(uint256 id);
-
-    // function initialize(
-    //     bytes32 _machineHash,
-    //     uint256 _confirmPeriodBlocks,
-    //     uint256 _extraChallengeTimeBlocks,
-    //     uint256 _arbGasSpeedLimitPerBlock,
-    //     uint256 _baseStake,
-    //     address _stakeToken,
-    //     address _owner,
-    //     bytes calldata _extraConfig,
-    //     address[6] calldata connectedContracts
-    // ) external;
-}
-
-interface IRollupUser is IRollup {
-    function completeChallenge(address winningStaker, address losingStaker) external;
-
-    function returnOldDeposit(address stakerAddress) external;
-
-    function requireUnresolved(uint256 nodeNum) external view;
-
-    function requireUnresolvedExists() external view;
-
-    function countStakedZombies(INode node) external view returns (uint256);
 }

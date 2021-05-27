@@ -5,11 +5,6 @@ pragma solidity ^0.6.11;
 import "../Rollup.sol";
 
 contract RollupAdminFacet is RollupBase {
-    modifier onlyOwner {
-        require(msg.sender == owner, "ONLY_OWNER");
-        _;
-    }
-
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add

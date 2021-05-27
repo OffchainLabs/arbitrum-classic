@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 pragma experimental ABIEncoderV2;
 
-import "../rollup/IRollup.sol";
+import "../rollup/facets/IRollupFacets.sol";
 import "../challenge/IChallenge.sol";
 import "../libraries/Cloneable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";

@@ -35,6 +35,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../bridge/Messages.sol";
 import "./RollupLib.sol";
 import "../libraries/Cloneable.sol";
+import "./facets/IRollupFacets.sol";
 
 abstract contract RollupBase is Cloneable, RollupCore, Pausable, IRollup {
     // Rollup Config
@@ -54,6 +55,11 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable, IRollup {
     address public stakeToken;
     // function signature => facet address
     address[] facets;
+
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
 }
 
 contract Rollup is RollupBase {
@@ -104,8 +110,13 @@ contract Rollup is RollupBase {
         // facets[0] == admin, facets[1] == user
         facets = _facets;
 
+        (bool success, ) =
+            _facets[1].delegatecall(
+                abi.encodeWithSelector(IRollupUser.initialize.selector, _stakeToken)
+            );
+        require(success, "FAIL_INIT_FACET");
+
         emit RollupCreated(_machineHash);
-        // TODO: initialize facets? ie erc20
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
@@ -135,9 +146,21 @@ contract Rollup is RollupBase {
             );
     }
 
-    function updateFacets(address[] memory _facets) external {
-        require(msg.sender == owner, "ONLY_OWNER");
-        facets = _facets;
+    function getFacets() public view returns (address, address) {
+        return (getAdminFacet(), getUserFacet());
+    }
+
+    function getAdminFacet() public view returns (address) {
+        return facets[0];
+    }
+
+    function getUserFacet() public view returns (address) {
+        return facets[1];
+    }
+
+    function setFacets(address newAdminFacet, address newUserFacet) external onlyOwner {
+        facets[0] = newAdminFacet;
+        facets[1] = newUserFacet;
     }
 
     /**
@@ -163,7 +186,7 @@ contract Rollup is RollupBase {
      */
     function _fallback() internal virtual {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
-        address target = msg.sender == owner ? facets[0] : facets[1];
+        address target = msg.sender == owner ? getAdminFacet() : getUserFacet();
         _delegate(target);
     }
 
