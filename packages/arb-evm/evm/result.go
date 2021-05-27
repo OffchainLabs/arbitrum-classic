@@ -50,6 +50,7 @@ const (
 	MinArbGasForContractTx    ResultType = 10
 	GasPriceTooLow            ResultType = 11
 	NoGasForAutoRedeem        ResultType = 12
+	ForbiddenSender           ResultType = 13
 )
 
 func (r ResultType) String() string {
@@ -168,6 +169,8 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 		return vm.ErrExecutionReverted
 	} else if res.ResultCode == GasPriceTooLow {
 		return errors.New("gas price too low")
+	} else if res.ResultCode == ForbiddenSender {
+		return errors.New("forbidden sender address")
 	} else {
 		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
 	}
