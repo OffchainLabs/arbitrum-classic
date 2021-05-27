@@ -65,7 +65,25 @@ interface IRollupAdmin {
      */
     function resume() external;
 
+    /**
+     * @notice Set the addresses of rollup logic facets called
+     * @param newAdminFacet address of logic that owner of rollup calls
+     * @param newUserFacet ddress of logic that user of rollup calls
+     */
+    function setFacets(address newAdminFacet, address newUserFacet) external;
+
+    /**
+     * @notice Set the addresses of the validator whitelist
+     * @dev It is expected that both arrays are same length, and validator at
+     * position i corresponds to the value at position i
+     * @param _validator addresses to set in the whitelist
+     * @param _val value to set in the whitelist for corresponding address
+     */
     function setValidator(address[] memory _validator, bool[] memory _val) external;
 
+    /**
+     * @notice Set a new owner address for the rollup
+     * @param newOwner address of new rollup owner
+     */
     function setOwner(address newOwner) external;
 }
