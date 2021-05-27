@@ -461,8 +461,16 @@ contract OneStepProof is OneStepProofCommon {
                 gasPriceL1,
                 messageDataHash
             );
-            // 3 == Inbox.L2_MSG
-            if (kind == 3 && gasPriceL1 == 0) {
+
+            uint8 expectedSeqKind;
+            if (messageDataLength > 0) {
+                // L2_MSG
+                expectedSeqKind = 3;
+            } else {
+                // END_OF_BLOCK_MESSAGE
+                expectedSeqKind = 6;
+            }
+            if (kind == expectedSeqKind && gasPriceL1 == 0) {
                 // Between the checks in the if statement, inboxSeqNum, and messageHashes[1:],
                 // this constrains all fields without the full message hash.
                 messageHashes[1] = keccak256(abi.encodePacked(sender, l1BlockNumber, l1Timestamp));
