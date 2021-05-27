@@ -197,7 +197,7 @@ func startup() error {
 					break
 				}
 				logger.Warn().Err(err).
-					Msg("failed to sequencer broadcast, waiting and retrying")
+					Msg("failed connect to sequencer broadcast, waiting and retrying")
 				time.Sleep(time.Second * 5)
 			}
 		}

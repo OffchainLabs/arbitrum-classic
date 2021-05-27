@@ -146,9 +146,15 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 	}
 
 	// connect returns
-	messages, err := ar.broadcastClient.Connect(ctx)
-	if err != nil {
-		return nil, err
+	var messages chan broadcaster.BroadcastFeedMessage
+	for {
+		messages, err = ar.broadcastClient.Connect(ctx)
+		if err == nil {
+			break
+		}
+		logger.Warn().Err(err).
+			Msg("failed connect to sequencer broadcast, waiting and retrying")
+		time.Sleep(time.Second * 5)
 	}
 
 	go func() {
