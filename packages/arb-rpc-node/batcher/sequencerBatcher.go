@@ -268,7 +268,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	}
 
 	txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-	err = core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		}
 	} else {
 		// Reorg to before we processed the batch and re-process the messages individually
-		err = core.DeliverMessagesAndWait(b.db, prevAcc, nil, nil, msgCount)
+		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
 		if err != nil {
 			return err
 		}
@@ -337,7 +337,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			l2Message := message.NewSafeL2Message(batch)
 			seqMsg := message.NewInboxMessage(l2Message, b.sequencer, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 			txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-			err = core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+			err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 			if err != nil {
 				return err
 			}
@@ -356,7 +356,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 			}
 			txResult := newTxResults[txHash]
 			if !shouldIncludeTxResult(txResult) {
-				err = core.DeliverMessagesAndWait(b.db, prevAcc, nil, nil, msgCount)
+				err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
 				if err != nil {
 					return err
 				}
@@ -382,7 +382,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 
 	newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
 	sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
-	err = core.DeliverMessagesAndWait(b.db, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
@@ -461,7 +461,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) err
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	seqBatchItems := []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}
-	err = core.DeliverMessagesAndWait(b.db, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
@@ -652,7 +652,7 @@ func (b *SequencerBatcher) reorgToNewTimestamp(ctx context.Context, prevMsgCount
 		}
 		batchItems[i] = item
 	}
-	err = core.DeliverMessagesAndWait(b.db, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
