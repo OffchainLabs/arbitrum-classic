@@ -223,7 +223,12 @@ contract Rollup is RollupBase {
      */
     function _fallback() internal virtual {
         require(msg.data.length >= 4, "NO_FUNC_SIG");
-        address target = msg.sender == owner ? getAdminFacet() : getUserFacet();
+        address rollupOwner = owner;
+        // if there is an owner and it is the sender, delegate to admin facet
+        address target =
+            rollupOwner != address(0) && rollupOwner == msg.sender
+                ? getAdminFacet()
+                : getUserFacet();
         _delegate(target);
     }
 
