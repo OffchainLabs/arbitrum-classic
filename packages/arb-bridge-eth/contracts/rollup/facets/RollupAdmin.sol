@@ -12,6 +12,10 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         _;
     }
 
+    function setOwner(address newOwner) external override onlyOwner {
+        owner = newOwner;
+    }
+
     /**
      * @notice Add a contract authorized to put messages into this rollup's inbox
      * @param _outbox Outbox contract to add

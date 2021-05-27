@@ -66,4 +66,6 @@ interface IRollupAdmin {
     function resume() external;
 
     function setValidator(address[] memory _validator, bool[] memory _val) external;
+
+    function setOwner(address newOwner) external;
 }
