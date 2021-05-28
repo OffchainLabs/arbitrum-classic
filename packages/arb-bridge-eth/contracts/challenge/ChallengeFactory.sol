@@ -20,11 +20,10 @@ pragma solidity ^0.6.11;
 
 import "./Challenge.sol";
 import "./IChallengeFactory.sol";
-import "../libraries/CloneFactory.sol";
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract ChallengeFactory is CloneFactory, IChallengeFactory {
+contract ChallengeFactory is IChallengeFactory {
     IOneStepProof[] public executors;
     UpgradeableBeacon public beacon;
 
@@ -46,7 +45,6 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         ISequencerInbox _sequencerBridge,
         IBridge _delayedBridge
     ) external override returns (address) {
-        // address clone = createClone(challengeTemplate);
         address clone = address(new BeaconProxy(address(beacon), ""));
         IChallenge(clone).initializeChallenge(
             executors,

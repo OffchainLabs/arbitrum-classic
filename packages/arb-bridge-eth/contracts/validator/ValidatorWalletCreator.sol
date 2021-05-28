@@ -22,10 +22,9 @@ import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "../libraries/CloneFactory.sol";
 import "./Validator.sol";
 
-contract ValidatorWalletCreator is Ownable, CloneFactory {
+contract ValidatorWalletCreator is Ownable {
     event WalletCreated(
         address indexed walletAddress,
         address indexed userAddress,
