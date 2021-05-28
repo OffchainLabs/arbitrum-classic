@@ -26,7 +26,9 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -144,7 +146,13 @@ func TestSequencerBatcher(t *testing.T) {
 	var owner common.Address
 	sequencerDelayBlocks := big.NewInt(60)
 	sequencerDelaySeconds := big.NewInt(900)
-	var extraConfig []byte
+
+	l2ChainId := common.RandBigInt()
+
+	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
+	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), []message.ChainConfigOption{chainIdConfig})
+	test.FailIfError(t, err)
+	extraConfig := init.ExtraConfig
 
 	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
@@ -197,8 +205,6 @@ func TestSequencerBatcher(t *testing.T) {
 
 	client.Commit()
 	time.Sleep(time.Second)
-
-	l2ChainId := common.RandBigInt()
 
 	batcher, err := NewSequencerBatcher(
 		ctx,
