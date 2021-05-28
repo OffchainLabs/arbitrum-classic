@@ -264,8 +264,8 @@ func initializeChallengeTest(
 		chainTime,
 	)
 	endOfBlockItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, delayedItem.Accumulator)
-	endAccInt := new(big.Int).SetBytes(endOfBlockItem.Accumulator.Bytes())
-	batchMetadata := []*big.Int{big.NewInt(0), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), endAccInt}
+	delayedAccInt := new(big.Int).SetBytes(delayed.DelayedAccumulator.Bytes())
+	batchMetadata := []*big.Int{big.NewInt(0), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), delayedAccInt}
 	_, err = sequencerBridge.AddSequencerL2BatchFromOrigin(sequencer, nil, nil, batchMetadata, endOfBlockItem.Accumulator)
 	test.FailIfError(t, err)
 
