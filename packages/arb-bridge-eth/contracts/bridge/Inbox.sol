@@ -23,8 +23,9 @@ import "./interfaces/IBridge.sol";
 
 import "./Messages.sol";
 import "../libraries/Cloneable.sol";
+import "../libraries/Whitelist.sol";
 
-contract Inbox is IInbox, Cloneable {
+contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant L1MessageType_L2FundedByL1 = 7;
@@ -35,9 +36,10 @@ contract Inbox is IInbox, Cloneable {
 
     IBridge public override bridge;
 
-    function initialize(IBridge _bridge) external {
+    function initialize(IBridge _bridge, address _whitelist) external {
         require(address(bridge) == address(0), "ALREADY_INIT");
         bridge = _bridge;
+        WhitelistConsumer.whitelist = _whitelist;
     }
 
     /**
@@ -45,7 +47,11 @@ contract Inbox is IInbox, Cloneable {
      * @dev This method is an optimization to avoid having to emit the entirety of the messageData in a log. Instead validators are expected to be able to parse the data from the transaction's input
      * @param messageData Data of the message being sent
      */
-    function sendL2MessageFromOrigin(bytes calldata messageData) external returns (uint256) {
+    function sendL2MessageFromOrigin(bytes calldata messageData)
+        external
+        onlyWhitelisted
+        returns (uint256)
+    {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
@@ -58,7 +64,12 @@ contract Inbox is IInbox, Cloneable {
      * @dev This method can be used to send any type of message that doesn't require L1 validation
      * @param messageData Data of the message being sent
      */
-    function sendL2Message(bytes calldata messageData) external override returns (uint256) {
+    function sendL2Message(bytes calldata messageData)
+        external
+        override
+        onlyWhitelisted
+        returns (uint256)
+    {
         uint256 msgNum = deliverToBridge(L2_MSG, msg.sender, keccak256(messageData));
         emit InboxMessageDelivered(msgNum, messageData);
         return msgNum;
@@ -70,7 +81,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 nonce,
         address destAddr,
         bytes calldata data
-    ) external payable virtual override returns (uint256) {
+    ) external payable virtual override onlyWhitelisted returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -92,7 +103,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 gasPriceBid,
         address destAddr,
         bytes calldata data
-    ) external payable virtual override returns (uint256) {
+    ) external payable virtual override onlyWhitelisted returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -115,7 +126,7 @@ contract Inbox is IInbox, Cloneable {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external virtual override returns (uint256) {
+    ) external virtual override onlyWhitelisted returns (uint256) {
         return
             _deliverMessage(
                 L2_MSG,
@@ -138,7 +149,7 @@ contract Inbox is IInbox, Cloneable {
         address destAddr,
         uint256 amount,
         bytes calldata data
-    ) external virtual override returns (uint256) {
+    ) external virtual override onlyWhitelisted returns (uint256) {
         return
             _deliverMessage(
                 L2_MSG,
@@ -154,7 +165,14 @@ contract Inbox is IInbox, Cloneable {
             );
     }
 
-    function depositEth(address destAddr) external payable virtual override returns (uint256) {
+    function depositEth(address destAddr)
+        external
+        payable
+        virtual
+        override
+        onlyWhitelisted
+        returns (uint256)
+    {
         return
             _deliverMessage(
                 L1MessageType_L2FundedByL1,
@@ -174,7 +192,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 maxGasPrice
-    ) external payable virtual override returns (uint256) {
+    ) external payable virtual override onlyWhitelisted returns (uint256) {
         return
             this.createRetryableTicket(
                 destAddr,
@@ -210,7 +228,7 @@ contract Inbox is IInbox, Cloneable {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata data
-    ) external payable virtual override returns (uint256) {
+    ) external payable virtual override onlyWhitelisted returns (uint256) {
         return
             _deliverMessage(
                 L1MessageType_submitRetryableTx,
