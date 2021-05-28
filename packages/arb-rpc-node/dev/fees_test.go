@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"bytes"
 	"context"
 	"math/big"
 	"strings"
@@ -41,6 +42,7 @@ import (
 )
 
 func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
+	skipBelowVersion(t, 25)
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)
@@ -115,8 +117,48 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 	test.FailIfError(t, err)
 
 	auth.GasLimit = 100000000
-	_, err = arbOwner.SetFairGasPriceSender(auth, aggInit.Aggregator.ToEthAddress())
+	_, err = arbOwner.SetFairGasPriceSender(auth, aggInit.Aggregator.ToEthAddress(), true)
 	test.FailIfError(t, err)
+
+	otherSender := common.RandAddress()
+	_, err = arbOwner.SetFairGasPriceSender(auth, otherSender.ToEthAddress(), true)
+	test.FailIfError(t, err)
+
+	senders, err := arbOwner.GetAllFairGasPriceSenders(&bind.CallOpts{})
+	test.FailIfError(t, err)
+	if len(senders) != 64 {
+		t.Fatal("unexpected length")
+	}
+	correctSenders := make([]byte, 64)
+	copy(correctSenders[12:], aggInit.Aggregator[:])
+	copy(correctSenders[44:], otherSender[:])
+
+	correctSenders2 := make([]byte, 64)
+	copy(correctSenders2[12:], otherSender[:])
+	copy(correctSenders2[44:], aggInit.Aggregator[:])
+	if !bytes.Equal(senders, correctSenders) && !bytes.Equal(senders, correctSenders2) {
+		t.Log("senders", hexutil.Encode(senders))
+		t.Log("correctSenders", hexutil.Encode(correctSenders))
+		t.Error("wrong senders")
+	}
+
+	aggIsFair, err := arbOwner.IsFairGasPriceSender(&bind.CallOpts{}, aggInit.Aggregator.ToEthAddress())
+	test.FailIfError(t, err)
+	if !aggIsFair {
+		t.Error("expected fair agg")
+	}
+
+	otherIsFair, err := arbOwner.IsFairGasPriceSender(&bind.CallOpts{}, otherSender.ToEthAddress())
+	test.FailIfError(t, err)
+	if !otherIsFair {
+		t.Error("expected fair other")
+	}
+
+	randomNotFair, err := arbOwner.IsFairGasPriceSender(&bind.CallOpts{}, common.RandAddress().ToEthAddress())
+	test.FailIfError(t, err)
+	if randomNotFair {
+		t.Error("expected unfair random")
+	}
 
 	_, err = arbOwner.SetFeesEnabled(auth, true)
 	test.FailIfError(t, err)
