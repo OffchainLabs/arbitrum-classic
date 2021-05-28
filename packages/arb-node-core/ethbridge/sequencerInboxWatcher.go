@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-var sequencerBridgeABI abi.ABI
 var sequencerBatchDeliveredID ethcommon.Hash
 var sequencerBatchDeliveredFromOriginID ethcommon.Hash
 var delayedInboxForcedID ethcommon.Hash
@@ -52,7 +52,6 @@ func init() {
 	sequencerBatchDeliveredFromOriginID = parsedBridgeABI.Events["SequencerBatchDeliveredFromOrigin"].ID
 	delayedInboxForcedID = parsedBridgeABI.Events["DelayedInboxForced"].ID
 	addSequencerL2BatchFromOriginABI = parsedBridgeABI.Methods["addSequencerL2BatchFromOrigin"]
-	sequencerBridgeABI = parsedBridgeABI
 }
 
 type SequencerInboxWatcher struct {
@@ -113,17 +112,16 @@ func (r *SequencerInboxWatcher) LookupBatchesInRange(ctx context.Context, from, 
 }
 
 type SequencerBatch struct {
-	transactionsData         []byte
-	transactionLengths       []*big.Int
-	TotalDelayedMessagesRead *big.Int
-	BatchIndex               *big.Int
-	BeforeCount              *big.Int
-	BeforeAcc                common.Hash
-	AfterCount               *big.Int
-	AfterAcc                 common.Hash
-	DelayedAcc               common.Hash
-	ChainTime                inbox.ChainTime
-	Sequencer                common.Address
+	transactionsData   []byte
+	transactionLengths []*big.Int
+	sectionsMetadata   []*big.Int
+	BatchIndex         *big.Int
+	BeforeCount        *big.Int
+	BeforeAcc          common.Hash
+	AfterCount         *big.Int
+	AfterAcc           common.Hash
+	DelayedAcc         common.Hash
+	Sequencer          common.Address
 }
 
 func (b SequencerBatch) GetBatchIndex() *big.Int {
@@ -146,62 +144,116 @@ func (b SequencerBatch) GetAfterAcc() common.Hash {
 	return b.AfterAcc
 }
 
+type sectionMetadata struct {
+	numItems                *big.Int
+	chainTime               inbox.ChainTime
+	newTotalDelayedMessages *big.Int
+	newDelayedAcc           common.Hash
+}
+
 func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
-	count := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
-	delayedCount := new(big.Int).Sub(count, big.NewInt(int64(len(b.transactionLengths))))
-	hasDelayed := delayedCount.Cmp(big.NewInt(0)) > 0
-	startDelayedCount := b.TotalDelayedMessagesRead
-	if hasDelayed {
-		// Subtract out the end of block message, which isn't really delayed
-		delayedCount.Sub(delayedCount, big.NewInt(1))
-		startDelayedCount = new(big.Int).Sub(b.TotalDelayedMessagesRead, delayedCount)
+	sectionsMetadata := make([]sectionMetadata, 0, len(b.sectionsMetadata)/5)
+	for i := 0; i+5 <= len(b.sectionsMetadata); i += 5 {
+		chainTime := inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(b.sectionsMetadata[i+1]),
+			Timestamp: b.sectionsMetadata[i+2],
+		}
+		var newDelayedAcc common.Hash
+		copy(newDelayedAcc[:], math.U256Bytes(b.sectionsMetadata[i+4]))
+		sectionsMetadata = append(sectionsMetadata, sectionMetadata{
+			numItems:                b.sectionsMetadata[i],
+			chainTime:               chainTime,
+			newTotalDelayedMessages: b.sectionsMetadata[i+3],
+			newDelayedAcc:           newDelayedAcc,
+		})
 	}
+	if len(sectionsMetadata) == 0 {
+		logger.Warn().Msg("encountered sequencer batch with no batch items")
+		return []inbox.SequencerBatchItem{}, nil
+	}
+	unaccountedTransactions := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
+	// Iterate backwards through all but the first section metadata
+	for i := len(sectionsMetadata) - 1; i >= 1; i-- {
+		meta := sectionsMetadata[i]
+		txCount := meta.numItems
+		unaccountedTransactions.Sub(unaccountedTransactions, txCount)
+		delayedCount := meta.newTotalDelayedMessages
+		prevDelayedCount := sectionsMetadata[i-1].newTotalDelayedMessages
+		unaccountedTransactions.Sub(unaccountedTransactions, delayedCount)
+		unaccountedTransactions.Add(unaccountedTransactions, prevDelayedCount)
+		if delayedCount.Cmp(prevDelayedCount) > 0 {
+			// Account for the end-of-block message
+			unaccountedTransactions.Sub(unaccountedTransactions, big.NewInt(1))
+		}
+	}
+	firstSectionMeta := sectionsMetadata[0]
+	unaccountedTransactions.Sub(unaccountedTransactions, firstSectionMeta.numItems)
+	if unaccountedTransactions.Sign() > 0 {
+		// Account for the end-of-block message
+		unaccountedTransactions.Sub(unaccountedTransactions, big.NewInt(1))
+	} else if unaccountedTransactions.Sign() < 0 {
+		return nil, errors.New("found a negative amount of unaccounted transactions")
+	}
+	// Any remaining unaccounted transactions are delayed messages in the first batch
+	runningTotalDelayedMessages := new(big.Int).Sub(firstSectionMeta.newTotalDelayedMessages, unaccountedTransactions)
 
 	ret := make([]inbox.SequencerBatchItem, 0, len(b.transactionLengths)+2)
 	lastAcc := b.BeforeAcc
 	nextSeqNum := new(big.Int).Set(b.BeforeCount)
 	dataOffset := 0
-	for i := 0; i < len(b.transactionLengths); i++ {
-		// Sequencer batch items
-		length := int(b.transactionLengths[i].Int64())
-		messageKind := message.L2Type
-		if length == 0 {
-			messageKind = message.EndOfBlockType
+	lengthsOffset := 0
+	for _, meta := range sectionsMetadata {
+		for j := 0; int64(j) < meta.numItems.Int64(); j++ {
+			// Sequencer batch items
+			length := int(b.transactionLengths[lengthsOffset].Int64())
+			lengthsOffset += 1
+			messageKind := message.L2Type
+			if length == 0 {
+				messageKind = message.EndOfBlockType
+			}
+			seqMsg := inbox.InboxMessage{
+				Kind:        messageKind,
+				Sender:      b.Sequencer,
+				InboxSeqNum: nextSeqNum,
+				GasPrice:    big.NewInt(0),
+				Data:        b.transactionsData[dataOffset:(dataOffset + length)],
+				ChainTime:   meta.chainTime,
+			}
+			dataOffset += length
+			item := inbox.NewSequencerItem(runningTotalDelayedMessages, seqMsg, lastAcc)
+			lastAcc = item.Accumulator
+			nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
+			ret = append(ret, item)
 		}
-		seqMsg := inbox.InboxMessage{
-			Kind:        messageKind,
-			Sender:      b.Sequencer,
-			InboxSeqNum: nextSeqNum,
-			GasPrice:    big.NewInt(0),
-			Data:        b.transactionsData[dataOffset:(dataOffset + length)],
-			ChainTime:   b.ChainTime,
+
+		if meta.newTotalDelayedMessages.Cmp(runningTotalDelayedMessages) > 0 {
+			// Create batch item to read delayed messages
+			lastSeqNum := new(big.Int).Add(nextSeqNum, meta.newTotalDelayedMessages)
+			lastSeqNum.Sub(lastSeqNum, runningTotalDelayedMessages)
+			nextSeqNum = new(big.Int).Set(lastSeqNum)
+			lastSeqNum.Sub(lastSeqNum, big.NewInt(1))
+			item := inbox.NewDelayedItem(lastSeqNum, meta.newTotalDelayedMessages, lastAcc, runningTotalDelayedMessages, meta.newDelayedAcc)
+			lastAcc = item.Accumulator
+			runningTotalDelayedMessages = meta.newTotalDelayedMessages
+			ret = append(ret, item)
+
+			endBlockMessage := inbox.InboxMessage{
+				Kind:        message.EndOfBlockType,
+				Sender:      common.Address{},
+				InboxSeqNum: nextSeqNum,
+				GasPrice:    big.NewInt(0),
+				Data:        []byte{},
+				ChainTime:   meta.chainTime,
+			}
+			item2 := inbox.NewSequencerItem(meta.newTotalDelayedMessages, endBlockMessage, lastAcc)
+			lastAcc = item2.Accumulator
+			nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
+			ret = append(ret, item2)
 		}
-		dataOffset += length
-		item := inbox.NewSequencerItem(startDelayedCount, seqMsg, lastAcc)
-		lastAcc = item.Accumulator
-		nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
-		ret = append(ret, item)
 	}
 
-	if hasDelayed {
-		// Create batch item to read delayed messages
-		lastSeqNum := new(big.Int).Sub(b.AfterCount, big.NewInt(2))
-		item := inbox.NewDelayedItem(lastSeqNum, b.TotalDelayedMessagesRead, lastAcc, startDelayedCount, b.DelayedAcc)
-		lastAcc = item.Accumulator
-		ret = append(ret, item)
-
-		endSeqNum := new(big.Int).Add(lastSeqNum, big.NewInt(1))
-		endBlockMessage := inbox.InboxMessage{
-			Kind:        message.EndOfBlockType,
-			Sender:      common.Address{},
-			InboxSeqNum: endSeqNum,
-			GasPrice:    big.NewInt(0),
-			Data:        []byte{},
-			ChainTime:   b.ChainTime,
-		}
-		item2 := inbox.NewSequencerItem(b.TotalDelayedMessagesRead, endBlockMessage, lastAcc)
-		lastAcc = item2.Accumulator
-		ret = append(ret, item2)
+	if nextSeqNum.Cmp(b.AfterCount) != 0 {
+		return nil, errors.New("computed unexpected batch end count")
 	}
 
 	if !lastAcc.Equals(b.AfterAcc) {
@@ -255,20 +307,15 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			}
 
 			refs = append(refs, SequencerBatch{
-				transactionsData:         parsed.Transactions,
-				transactionLengths:       parsed.Lengths,
-				BatchIndex:               parsed.SeqBatchIndex,
-				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
-				BeforeCount:              parsed.FirstMessageNum,
-				BeforeAcc:                parsed.BeforeAcc,
-				AfterCount:               parsed.NewMessageCount,
-				AfterAcc:                 parsed.AfterAcc,
-				DelayedAcc:               parsed.DelayedAcc,
-				Sequencer:                common.NewAddressFromEth(parsed.Sequencer),
-				ChainTime: inbox.ChainTime{
-					BlockNum:  common.NewTimeBlocks(parsed.L1BlockNumberAndTimestamp[0]),
-					Timestamp: parsed.L1BlockNumberAndTimestamp[1],
-				},
+				transactionsData:   parsed.Transactions,
+				transactionLengths: parsed.Lengths,
+				sectionsMetadata:   parsed.SectionsMetadata,
+				BatchIndex:         parsed.SeqBatchIndex,
+				BeforeCount:        parsed.FirstMessageNum,
+				BeforeAcc:          parsed.BeforeAcc,
+				AfterCount:         parsed.NewMessageCount,
+				AfterAcc:           parsed.AfterAcc,
+				Sequencer:          common.NewAddressFromEth(parsed.Sequencer),
 			})
 		} else if log.Topics[0] == sequencerBatchDeliveredFromOriginID {
 			parsed, err := r.con.ParseSequencerBatchDeliveredFromOrigin(log)
@@ -283,7 +330,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				beforeAcc:   parsed.BeforeAcc,
 				afterCount:  parsed.NewMessageCount,
 				afterAcc:    parsed.AfterAcc,
-				delayedAcc:  parsed.DelayedAcc,
 			})
 		} else if log.Topics[0] == delayedInboxForcedID {
 			parsed, err := r.con.ParseDelayedInboxForced(log)
@@ -294,20 +340,17 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
+			blockNum := new(big.Int).SetUint64(log.BlockNumber)
 			blockTime := new(big.Int).SetUint64(header.Time)
-			txChainTime := inbox.ChainTime{
-				BlockNum:  common.NewTimeBlocksInt(int64(log.BlockNumber)),
-				Timestamp: blockTime,
-			}
+			delayedAccInt := new(big.Int).SetBytes(parsed.AfterAccAndDelayed[1][:])
+			sectionsMetadata := []*big.Int{big.NewInt(0), blockNum, blockTime, parsed.TotalDelayedMessagesRead, delayedAccInt}
 			refs = append(refs, SequencerBatch{
-				TotalDelayedMessagesRead: parsed.TotalDelayedMessagesRead,
-				BatchIndex:               parsed.SeqBatchIndex,
-				BeforeCount:              parsed.FirstMessageNum,
-				BeforeAcc:                parsed.BeforeAcc,
-				AfterCount:               parsed.NewMessageCount,
-				AfterAcc:                 parsed.AfterAccAndDelayed[0],
-				DelayedAcc:               parsed.AfterAccAndDelayed[1],
-				ChainTime:                txChainTime,
+				sectionsMetadata: sectionsMetadata,
+				BatchIndex:       parsed.SeqBatchIndex,
+				BeforeCount:      parsed.FirstMessageNum,
+				BeforeAcc:        parsed.BeforeAcc,
+				AfterCount:       parsed.NewMessageCount,
+				AfterAcc:         parsed.AfterAccAndDelayed[0],
 			})
 		} else {
 			return nil, errors.Errorf("Unexpected log topic %v", log.Topics[0].String())
@@ -338,19 +381,15 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		return SequencerBatch{}, err
 	}
 	return SequencerBatch{
-		transactionsData:         args["transactions"].([]byte),
-		transactionLengths:       args["lengths"].([]*big.Int),
-		TotalDelayedMessagesRead: args["_totalDelayedMessagesRead"].(*big.Int),
-		BeforeCount:              ref.beforeCount,
-		BeforeAcc:                ref.beforeAcc,
-		AfterCount:               ref.afterCount,
-		AfterAcc:                 ref.afterAcc,
-		DelayedAcc:               ref.delayedAcc,
-		Sequencer:                common.NewAddressFromEth(sender),
-		ChainTime: inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocks(args["l1BlockNumber"].(*big.Int)),
-			Timestamp: args["timestamp"].(*big.Int),
-		},
+		transactionsData:   args["transactions"].([]byte),
+		transactionLengths: args["lengths"].([]*big.Int),
+		sectionsMetadata:   args["sectionsMetadata"].([]*big.Int),
+		BeforeCount:        ref.beforeCount,
+		BeforeAcc:          ref.beforeAcc,
+		AfterCount:         ref.afterCount,
+		AfterAcc:           ref.afterAcc,
+		DelayedAcc:         ref.delayedAcc,
+		Sequencer:          common.NewAddressFromEth(sender),
 	}, nil
 }
 
