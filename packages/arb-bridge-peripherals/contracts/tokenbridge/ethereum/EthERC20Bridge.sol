@@ -55,7 +55,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
 
     address public l2ArbTokenBridgeAddress;
     IInbox public inbox;
-    address private admin;
+    address public owner;
 
     // can only deposit after a deploy attempt
     mapping(address => bool) public override hasTriedDeploy;
@@ -68,9 +68,14 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         require(l2ArbTokenBridgeAddress == outbox.l2ToL1Sender(), "Not from l2 buddy");
         _;
     }
-    modifier onlyAdmin {
-        require(msg.sender == admin, "admin only");
+
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
         _;
+    }
+
+    function setOwner(address _owner) external onlyOwner {
+        owner = _owner;
     }
 
     /**
@@ -78,12 +83,13 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
      * @param _inbox Address of Arbitrum chain's L1 Inbox.sol contract used to submit transactions to the L2
      * @param _l2TemplateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
      * @param _l2ArbTokenBridgeAddress Address of L2 side of token bridge (ArbTokenBridge.sol)
+     * @param _owner Bridge owner that is able to force set token pairs
      */
     function initialize(
         address _inbox,
         address _l2TemplateERC20,
         address _l2ArbTokenBridgeAddress,
-        address _adminAddress
+        address _owner
     ) external payable {
         require(address(l2TemplateERC20) == address(0), "already initialized");
         l2TemplateERC20 = _l2TemplateERC20;
@@ -91,7 +97,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         l2ArbTokenBridgeAddress = _l2ArbTokenBridgeAddress;
         inbox = IInbox(_inbox);
         cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
-        admin = _adminAddress;
+        owner = _owner;
     }
 
     function _registerCustomL2Token(
@@ -162,14 +168,14 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
             );
     }
 
-    function registerCustomL2TokenAdmin(
+    function forceRegisterCustomL2Token(
         address l1CustomTokenAddress,
         address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 gasPriceBid,
         address refundAddress
-    ) external payable onlyAdmin returns (uint256) {
+    ) external payable onlyOwner returns (uint256) {
         return
             _registerCustomL2Token(
                 l1CustomTokenAddress,
