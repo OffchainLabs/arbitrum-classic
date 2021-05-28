@@ -156,4 +156,10 @@ interface IRollupAdmin {
         address newWhitelist,
         address[] memory targets
     ) external;
+
+    /**
+     * @notice Updates a sequencer address at the sequencer inbox
+     * @param newSequencer new sequencer address to be used
+     */
+    function setSequencer(address newSequencer) external;
 }

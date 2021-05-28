@@ -5,6 +5,7 @@ pragma solidity ^0.6.11;
 import "../Rollup.sol";
 import "./IRollupFacets.sol";
 import "../../bridge/interfaces/IOutbox.sol";
+import "../../bridge/interfaces/ISequencerInbox.sol";
 import "../../libraries/Whitelist.sol";
 
 contract RollupAdminFacet is RollupBase, IRollupAdmin {
@@ -201,6 +202,15 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     ) external override {
         Whitelist(whitelist).triggerConsumers(newWhitelist, targets);
         emit OwnerFunctionCalled(17);
+    }
+
+    /**
+     * @notice Updates a sequencer address at the sequencer inbox
+     * @param newSequencer new sequencer address to be used
+     */
+    function setSequencer(address newSequencer) external override {
+        ISequencerInbox(sequencerBridge).setSequencer(newSequencer);
+        emit OwnerFunctionCalled(18);
     }
 
     /*

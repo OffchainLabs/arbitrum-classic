@@ -51,6 +51,10 @@ interface ISequencerInbox {
         uint256 seqBatchIndex
     );
 
+    event SequencerAddressUpdated(address newAddress);
+
+    function setSequencer(address newSequencer) external;
+
     function messageCount() external view returns (uint256);
 
     function maxDelayBlocks() external view returns (uint256);

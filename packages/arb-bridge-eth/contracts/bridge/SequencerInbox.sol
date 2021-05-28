@@ -50,6 +50,12 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         rollup = _rollup;
     }
 
+    function setSequencer(address newSequencer) external override {
+        require(msg.sender == rollup, "ONLY_ROLLUP");
+        sequencer = newSequencer;
+        emit SequencerAddressUpdated(newSequencer);
+    }
+
     function maxDelayBlocks() public view override returns (uint256) {
         return RollupBase(rollup).sequencerInboxMaxDelayBlocks();
     }
