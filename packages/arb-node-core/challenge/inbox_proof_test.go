@@ -36,7 +36,6 @@ func TestInboxProof(t *testing.T) {
 	sequencer := auth.From
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)
-	rollup := common.RandAddress()
 
 	_, _, osp1, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
 	test.FailIfError(t, err)
@@ -44,14 +43,18 @@ func TestInboxProof(t *testing.T) {
 	test.FailIfError(t, err)
 	sequencerAddr, _, sequencerCon, err := ethbridgecontracts.DeploySequencerInbox(auth, client)
 	test.FailIfError(t, err)
+	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(auth, client)
+	test.FailIfError(t, err)
 	client.Commit()
 
 	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddr, client)
 	test.FailIfError(t, err)
 
+	_, err = rollup.SetMock(auth, maxDelayBlocks, maxDelaySeconds)
+	test.FailIfError(t, err)
 	_, err = delayedBridge.Initialize(auth)
 	test.FailIfError(t, err)
-	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, maxDelayBlocks, maxDelaySeconds)
+	_, err = sequencerCon.Initialize(auth, delayedBridgeAddr, sequencer, rollupAddr)
 	test.FailIfError(t, err)
 	client.Commit()
 
@@ -89,7 +92,7 @@ func TestInboxProof(t *testing.T) {
 		return delayedAcc, delayed
 	}
 
-	delayedAcc1, delayed1 := addDelayed(common.Hash{}, initMsg, rollup, 0)
+	delayedAcc1, delayed1 := addDelayed(common.Hash{}, initMsg, common.NewAddressFromEth(rollupAddr), 0)
 	delayedAcc2, delayed2 := addDelayed(delayedAcc1, message.NewSafeL2Message(message.NewRandomTransaction()), common.RandAddress(), 1)
 
 	delayedItem1 := inbox.NewDelayedItem(big.NewInt(0), big.NewInt(1), common.Hash{}, big.NewInt(0), delayedAcc1)

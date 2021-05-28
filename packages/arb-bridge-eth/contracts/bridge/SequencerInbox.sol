@@ -22,6 +22,7 @@ import "./interfaces/ISequencerInbox.sol";
 import "./interfaces/IBridge.sol";
 import "../arch/Marshaling.sol";
 import "../libraries/Cloneable.sol";
+import "../rollup/Rollup.sol";
 
 import "./Messages.sol";
 
@@ -36,20 +37,25 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
 
     IBridge public delayedInbox;
     address public sequencer;
-    uint256 public override maxDelayBlocks;
-    uint256 public override maxDelaySeconds;
+    address public rollup;
 
     function initialize(
         IBridge _delayedInbox,
         address _sequencer,
-        uint256 _maxDelayBlocks,
-        uint256 _maxDelaySeconds
+        address _rollup
     ) external {
         require(address(delayedInbox) == address(0), "ALREADY_INIT");
         delayedInbox = _delayedInbox;
         sequencer = _sequencer;
-        maxDelayBlocks = _maxDelayBlocks;
-        maxDelaySeconds = _maxDelaySeconds;
+        rollup = _rollup;
+    }
+
+    function maxDelayBlocks() public view override returns (uint256) {
+        return RollupBase(rollup).sequencerInboxMaxDelayBlocks();
+    }
+
+    function maxDelaySeconds() public view override returns (uint256) {
+        return RollupBase(rollup).sequencerInboxMaxDelaySeconds();
     }
 
     function getLastDelayedAcc() internal view returns (bytes32) {
@@ -81,8 +87,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                     gasPriceL1,
                     messageDataHash
                 );
-            require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
-            require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
+            require(l1BlockAndTimestamp[0] + maxDelayBlocks() < block.number, "MAX_DELAY_BLOCKS");
+            require(l1BlockAndTimestamp[1] + maxDelaySeconds() < block.timestamp, "MAX_DELAY_TIME");
 
             bytes32 prevDelayedAcc = 0;
             if (_totalDelayedMessagesRead > 1) {
@@ -193,9 +199,9 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         bytes32 afterAcc
     ) private returns (bytes32 beforeAcc, bytes32 delayedAcc) {
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
-        require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
+        require(l1BlockNumber + maxDelayBlocks() >= block.number, "BLOCK_TOO_OLD");
         require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
-        require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
+        require(timestamp + maxDelaySeconds() >= block.timestamp, "TIME_TOO_OLD");
         require(timestamp <= block.timestamp, "TIME_TOO_NEW");
         require(_totalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         require(_totalDelayedMessagesRead >= 1, "MUST_DELAYED_INIT");

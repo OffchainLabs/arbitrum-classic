@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2012, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 pragma solidity ^0.6.11;
 
-import "../bridge/InboxHelper.sol";
+contract RollupMock {
+    uint256 public sequencerInboxMaxDelayBlocks;
+    uint256 public sequencerInboxMaxDelaySeconds;
 
-contract InboxHelperTester {
-    function chainId(address rollup) external pure returns (uint256) {
-        return InboxHelper.chainId(rollup);
-    }
-
-    function requestID(uint256 messageNum, address rollup) external pure returns (bytes32) {
-        return InboxHelper.requestID(messageNum, rollup);
-    }
-
-    function retryableTicketID(uint256 messageNum, address rollup) external pure returns (bytes32) {
-        return InboxHelper.retryableTicketID(messageNum, rollup);
+    function setMock(uint256 _sequencerInboxMaxDelayBlocks, uint256 _sequencerInboxMaxDelaySeconds)
+        external
+    {
+        sequencerInboxMaxDelayBlocks = _sequencerInboxMaxDelayBlocks;
+        sequencerInboxMaxDelaySeconds = _sequencerInboxMaxDelaySeconds;
     }
 }

@@ -23,13 +23,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -41,7 +43,7 @@ var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
 
 func init() {
-	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupABI))
+	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupUserFacetABI))
 	if err != nil {
 		panic(err)
 	}
@@ -78,13 +80,13 @@ func (d *DeliveredInboxMessage) Block() *common.BlockId {
 }
 
 type RollupWatcher struct {
-	con     *ethbridgecontracts.Rollup
+	con     *ethbridgecontracts.RollupUserFacet
 	address ethcommon.Address
 	client  ethutils.EthClient
 }
 
 func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*RollupWatcher, error) {
-	con, err := ethbridgecontracts.NewRollup(address, client)
+	con, err := ethbridgecontracts.NewRollupUserFacet(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -96,7 +98,7 @@ func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*Ro
 	}, nil
 }
 
-func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupRollupCreated, error) {
+func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupUserFacetRollupCreated, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
 		FromBlock: big.NewInt(0),

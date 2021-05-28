@@ -10,9 +10,29 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const osp2 = await deployments.get('OneStepProof2')
   const osp3 = await deployments.get('OneStepProofHash')
 
+  const proxyAdmin = await deploy('ProxyAdmin', {
+    from: deployer,
+    args: [],
+  })
+
+  const osp1Proxy = await deploy('TransparentUpgradeableProxy', {
+    from: deployer,
+    args: [osp1.address, proxyAdmin.address, '0x'],
+  })
+
+  const osp2Proxy = await deploy('TransparentUpgradeableProxy', {
+    from: deployer,
+    args: [osp2.address, proxyAdmin.address, '0x'],
+  })
+
+  const osp3Proxy = await deploy('TransparentUpgradeableProxy', {
+    from: deployer,
+    args: [osp3.address, proxyAdmin.address, '0x'],
+  })
+
   await deploy('ChallengeFactory', {
     from: deployer,
-    args: [[osp1.address, osp2.address, osp3.address]],
+    args: [[osp1Proxy.address, osp2Proxy.address, osp3Proxy.address]],
   })
 }
 

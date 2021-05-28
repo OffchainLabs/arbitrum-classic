@@ -26,10 +26,12 @@ import "../rollup/RollupEventBridge.sol";
 import "../rollup/Rollup.sol";
 import "../rollup/NodeFactory.sol";
 
-import "../rollup/IRollup.sol";
+import "../rollup/Rollup.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "../rollup/RollupLib.sol";
+import "../rollup/facets/RollupUser.sol";
+import "../rollup/facets/RollupAdmin.sol";
 
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress);
@@ -84,12 +86,7 @@ contract RollupCreatorNoProxy {
         Outbox outbox;
     }
 
-    function createBridge(
-        address rollup,
-        address sequencer,
-        uint256 sequencerDelayBlocks,
-        uint256 sequencerDelaySeconds
-    )
+    function createBridge(address rollup, address sequencer)
         private
         returns (
             Bridge,
@@ -109,12 +106,7 @@ contract RollupCreatorNoProxy {
         }
 
         frame.delayedBridge.initialize();
-        frame.sequencerInbox.initialize(
-            IBridge(frame.delayedBridge),
-            sequencer,
-            sequencerDelayBlocks,
-            sequencerDelaySeconds
-        );
+        frame.sequencerInbox.initialize(IBridge(frame.delayedBridge), sequencer, rollup);
         frame.inbox.initialize(IBridge(frame.delayedBridge));
         frame.rollupEventBridge.initialize(address(frame.delayedBridge), rollup);
         frame.outbox.initialize(rollup, IBridge(frame.delayedBridge));
@@ -133,7 +125,7 @@ contract RollupCreatorNoProxy {
 
     function createRollupNoProxy(RollupLib.Config memory config, address challengeFactory)
         private
-        returns (IRollup)
+        returns (address)
     {
         CreateRollupFrame memory frame;
         frame.rollup = address(new Rollup());
@@ -143,19 +135,16 @@ contract RollupCreatorNoProxy {
             frame.inbox,
             frame.rollupEventBridge,
             frame.outbox
-        ) = createBridge(
-            frame.rollup,
-            config.sequencer,
-            config.sequencerDelayBlocks,
-            config.sequencerDelaySeconds
-        );
+        ) = createBridge(frame.rollup, config.sequencer);
 
-        IRollup(frame.rollup).initialize(
+        Rollup(payable(frame.rollup)).initialize(
             config.machineHash,
-            config.confirmPeriodBlocks,
-            config.extraChallengeTimeBlocks,
-            config.arbGasSpeedLimitPerBlock,
-            config.baseStake,
+            [
+                config.confirmPeriodBlocks,
+                config.extraChallengeTimeBlocks,
+                config.arbGasSpeedLimitPerBlock,
+                config.baseStake
+            ],
             config.stakeToken,
             config.owner,
             config.extraConfig,
@@ -166,9 +155,11 @@ contract RollupCreatorNoProxy {
                 address(frame.rollupEventBridge),
                 challengeFactory,
                 address(new NodeFactory())
-            ]
+            ],
+            [address(new RollupAdminFacet()), address(new RollupUserFacet())],
+            [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
         emit RollupCreated(frame.rollup);
-        return IRollup(frame.rollup);
+        return frame.rollup;
     }
 }

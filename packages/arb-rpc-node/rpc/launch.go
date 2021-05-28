@@ -108,7 +108,7 @@ func SetupBatcher(
 		}
 		return batcher.NewStatefulBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
 	case SequencerBatcherMode:
-		rollup, err := ethbridgecontracts.NewRollup(rollupAddress.ToEthAddress(), client)
+		rollup, err := ethbridgecontracts.NewRollupUserFacet(rollupAddress.ToEthAddress(), client)
 		if err != nil {
 			return nil, err
 		}
