@@ -48,7 +48,7 @@ func addEnableFeesMessages(ib *InboxBuilder) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.SetFairGasPriceSender(owner),
+		Data:        arbos.SetFairGasPriceSender(owner, true),
 	}
 
 	ownerTx2 := message.Transaction{

@@ -79,8 +79,8 @@ func GetUploadedCodeHash() []byte {
 	return makeFuncData(getUploadedCodeHashABI)
 }
 
-func SetFairGasPriceSender(sender common.Address) []byte {
-	return makeFuncData(setFairGasPriceSenderABI, sender)
+func SetFairGasPriceSender(sender common.Address, enable bool) []byte {
+	return makeFuncData(setFairGasPriceSenderABI, sender, enable)
 }
 
 func SetFeesEnabled(enabled bool) []byte {
