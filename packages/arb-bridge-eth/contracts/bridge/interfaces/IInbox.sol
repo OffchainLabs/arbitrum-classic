@@ -67,13 +67,7 @@ interface IInbox is IMessageProvider {
         bytes calldata data
     ) external payable returns (uint256);
 
-    function depositEth(
-        address destAddr,
-        uint256 l2Callvalue,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 maxGasPrice
-    ) external payable returns (uint256);
+    function depositEth(uint256 maxSubmissionCost) external payable returns (uint256);
 
     function bridge() external view returns (IBridge);
 }

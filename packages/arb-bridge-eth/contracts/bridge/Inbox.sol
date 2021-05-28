@@ -165,22 +165,23 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             );
     }
 
-    function depositEth(
-        address destAddr,
-        uint256 l2Callvalue,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 maxGasPrice
-    ) external payable virtual override onlyWhitelisted returns (uint256) {
+    function depositEth(uint256 maxSubmissionCost)
+        external
+        payable
+        virtual
+        override
+        onlyWhitelisted
+        returns (uint256)
+    {
         return
             this.createRetryableTicket{ value: msg.value }(
-                destAddr,
-                l2Callvalue,
+                msg.sender,
+                0,
                 maxSubmissionCost,
                 msg.sender,
                 msg.sender,
-                maxGas,
-                maxGasPrice,
+                0,
+                0,
                 ""
             );
     }
