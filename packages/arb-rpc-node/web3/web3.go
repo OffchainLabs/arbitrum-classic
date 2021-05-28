@@ -25,7 +25,7 @@ type Web3 struct {
 }
 
 func (web3 *Web3) ClientVersion() string {
-	return "arb-rpc-node/v0.8.0"
+	return "arb-rpc-node/v1.0.0"
 }
 
 func (web3 *Web3) Sha3(data hexutil.Bytes) hexutil.Bytes {
