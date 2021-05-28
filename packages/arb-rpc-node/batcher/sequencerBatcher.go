@@ -327,6 +327,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		for i, tx := range batchTxs {
 			txHash := txHashes[i]
 			if !shouldIncludeTxResult(txResults[txHash]) {
+				resultChans[i] <- evm.HandleCallError(txResults[txHash], false)
 				continue
 			}
 			l2Msg := message.NewCompressedECDSAFromEth(tx)
@@ -360,7 +361,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 				if err != nil {
 					return err
 				}
-				resultChans[i] <- errors.New("transaction errored")
+				resultChans[i] <- evm.HandleCallError(txResult, false)
 				continue
 			}
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
