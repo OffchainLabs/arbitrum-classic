@@ -29,7 +29,9 @@ import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@openzeppelin/contracts/proxy/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./IRollup.sol";
+import "./Rollup.sol";
+import "./facets/RollupUser.sol";
+import "./facets/RollupAdmin.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "./RollupLib.sol";
@@ -44,6 +46,8 @@ contract RollupCreator is Ownable, CloneFactory {
     ICloneable public rollupTemplate;
     address public challengeFactory;
     address public nodeFactory;
+    address public rollupAdminFacet;
+    address public rollupUserFacet;
 
     constructor() public Ownable() {}
 
@@ -51,12 +55,16 @@ contract RollupCreator is Ownable, CloneFactory {
         BridgeCreator _bridgeCreator,
         ICloneable _rollupTemplate,
         address _challengeFactory,
-        address _nodeFactory
+        address _nodeFactory,
+        address _rollupAdminFacet,
+        address _rollupUserFacet
     ) external onlyOwner {
         bridgeCreator = _bridgeCreator;
         rollupTemplate = _rollupTemplate;
         challengeFactory = _challengeFactory;
         nodeFactory = _nodeFactory;
+        rollupAdminFacet = _rollupAdminFacet;
+        rollupUserFacet = _rollupUserFacet;
         emit TemplatesUpdated();
     }
 
@@ -72,7 +80,7 @@ contract RollupCreator is Ownable, CloneFactory {
         uint256 _sequencerDelayBlocks,
         uint256 _sequencerDelaySeconds,
         bytes calldata _extraConfig
-    ) external returns (IRollup) {
+    ) external returns (address) {
         return
             createRollup(
                 RollupLib.Config(
@@ -106,7 +114,7 @@ contract RollupCreator is Ownable, CloneFactory {
     // RollupOwner should be the owner of Rollup's ProxyAdmin
     // RollupOwner should be the owner of Rollup
     // Bridge should have a single inbox and outbox
-    function createRollup(RollupLib.Config memory config) private returns (IRollup) {
+    function createRollup(RollupLib.Config memory config) private returns (address) {
         CreateRollupFrame memory frame;
         frame.admin = new ProxyAdmin();
         frame.rollup = address(
@@ -119,21 +127,17 @@ contract RollupCreator is Ownable, CloneFactory {
             frame.inbox,
             frame.rollupEventBridge,
             frame.outbox
-        ) = bridgeCreator.createBridge(
-            address(frame.admin),
-            frame.rollup,
-            config.sequencer,
-            config.sequencerDelayBlocks,
-            config.sequencerDelaySeconds
-        );
+        ) = bridgeCreator.createBridge(address(frame.admin), frame.rollup, config.sequencer);
 
         frame.admin.transferOwnership(config.owner);
-        IRollup(frame.rollup).initialize(
+        Rollup(payable(frame.rollup)).initialize(
             config.machineHash,
-            config.confirmPeriodBlocks,
-            config.extraChallengeTimeBlocks,
-            config.arbGasSpeedLimitPerBlock,
-            config.baseStake,
+            [
+                config.confirmPeriodBlocks,
+                config.extraChallengeTimeBlocks,
+                config.arbGasSpeedLimitPerBlock,
+                config.baseStake
+            ],
             config.stakeToken,
             config.owner,
             config.extraConfig,
@@ -144,9 +148,12 @@ contract RollupCreator is Ownable, CloneFactory {
                 address(frame.rollupEventBridge),
                 challengeFactory,
                 nodeFactory
-            ]
+            ],
+            [rollupAdminFacet, rollupUserFacet],
+            [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
+
         emit RollupCreated(frame.rollup, address(frame.inbox), address(frame.admin));
-        return IRollup(frame.rollup);
+        return frame.rollup;
     }
 }

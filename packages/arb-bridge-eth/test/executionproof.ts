@@ -89,14 +89,18 @@ describe('OneStepProof', function () {
     await bridge.deployed()
     await bridge.initialize()
 
+    const RollupMock = await ethers.getContractFactory('RollupMock')
+    const rollupMock = await RollupMock.deploy()
+    await rollupMock.deployed()
+    await rollupMock.setMock(15, 900)
+
     const SequencerInbox = await ethers.getContractFactory('SequencerInbox')
     sequencerInbox = (await SequencerInbox.deploy()) as SequencerInbox
     await sequencerInbox.deployed()
     await sequencerInbox.initialize(
       bridge.address,
       ethers.constants.AddressZero,
-      15,
-      900
+      rollupMock.address
     )
   })
   const files = fs.readdirSync('./test/proofs')

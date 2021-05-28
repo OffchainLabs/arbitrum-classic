@@ -210,7 +210,7 @@ func setFairGasPriceSender(sender ethcommon.Address) error {
 	if err != nil {
 		return err
 	}
-	tx, err := arbOwner.SetFairGasPriceSender(config.auth, sender)
+	tx, err := arbOwner.SetFairGasPriceSender(config.auth, sender, true)
 	if err != nil {
 		return err
 	}
