@@ -118,8 +118,8 @@ contract RollupCreatorNoProxy {
         frame.delayedBridge.setInbox(address(frame.inbox), true);
         frame.delayedBridge.transferOwnership(rollup);
 
-        // TODO: should owner be the rollup or msg.sender?
-        frame.whitelist.setOwner(rollup);
+        // no whitelist in tests
+        frame.whitelist.setOwner(address(0));
 
         return (
             frame.delayedBridge,

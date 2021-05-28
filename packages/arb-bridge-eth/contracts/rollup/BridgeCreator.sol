@@ -125,7 +125,6 @@ contract BridgeCreator is Ownable {
         frame.delayedBridge.setInbox(address(frame.inbox), true);
         frame.delayedBridge.transferOwnership(rollup);
 
-        // TODO: should owner be the rollup or msg.sender?
         frame.whitelist.setOwner(rollup);
 
         return (
