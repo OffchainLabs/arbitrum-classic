@@ -165,7 +165,7 @@ export class L1Bridge {
     overrides: PayableOverrides = {}
   ) {
     const inbox = await this.getInbox()
-    return inbox.functions.depositEth(value, {
+    return inbox.functions.depositEth(maxSubmissionPrice, {
       value,
       ...overrides,
     })
