@@ -144,7 +144,7 @@ func TestSequencerBatcher(t *testing.T) {
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
 	var owner common.Address
-	sequencerDelayBlocks := big.NewInt(200)
+	sequencerDelayBlocks := big.NewInt(51)
 	sequencerDelaySeconds := big.NewInt(3000)
 
 	l2ChainId := common.RandBigInt()
@@ -248,6 +248,22 @@ func TestSequencerBatcher(t *testing.T) {
 			t.Fatal("sequencer didn't sequence initial message")
 		}
 	}
+	attempts = 0
+	for {
+		msgCount, err := seqInbox.MessageCount(&bind.CallOpts{Context: ctx})
+		test.FailIfError(t, err)
+
+		if msgCount.Sign() > 0 {
+			break
+		}
+		client.Commit()
+		time.Sleep(20 * time.Millisecond)
+		attempts++
+
+		if attempts == 100 {
+			t.Fatal("sequencer didn't create initial batch")
+		}
+	}
 
 	txs := generateTxs(t, 10, 10, l2ChainId)
 	for i, tx := range txs {
@@ -285,7 +301,7 @@ func TestSequencerBatcher(t *testing.T) {
 		if msgCount2.Cmp(msgCount1) == 0 {
 			break
 		}
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Second)
 		client.Commit()
 
 		if time.Now().After(timeout) {
