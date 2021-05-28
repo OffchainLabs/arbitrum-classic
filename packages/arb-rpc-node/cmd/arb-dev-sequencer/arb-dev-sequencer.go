@@ -91,7 +91,7 @@ func startup() error {
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
-	fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
+	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -197,7 +197,7 @@ func startup() error {
 		return err
 	}
 	rollupAddress := common.NewAddressFromEth(createdEvent.RollupAddress)
-	inboxAddress := createdEvent.InboxAddress
+	//inboxAddress := createdEvent.InboxAddress
 
 	l2ChainId := new(big.Int).SetUint64(*chainId64)
 	l2OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l2ChainId)
@@ -318,22 +318,23 @@ func startup() error {
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
 
-	inboxCon, err := ethbridgecontracts.NewInbox(inboxAddress, ethclint)
-	if err != nil {
-		return err
-	}
-
-	deployer.Value = transferSize
-	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
-	if err != nil {
-		return err
-	}
-
-	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
-	if err != nil {
-		return err
-	}
-	deployer.Value = nil
+	// TODO: Add back in funding of fundedAccount
+	// Note: The dev sequencer isn't being used anywhere currently
+	//inboxCon, err := ethbridgecontracts.NewInbox(inboxAddress, ethclint)
+	//if err != nil {
+	//	return err
+	//}
+	//deployer.Value = transferSize
+	//_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
+	//if err != nil {
+	//	return err
+	//}
+	//deployer.Value = nil
 
 	time.Sleep(time.Second * 40)
 
