@@ -18,6 +18,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
+var gasThreshold = big.NewInt(100_000_000_000)
+var sendThreshold = big.NewInt(5)
+var blockThreshold = big.NewInt(10000)
+
 type Validator struct {
 	rollup         *ethbridge.Rollup
 	delayedBridge  *ethbridge.DelayedBridgeWatcher
@@ -338,6 +342,18 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		Before: startState.ExecutionState,
 		After:  execState,
 	}
+
+	// If there are no successor nodes, and there isn't much activity to process
+	if len(successorNodes) == 0 {
+		gasExecuted := new(big.Int).Sub(assertion.After.TotalGasConsumed, assertion.Before.TotalGasConsumed)
+		sendCount := new(big.Int).Sub(assertion.After.TotalSendCount, assertion.Before.TotalSendCount)
+		if sendCount.Cmp(gasThreshold) > 0 ||
+			gasExecuted.Cmp(sendThreshold) > 0 ||
+			timeSinceProposed.Cmp(blockThreshold) > 0 {
+			return nil, false, nil
+		}
+	}
+
 	executionHash := assertion.ExecutionHash()
 	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
 
