@@ -165,7 +165,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             );
     }
 
-    function depositEth(address destAddr)
+    function depositEth(uint256 maxSubmissionCost)
         external
         payable
         virtual
@@ -174,34 +174,14 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         returns (uint256)
     {
         return
-            _deliverMessage(
-                L1MessageType_L2FundedByL1,
-                destAddr,
-                abi.encodePacked(
-                    L2MessageType_unsignedContractTx,
-                    uint256(0),
-                    uint256(0),
-                    uint256(uint160(bytes20(destAddr))),
-                    msg.value
-                )
-            );
-    }
-
-    function depositEthRetryable(
-        address destAddr,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 maxGasPrice
-    ) external payable virtual override onlyWhitelisted returns (uint256) {
-        return
-            this.createRetryableTicket(
-                destAddr,
-                msg.value,
+            this.createRetryableTicket{ value: msg.value }(
+                msg.sender,
+                0,
                 maxSubmissionCost,
                 msg.sender,
                 msg.sender,
-                maxGas,
-                maxGasPrice,
+                0,
+                0,
                 ""
             );
     }
