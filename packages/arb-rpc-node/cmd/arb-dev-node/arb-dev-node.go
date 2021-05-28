@@ -101,6 +101,7 @@ func startup() error {
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	initialL1Height := fs.Uint64("l1height", 0, "initial l1 height")
 	rollupStr := fs.String("rollup", "", "address of rollup contract")
+	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -123,6 +124,8 @@ func startup() error {
 			log.Error().Err(err).Msg("profiling server failed")
 		}()
 	}
+
+	chainId := new(big.Int).SetUint64(*chainId64)
 
 	wallet, err := hdwallet.NewFromMnemonic(*mnemonic)
 	if err != nil {
@@ -177,7 +180,7 @@ func startup() error {
 		ctx,
 		*dbDir,
 		*arbosPath,
-		rollupAddress,
+		chainId,
 		agg,
 		*initialL1Height,
 	)
@@ -209,6 +212,7 @@ func startup() error {
 		}
 
 		var configOptions []message.ChainConfigOption
+		configOptions = append(configOptions, message.ChainIDConfig{ChainId: new(big.Int).SetUint64(*chainId64)})
 		aggInit := message.DefaultAggConfig{Aggregator: agg}
 		if *enableFees {
 			configOptions = append(configOptions, aggInit)
@@ -276,14 +280,13 @@ func startup() error {
 		privateKeys = append(privateKeys, privKey)
 	}
 
-	chainId := message.ChainAddressToID(rollupAddress)
 	ownerAuth, err := bind.NewKeyedTransactorWithChainID(privateKeys[0], chainId)
 	if err != nil {
 		return err
 	}
 	signer := types.NewEIP155Signer(chainId)
 
-	srv := aggregator.NewServer(backend, rollupAddress, db)
+	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
 
 	if deleteDir {
 		client := web3.NewEthClient(srv, true)

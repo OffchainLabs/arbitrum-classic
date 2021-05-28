@@ -51,10 +51,19 @@ type upgrade struct {
 	Instructions []string `json:"instructions"`
 }
 
-func upgradeArbOS(upgradeFile string, targetMexe string) error {
+func upgradeArbOS(upgradeFile string, targetMexe string, startMexe *string) error {
 	targetMach, err := cmachine.New(targetMexe)
 	if err != nil {
 		return err
+	}
+
+	var startHash common.Hash
+	if startMexe != nil {
+		startMach, err := cmachine.New(*startMexe)
+		if err != nil {
+			return err
+		}
+		startHash = startMach.CodePointHash()
 	}
 
 	updateBytes, err := ioutil.ReadFile(upgradeFile)
@@ -106,7 +115,7 @@ func upgradeArbOS(upgradeFile string, targetMexe string) error {
 		return errors.New("incorrect code segment uploaded")
 	}
 
-	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, targetMach.CodePointHash())
+	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(config.auth, targetMach.CodePointHash(), startHash)
 	if err != nil {
 		return err
 	}
@@ -297,10 +306,14 @@ func handleCommand(fields []string) error {
 		}
 		return feeInfo(blockNum)
 	case "upgrade":
-		if len(fields) != 3 {
+		if len(fields) != 3 && len(fields) != 4 {
 			return errors.New("Expected upgrade file and target mexe arguments")
 		}
-		return upgradeArbOS(fields[1], fields[2])
+		var source *string
+		if len(fields) == 4 {
+			source = &fields[3]
+		}
+		return upgradeArbOS(fields[1], fields[2], source)
 	case "version":
 		return version()
 	default:

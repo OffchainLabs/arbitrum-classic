@@ -47,6 +47,7 @@ func TestUpgrade(t *testing.T) {
 
 	arbosDir, err := arbos.Dir()
 	test.FailIfError(t, err)
+	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
 
 	upgradedMach, err := cmachine.New(filepath.Join(arbosDir, "arbos-upgrade.mexe"))
 	test.FailIfError(t, err)
@@ -63,7 +64,7 @@ func TestUpgrade(t *testing.T) {
 		MaxExecutionSteps:         10000000000,
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
-	arbosFile := filepath.Join(arbosDir, "arbos_before.mexe")
+
 	backend, _, srv, cancelDevNode := NewTestDevNode(t, arbosFile, config, common.NewAddressFromEth(auth.From), nil)
 	defer cancelDevNode()
 
@@ -139,7 +140,7 @@ func TestUpgrade(t *testing.T) {
 		t.Fatal("uploaded codehash was incorrect after 1st upgrade")
 	}
 
-	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth, codeHash)
+	_, err = arbOwner.FinishCodeUploadAsArbosUpgrade(auth, codeHash, common.Hash{})
 	test.FailIfError(t, err)
 	auth.GasLimit = 0
 
