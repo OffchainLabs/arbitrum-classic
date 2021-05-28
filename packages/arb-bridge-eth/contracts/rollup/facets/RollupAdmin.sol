@@ -8,6 +8,8 @@ import "../../bridge/interfaces/IOutbox.sol";
 import "../../bridge/interfaces/ISequencerInbox.sol";
 import "../../libraries/Whitelist.sol";
 
+import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+
 contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /**
      * Functions are only to reach this facet if the caller is the owner
@@ -228,6 +230,16 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     function setSequencer(address newSequencer) external override {
         ISequencerInbox(sequencerBridge).setSequencer(newSequencer);
         emit OwnerFunctionCalled(19);
+    }
+
+    /**
+     * @notice Upgrades the implementation of a beacon controlled by the rollup
+     * @param beacon address of beacon to be upgraded
+     * @param newImplementation new address of implementation
+     */
+    function upgradeBeacon(address beacon, address newImplementation) external override {
+        UpgradeableBeacon(beacon).upgradeTo(newImplementation);
+        emit OwnerFunctionCalled(20);
     }
 
     /*

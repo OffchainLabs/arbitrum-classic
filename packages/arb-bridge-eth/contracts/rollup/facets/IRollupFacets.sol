@@ -175,4 +175,11 @@ interface IRollupAdmin {
      * @param newSequencer new sequencer address to be used
      */
     function setSequencer(address newSequencer) external;
+
+    /**
+     * @notice Upgrades the implementation of a beacon controlled by the rollup
+     * @param beacon address of beacon to be upgraded
+     * @param newImplementation new address of implementation
+     */
+    function upgradeBeacon(address beacon, address newImplementation) external;
 }
