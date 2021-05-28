@@ -2427,9 +2427,12 @@ ValueResult<ArbCore::logscursor_logs> ArbCore::logsCursorGetLogs(
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+    auto status = logs_cursors[cursor_index].status;
+    if (status == DataCursor::REQUESTED) {
         // No new logs yet
         return {rocksdb::Status::TryAgain(), {}};
+    } else if (status != DataCursor::READY) {
+        throw std::runtime_error("Unexpected logsCursor status " + status);
     }
 
     ReadTransaction tx(data_storage);
