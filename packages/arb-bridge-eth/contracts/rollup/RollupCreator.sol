@@ -35,10 +35,9 @@ import "./facets/RollupAdmin.sol";
 import "../bridge/interfaces/IBridge.sol";
 
 import "./RollupLib.sol";
-import "../libraries/CloneFactory.sol";
 import "../libraries/ICloneable.sol";
 
-contract RollupCreator is Ownable, CloneFactory {
+contract RollupCreator is Ownable {
     event RollupCreated(address indexed rollupAddress, address inboxAddress, address adminProxy);
     event TemplatesUpdated();
 
