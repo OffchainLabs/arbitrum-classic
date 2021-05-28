@@ -31,26 +31,19 @@ struct RawTuple {
     bool deferredHashing = true;
 
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}
+    RawTuple(const RawTuple&) = delete;
+    RawTuple& operator=(const RawTuple&) = delete;
+    ~RawTuple();
 };
+
+void tupleDeleter(RawTuple* p);
 
 using UniqueTuple = std::unique_ptr<RawTuple, void (*)(RawTuple*)>;
 
 class TuplePool {
-   private:
-    std::array<std::vector<UniqueTuple>, 9> resources;
-    bool shuttingDown = false;
-
-    bool deleting = false;
-    std::deque<UniqueTuple> delete_list;
-
-    void deleteTuple(UniqueTuple tup);
-
-    friend void tupleDeleter(RawTuple* p);
-
    public:
     static TuplePool& get_impl();
 
-    ~TuplePool() { shuttingDown = true; }
     /**
      * Returns instance of Resource.
      *

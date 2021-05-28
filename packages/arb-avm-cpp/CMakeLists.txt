@@ -56,11 +56,20 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
+option(ENABLE_JEMALLOC "Enable jemalloc" OFF)
 option(AVM_BUILD_TESTING "Build tests" ON)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
+
+if (ENABLE_JEMALLOC)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules (JEMALLOC REQUIRED jemalloc)
+    message(STATUS "Building with jemalloc")
+    include_directories(${JEMALLOC_INCLUDE_DIRS})
+    link_directories(${JEMALLOC_LIBRARY_DIRS})
+endif (ENABLE_JEMALLOC)
 
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
@@ -158,11 +167,12 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
         string(CONCAT LDFLAGS
             " -L${C_LIBRARY_PATH}"
             " -L${ETHASH_LIB_FOLDER}"
-            " -l$<TARGET_FILE_BASE_NAME:cavm>"
-            " -l$<TARGET_FILE_BASE_NAME:data_storage>"
-            " -l$<TARGET_FILE_BASE_NAME:avm>"
-            " -l$<TARGET_FILE_BASE_NAME:avm_values>"
-            " -l$<TARGET_FILE_BASE_NAME:ff>"
+            " $<TARGET_LINKER_FILE:cavm>"
+            " $<TARGET_LINKER_FILE:data_storage>"
+            " $<TARGET_LINKER_FILE:avm>"
+            " $<TARGET_LINKER_FILE:avm_values>"
+            " $<TARGET_LINKER_FILE:ff>"
+            " ${JEMALLOC_LINK_LIBRARIES}"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
