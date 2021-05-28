@@ -161,23 +161,14 @@ export class L1Bridge {
 
   public async depositETH(
     value: BigNumber,
-    destinationAddress?: string,
-    maxGas: BigNumber = BigNumber.from(3000000),
-    gasPriceBid: BigNumber = BigNumber.from(0),
+    maxSubmissionPrice: BigNumber,
     overrides: PayableOverrides = {}
   ) {
-    const address = destinationAddress || (await this.getWalletAddress())
     const inbox = await this.getInbox()
-    return inbox.functions.sendL1FundedContractTransaction(
-      maxGas,
-      gasPriceBid,
-      address,
-      '0x',
-      {
-        value,
-        ...overrides,
-      }
-    )
+    return inbox.functions.depositEthRetryable(value, maxSubmissionPrice, {
+      value,
+      ...overrides,
+    })
   }
 
   public async approveToken(
