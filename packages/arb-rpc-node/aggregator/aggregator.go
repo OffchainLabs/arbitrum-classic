@@ -18,6 +18,7 @@ package aggregator
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -44,22 +44,25 @@ import (
 var logger = log.With().Caller().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain common.Address
-	batch batcher.TransactionBatcher
-	db    *txdb.TxDB
-	scope event.SubscriptionScope
+	chain   common.Address
+	chainId *big.Int
+	batch   batcher.TransactionBatcher
+	db      *txdb.TxDB
+	scope   event.SubscriptionScope
 }
 
 // NewServer returns a new instance of the Server class
 func NewServer(
 	batch batcher.TransactionBatcher,
 	rollupAddress common.Address,
+	chainId *big.Int,
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain: rollupAddress,
-		batch: batch,
-		db:    db,
+		chain:   rollupAddress,
+		chainId: chainId,
+		batch:   batch,
+		db:      db,
 	}
 }
 
@@ -108,9 +111,12 @@ func (m *Server) GetL2ToL1Proof(batchNumber *big.Int, index uint64) (*evm.Merkle
 	return batch.GenerateProof(index)
 }
 
-// GetVMInfo returns current metadata about this VM
 func (m *Server) GetChainAddress() ethcommon.Address {
 	return m.chain.ToEthAddress()
+}
+
+func (m *Server) ChainId() *big.Int {
+	return m.chainId
 }
 
 func (m *Server) BlockInfoByNumber(height uint64) (*machine.BlockInfo, error) {

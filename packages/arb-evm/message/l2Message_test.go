@@ -19,10 +19,11 @@ package message
 import (
 	"bytes"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"math/rand"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -44,7 +45,7 @@ func TestL2MessageSerialization(t *testing.T) {
 		t.Error("serialized tx has incorrect size")
 	}
 
-	randomBatch, err := NewRandomTransactionBatch(10, common.RandAddress(), pk, 0)
+	randomBatch, err := NewRandomTransactionBatch(10, pk, 0, common.RandBigInt())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,8 +138,7 @@ func TestCompressedECDSAEncoding(t *testing.T) {
 }
 
 func TestCompressedECDSAConversion(t *testing.T) {
-	chain := common.RandAddress()
-	chainId := ChainAddressToID(chain)
+	chainId := common.RandBigInt()
 	signer := types.NewEIP155Signer(chainId)
 	tx := types.NewTransaction(rand.Uint64(), common.RandAddress().ToEthAddress(), common.RandBigInt(), rand.Uint64(), common.RandBigInt(), common.RandBytes(100))
 	pk, err := crypto.GenerateKey()

@@ -317,7 +317,7 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 		)
 		_, _, _, err = mach.ExecuteAssertionAdvanced(10000000000, false, []inbox.InboxMessage{msg}, nil, true)
 		test.FailIfError(t, err)
-		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, message.ChainAddressToID(chain), seq)
+		snap, err = snapshot.NewSnapshot(mach.Clone(), lastMessage.ChainTime, seq)
 		test.FailIfError(t, err)
 	}
 	if printArbOSLog {
@@ -344,7 +344,8 @@ func makeSimpleInbox(t *testing.T, messages []message.Message) []inbox.InboxMess
 	}
 
 	ib := &InboxBuilder{}
-	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+	options := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
+	ib.AddMessage(initMsg(t, options), chain, big.NewInt(0), chainTime)
 	for _, msg := range messages {
 		ib.AddMessage(msg, sender, big.NewInt(0), chainTime)
 	}

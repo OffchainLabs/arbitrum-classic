@@ -118,7 +118,7 @@ func TestFees(t *testing.T) {
 
 	privKey, err := crypto.GenerateKey()
 	failIfError(t, err)
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	signer := types.NewEIP155Signer(chainId)
 	userAddress := common.NewAddressFromEth(crypto.PubkeyToAddress(privKey.PublicKey))
 
 	initialDeposit := new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil)
@@ -266,7 +266,8 @@ func TestFees(t *testing.T) {
 			CongestionFeeRecipient: congestionFeeRecipient,
 		}
 		aggInit := message.DefaultAggConfig{Aggregator: aggregator}
-		init, err := message.NewInitMessage(config, owner, []message.ChainConfigOption{feeConfigInit, aggInit})
+		chainIdInit := message.ChainIDConfig{ChainId: chainId}
+		init, err := message.NewInitMessage(config, owner, []message.ChainConfigOption{chainIdInit, feeConfigInit, aggInit})
 		test.FailIfError(t, err)
 
 		chainTime := inbox.ChainTime{

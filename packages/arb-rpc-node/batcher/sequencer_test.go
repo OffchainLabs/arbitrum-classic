@@ -35,7 +35,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
@@ -199,10 +198,12 @@ func TestSequencerBatcher(t *testing.T) {
 	client.Commit()
 	time.Sleep(time.Second)
 
+	l2ChainId := common.RandBigInt()
+
 	batcher, err := NewSequencerBatcher(
 		ctx,
 		seqMon.Core,
-		message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)),
+		l2ChainId,
 		seqMon.Reader,
 		client,
 		big.NewInt(1),
@@ -233,7 +234,7 @@ func TestSequencerBatcher(t *testing.T) {
 		}
 	}
 
-	txs := generateTxs(t, 5, 10, message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)))
+	txs := generateTxs(t, 5, 10, l2ChainId)
 	for _, tx := range txs {
 		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
