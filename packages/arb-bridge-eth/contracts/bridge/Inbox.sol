@@ -165,38 +165,18 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             );
     }
 
-    function depositEth(address destAddr)
-        external
-        payable
-        virtual
-        override
-        onlyWhitelisted
-        returns (uint256)
-    {
-        return
-            _deliverMessage(
-                L1MessageType_L2FundedByL1,
-                destAddr,
-                abi.encodePacked(
-                    L2MessageType_unsignedContractTx,
-                    uint256(0),
-                    uint256(0),
-                    uint256(uint160(bytes20(destAddr))),
-                    msg.value
-                )
-            );
-    }
-
-    function depositEthRetryable(
+    function depositEth(
         address destAddr,
+        uint256 l2Costs,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 maxGasPrice
     ) external payable virtual override onlyWhitelisted returns (uint256) {
+        require(msg.value > l2Costs, "UNDERFLOW");
         return
             this.createRetryableTicket(
                 destAddr,
-                msg.value,
+                msg.value - l2Costs,
                 maxSubmissionCost,
                 msg.sender,
                 msg.sender,
