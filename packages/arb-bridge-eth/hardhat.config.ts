@@ -122,7 +122,7 @@ const config = {
       accounts: {
         accountsBalance: '10000000000000000000000000',
       },
-      blockGasLimit: 15000000,
+      blockGasLimit: 20000000,
       // mining: {
       //   auto: false,
       //   interval: 1000,
