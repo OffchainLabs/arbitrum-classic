@@ -94,6 +94,7 @@ func NewSequencerBatcher(
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
 	broadcaster *broadcaster.Broadcaster,
+	gasPriceUrl string,
 ) (*SequencerBatcher, error) {
 	chainTime, err := getChainTime(ctx, client)
 	if err != nil {
@@ -109,7 +110,7 @@ func NewSequencerBatcher(
 		return nil, errors.New("Transaction auth isn't for sequencer")
 	}
 
-	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, gasPriceUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -327,6 +328,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 		for i, tx := range batchTxs {
 			txHash := txHashes[i]
 			if !shouldIncludeTxResult(txResults[txHash]) {
+				resultChans[i] <- evm.HandleCallError(txResults[txHash], false)
 				continue
 			}
 			l2Msg := message.NewCompressedECDSAFromEth(tx)
@@ -360,7 +362,7 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 				if err != nil {
 					return err
 				}
-				resultChans[i] <- errors.New("transaction errored")
+				resultChans[i] <- evm.HandleCallError(txResult, false)
 				continue
 			}
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))

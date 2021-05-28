@@ -123,6 +123,7 @@ func startup() error {
 	}
 	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
 	walletFlags := cmdhelp.AddWalletFlags(flagSet)
+	gasPriceUrl := flagSet.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
 
@@ -245,7 +246,7 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, *gasPriceUrl)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}

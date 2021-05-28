@@ -37,6 +37,8 @@ struct Operation {
         }
     }
 
+    Operation(Operation&& op) = default;
+
     void marshalForProof(std::vector<unsigned char>& buf,
                          MarshalLevel marshal_level,
                          const Code& code) const;
