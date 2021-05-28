@@ -96,7 +96,8 @@ func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
 	return bytesArrayToByteSliceArray(bytes)
 }
 
-func (ac *ArbCore) DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
+func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
+	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))
 	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
 	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
 	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
@@ -107,7 +108,7 @@ func (ac *ArbCore) DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItem
 		cReorgSeqBatchItemCount = unsafeDataPointer(reorgSeqBatchItemCount)
 	}
 
-	status := C.arbCoreDeliverMessages(ac.c, previousSeqBatchAccPtr, seqBatchItemsSlice, delayedMessagesSlice, cReorgSeqBatchItemCount)
+	status := C.arbCoreDeliverMessages(ac.c, previousMessageCountPtr, previousSeqBatchAccPtr, seqBatchItemsSlice, delayedMessagesSlice, cReorgSeqBatchItemCount)
 	return status == 1
 }
 
@@ -213,11 +214,10 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	return messages, nil
 }
 
-func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int, count *big.Int) ([]inbox.SequencerBatchItem, error) {
+func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int) ([]inbox.SequencerBatchItem, error) {
 	startIndexData := math.U256Bytes(startIndex)
-	countData := math.U256Bytes(count)
 
-	result := C.arbCoreGetSequencerBatchItems(ac.c, unsafeDataPointer(startIndexData), unsafeDataPointer(countData))
+	result := C.arbCoreGetSequencerBatchItems(ac.c, unsafeDataPointer(startIndexData))
 	if result.found == 0 {
 		return nil, errors.New("failed to get messages")
 	}

@@ -121,6 +121,7 @@ void ArbCore::abortThread() {
 
 // deliverMessages sends messages to core thread
 bool ArbCore::deliverMessages(
+    const uint256_t& previous_message_count,
     const uint256_t& previous_batch_acc,
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
@@ -129,6 +130,7 @@ bool ArbCore::deliverMessages(
         return false;
     }
 
+    message_data.previous_message_count = previous_message_count;
     message_data.previous_batch_acc = previous_batch_acc;
     message_data.sequencer_batch_items = std::move(sequencer_batch_items);
     message_data.delayed_messages = std::move(delayed_messages);
@@ -980,7 +982,7 @@ rocksdb::Status ArbCore::saveSends(
 }
 
 ValueResult<std::vector<std::vector<unsigned char>>>
-ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
+ArbCore::getSequencerBatchItems(uint256_t index) const {
     ReadTransaction tx(data_storage);
 
     std::vector<unsigned char> first_key_vec;
@@ -990,7 +992,7 @@ ArbCore::getSequencerBatchItems(uint256_t index, uint256_t count) const {
     it->Seek(first_key_slice);
 
     std::vector<std::vector<unsigned char>> ret;
-    while (it->Valid() && ret.size() < count) {
+    while (it->Valid()) {
         auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
         auto value_ptr =
             reinterpret_cast<const unsigned char*>(it->value().data());
@@ -1932,7 +1934,7 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
         }
 
         if (seq_batch_items.size() > 0) {
-            uint256_t start = seq_batch_items[0].first.last_sequence_number;
+            uint256_t start = message_data.previous_message_count;
             bool checking_prev = false;
             if (start > 0) {
                 start -= 1;
@@ -1944,30 +1946,33 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             auto seq_batch_it = tx.sequencerBatchItemGetIterator();
 
             if (checking_prev) {
-                seq_batch_it->SeekForPrev(start_slice);
+                seq_batch_it->Seek(start_slice);
                 if (!seq_batch_it->status().ok()) {
                     return seq_batch_it->status();
                 }
-                if (seq_batch_it->Valid()) {
-                    auto key_ptr = reinterpret_cast<const unsigned char*>(
-                        seq_batch_it->key().data());
-                    auto value_ptr = reinterpret_cast<const unsigned char*>(
-                        seq_batch_it->value().data());
-                    auto value_end_ptr =
-                        value_ptr + seq_batch_it->value().size();
-                    auto db_item = deserializeSequencerBatchItem(
-                        extractUint256(key_ptr), value_ptr, value_end_ptr);
-
-                    if (db_item.accumulator != data.previous_batch_acc) {
-                        throw std::runtime_error("prev_batch_acc didn't match");
-                    }
-                    prev_item = db_item;
-                    seq_batch_it->Next();
-                } else {
-                    // If this was not found, this batch item is the first,
-                    // which means that the default prev_item is correct.
-                    seq_batch_it->Seek(start_slice);
+                if (!seq_batch_it->Valid()) {
+                    std::cerr << "addMessages: previous batch item not found"
+                              << std::endl;
+                    return rocksdb::Status::NotFound();
                 }
+                auto key_ptr = reinterpret_cast<const unsigned char*>(
+                    seq_batch_it->key().data());
+                auto value_ptr = reinterpret_cast<const unsigned char*>(
+                    seq_batch_it->value().data());
+                auto value_end_ptr = value_ptr + seq_batch_it->value().size();
+                auto db_item = deserializeSequencerBatchItem(
+                    extractUint256(key_ptr), value_ptr, value_end_ptr);
+
+                if (db_item.last_sequence_number != start) {
+                    throw std::runtime_error(
+                        "previous_message_count didn't fall on batch item "
+                        "boundary");
+                }
+                if (db_item.accumulator != data.previous_batch_acc) {
+                    throw std::runtime_error("prev_batch_acc didn't match");
+                }
+                prev_item = db_item;
+                seq_batch_it->Next();
             } else {
                 seq_batch_it->Seek(start_slice);
             }
@@ -2123,7 +2128,13 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
             auto& item_and_slice = seq_batch_items[i];
             auto& item = item_and_slice.first;
             uint256_t delayed_acc;
+            uint256_t expected_last_seq_num = 0;
+            if (prev_item.accumulator != 0) {
+                expected_last_seq_num = prev_item.last_sequence_number + 1;
+            }
             if (item.total_delayed_count > prev_item.total_delayed_count) {
+                expected_last_seq_num += item.total_delayed_count -
+                                         prev_item.total_delayed_count - 1;
                 if (item.sequencer_message) {
                     throw std::runtime_error(
                         "Attempted to add sequencer batch item with both "
@@ -2143,6 +2154,11 @@ rocksdb::Status ArbCore::addMessages(const ArbCore::message_data_struct& data,
                 throw std::runtime_error(
                     "Attempted to add sequencer batch item that decreases "
                     "total messages read");
+            }
+            if (item.last_sequence_number != expected_last_seq_num) {
+                throw std::runtime_error(
+                    "Attempted to add sequencer batch item with unexpected "
+                    "sequence number");
             }
             auto expected_acc = item.computeAccumulator(
                 prev_item.accumulator, prev_item.total_delayed_count,
@@ -2411,9 +2427,12 @@ ValueResult<ArbCore::logscursor_logs> ArbCore::logsCursorGetLogs(
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+    DataCursor::status_enum status = logs_cursors[cursor_index].status;
+    if (status == DataCursor::REQUESTED) {
         // No new logs yet
         return {rocksdb::Status::TryAgain(), {}};
+    } else if (status != DataCursor::READY) {
+        throw std::runtime_error("Unexpected logsCursor status " + status);
     }
 
     ReadTransaction tx(data_storage);
@@ -2435,6 +2454,7 @@ ValueResult<ArbCore::logscursor_logs> ArbCore::logsCursorGetLogs(
     logs.deleted_logs = std::move(logs_cursors[cursor_index].deleted_data);
     logs_cursors[cursor_index].data.clear();
     logs_cursors[cursor_index].deleted_data.clear();
+    logs_cursors[cursor_index].status = DataCursor::DELIVERED;
 
     return {rocksdb::Status::OK(), std::move(logs)};
 }
@@ -2448,7 +2468,7 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    if (logs_cursors[cursor_index].status != DataCursor::READY) {
+    if (logs_cursors[cursor_index].status != DataCursor::DELIVERED) {
         logs_cursors[cursor_index].error_string =
             "logsCursorConfirmReceived called at wrong state";
         std::cerr << "logsCursorConfirmReceived called at wrong state: "
@@ -2457,24 +2477,12 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         return false;
     }
 
-    if (!logs_cursors[cursor_index].data.empty()) {
-        // Still have logs to get
-        std::cerr << "logs cursor " << cursor_index
-                  << " has messages left in cursor when trying to confirm"
-                  << std::endl;
-        return false;
+    if (logs_cursors[cursor_index].deleted_data.empty()) {
+        ReadWriteTransaction tx(data_storage);
+        auto status = logsCursorSaveCurrentTotalCount(
+            tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
+        tx.commit();
     }
-
-    if (!logs_cursors[cursor_index].data.empty() ||
-        !logs_cursors[cursor_index].deleted_data.empty()) {
-        // Still have logs to get
-        return false;
-    }
-
-    ReadWriteTransaction tx(data_storage);
-    auto status = logsCursorSaveCurrentTotalCount(
-        tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
-    tx.commit();
 
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 

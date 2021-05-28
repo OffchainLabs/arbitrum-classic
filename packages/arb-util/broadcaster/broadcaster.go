@@ -19,6 +19,7 @@ package broadcaster
 import (
 	"context"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -231,23 +232,28 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 			if err == gopool.ErrScheduleTimeout {
 				netError, ok := err.(net.Error)
 				if !ok || !netError.Temporary() {
-					logger.Fatal().Err(err).Msg("error in poller.Start")
+					logger.Error().Err(err).Msg("error in poller.Start")
+					return
+				}
+				if strings.Contains(err.Error(), "file descriptor was not registered") {
+					logger.Info().Err(err).Msg("poller exiting")
+					return
 				}
 			}
 
 			// cooldown
 			delay := 5 * time.Millisecond
-			logger.Info().Msgf("accept error: %v; retrying in %s", err, delay)
+			logger.Info().Err(err).Str("delay", delay.String()).Msg("accept error")
 			time.Sleep(delay)
 		}
 
 		err = b.poller.Resume(acceptDesc)
 		if err != nil {
-			logger.Warn().Err(err).Msg("error in poller.Start")
+			logger.Warn().Err(err).Msg("error in poller.Resume")
 		}
 	})
 	if err != nil {
-		logger.Warn().Err(err).Msg("error in poller.Resume")
+		logger.Warn().Err(err).Msg("error in poller.Start")
 	}
 
 	b.broadcasterStarted = true

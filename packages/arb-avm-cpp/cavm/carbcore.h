@@ -30,6 +30,7 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr);
 char* arbCoreMessagesClearError(CArbCore* arbcore_ptr);
 
 int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
+                           void* previous_message_count_ptr,
                            void* previous_inbox_acc_ptr,
                            ByteSliceArray sequencer_batch_items_slice,
                            ByteSliceArray delayed_messages_slice,
@@ -56,8 +57,7 @@ ByteSliceArrayResult arbCoreGetMessages(CArbCore* arbcore_ptr,
                                         const void* count_ptr);
 
 ByteSliceArrayResult arbCoreGetSequencerBatchItems(CArbCore* arbcore_ptr,
-                                                   const void* start_index_ptr,
-                                                   const void* count_ptr);
+                                                   const void* start_index_ptr);
 
 Uint256Result arbCoreGetSequencerBlockNumberAt(CArbCore* arbcore_ptr,
                                                const void* seq_num_ptr);
