@@ -26,22 +26,22 @@ import "./interfaces/IBridge.sol";
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
+import "../libraries/Cloneable.sol";
 
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract Outbox is IOutbox {
+contract Outbox is IOutbox, Cloneable {
     using BytesLib for bytes;
 
     bytes1 internal constant MSG_ROOT = 0;
 
     uint8 internal constant SendType_sendTxToL1 = 3;
 
-    address rollup;
-    IBridge bridge;
+    address public rollup;
+    IBridge public bridge;
 
-    // ICloneable outboxEntryTemplate;
-    UpgradeableBeacon beacon;
+    UpgradeableBeacon public beacon;
     OutboxEntry[] public outboxes;
 
     // Note, these variables are set and then wiped during a single transaction.
@@ -56,6 +56,7 @@ contract Outbox is IOutbox {
         require(rollup == address(0), "ALREADY_INIT");
         rollup = _rollup;
         bridge = _bridge;
+
         address outboxEntryTemplate = address(new OutboxEntry());
         beacon = new UpgradeableBeacon(outboxEntryTemplate);
         beacon.transferOwnership(_rollup);
