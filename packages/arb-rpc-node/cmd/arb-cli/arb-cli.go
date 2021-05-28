@@ -40,13 +40,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
@@ -197,15 +195,6 @@ func createChain(rollupCreator ethcommon.Address) error {
 	sequencerDelayBlocks := big.NewInt(6545)
 	sequencerDelaySeconds := big.NewInt(86400)
 
-	opts := []message.ChainConfigOption{
-		message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(sequencer)},
-	}
-	// Junk data other than opts since it's ignored
-	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), opts)
-	if err != nil {
-		return err
-	}
-
 	tx, err := creator.CreateRollup(
 		config.auth,
 		initialMachine.Hash(),
@@ -218,7 +207,7 @@ func createChain(rollupCreator ethcommon.Address) error {
 		sequencer,
 		sequencerDelayBlocks,
 		sequencerDelaySeconds,
-		init.ExtraConfig,
+		nil,
 	)
 
 	if err != nil {
