@@ -5,6 +5,7 @@ pragma solidity ^0.6.11;
 import "../Rollup.sol";
 import "./IRollupFacets.sol";
 import "../../bridge/interfaces/IOutbox.sol";
+import "../../libraries/Whitelist.sol";
 
 contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /**
@@ -184,6 +185,22 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     {
         challengeExecutionBisectionDegree = newChallengeExecutionBisectionDegree;
         emit OwnerFunctionCalled(16);
+    }
+
+    /**
+     * @notice Updates a whitelist controlled by the rollup
+     * @dev setting the newWhitelist to address(0) disables it for consumers
+     * @param whitelist old whitelist to be deprecated
+     * @param newWhitelist new whitelist to be used
+     * @param targets whitelist consumers to be triggered
+     */
+    function updateWhitelist(
+        address whitelist,
+        address newWhitelist,
+        address[] memory targets
+    ) external override {
+        Whitelist(whitelist).triggerConsumers(newWhitelist, targets);
+        emit OwnerFunctionCalled(17);
     }
 
     /*

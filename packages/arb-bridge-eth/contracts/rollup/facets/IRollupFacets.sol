@@ -143,4 +143,17 @@ interface IRollupAdmin {
      */
     function setChallengeExecutionBisectionDegree(uint256 newChallengeExecutionBisectionDegree)
         external;
+
+    /**
+     * @notice Updates a whitelist controlled by the rollup
+     * @dev setting the newWhitelist to address(0) disables it for consumers
+     * @param whitelist old whitelist to be deprecated
+     * @param newWhitelist new whitelist to be used
+     * @param targets whitelist consumers to be triggered
+     */
+    function updateWhitelist(
+        address whitelist,
+        address newWhitelist,
+        address[] memory targets
+    ) external;
 }
