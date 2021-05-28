@@ -50,19 +50,19 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(ctx context.Context, dir string, arbosPath string, rollupAddress, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
+func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
 	mon, err := monitor.NewMonitor(dir, arbosPath)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
-	backendCore, err := NewBackendCore(ctx, mon.Core, message.ChainAddressToID(rollupAddress))
+	backendCore, err := NewBackendCore(ctx, mon.Core, chainId)
 	if err != nil {
 		mon.Close()
 		return nil, nil, nil, nil, err
 	}
 
-	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond)
 	if err != nil {
 		mon.Close()
 		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
@@ -72,7 +72,7 @@ func NewDevNode(ctx context.Context, dir string, arbosPath string, rollupAddress
 		db.Close()
 		mon.Close()
 	}
-	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
+	signer := types.NewEIP155Signer(chainId)
 	l1 := NewL1Emulator(initialL1Height)
 	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000))
 
@@ -430,7 +430,7 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 		return errors.Wrap(err, "error connecting to arb owner")
 	}
 
-	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator)
+	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator, true)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}

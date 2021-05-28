@@ -29,8 +29,12 @@ func TestSequencerGasUsage(t *testing.T) {
 
 	evBridgeAddr, _, evBridge, err := ethbridgetestcontracts.DeployRollupEventBridge(auth, clnt)
 	test.FailIfError(t, err)
+	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(auth, clnt)
+	test.FailIfError(t, err)
 	clnt.Commit()
 
+	_, err = rollup.SetMock(auth, big.NewInt(150), big.NewInt(9000))
+	test.FailIfError(t, err)
 	_, err = evBridge.Initialize(auth, delayedInboxAddr, auth.From)
 	test.FailIfError(t, err)
 	clnt.Commit()
@@ -56,7 +60,7 @@ func TestSequencerGasUsage(t *testing.T) {
 	test.FailIfError(t, err)
 	clnt.Commit()
 
-	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, big.NewInt(150), big.NewInt(9000))
+	_, err = seqInbox.Initialize(auth, delayedInboxAddr, auth.From, rollupAddr)
 	test.FailIfError(t, err)
 	clnt.Commit()
 

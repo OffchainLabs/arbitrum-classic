@@ -22,12 +22,16 @@ import "./Node.sol";
 import "./INodeFactory.sol";
 
 import "../libraries/CloneFactory.sol";
+import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
 contract NodeFactory is CloneFactory, INodeFactory {
-    ICloneable public templateContract;
+    UpgradeableBeacon public beacon;
 
     constructor() public {
-        templateContract = new Node();
+        address templateContract = address(new Node());
+        beacon = new UpgradeableBeacon(templateContract);
+        beacon.transferOwnership(msg.sender);
     }
 
     function createNode(
@@ -37,7 +41,7 @@ contract NodeFactory is CloneFactory, INodeFactory {
         uint256 _prev,
         uint256 _deadlineBlock
     ) external override returns (address) {
-        address clone = createClone(templateContract);
+        address clone = address(new BeaconProxy(address(beacon), ""));
         Node(clone).initialize(
             msg.sender,
             _stateHash,

@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -77,18 +76,19 @@ func SetupBatcher(
 	ctx context.Context,
 	client ethutils.EthClient,
 	rollupAddress common.Address,
+	l2ChainId *big.Int,
 	db *txdb.TxDB,
 	maxBatchTime time.Duration,
 	batcherMode BatcherMode,
 	dataSigner func([]byte) ([]byte, error),
 	broadcasterSettings broadcaster.Settings,
+	gasPriceUrl string,
 ) (batcher.TransactionBatcher, error) {
-	l2ChainID := message.ChainAddressToID(rollupAddress)
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
 		return batcher.NewForwarder(ctx, batcherMode.NodeURL)
 	case StatelessBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -96,9 +96,9 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatelessBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime), nil
+		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime), nil
 	case StatefulBatcherMode:
-		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth)
+		auth, err := ethbridge.NewTransactAuth(ctx, client, batcherMode.Auth, gasPriceUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -106,9 +106,9 @@ func SetupBatcher(
 		if err != nil {
 			return nil, err
 		}
-		return batcher.NewStatefulBatcher(ctx, db, l2ChainID, client, inbox, maxBatchTime)
+		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, client, inbox, maxBatchTime)
 	case SequencerBatcherMode:
-		rollup, err := ethbridgecontracts.NewRollup(rollupAddress.ToEthAddress(), client)
+		rollup, err := ethbridgecontracts.NewRollupUserFacet(rollupAddress.ToEthAddress(), client)
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func SetupBatcher(
 		seqBatcher, err := batcher.NewSequencerBatcher(
 			ctx,
 			batcherMode.Core,
-			l2ChainID,
+			l2ChainId,
 			batcherMode.InboxReader,
 			client,
 			batcherMode.DelayedMessagesTargetDelay,
@@ -134,6 +134,7 @@ func SetupBatcher(
 			batcherMode.Auth,
 			dataSigner,
 			feedBroadcaster,
+			gasPriceUrl,
 		)
 		if err != nil {
 			return nil, err

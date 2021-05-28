@@ -220,7 +220,6 @@ type sequencerBatchOriginRef struct {
 	afterCount  *big.Int
 	afterAcc    common.Hash
 	delayedAcc  common.Hash
-	sequencer   common.Address
 }
 
 func (b sequencerBatchOriginRef) GetBatchIndex() *big.Int {
@@ -247,11 +246,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 	if len(logs) == 0 {
 		return nil, nil
 	}
-	sequencerEthAddr, err := r.con.Sequencer(&bind.CallOpts{Context: ctx})
-	if err != nil {
-		return nil, err
-	}
-	sequencer := common.NewAddressFromEth(sequencerEthAddr)
 	refs := make([]SequencerBatchRef, 0, len(logs))
 	for _, log := range logs {
 		if log.Topics[0] == sequencerBatchDeliveredID {
@@ -270,10 +264,10 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				AfterCount:               parsed.NewMessageCount,
 				AfterAcc:                 parsed.AfterAcc,
 				DelayedAcc:               parsed.DelayedAcc,
-				Sequencer:                sequencer,
+				Sequencer:                common.NewAddressFromEth(parsed.Sequencer),
 				ChainTime: inbox.ChainTime{
-					BlockNum:  common.NewTimeBlocks(parsed.L1BlockNumber),
-					Timestamp: parsed.Timestamp,
+					BlockNum:  common.NewTimeBlocks(parsed.L1BlockNumberAndTimestamp[0]),
+					Timestamp: parsed.L1BlockNumberAndTimestamp[1],
 				},
 			})
 		} else if log.Topics[0] == sequencerBatchDeliveredFromOriginID {
@@ -290,7 +284,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				afterCount:  parsed.NewMessageCount,
 				afterAcc:    parsed.AfterAcc,
 				delayedAcc:  parsed.DelayedAcc,
-				sequencer:   sequencer,
 			})
 		} else if log.Topics[0] == delayedInboxForcedID {
 			parsed, err := r.con.ParseDelayedInboxForced(log)
@@ -314,7 +307,6 @@ func (r *SequencerInboxWatcher) logsToBatchRefs(ctx context.Context, logs []type
 				AfterCount:               parsed.NewMessageCount,
 				AfterAcc:                 parsed.AfterAccAndDelayed[0],
 				DelayedAcc:               parsed.AfterAccAndDelayed[1],
-				Sequencer:                sequencer,
 				ChainTime:                txChainTime,
 			})
 		} else {
@@ -341,6 +333,10 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		return SequencerBatch{}, err
 	}
 
+	sender, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
+	if err != nil {
+		return SequencerBatch{}, err
+	}
 	return SequencerBatch{
 		transactionsData:         args["transactions"].([]byte),
 		transactionLengths:       args["lengths"].([]*big.Int),
@@ -350,7 +346,7 @@ func (r *SequencerInboxWatcher) ResolveBatchRef(ctx context.Context, genericRef 
 		AfterCount:               ref.afterCount,
 		AfterAcc:                 ref.afterAcc,
 		DelayedAcc:               ref.delayedAcc,
-		Sequencer:                ref.sequencer,
+		Sequencer:                common.NewAddressFromEth(sender),
 		ChainTime: inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocks(args["l1BlockNumber"].(*big.Int)),
 			Timestamp: args["timestamp"].(*big.Int),

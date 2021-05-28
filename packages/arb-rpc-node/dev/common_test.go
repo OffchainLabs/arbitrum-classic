@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 
@@ -81,10 +82,15 @@ func NewTestDevNode(
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
 	agg := common.RandAddress()
+	chainId := big.NewInt(42161)
 	for i := range config {
 		opt := config[len(config)-1-i]
 		if aggConfig, ok := opt.(message.DefaultAggConfig); ok {
 			agg = aggConfig.Aggregator
+			break
+		}
+		if chainIdConfig, ok := opt.(message.ChainIDConfig); ok {
+			chainId = chainIdConfig.ChainId
 			break
 		}
 	}
@@ -93,7 +99,7 @@ func NewTestDevNode(
 		ctx,
 		t.TempDir(),
 		arbosPath,
-		rollupAddress,
+		chainId,
 		agg,
 		0,
 	)
@@ -113,6 +119,6 @@ func NewTestDevNode(
 		cancelDevNode()
 		cancel()
 	}
-	srv := aggregator.NewServer(backend, rollupAddress, db)
+	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
 	return backend, db, srv, closeFunc
 }

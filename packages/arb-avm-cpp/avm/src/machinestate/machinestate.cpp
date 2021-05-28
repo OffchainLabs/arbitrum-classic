@@ -452,6 +452,10 @@ const Operation& MachineState::loadCurrentOperation() const {
 
 uint256_t MachineState::nextGasCost() const {
     auto& op = loadCurrentOperation();
+    return gasCost(op);
+}
+
+uint256_t MachineState::gasCost(const Operation& op) const {
     auto base_gas = instructionGasCosts()[static_cast<size_t>(op.opcode)];
     if (op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
@@ -507,7 +511,7 @@ BlockReason MachineState::runOne() {
         }
 
         uint256_t gas_cost =
-            is_valid_instruction ? nextGasCost() : error_gas_cost;
+            is_valid_instruction ? gasCost(op) : error_gas_cost;
 
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning

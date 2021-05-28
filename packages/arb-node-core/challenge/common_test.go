@@ -202,6 +202,8 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	_, _, tester, err := ethbridgetestcontracts.DeployChallengeTester(deployer, client, []ethcommon.Address{osp1Addr, osp2Addr, osp3Addr})
 	test.FailIfError(t, err)
+	rollupAddr, _, rollup, err := ethbridgetestcontracts.DeployRollupMock(deployer, client)
+	test.FailIfError(t, err)
 
 	delayedBridgeAddr, _, delayedBridge, err := ethbridgecontracts.DeployBridge(deployer, client)
 	test.FailIfError(t, err)
@@ -212,11 +214,16 @@ func initializeChallengeTest(
 
 	_, err = delayedBridge.SetInbox(deployer, deployer.From, true)
 	test.FailIfError(t, err)
+
+	maxDelayBlocks := big.NewInt(60)
+	maxDelaySeconds := big.NewInt(900)
+	_, err = rollup.SetMock(deployer, maxDelayBlocks, maxDelaySeconds)
+	test.FailIfError(t, err)
 	client.Commit()
 
 	init := makeInit()
-	rollup := common.RandAddress()
-	tx, err := delayedBridge.DeliverMessageToInbox(deployer, uint8(init.Type()), rollup.ToEthAddress(), hashing.SoliditySHA3(init.AsData()))
+
+	tx, err := delayedBridge.DeliverMessageToInbox(deployer, uint8(init.Type()), rollupAddr, hashing.SoliditySHA3(init.AsData()))
 	test.FailIfError(t, err)
 	client.Commit()
 	initReceipt, err := clnt.TransactionReceipt(context.Background(), tx.Hash())
@@ -225,7 +232,7 @@ func initializeChallengeTest(
 	test.FailIfError(t, err)
 	initMsg := message.NewInboxMessage(
 		init,
-		rollup,
+		common.NewAddressFromEth(rollupAddr),
 		big.NewInt(0),
 		tx.GasPrice(),
 		inbox.ChainTime{
@@ -234,12 +241,10 @@ func initializeChallengeTest(
 		},
 	)
 
-	maxDelayBlocks := big.NewInt(60)
-	maxDelaySeconds := big.NewInt(900)
 	sequencerBridgeAddr, _, sequencerBridge, err := ethbridgecontracts.DeploySequencerInbox(deployer, client)
 	test.FailIfError(t, err)
 	client.Commit()
-	_, err = sequencerBridge.Initialize(deployer, delayedBridgeAddr, sequencer.From, maxDelayBlocks, maxDelaySeconds)
+	_, err = sequencerBridge.Initialize(deployer, delayedBridgeAddr, sequencer.From, rollupAddr)
 	test.FailIfError(t, err)
 	client.Commit()
 	latestHeader, err := client.HeaderByNumber(context.Background(), nil)
@@ -277,12 +282,12 @@ func initializeChallengeTest(
 	_, err = validatorCon2.Initialize(challenger)
 	test.FailIfError(t, err)
 
-	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter)
+	asserterAuth, err := ethbridge.NewTransactAuth(ctx, client, asserter, "")
 	test.FailIfError(t, err)
 	asserterWallet, err := ethbridge.NewValidator(asserterWalletAddress, ethcommon.Address{}, client, asserterAuth)
 	test.FailIfError(t, err)
 
-	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger)
+	challengerAuth, err := ethbridge.NewTransactAuth(ctx, client, challenger, "")
 	test.FailIfError(t, err)
 	challengerWallet, err := ethbridge.NewValidator(challengerWalletAddress, ethcommon.Address{}, client, challengerAuth)
 	test.FailIfError(t, err)

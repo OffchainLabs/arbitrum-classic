@@ -23,9 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}) (*rpc.Server, error) {
@@ -53,7 +51,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
-	net := &Net{chainId: message.ChainAddressToID(common.NewAddressFromEth(server.GetChainAddress())).Uint64()}
+	net := &Net{chainId: server.ChainId().Uint64()}
 	if err := s.RegisterName("net", net); err != nil {
 		return nil, err
 	}

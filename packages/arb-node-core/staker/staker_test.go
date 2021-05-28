@@ -143,7 +143,6 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	arbGasSpeedLimitPerBlock := maxGasPerNode
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
-	var owner common.Address
 	sequencerDelayBlocks := big.NewInt(60)
 	sequencerDelaySeconds := big.NewInt(900)
 	var extraConfig []byte
@@ -152,6 +151,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	auth := bind.NewKeyedTransactor(pks[0])
 	auth2 := bind.NewKeyedTransactor(pks[1])
 	seqAuth := bind.NewKeyedTransactor(pks[2])
+	ownerAuth := bind.NewKeyedTransactor(pks[2])
 	sequencer := common.NewAddressFromEth(seqAuth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
@@ -165,7 +165,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		arbGasSpeedLimitPerBlock,
 		baseStake,
 		stakeToken,
-		owner,
+		common.NewAddressFromEth(ownerAuth.From),
 		sequencer,
 		sequencerDelayBlocks,
 		sequencerDelaySeconds,
@@ -189,12 +189,18 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	client.Commit()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	rollupAdmin, err := ethbridgecontracts.NewRollupAdminFacet(rollupAddr, client)
+	test.FailIfError(t, err)
+	_, err = rollupAdmin.SetValidator(ownerAuth, []ethcommon.Address{validatorAddress, validatorAddress2}, []bool{true, true})
+	test.FailIfError(t, err)
+	client.Commit()
+
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
 	test.FailIfError(t, err)
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	test.FailIfError(t, err)
 
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
 	test.FailIfError(t, err)
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
@@ -238,7 +244,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	)
 
 	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, batchItem.Accumulator)
-	_, err = seqInbox.AddSequencerL2Batch(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
+	_, err = seqInbox.AddSequencerL2BatchFromOrigin(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
 	test.FailIfError(t, err)
 	client.Commit()
 

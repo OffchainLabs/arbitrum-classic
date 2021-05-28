@@ -42,7 +42,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -93,6 +92,7 @@ func startup() error {
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
 	fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
+	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	//go http.ListenAndServe("localhost:6060", nil)
 
 	err := fs.Parse(os.Args[1:])
@@ -199,13 +199,14 @@ func startup() error {
 	rollupAddress := common.NewAddressFromEth(createdEvent.RollupAddress)
 	inboxAddress := createdEvent.InboxAddress
 
-	l2OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, message.ChainAddressToID(rollupAddress))
+	l2ChainId := new(big.Int).SetUint64(*chainId64)
+	l2OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l2ChainId)
 	if err != nil {
 		return err
 	}
 
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
-	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Str("chainid", message.ChainAddressToID(rollupAddress).String()).Msg("Launching arbitrum node")
+	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Str("chainid", l2ChainId.String()).Msg("Launching arbitrum node")
 
 	dbPath, err := ioutil.TempDir(".", "arbitrum")
 	if err != nil {
@@ -289,7 +290,7 @@ func startup() error {
 		ClientNoResponseTimeout: 15 * time.Second,
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupAddress, 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -303,17 +304,19 @@ func startup() error {
 		ctx,
 		ethclint,
 		rollupAddress,
+		l2ChainId,
 		db,
 		time.Duration(5)*time.Second,
 		batcherMode,
 		signer,
 		broadcasterSettings,
+		"",
 	)
 	if err != nil {
 		return err
 	}
 
-	srv := aggregator.NewServer(batch, rollupAddress, db)
+	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
 
 	inboxCon, err := ethbridgecontracts.NewInbox(inboxAddress, ethclint)
 	if err != nil {
