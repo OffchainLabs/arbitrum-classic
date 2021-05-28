@@ -211,6 +211,7 @@ func TestSequencerBatcher(t *testing.T) {
 		auth,
 		dummyDataSigner,
 		nil,
+		"",
 	)
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true

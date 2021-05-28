@@ -189,12 +189,12 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	client.Commit()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
 	test.FailIfError(t, err)
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	test.FailIfError(t, err)
 
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2)
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
 	test.FailIfError(t, err)
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)

@@ -308,6 +308,7 @@ func startup() error {
 		batcherMode,
 		signer,
 		broadcasterSettings,
+		"",
 	)
 	if err != nil {
 		return err
