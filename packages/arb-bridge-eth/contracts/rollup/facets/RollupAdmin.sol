@@ -205,12 +205,29 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     }
 
     /**
+     * @notice Updates a whitelist's entries
+     * @dev user at position i will be assigned value i
+     * @param whitelist whitelist to be updated
+     * @param user users to be updated in the whitelist
+     * @param val if user is or not allowed in the whitelist
+     */
+    function setWhitelist(
+        address whitelist,
+        address[] memory user,
+        bool[] memory val
+    ) external override {
+        require(user.length == val.length, "INVALID_INPUT");
+        Whitelist(whitelist).setWhitelist(user, val);
+        emit OwnerFunctionCalled(18);
+    }
+
+    /**
      * @notice Updates a sequencer address at the sequencer inbox
      * @param newSequencer new sequencer address to be used
      */
     function setSequencer(address newSequencer) external override {
         ISequencerInbox(sequencerBridge).setSequencer(newSequencer);
-        emit OwnerFunctionCalled(18);
+        emit OwnerFunctionCalled(19);
     }
 
     /*
