@@ -65,9 +65,7 @@ func NewServer(
 }
 
 func (s *Server) ChainId() hexutil.Uint64 {
-	return hexutil.Uint64(message.ChainAddressToID(
-		arbcommon.NewAddressFromEth(s.srv.GetChainAddress()),
-	).Uint64())
+	return hexutil.Uint64(s.srv.ChainId().Uint64())
 }
 
 func (s *Server) GasPrice() (*hexutil.Big, error) {

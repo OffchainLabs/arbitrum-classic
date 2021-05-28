@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
@@ -35,10 +34,7 @@ var (
 	withdrawEthABI  abi.Method
 	getStorageAtABI abi.Method
 	arbOSVersionABI abi.Method
-
-	ethWithdrawal ethcommon.Hash
-
-	arbsysConn *bind.BoundContract
+	chainIdABI      abi.Method
 
 	L2ToL1TransactionID ethcommon.Hash
 )
@@ -53,11 +49,9 @@ func init() {
 	withdrawEthABI = arbsys.Methods["withdrawEth"]
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
 	arbOSVersionABI = arbsys.Methods["arbOSVersion"]
+	chainIdABI = arbsys.Methods["arbChainID"]
 
-	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
 	L2ToL1TransactionID = arbsys.Events["L2ToL1Transaction"].ID
-
-	arbsysConn = bind.NewBoundContract(ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
 
 func TransactionCountData(address common.Address) []byte {
@@ -102,6 +96,22 @@ func ArbOSVersionData() []byte {
 
 func ParseArbOSVersionResult(data []byte) (*big.Int, error) {
 	vals, err := arbOSVersionABI.Outputs.UnpackValues(data)
+	if err != nil {
+		return nil, err
+	}
+	val, ok := vals[0].(*big.Int)
+	if !ok {
+		return nil, errors.New("unexpected tx result")
+	}
+	return val, nil
+}
+
+func ChainIdData() []byte {
+	return makeFuncData(chainIdABI)
+}
+
+func ParseChainIdResult(data []byte) (*big.Int, error) {
+	vals, err := chainIdABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}

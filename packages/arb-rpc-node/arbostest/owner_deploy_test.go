@@ -25,7 +25,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 	test.FailIfError(t, err)
 	txSender := crypto.PubkeyToAddress(privkey.PublicKey)
 	connAddress := crypto.CreateAddress(txSender, 0)
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	signer := types.NewEIP155Signer(chainId)
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -63,7 +63,8 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 		}
 
 		ib := &InboxBuilder{}
-		ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+		config := []message.ChainConfigOption{message.ChainIDConfig{ChainId: chainId}}
+		ib.AddMessage(initMsg(t, config), chain, big.NewInt(0), chainTime)
 		ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
 		results, snap := runTxAssertion(t, ib.Messages)
 		allResultsSucceeded(t, results)
