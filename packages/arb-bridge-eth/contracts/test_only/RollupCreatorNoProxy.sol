@@ -33,6 +33,8 @@ import "../rollup/RollupLib.sol";
 import "../rollup/facets/RollupUser.sol";
 import "../rollup/facets/RollupAdmin.sol";
 
+import "../libraries/Whitelist.sol";
+
 contract RollupCreatorNoProxy {
     event RollupCreated(address rollupAddress);
 
@@ -84,6 +86,7 @@ contract RollupCreatorNoProxy {
         Inbox inbox;
         RollupEventBridge rollupEventBridge;
         Outbox outbox;
+        Whitelist whitelist;
     }
 
     function createBridge(address rollup, address sequencer)
@@ -103,16 +106,20 @@ contract RollupCreatorNoProxy {
             frame.inbox = new Inbox();
             frame.rollupEventBridge = new RollupEventBridge();
             frame.outbox = new Outbox();
+            frame.whitelist = new Whitelist();
         }
 
         frame.delayedBridge.initialize();
         frame.sequencerInbox.initialize(IBridge(frame.delayedBridge), sequencer, rollup);
-        frame.inbox.initialize(IBridge(frame.delayedBridge));
+        frame.inbox.initialize(IBridge(frame.delayedBridge), address(frame.whitelist));
         frame.rollupEventBridge.initialize(address(frame.delayedBridge), rollup);
         frame.outbox.initialize(rollup, IBridge(frame.delayedBridge));
 
         frame.delayedBridge.setInbox(address(frame.inbox), true);
         frame.delayedBridge.transferOwnership(rollup);
+
+        // TODO: should owner be the rollup or msg.sender?
+        frame.whitelist.setOwner(rollup);
 
         return (
             frame.delayedBridge,
