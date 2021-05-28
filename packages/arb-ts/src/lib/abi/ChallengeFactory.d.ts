@@ -22,15 +22,12 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ChallengeFactoryInterface extends ethers.utils.Interface {
   functions: {
-    'challengeTemplate()': FunctionFragment
+    'beacon()': FunctionFragment
     'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'executors(uint256)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'challengeTemplate',
-    values?: undefined
-  ): string
+  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'createChallenge',
     values: [
@@ -50,10 +47,7 @@ interface ChallengeFactoryInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
 
-  decodeFunctionResult(
-    functionFragment: 'challengeTemplate',
-    data: BytesLike
-  ): Result
+  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'createChallenge',
     data: BytesLike
@@ -77,9 +71,9 @@ export class ChallengeFactory extends Contract {
   interface: ChallengeFactoryInterface
 
   functions: {
-    challengeTemplate(overrides?: CallOverrides): Promise<[string]>
+    beacon(overrides?: CallOverrides): Promise<[string]>
 
-    'challengeTemplate()'(overrides?: CallOverrides): Promise<[string]>
+    'beacon()'(overrides?: CallOverrides): Promise<[string]>
 
     createChallenge(
       _resultReceiver: string,
@@ -115,9 +109,9 @@ export class ChallengeFactory extends Contract {
     ): Promise<[string]>
   }
 
-  challengeTemplate(overrides?: CallOverrides): Promise<string>
+  beacon(overrides?: CallOverrides): Promise<string>
 
-  'challengeTemplate()'(overrides?: CallOverrides): Promise<string>
+  'beacon()'(overrides?: CallOverrides): Promise<string>
 
   createChallenge(
     _resultReceiver: string,
@@ -153,9 +147,9 @@ export class ChallengeFactory extends Contract {
   ): Promise<string>
 
   callStatic: {
-    challengeTemplate(overrides?: CallOverrides): Promise<string>
+    beacon(overrides?: CallOverrides): Promise<string>
 
-    'challengeTemplate()'(overrides?: CallOverrides): Promise<string>
+    'beacon()'(overrides?: CallOverrides): Promise<string>
 
     createChallenge(
       _resultReceiver: string,
@@ -194,9 +188,9 @@ export class ChallengeFactory extends Contract {
   filters: {}
 
   estimateGas: {
-    challengeTemplate(overrides?: CallOverrides): Promise<BigNumber>
+    beacon(overrides?: CallOverrides): Promise<BigNumber>
 
-    'challengeTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
+    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
 
     createChallenge(
       _resultReceiver: string,
@@ -233,11 +227,9 @@ export class ChallengeFactory extends Contract {
   }
 
   populateTransaction: {
-    challengeTemplate(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'challengeTemplate()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
+    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     createChallenge(
       _resultReceiver: string,

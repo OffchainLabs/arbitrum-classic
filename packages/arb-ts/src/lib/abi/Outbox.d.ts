@@ -22,6 +22,8 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface OutboxInterface extends ethers.utils.Interface {
   functions: {
+    'beacon()': FunctionFragment
+    'bridge()': FunctionFragment
     'calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
     'calculateMerkleRoot(bytes32[],uint256,bytes32)': FunctionFragment
     'executeTransaction(uint256,bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)': FunctionFragment
@@ -34,8 +36,11 @@ interface OutboxInterface extends ethers.utils.Interface {
     'outboxes(uint256)': FunctionFragment
     'outboxesLength()': FunctionFragment
     'processOutgoingMessages(bytes,uint256[])': FunctionFragment
+    'rollup()': FunctionFragment
   }
 
+  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
+  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'calculateItemHash',
     values: [
@@ -100,7 +105,10 @@ interface OutboxInterface extends ethers.utils.Interface {
     functionFragment: 'processOutgoingMessages',
     values: [BytesLike, BigNumberish[]]
   ): string
+  encodeFunctionData(functionFragment: 'rollup', values?: undefined): string
 
+  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateItemHash',
     data: BytesLike
@@ -137,6 +145,7 @@ interface OutboxInterface extends ethers.utils.Interface {
     functionFragment: 'processOutgoingMessages',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'rollup', data: BytesLike): Result
 
   events: {
     'OutBoxTransactionExecuted(address,address,uint256,uint256)': EventFragment
@@ -161,6 +170,14 @@ export class Outbox extends Contract {
   interface: OutboxInterface
 
   functions: {
+    beacon(overrides?: CallOverrides): Promise<[string]>
+
+    'beacon()'(overrides?: CallOverrides): Promise<[string]>
+
+    bridge(overrides?: CallOverrides): Promise<[string]>
+
+    'bridge()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateItemHash(
       l2Sender: string,
       destAddr: string,
@@ -279,7 +296,19 @@ export class Outbox extends Contract {
       sendLengths: BigNumberish[],
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    rollup(overrides?: CallOverrides): Promise<[string]>
+
+    'rollup()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  beacon(overrides?: CallOverrides): Promise<string>
+
+  'beacon()'(overrides?: CallOverrides): Promise<string>
+
+  bridge(overrides?: CallOverrides): Promise<string>
+
+  'bridge()'(overrides?: CallOverrides): Promise<string>
 
   calculateItemHash(
     l2Sender: string,
@@ -400,7 +429,19 @@ export class Outbox extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  rollup(overrides?: CallOverrides): Promise<string>
+
+  'rollup()'(overrides?: CallOverrides): Promise<string>
+
   callStatic: {
+    beacon(overrides?: CallOverrides): Promise<string>
+
+    'beacon()'(overrides?: CallOverrides): Promise<string>
+
+    bridge(overrides?: CallOverrides): Promise<string>
+
+    'bridge()'(overrides?: CallOverrides): Promise<string>
+
     calculateItemHash(
       l2Sender: string,
       destAddr: string,
@@ -519,6 +560,10 @@ export class Outbox extends Contract {
       sendLengths: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<void>
+
+    rollup(overrides?: CallOverrides): Promise<string>
+
+    'rollup()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -538,6 +583,14 @@ export class Outbox extends Contract {
   }
 
   estimateGas: {
+    beacon(overrides?: CallOverrides): Promise<BigNumber>
+
+    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    bridge(overrides?: CallOverrides): Promise<BigNumber>
+
+    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateItemHash(
       l2Sender: string,
       destAddr: string,
@@ -656,9 +709,21 @@ export class Outbox extends Contract {
       sendLengths: BigNumberish[],
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    rollup(overrides?: CallOverrides): Promise<BigNumber>
+
+    'rollup()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateItemHash(
       l2Sender: string,
       destAddr: string,
@@ -782,5 +847,9 @@ export class Outbox extends Contract {
       sendLengths: BigNumberish[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    rollup(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'rollup()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

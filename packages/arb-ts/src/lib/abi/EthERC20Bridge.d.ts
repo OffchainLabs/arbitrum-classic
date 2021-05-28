@@ -39,6 +39,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'setOwner(address)': FunctionFragment
     'transferExitAndCall(address,address,uint256,uint256,address,bytes)': FunctionFragment
     'updateWhitelistSource(address)': FunctionFragment
+    'whitelist()': FunctionFragment
     'withdrawFromL2(uint256,address,address,uint256)': FunctionFragment
   }
 
@@ -105,6 +106,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     functionFragment: 'updateWhitelistSource',
     values: [string]
   ): string
+  encodeFunctionData(functionFragment: 'whitelist', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'withdrawFromL2',
     values: [BigNumberish, string, string, BigNumberish]
@@ -159,6 +161,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     functionFragment: 'updateWhitelistSource',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'withdrawFromL2',
     data: BytesLike
@@ -168,6 +171,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
     'ActivateCustomToken(uint256,address,address)': EventFragment
     'DeployToken(uint256,address)': EventFragment
     'DepositToken(address,address,uint256,uint256,address)': EventFragment
+    'WhitelistSourceUpdated(address)': EventFragment
     'WithdrawExecuted(address,address,address,uint256,uint256)': EventFragment
     'WithdrawRedirected(address,address,address,uint256,uint256,bool)': EventFragment
   }
@@ -175,6 +179,7 @@ interface EthERC20BridgeInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'ActivateCustomToken'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'DeployToken'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'DepositToken'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawExecuted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
 }
@@ -389,6 +394,10 @@ export class EthERC20Bridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    whitelist(overrides?: CallOverrides): Promise<[string]>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<[string]>
+
     withdrawFromL2(
       exitNum: BigNumberish,
       erc20: string,
@@ -592,6 +601,10 @@ export class EthERC20Bridge extends Contract {
     newSource: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
+
+  whitelist(overrides?: CallOverrides): Promise<string>
+
+  'whitelist()'(overrides?: CallOverrides): Promise<string>
 
   withdrawFromL2(
     exitNum: BigNumberish,
@@ -807,6 +820,10 @@ export class EthERC20Bridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    whitelist(overrides?: CallOverrides): Promise<string>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<string>
+
     withdrawFromL2(
       exitNum: BigNumberish,
       erc20: string,
@@ -843,6 +860,8 @@ export class EthERC20Bridge extends Contract {
       value: null,
       tokenAddress: string | null
     ): EventFilter
+
+    WhitelistSourceUpdated(newSource: null): EventFilter
 
     WithdrawExecuted(
       initialDestination: string | null,
@@ -1051,6 +1070,10 @@ export class EthERC20Bridge extends Contract {
       newSource: string,
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    whitelist(overrides?: CallOverrides): Promise<BigNumber>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<BigNumber>
 
     withdrawFromL2(
       exitNum: BigNumberish,
@@ -1271,6 +1294,10 @@ export class EthERC20Bridge extends Contract {
       newSource: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    whitelist(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     withdrawFromL2(
       exitNum: BigNumberish,

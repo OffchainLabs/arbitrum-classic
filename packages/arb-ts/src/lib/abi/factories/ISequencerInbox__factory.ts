@@ -64,6 +64,19 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
+        indexed: false,
+        internalType: 'address',
+        name: 'newAddress',
+        type: 'address',
+      },
+    ],
+    name: 'SequencerAddressUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: true,
         internalType: 'uint256',
         name: 'firstMessageNum',
@@ -101,33 +114,21 @@ const _abi = [
       },
       {
         indexed: false,
-        internalType: 'uint256',
-        name: 'l1BlockNumber',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'timestamp',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'totalDelayedMessagesRead',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes32',
-        name: 'delayedAcc',
-        type: 'bytes32',
+        internalType: 'uint256[]',
+        name: 'sectionsMetadata',
+        type: 'uint256[]',
       },
       {
         indexed: false,
         internalType: 'uint256',
         name: 'seqBatchIndex',
         type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'address',
+        name: 'sequencer',
+        type: 'address',
       },
     ],
     name: 'SequencerBatchDelivered',
@@ -158,12 +159,6 @@ const _abi = [
         indexed: false,
         internalType: 'bytes32',
         name: 'afterAcc',
-        type: 'bytes32',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes32',
-        name: 'delayedAcc',
         type: 'bytes32',
       },
       {
@@ -261,6 +256,19 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'newSequencer',
+        type: 'address',
+      },
+    ],
+    name: 'setSequencer',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
 ]
