@@ -309,6 +309,78 @@ func setFairGasPriceSender(sender ethcommon.Address) error {
 	return waitForTx(tx, "SetFairGasPriceSender")
 }
 
+func setFeeRecipients(congestionRecipient, networkRecipient ethcommon.Address) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.SetFeeRecipients(config.auth, congestionRecipient, networkRecipient)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt")
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetFeeRecipients")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
+func setL1GasPriceEstimate(estimate *big.Int) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.SetL1GasPriceEstimate(config.auth, estimate)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt")
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "SetL1GasPriceEstimate")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
+func allowOnlyOwnerToSend() error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.AllowOnlyOwnerToSend(config.auth)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt")
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "AllowOnlyOwnerToSend")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
+func addAllowedSender(sender ethcommon.Address) error {
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
+	if err != nil {
+		return err
+	}
+	tx, err := arbOwner.AddAllowedSender(config.auth, sender)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt")
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "AddAllowedSender")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
 func deploy1820() error {
 	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, config.client)
 	if err != nil {
@@ -401,6 +473,30 @@ func handleCommand(fields []string) error {
 		}
 		agg := ethcommon.HexToAddress(fields[1])
 		return setFairGasPriceSender(agg)
+	case "set-fee-recipients":
+		if len(fields) != 3 {
+			return errors.New("Expected [congestion] [network]")
+		}
+		congestion := ethcommon.HexToAddress(fields[1])
+		network := ethcommon.HexToAddress(fields[2])
+		return setFeeRecipients(congestion, network)
+	case "allow-only-owner":
+		return allowOnlyOwnerToSend()
+	case "set-gas-price-estimate":
+		if len(fields) != 2 {
+			return errors.New("Expected [gas price]")
+		}
+		gasPrice, ok := new(big.Int).SetString(fields[1], 10)
+		if !ok {
+			return errors.New("bad gas price")
+		}
+		return setL1GasPriceEstimate(gasPrice)
+	case "add-sender":
+		if len(fields) != 2 {
+			return errors.New("Expected [sender]")
+		}
+		sender := ethcommon.HexToAddress(fields[1])
+		return addAllowedSender(sender)
 	case "deploy-1820":
 		return deploy1820()
 	case "fee-info":
