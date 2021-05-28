@@ -35,6 +35,16 @@ uint256_t InboxMessage::hash() const {
     return ::hash(inbox_vector);
 }
 
+uint256_t InboxMessage::prefixHash() const {
+    std::vector<unsigned char> prefix_data;
+
+    prefix_data.insert(prefix_data.end(), sender.begin(), sender.end());
+    marshal_uint256_t(block_number, prefix_data);
+    marshal_uint256_t(timestamp, prefix_data);
+
+    return ::hash(prefix_data);
+}
+
 uint256_t hash_raw_message(const std::vector<unsigned char>& stored_state) {
     constexpr auto message_fixed_size = 1 + 20 + 32 * 4;
 

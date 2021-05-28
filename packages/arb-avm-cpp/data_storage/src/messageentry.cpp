@@ -37,11 +37,11 @@ uint256_t SequencerBatchItem::computeAccumulator(uint256_t prev_acc,
     } else {
         assert(sequencer_message);
         assert(total_delayed_count == prev_delayed_count);
-        std::string prefix = "Sequencer message:";
-        data.insert(data.end(), prefix.begin(), prefix.end());
         marshal_uint256_t(prev_acc, data);
         marshal_uint256_t(last_sequence_number, data);
-        marshal_uint256_t(extractInboxMessage(*sequencer_message).hash(), data);
+        auto message = extractInboxMessage(*sequencer_message);
+        marshal_uint256_t(message.prefixHash(), data);
+        marshal_uint256_t(::hash(message.data), data);
     }
     return ::hash(data);
 }

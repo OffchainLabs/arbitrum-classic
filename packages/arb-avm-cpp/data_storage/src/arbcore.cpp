@@ -1113,8 +1113,9 @@ ValueResult<std::vector<unsigned char>> ArbCore::genInboxProof(
         } else {
             if (item.sequencer_message) {
                 proof.push_back(0);
-                marshal_uint256_t(
-                    extractInboxMessage(*item.sequencer_message).hash(), proof);
+                auto seq_msg = extractInboxMessage(*item.sequencer_message);
+                marshal_uint256_t(seq_msg.prefixHash(), proof);
+                marshal_uint256_t(::hash(seq_msg.data), proof);
             } else {
                 proof.push_back(1);
                 marshal_uint256_t(prev_item.total_delayed_count, proof);

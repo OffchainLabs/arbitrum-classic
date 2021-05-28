@@ -271,4 +271,12 @@ func TestSequencerBatcher(t *testing.T) {
 			t.Fatal("Exceeded message delivery timeout")
 		}
 	}
+	lastMsgIndex := new(big.Int).Sub(msgCount1, big.NewInt(1))
+	seqMonAcc, err := seqMon.Core.GetInboxAcc(lastMsgIndex)
+	test.FailIfError(t, err)
+	otherMonAcc, err := otherMon.Core.GetInboxAcc(lastMsgIndex)
+	test.FailIfError(t, err)
+	if seqMonAcc != otherMonAcc {
+		t.Fatal("accumulators differ between monitors")
+	}
 }
