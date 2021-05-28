@@ -289,7 +289,7 @@ func TestSequencerBatcher(t *testing.T) {
 
 	msgCount1, err := seqMon.Core.GetMessageCount()
 	test.FailIfError(t, err)
-	if msgCount1.Cmp(big.NewInt(33)) < 0 {
+	if msgCount1.Cmp(big.NewInt(26)) < 0 {
 		t.Error("Not enough messages, only got", msgCount1.String())
 	}
 
