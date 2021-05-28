@@ -19,7 +19,9 @@
 pragma solidity ^0.6.11;
 
 abstract contract WhitelistConsumer {
-    address whitelist;
+    address public whitelist;
+
+    event WhitelistSourceUpdated(address newSource);
 
     modifier onlyWhitelisted {
         if (whitelist != address(0)) {
@@ -31,12 +33,16 @@ abstract contract WhitelistConsumer {
     function updateWhitelistSource(address newSource) external {
         require(msg.sender == whitelist, "NOT_FROM_LIST");
         whitelist = newSource;
+        emit WhitelistSourceUpdated(newSource);
     }
 }
 
 contract Whitelist {
     address public owner;
     mapping(address => bool) public isAllowed;
+
+    event OwnerUpdated(address newOwner);
+    event WhitelistUpgraded(address newWhitelist, address[] targets);
 
     constructor() public {
         owner = msg.sender;
@@ -49,6 +55,7 @@ contract Whitelist {
 
     function setOwner(address newOwner) external onlyOwner {
         owner = newOwner;
+        emit OwnerUpdated(newOwner);
     }
 
     function setWhitelist(address[] memory user, bool[] memory val) external onlyOwner {
@@ -64,5 +71,6 @@ contract Whitelist {
         for (uint256 i = 0; i < targets.length; i++) {
             WhitelistConsumer(targets[i]).updateWhitelistSource(newWhitelist);
         }
+        emit WhitelistUpgraded(newWhitelist, targets);
     }
 }
