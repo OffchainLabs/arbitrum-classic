@@ -211,6 +211,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
+	staker.Validator.GasThreshold = big.NewInt(0)
+
 	seqInboxAddr, err := staker.rollup.SequencerBridge(ctx)
 	test.FailIfError(t, err)
 
@@ -252,6 +254,8 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
+
+	faultyStaker.Validator.GasThreshold = big.NewInt(0)
 
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)

@@ -207,6 +207,7 @@ class ArbCore {
     bool machineIdle();
     std::optional<std::string> machineClearError();
     std::unique_ptr<Machine> getLastMachine();
+    MachineOutput getLastMachineOutput();
     uint256_t machineMessagesRead();
 
    public:

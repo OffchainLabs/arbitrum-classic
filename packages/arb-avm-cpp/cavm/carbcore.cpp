@@ -527,6 +527,12 @@ CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr) {
     return static_cast<void*>(arbCore->getLastMachine().release());
 }
 
+Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto gas = arbCore->getLastMachineOutput().arb_gas_used;
+    return returnUint256Result({rocksdb::Status::OK(), gas});
+}
+
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
