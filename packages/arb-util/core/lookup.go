@@ -68,6 +68,8 @@ type ArbCoreLookup interface {
 	// GetLastMachine gets a copy of the machine from the last time machinethread stopped or the last reorg
 	GetLastMachine() (machine.Machine, error)
 
+	GetLastMachineTotalGas() (*big.Int, error)
+
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
 	GetExecutionCursor(totalGasUsed *big.Int) (ExecutionCursor, error)

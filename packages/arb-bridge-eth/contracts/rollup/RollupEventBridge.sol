@@ -52,7 +52,6 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
 
     function rollupInitialized(
         uint256 confirmPeriodBlocks,
-        uint256 extraChallengeTimeBlocks,
         uint256 arbGasSpeedLimitPerBlock,
         uint256 baseStake,
         address stakeToken,
@@ -62,8 +61,8 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
         bytes memory initMsg =
             abi.encodePacked(
                 confirmPeriodBlocks,
-                extraChallengeTimeBlocks,
-                arbGasSpeedLimitPerBlock,
+                arbGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
+                uint256(0),
                 baseStake,
                 uint256(uint160(bytes20(stakeToken))),
                 uint256(uint160(bytes20(owner))),

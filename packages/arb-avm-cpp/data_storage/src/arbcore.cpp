@@ -765,7 +765,7 @@ void ArbCore::operator()() {
 
                 if (machine->machine_state.output.arb_gas_used >
                     last_checkpoint_gas + max_checkpoint_frequency) {
-                    // Save checkpoint for every sideload
+                    // Save checkpoint after max_checkpoint_frequency gas used
                     status = saveCheckpoint(tx);
                     if (!status.ok()) {
                         core_error_string = status.ToString();
@@ -776,6 +776,9 @@ void ArbCore::operator()() {
                     last_checkpoint_gas =
                         machine->machine_state.output.arb_gas_used;
                     // Clear oldest cache and start populating next cache
+                    std::cout
+                        << "Last checkpoint gas used: " << last_checkpoint_gas
+                        << std::endl;
                     cache.nextCache();
                 }
 
@@ -1505,6 +1508,11 @@ ValueResult<uint256_t> ArbCore::getDelayedMessagesToSequence(
 std::unique_ptr<Machine> ArbCore::getLastMachine() {
     std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
     return std::make_unique<Machine>(*last_machine);
+}
+
+MachineOutput ArbCore::getLastMachineOutput() {
+    std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
+    return last_machine->machine_state.output;
 }
 
 uint256_t ArbCore::machineMessagesRead() {

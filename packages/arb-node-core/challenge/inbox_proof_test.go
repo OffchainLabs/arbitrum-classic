@@ -112,18 +112,6 @@ func TestInboxProof(t *testing.T) {
 	)
 	endBlockBatchItem1 := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage1, delayedItem1.Accumulator)
 
-	_, err = sequencerCon.AddSequencerL2BatchFromOrigin(
-		auth,
-		nil,
-		nil,
-		latest.Number,
-		new(big.Int).SetUint64(latest.Time),
-		big.NewInt(1),
-		endBlockBatchItem1.Accumulator,
-	)
-	test.FailIfError(t, err)
-	client.Commit()
-
 	seqMessage := message.NewInboxMessage(
 		message.NewSafeL2Message(message.NewRandomTransaction()),
 		common.NewAddressFromEth(sequencer),
@@ -150,14 +138,17 @@ func TestInboxProof(t *testing.T) {
 	)
 	endBlockBatchItem2 := inbox.NewSequencerItem(big.NewInt(2), endOfBlockMessage2, delayedItem2.Accumulator)
 
+	delayedAcc1Int := new(big.Int).SetBytes(delayedAcc1[:])
+	delayedAcc2Int := new(big.Int).SetBytes(delayedAcc2[:])
+	batch2Metadata := []*big.Int{
+		big.NewInt(0), latest.Number, new(big.Int).SetUint64(latest.Time), big.NewInt(1), delayedAcc1Int,
+		big.NewInt(1), latest.Number, new(big.Int).SetUint64(latest.Time), big.NewInt(2), delayedAcc2Int,
+	}
 	_, err = sequencerCon.AddSequencerL2BatchFromOrigin(
 		auth,
 		seqMessage.Data,
 		[]*big.Int{big.NewInt(int64(len(seqMessage.Data)))},
-		//nil, nil,
-		latest.Number,
-		new(big.Int).SetUint64(latest.Time),
-		big.NewInt(2),
+		batch2Metadata,
 		endBlockBatchItem2.Accumulator,
 	)
 	test.FailIfError(t, err)

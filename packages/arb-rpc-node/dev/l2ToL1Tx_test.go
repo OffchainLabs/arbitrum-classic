@@ -185,7 +185,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		GasPrice: nil,
 		GasLimit: 0,
 		Context:  nil,
-	}, common.RandAddress().ToEthAddress())
+	}, big.NewInt(0))
 	if err != nil {
 		t.Fatal(err)
 	}
