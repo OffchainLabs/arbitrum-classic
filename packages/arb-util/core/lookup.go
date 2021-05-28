@@ -82,12 +82,12 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool
+	DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
-	if !db.DeliverMessages(previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
+func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
+	if !db.DeliverMessages(previousMessageCount, previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
 		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)
@@ -101,7 +101,7 @@ func DeliverMessagesAndWait(db ArbCoreInbox, previousSeqBatchAcc common.Hash, se
 }
 
 func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
-	if !db.DeliverMessages(common.Hash{}, nil, nil, reorgMessageCount) {
+	if !db.DeliverMessages(big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount) {
 		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)

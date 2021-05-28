@@ -80,15 +80,29 @@ func NewTestDevNode(
 	config []message.ChainConfigOption,
 ) (*Backend, *txdb.TxDB, *aggregator.Server, func()) {
 	ctx, cancel := context.WithCancel(context.Background())
-	backend, db, rollupAddress, cancelDevNode, txDBErrChan, err := NewDevNode(
+	agg := common.RandAddress()
+	for i := range config {
+		opt := config[len(config)-1-i]
+		if aggConfig, ok := opt.(message.DefaultAggConfig); ok {
+			agg = aggConfig.Aggregator
+			break
+		}
+	}
+	rollupAddress := common.RandAddress()
+	backend, db, cancelDevNode, txDBErrChan, err := NewDevNode(
 		ctx,
 		t.TempDir(),
 		arbosPath,
-		params,
-		owner,
-		config,
+		rollupAddress,
+		agg,
+		0,
 	)
 	test.FailIfError(t, err)
+	initMsg, err := message.NewInitMessage(params, owner, config)
+	test.FailIfError(t, err)
+	_, err = backend.AddInboxMessage(initMsg, rollupAddress)
+	test.FailIfError(t, err)
+
 	go func() {
 		if err := <-txDBErrChan; err != nil {
 			t.Error(err)

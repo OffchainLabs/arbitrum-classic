@@ -7,36 +7,34 @@
 FROM offchainlabs/cpp-base:0.3.1 as arb-avm-cpp
 
 # Copy external dependencies
-COPY --chown=user arb-avm-cpp/CMakeLists.txt .
-COPY --chown=user arb-avm-cpp/external ./external
-COPY --chown=user arb-avm-cpp/cmake ./cmake
-COPY --chown=user arb-avm-cpp/scripts ./scripts
+COPY --chown=user arb-avm-cpp/CMakeLists.txt /home/user/arb-avm-cpp/
+COPY --chown=user arb-avm-cpp/external /home/user/arb-avm-cpp/external
+COPY --chown=user arb-avm-cpp/cmake /home/user/arb-avm-cpp/cmake
 # Build arb-avm-cpp
-RUN mkdir -p build && cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+RUN mkdir -p arb-avm-cpp/build && cd arb-avm-cpp/build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
-COPY --chown=user arb-avm-cpp/avm_values ./avm_values
-RUN cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+COPY --chown=user arb-avm-cpp/avm_values /home/user/arb-avm-cpp/avm_values
+RUN cd arb-avm-cpp/build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
-COPY --chown=user arb-avm-cpp/avm ./avm
-RUN cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+COPY --chown=user arb-avm-cpp/avm /home/user/arb-avm-cpp/avm
+RUN cd arb-avm-cpp/build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
-COPY --chown=user arb-avm-cpp/data_storage ./data_storage
-RUN cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+COPY --chown=user arb-avm-cpp/data_storage /home/user/arb-avm-cpp/data_storage
+RUN cd arb-avm-cpp/build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
-COPY --chown=user arb-avm-cpp/cavm ./cavm
-RUN cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
-    cmake --build . -j $(nproc) && \
-    cd ../ && \
-    ./scripts/install-cmachine-build
+COPY --chown=user arb-avm-cpp/cavm /home/user/arb-avm-cpp/cavm
+COPY --chown=user arb-avm-cpp/cmachine/flags.go.in /home/user/arb-avm-cpp/cmachine/
+RUN cd arb-avm-cpp/build && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
+    cmake --build . -j $(nproc)
 
 FROM offchainlabs/backend-base:0.3.2 as arb-validator-builder
 
@@ -55,14 +53,15 @@ RUN cd arb-util && go build -v ./...
 COPY --chown=user arb-evm/ /home/user/arb-evm/
 RUN cd arb-evm && go build -v ./...
 
-
 RUN cd arb-node-core && go build -v ./...
 
 COPY --chown=user arb-avm-cpp/ /home/user/arb-avm-cpp/
 COPY --chown=user arb-node-core/ /home/user/arb-node-core/
 COPY --chown=user arb-rpc-node/ /home/user/arb-rpc-node/
 
-COPY --from=arb-avm-cpp /home/user/cmachine /home/user/arb-avm-cpp/cmachine/
+COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/build/lib /home/user/arb-avm-cpp/build/lib
+COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/cmachine/flags.go /home/user/arb-avm-cpp/cmachine/
+COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 
 # Build arb-validator
 RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
