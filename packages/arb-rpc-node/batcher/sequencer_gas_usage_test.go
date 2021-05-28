@@ -49,7 +49,6 @@ func TestSequencerGasUsage(t *testing.T) {
 		big.NewInt(0),
 		big.NewInt(0),
 		big.NewInt(0),
-		big.NewInt(0),
 		ethcommon.Address{},
 		auth.From,
 		nil,
