@@ -778,7 +778,7 @@ void ArbCore::operator()() {
                     // Clear oldest cache and start populating next cache
                     std::cout
                         << "Last checkpoint gas used: " << last_checkpoint_gas
-                        << "\n";
+                        << std::endl;
                     cache.nextCache();
                 }
 
