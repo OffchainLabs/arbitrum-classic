@@ -39,11 +39,11 @@ type RawTransaction struct {
 type Rollup struct {
 	*RollupWatcher
 	*BuilderBackend
-	builderCon *ethbridgecontracts.Rollup
+	builderCon *ethbridgecontracts.RollupUserFacet
 }
 
 func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Rollup, error) {
-	builderCon, err := ethbridgecontracts.NewRollup(address, builder)
+	builderCon, err := ethbridgecontracts.NewRollupUserFacet(address, builder)
 	if err != nil {
 		return nil, err
 	}

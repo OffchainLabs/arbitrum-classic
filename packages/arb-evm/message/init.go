@@ -30,6 +30,7 @@ import (
 
 var InitOptionSetChargingParams uint64 = 2
 var InitOptionSetDefaultAggregator uint64 = 3
+var InitOptionSetChainID uint64 = 4
 
 type Init struct {
 	protocol.ChainParams
@@ -143,4 +144,16 @@ func (c DefaultAggConfig) OptionCode() uint64 {
 
 func (c DefaultAggConfig) AsData() []byte {
 	return addressData(c.Aggregator)
+}
+
+type ChainIDConfig struct {
+	ChainId *big.Int
+}
+
+func (c ChainIDConfig) OptionCode() uint64 {
+	return InitOptionSetChainID
+}
+
+func (c ChainIDConfig) AsData() []byte {
+	return math.U256Bytes(c.ChainId)
 }

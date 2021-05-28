@@ -37,8 +37,20 @@ func RunBindingGen() error {
 	)
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "rollup"),
-		[]string{"Rollup", "RollupCreator", "INode"},
+		[]string{"RollupCreator", "INode"},
 	)...)
+	contracts = append(contracts, binding.Contract{
+		File:     filepath.Join(base, "rollup", "facets", "RollupUser.sol", "RollupUserFacet.json"),
+		Contract: "RollupUserFacet",
+	})
+	contracts = append(contracts, binding.Contract{
+		File:     filepath.Join(base, "rollup", "facets", "RollupUser.sol", "RollupUserFacet.json"),
+		Contract: "RollupUserFacet",
+	})
+	contracts = append(contracts, binding.Contract{
+		File:     filepath.Join(base, "rollup", "facets", "RollupAdmin.sol", "RollupAdminFacet.json"),
+		Contract: "RollupAdminFacet",
+	})
 	contracts = append(contracts, binding.GenerateContractsList(
 		filepath.Join(base, "bridge"),
 		[]string{"Bridge", "Inbox", "Outbox", "OutboxEntry", "SequencerInbox"},

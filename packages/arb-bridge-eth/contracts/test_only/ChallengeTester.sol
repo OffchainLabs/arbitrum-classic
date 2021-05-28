@@ -26,6 +26,7 @@ contract ChallengeTester {
     address public winner;
     address public loser;
     ChallengeFactory public challengeFactory;
+    uint256 public challengeExecutionBisectionDegree = 400;
 
     constructor(IOneStepProof[] memory _executors) public {
         challengeFactory = new ChallengeFactory(_executors);

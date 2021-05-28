@@ -96,7 +96,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 		l2Message, err := l2Msg.AbstractMessage()
 		failIfError(t, err)
 
-		targetHash := hashing.SoliditySHA3(hashing.Uint256(message.ChainAddressToID(chain)), hashing.Uint256(big.NewInt(int64(4+i))))
+		targetHash := hashing.SoliditySHA3(hashing.Uint256(chainId), hashing.Uint256(big.NewInt(int64(4+i))))
 		if result.IncomingRequest.MessageID != targetHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, targetHash)
 		}
@@ -282,9 +282,9 @@ func TestUnsignedTx(t *testing.T) {
 
 		var correctHash common.Hash
 		if i == 0 {
-			correctHash = tx1.MessageID(sender, chain)
+			correctHash = tx1.MessageID(sender, chainId)
 		} else {
-			correctHash = tx2.MessageID(sender, chain)
+			correctHash = tx2.MessageID(sender, chainId)
 		}
 		if result.IncomingRequest.MessageID != correctHash {
 			t.Errorf("l2message of type %T had incorrect id %v instead of %v", l2Message, result.IncomingRequest.MessageID, correctHash)
@@ -321,12 +321,12 @@ func TestBatch(t *testing.T) {
 		}
 		senders = append(senders, sender)
 		txes = append(txes, tx)
-		hashes = append(hashes, tx.MessageID(sender, chain))
+		hashes = append(hashes, tx.MessageID(sender, chainId))
 		batchSenderSeq++
 	}
 	for _, pk := range pks[1:] {
 		tx := types.NewTransaction(0, dest.ToEthAddress(), big.NewInt(0), 10000000, big.NewInt(0), []byte{})
-		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+		signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
 		failIfError(t, err)
 		addr := common.NewAddressFromEth(crypto.PubkeyToAddress(pk.PublicKey))
 		senders = append(senders, addr)
@@ -378,7 +378,7 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	failIfError(t, err)
 
 	tx := types.NewTransaction(0, common.RandAddress().ToEthAddress(), big.NewInt(1), 10000000, big.NewInt(0), []byte{})
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainId), pk)
 	failIfError(t, err)
 
 	tx2 := types.NewTransaction(1, common.RandAddress().ToEthAddress(), big.NewInt(0), 1000000, big.NewInt(0), []byte{})
@@ -386,7 +386,7 @@ func generateTestTransactions(t *testing.T, chain common.Address) []*types.Trans
 	failIfError(t, err)
 
 	tx3 := types.NewContractCreation(2, big.NewInt(0), 3000000, big.NewInt(0), hexutil.MustDecode(arbostestcontracts.FibonacciBin))
-	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(message.ChainAddressToID(chain)), pk)
+	signedTx3, err := types.SignTx(tx3, types.NewEIP155Signer(chainId), pk)
 	failIfError(t, err)
 	return []*types.Transaction{signedTx, signedTx2, signedTx3}
 }
@@ -418,9 +418,9 @@ func verifyTxLogs(t *testing.T, signer types.Signer, txes []*types.Transaction, 
 
 func TestCompressedECDSATx(t *testing.T) {
 	t.Log("Chain address:", chain)
-	t.Log("Chain ID:", message.ChainAddressToID(chain))
+	t.Log("Chain ID:", chainId)
 
-	signer := types.NewEIP155Signer(message.ChainAddressToID(chain))
+	signer := types.NewEIP155Signer(chainId)
 
 	txes := generateTestTransactions(t, chain)
 

@@ -39,7 +39,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
@@ -94,6 +93,8 @@ func startup() error {
 	delayedMessagesTargetDelay := fs.Int64("delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	createBatchBlockInterval := fs.Int64("create-batch-block-interval", 1, "block interval at which to create new batches")
 	gasPriceUrl := fs.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
+
+	chainId64 := fs.Uint64("chainid", 42161, "chain id of the arbitrum chain")
 
 	//Healthcheck Config
 	disablePrimaryCheck := fs.Bool("disable-primary-check", false, "disable checking the health of the primary")
@@ -156,7 +157,8 @@ func startup() error {
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
+	l2ChainId := new(big.Int).SetUint64(*chainId64)
+	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", l2ChainId.Bytes()).Msg("Launching arbitrum node")
 
 	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
 	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
@@ -272,7 +274,7 @@ func startup() error {
 		}
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -284,6 +286,7 @@ func startup() error {
 			ctx,
 			ethclint,
 			rollupArgs.Address,
+			l2ChainId,
 			db,
 			time.Duration(*maxBatchTime)*time.Second,
 			batcherMode,
@@ -302,7 +305,7 @@ func startup() error {
 		inboxReader.WaitToCatchUp(ctx)
 	}
 
-	srv := aggregator.NewServer(batch, rollupArgs.Address, db)
+	srv := aggregator.NewServer(batch, rollupArgs.Address, l2ChainId, db)
 	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
 	if err != nil {
 		return err

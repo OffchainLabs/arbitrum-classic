@@ -37,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -51,7 +50,6 @@ var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 type TxDB struct {
 	Lookup    core.ArbOutputLookup
 	as        machine.NodeStore
-	chain     common.Address
 	logReader *core.LogReader
 
 	rmLogsFeed      event.Feed
@@ -69,7 +67,6 @@ func New(
 	ctx context.Context,
 	arbCore core.ArbCore,
 	as machine.NodeStore,
-	chain common.Address,
 	updateFrequency time.Duration,
 ) (*TxDB, <-chan error, error) {
 	snapshotCache, err := lru.New(100)
@@ -79,7 +76,6 @@ func New(
 	db := &TxDB{
 		Lookup:        arbCore,
 		as:            as,
-		chain:         chain,
 		snapshotCache: snapshotCache,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
@@ -463,7 +459,7 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}
-	snap, err := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	snap, err := snapshot.NewSnapshot(mach, currentTime, big.NewInt(1<<60))
 	if err != nil {
 		return nil, err
 	}

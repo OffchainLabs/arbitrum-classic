@@ -422,7 +422,8 @@ contract OneStepProof is OneStepProofCommon {
     {
         bytes memory proof = context.proof;
 
-        bytes32 messageHash;
+        // [messageHash, prefixHash, messageDataHash]
+        bytes32[3] memory messageHashes;
         uint256 inboxSeqNum;
         Value.Data[] memory tupData = new Value.Data[](8);
 
@@ -451,7 +452,7 @@ contract OneStepProof is OneStepProofCommon {
             }
             context.offset += messageDataLength;
 
-            messageHash = Messages.messageHash(
+            messageHashes[0] = Messages.messageHash(
                 kind,
                 sender,
                 l1BlockNumber,
@@ -460,6 +461,21 @@ contract OneStepProof is OneStepProofCommon {
                 gasPriceL1,
                 messageDataHash
             );
+
+            uint8 expectedSeqKind;
+            if (messageDataLength > 0) {
+                // L2_MSG
+                expectedSeqKind = 3;
+            } else {
+                // END_OF_BLOCK_MESSAGE
+                expectedSeqKind = 6;
+            }
+            if (kind == expectedSeqKind && gasPriceL1 == 0) {
+                // Between the checks in the if statement, inboxSeqNum, and messageHashes[1:],
+                // this constrains all fields without the full message hash.
+                messageHashes[1] = keccak256(abi.encodePacked(sender, l1BlockNumber, l1Timestamp));
+                messageHashes[2] = messageDataHash;
+            }
 
             tupData[0] = Value.newInt(uint256(kind));
             tupData[1] = Value.newInt(l1BlockNumber);
@@ -481,7 +497,7 @@ contract OneStepProof is OneStepProofCommon {
         (context.offset, acc) = Marshaling.deserializeBytes32(proof, context.offset);
         if (isDelayed == 0) {
             // Start the proof at an arbitrary previous accumulator, as we validate the end accumulator.
-            acc = keccak256(abi.encodePacked("Sequencer message:", acc, inboxSeqNum, messageHash));
+            acc = keccak256(abi.encodePacked(acc, inboxSeqNum, messageHashes[1], messageHashes[2]));
 
             require(inboxSeqNum == context.totalMessagesRead, "WRONG_SEQUENCER_MSG_SEQ_NUM");
             inboxSeqNum++;
@@ -508,7 +524,7 @@ contract OneStepProof is OneStepProofCommon {
                 prevDelayedAcc = context.delayedBridge.inboxAccs(inboxSeqNum - 1);
             }
             require(
-                Messages.addMessageToInbox(prevDelayedAcc, messageHash) ==
+                Messages.addMessageToInbox(prevDelayedAcc, messageHashes[0]) ==
                     context.delayedBridge.inboxAccs(inboxSeqNum),
                 "DELAYED_ACC"
             );
@@ -547,13 +563,18 @@ contract OneStepProof is OneStepProofCommon {
             require(isDelayed == 0 || isDelayed == 1, "REM_IS_DELAYED_VAL");
             context.offset++;
             if (isDelayed == 0) {
-                bytes32 newerMessageHash;
-                (context.offset, newerMessageHash) = Marshaling.deserializeBytes32(
+                bytes32 newerMessagePrefixHash;
+                bytes32 newerMessageDataHash;
+                (context.offset, newerMessagePrefixHash) = Marshaling.deserializeBytes32(
+                    proof,
+                    context.offset
+                );
+                (context.offset, newerMessageDataHash) = Marshaling.deserializeBytes32(
                     proof,
                     context.offset
                 );
                 acc = keccak256(
-                    abi.encodePacked("Sequencer message:", acc, inboxSeqNum, newerMessageHash)
+                    abi.encodePacked(acc, inboxSeqNum, newerMessagePrefixHash, newerMessageDataHash)
                 );
                 inboxSeqNum++;
             } else {

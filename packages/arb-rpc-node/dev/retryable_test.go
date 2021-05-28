@@ -560,6 +560,7 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 
 	requestId, err := backend.AddInboxMessage(retryableTx, sender)
 	test.FailIfError(t, err)
+
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
 
 	checkRetryableCreationTx(t, client, retryableTx, requestId)
@@ -632,6 +633,10 @@ func checkRetryableCreationTx(t *testing.T, client *web3.EthClient, retryableTx 
 
 	createTicketReceipt, err := client.TransactionReceipt(context.Background(), requestId.ToEthHash())
 	test.FailIfError(t, err)
+
+	if createTicketReceipt == nil {
+		t.Fatal("expected receipt")
+	}
 
 	if len(createTicketReceipt.Logs) != 1 {
 		t.Fatal("unexpected log count")

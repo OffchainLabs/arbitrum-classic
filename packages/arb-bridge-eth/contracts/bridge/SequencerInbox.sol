@@ -22,6 +22,7 @@ import "./interfaces/ISequencerInbox.sol";
 import "./interfaces/IBridge.sol";
 import "../arch/Marshaling.sol";
 import "../libraries/Cloneable.sol";
+import "../rollup/Rollup.sol";
 
 import "./Messages.sol";
 
@@ -36,20 +37,25 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
 
     IBridge public delayedInbox;
     address public sequencer;
-    uint256 public override maxDelayBlocks;
-    uint256 public override maxDelaySeconds;
+    address public rollup;
 
     function initialize(
         IBridge _delayedInbox,
         address _sequencer,
-        uint256 _maxDelayBlocks,
-        uint256 _maxDelaySeconds
+        address _rollup
     ) external {
         require(address(delayedInbox) == address(0), "ALREADY_INIT");
         delayedInbox = _delayedInbox;
         sequencer = _sequencer;
-        maxDelayBlocks = _maxDelayBlocks;
-        maxDelaySeconds = _maxDelaySeconds;
+        rollup = _rollup;
+    }
+
+    function maxDelayBlocks() public view override returns (uint256) {
+        return RollupBase(rollup).sequencerInboxMaxDelayBlocks();
+    }
+
+    function maxDelaySeconds() public view override returns (uint256) {
+        return RollupBase(rollup).sequencerInboxMaxDelaySeconds();
     }
 
     function getLastDelayedAcc() internal view returns (bytes32) {
@@ -81,8 +87,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                     gasPriceL1,
                     messageDataHash
                 );
-            require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
-            require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
+            require(l1BlockAndTimestamp[0] + maxDelayBlocks() < block.number, "MAX_DELAY_BLOCKS");
+            require(l1BlockAndTimestamp[1] + maxDelaySeconds() < block.timestamp, "MAX_DELAY_TIME");
 
             bytes32 prevDelayedAcc = 0;
             if (_totalDelayedMessagesRead > 1) {
@@ -154,8 +160,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     function addSequencerL2Batch(
         bytes calldata transactions,
         uint256[] calldata lengths,
-        uint256 l1BlockNumber,
-        uint256 timestamp,
+        uint256[2] calldata l1BlockNumberAndTimestamp,
         uint256 _totalDelayedMessagesRead,
         bytes32 afterAcc
     ) external {
@@ -164,8 +169,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             addSequencerL2BatchImpl(
                 transactions,
                 lengths,
-                l1BlockNumber,
-                timestamp,
+                l1BlockNumberAndTimestamp[0],
+                l1BlockNumberAndTimestamp[1],
                 _totalDelayedMessagesRead,
                 afterAcc
             );
@@ -176,11 +181,11 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             afterAcc,
             transactions,
             lengths,
-            l1BlockNumber,
-            timestamp,
+            l1BlockNumberAndTimestamp,
             _totalDelayedMessagesRead,
             delayedAcc,
-            inboxAccs.length - 1
+            inboxAccs.length - 1,
+            msg.sender
         );
     }
 
@@ -192,42 +197,23 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256 _totalDelayedMessagesRead,
         bytes32 afterAcc
     ) private returns (bytes32 beforeAcc, bytes32 delayedAcc) {
+        uint256 txCount = lengths.length;
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
-        require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
+        require(l1BlockNumber + maxDelayBlocks() >= block.number, "BLOCK_TOO_OLD");
         require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
-        require(timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
+        require(timestamp + maxDelaySeconds() >= block.timestamp, "TIME_TOO_OLD");
         require(timestamp <= block.timestamp, "TIME_TOO_NEW");
         require(_totalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         require(_totalDelayedMessagesRead >= 1, "MUST_DELAYED_INIT");
-        require(totalDelayedMessagesRead >= 1 || lengths.length == 0, "MUST_DELAYED_INIT_START");
+        require(totalDelayedMessagesRead >= 1 || txCount == 0, "MUST_DELAYED_INIT_START");
 
         if (inboxAccs.length > 0) {
             beforeAcc = inboxAccs[inboxAccs.length - 1];
         }
 
-        uint256 count = messageCount;
-        bytes32 acc = beforeAcc;
-        uint256 offset = 0;
-        for (uint256 i = 0; i < lengths.length; i++) {
-            bytes32 messageDataHash = keccak256(bytes(transactions[offset:offset + lengths[i]]));
-            uint8 messageType = L2_MSG;
-            if (lengths[i] == 0) {
-                messageType = END_OF_BLOCK;
-            }
-            bytes32 messageHash =
-                Messages.messageHash(
-                    messageType,
-                    msg.sender,
-                    l1BlockNumber,
-                    timestamp, // solhint-disable-line not-rely-on-time
-                    count,
-                    0,
-                    messageDataHash
-                );
-            acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, messageHash));
-            offset += lengths[i];
-            count++;
-        }
+        bytes32 prefixHash = keccak256(abi.encodePacked(msg.sender, l1BlockNumber, timestamp));
+        (bytes32 acc, uint256 count) = calcL2Batch(transactions, lengths, prefixHash, beforeAcc);
+
         (delayedAcc, acc, count) = includeDelayedMessages(
             acc,
             count,
@@ -241,6 +227,32 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         messageCount = count;
 
         require(acc == afterAcc, "AFTER_ACC");
+    }
+
+    function calcL2Batch(
+        bytes memory transactions,
+        uint256[] calldata lengths,
+        bytes32 prefixHash,
+        bytes32 beforeAcc
+    ) private view returns (bytes32 acc, uint256 count) {
+        uint256 txCount = lengths.length;
+        count = messageCount;
+        acc = beforeAcc;
+        uint256 offset;
+        assembly {
+            offset := add(transactions, 32)
+        }
+        for (uint256 i = 0; i < txCount; i++) {
+            uint256 length = lengths[i];
+            bytes32 messageDataHash;
+            assembly {
+                messageDataHash := keccak256(offset, length)
+            }
+            acc = keccak256(abi.encodePacked(acc, count, prefixHash, messageDataHash));
+            offset += length;
+            count++;
+        }
+        return (acc, count);
     }
 
     function includeDelayedMessages(
@@ -273,17 +285,14 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             );
             count += _totalDelayedMessagesRead - totalDelayedMessagesRead;
             bytes memory emptyBytes;
-            bytes32 endMessageHash =
-                Messages.messageHash(
-                    END_OF_BLOCK,
-                    address(0),
-                    l1BlockNumber,
-                    timestamp,
+            acc = keccak256(
+                abi.encodePacked(
+                    acc,
                     count,
-                    0,
+                    keccak256(abi.encodePacked(address(0), l1BlockNumber, timestamp)),
                     keccak256(emptyBytes)
-                );
-            acc = keccak256(abi.encodePacked("Sequencer message:", acc, count, endMessageHash));
+                )
+            );
             count++;
             totalDelayedMessagesRead = _totalDelayedMessagesRead;
         }
@@ -299,12 +308,14 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
 
         bytes32 buildingAcc;
         uint256 seqNum;
-        bytes32 messageHash;
+        bytes32 messageHeaderHash;
+        bytes32 messageDataHash;
         (offset, buildingAcc) = Marshaling.deserializeBytes32(proof, offset);
         (offset, seqNum) = Marshaling.deserializeInt(proof, offset);
-        (offset, messageHash) = Marshaling.deserializeBytes32(proof, offset);
+        (offset, messageHeaderHash) = Marshaling.deserializeBytes32(proof, offset);
+        (offset, messageDataHash) = Marshaling.deserializeBytes32(proof, offset);
         buildingAcc = keccak256(
-            abi.encodePacked("Sequencer message:", buildingAcc, seqNum, messageHash)
+            abi.encodePacked(buildingAcc, seqNum, messageHeaderHash, messageDataHash)
         );
         endCount = seqNum + 1;
         require(buildingAcc == acc, "BATCH_ACC");

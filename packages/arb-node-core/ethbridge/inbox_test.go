@@ -25,7 +25,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -91,33 +90,5 @@ func TestRetryable(t *testing.T) {
 		t.Log(parsedArbTx)
 		t.Log(arbTx)
 		t.Error("event data not equal")
-	}
-
-	_, _, tester, err := ethbridgetestcontracts.DeployInboxHelperTester(auth, clnt)
-	test.FailIfError(t, err)
-	clnt.Commit()
-
-	rollup := common.RandAddress()
-	chainId := message.ChainAddressToID(rollup)
-	requestId := message.CalculateRequestId(chainId, ev.MessageNum)
-	retryableId := message.RetryableId(requestId)
-
-	calcChainId, err := tester.ChainId(&bind.CallOpts{}, rollup.ToEthAddress())
-	test.FailIfError(t, err)
-	calcRequestId, err := tester.RequestID(&bind.CallOpts{}, ev.MessageNum, rollup.ToEthAddress())
-	test.FailIfError(t, err)
-	calcRetryableId, err := tester.RetryableTicketID(&bind.CallOpts{}, ev.MessageNum, rollup.ToEthAddress())
-	test.FailIfError(t, err)
-
-	if calcChainId.Cmp(chainId) != 0 {
-		t.Log(calcChainId.Text(16))
-		t.Log(chainId.Text(16))
-		t.Error("wrong chainid")
-	}
-	if calcRequestId != requestId {
-		t.Error("wrong request id")
-	}
-	if calcRetryableId != retryableId {
-		t.Error("wrong retryable id")
 	}
 }

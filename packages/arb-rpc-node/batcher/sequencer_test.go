@@ -26,7 +26,9 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -35,7 +37,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
@@ -145,7 +146,13 @@ func TestSequencerBatcher(t *testing.T) {
 	var owner common.Address
 	sequencerDelayBlocks := big.NewInt(60)
 	sequencerDelaySeconds := big.NewInt(900)
-	var extraConfig []byte
+
+	l2ChainId := common.RandBigInt()
+
+	chainIdConfig := message.ChainIDConfig{ChainId: l2ChainId}
+	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), []message.ChainConfigOption{chainIdConfig})
+	test.FailIfError(t, err)
+	extraConfig := init.ExtraConfig
 
 	clnt, pks := test.SimulatedBackend(t)
 	auth := bind.NewKeyedTransactor(pks[0])
@@ -202,7 +209,7 @@ func TestSequencerBatcher(t *testing.T) {
 	batcher, err := NewSequencerBatcher(
 		ctx,
 		seqMon.Core,
-		message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)),
+		l2ChainId,
 		seqMon.Reader,
 		client,
 		big.NewInt(1),
@@ -234,7 +241,7 @@ func TestSequencerBatcher(t *testing.T) {
 		}
 	}
 
-	txs := generateTxs(t, 5, 10, message.ChainAddressToID(common.NewAddressFromEth(rollupAddr)))
+	txs := generateTxs(t, 5, 10, l2ChainId)
 	for _, tx := range txs {
 		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
@@ -264,5 +271,13 @@ func TestSequencerBatcher(t *testing.T) {
 		if time.Now().After(timeout) {
 			t.Fatal("Exceeded message delivery timeout")
 		}
+	}
+	lastMsgIndex := new(big.Int).Sub(msgCount1, big.NewInt(1))
+	seqMonAcc, err := seqMon.Core.GetInboxAcc(lastMsgIndex)
+	test.FailIfError(t, err)
+	otherMonAcc, err := otherMon.Core.GetInboxAcc(lastMsgIndex)
+	test.FailIfError(t, err)
+	if seqMonAcc != otherMonAcc {
+		t.Fatal("accumulators differ between monitors")
 	}
 }
