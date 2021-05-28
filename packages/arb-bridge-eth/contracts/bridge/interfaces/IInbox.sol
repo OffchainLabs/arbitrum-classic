@@ -69,7 +69,7 @@ interface IInbox is IMessageProvider {
 
     function depositEth(
         address destAddr,
-        uint256 l2Costs,
+        uint256 l2Callvalue,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 maxGasPrice

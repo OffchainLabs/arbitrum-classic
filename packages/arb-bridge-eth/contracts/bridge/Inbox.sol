@@ -167,16 +167,15 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
 
     function depositEth(
         address destAddr,
-        uint256 l2Costs,
+        uint256 l2Callvalue,
         uint256 maxSubmissionCost,
         uint256 maxGas,
         uint256 maxGasPrice
     ) external payable virtual override onlyWhitelisted returns (uint256) {
-        require(msg.value > l2Costs, "UNDERFLOW");
         return
-            this.createRetryableTicket(
+            this.createRetryableTicket{ value: msg.value }(
                 destAddr,
-                msg.value - l2Costs,
+                l2Callvalue,
                 maxSubmissionCost,
                 msg.sender,
                 msg.sender,
