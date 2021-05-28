@@ -8,7 +8,7 @@ FROM debian:bullseye-slim
 RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
     apt-get install -y cmake curl git g++ libboost-dev libboost-filesystem-dev \
     lcov librocksdb-dev make libgmp-dev libssl-dev \
-    autotools-dev dh-autoreconf && \
+    autotools-dev dh-autoreconf pkg-config libjemalloc-dev && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -ms /bin/bash user
 USER user

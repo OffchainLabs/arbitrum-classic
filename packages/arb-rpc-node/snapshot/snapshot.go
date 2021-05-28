@@ -42,18 +42,25 @@ type Snapshot struct {
 	arbosVersion    uint64
 }
 
-func NewSnapshot(mach machine.Machine, time inbox.ChainTime, chainId *big.Int, lastInboxSeq *big.Int) (*Snapshot, error) {
+func NewSnapshot(mach machine.Machine, time inbox.ChainTime, lastInboxSeq *big.Int) (*Snapshot, error) {
 	snap := &Snapshot{
 		mach:            mach,
 		time:            time,
 		nextInboxSeqNum: new(big.Int).Add(lastInboxSeq, big.NewInt(1)),
-		chainId:         chainId,
 	}
+
 	ver, err := snap.ArbOSVersion()
 	if err != nil {
 		return nil, err
 	}
 	snap.arbosVersion = ver.Uint64()
+	if snap.arbosVersion >= 27 {
+		chainId, err := snap.ChainId()
+		if err != nil {
+			return nil, err
+		}
+		snap.chainId = chainId
+	}
 	return snap, nil
 }
 
@@ -66,9 +73,12 @@ func (s *Snapshot) AddMessage(msg message.Message, sender common.Address, target
 		Timestamp: big.NewInt(0),
 	}
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), chainTime)
-	res, _, err := runTx(mach, inboxMsg, targetHash, 100000000000)
+	res, _, err := runTx(mach, inboxMsg, 100000000000)
 	if err != nil {
 		return nil, err
+	}
+	if res.IncomingRequest.MessageID != targetHash {
+		return nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 	s.mach = mach
 	s.nextInboxSeqNum = new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
@@ -81,6 +91,10 @@ func (s *Snapshot) AdvanceTime(time inbox.ChainTime) {
 }
 
 func (s *Snapshot) Clone() *Snapshot {
+	var chainId *big.Int
+	if s.chainId != nil {
+		chainId = chainId.Set(s.chainId)
+	}
 	return &Snapshot{
 		mach: s.mach,
 		time: inbox.ChainTime{
@@ -88,7 +102,7 @@ func (s *Snapshot) Clone() *Snapshot {
 			Timestamp: new(big.Int).Set(s.time.Timestamp),
 		},
 		nextInboxSeqNum: new(big.Int).Set(s.nextInboxSeqNum),
-		chainId:         new(big.Int).Set(s.chainId),
+		chainId:         chainId,
 	}
 }
 
@@ -118,20 +132,48 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		if err != nil {
 			return nil, nil, err
 		}
-		targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
-		targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
+		var targetHash common.Hash
+		if s.chainId != nil {
+			targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+			targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
+		}
 		return s.tryTx(gasEstimationMessage, sender, targetHash, maxAVMGas)
 	}
 }
 
 func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, []value.Value, error) {
-	targetHash := hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	var targetHash common.Hash
+	if s.chainId != nil {
+		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+	}
 	return s.tryTx(message.NewSafeL2Message(msg), sender, targetHash, 100000000000)
 }
 
 func (s *Snapshot) tryTx(msg message.Message, sender common.Address, targetHash common.Hash, maxGas uint64) (*evm.TxResult, []value.Value, error) {
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
-	return runTx(s.mach.Clone(), inboxMsg, targetHash, maxGas)
+	res, debugPrints, err := runTx(s.mach.Clone(), inboxMsg, maxGas)
+	if err != nil {
+		return nil, nil, err
+	}
+	var emptyHash common.Hash
+	if targetHash != emptyHash && res.IncomingRequest.MessageID != targetHash {
+		return nil, debugPrints, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+	}
+	return res, debugPrints, nil
+}
+
+func (s *Snapshot) basicCallUnsafe(data []byte, dest common.Address) (*evm.TxResult, []value.Value, error) {
+	msg := message.ContractTransaction{
+		BasicTx: message.BasicTx{
+			MaxGas:      big.NewInt(1000000000),
+			GasPriceBid: big.NewInt(0),
+			DestAddress: dest,
+			Payment:     big.NewInt(0),
+			Data:        data,
+		},
+	}
+	inboxMsg := message.NewInboxMessage(message.NewSafeL2Message(msg), common.Address{}, s.nextInboxSeqNum, big.NewInt(0), s.time)
+	return runTx(s.mach.Clone(), inboxMsg, 1000000000)
 }
 
 func (s *Snapshot) basicCall(data []byte, dest common.Address) (*evm.TxResult, error) {
@@ -200,7 +242,7 @@ func (s *Snapshot) GetStorageAt(account common.Address, index *big.Int) (*big.In
 }
 
 func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
-	res, err := s.basicCall(arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, _, err := s.basicCallUnsafe(arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -208,6 +250,17 @@ func (s *Snapshot) ArbOSVersion() (*big.Int, error) {
 		return nil, err
 	}
 	return arbos.ParseArbOSVersionResult(res.ReturnData)
+}
+
+func (s *Snapshot) ChainId() (*big.Int, error) {
+	res, _, err := s.basicCallUnsafe(arbos.ChainIdData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	if err != nil {
+		return nil, err
+	}
+	if err := checkValidResult(res); err != nil {
+		return nil, err
+	}
+	return arbos.ParseChainIdResult(res.ReturnData)
 }
 
 func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
@@ -221,7 +274,7 @@ func (s *Snapshot) GetPricesInWei() ([6]*big.Int, error) {
 	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
 }
 
-func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash, maxGas uint64) (*evm.TxResult, []value.Value, error) {
+func runTx(mach machine.Machine, msg inbox.InboxMessage, maxGas uint64) (*evm.TxResult, []value.Value, error) {
 	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(maxGas, false, nil, []inbox.InboxMessage{msg}, true)
 	if err != nil {
 		return nil, nil, err
@@ -243,13 +296,5 @@ func runTx(mach machine.Machine, msg inbox.InboxMessage, targetHash common.Hash,
 	}
 
 	res, err := evm.NewTxResultFromValue(avmLogs[len(avmLogs)-1])
-	if err != nil {
-		return nil, debugPrints, err
-	}
-
-	if res.IncomingRequest.MessageID != targetHash {
-		return nil, debugPrints, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
-	}
-
-	return res, debugPrints, nil
+	return res, debugPrints, err
 }

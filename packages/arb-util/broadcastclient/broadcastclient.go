@@ -19,6 +19,7 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"math/big"
 	"net"
 	"sync"
@@ -63,7 +64,14 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int) *Broadcas
 
 func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
-	return bc.connect(ctx, messageReceiver)
+	_, err := bc.connect(ctx, messageReceiver)
+	if err != nil {
+		return nil, err
+	}
+
+	bc.startBackgroundReader(ctx, messageReceiver)
+
+	return messageReceiver, nil
 }
 
 func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (chan broadcaster.BroadcastFeedMessage, error) {
@@ -80,7 +88,7 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
 	if err != nil {
 		logger.Warn().Err(err).Msg("broadcast client unable to connect")
-		return nil, err
+		return nil, errors.Wrap(err, "broadcast client unable to connect")
 	}
 
 	bc.connMutex.Lock()
@@ -88,8 +96,6 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	bc.connMutex.Unlock()
 
 	logger.Info().Msg("Connected")
-
-	bc.startBackgroundReader(ctx, messageReceiver)
 
 	return messageReceiver, nil
 }
@@ -110,9 +116,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 				logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling ReadServerData")
 				_ = bc.conn.Close()
-				// Starts up a new backgroundReader
 				bc.RetryConnect(ctx, messageReceiver)
-				return
 			}
 
 			res := broadcaster.BroadcastMessage{}

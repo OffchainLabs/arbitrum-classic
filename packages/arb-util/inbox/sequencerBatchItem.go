@@ -35,10 +35,14 @@ type SequencerBatchItem struct {
 
 func NewSequencerItem(totalDelayedCount *big.Int, msg InboxMessage, prevAcc common.Hash) SequencerBatchItem {
 	var data []byte
-	data = append(data, "Sequencer message:"...)
 	data = append(data, prevAcc.Bytes()...)
 	data = append(data, math.U256Bytes(msg.InboxSeqNum)...)
-	data = append(data, msg.CommitmentHash().Bytes()...)
+	data = append(data, hashing.SoliditySHA3(
+		hashing.Address(msg.Sender),
+		hashing.Uint256(msg.ChainTime.BlockNum.AsInt()),
+		hashing.Uint256(msg.ChainTime.Timestamp),
+	).Bytes()...)
+	data = append(data, hashing.SoliditySHA3(msg.Data).Bytes()...)
 	return SequencerBatchItem{
 		LastSeqNum:        msg.InboxSeqNum,
 		Accumulator:       hashing.SoliditySHA3(data),
