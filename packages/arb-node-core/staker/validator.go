@@ -27,6 +27,9 @@ type Validator struct {
 	lookup         core.ArbCoreLookup
 	builder        *ethbridge.BuilderBackend
 	wallet         *ethbridge.ValidatorWallet
+	GasThreshold   *big.Int
+	SendThreshold  *big.Int
+	BlockThreshold *big.Int
 }
 
 func NewValidator(
@@ -78,6 +81,9 @@ func NewValidator(
 		lookup:         lookup,
 		builder:        builder,
 		wallet:         wallet,
+		GasThreshold:   big.NewInt(100_000_000_000),
+		SendThreshold:  big.NewInt(5),
+		BlockThreshold: big.NewInt(960),
 	}, nil
 }
 
@@ -231,6 +237,25 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		return nil, false, err
 	}
 
+	// If there are no successor nodes, and there isn't much activity to process, don't do anything yet
+	if len(successorNodes) == 0 {
+		coreGasExecuted, err := v.lookup.GetLastMachineTotalGas()
+		if err != nil {
+			return nil, false, err
+		}
+		coreSendCount, err := v.lookup.GetSendCount()
+		if err != nil {
+			return nil, false, err
+		}
+		gasExecuted := new(big.Int).Sub(coreGasExecuted, startState.TotalGasConsumed)
+		sendCount := new(big.Int).Sub(coreSendCount, startState.TotalSendCount)
+		if sendCount.Cmp(v.SendThreshold) < 0 &&
+			gasExecuted.Cmp(v.GasThreshold) < 0 &&
+			timeSinceProposed.Cmp(v.BlockThreshold) < 0 {
+			return nil, false, nil
+		}
+	}
+
 	gasesUsed := make([]*big.Int, 0, len(successorNodes)+1)
 	for _, nd := range successorNodes {
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
@@ -338,6 +363,7 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		Before: startState.ExecutionState,
 		After:  execState,
 	}
+
 	executionHash := assertion.ExecutionHash()
 	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
 

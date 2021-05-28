@@ -352,6 +352,15 @@ func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
 	return ret, nil
 }
 
+func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
+	result := C.arbCoreGetLastMachineTotalGas(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to get last machine total gas")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {
 	cursor, ok := executionCursor.(*ExecutionCursor)
 	if !ok {

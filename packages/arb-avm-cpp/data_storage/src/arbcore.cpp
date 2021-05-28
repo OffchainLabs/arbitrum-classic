@@ -1507,6 +1507,11 @@ std::unique_ptr<Machine> ArbCore::getLastMachine() {
     return std::make_unique<Machine>(*last_machine);
 }
 
+MachineOutput ArbCore::getLastMachineOutput() {
+    std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
+    return last_machine->machine_state.output;
+}
+
 uint256_t ArbCore::machineMessagesRead() {
     std::shared_lock<std::shared_mutex> guard(last_machine_mutex);
     assert(last_machine);
