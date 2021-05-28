@@ -25,9 +25,8 @@ interface InboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
-    'depositEth(address)': FunctionFragment
-    'depositEthRetryable(address,uint256,uint256,uint256)': FunctionFragment
-    'initialize(address)': FunctionFragment
+    'depositEth(uint256)': FunctionFragment
+    'initialize(address,address)': FunctionFragment
     'isMaster()': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
@@ -35,6 +34,8 @@ interface InboxInterface extends ethers.utils.Interface {
     'sendL2Message(bytes)': FunctionFragment
     'sendL2MessageFromOrigin(bytes)': FunctionFragment
     'sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)': FunctionFragment
+    'updateWhitelistSource(address)': FunctionFragment
+    'whitelist()': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
@@ -51,12 +52,14 @@ interface InboxInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
-  encodeFunctionData(functionFragment: 'depositEth', values: [string]): string
   encodeFunctionData(
-    functionFragment: 'depositEthRetryable',
-    values: [string, BigNumberish, BigNumberish, BigNumberish]
+    functionFragment: 'depositEth',
+    values: [BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'initialize', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [string, string]
+  ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
@@ -89,6 +92,11 @@ interface InboxInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(
+    functionFragment: 'updateWhitelistSource',
+    values: [string]
+  ): string
+  encodeFunctionData(functionFragment: 'whitelist', values?: undefined): string
 
   decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
   decodeFunctionResult(
@@ -96,10 +104,6 @@ interface InboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'depositEthRetryable',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(
@@ -126,16 +130,23 @@ interface InboxInterface extends ethers.utils.Interface {
     functionFragment: 'sendUnsignedTransaction',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'updateWhitelistSource',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
     'InboxMessageDelivered(uint256,bytes)': EventFragment
     'InboxMessageDeliveredFromOrigin(uint256)': EventFragment
+    'WhitelistSourceUpdated(address)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboxMessageDelivered'): EventFragment
   getEvent(
     nameOrSignatureOrTopic: 'InboxMessageDeliveredFromOrigin'
   ): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
 
 export class Inbox extends Contract {
@@ -181,38 +192,24 @@ export class Inbox extends Contract {
     ): Promise<ContractTransaction>
 
     depositEth(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    depositEthRetryable(
-      destAddr: string,
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     initialize(
       _bridge: string,
+      _whitelist: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address)'(
+    'initialize(address,address)'(
       _bridge: string,
+      _whitelist: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -311,6 +308,20 @@ export class Inbox extends Contract {
       data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    whitelist(overrides?: CallOverrides): Promise<[string]>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   bridge(overrides?: CallOverrides): Promise<string>
@@ -342,38 +353,24 @@ export class Inbox extends Contract {
   ): Promise<ContractTransaction>
 
   depositEth(
-    destAddr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'depositEth(address)'(
-    destAddr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  depositEthRetryable(
-    destAddr: string,
     maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    maxGasPrice: BigNumberish,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'depositEthRetryable(address,uint256,uint256,uint256)'(
-    destAddr: string,
+  'depositEth(uint256)'(
     maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    maxGasPrice: BigNumberish,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   initialize(
     _bridge: string,
+    _whitelist: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address)'(
+  'initialize(address,address)'(
     _bridge: string,
+    _whitelist: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -473,6 +470,20 @@ export class Inbox extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  updateWhitelistSource(
+    newSource: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'updateWhitelistSource(address)'(
+    newSource: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  whitelist(overrides?: CallOverrides): Promise<string>
+
+  'whitelist()'(overrides?: CallOverrides): Promise<string>
+
   callStatic: {
     bridge(overrides?: CallOverrides): Promise<string>
 
@@ -502,33 +513,25 @@ export class Inbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    depositEth(destAddr: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    depositEthRetryable(
-      destAddr: string,
+    depositEth(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    initialize(_bridge: string, overrides?: CallOverrides): Promise<void>
-
-    'initialize(address)'(
+    initialize(
       _bridge: string,
+      _whitelist: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initialize(address,address)'(
+      _bridge: string,
+      _whitelist: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -627,6 +630,20 @@ export class Inbox extends Contract {
       data: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    whitelist(overrides?: CallOverrides): Promise<string>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -638,6 +655,8 @@ export class Inbox extends Contract {
     InboxMessageDeliveredFromOrigin(
       messageNum: BigNumberish | null
     ): EventFilter
+
+    WhitelistSourceUpdated(newSource: null): EventFilter
   }
 
   estimateGas: {
@@ -670,35 +689,24 @@ export class Inbox extends Contract {
     ): Promise<BigNumber>
 
     depositEth(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    depositEthRetryable(
-      destAddr: string,
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    initialize(_bridge: string, overrides?: Overrides): Promise<BigNumber>
-
-    'initialize(address)'(
+    initialize(
       _bridge: string,
+      _whitelist: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'initialize(address,address)'(
+      _bridge: string,
+      _whitelist: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -797,6 +805,20 @@ export class Inbox extends Contract {
       data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    whitelist(overrides?: CallOverrides): Promise<BigNumber>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -829,38 +851,24 @@ export class Inbox extends Contract {
     ): Promise<PopulatedTransaction>
 
     depositEth(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    depositEthRetryable(
-      destAddr: string,
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     initialize(
       _bridge: string,
+      _whitelist: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address)'(
+    'initialize(address,address)'(
       _bridge: string,
+      _whitelist: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -959,5 +967,19 @@ export class Inbox extends Contract {
       data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    whitelist(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }
