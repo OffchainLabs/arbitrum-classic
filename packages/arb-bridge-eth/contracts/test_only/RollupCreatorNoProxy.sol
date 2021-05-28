@@ -106,20 +106,19 @@ contract RollupCreatorNoProxy {
             frame.inbox = new Inbox();
             frame.rollupEventBridge = new RollupEventBridge();
             frame.outbox = new Outbox();
-            frame.whitelist = new Whitelist();
+            // frame.whitelist = new Whitelist();
         }
 
         frame.delayedBridge.initialize();
         frame.sequencerInbox.initialize(IBridge(frame.delayedBridge), sequencer, rollup);
-        frame.inbox.initialize(IBridge(frame.delayedBridge), address(frame.whitelist));
+        frame.inbox.initialize(IBridge(frame.delayedBridge), address(0));
         frame.rollupEventBridge.initialize(address(frame.delayedBridge), rollup);
         frame.outbox.initialize(rollup, IBridge(frame.delayedBridge));
 
         frame.delayedBridge.setInbox(address(frame.inbox), true);
         frame.delayedBridge.transferOwnership(rollup);
 
-        // no whitelist in tests
-        frame.whitelist.setOwner(address(0));
+        // frame.whitelist.setOwner(rollup);
 
         return (
             frame.delayedBridge,
