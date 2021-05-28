@@ -147,7 +147,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'address',
-        name: 'liquidityProvider',
+        name: 'to',
         type: 'address',
       },
       {
@@ -167,6 +167,12 @@ const _abi = [
         internalType: 'uint256',
         name: 'exitNum',
         type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'madeExternalCall',
+        type: 'bool',
       },
     ],
     name: 'WithdrawRedirected',
@@ -243,49 +249,6 @@ const _abi = [
       },
     ],
     stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'liquidityProvider',
-        type: 'address',
-      },
-      {
-        internalType: 'bytes',
-        name: 'liquidityProof',
-        type: 'bytes',
-      },
-      {
-        internalType: 'address',
-        name: 'initialDestination',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'erc20',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'exitNum',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxFee',
-        type: 'uint256',
-      },
-    ],
-    name: 'fastWithdrawalFromL2',
-    outputs: [],
-    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -388,6 +351,44 @@ const _abi = [
       },
     ],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'initialDestination',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'erc20',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'exitNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'to',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'transferExitAndCall',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {

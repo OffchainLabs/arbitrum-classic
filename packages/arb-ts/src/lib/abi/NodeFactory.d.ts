@@ -22,24 +22,18 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface NodeFactoryInterface extends ethers.utils.Interface {
   functions: {
+    'beacon()': FunctionFragment
     'createNode(bytes32,bytes32,bytes32,uint256,uint256)': FunctionFragment
-    'templateContract()': FunctionFragment
   }
 
+  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'createNode',
     values: [BytesLike, BytesLike, BytesLike, BigNumberish, BigNumberish]
   ): string
-  encodeFunctionData(
-    functionFragment: 'templateContract',
-    values?: undefined
-  ): string
 
+  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'createNode', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'templateContract',
-    data: BytesLike
-  ): Result
 
   events: {}
 }
@@ -58,6 +52,10 @@ export class NodeFactory extends Contract {
   interface: NodeFactoryInterface
 
   functions: {
+    beacon(overrides?: CallOverrides): Promise<[string]>
+
+    'beacon()'(overrides?: CallOverrides): Promise<[string]>
+
     createNode(
       _stateHash: BytesLike,
       _challengeHash: BytesLike,
@@ -75,11 +73,11 @@ export class NodeFactory extends Contract {
       _deadlineBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
-
-    templateContract(overrides?: CallOverrides): Promise<[string]>
-
-    'templateContract()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  beacon(overrides?: CallOverrides): Promise<string>
+
+  'beacon()'(overrides?: CallOverrides): Promise<string>
 
   createNode(
     _stateHash: BytesLike,
@@ -99,11 +97,11 @@ export class NodeFactory extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  templateContract(overrides?: CallOverrides): Promise<string>
-
-  'templateContract()'(overrides?: CallOverrides): Promise<string>
-
   callStatic: {
+    beacon(overrides?: CallOverrides): Promise<string>
+
+    'beacon()'(overrides?: CallOverrides): Promise<string>
+
     createNode(
       _stateHash: BytesLike,
       _challengeHash: BytesLike,
@@ -121,15 +119,15 @@ export class NodeFactory extends Contract {
       _deadlineBlock: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>
-
-    templateContract(overrides?: CallOverrides): Promise<string>
-
-    'templateContract()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {}
 
   estimateGas: {
+    beacon(overrides?: CallOverrides): Promise<BigNumber>
+
+    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
+
     createNode(
       _stateHash: BytesLike,
       _challengeHash: BytesLike,
@@ -147,13 +145,13 @@ export class NodeFactory extends Contract {
       _deadlineBlock: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
-
-    templateContract(overrides?: CallOverrides): Promise<BigNumber>
-
-    'templateContract()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     createNode(
       _stateHash: BytesLike,
       _challengeHash: BytesLike,
@@ -170,12 +168,6 @@ export class NodeFactory extends Contract {
       _prev: BigNumberish,
       _deadlineBlock: BigNumberish,
       overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    templateContract(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'templateContract()'(
-      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
   }
 }

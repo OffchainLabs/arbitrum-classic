@@ -28,7 +28,7 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
     'nodeConfirmed(uint256)': FunctionFragment
     'nodeCreated(uint256,uint256,uint256,address)': FunctionFragment
     'nodeRejected(uint256)': FunctionFragment
-    'rollupInitialized(uint256,uint256,uint256,uint256,address,address,bytes)': FunctionFragment
+    'rollupInitialized(uint256,uint256,uint256,address,address,bytes)': FunctionFragment
     'stakeCreated(address,uint256)': FunctionFragment
   }
 
@@ -56,7 +56,6 @@ interface RollupEventBridgeInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'rollupInitialized',
     values: [
-      BigNumberish,
       BigNumberish,
       BigNumberish,
       BigNumberish,
@@ -182,7 +181,6 @@ export class RollupEventBridge extends Contract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -191,9 +189,8 @@ export class RollupEventBridge extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'rollupInitialized(uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'rollupInitialized(uint256,uint256,uint256,address,address,bytes)'(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -281,7 +278,6 @@ export class RollupEventBridge extends Contract {
 
   rollupInitialized(
     confirmPeriodBlocks: BigNumberish,
-    extraChallengeTimeBlocks: BigNumberish,
     arbGasSpeedLimitPerBlock: BigNumberish,
     baseStake: BigNumberish,
     stakeToken: string,
@@ -290,9 +286,8 @@ export class RollupEventBridge extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'rollupInitialized(uint256,uint256,uint256,uint256,address,address,bytes)'(
+  'rollupInitialized(uint256,uint256,uint256,address,address,bytes)'(
     confirmPeriodBlocks: BigNumberish,
-    extraChallengeTimeBlocks: BigNumberish,
     arbGasSpeedLimitPerBlock: BigNumberish,
     baseStake: BigNumberish,
     stakeToken: string,
@@ -380,7 +375,6 @@ export class RollupEventBridge extends Contract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -389,9 +383,8 @@ export class RollupEventBridge extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    'rollupInitialized(uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'rollupInitialized(uint256,uint256,uint256,address,address,bytes)'(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -491,7 +484,6 @@ export class RollupEventBridge extends Contract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -500,9 +492,8 @@ export class RollupEventBridge extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'rollupInitialized(uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'rollupInitialized(uint256,uint256,uint256,address,address,bytes)'(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -591,7 +582,6 @@ export class RollupEventBridge extends Contract {
 
     rollupInitialized(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,
@@ -600,9 +590,8 @@ export class RollupEventBridge extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'rollupInitialized(uint256,uint256,uint256,uint256,address,address,bytes)'(
+    'rollupInitialized(uint256,uint256,uint256,address,address,bytes)'(
       confirmPeriodBlocks: BigNumberish,
-      extraChallengeTimeBlocks: BigNumberish,
       arbGasSpeedLimitPerBlock: BigNumberish,
       baseStake: BigNumberish,
       stakeToken: string,

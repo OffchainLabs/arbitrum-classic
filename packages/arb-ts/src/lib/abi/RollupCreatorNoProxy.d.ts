@@ -19,7 +19,7 @@ interface RollupCreatorNoProxyInterface extends ethers.utils.Interface {
   functions: {}
 
   events: {
-    'RollupCreated(address)': EventFragment
+    'RollupCreated(address,address)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
@@ -43,7 +43,7 @@ export class RollupCreatorNoProxy extends Contract {
   callStatic: {}
 
   filters: {
-    RollupCreated(rollupAddress: null): EventFilter
+    RollupCreated(rollupAddress: null, inbox: null): EventFilter
   }
 
   estimateGas: {}

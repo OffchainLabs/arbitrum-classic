@@ -25,7 +25,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
     'DOMAIN_SEPARATOR()': FunctionFragment
     'allowance(address,address)': FunctionFragment
     'approve(address,uint256)': FunctionFragment
-    'approveAndCall(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
@@ -34,13 +33,11 @@ interface AeERC20Interface extends ethers.utils.Interface {
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
-    'supportsInterface(bytes4)': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
-    'transferAndCall(address,uint256)': FunctionFragment
+    'transferAndCall(address,uint256,bytes)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
-    'transferFromAndCall(address,address,uint256,bytes)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -53,10 +50,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'approve',
-    values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'approveAndCall',
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
@@ -87,10 +80,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
-  encodeFunctionData(
-    functionFragment: 'supportsInterface',
-    values: [BytesLike]
-  ): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'totalSupply',
@@ -102,15 +91,11 @@ interface AeERC20Interface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'transferAndCall',
-    values: [string, BigNumberish]
+    values: [string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'transferFrom',
     values: [string, string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'transferFromAndCall',
-    values: [string, string, BigNumberish, BytesLike]
   ): string
 
   decodeFunctionResult(
@@ -119,10 +104,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'approveAndCall',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
   decodeFunctionResult(
@@ -137,10 +118,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'supportsInterface',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result
@@ -152,14 +129,10 @@ interface AeERC20Interface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     data: BytesLike
   ): Result
-  decodeFunctionResult(
-    functionFragment: 'transferFromAndCall',
-    data: BytesLike
-  ): Result
 
   events: {
     'Approval(address,address,uint256)': EventFragment
-    'Transfer(address,address,uint256)': EventFragment
+    'Transfer(address,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'Approval'): EventFragment
@@ -205,19 +178,6 @@ export class AeERC20 extends Contract {
     'approve(address,uint256)'(
       spender: string,
       amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'approveAndCall(address,uint256)'(
-      spender: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'approveAndCall(address,uint256,bytes)'(
-      spender: string,
-      amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -303,16 +263,6 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    supportsInterface(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
-    'supportsInterface(bytes4)'(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>
-
     symbol(overrides?: CallOverrides): Promise<[string]>
 
     'symbol()'(overrides?: CallOverrides): Promise<[string]>
@@ -333,16 +283,17 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'transferAndCall(address,uint256)'(
-      recipient: string,
-      amount: BigNumberish,
+    transferAndCall(
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'transferAndCall(address,uint256,bytes)'(
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -354,21 +305,6 @@ export class AeERC20 extends Contract {
     ): Promise<ContractTransaction>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferFromAndCall(address,address,uint256,bytes)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,
@@ -401,19 +337,6 @@ export class AeERC20 extends Contract {
   'approve(address,uint256)'(
     spender: string,
     amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'approveAndCall(address,uint256)'(
-    spender: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'approveAndCall(address,uint256,bytes)'(
-    spender: string,
-    amount: BigNumberish,
-    data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -499,16 +422,6 @@ export class AeERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  supportsInterface(
-    interfaceId: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
-  'supportsInterface(bytes4)'(
-    interfaceId: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<boolean>
-
   symbol(overrides?: CallOverrides): Promise<string>
 
   'symbol()'(overrides?: CallOverrides): Promise<string>
@@ -529,16 +442,17 @@ export class AeERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'transferAndCall(address,uint256)'(
-    recipient: string,
-    amount: BigNumberish,
+  transferAndCall(
+    _to: string,
+    _value: BigNumberish,
+    _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'transferAndCall(address,uint256,bytes)'(
-    recipient: string,
-    amount: BigNumberish,
-    data: BytesLike,
+    _to: string,
+    _value: BigNumberish,
+    _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -550,21 +464,6 @@ export class AeERC20 extends Contract {
   ): Promise<ContractTransaction>
 
   'transferFrom(address,address,uint256)'(
-    sender: string,
-    recipient: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferFromAndCall(address,address,uint256,bytes)'(
-    sender: string,
-    recipient: string,
-    amount: BigNumberish,
-    data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'transferFromAndCall(address,address,uint256)'(
     sender: string,
     recipient: string,
     amount: BigNumberish,
@@ -597,19 +496,6 @@ export class AeERC20 extends Contract {
     'approve(address,uint256)'(
       spender: string,
       amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'approveAndCall(address,uint256)'(
-      spender: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'approveAndCall(address,uint256,bytes)'(
-      spender: string,
-      amount: BigNumberish,
-      data: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>
 
@@ -695,16 +581,6 @@ export class AeERC20 extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    supportsInterface(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'supportsInterface(bytes4)'(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
     symbol(overrides?: CallOverrides): Promise<string>
 
     'symbol()'(overrides?: CallOverrides): Promise<string>
@@ -725,16 +601,17 @@ export class AeERC20 extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    'transferAndCall(address,uint256)'(
-      recipient: string,
-      amount: BigNumberish,
+    transferAndCall(
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>
 
     'transferAndCall(address,uint256,bytes)'(
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>
 
@@ -751,21 +628,6 @@ export class AeERC20 extends Contract {
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    'transferFromAndCall(address,address,uint256,bytes)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<boolean>
-
-    'transferFromAndCall(address,address,uint256)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>
   }
 
   filters: {
@@ -775,7 +637,12 @@ export class AeERC20 extends Contract {
       value: null
     ): EventFilter
 
-    Transfer(from: string | null, to: string | null, value: null): EventFilter
+    Transfer(
+      from: string | null,
+      to: string | null,
+      value: null,
+      data: null
+    ): EventFilter
   }
 
   estimateGas: {
@@ -804,19 +671,6 @@ export class AeERC20 extends Contract {
     'approve(address,uint256)'(
       spender: string,
       amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'approveAndCall(address,uint256)'(
-      spender: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'approveAndCall(address,uint256,bytes)'(
-      spender: string,
-      amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -902,16 +756,6 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    supportsInterface(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'supportsInterface(bytes4)'(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
     symbol(overrides?: CallOverrides): Promise<BigNumber>
 
     'symbol()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -932,16 +776,17 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'transferAndCall(address,uint256)'(
-      recipient: string,
-      amount: BigNumberish,
+    transferAndCall(
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'transferAndCall(address,uint256,bytes)'(
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -953,21 +798,6 @@ export class AeERC20 extends Contract {
     ): Promise<BigNumber>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferFromAndCall(address,address,uint256,bytes)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,
@@ -1003,19 +833,6 @@ export class AeERC20 extends Contract {
     'approve(address,uint256)'(
       spender: string,
       amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'approveAndCall(address,uint256)'(
-      spender: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'approveAndCall(address,uint256,bytes)'(
-      spender: string,
-      amount: BigNumberish,
-      data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -1107,16 +924,6 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    supportsInterface(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'supportsInterface(bytes4)'(
-      interfaceId: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
     symbol(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'symbol()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -1137,16 +944,17 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'transferAndCall(address,uint256)'(
-      recipient: string,
-      amount: BigNumberish,
+    transferAndCall(
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'transferAndCall(address,uint256,bytes)'(
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
+      _to: string,
+      _value: BigNumberish,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -1158,21 +966,6 @@ export class AeERC20 extends Contract {
     ): Promise<PopulatedTransaction>
 
     'transferFrom(address,address,uint256)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferFromAndCall(address,address,uint256,bytes)'(
-      sender: string,
-      recipient: string,
-      amount: BigNumberish,
-      data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'transferFromAndCall(address,address,uint256)'(
       sender: string,
       recipient: string,
       amount: BigNumberish,
