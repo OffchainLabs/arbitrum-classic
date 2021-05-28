@@ -61,7 +61,7 @@ contract RollupEventBridge is IMessageProvider, Cloneable {
         bytes memory initMsg =
             abi.encodePacked(
                 confirmPeriodBlocks,
-                arbGasSpeedLimitPerBlock,
+                arbGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
                 uint256(0),
                 baseStake,
                 uint256(uint160(bytes20(stakeToken))),
