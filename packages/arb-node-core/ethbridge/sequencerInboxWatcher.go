@@ -144,21 +144,41 @@ func (b SequencerBatch) GetAfterAcc() common.Hash {
 	return b.AfterAcc
 }
 
+type sectionMetadata struct {
+	numItems                *big.Int
+	chainTime               inbox.ChainTime
+	newTotalDelayedMessages *big.Int
+	newDelayedAcc           common.Hash
+}
+
 func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
-	if len(b.sectionsMetadata)%5 > 0 {
-		b.sectionsMetadata = b.sectionsMetadata[:(len(b.sectionsMetadata) - (len(b.sectionsMetadata) % 5))]
+	sectionsMetadata := make([]sectionMetadata, 0, len(b.sectionsMetadata)/5)
+	for i := 0; i+5 <= len(b.sectionsMetadata); i += 5 {
+		chainTime := inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocks(b.sectionsMetadata[i+1]),
+			Timestamp: b.sectionsMetadata[i+2],
+		}
+		var newDelayedAcc common.Hash
+		copy(newDelayedAcc[:], math.U256Bytes(b.sectionsMetadata[i+4]))
+		sectionsMetadata = append(sectionsMetadata, sectionMetadata{
+			numItems:                b.sectionsMetadata[i],
+			chainTime:               chainTime,
+			newTotalDelayedMessages: b.sectionsMetadata[i+3],
+			newDelayedAcc:           newDelayedAcc,
+		})
 	}
-	if len(b.sectionsMetadata) == 0 {
+	if len(sectionsMetadata) == 0 {
 		logger.Warn().Msg("encountered sequencer batch with no batch items")
 		return []inbox.SequencerBatchItem{}, nil
 	}
 	unaccountedTransactions := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
-	for i := len(b.sectionsMetadata) - 5; i >= 5; i -= 5 {
-		// [numItems, l1BlockNumber, l1Timestamp, newTotalDelayedMessagesRead, newDelayedAcc]
-		txCount := b.sectionsMetadata[i] // numItems
+	// Iterate backwards through all but the first section metadata
+	for i := len(sectionsMetadata) - 1; i >= 1; i-- {
+		meta := sectionsMetadata[i]
+		txCount := meta.numItems
 		unaccountedTransactions.Sub(unaccountedTransactions, txCount)
-		delayedCount := b.sectionsMetadata[i+3]       // newTotalDelayedMessagesRead
-		prevDelayedCount := b.sectionsMetadata[i-5+3] // previous newTotalDelayedMessagesRead
+		delayedCount := meta.newTotalDelayedMessages
+		prevDelayedCount := sectionsMetadata[i-1].newTotalDelayedMessages
 		unaccountedTransactions.Sub(unaccountedTransactions, delayedCount)
 		unaccountedTransactions.Add(unaccountedTransactions, prevDelayedCount)
 		if delayedCount.Cmp(prevDelayedCount) > 0 {
@@ -166,7 +186,8 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 			unaccountedTransactions.Sub(unaccountedTransactions, big.NewInt(1))
 		}
 	}
-	unaccountedTransactions.Sub(unaccountedTransactions, b.sectionsMetadata[0])
+	firstSectionMeta := sectionsMetadata[0]
+	unaccountedTransactions.Sub(unaccountedTransactions, firstSectionMeta.numItems)
 	if unaccountedTransactions.Sign() > 0 {
 		// Account for the end-of-block message
 		unaccountedTransactions.Sub(unaccountedTransactions, big.NewInt(1))
@@ -174,20 +195,15 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 		return nil, errors.New("found a negative amount of unaccounted transactions")
 	}
 	// Any remaining unaccounted transactions are delayed messages in the first batch
-	runningTotalDelayedMessages := new(big.Int).Sub(b.sectionsMetadata[3], unaccountedTransactions)
+	runningTotalDelayedMessages := new(big.Int).Sub(firstSectionMeta.newTotalDelayedMessages, unaccountedTransactions)
 
 	ret := make([]inbox.SequencerBatchItem, 0, len(b.transactionLengths)+2)
 	lastAcc := b.BeforeAcc
 	nextSeqNum := new(big.Int).Set(b.BeforeCount)
 	dataOffset := 0
 	lengthsOffset := 0
-	for i := 0; i+5 <= len(b.sectionsMetadata); i += 5 {
-		sectionTxCount := b.sectionsMetadata[i]
-		chainTime := inbox.ChainTime{
-			BlockNum:  common.NewTimeBlocks(b.sectionsMetadata[i+1]),
-			Timestamp: b.sectionsMetadata[i+2],
-		}
-		for j := 0; int64(j) < sectionTxCount.Int64(); j++ {
+	for _, meta := range sectionsMetadata {
+		for j := 0; int64(j) < meta.numItems.Int64(); j++ {
 			// Sequencer batch items
 			length := int(b.transactionLengths[lengthsOffset].Int64())
 			lengthsOffset += 1
@@ -201,7 +217,7 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 				InboxSeqNum: nextSeqNum,
 				GasPrice:    big.NewInt(0),
 				Data:        b.transactionsData[dataOffset:(dataOffset + length)],
-				ChainTime:   chainTime,
+				ChainTime:   meta.chainTime,
 			}
 			dataOffset += length
 			item := inbox.NewSequencerItem(runningTotalDelayedMessages, seqMsg, lastAcc)
@@ -210,18 +226,15 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 			ret = append(ret, item)
 		}
 
-		newTotalDelayedMessages := b.sectionsMetadata[i+3]
-		if newTotalDelayedMessages.Cmp(runningTotalDelayedMessages) > 0 {
+		if meta.newTotalDelayedMessages.Cmp(runningTotalDelayedMessages) > 0 {
 			// Create batch item to read delayed messages
-			lastSeqNum := new(big.Int).Add(nextSeqNum, newTotalDelayedMessages)
+			lastSeqNum := new(big.Int).Add(nextSeqNum, meta.newTotalDelayedMessages)
 			lastSeqNum.Sub(lastSeqNum, runningTotalDelayedMessages)
 			nextSeqNum = new(big.Int).Set(lastSeqNum)
 			lastSeqNum.Sub(lastSeqNum, big.NewInt(1))
-			var delayedAcc common.Hash
-			copy(delayedAcc[:], math.U256Bytes(b.sectionsMetadata[i+4]))
-			item := inbox.NewDelayedItem(lastSeqNum, newTotalDelayedMessages, lastAcc, runningTotalDelayedMessages, delayedAcc)
+			item := inbox.NewDelayedItem(lastSeqNum, meta.newTotalDelayedMessages, lastAcc, runningTotalDelayedMessages, meta.newDelayedAcc)
 			lastAcc = item.Accumulator
-			runningTotalDelayedMessages = newTotalDelayedMessages
+			runningTotalDelayedMessages = meta.newTotalDelayedMessages
 			ret = append(ret, item)
 
 			endBlockMessage := inbox.InboxMessage{
@@ -230,9 +243,9 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 				InboxSeqNum: nextSeqNum,
 				GasPrice:    big.NewInt(0),
 				Data:        []byte{},
-				ChainTime:   chainTime,
+				ChainTime:   meta.chainTime,
 			}
-			item2 := inbox.NewSequencerItem(newTotalDelayedMessages, endBlockMessage, lastAcc)
+			item2 := inbox.NewSequencerItem(meta.newTotalDelayedMessages, endBlockMessage, lastAcc)
 			lastAcc = item2.Accumulator
 			nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
 			ret = append(ret, item2)
