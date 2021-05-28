@@ -20,7 +20,7 @@ import (
 
 var gasThreshold = big.NewInt(100_000_000_000)
 var sendThreshold = big.NewInt(5)
-var blockThreshold = big.NewInt(10000)
+var blockThreshold = big.NewInt(960)
 
 type Validator struct {
 	rollup         *ethbridge.Rollup
@@ -347,9 +347,9 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	if len(successorNodes) == 0 {
 		gasExecuted := new(big.Int).Sub(assertion.After.TotalGasConsumed, assertion.Before.TotalGasConsumed)
 		sendCount := new(big.Int).Sub(assertion.After.TotalSendCount, assertion.Before.TotalSendCount)
-		if sendCount.Cmp(gasThreshold) > 0 ||
-			gasExecuted.Cmp(sendThreshold) > 0 ||
-			timeSinceProposed.Cmp(blockThreshold) > 0 {
+		if sendCount.Cmp(sendThreshold) < 0 &&
+			gasExecuted.Cmp(gasThreshold) < 0 &&
+			timeSinceProposed.Cmp(blockThreshold) < 0 {
 			return nil, false, nil
 		}
 	}
