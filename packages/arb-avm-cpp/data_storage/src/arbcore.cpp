@@ -2427,7 +2427,7 @@ ValueResult<ArbCore::logscursor_logs> ArbCore::logsCursorGetLogs(
     const std::lock_guard<std::mutex> lock(
         logs_cursors[cursor_index].reorg_mutex);
 
-    auto status = logs_cursors[cursor_index].status;
+    DataCursor::status_enum status = logs_cursors[cursor_index].status;
     if (status == DataCursor::REQUESTED) {
         // No new logs yet
         return {rocksdb::Status::TryAgain(), {}};
