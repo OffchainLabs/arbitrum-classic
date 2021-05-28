@@ -25,8 +25,7 @@ interface IInboxInterface extends ethers.utils.Interface {
   functions: {
     'bridge()': FunctionFragment
     'createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
-    'depositEth(address)': FunctionFragment
-    'depositEthRetryable(address,uint256,uint256,uint256)': FunctionFragment
+    'depositEth(uint256)': FunctionFragment
     'sendContractTransaction(uint256,uint256,address,uint256,bytes)': FunctionFragment
     'sendL1FundedContractTransaction(uint256,uint256,address,bytes)': FunctionFragment
     'sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)': FunctionFragment
@@ -48,10 +47,9 @@ interface IInboxInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
-  encodeFunctionData(functionFragment: 'depositEth', values: [string]): string
   encodeFunctionData(
-    functionFragment: 'depositEthRetryable',
-    values: [string, BigNumberish, BigNumberish, BigNumberish]
+    functionFragment: 'depositEth',
+    values: [BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'sendContractTransaction',
@@ -87,10 +85,6 @@ interface IInboxInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'depositEth', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'depositEthRetryable',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(
     functionFragment: 'sendContractTransaction',
     data: BytesLike
@@ -166,28 +160,12 @@ export class IInbox extends Contract {
     ): Promise<ContractTransaction>
 
     depositEth(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    depositEthRetryable(
-      destAddr: string,
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
@@ -303,28 +281,12 @@ export class IInbox extends Contract {
   ): Promise<ContractTransaction>
 
   depositEth(
-    destAddr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'depositEth(address)'(
-    destAddr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  depositEthRetryable(
-    destAddr: string,
     maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    maxGasPrice: BigNumberish,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'depositEthRetryable(address,uint256,uint256,uint256)'(
-    destAddr: string,
+  'depositEth(uint256)'(
     maxSubmissionCost: BigNumberish,
-    maxGas: BigNumberish,
-    maxGasPrice: BigNumberish,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
@@ -439,26 +401,13 @@ export class IInbox extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    depositEth(destAddr: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'depositEth(address)'(
-      destAddr: string,
+    depositEth(
+      maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    depositEthRetryable(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
-      maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -586,28 +535,12 @@ export class IInbox extends Contract {
     ): Promise<BigNumber>
 
     depositEth(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    depositEthRetryable(
-      destAddr: string,
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
@@ -724,28 +657,12 @@ export class IInbox extends Contract {
     ): Promise<PopulatedTransaction>
 
     depositEth(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'depositEth(address)'(
-      destAddr: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    depositEthRetryable(
-      destAddr: string,
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'depositEthRetryable(address,uint256,uint256,uint256)'(
-      destAddr: string,
+    'depositEth(uint256)'(
       maxSubmissionCost: BigNumberish,
-      maxGas: BigNumberish,
-      maxGasPrice: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
