@@ -102,7 +102,7 @@ func processResults(t *testing.T, logs []value.Value) []evm.Result {
 		res, err := evm.NewResultFromValue(avmLog)
 		failIfError(t, err)
 		if res, ok := res.(*evm.BlockInfo); ok {
-			if res.GasLimit().Cmp(big.NewInt(100000000000)) > 0 {
+			if res.GasLimit().Cmp(big.NewInt(1_000_000_000_000)) > 0 {
 				t.Error("block gas limit too high", res.GasLimit())
 			}
 		}

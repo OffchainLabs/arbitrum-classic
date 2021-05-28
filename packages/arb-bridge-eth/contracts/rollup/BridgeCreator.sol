@@ -30,11 +30,11 @@ import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "../libraries/Whitelist.sol";
 
 contract BridgeCreator is Ownable {
-    Bridge delayedBridgeTemplate;
-    SequencerInbox sequencerInboxTemplate;
-    Inbox inboxTemplate;
-    RollupEventBridge rollupEventBridgeTemplate;
-    Outbox outboxTemplate;
+    Bridge public delayedBridgeTemplate;
+    SequencerInbox public sequencerInboxTemplate;
+    Inbox public inboxTemplate;
+    RollupEventBridge public rollupEventBridgeTemplate;
+    Outbox public outboxTemplate;
 
     event TemplatesUpdated();
 
