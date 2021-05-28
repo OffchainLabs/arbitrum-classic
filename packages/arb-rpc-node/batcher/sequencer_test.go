@@ -61,7 +61,7 @@ func deployRollup(
 	sequencerDelayBlocks *big.Int,
 	sequencerDelaySeconds *big.Int,
 	extraConfig []byte,
-) ethcommon.Address {
+) (ethcommon.Address, ethcommon.Address) {
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(auth, client)
 	test.FailIfError(t, err)
 	osp2Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof2(auth, client)
@@ -95,7 +95,7 @@ func deployRollup(
 	createEv, err := rollupCreator.ParseRollupCreated(*receipt.Logs[len(receipt.Logs)-1])
 	test.FailIfError(t, err)
 
-	return createEv.RollupAddress
+	return createEv.RollupAddress, createEv.Inbox
 }
 
 func generateTxs(t *testing.T, totalCount int, dataSizePerTx int, chainId *big.Int) []*types.Transaction {
@@ -144,8 +144,8 @@ func TestSequencerBatcher(t *testing.T) {
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
 	var owner common.Address
-	sequencerDelayBlocks := big.NewInt(60)
-	sequencerDelaySeconds := big.NewInt(900)
+	sequencerDelayBlocks := big.NewInt(200)
+	sequencerDelaySeconds := big.NewInt(3000)
 
 	l2ChainId := common.RandBigInt()
 
@@ -159,7 +159,7 @@ func TestSequencerBatcher(t *testing.T) {
 	sequencer := common.NewAddressFromEth(auth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 
-	rollupAddr := deployRollup(
+	rollupAddr, delayedInboxAddr := deployRollup(
 		t,
 		auth,
 		client,
@@ -188,6 +188,12 @@ func TestSequencerBatcher(t *testing.T) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, client)
 	test.FailIfError(t, err)
 
+	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
+	test.FailIfError(t, err)
+
+	delayedInbox, err := ethbridge.NewStandardInbox(delayedInboxAddr, client, transactAuth)
+	test.FailIfError(t, err)
+
 	seqInboxAddr, err := rollup.SequencerBridge(ctx)
 	test.FailIfError(t, err)
 
@@ -213,7 +219,7 @@ func TestSequencerBatcher(t *testing.T) {
 		seqMon.Reader,
 		client,
 		big.NewInt(1),
-		big.NewInt(1),
+		big.NewInt(50),
 		seqInbox,
 		auth,
 		dummyDataSigner,
@@ -223,6 +229,8 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 	batcher.logBatchGasCosts = true
 	batcher.chainTimeCheckInterval = time.Millisecond * 10
+	batcher.updateTimestampInterval = big.NewInt(1)
+	batcher.sequenceDelayedMessagesInterval = big.NewInt(1)
 	go batcher.Start(ctx)
 	client.Commit()
 	attempts := 0
@@ -241,19 +249,31 @@ func TestSequencerBatcher(t *testing.T) {
 		}
 	}
 
-	txs := generateTxs(t, 5, 10, l2ChainId)
-	for _, tx := range txs {
+	txs := generateTxs(t, 10, 10, l2ChainId)
+	for i, tx := range txs {
 		if err := batcher.SendTransaction(ctx, tx); err != nil {
 			t.Fatal(err)
 		}
+		delayedCount := 0
+		if i%4 == 0 {
+			delayedCount = 4
+		} else if i%2 == 0 {
+			delayedCount = 2
+		}
+		for i := 0; i < delayedCount; i++ {
+			_, err = delayedInbox.SendL2MessageFromOrigin(ctx, []byte{})
+			test.FailIfError(t, err)
+		}
+		client.Commit()
+		<-time.After(time.Millisecond * 500)
 	}
-	client.Commit()
-	<-time.After(time.Second)
-	client.Commit()
+	for i := 0; i < 50; i++ {
+		client.Commit()
+	}
 
 	msgCount1, err := seqMon.Core.GetMessageCount()
 	test.FailIfError(t, err)
-	if msgCount1.Cmp(big.NewInt(10)) < 0 {
+	if msgCount1.Cmp(big.NewInt(27)) < 0 {
 		t.Error("Not enough messages, only got", msgCount1.String())
 	}
 

@@ -36,7 +36,7 @@ import "../rollup/facets/RollupAdmin.sol";
 import "../libraries/Whitelist.sol";
 
 contract RollupCreatorNoProxy {
-    event RollupCreated(address rollupAddress);
+    event RollupCreated(address rollupAddress, Inbox inbox);
 
     constructor(
         address _challengeFactory,
@@ -165,7 +165,7 @@ contract RollupCreatorNoProxy {
             [address(new RollupAdminFacet()), address(new RollupUserFacet())],
             [config.sequencerDelayBlocks, config.sequencerDelaySeconds]
         );
-        emit RollupCreated(frame.rollup);
+        emit RollupCreated(frame.rollup, frame.inbox);
         return frame.rollup;
     }
 }

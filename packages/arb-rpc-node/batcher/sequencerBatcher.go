@@ -507,6 +507,26 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 		return true, nil
 	}
 
+	// Check if we need to reorg because we've exceeded the window
+	lastBatchItem := batchItems[len(batchItems)-1]
+	lastSeqMsg, err := inbox.NewInboxMessageFromData(lastBatchItem.SequencerMessage)
+	if err != nil {
+		return false, err
+	}
+	newestChainTime, err := getChainTime(ctx, b.client)
+	if err != nil {
+		return false, err
+	}
+	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), lastSeqMsg.ChainTime.BlockNum.AsInt())
+	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, lastSeqMsg.ChainTime.Timestamp)
+	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
+		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
+
+		b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
+
+		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
+	}
+
 	var transactionsData []byte
 	var transactionsLengths []*big.Int
 	var metadata []*big.Int
@@ -547,6 +567,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 			delayedAccInt := new(big.Int).SetBytes(delayedAcc.Bytes())
 			sectionCount := big.NewInt(int64(len(transactionsLengths) - lastMetadataEnd))
 			metadata = append(metadata, sectionCount, l1BlockNumber, l1Timestamp, totalDelayedMessagesRead, delayedAccInt)
+			lastMetadataEnd = len(transactionsLengths)
 			l1BlockNumber = nil
 			l1Timestamp = nil
 			startDelayedMessagesRead = nil
@@ -566,7 +587,8 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 			if l1BlockNumber == nil || l1BlockNumber.Cmp(seqMsg.ChainTime.BlockNum.AsInt()) != 0 || l1Timestamp.Cmp(seqMsg.ChainTime.Timestamp) != 0 {
 				sectionCount := len(transactionsLengths) - lastMetadataEnd
 				if sectionCount > 0 {
-					metadata = append(metadata, big.NewInt(int64(sectionCount)), l1BlockNumber, l1Timestamp, totalDelayedMessagesRead, big.NewInt(0))
+					metadata = append(metadata, big.NewInt(int64(sectionCount)), l1BlockNumber, l1Timestamp, startDelayedMessagesRead, big.NewInt(0))
+					lastMetadataEnd = len(transactionsLengths)
 				}
 				l1BlockNumber = seqMsg.ChainTime.BlockNum.AsInt()
 				l1Timestamp = seqMsg.ChainTime.Timestamp
@@ -594,6 +616,9 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 		lastAcc = item.Accumulator
 		lastSeqNum = item.LastSeqNum
 	}
+	if lastSeqNum == nil {
+		return true, nil
+	}
 	if skippingImplicitEndOfBlock {
 		return false, errors.New("didn't find implicit end of block after delayed messages")
 	}
@@ -611,21 +636,6 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 		}
 		delayedAccInt := new(big.Int).SetBytes(delayedAcc.Bytes())
 		metadata = append(metadata, big.NewInt(int64(lastSectionCount)), l1BlockNumber, l1Timestamp, totalDelayedMessagesRead, delayedAccInt)
-	}
-
-	// Check if we need to reorg because we've exceeded the window
-	newestChainTime, err := getChainTime(ctx, b.client)
-	if err != nil {
-		return false, err
-	}
-	delayBlocks := new(big.Int).Sub(newestChainTime.BlockNum.AsInt(), l1BlockNumber)
-	delaySeconds := new(big.Int).Sub(newestChainTime.Timestamp, l1Timestamp)
-	if delayBlocks.Cmp(b.maxDelayBlocks) > 0 || delaySeconds.Cmp(b.maxDelaySeconds) > 0 {
-		logger.Error().Str("delayBlocks", delayBlocks.String()).Str("delaySeconds", delaySeconds.String()).Msg("Exceeded max sequencer delay! Reorganizing to compensate...")
-
-		b.reorgToNewTimestamp(ctx, prevMsgCount, newestChainTime)
-
-		return false, errors.New("exceeded max sequencer delay, reorganized to compensate")
 	}
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
@@ -750,6 +760,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 					logger.Error().Err(err).Msg("Error creating batch")
 					time.Sleep(5 * time.Second)
 				}
+				dontPublishBlockNum = nil
 			}
 			b.lastCreatedBatchAt = blockNum
 		}

@@ -153,11 +153,12 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 		return []inbox.SequencerBatchItem{}, nil
 	}
 	unaccountedTransactions := new(big.Int).Sub(b.AfterCount, b.BeforeCount)
-	for i := len(b.sectionsMetadata); i >= 10; i -= 5 {
-		txCount := b.sectionsMetadata[i-5]
+	for i := len(b.sectionsMetadata) - 5; i >= 5; i -= 5 {
+		// [numItems, l1BlockNumber, l1Timestamp, newTotalDelayedMessagesRead, newDelayedAcc]
+		txCount := b.sectionsMetadata[i] // numItems
 		unaccountedTransactions.Sub(unaccountedTransactions, txCount)
-		delayedCount := b.sectionsMetadata[i-1]
-		prevDelayedCount := b.sectionsMetadata[i-6]
+		delayedCount := b.sectionsMetadata[i+3]       // newTotalDelayedMessagesRead
+		prevDelayedCount := b.sectionsMetadata[i-5+3] // previous newTotalDelayedMessagesRead
 		unaccountedTransactions.Sub(unaccountedTransactions, delayedCount)
 		unaccountedTransactions.Add(unaccountedTransactions, prevDelayedCount)
 		if delayedCount.Cmp(prevDelayedCount) > 0 {
@@ -169,6 +170,8 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 	if unaccountedTransactions.Sign() > 0 {
 		// Account for the end-of-block message
 		unaccountedTransactions.Sub(unaccountedTransactions, big.NewInt(1))
+	} else if unaccountedTransactions.Sign() < 0 {
+		return nil, errors.New("found a negative amount of unaccounted transactions")
 	}
 	// Any remaining unaccounted transactions are delayed messages in the first batch
 	runningTotalDelayedMessages := new(big.Int).Sub(b.sectionsMetadata[3], unaccountedTransactions)
@@ -234,6 +237,10 @@ func (b SequencerBatch) GetItems() ([]inbox.SequencerBatchItem, error) {
 			nextSeqNum = new(big.Int).Add(nextSeqNum, big.NewInt(1))
 			ret = append(ret, item2)
 		}
+	}
+
+	if nextSeqNum.Cmp(b.AfterCount) != 0 {
+		return nil, errors.New("computed unexpected batch end count")
 	}
 
 	if !lastAcc.Equals(b.AfterAcc) {
