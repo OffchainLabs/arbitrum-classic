@@ -40,10 +40,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
@@ -56,6 +59,16 @@ type Config struct {
 }
 
 var config *Config
+
+func waitForTxWithReceipt(tx *types.Transaction, method string) (*types.Receipt, error) {
+	fmt.Println("Waiting for receipt")
+	receipt, err := transactauth.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, arbtransaction.NewArbTransaction(tx), method, transactauth.NewEthArbReceiptFetcher(config.client))
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("Transaction completed successfully")
+	return receipt, nil
+}
 
 func waitForTx(tx *types.Transaction, method string) error {
 	fmt.Println("Waiting for receipt")
@@ -155,6 +168,76 @@ func version() error {
 		return err
 	}
 	fmt.Println("ArbOS Version:", version)
+	return nil
+}
+
+// This expects to be run with an L1 key and address
+func createChain(rollupCreator ethcommon.Address) error {
+	creator, err := ethbridgecontracts.NewRollupCreator(rollupCreator, config.client)
+	if err != nil {
+		return err
+	}
+
+	arbosMexe, err := arbos.Path()
+	if err != nil {
+		return err
+	}
+	initialMachine, err := cmachine.New(arbosMexe)
+	if err != nil {
+		return err
+	}
+
+	confirmPeriodBlocks := big.NewInt(45818)
+	extraChallengeTimeBlocks := big.NewInt(0)
+	arbGasSpeedLimitPerBlock := big.NewInt(600_000_000)
+	baseStake := big.NewInt(5_000_000_000_000_000_000)
+	stakeToken := ethcommon.Address{}
+	owner := ethcommon.HexToAddress("0x1c7d91ccBdBf378bAC0F074678b09CB589184e4E")
+	sequencer := ethcommon.HexToAddress("0xcCe5c6cFF61C49b4d53dd6024f8295F3c5230513")
+	sequencerDelayBlocks := big.NewInt(6545)
+	sequencerDelaySeconds := big.NewInt(86400)
+
+	opts := []message.ChainConfigOption{
+		message.DefaultAggConfig{Aggregator: common.NewAddressFromEth(sequencer)},
+	}
+	// Junk data other than opts since it's ignored
+	init, err := message.NewInitMessage(protocol.ChainParams{}, common.RandAddress(), opts)
+	if err != nil {
+		return err
+	}
+
+	tx, err := creator.CreateRollup(
+		config.auth,
+		initialMachine.Hash(),
+		confirmPeriodBlocks,
+		extraChallengeTimeBlocks,
+		arbGasSpeedLimitPerBlock,
+		baseStake,
+		stakeToken,
+		owner,
+		sequencer,
+		sequencerDelayBlocks,
+		sequencerDelaySeconds,
+		init.ExtraConfig,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	receipt, err := waitForTxWithReceipt(tx, "CreateRollup")
+	if err != nil {
+		return err
+	}
+
+	createEv, err := creator.ParseRollupCreated(*receipt.Logs[len(receipt.Logs)-1])
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Rollup created", createEv.RollupAddress.Hex())
+	fmt.Println("Inbox created", createEv.InboxAddress.Hex())
+	fmt.Println("Admin Proxy created", createEv.AdminProxy.Hex())
 	return nil
 }
 
@@ -354,6 +437,12 @@ func handleCommand(fields []string) error {
 		return version()
 	case "spam":
 		return spam()
+	case "create-mainnet":
+		if len(fields) != 2 {
+			return errors.New("Expected address argument")
+		}
+		creator := ethcommon.HexToAddress(fields[1])
+		return createChain(creator)
 	default:
 		fmt.Println("Unknown command")
 	}
