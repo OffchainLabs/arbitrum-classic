@@ -55,6 +55,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
 
     address public l2ArbTokenBridgeAddress;
     IInbox public inbox;
+    address public owner;
 
     // can only deposit after a deploy attempt
     mapping(address => bool) public override hasTriedDeploy;
@@ -68,16 +69,27 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         _;
     }
 
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
+
+    function setOwner(address _owner) external onlyOwner {
+        owner = _owner;
+    }
+
     /**
      * @notice Initialize L1 bridge
      * @param _inbox Address of Arbitrum chain's L1 Inbox.sol contract used to submit transactions to the L2
      * @param _l2TemplateERC20 Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
      * @param _l2ArbTokenBridgeAddress Address of L2 side of token bridge (ArbTokenBridge.sol)
+     * @param _owner Bridge owner that is able to force set token pairs
      */
     function initialize(
         address _inbox,
         address _l2TemplateERC20,
-        address _l2ArbTokenBridgeAddress
+        address _l2ArbTokenBridgeAddress,
+        address _owner
     ) external payable {
         require(address(l2TemplateERC20) == address(0), "already initialized");
         l2TemplateERC20 = _l2TemplateERC20;
@@ -85,6 +97,45 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         l2ArbTokenBridgeAddress = _l2ArbTokenBridgeAddress;
         inbox = IInbox(_inbox);
         cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
+        owner = _owner;
+    }
+
+    function _registerCustomL2Token(
+        address l1CustomTokenAddress,
+        address l2CustomTokenAddress,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address refundAddress,
+        uint256 value
+    ) internal returns (uint256) {
+        // Token must be registering for the first time, or retrying the same address
+        require(
+            !TokenAddressHandler.isCustomToken(l1CustomTokenAddress) ||
+                TokenAddressHandler.customL2Token[l1CustomTokenAddress] == l2CustomTokenAddress,
+            "Cannot register a different custom token address"
+        );
+        TokenAddressHandler.customL2Token[l1CustomTokenAddress] = l2CustomTokenAddress;
+
+        bytes memory data =
+            abi.encodeWithSelector(
+                IArbTokenBridge.customTokenRegistered.selector,
+                l1CustomTokenAddress,
+                l2CustomTokenAddress
+            );
+        uint256 seqNum =
+            inbox.createRetryableTicket{ value: value }(
+                l2ArbTokenBridgeAddress,
+                0,
+                maxSubmissionCost,
+                refundAddress,
+                refundAddress,
+                maxGas,
+                gasPriceBid,
+                data
+            );
+        emit ActivateCustomToken(seqNum, l1CustomTokenAddress, l2CustomTokenAddress);
+        return seqNum;
     }
 
     /**
@@ -105,34 +156,36 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 gasPriceBid,
         address refundAddress
     ) external payable override returns (uint256) {
-        address l1CustomTokenAddress = msg.sender;
-        // Token must be registering for the first time, or retrying the same address
-        require(
-            !TokenAddressHandler.isCustomToken(l1CustomTokenAddress) ||
-                TokenAddressHandler.customL2Token[l1CustomTokenAddress] == l2CustomTokenAddress,
-            "Cannot register a different custom token address"
-        );
-        TokenAddressHandler.customL2Token[l1CustomTokenAddress] = l2CustomTokenAddress;
-
-        bytes memory data =
-            abi.encodeWithSelector(
-                IArbTokenBridge.customTokenRegistered.selector,
-                l1CustomTokenAddress,
-                l2CustomTokenAddress
-            );
-        uint256 seqNum =
-            inbox.createRetryableTicket{ value: msg.value }(
-                l2ArbTokenBridgeAddress,
-                0,
+        return
+            _registerCustomL2Token(
+                msg.sender,
+                l2CustomTokenAddress,
                 maxSubmissionCost,
-                refundAddress,
-                refundAddress,
                 maxGas,
                 gasPriceBid,
-                data
+                refundAddress,
+                msg.value
             );
-        emit ActivateCustomToken(seqNum, l1CustomTokenAddress, l2CustomTokenAddress);
-        return seqNum;
+    }
+
+    function forceRegisterCustomL2Token(
+        address l1CustomTokenAddress,
+        address l2CustomTokenAddress,
+        uint256 maxSubmissionCost,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        address refundAddress
+    ) external payable onlyOwner returns (uint256) {
+        return
+            _registerCustomL2Token(
+                l1CustomTokenAddress,
+                l2CustomTokenAddress,
+                maxSubmissionCost,
+                maxGas,
+                gasPriceBid,
+                refundAddress,
+                msg.value
+            );
     }
 
     /**

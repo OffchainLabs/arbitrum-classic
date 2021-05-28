@@ -41,7 +41,12 @@ describe('Bridge peripherals layer 1', () => {
     const Inbox = await ethers.getContractFactory('InboxMock')
     inbox = await Inbox.deploy()
 
-    await testBridge.initialize(inbox.address, l2Template20, l2Address)
+    await testBridge.initialize(
+      inbox.address,
+      l2Template20,
+      l2Address,
+      accounts[0].address
+    )
   })
 
   it('should escrow depositted tokens', async function () {
