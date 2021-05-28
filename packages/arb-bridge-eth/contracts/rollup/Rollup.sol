@@ -187,6 +187,12 @@ contract Rollup is RollupBase {
             );
     }
 
+    /**
+     * Fallback and delegate functions from OZ
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/proxy/TransparentUpgradeableProxy.sol
+     * And dispatch pattern from EIP-2535: Diamonds
+     */
+
     function getFacets() public view returns (address, address) {
         return (getAdminFacet(), getUserFacet());
     }
