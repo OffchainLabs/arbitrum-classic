@@ -12,28 +12,28 @@ COPY --chown=user arb-avm-cpp/external /home/user/arb-avm-cpp/external
 COPY --chown=user arb-avm-cpp/cmake /home/user/arb-avm-cpp/cmake
 # Build arb-avm-cpp
 RUN mkdir -p arb-avm-cpp/build && cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
 COPY --chown=user arb-avm-cpp/avm_values /home/user/arb-avm-cpp/avm_values
 RUN cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
 COPY --chown=user arb-avm-cpp/avm /home/user/arb-avm-cpp/avm
 RUN cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
 COPY --chown=user arb-avm-cpp/data_storage /home/user/arb-avm-cpp/data_storage
 RUN cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
 COPY --chown=user arb-avm-cpp/cavm /home/user/arb-avm-cpp/cavm
 COPY --chown=user arb-avm-cpp/cmachine/flags.go.in /home/user/arb-avm-cpp/cmachine/
 RUN cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=0 && \
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 && \
     cmake --build . -j $(nproc)
 
 FROM offchainlabs/backend-base:0.3.2 as arb-validator-builder
