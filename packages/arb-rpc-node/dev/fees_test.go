@@ -42,6 +42,7 @@ import (
 )
 
 func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind.TransactOpts, *bind.TransactOpts, message.FeeConfig, protocol.ChainParams, common.Address, func()) {
+	skipBelowVersion(t, 25)
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	auth := bind.NewKeyedTransactor(privkey)

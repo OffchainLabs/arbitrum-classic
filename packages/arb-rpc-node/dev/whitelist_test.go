@@ -33,6 +33,7 @@ import (
 )
 
 func TestWhitelist(t *testing.T) {
+	skipBelowVersion(t, 25)
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(10),
 		StakeToken:                common.Address{},
