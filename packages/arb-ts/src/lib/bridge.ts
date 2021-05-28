@@ -105,19 +105,17 @@ export class Bridge extends L2Bridge {
    */
   public async depositETH(
     value: BigNumber,
-    destinationAddress?: string,
-    maxGas: BigNumber = BigNumber.from(3000000),
-    _gasPriceBid?: BigNumber,
+    _maxSubmissionPriceIncreaseRatio?: BigNumber,
     overrides?: PayableOverrides
   ) {
-    const gasPriceBid = _gasPriceBid || (await this.l2Provider.getGasPrice())
-    return this.l1Bridge.depositETH(
-      value,
-      destinationAddress,
-      maxGas,
-      gasPriceBid,
-      overrides
-    )
+    const maxSubmissionPriceIncreaseRatio =
+      _maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+
+    const maxSubmissionPrice = (await this.getTxnSubmissionPrice(0))[0]
+      .mul(maxSubmissionPriceIncreaseRatio)
+      .div(BigNumber.from(10))
+
+    return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
   }
 
   /**
