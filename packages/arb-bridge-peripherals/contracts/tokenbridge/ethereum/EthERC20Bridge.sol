@@ -33,6 +33,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "../../buddybridge/ethereum/L1Buddy.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
+import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
 import "./IEthERC20Bridge.sol";
 
@@ -42,7 +43,7 @@ import "./IEthERC20Bridge.sol";
  * @dev Custom tokens that are sufficiently "weird," (i.e., dynamic supply adjustment, say) should use their own, custom bridge.
  * All messages to layer 2 use the inbox's createRetryableTicket method.
  */
-contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
+contract EthERC20Bridge is IEthERC20Bridge, WhitelistConsumer, TokenAddressHandler {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -89,7 +90,8 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         address _inbox,
         address _l2TemplateERC20,
         address _l2ArbTokenBridgeAddress,
-        address _owner
+        address _owner,
+        address _whitelist
     ) external payable {
         require(address(l2TemplateERC20) == address(0), "already initialized");
         l2TemplateERC20 = _l2TemplateERC20;
@@ -98,6 +100,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         inbox = IInbox(_inbox);
         cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
         owner = _owner;
+        WhitelistConsumer.whitelist = _whitelist;
     }
 
     function _registerCustomL2Token(
@@ -155,7 +158,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 maxGas,
         uint256 gasPriceBid,
         address refundAddress
-    ) external payable override returns (uint256) {
+    ) external payable override onlyWhitelisted returns (uint256) {
         return
             _registerCustomL2Token(
                 msg.sender,
@@ -204,7 +207,7 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 exitNum,
         address to,
         bytes calldata data
-    ) external override {
+    ) external override onlyWhitelisted {
         bytes32 withdrawData = encodeWithdrawal(exitNum, initialDestination, erc20, amount);
         address redirectedAddress = redirectedExits[withdrawData];
         require(redirectedAddress != USED_ADDRESS, "ALREADY_EXITED");
@@ -330,7 +333,13 @@ contract EthERC20Bridge is IEthERC20Bridge, TokenAddressHandler {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata callHookData
-    ) external payable override returns (uint256 seqNum, uint256 depositCalldataLength) {
+    )
+        external
+        payable
+        override
+        onlyWhitelisted
+        returns (uint256 seqNum, uint256 depositCalldataLength)
+    {
         IERC20(erc20).safeTransferFrom(msg.sender, address(this), amount);
 
         bytes memory depositCalldata;

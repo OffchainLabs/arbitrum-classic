@@ -45,7 +45,8 @@ describe('Bridge peripherals layer 1', () => {
       inbox.address,
       l2Template20,
       l2Address,
-      accounts[0].address
+      accounts[0].address,
+      '0x0000000000000000000000000000000000000000'
     )
   })
 
