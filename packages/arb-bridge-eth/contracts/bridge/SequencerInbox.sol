@@ -154,8 +154,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     function addSequencerL2Batch(
         bytes calldata transactions,
         uint256[] calldata lengths,
-        uint256 l1BlockNumber,
-        uint256 timestamp,
+        uint256[2] calldata l1BlockNumberAndTimestamp,
         uint256 _totalDelayedMessagesRead,
         bytes32 afterAcc
     ) external {
@@ -164,8 +163,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             addSequencerL2BatchImpl(
                 transactions,
                 lengths,
-                l1BlockNumber,
-                timestamp,
+                l1BlockNumberAndTimestamp[0],
+                l1BlockNumberAndTimestamp[1],
                 _totalDelayedMessagesRead,
                 afterAcc
             );
@@ -176,11 +175,11 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             afterAcc,
             transactions,
             lengths,
-            l1BlockNumber,
-            timestamp,
+            l1BlockNumberAndTimestamp,
             _totalDelayedMessagesRead,
             delayedAcc,
-            inboxAccs.length - 1
+            inboxAccs.length - 1,
+            msg.sender
         );
     }
 
