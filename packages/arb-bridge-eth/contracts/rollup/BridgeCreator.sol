@@ -27,6 +27,7 @@ import "./RollupEventBridge.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
+import "../libraries/Whitelist.sol";
 
 contract BridgeCreator is Ownable {
     Bridge delayedBridgeTemplate;
@@ -68,6 +69,7 @@ contract BridgeCreator is Ownable {
         Inbox inbox;
         RollupEventBridge rollupEventBridge;
         Outbox outbox;
+        Whitelist whitelist;
     }
 
     function createBridge(
@@ -111,16 +113,19 @@ contract BridgeCreator is Ownable {
             frame.outbox = Outbox(
                 address(new TransparentUpgradeableProxy(address(outboxTemplate), adminProxy, ""))
             );
+            frame.whitelist = new Whitelist();
         }
 
         frame.delayedBridge.initialize();
         frame.sequencerInbox.initialize(IBridge(frame.delayedBridge), sequencer, rollup);
-        frame.inbox.initialize(IBridge(frame.delayedBridge));
+        frame.inbox.initialize(IBridge(frame.delayedBridge), address(frame.whitelist));
         frame.rollupEventBridge.initialize(address(frame.delayedBridge), rollup);
         frame.outbox.initialize(rollup, IBridge(frame.delayedBridge));
 
         frame.delayedBridge.setInbox(address(frame.inbox), true);
         frame.delayedBridge.transferOwnership(rollup);
+
+        frame.whitelist.setOwner(rollup);
 
         return (
             frame.delayedBridge,

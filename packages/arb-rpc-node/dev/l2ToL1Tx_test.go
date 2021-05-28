@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -165,7 +166,7 @@ func TestL2ToL1Tx(t *testing.T) {
 	test.FailIfError(t, err)
 	_, err = outbox.Initialize(ethAuth, ethAuth.From, bridgeAddress)
 	test.FailIfError(t, err)
-	_, err = inbox.Initialize(ethAuth, bridgeAddress)
+	_, err = inbox.Initialize(ethAuth, bridgeAddress, ethcommon.Address{})
 	test.FailIfError(t, err)
 	clnt.Commit()
 
