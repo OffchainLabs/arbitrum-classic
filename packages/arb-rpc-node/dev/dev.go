@@ -430,7 +430,7 @@ func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator
 		return errors.Wrap(err, "error connecting to arb owner")
 	}
 
-	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator)
+	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator, true)
 	if err != nil {
 		return errors.Wrap(err, "error calling SetFairGasPriceSender")
 	}
