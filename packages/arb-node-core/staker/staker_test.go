@@ -244,7 +244,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	)
 
 	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, batchItem.Accumulator)
-	_, err = seqInbox.AddSequencerL2BatchFromOrigin(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
+	delayedAccInt := new(big.Int).SetBytes(delayedAcc[:])
+	metadata := []*big.Int{big.NewInt(0), currentBlockNumber, currentTimestamp, big.NewInt(1), delayedAccInt}
+	_, err = seqInbox.AddSequencerL2BatchFromOrigin(seqAuth, []byte{}, []*big.Int{}, metadata, endBlockBatchItem.Accumulator)
 	test.FailIfError(t, err)
 	client.Commit()
 

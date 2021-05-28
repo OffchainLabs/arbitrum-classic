@@ -79,7 +79,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256 inboxSeqNum,
         uint256 gasPriceL1,
         address sender,
-        bytes32 messageDataHash
+        bytes32 messageDataHash,
+        bytes32 delayedAcc
     ) external {
         require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         {
@@ -113,13 +114,14 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             beforeAcc = inboxAccs[inboxAccs.length - 1];
         }
 
-        (bytes32 delayedAcc, bytes32 acc, uint256 count) =
+        (bytes32 acc, uint256 count) =
             includeDelayedMessages(
                 beforeAcc,
                 startNum,
                 _totalDelayedMessagesRead,
                 block.number,
-                block.timestamp
+                block.timestamp,
+                delayedAcc
             );
         inboxAccs.push(acc);
         messageCount = count;
@@ -136,29 +138,19 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     function addSequencerL2BatchFromOrigin(
         bytes calldata transactions,
         uint256[] calldata lengths,
-        uint256 l1BlockNumber,
-        uint256 timestamp,
-        uint256 _totalDelayedMessagesRead,
+        uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
     ) external {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 startNum = messageCount;
-        (bytes32 beforeAcc, bytes32 delayedAcc) =
-            addSequencerL2BatchImpl(
-                transactions,
-                lengths,
-                l1BlockNumber,
-                timestamp,
-                _totalDelayedMessagesRead,
-                afterAcc
-            );
+        bytes32 beforeAcc =
+            addSequencerL2BatchImpl(transactions, lengths, sectionsMetadata, afterAcc);
         emit SequencerBatchDeliveredFromOrigin(
             startNum,
             beforeAcc,
             messageCount,
             afterAcc,
-            delayedAcc,
             inboxAccs.length - 1
         );
     }
@@ -166,20 +158,12 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     function addSequencerL2Batch(
         bytes calldata transactions,
         uint256[] calldata lengths,
-        uint256[2] calldata l1BlockNumberAndTimestamp,
-        uint256 _totalDelayedMessagesRead,
+        uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
     ) external {
         uint256 startNum = messageCount;
-        (bytes32 beforeAcc, bytes32 delayedAcc) =
-            addSequencerL2BatchImpl(
-                transactions,
-                lengths,
-                l1BlockNumberAndTimestamp[0],
-                l1BlockNumberAndTimestamp[1],
-                _totalDelayedMessagesRead,
-                afterAcc
-            );
+        bytes32 beforeAcc =
+            addSequencerL2BatchImpl(transactions, lengths, sectionsMetadata, afterAcc);
         emit SequencerBatchDelivered(
             startNum,
             beforeAcc,
@@ -187,68 +171,122 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             afterAcc,
             transactions,
             lengths,
-            l1BlockNumberAndTimestamp,
-            _totalDelayedMessagesRead,
-            delayedAcc,
+            sectionsMetadata,
             inboxAccs.length - 1,
             msg.sender
         );
     }
 
     function addSequencerL2BatchImpl(
-        bytes calldata transactions,
+        bytes memory transactions,
         uint256[] calldata lengths,
-        uint256 l1BlockNumber,
-        uint256 timestamp,
-        uint256 _totalDelayedMessagesRead,
+        uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
-    ) private returns (bytes32 beforeAcc, bytes32 delayedAcc) {
-        uint256 txCount = lengths.length;
+    ) private returns (bytes32 beforeAcc) {
         require(msg.sender == sequencer, "ONLY_SEQUENCER");
-        require(l1BlockNumber + maxDelayBlocks() >= block.number, "BLOCK_TOO_OLD");
-        require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
-        require(timestamp + maxDelaySeconds() >= block.timestamp, "TIME_TOO_OLD");
-        require(timestamp <= block.timestamp, "TIME_TOO_NEW");
-        require(_totalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
-        require(_totalDelayedMessagesRead >= 1, "MUST_DELAYED_INIT");
-        require(totalDelayedMessagesRead >= 1 || txCount == 0, "MUST_DELAYED_INIT_START");
 
         if (inboxAccs.length > 0) {
             beforeAcc = inboxAccs[inboxAccs.length - 1];
         }
 
-        bytes32 prefixHash = keccak256(abi.encodePacked(msg.sender, l1BlockNumber, timestamp));
-        (bytes32 acc, uint256 count) = calcL2Batch(transactions, lengths, prefixHash, beforeAcc);
+        uint256 runningCount = messageCount;
+        bytes32 runningAcc = beforeAcc;
+        uint256 processedItems = 0;
+        uint256 dataOffset;
+        assembly {
+            dataOffset := add(transactions, 32)
+        }
+        for (uint256 i = 0; i + 5 <= sectionsMetadata.length; i += 5) {
+            // Each metadata section consists of:
+            // [numItems, l1BlockNumber, l1Timestamp, newTotalDelayedMessagesRead, newDelayedAcc]
+            {
+                uint256 l1BlockNumber = sectionsMetadata[i + 1];
+                require(l1BlockNumber + maxDelayBlocks() >= block.number, "BLOCK_TOO_OLD");
+                require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
+            }
+            {
+                uint256 l1Timestamp = sectionsMetadata[i + 2];
+                require(l1Timestamp + maxDelaySeconds() >= block.timestamp, "TIME_TOO_OLD");
+                require(l1Timestamp <= block.timestamp, "TIME_TOO_NEW");
+            }
 
-        (delayedAcc, acc, count) = includeDelayedMessages(
-            acc,
-            count,
-            _totalDelayedMessagesRead,
-            l1BlockNumber,
-            timestamp
-        );
+            {
+                bytes32 prefixHash =
+                    keccak256(
+                        abi.encodePacked(
+                            msg.sender,
+                            sectionsMetadata[i + 1],
+                            sectionsMetadata[i + 2]
+                        )
+                    );
+                uint256 numItems = sectionsMetadata[i];
+                (runningAcc, runningCount, dataOffset) = calcL2Batch(
+                    dataOffset,
+                    lengths,
+                    processedItems,
+                    numItems, // num items
+                    prefixHash,
+                    runningCount,
+                    runningAcc
+                );
+                processedItems += numItems; // num items
+            }
 
-        require(count > messageCount, "EMPTY_BATCH");
-        inboxAccs.push(acc);
-        messageCount = count;
+            uint256 newTotalDelayedMessagesRead = sectionsMetadata[i + 3];
+            require(newTotalDelayedMessagesRead >= totalDelayedMessagesRead, "DELAYED_BACKWARDS");
+            require(newTotalDelayedMessagesRead >= 1, "MUST_DELAYED_INIT");
+            require(
+                totalDelayedMessagesRead >= 1 || sectionsMetadata[i] == 0,
+                "MUST_DELAYED_INIT_START"
+            );
+            if (newTotalDelayedMessagesRead > totalDelayedMessagesRead) {
+                (runningAcc, runningCount) = includeDelayedMessages(
+                    runningAcc,
+                    runningCount,
+                    newTotalDelayedMessagesRead,
+                    sectionsMetadata[i + 1], // block number
+                    sectionsMetadata[i + 2], // timestamp
+                    bytes32(sectionsMetadata[i + 4]) // delayed accumulator
+                );
+            }
+        }
 
-        require(acc == afterAcc, "AFTER_ACC");
+        uint256 startOffset;
+        assembly {
+            startOffset := add(transactions, 32)
+        }
+        require(dataOffset >= startOffset, "OFFSET_OVERFLOW");
+        require(dataOffset <= startOffset + transactions.length, "TRANSACTIONS_OVERRUN");
+
+        require(runningCount > messageCount, "EMPTY_BATCH");
+        inboxAccs.push(runningAcc);
+        messageCount = runningCount;
+
+        require(runningAcc == afterAcc, "AFTER_ACC");
     }
 
     function calcL2Batch(
-        bytes memory transactions,
+        uint256 beforeOffset,
         uint256[] calldata lengths,
+        uint256 lengthsOffset,
+        uint256 itemCount,
         bytes32 prefixHash,
+        uint256 beforeCount,
         bytes32 beforeAcc
-    ) private view returns (bytes32 acc, uint256 count) {
-        uint256 txCount = lengths.length;
-        count = messageCount;
+    )
+        private
+        pure
+        returns (
+            bytes32 acc,
+            uint256 count,
+            uint256 offset
+        )
+    {
+        offset = beforeOffset;
+        count = beforeCount;
         acc = beforeAcc;
-        uint256 offset;
-        assembly {
-            offset := add(transactions, 32)
-        }
-        for (uint256 i = 0; i < txCount; i++) {
+        itemCount += lengthsOffset;
+        for (uint256 i = lengthsOffset; i < itemCount; i++) {
             uint256 length = lengths[i];
             bytes32 messageDataHash;
             assembly {
@@ -258,57 +296,43 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             offset += length;
             count++;
         }
-        uint256 startOffset;
-        assembly {
-            startOffset := add(transactions, 32)
-        }
-        require(offset >= startOffset, "OFFSET_OVERFLOW");
-        require(offset <= startOffset + transactions.length, "TRANSACTIONS_OVERRUN");
-        return (acc, count);
+        return (acc, count, offset);
     }
 
+    // Precondition: _totalDelayedMessagesRead > totalDelayedMessagesRead
     function includeDelayedMessages(
         bytes32 acc,
         uint256 count,
         uint256 _totalDelayedMessagesRead,
         uint256 l1BlockNumber,
-        uint256 timestamp
-    )
-        private
-        returns (
-            bytes32,
-            bytes32,
-            uint256
-        )
-    {
-        bytes32 delayedAcc;
-        if (_totalDelayedMessagesRead > totalDelayedMessagesRead) {
-            require(_totalDelayedMessagesRead <= delayedInbox.messageCount(), "DELAYED_TOO_FAR");
-            delayedAcc = delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1);
-            acc = keccak256(
-                abi.encodePacked(
-                    "Delayed messages:",
-                    acc,
-                    count,
-                    totalDelayedMessagesRead,
-                    _totalDelayedMessagesRead,
-                    delayedAcc
-                )
-            );
-            count += _totalDelayedMessagesRead - totalDelayedMessagesRead;
-            bytes memory emptyBytes;
-            acc = keccak256(
-                abi.encodePacked(
-                    acc,
-                    count,
-                    keccak256(abi.encodePacked(address(0), l1BlockNumber, timestamp)),
-                    keccak256(emptyBytes)
-                )
-            );
-            count++;
-            totalDelayedMessagesRead = _totalDelayedMessagesRead;
-        }
-        return (delayedAcc, acc, count);
+        uint256 timestamp,
+        bytes32 delayedAcc
+    ) private returns (bytes32, uint256) {
+        require(_totalDelayedMessagesRead <= delayedInbox.messageCount(), "DELAYED_TOO_FAR");
+        require(delayedAcc == delayedInbox.inboxAccs(_totalDelayedMessagesRead - 1), "DELAYED_ACC");
+        acc = keccak256(
+            abi.encodePacked(
+                "Delayed messages:",
+                acc,
+                count,
+                totalDelayedMessagesRead,
+                _totalDelayedMessagesRead,
+                delayedAcc
+            )
+        );
+        count += _totalDelayedMessagesRead - totalDelayedMessagesRead;
+        bytes memory emptyBytes;
+        acc = keccak256(
+            abi.encodePacked(
+                acc,
+                count,
+                keccak256(abi.encodePacked(address(0), l1BlockNumber, timestamp)),
+                keccak256(emptyBytes)
+            )
+        );
+        count++;
+        totalDelayedMessagesRead = _totalDelayedMessagesRead;
+        return (acc, count);
     }
 
     function proveSeqBatchMsgCount(

@@ -86,13 +86,13 @@ func TestSequencerGasUsage(t *testing.T) {
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endBlockMsg, initBatchItem.Accumulator)
 
+	delayedAccInt := new(big.Int).SetBytes(delayedAcc[:])
+	metadata := []*big.Int{big.NewInt(0), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), delayedAccInt}
 	_, err = seqInbox.AddSequencerL2BatchFromOrigin(
 		auth,
 		nil,
 		nil,
-		chainTime.BlockNum.AsInt(),
-		chainTime.Timestamp,
-		big.NewInt(1),
+		metadata,
 		endBlockBatchItem.Accumulator,
 	)
 	test.FailIfError(t, err)
@@ -127,13 +127,12 @@ func TestSequencerGasUsage(t *testing.T) {
 				seq = new(big.Int).Add(seq, big.NewInt(1))
 			}
 
+			metadata := []*big.Int{big.NewInt(int64(totalCount)), chainTime.BlockNum.AsInt(), chainTime.Timestamp, big.NewInt(1), big.NewInt(0)}
 			tx, err := seqInbox.AddSequencerL2BatchFromOrigin(
 				auth,
 				transactionsData,
 				lengths,
-				chainTime.BlockNum.AsInt(),
-				chainTime.Timestamp,
-				big.NewInt(1),
+				metadata,
 				prevAcc,
 			)
 			test.FailIfError(t, err)

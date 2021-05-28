@@ -26,9 +26,7 @@ interface ISequencerInbox {
         bytes32 afterAcc,
         bytes transactions,
         uint256[] lengths,
-        uint256[2] l1BlockNumberAndTimestamp,
-        uint256 totalDelayedMessagesRead,
-        bytes32 delayedAcc,
+        uint256[] sectionsMetadata,
         uint256 seqBatchIndex,
         address sequencer
     );
@@ -38,7 +36,6 @@ interface ISequencerInbox {
         bytes32 indexed beforeAcc,
         uint256 newMessageCount,
         bytes32 afterAcc,
-        bytes32 delayedAcc,
         uint256 seqBatchIndex
     );
 
