@@ -763,7 +763,7 @@ void ArbCore::operator()() {
                     }
                 }
 
-                if (core_machine->machine_state.output.arb_gas_used >
+                if (machine->machine_state.output.arb_gas_used >
                     last_checkpoint_gas + max_checkpoint_frequency) {
                     // Save checkpoint for every sideload
                     status = saveCheckpoint(tx);
@@ -774,7 +774,7 @@ void ArbCore::operator()() {
                         break;
                     }
                     last_checkpoint_gas =
-                        core_machine->machine_state.output.arb_gas_used;
+                        machine->machine_state.output.arb_gas_used;
                     // Clear oldest cache and start populating next cache
                     cache.nextCache();
                 }
