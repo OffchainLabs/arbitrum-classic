@@ -355,7 +355,7 @@ func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
 func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
 	result := C.arbCoreGetLastMachineTotalGas(ac.c)
 	if result.found == 0 {
-		return nil, errors.New("failed to load send count")
+		return nil, errors.New("failed to get last machine total gas")
 	}
 
 	return receiveBigInt(result.value), nil
