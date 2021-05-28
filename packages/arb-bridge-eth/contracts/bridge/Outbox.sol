@@ -18,7 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "../libraries/CloneFactory.sol";
 import "./OutboxEntry.sol";
 
 import "./interfaces/IOutbox.sol";
@@ -29,17 +28,20 @@ import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
 import "../libraries/Cloneable.sol";
 
-contract Outbox is CloneFactory, IOutbox, Cloneable {
+import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+
+contract Outbox is IOutbox, Cloneable {
     using BytesLib for bytes;
 
     bytes1 internal constant MSG_ROOT = 0;
 
     uint8 internal constant SendType_sendTxToL1 = 3;
 
-    address rollup;
-    IBridge bridge;
+    address public rollup;
+    IBridge public bridge;
 
-    ICloneable outboxEntryTemplate;
+    UpgradeableBeacon public beacon;
     OutboxEntry[] public outboxes;
 
     // Note, these variables are set and then wiped during a single transaction.
@@ -54,7 +56,10 @@ contract Outbox is CloneFactory, IOutbox, Cloneable {
         require(rollup == address(0), "ALREADY_INIT");
         rollup = _rollup;
         bridge = _bridge;
-        outboxEntryTemplate = ICloneable(new OutboxEntry());
+
+        address outboxEntryTemplate = address(new OutboxEntry());
+        beacon = new UpgradeableBeacon(outboxEntryTemplate);
+        beacon.transferOwnership(_rollup);
     }
 
     /// @notice When l2ToL1Sender returns a nonzero address, the message was originated by an L2 account
@@ -97,7 +102,7 @@ contract Outbox is CloneFactory, IOutbox, Cloneable {
             uint256 numInBatch = data.toUint(33);
             bytes32 outputRoot = data.toBytes32(65);
 
-            address clone = createClone(outboxEntryTemplate);
+            address clone = address(new BeaconProxy(address(beacon), ""));
             OutboxEntry(clone).initialize(outputRoot, numInBatch);
             uint256 outboxIndex = outboxes.length;
             outboxes.push(OutboxEntry(clone));

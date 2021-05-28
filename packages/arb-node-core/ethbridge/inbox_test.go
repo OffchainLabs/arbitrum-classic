@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
@@ -37,9 +38,10 @@ func TestRetryable(t *testing.T) {
 	inboxAddress, _, inbox, err := ethbridgecontracts.DeployInbox(auth, clnt)
 	test.FailIfError(t, err)
 	clnt.Commit()
+
 	_, err = bridge.Initialize(auth)
 	test.FailIfError(t, err)
-	_, err = inbox.Initialize(auth, bridgeAddress)
+	_, err = inbox.Initialize(auth, bridgeAddress, ethcommon.Address{})
 	test.FailIfError(t, err)
 	_, err = bridge.SetInbox(auth, inboxAddress, true)
 	test.FailIfError(t, err)

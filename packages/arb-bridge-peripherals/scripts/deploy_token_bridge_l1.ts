@@ -17,6 +17,10 @@ const main = async () => {
 
   if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
+  const whitelistAddress = process.env.WHITELIST_ADDRESS
+  if (!whitelistAddress)
+    throw new Error('Please set whitelist address! WHITELIST_ADDRESS')
+
   const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
 
   if (deployments.buddyDeployer === '' || deployments.standardArbERC20 === '')
@@ -104,7 +108,9 @@ const main = async () => {
   const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
     inboxAddress,
     deployments.standardArbERC20,
-    arbTokenBridgeProxy.address
+    arbTokenBridgeProxy.address,
+    l2Signer.address,
+    whitelistAddress
   )
   console.log('init L1 hash', initL1Bridge.hash)
   console.log('init L2 hash', initL2Bridge.hash)

@@ -143,4 +143,43 @@ interface IRollupAdmin {
      */
     function setChallengeExecutionBisectionDegree(uint256 newChallengeExecutionBisectionDegree)
         external;
+
+    /**
+     * @notice Updates a whitelist address for its consumers
+     * @dev setting the newWhitelist to address(0) disables it for consumers
+     * @param whitelist old whitelist to be deprecated
+     * @param newWhitelist new whitelist to be used
+     * @param targets whitelist consumers to be triggered
+     */
+    function updateWhitelistConsumers(
+        address whitelist,
+        address newWhitelist,
+        address[] memory targets
+    ) external;
+
+    /**
+     * @notice Updates a whitelist's entries
+     * @dev user at position i will be assigned value i
+     * @param whitelist whitelist to be updated
+     * @param user users to be updated in the whitelist
+     * @param val if user is or not allowed in the whitelist
+     */
+    function setWhitelistEntries(
+        address whitelist,
+        address[] memory user,
+        bool[] memory val
+    ) external;
+
+    /**
+     * @notice Updates a sequencer address at the sequencer inbox
+     * @param newSequencer new sequencer address to be used
+     */
+    function setSequencer(address newSequencer) external;
+
+    /**
+     * @notice Upgrades the implementation of a beacon controlled by the rollup
+     * @param beacon address of beacon to be upgraded
+     * @param newImplementation new address of implementation
+     */
+    function upgradeBeacon(address beacon, address newImplementation) external;
 }
