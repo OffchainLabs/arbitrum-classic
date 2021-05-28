@@ -75,7 +75,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	wg.Wait()
 
 	// give the above connections time to reconnect
-	time.Sleep(2 * time.Second)
+	time.Sleep(4 * time.Second)
 
 	// Confirmed Accumulator will also broadcast to the clients.
 	err = b.ConfirmedAccumulator(feedItem1.BatchItem.Accumulator) // remove the first message we generated

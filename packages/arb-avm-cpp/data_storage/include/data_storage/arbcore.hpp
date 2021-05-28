@@ -75,6 +75,7 @@ class ArbCore {
 
    private:
     struct message_data_struct {
+        uint256_t previous_message_count;
         uint256_t previous_batch_acc;
         std::vector<std::vector<unsigned char>> sequencer_batch_items;
         std::vector<std::vector<unsigned char>> delayed_messages;
@@ -211,6 +212,7 @@ class ArbCore {
    public:
     // Sending messages to core thread
     bool deliverMessages(
+        const uint256_t& previous_message_count,
         const uint256_t& previous_inbox_acc,
         std::vector<std::vector<unsigned char>> sequencer_batch_items,
         std::vector<std::vector<unsigned char>> delayed_messages,
