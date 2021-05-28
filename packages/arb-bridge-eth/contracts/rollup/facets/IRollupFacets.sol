@@ -162,4 +162,17 @@ interface IRollupAdmin {
      * @param newSequencer new sequencer address to be used
      */
     function setSequencer(address newSequencer) external;
+
+    /**
+     * @notice Updates a whitelist's entries
+     * @dev user at position i will be assigned value i
+     * @param whitelist whitelist to be updated
+     * @param user users to be updated in the whitelist
+     * @param val if user is or not allowed in the whitelist
+     */
+    function setWhitelist(
+        address whitelist,
+        address[] memory user,
+        bool[] memory val
+    ) external;
 }
