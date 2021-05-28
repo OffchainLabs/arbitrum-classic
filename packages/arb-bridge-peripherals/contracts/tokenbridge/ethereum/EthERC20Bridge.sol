@@ -391,8 +391,8 @@ contract EthERC20Bridge is IEthERC20Bridge, WhitelistConsumer, TokenAddressHandl
 
     /**
      * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L@ oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @dev This always returns the same as the L2 oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deployed, or the contract self destructed.
      * @param erc20 address of L1 token
      * @return L2 address of a bridged ERC20 token
      */
