@@ -280,6 +280,10 @@ func startup() error {
 	}
 	defer db.Close()
 
+	if *waitToCatchUp {
+		inboxReader.WaitToCatchUp(ctx)
+	}
+
 	var batch batcher.TransactionBatcher
 	for {
 		batch, err = rpc.SetupBatcher(
@@ -299,10 +303,6 @@ func startup() error {
 		}
 		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
 		time.Sleep(time.Second * 5)
-	}
-
-	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp(ctx)
 	}
 
 	srv := aggregator.NewServer(batch, rollupArgs.Address, l2ChainId, db)
