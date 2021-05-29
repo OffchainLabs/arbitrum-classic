@@ -144,7 +144,7 @@ func TestSequencerBatcher(t *testing.T) {
 	baseStake := big.NewInt(100)
 	var stakeToken common.Address
 	var owner common.Address
-	sequencerDelayBlocks := big.NewInt(51)
+	sequencerDelayBlocks := big.NewInt(200)
 	sequencerDelaySeconds := big.NewInt(3000)
 
 	l2ChainId := common.RandBigInt()
