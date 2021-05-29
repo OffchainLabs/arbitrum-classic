@@ -32,7 +32,7 @@ contract BridgeUtils {
             counts[0] = delayedCount;
             accs[0] = delayedBridge.inboxAccs(delayedCount - 1);
         }
-        uint256 sequencerCount = sequencerInbox.messageCount();
+        uint256 sequencerCount = sequencerInbox.getInboxAccsLength();
         if (sequencerCount > 0) {
             counts[1] = sequencerCount;
             accs[1] = sequencerInbox.inboxAccs(sequencerCount - 1);

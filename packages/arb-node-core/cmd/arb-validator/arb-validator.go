@@ -116,8 +116,8 @@ func startup() error {
 		}
 	}()
 
-	if len(os.Args) < 5 {
-		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] [validator wallet factory address] [strategy] " + cmdhelp.WalletArgsString
+	if len(os.Args) < 6 {
+		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [bridge utils address] [validator utils address] [validator wallet factory address] [strategy] " + cmdhelp.WalletArgsString
 		fmt.Println(usageStr)
 		return errors.New("invalid arguments")
 	}
@@ -133,7 +133,7 @@ func startup() error {
 	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
 	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
 
-	if err := flagSet.Parse(os.Args[7:]); err != nil {
+	if err := flagSet.Parse(os.Args[8:]); err != nil {
 		return errors.Wrap(err, "failed parsing command line arguments")
 	}
 	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
@@ -175,15 +175,16 @@ func startup() error {
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	rollupAddr := ethcommon.HexToAddress(os.Args[3])
-	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
-	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[5])
+	bridgeUtilsAddr := ethcommon.HexToAddress(os.Args[4])
+	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[5])
+	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[6])
 	auth, _, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 
-	strategyString := os.Args[6]
+	strategyString := os.Args[7]
 	var strategy staker.Strategy
 	if strategyString == "MakeNodes" {
 		strategy = staker.MakeNodesStrategy
@@ -276,7 +277,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, dummySequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}

@@ -33,7 +33,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     bytes32[] public override inboxAccs;
     uint256 public override messageCount;
 
-    uint256 totalDelayedMessagesRead;
+    uint256 public totalDelayedMessagesRead;
 
     IBridge public delayedInbox;
     address public sequencer;
@@ -388,5 +388,9 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         require(inboxCount <= thisBatchCount, "BATCH_END");
 
         return (thisBatchCount, seqBatchAcc);
+    }
+
+    function getInboxAccsLength() external view override returns (uint256) {
+        return inboxAccs.length;
     }
 }

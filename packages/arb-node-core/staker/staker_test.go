@@ -253,7 +253,9 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	metadata := []*big.Int{big.NewInt(0), currentBlockNumber, currentTimestamp, big.NewInt(1), delayedAccInt}
 	_, err = seqInbox.AddSequencerL2BatchFromOrigin(seqAuth, []byte{}, []*big.Int{}, metadata, endBlockBatchItem.Accumulator)
 	test.FailIfError(t, err)
-	client.Commit()
+	for i := 0; i < 5; i++ {
+		client.Commit()
+	}
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 

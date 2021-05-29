@@ -100,8 +100,8 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 2 {
-		fmt.Println("usage: arb-dev-sequencer <ethURL> <rollup_creator_address>")
+	if fs.NArg() != 3 {
+		fmt.Println("usage: arb-dev-sequencer <ethURL> <rollup_creator_address> <bridge_utils_adddress>")
 		return errors.New("invalid arguments")
 	}
 
@@ -118,7 +118,9 @@ func startup() error {
 
 	ethURL := fs.Arg(0)
 	rollupCreatorAddresssString := fs.Arg(1)
+	bridgeUtilsAddressString := fs.Arg(2)
 	rollupCreator := common.HexToAddress(rollupCreatorAddresssString)
+	bridgeUtilsAddress := common.HexToAddress(bridgeUtilsAddressString)
 
 	ethclint, err := ethutils.NewRPCEthClient(ethURL)
 	if err != nil {
@@ -228,13 +230,14 @@ func startup() error {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, nil, dummySequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, bridgeUtilsAddress, nil, dummySequencerFeed)
 		if err == nil {
 			break
 		}
 		logger.Warn().Err(err).
 			Str("url", ethURL).
 			Str("rollup", rollupAddress.Hex()).
+			Str("bridgeUtils", bridgeUtilsAddress.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
 		time.Sleep(time.Second * 5)
 	}
