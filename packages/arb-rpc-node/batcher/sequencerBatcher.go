@@ -751,7 +751,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 					}
 				} else {
 					logger.Error().Err(err).Msg("Error creating batch")
-					time.Sleep(5 * time.Second)
+					time.Sleep(1 * time.Minute)
 				}
 				dontPublishBlockNum = nil
 			}
