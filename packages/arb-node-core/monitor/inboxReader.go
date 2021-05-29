@@ -169,7 +169,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		}
 
 		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelay > 0 {
-			currentHeight = currentHeight.Sub(currentHeight, big.NewInt(inboxReaderDelay))
+			currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelay))
 			if currentHeight.Sign() <= 0 {
 				currentHeight = currentHeight.SetInt64(1)
 			}
