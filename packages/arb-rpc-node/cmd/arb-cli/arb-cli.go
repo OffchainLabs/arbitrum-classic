@@ -312,8 +312,17 @@ func deposit(inboxAddress ethcommon.Address, value *big.Int, submissionPrice *bi
 	}
 	config.auth.Value = value
 	config.auth.GasPrice = big.NewInt(30000000000)
-	config.auth.GasLimit = 300000
-	tx, err := inbox.DepositEth(config.auth, submissionPrice)
+	tx, err := inbox.CreateRetryableTicket(
+		config.auth,
+		config.auth.From,
+		big.NewInt(0),
+		submissionPrice,
+		config.auth.From,
+		config.auth.From,
+		big.NewInt(0),
+		big.NewInt(0),
+		nil,
+	)
 	if err != nil {
 		return err
 	}
