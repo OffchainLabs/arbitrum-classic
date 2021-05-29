@@ -500,7 +500,9 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 	if err != nil {
 		return false, err
 	}
+	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
+	b.inboxReader.MessageDeliveryMutex.Unlock()
 	if err != nil {
 		return false, err
 	}
