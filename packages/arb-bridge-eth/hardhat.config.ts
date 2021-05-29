@@ -137,6 +137,12 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
+    mainnet: {
+      url: process.env['MAINNET_URL'],
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     arbkovan4: {
       gasPrice: 0,
       url: 'https://kovan4.arbitrum.io/rpc',
