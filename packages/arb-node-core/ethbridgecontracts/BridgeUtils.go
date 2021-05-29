@@ -27,10 +27,10 @@ var (
 )
 
 // BridgeUtilsABI is the input ABI used to generate the binding from.
-const BridgeUtilsABI = "[{\"inputs\":[{\"internalType\":\"contractIBridge[2]\",\"name\":\"bridges\",\"type\":\"address[2]\"}],\"name\":\"getCountsAndAccumulators\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"counts\",\"type\":\"uint256[2]\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const BridgeUtilsABI = "[{\"inputs\":[{\"internalType\":\"contractIBridge\",\"name\":\"delayedBridge\",\"type\":\"address\"},{\"internalType\":\"contractISequencerInbox\",\"name\":\"sequencerInbox\",\"type\":\"address\"}],\"name\":\"getCountsAndAccumulators\",\"outputs\":[{\"internalType\":\"uint256[2]\",\"name\":\"counts\",\"type\":\"uint256[2]\"},{\"internalType\":\"bytes32[2]\",\"name\":\"accs\",\"type\":\"bytes32[2]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // BridgeUtilsBin is the compiled bytecode used for deploying new contracts.
-var BridgeUtilsBin = "0x608060405234801561001057600080fd5b50610257806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c8063732c6d7c14610030575b600080fd5b61004c6004803603604081101561004657600080fd5b506100b3565b6040518083600260200280838360005b8381101561007457818101518382015260200161005c565b5050505090500182600260200280838360005b8381101561009f578181015183820152602001610087565b505050509050019250505060405180910390f35b6100bb610203565b6100c3610203565b60005b60028110156101fd5760008482600281106100dd57fe5b60200201356001600160a01b031690506000816001600160a01b0316633dbcc8d16040518163ffffffff1660e01b815260040160206040518083038186803b15801561012857600080fd5b505afa15801561013c573d6000803e3d6000fd5b505050506040513d602081101561015257600080fd5b505190508085846002811061016357fe5b602002015280156101f357816001600160a01b031663d9dd67ab600183036040518263ffffffff1660e01b81526004018082815260200191505060206040518083038186803b1580156101b557600080fd5b505afa1580156101c9573d6000803e3d6000fd5b505050506040513d60208110156101df57600080fd5b50518484600281106101ed57fe5b60200201525b50506001016100c6565b50915091565b6040518060400160405280600290602082028036833750919291505056fea26469706673582212200dadb7f7dbf4fd73e5a75ec06afe0b0fbca664e5ed018c2101449ebe5a6bafc164736f6c634300060b0033"
+var BridgeUtilsBin = "0x608060405234801561001057600080fd5b5061030c806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c806301ccad0214610030575b600080fd5b61005e6004803603604081101561004657600080fd5b506001600160a01b03813581169160200135166100c5565b6040518083600260200280838360005b8381101561008657818101518382015260200161006e565b5050505090500182600260200280838360005b838110156100b1578181015183820152602001610099565b505050509050019250505060405180910390f35b6100cd6102b8565b6100d56102b8565b6000846001600160a01b0316633dbcc8d16040518163ffffffff1660e01b815260040160206040518083038186803b15801561011057600080fd5b505afa158015610124573d6000803e3d6000fd5b505050506040513d602081101561013a57600080fd5b5051905080156101c0578083526040805163d9dd67ab60e01b81526000198301600482015290516001600160a01b0387169163d9dd67ab916024808301926020929190829003018186803b15801561019157600080fd5b505afa1580156101a5573d6000803e3d6000fd5b505050506040513d60208110156101bb57600080fd5b505182525b6000846001600160a01b0316633dbcc8d16040518163ffffffff1660e01b815260040160206040518083038186803b1580156101fb57600080fd5b505afa15801561020f573d6000803e3d6000fd5b505050506040513d602081101561022557600080fd5b5051905080156102af5760208085018290526040805163d9dd67ab60e01b81526000198401600482015290516001600160a01b0388169263d9dd67ab9260248082019391829003018186803b15801561027d57600080fd5b505afa158015610291573d6000803e3d6000fd5b505050506040513d60208110156102a757600080fd5b505160208401525b50509250929050565b6040518060400160405280600290602082028036833750919291505056fea2646970667358221220ed899df1d2fc2e9d5a427f19ae7fe694c4571447710f9fdf26431cb9f782b66864736f6c634300060b0033"
 
 // DeployBridgeUtils deploys a new Ethereum contract, binding an instance of BridgeUtils to it.
 func DeployBridgeUtils(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *BridgeUtils, error) {
@@ -188,15 +188,15 @@ func (_BridgeUtils *BridgeUtilsTransactorRaw) Transact(opts *bind.TransactOpts, 
 	return _BridgeUtils.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetCountsAndAccumulators is a free data retrieval call binding the contract method 0x732c6d7c.
+// GetCountsAndAccumulators is a free data retrieval call binding the contract method 0x01ccad02.
 //
-// Solidity: function getCountsAndAccumulators(address[2] bridges) view returns(uint256[2] counts, bytes32[2] accs)
-func (_BridgeUtils *BridgeUtilsCaller) GetCountsAndAccumulators(opts *bind.CallOpts, bridges [2]common.Address) (struct {
+// Solidity: function getCountsAndAccumulators(address delayedBridge, address sequencerInbox) view returns(uint256[2] counts, bytes32[2] accs)
+func (_BridgeUtils *BridgeUtilsCaller) GetCountsAndAccumulators(opts *bind.CallOpts, delayedBridge common.Address, sequencerInbox common.Address) (struct {
 	Counts [2]*big.Int
 	Accs   [2][32]byte
 }, error) {
 	var out []interface{}
-	err := _BridgeUtils.contract.Call(opts, &out, "getCountsAndAccumulators", bridges)
+	err := _BridgeUtils.contract.Call(opts, &out, "getCountsAndAccumulators", delayedBridge, sequencerInbox)
 
 	outstruct := new(struct {
 		Counts [2]*big.Int
@@ -213,22 +213,22 @@ func (_BridgeUtils *BridgeUtilsCaller) GetCountsAndAccumulators(opts *bind.CallO
 
 }
 
-// GetCountsAndAccumulators is a free data retrieval call binding the contract method 0x732c6d7c.
+// GetCountsAndAccumulators is a free data retrieval call binding the contract method 0x01ccad02.
 //
-// Solidity: function getCountsAndAccumulators(address[2] bridges) view returns(uint256[2] counts, bytes32[2] accs)
-func (_BridgeUtils *BridgeUtilsSession) GetCountsAndAccumulators(bridges [2]common.Address) (struct {
+// Solidity: function getCountsAndAccumulators(address delayedBridge, address sequencerInbox) view returns(uint256[2] counts, bytes32[2] accs)
+func (_BridgeUtils *BridgeUtilsSession) GetCountsAndAccumulators(delayedBridge common.Address, sequencerInbox common.Address) (struct {
 	Counts [2]*big.Int
 	Accs   [2][32]byte
 }, error) {
-	return _BridgeUtils.Contract.GetCountsAndAccumulators(&_BridgeUtils.CallOpts, bridges)
+	return _BridgeUtils.Contract.GetCountsAndAccumulators(&_BridgeUtils.CallOpts, delayedBridge, sequencerInbox)
 }
 
-// GetCountsAndAccumulators is a free data retrieval call binding the contract method 0x732c6d7c.
+// GetCountsAndAccumulators is a free data retrieval call binding the contract method 0x01ccad02.
 //
-// Solidity: function getCountsAndAccumulators(address[2] bridges) view returns(uint256[2] counts, bytes32[2] accs)
-func (_BridgeUtils *BridgeUtilsCallerSession) GetCountsAndAccumulators(bridges [2]common.Address) (struct {
+// Solidity: function getCountsAndAccumulators(address delayedBridge, address sequencerInbox) view returns(uint256[2] counts, bytes32[2] accs)
+func (_BridgeUtils *BridgeUtilsCallerSession) GetCountsAndAccumulators(delayedBridge common.Address, sequencerInbox common.Address) (struct {
 	Counts [2]*big.Int
 	Accs   [2][32]byte
 }, error) {
-	return _BridgeUtils.Contract.GetCountsAndAccumulators(&_BridgeUtils.CallOpts, bridges)
+	return _BridgeUtils.Contract.GetCountsAndAccumulators(&_BridgeUtils.CallOpts, delayedBridge, sequencerInbox)
 }

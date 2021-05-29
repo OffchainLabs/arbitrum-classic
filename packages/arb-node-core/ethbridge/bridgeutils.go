@@ -29,8 +29,9 @@ import (
 )
 
 type BridgeUtils struct {
-	con             *ethbridgecontracts.BridgeUtils
-	bridgeAddresses [2]ethcommon.Address
+	con                *ethbridgecontracts.BridgeUtils
+	delayedBridgeAddr  ethcommon.Address
+	sequencerInboxAddr ethcommon.Address
 }
 
 func NewBridgeUtils(address ethcommon.Address, client ethutils.EthClient, delayedBridge *DelayedBridgeWatcher, sequencerInbox *SequencerInboxWatcher) (*BridgeUtils, error) {
@@ -40,8 +41,9 @@ func NewBridgeUtils(address ethcommon.Address, client ethutils.EthClient, delaye
 	}
 
 	return &BridgeUtils{
-		con:             con,
-		bridgeAddresses: [2]ethcommon.Address{delayedBridge.address, sequencerInbox.address},
+		con:                con,
+		delayedBridgeAddr:  delayedBridge.address,
+		sequencerInboxAddr: sequencerInbox.address,
 	}, nil
 }
 
@@ -51,8 +53,8 @@ type CountAndAccumulator struct {
 }
 
 func (b *BridgeUtils) GetCountsAndAccumulators(ctx context.Context) (delayedRet, seqRet CountAndAccumulator, err error) {
-	contractRet, contractErr := b.con.GetCountsAndAccumulators(&bind.CallOpts{Context: ctx}, b.bridgeAddresses)
-	err = contractErr
+	contractRet, contractErr := b.con.GetCountsAndAccumulators(&bind.CallOpts{Context: ctx}, b.delayedBridgeAddr, b.sequencerInboxAddr)
+	err = errors.WithStack(contractErr)
 	if err != nil {
 		return
 	}

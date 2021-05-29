@@ -19,20 +19,23 @@
 pragma solidity ^0.6.11;
 
 import "./interfaces/IBridge.sol";
+import "./interfaces/ISequencerInbox.sol";
 
 contract BridgeUtils {
-    function getCountsAndAccumulators(IBridge[2] calldata bridges)
+    function getCountsAndAccumulators(IBridge delayedBridge, ISequencerInbox sequencerInbox)
         external
         view
         returns (uint256[2] memory counts, bytes32[2] memory accs)
     {
-        for (uint256 i = 0; i < 2; i++) {
-            IBridge bridge = bridges[i];
-            uint256 count = bridge.messageCount();
-            counts[i] = count;
-            if (count > 0) {
-                accs[i] = bridge.inboxAccs(count - 1);
-            }
+        uint256 delayedCount = delayedBridge.messageCount();
+        if (delayedCount > 0) {
+            counts[0] = delayedCount;
+            accs[0] = delayedBridge.inboxAccs(delayedCount - 1);
+        }
+        uint256 sequencerCount = sequencerInbox.messageCount();
+        if (sequencerCount > 0) {
+            counts[1] = sequencerCount;
+            accs[1] = sequencerInbox.inboxAccs(sequencerCount - 1);
         }
     }
 }
