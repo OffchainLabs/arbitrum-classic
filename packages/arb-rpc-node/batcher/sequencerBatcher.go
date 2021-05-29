@@ -532,7 +532,6 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 	var transactionsLengths []*big.Int
 	var metadata []*big.Int
 	var startDelayedMessagesRead *big.Int
-	var totalDelayedMessagesRead *big.Int
 	var l1BlockNumber *big.Int
 	var l1Timestamp *big.Int
 	var lastAcc common.Hash
@@ -558,41 +557,28 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 			break
 		}
 
-		if startDelayedMessagesRead == nil {
-			startDelayedMessagesRead = item.TotalDelayedCount
-		} else if totalDelayedMessagesRead != nil && !skippingImplicitEndOfBlock {
-			delayedAcc, err := b.db.GetDelayedInboxAcc(new(big.Int).Sub(totalDelayedMessagesRead, big.NewInt(1)))
-			if err != nil {
-				return false, err
-			}
-			delayedAccInt := new(big.Int).SetBytes(delayedAcc.Bytes())
-			sectionCount := big.NewInt(int64(len(transactionsLengths) - lastMetadataEnd))
-			metadata = append(metadata, sectionCount, l1BlockNumber, l1Timestamp, totalDelayedMessagesRead, delayedAccInt)
-			lastMetadataEnd = len(transactionsLengths)
-			l1BlockNumber = nil
-			l1Timestamp = nil
-			startDelayedMessagesRead = nil
-			totalDelayedMessagesRead = nil
-		}
-
+		mustEndBatchAfterItem := skippingImplicitEndOfBlock
 		if len(item.SequencerMessage) == 0 {
 			if skippingImplicitEndOfBlock {
 				return false, errors.New("back-to-back delayed messages inserted without end of block")
 			}
-			totalDelayedMessagesRead = item.TotalDelayedCount
 			skippingImplicitEndOfBlock = true
 		} else {
 			if dontPublishBlockNum != nil && seqMsg.ChainTime.BlockNum.AsInt().Cmp(dontPublishBlockNum) >= 0 && !skippingImplicitEndOfBlock {
 				break
 			}
-			if l1BlockNumber == nil || l1BlockNumber.Cmp(seqMsg.ChainTime.BlockNum.AsInt()) != 0 || l1Timestamp.Cmp(seqMsg.ChainTime.Timestamp) != 0 {
-				sectionCount := len(transactionsLengths) - lastMetadataEnd
-				if sectionCount > 0 {
-					metadata = append(metadata, big.NewInt(int64(sectionCount)), l1BlockNumber, l1Timestamp, startDelayedMessagesRead, big.NewInt(0))
-					lastMetadataEnd = len(transactionsLengths)
-				}
+			if l1BlockNumber == nil {
 				l1BlockNumber = seqMsg.ChainTime.BlockNum.AsInt()
 				l1Timestamp = seqMsg.ChainTime.Timestamp
+				startDelayedMessagesRead = item.TotalDelayedCount
+			} else if l1BlockNumber.Cmp(seqMsg.ChainTime.BlockNum.AsInt()) != 0 || l1Timestamp.Cmp(seqMsg.ChainTime.Timestamp) != 0 {
+				sectionCount := len(transactionsLengths) - lastMetadataEnd
+				metadata = append(metadata, big.NewInt(int64(sectionCount)), l1BlockNumber, l1Timestamp, startDelayedMessagesRead, big.NewInt(0))
+				lastMetadataEnd = len(transactionsLengths)
+
+				l1BlockNumber = seqMsg.ChainTime.BlockNum.AsInt()
+				l1Timestamp = seqMsg.ChainTime.Timestamp
+				startDelayedMessagesRead = item.TotalDelayedCount
 			}
 
 			// Do some basic validation of the message
@@ -616,6 +602,19 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 		}
 		lastAcc = item.Accumulator
 		lastSeqNum = item.LastSeqNum
+		if mustEndBatchAfterItem {
+			delayedAcc, err := b.db.GetDelayedInboxAcc(new(big.Int).Sub(item.TotalDelayedCount, big.NewInt(1)))
+			if err != nil {
+				return false, err
+			}
+			delayedAccInt := new(big.Int).SetBytes(delayedAcc.Bytes())
+			sectionCount := big.NewInt(int64(len(transactionsLengths) - lastMetadataEnd))
+			metadata = append(metadata, sectionCount, l1BlockNumber, l1Timestamp, item.TotalDelayedCount, delayedAccInt)
+			lastMetadataEnd = len(transactionsLengths)
+			l1BlockNumber = nil
+			l1Timestamp = nil
+			startDelayedMessagesRead = nil
+		}
 	}
 	if lastSeqNum == nil {
 		return true, nil
@@ -625,18 +624,8 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 	}
 
 	lastSectionCount := len(transactionsLengths) - lastMetadataEnd
-	if lastSectionCount > 0 || totalDelayedMessagesRead != nil {
-		var delayedAcc common.Hash
-		if totalDelayedMessagesRead != nil {
-			delayedAcc, err = b.db.GetDelayedInboxAcc(new(big.Int).Sub(totalDelayedMessagesRead, big.NewInt(1)))
-			if err != nil {
-				return false, err
-			}
-		} else {
-			totalDelayedMessagesRead = startDelayedMessagesRead
-		}
-		delayedAccInt := new(big.Int).SetBytes(delayedAcc.Bytes())
-		metadata = append(metadata, big.NewInt(int64(lastSectionCount)), l1BlockNumber, l1Timestamp, totalDelayedMessagesRead, delayedAccInt)
+	if lastSectionCount > 0 {
+		metadata = append(metadata, big.NewInt(int64(lastSectionCount)), l1BlockNumber, l1Timestamp, startDelayedMessagesRead, big.NewInt(0))
 	}
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
