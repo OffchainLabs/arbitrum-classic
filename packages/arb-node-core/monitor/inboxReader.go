@@ -121,6 +121,8 @@ func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
 
 }
 
+const inboxReaderDelay int64 = 4
+
 func (ir *InboxReader) getMessages(ctx context.Context) error {
 	from, err := ir.getNextBlockToRead()
 	if err != nil {
@@ -141,6 +143,13 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 		currentHeight, err := ir.delayedBridge.CurrentBlockHeight(ctx)
 		if err != nil {
 			return err
+		}
+
+		if inboxReaderDelay > 0 {
+			currentHeight = currentHeight.Sub(currentHeight, big.NewInt(inboxReaderDelay))
+			if currentHeight.Sign() <= 0 {
+				currentHeight = currentHeight.SetInt64(1)
+			}
 		}
 
 		if ir.healthChan != nil && currentHeight != nil {
@@ -244,8 +253,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			} else if len(sequencerBatches) > 10 {
 				blocksToFetch /= 2
 			}
-			if blocksToFetch == 0 {
-				blocksToFetch++
+			if blocksToFetch < 2 {
+				blocksToFetch = 2
 			}
 
 			logMsg := logger.Debug().
@@ -271,7 +280,16 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 						return err
 					}
 				}
-				from = from.Add(to, big.NewInt(1))
+				delta := new(big.Int).SetUint64(blocksToFetch)
+				if new(big.Int).Add(to, delta).Cmp(currentHeight) >= 0 {
+					delta = delta.Div(delta, big.NewInt(2))
+					from = from.Add(from, delta)
+					if from.Cmp(to) > 0 {
+						from = from.Set(to)
+					}
+				} else {
+					from = from.Add(to, big.NewInt(1))
+				}
 			}
 		}
 		sleepChan := time.After(time.Second * 5)
