@@ -156,13 +156,13 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			}
 			if latestDelayed.Count.Sign() > 0 {
 				dbDelayedAcc, err := ir.db.GetDelayedInboxAcc(new(big.Int).Sub(latestDelayed.Count, big.NewInt(1)))
-				if err != nil && dbDelayedAcc != latestDelayed.Accumulator {
+				if err == nil && dbDelayedAcc != latestDelayed.Accumulator {
 					reorgingDelayed = true
 				}
 			}
 			if latestSeq.Count.Sign() > 0 {
 				dbSeqAcc, err := ir.db.GetInboxAcc(new(big.Int).Sub(latestSeq.Count, big.NewInt(1)))
-				if err != nil && dbSeqAcc != latestSeq.Accumulator {
+				if err == nil && dbSeqAcc != latestSeq.Accumulator {
 					reorgingSequencer = true
 				}
 			}
