@@ -131,6 +131,18 @@ const config = {
     local_development: {
       url: 'http://127.0.0.1:7545',
     },
+    mainnet: {
+      url: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arb1: {
+      url: 'https://arb1.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
     kovan: {
       url: 'https://kovan.infura.io/v3/' + process.env['INFURA_KEY'],
       accounts: process.env['DEVNET_PRIVKEY']

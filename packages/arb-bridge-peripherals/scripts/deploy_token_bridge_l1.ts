@@ -35,7 +35,8 @@ const main = async () => {
   const l2Provider = new providers.JsonRpcProvider(
     // 'https://kovan4.arbitrum.io/rpc'
     // 'https://devnet-l2.arbitrum.io/rpc'
-    'https://kovan5.arbitrum.io/rpc'
+    // 'https://kovan5.arbitrum.io/rpc'
+    'https://arb1.arbitrum.io/rpc'
   )
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
@@ -104,12 +105,15 @@ const main = async () => {
     ethERC20BridgeProxy.address,
     accounts[0]
   )
+  const owner = l2Signer.address
+
+  console.log('ArbTokenBridge owner (for forceCustomTokenRegistration)', owner)
 
   const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
     inboxAddress,
     deployments.standardArbERC20,
     arbTokenBridgeProxy.address,
-    l2Signer.address,
+    owner,
     whitelistAddress
   )
   console.log('init L1 hash', initL1Bridge.hash)
