@@ -76,6 +76,7 @@ func (m *Monitor) StartInboxReader(
 	ctx context.Context,
 	ethClient ethutils.EthClient,
 	rollupAddress common.Address,
+	bridgeUtilsAddress common.Address,
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
 ) (*InboxReader, error) {
@@ -99,7 +100,11 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
-	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, m.Core, healthChan, sequencerFeed)
+	bridgeUtils, err := ethbridge.NewBridgeUtils(bridgeUtilsAddress.ToEthAddress(), ethClient, delayedBridgeWatcher, sequencerInboxWatcher)
+	if err != nil {
+		return nil, err
+	}
+	reader, err := NewInboxReader(ctx, delayedBridgeWatcher, sequencerInboxWatcher, bridgeUtils, m.Core, healthChan, sequencerFeed)
 	if err != nil {
 		return nil, err
 	}

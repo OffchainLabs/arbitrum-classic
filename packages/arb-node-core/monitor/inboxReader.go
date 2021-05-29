@@ -37,6 +37,7 @@ type InboxReader struct {
 	// Only in run thread
 	delayedBridge      *ethbridge.DelayedBridgeWatcher
 	sequencerInbox     *ethbridge.SequencerInboxWatcher
+	bridgeUtils        *ethbridge.BridgeUtils
 	db                 core.ArbCore
 	firstMessageBlock  *big.Int
 	caughtUp           bool
@@ -61,6 +62,7 @@ func NewInboxReader(
 	ctx context.Context,
 	bridge *ethbridge.DelayedBridgeWatcher,
 	sequencerInbox *ethbridge.SequencerInboxWatcher,
+	bridgeUtils *ethbridge.BridgeUtils,
 	db core.ArbCore,
 	healthChan chan nodehealth.Log,
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
@@ -72,6 +74,7 @@ func NewInboxReader(
 	return &InboxReader{
 		delayedBridge:     bridge,
 		sequencerInbox:    sequencerInbox,
+		bridgeUtils:       bridgeUtils,
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
 		completed:         make(chan bool, 1),
@@ -131,7 +134,6 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if ir.healthChan != nil && from != nil {
 		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(from)}
 	}
-	reorging := false
 	blocksToFetch := uint64(100)
 	for {
 		select {
@@ -145,7 +147,28 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			return err
 		}
 
-		if inboxReaderDelay > 0 {
+		reorgingDelayed := false
+		reorgingSequencer := false
+		if ir.caughtUp {
+			latestDelayed, latestSeq, err := ir.bridgeUtils.GetCountsAndAccumulators(ctx)
+			if err != nil {
+				return err
+			}
+			if latestDelayed.Count.Sign() > 0 {
+				dbDelayedAcc, err := ir.db.GetDelayedInboxAcc(new(big.Int).Sub(latestDelayed.Count, big.NewInt(1)))
+				if err != nil && dbDelayedAcc != latestDelayed.Accumulator {
+					reorgingDelayed = true
+				}
+			}
+			if latestSeq.Count.Sign() > 0 {
+				dbSeqAcc, err := ir.db.GetInboxAcc(new(big.Int).Sub(latestSeq.Count, big.NewInt(1)))
+				if err != nil && dbSeqAcc != latestSeq.Accumulator {
+					reorgingSequencer = true
+				}
+			}
+		}
+
+		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelay > 0 {
 			currentHeight = currentHeight.Sub(currentHeight, big.NewInt(inboxReaderDelay))
 			if currentHeight.Sign() <= 0 {
 				currentHeight = currentHeight.SetInt64(1)
@@ -224,24 +247,25 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-				reorging = false
+				reorgingSequencer = false
 				if checkingStart {
 					if matching == 0 {
-						reorging = true
+						reorgingSequencer = true
 					} else {
 						matching--
 					}
 				}
 				sequencerBatches = sequencerBatches[matching:]
 			}
-			if !reorging && len(delayedMessages) > 0 {
+			if len(delayedMessages) > 0 {
 				firstMsg := delayedMessages[0]
 				beforeAcc := firstMsg.BeforeInboxAcc
 				beforeSeqNum := new(big.Int).Sub(firstMsg.Message.InboxSeqNum, big.NewInt(1))
-				if beforeSeqNum.Cmp(big.NewInt(0)) >= 0 {
+				reorgingDelayed = false
+				if beforeSeqNum.Sign() >= 0 {
 					haveAcc, err := ir.db.GetDelayedInboxAcc(beforeSeqNum)
 					if err != nil || haveAcc != beforeAcc {
-						reorging = true
+						reorgingDelayed = true
 					}
 				}
 			}
@@ -268,7 +292,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					Str("afterCount", sequencerBatches[len(sequencerBatches)-1].GetAfterCount().String())
 			}
 			logMsg.Msg("Looking up messages")
-			if reorging {
+			if reorgingDelayed || reorgingSequencer {
 				from, err = ir.getPrevBlockForReorg(from)
 				if err != nil {
 					return err
