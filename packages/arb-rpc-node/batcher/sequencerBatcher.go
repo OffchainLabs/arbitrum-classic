@@ -438,6 +438,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bo
 		return false, err
 	}
 	if newDelayedCount.Cmp(oldDelayedCount) <= 0 {
+		logger.Debug().Str("delayedCount", oldDelayedCount.String()).Msg("no delayed messages to sequence")
 		return false, nil
 	}
 
