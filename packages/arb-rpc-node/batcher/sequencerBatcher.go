@@ -557,7 +557,7 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 			break
 		}
 
-		mustEndBatchAfterItem := skippingImplicitEndOfBlock
+		mustEndSectionAfterItem := skippingImplicitEndOfBlock
 		if len(item.SequencerMessage) == 0 {
 			if skippingImplicitEndOfBlock {
 				return false, errors.New("back-to-back delayed messages inserted without end of block")
@@ -602,7 +602,8 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 		}
 		lastAcc = item.Accumulator
 		lastSeqNum = item.LastSeqNum
-		if mustEndBatchAfterItem {
+
+		if mustEndSectionAfterItem {
 			delayedAcc, err := b.db.GetDelayedInboxAcc(new(big.Int).Sub(item.TotalDelayedCount, big.NewInt(1)))
 			if err != nil {
 				return false, err
