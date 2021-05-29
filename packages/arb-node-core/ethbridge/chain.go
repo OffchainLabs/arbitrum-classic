@@ -71,9 +71,11 @@ func WaitForReceiptWithResultsSimple(ctx context.Context, client ethutils.Receip
 func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, from ethcommon.Address, tx *types.Transaction, methodName string) (*types.Receipt, error) {
 	receipt, err := WaitForReceiptWithResultsSimple(ctx, client, tx.Hash())
 	if err != nil {
+		logger.Warn().Err(err).Hex("tx", tx.Hash().Bytes()).Msg("error while waiting for transaction receipt")
 		return nil, errors.WithStack(err)
 	}
 	if receipt.Status != 1 {
+		logger.Warn().Hex("tx", tx.Hash().Bytes()).Msg("failed transaction")
 		callMsg := ethereum.CallMsg{
 			From:     from,
 			To:       tx.To(),
