@@ -404,6 +404,9 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		beforeAcc = firstRef.GetBeforeAcc()
 		logger.Debug().Str("prevAcc", beforeAcc.String()).Str("acc", seqBatchItems[len(seqBatchItems)-1].Accumulator.String()).Int("count", len(seqBatchItems)).Msg("delivering on-chain inbox items")
 	}
+	if len(delayedMessages) > 0 {
+		logger.Debug().Str("acc", delayedMessages[len(delayedMessages)-1].DelayedAccumulator.String()).Int("count", len(delayedMessages)).Msg("delivering delayed inbox messages")
+	}
 	err := core.DeliverMessagesAndWait(ir.db, beforeCount, beforeAcc, seqBatchItems, delayedMessages, nil)
 	if err != nil {
 		return err
