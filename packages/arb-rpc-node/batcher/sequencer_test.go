@@ -176,6 +176,9 @@ func TestSequencerBatcher(t *testing.T) {
 		extraConfig,
 	)
 
+	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
+	test.FailIfError(t, err)
+
 	seqMon, shutdown := monitor.PrepareArbCore(t)
 	defer shutdown()
 
@@ -203,14 +206,16 @@ func TestSequencerBatcher(t *testing.T) {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	dummyDataSigner := func([]byte) ([]byte, error) { return make([]byte, 0), nil }
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
-	test.FailIfError(t, err)
-
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), nil, dummySequencerFeed)
-	test.FailIfError(t, err)
-
-	client.Commit()
+	for i := 0; i < 5; i++ {
+		client.Commit()
+	}
 	time.Sleep(time.Second)
+
+	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	test.FailIfError(t, err)
+
+	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	test.FailIfError(t, err)
 
 	batcher, err := NewSequencerBatcher(
 		ctx,
@@ -257,6 +262,7 @@ func TestSequencerBatcher(t *testing.T) {
 			break
 		}
 		client.Commit()
+		println("commit 2")
 		time.Sleep(20 * time.Millisecond)
 		attempts++
 

@@ -207,13 +207,14 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, rollupArgs.BridgeUtilsAddress, healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}
 		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).
+			Str("bridgeUtils", rollupArgs.BridgeUtilsAddress.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
 		time.Sleep(time.Second * 5)
 	}
