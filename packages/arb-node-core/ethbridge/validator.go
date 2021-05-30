@@ -28,6 +28,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/pkg/errors"
 )
 
 var validatorABI abi.ABI
@@ -144,4 +145,26 @@ func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []co
 	return v.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return v.con.TimeoutChallenges(auth, common.AddressArrayToEth(challenges))
 	})
+}
+
+func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, auth *TransactAuth, client ethutils.EthClient) (ethcommon.Address, error) {
+	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
+	if err != nil {
+		return ethcommon.Address{}, errors.WithStack(err)
+	}
+	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return walletCreator.CreateWallet(auth)
+	})
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, tx, "CreateWallet")
+	if err != nil {
+		return ethcommon.Address{}, err
+	}
+	ev, err := walletCreator.ParseWalletCreated(*receipt.Logs[len(receipt.Logs)-1])
+	if err != nil {
+		return ethcommon.Address{}, errors.WithStack(err)
+	}
+	return ev.WalletAddress, nil
 }
