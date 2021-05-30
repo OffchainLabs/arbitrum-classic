@@ -17,7 +17,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -29,8 +28,6 @@ import (
 	"os"
 	"path"
 	"time"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
@@ -44,7 +41,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
@@ -62,26 +58,6 @@ func init() {
 
 type ChainState struct {
 	ValidatorWallet string `json:"validatorWallet"`
-}
-
-func createValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
-	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	tx, err := walletCreator.CreateWallet(auth)
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, client, auth.From, tx, "CreateWallet")
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	ev, err := walletCreator.ParseWalletCreated(*receipt.Logs[len(receipt.Logs)-1])
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	return ev.WalletAddress, nil
 }
 
 func main() {
@@ -214,10 +190,14 @@ func startup() error {
 		}
 	}
 
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, *gasPriceUrl)
+	if err != nil {
+		return errors.Wrap(err, "error creating connecting to chain")
+	}
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = createValidatorWallet(ctx, validatorWalletFactoryAddr, auth, client)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, valAuth, client)
 			if err == nil {
 				break
 			}
@@ -247,10 +227,6 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, *gasPriceUrl)
-	if err != nil {
-		return errors.Wrap(err, "error creating connecting to chain")
-	}
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error creating validator wallet")
