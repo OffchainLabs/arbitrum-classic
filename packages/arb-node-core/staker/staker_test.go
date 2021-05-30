@@ -178,17 +178,29 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	validatorUtilsAddr, _, _, err := ethbridgecontracts.DeployValidatorUtils(auth, client)
 	test.FailIfError(t, err)
 
-	validatorAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
-	_, err = validatorCon.Initialize(auth)
+	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	validatorAddress2, _, validatorCon2, err := ethbridgecontracts.DeployValidator(auth2, client)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
 	test.FailIfError(t, err)
-	client.Commit()
-	_, err = validatorCon2.Initialize(auth2)
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
 	test.FailIfError(t, err)
+
+	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, valAuth, client)
+	test.FailIfError(t, err)
+
+	// Should lookup WalletCreated event
+	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, valAuth, client)
+	test.FailIfError(t, err)
+	if validatorAddress != checkValidatorAddress {
+		t.Error("CreateValidatorWallet didn't reuse existing wallet")
+	}
+
+	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, val2Auth, client)
+	test.FailIfError(t, err)
+	if validatorAddress == validatorAddress2 {
+		t.Error("CreateValidatorWallet reused existing wallet for different address")
+	}
 
 	client.Commit()
 
@@ -198,18 +210,13 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	test.FailIfError(t, err)
 	client.Commit()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
-	test.FailIfError(t, err)
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
-	test.FailIfError(t, err)
+	mon, shutdown := monitor.PrepareArbCore(t)
+	defer shutdown()
 
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
+	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	test.FailIfError(t, err)
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
-
-	mon, shutdown := monitor.PrepareArbCore(t)
-	defer shutdown()
 
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)

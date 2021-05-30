@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -32,6 +33,7 @@ import (
 )
 
 var validatorABI abi.ABI
+var walletCreatedID ethcommon.Hash
 
 func init() {
 	parsedValidator, err := abi.JSON(strings.NewReader(ethbridgecontracts.ValidatorABI))
@@ -39,6 +41,12 @@ func init() {
 		panic(err)
 	}
 	validatorABI = parsedValidator
+
+	parsedValidatorWalletCreator, err := abi.JSON(strings.NewReader(ethbridgecontracts.ValidatorWalletCreatorABI))
+	if err != nil {
+		panic(err)
+	}
+	walletCreatedID = parsedValidatorWalletCreator.Events["WalletCreated"].ID
 }
 
 type ValidatorWallet struct {
@@ -152,12 +160,38 @@ func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethco
 	if err != nil {
 		return ethcommon.Address{}, errors.WithStack(err)
 	}
+
+	query := ethereum.FilterQuery{
+		BlockHash: nil,
+		FromBlock: nil,
+		ToBlock:   nil,
+		Addresses: []ethcommon.Address{validatorWalletFactoryAddr},
+		Topics:    [][]ethcommon.Hash{{walletCreatedID}, nil, {auth.auth.From.Hash()}},
+	}
+	logs, err := client.FilterLogs(ctx, query)
+	if err != nil {
+		return ethcommon.Address{}, errors.WithStack(err)
+	}
+	if len(logs) > 1 {
+		return ethcommon.Address{}, errors.New("more than one validator wallet created for address")
+	} else if len(logs) == 1 {
+		log := logs[0]
+		parsed, err := walletCreator.ParseWalletCreated(log)
+		return parsed.WalletAddress, err
+	}
+
 	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return walletCreator.CreateWallet(auth)
 	})
 	if err != nil {
 		return ethcommon.Address{}, err
 	}
+
+	simulatedBackend, ok := client.(*ethutils.SimulatedEthClient)
+	if ok {
+		simulatedBackend.Commit()
+	}
+
 	receipt, err := WaitForReceiptWithResults(ctx, client, auth.auth.From, tx, "CreateWallet")
 	if err != nil {
 		return ethcommon.Address{}, err
