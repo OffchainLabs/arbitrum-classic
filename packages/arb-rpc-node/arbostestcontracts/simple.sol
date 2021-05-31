@@ -96,4 +96,12 @@ contract Simple {
         try new Reverter() {} catch {}
         return con.getVal();
     }
+
+    event Variable(bool[10] _variable);
+
+    function debug() external {
+        bool[10] memory seen;
+
+        emit Variable(seen);
+    }
 }
