@@ -262,7 +262,6 @@ func TestSequencerBatcher(t *testing.T) {
 			break
 		}
 		client.Commit()
-		println("commit 2")
 		time.Sleep(20 * time.Millisecond)
 		attempts++
 
