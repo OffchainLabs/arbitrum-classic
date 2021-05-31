@@ -143,6 +143,12 @@ const config = {
     //     ? [process.env['MAINNET_PRIVKEY']]
     //     : [],
     // },
+    arb1: {
+      url: 'https://arb1.arbitrum.io/rpc',
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     arbkovan4: {
       gasPrice: 0,
       url: 'https://kovan4.arbitrum.io/rpc',
