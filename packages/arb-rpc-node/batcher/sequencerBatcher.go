@@ -495,11 +495,8 @@ const gasCostPerMessage int = 1431
 const gasCostPerMessageByte int = 16
 const gasCostMaximum int = 2_000_000
 
-func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum *big.Int) (bool, error) {
-	prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
-	if err != nil {
-		return false, err
-	}
+// Updates both prevMsgCount and nonce on success
+func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum *big.Int, prevMsgCount *big.Int, nonce *big.Int) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	batchItems, err := b.db.GetSequencerBatchItems(prevMsgCount)
 	b.inboxReader.MessageDeliveryMutex.Unlock()
@@ -633,10 +630,14 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	tx, err := ethbridge.AddSequencerL2BatchFromOriginReplaceByFee(ctx, b.sequencerInbox, b.client, b.auth, transactionsData, transactionsLengths, metadata, lastAcc)
+	tx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc)
 	if err != nil {
 		return false, err
 	}
+
+	// Update prevMsgCount for the next iteration if we're not publishingAllBatchItems
+	// AddSequencerL2BatchFromOriginCustomNonce will have already updated the nonce
+	prevMsgCount.Set(newMsgCount)
 
 	go (func() {
 		receipt, err := ethbridge.WaitForReceiptWithResults(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin")
@@ -743,20 +744,47 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			b.inboxReader.MessageDeliveryMutex.Unlock()
 		}
 		if creatingBatch || firstBoot {
+			// The outer loop starts from scratch and will only re-run if there's an error.
+		CreateBatchOuterLoop:
 			for {
-				complete, err := b.createBatch(ctx, dontPublishBlockNum)
-				if err == nil {
-					if complete {
-						time.Sleep(10 * b.chainTimeCheckInterval)
-						break
-					} else {
-						time.Sleep(time.Second)
-					}
-				} else {
-					logger.Error().Err(err).Msg("Error creating batch")
-					time.Sleep(1 * time.Minute)
+				prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
+				if err != nil {
+					logger.Error().Err(err).Msg("error getting on-chain message count")
+					continue
 				}
-				dontPublishBlockNum = nil
+				// Gets the nonce at the latest block's state, *not* the pending state
+				nonceInt, err := b.client.NonceAt(ctx, b.sequencer.ToEthAddress(), nil)
+				if err != nil {
+					logger.Error().Err(err).Msg("error getting latest sequencer nonce")
+					continue
+				}
+				nonce := new(big.Int).SetUint64(nonceInt)
+				// The inner loop continues from the previous state and will only re-run
+				// if there's no error but publishing is not yet complete.
+				for {
+					// Updates both prevMsgCount and nonce on success
+					complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
+					if err == nil {
+						if complete {
+							// We're done, exit entirely from the outer loop
+							time.Sleep(10 * b.chainTimeCheckInterval)
+							break CreateBatchOuterLoop
+						} else {
+							// This publishing was successful but incomplete,
+							// continue the inner loop from this new state
+							time.Sleep(time.Second)
+						}
+					} else {
+						// There was an error, go back to the start of the outer loop to retry with a fresh state
+						logger.Error().Err(err).Msg("Error creating batch")
+						time.Sleep(1 * time.Minute)
+						// Don't prevent the publishing of potential reorg'd messages with a new timestamp
+						dontPublishBlockNum = nil
+						continue CreateBatchOuterLoop
+					}
+				}
+				// Code here should never be executed, as we should've either
+				// continued or broken out of the outer loop.
 			}
 			b.lastCreatedBatchAt = blockNum
 		}
