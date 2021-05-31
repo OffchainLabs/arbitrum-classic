@@ -137,3 +137,21 @@ TEST_CASE("Code serialization") {
         checkRun(*mach2);
     }
 }
+
+TEST_CASE("Code forks are identical to original") {
+    Code code;
+    std::vector<CodePointStub> stubs(1, code.addSegment());
+    constexpr size_t num_ops = 45;
+    for (size_t i = 0; i < num_ops; i++) {
+        stubs.push_back(
+            code.addOperation(stubs.back().pc, Operation{OpCode::NOP}));
+    }
+    for (size_t i = 0; i < stubs.size(); i++) {
+        auto new_stub = stubs[i];
+        for (size_t j = i; j < num_ops; j++) {
+            new_stub = code.addOperation(new_stub.pc, Operation{OpCode::NOP});
+            REQUIRE(::hash(code.loadCodePoint(new_stub.pc)) == new_stub.hash);
+        }
+        REQUIRE(new_stub.hash == stubs.back().hash);
+    }
+}
