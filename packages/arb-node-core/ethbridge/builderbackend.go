@@ -75,6 +75,10 @@ func (b *BuilderBackend) PendingNonceAt(ctx context.Context, account common.Addr
 	return 0, nil
 }
 
+func (b *BuilderBackend) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
+	return 0, nil
+}
+
 func (b *BuilderBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	return big.NewInt(0), nil
 }

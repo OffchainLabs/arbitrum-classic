@@ -633,27 +633,30 @@ func (b *SequencerBatcher) createBatch(ctx context.Context, dontPublishBlockNum 
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	tx, err := ethbridge.AddSequencerL2BatchFromOrigin(ctx, b.sequencerInbox, b.auth, transactionsData, transactionsLengths, metadata, lastAcc)
+	tx, err := ethbridge.AddSequencerL2BatchFromOriginReplaceByFee(ctx, b.sequencerInbox, b.client, b.auth, transactionsData, transactionsLengths, metadata, lastAcc)
 	if err != nil {
 		return false, err
 	}
 
-	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin")
-	if err != nil {
-		return false, err
-	}
-
-	if b.feedBroadcaster != nil {
-		// Confirm feed messages that are already on chain
-		err = b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
+	go (func() {
+		receipt, err := ethbridge.WaitForReceiptWithResults(ctx, b.client, b.sequencer.ToEthAddress(), tx, "addSequencerL2BatchFromOrigin")
 		if err != nil {
-			return false, err
+			logger.Warn().Err(err).Msg("error waiting for batch receipt")
+			return
 		}
-	}
 
-	if b.logBatchGasCosts {
-		fmt.Printf("%v,%v,%v\n", len(transactionsLengths), len(transactionsData), receipt.GasUsed)
-	}
+		if b.feedBroadcaster != nil {
+			// Confirm feed messages that are already on chain
+			err = b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
+			if err != nil {
+				logger.Warn().Err(err).Msg("error broadcasting confirmed accumulator")
+			}
+		}
+
+		if b.logBatchGasCosts {
+			fmt.Printf("%v,%v,%v\n", len(transactionsLengths), len(transactionsData), receipt.GasUsed)
+		}
+	})()
 
 	return publishingAllBatchItems, nil
 }
