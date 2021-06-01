@@ -36,6 +36,7 @@ var (
 	RetryRedeemedEvent abi.Event
 
 	createRetryableTicketABI abi.Method
+	redeemABI                abi.Method
 )
 
 func init() {
@@ -51,6 +52,7 @@ func init() {
 
 	RetryCanceledEvent = parsedABI.Events["Canceled"]
 	RetryRedeemedEvent = parsedABI.Events["Redeemed"]
+	redeemABI = parsedABI.Methods["redeem"]
 	createRetryableTicketABI = creatorABI.Methods["createRetryableTicket"]
 }
 
@@ -69,6 +71,10 @@ func CreateRetryableTicketData(msg message.RetryableTx) []byte {
 		panic(err)
 	}
 	return append(createRetryableTicketABI.ID, txData...)
+}
+
+func RedeemData(txId common.Hash) []byte {
+	return append(redeemABI.ID, txId[:]...)
 }
 
 func ParseCreateRetryableTicketTx(tx *types.Transaction) (*message.RetryableTx, error) {
