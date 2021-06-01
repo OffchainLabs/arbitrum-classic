@@ -440,7 +440,7 @@ export class Bridge extends L2Bridge {
     return BridgeHelper.isWhiteListed(
       address,
       whiteListAddress,
-      this.l2Provider
+      this.l1Bridge.l1Provider
     )
   }
 }

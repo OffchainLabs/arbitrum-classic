@@ -850,9 +850,9 @@ export class BridgeHelper {
   static isWhiteListed(
     address: string,
     whiteListAddress: string,
-    l2Provider: providers.Provider
+    l1Provider: providers.Provider
   ) {
-    const whiteList = Whitelist__factory.connect(whiteListAddress, l2Provider)
+    const whiteList = Whitelist__factory.connect(whiteListAddress, l1Provider)
     return whiteList.isAllowed(address)
   }
 }
