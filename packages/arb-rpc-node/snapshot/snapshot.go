@@ -93,7 +93,7 @@ func (s *Snapshot) AdvanceTime(time inbox.ChainTime) {
 func (s *Snapshot) Clone() *Snapshot {
 	var chainId *big.Int
 	if s.chainId != nil {
-		chainId = chainId.Set(s.chainId)
+		chainId = new(big.Int).Set(s.chainId)
 	}
 	return &Snapshot{
 		mach: s.mach,
@@ -139,6 +139,75 @@ func (s *Snapshot) EstimateGas(tx *types.Transaction, aggregator, sender common.
 		}
 		return s.tryTx(gasEstimationMessage, sender, targetHash, maxAVMGas)
 	}
+}
+
+func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	redeemGas := new(big.Int).Set(msg.MaxGas)
+	redeemGasPriceBid := new(big.Int).Set(msg.GasPriceBid)
+	msg.MaxGas = msg.MaxGas.SetUint64(0)
+	msg.GasPriceBid = msg.GasPriceBid.SetUint64(0)
+	inboxMsg1 := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
+	var targetHash common.Hash
+	var ticketHash common.Hash
+	if s.chainId != nil {
+		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
+		ticketHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
+	}
+
+	redeemTx := types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		GasPrice: redeemGasPriceBid,
+		Gas:      redeemGas.Uint64(),
+		To:       &arbos.ARB_RETRYABLE_ADDRESS,
+		Value:    big.NewInt(0),
+		Data:     arbos.RedeemData(ticketHash),
+	})
+	gasEstimationMessage, err := message.NewGasEstimationMessage(common.Address{}, big.NewInt(0), message.NewCompressedECDSAFromEth(redeemTx))
+	if err != nil {
+		return nil, nil, err
+	}
+	estimateSeqNum := new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
+	var targetHash2 common.Hash
+	if s.chainId != nil {
+		targetHash2 = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(estimateSeqNum))
+		targetHash2 = hashing.SoliditySHA3(hashing.Bytes32(targetHash2), hashing.Uint256(big.NewInt(0)))
+	}
+	inboxMsg2 := message.NewInboxMessage(gasEstimationMessage, sender, estimateSeqNum, big.NewInt(0), s.time)
+
+	mach := s.mach.Clone()
+	assertion, debugPrints, _, err := mach.ExecuteAssertionAdvanced(
+		maxAVMGas,
+		false,
+		nil,
+		[]inbox.InboxMessage{inboxMsg2, inboxMsg1},
+		true,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	avmLogs := assertion.Logs
+	if len(avmLogs) != 3 {
+		return nil, nil, errors.Errorf("unexpected result count %v", len(avmLogs))
+	}
+	res, err := evm.NewTxResultFromValue(avmLogs[0])
+	if err != nil {
+		return nil, nil, err
+	}
+	if res.ResultCode != evm.ReturnCode {
+		return nil, nil, errors.New("ticket creation failed")
+	}
+	if res.IncomingRequest.MessageID != targetHash {
+		return nil, debugPrints, errors.Errorf("ticket creation got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+	}
+	res2, err := evm.NewTxResultFromValue(avmLogs[2])
+	if err != nil {
+		return nil, nil, err
+	}
+	if res2.IncomingRequest.MessageID != targetHash2 {
+		return nil, debugPrints, errors.Errorf("estimation got unexpected result %v instead of %v", res2.IncomingRequest.MessageID, targetHash2)
+	}
+	return res2, debugPrints, err
 }
 
 func (s *Snapshot) Call(msg message.ContractTransaction, sender common.Address) (*evm.TxResult, []value.Value, error) {
