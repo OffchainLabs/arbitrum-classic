@@ -197,7 +197,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 		if callArgs.Data != nil {
 			data = *callArgs.Data
 		}
-		return HandleNodeInterfaceCall(s.srv, data)
+		return HandleNodeInterfaceCall(s, data, blockNum)
 	}
 
 	snap, err := s.getSnapshot(blockNum)
