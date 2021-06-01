@@ -435,4 +435,12 @@ export class Bridge extends L2Bridge {
       this.l2Provider
     )
   }
+
+  public isWhiteListed(address: string, whiteListAddress: string) {
+    return BridgeHelper.isWhiteListed(
+      address,
+      whiteListAddress,
+      this.l2Provider
+    )
+  }
 }

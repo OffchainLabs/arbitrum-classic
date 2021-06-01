@@ -8,6 +8,8 @@ import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
+import { Whitelist__factory } from './abi/factories/Whitelist__factory'
+
 import { OutboxEntry } from './abi/OutboxEntry'
 
 import { providers, utils, constants } from 'ethers'
@@ -843,5 +845,14 @@ export class BridgeHelper {
       console.warn('666: error in getOutgoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
     }
+  }
+
+  static isWhiteListed(
+    address: string,
+    whiteListAddress: string,
+    l2Provider: providers.Provider
+  ) {
+    const whiteList = Whitelist__factory.connect(whiteListAddress, l2Provider)
+    return whiteList.isAllowed(address)
   }
 }
