@@ -30,22 +30,30 @@ contract GatewayRouter is ITokenGateway {
 
     mapping(address => address) public tokenToGateway;
     address public owner;
-    // TODO: set defaultGateway
     address public defaultGateway;
 
-    function initialize(address _owner) public {
+    modifier onlyOwner {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
+
+    function initialize(address _owner, address _defaultGateway) public {
         require(_owner != address(0), "INVALID_OWNER");
         require(owner == address(0), "ALREADY_INIT");
         owner = _owner;
+        // if 0, only tokens in mapping will not revert
+        defaultGateway = _defaultGateway;
     }
 
-    function setOwner(address newOwner) external {
-        require(msg.sender == owner, "ONLY_OWNER");
+    function setDefaultGateway(address newDefaultGateway) external onlyOwner {
+        defaultGateway = newDefaultGateway;
+    }
+
+    function setOwner(address newOwner) external onlyOwner {
         owner = newOwner;
     }
 
-    function setGateways(address[] memory token, address[] memory gateway) external {
-        require(msg.sender == owner, "ONLY_OWNER");
+    function setGateways(address[] memory token, address[] memory gateway) external onlyOwner {
         require(token.length == gateway.length, "WRONG_LENGTH");
 
         for (uint256 i = 0; i < token.length; i++) {
