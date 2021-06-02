@@ -42,17 +42,17 @@ abstract contract L1ArbitrumGateway is TokenGateway {
     }
 
     function createOutboundTx(
-        address _handler,
+        address _inbox,
         address _user,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual override returns (bytes memory) {
+    ) internal virtual returns (bytes memory) {
         // msg.value is sent, but 0 is set to the L2 call value
         // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
-            IInbox(_handler).createRetryableTicket{ value: msg.value }(
+            IInbox(_inbox).createRetryableTicket{ value: msg.value }(
                 counterpartGateway,
                 0,
                 _maxSubmissionCost,
@@ -81,19 +81,16 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) external payable virtual override onlyRouter returns (bytes memory res) {
-        (
-            address _handler, // inbox
-            address _from,
-            uint256 _maxSubmissionCost,
-            bytes memory extraData
-        ) = parseArbitrumData(_data);
+        (address _inbox, address _from, uint256 _maxSubmissionCost, bytes memory extraData) =
+            parseArbitrumData(_data);
 
-        handleEscrow(_token, _from, _amount);
+        // escrow funds in gateway
+        IERC20(_token).safeTransferFrom(_from, address(this), _amount);
 
         bytes memory outboundCalldata = getOutboundCalldata(_token, _from, _to, _amount, extraData);
 
         res = createOutboundTx(
-            _handler,
+            _inbox,
             _from,
             _maxSubmissionCost,
             _maxGas,
@@ -111,16 +108,16 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         pure
         virtual
         returns (
-            address inbox,
-            address from,
-            uint256 maxSubmissionCost,
+            address _inbox,
+            address _from,
+            uint256 _maxSubmissionCost,
             bytes memory _extraData
         )
     {
         // router encoded
-        (inbox, from, _extraData) = abi.decode(_data, (address, address, bytes));
+        (_inbox, _from, _extraData) = abi.decode(_data, (address, address, bytes));
         // user encoded
-        (maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
+        (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
     }
 
     /**
@@ -164,14 +161,6 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         );
 
         return outboundCalldata;
-    }
-
-    function handleEscrow(
-        address _token,
-        address _from,
-        uint256 _amount
-    ) internal virtual override {
-        IERC20(_token).safeTransferFrom(_from, address(this), _amount);
     }
 
     function finalizeInboundTransfer(

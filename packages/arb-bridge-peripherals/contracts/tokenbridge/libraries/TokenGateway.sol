@@ -43,29 +43,25 @@ abstract contract TokenGateway is ITokenGateway {
         bytes calldata _data
     ) external payable virtual override returns (bytes memory);
 
-    function createOutboundTx(
-        address _handler,
-        address _user,
-        uint256 _maxSubmissionCost,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes memory _data
-    ) internal virtual returns (bytes memory);
-
-    function handleEscrow(
-        address _token,
-        address _from,
-        uint256 _amount
-    ) internal virtual;
-
     // make it public so it can be used internally and externally for gas estimation
     function getOutboundCalldata(
         address _token,
-        address _sender,
-        address _destination,
+        address _from,
+        address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual returns (bytes memory);
+    ) public view virtual returns (bytes memory outboundCalldata) {
+        outboundCalldata = abi.encodeWithSelector(
+            ITokenGateway.finalizeInboundTransfer.selector,
+            _token,
+            _from,
+            _to,
+            _amount,
+            _data
+        );
+
+        return outboundCalldata;
+    }
 
     function finalizeInboundTransfer(
         address _token,
