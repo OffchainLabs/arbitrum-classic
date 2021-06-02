@@ -38,8 +38,8 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         _;
     }
 
-    function initialize(address _target) public virtual override {
-        super.initialize(_target);
+    function initialize(address _l1Counterpart) public virtual override {
+        super.initialize(_l1Counterpart);
     }
 
     function createOutboundTx(bytes memory _data) internal virtual returns (uint256) {
@@ -64,8 +64,8 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
     address public override beacon;
     uint256 public exitNum;
 
-    function initialize(address _target, address _beacon) public virtual {
-        super.initialize(_target);
+    function initialize(address _l1Counterpart, address _beacon) public virtual {
+        super.initialize(_l1Counterpart);
         require(_beacon != address(0), "INVALID_BEACON");
         require(beacon == address(0), "ALREADY_INIT");
         beacon = _beacon;
@@ -196,19 +196,8 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
                 token.bridgeMint(_from, _amount);
                 // success default value is false
             }
-            // if success tokens got minted to _to, else to _from
-            // emit TokenMinted(
-            //     l1ERC20,
-            //     expectedAddress,
-            //     _from,
-            //     success ? _to : _from,
-            //     _amount,
-            //     true
-            // );
-            // emit MintAndCallTriggered(success, _from, _to, _amount, callHookData);
         } else {
             token.bridgeMint(_to, _amount);
-            // emit TokenMinted(l1ERC20, expectedAddress, _from, _to, _amount, false);
         }
 
         emit InboundTransferFinalized(

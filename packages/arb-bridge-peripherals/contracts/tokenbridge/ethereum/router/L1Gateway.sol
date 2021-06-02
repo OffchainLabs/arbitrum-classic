@@ -196,5 +196,7 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         // TODO: add transferExit
         IERC20(_token).safeTransfer(_to, _amount);
         emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
+
+        return bytes("");
     }
 }
