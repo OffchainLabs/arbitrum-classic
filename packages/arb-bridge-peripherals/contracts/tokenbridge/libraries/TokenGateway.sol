@@ -18,15 +18,20 @@
 
 pragma solidity ^0.6.11;
 
-import "./ITokenBridge.sol";
+import "./ITokenGateway.sol";
 
-abstract contract TokenGateway is ITokenBridge {
-    address public target;
+abstract contract TokenGateway is ITokenGateway {
+    address public counterpartGateway;
 
-    function initialize(address _target) public virtual {
-        require(_target != address(0), "INVALID_TARGET");
-        require(target == address(0), "ALREADY_INIT");
-        target = _target;
+    modifier onlyCounterpartGateway {
+        require(msg.sender == counterpartGateway, "ONLY_L1_GATEWAY");
+        _;
+    }
+
+    function initialize(address _counterpartGateway) public virtual {
+        require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
+        require(counterpartGateway == address(0), "ALREADY_INIT");
+        counterpartGateway = _counterpartGateway;
     }
 
     function outboundTransfer(

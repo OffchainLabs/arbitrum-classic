@@ -347,7 +347,7 @@ contract ArbTokenBridge is ProxySetter, IArbTokenBridge, TokenAddressHandler {
      * @dev this method makes it possible to use ClonableBeaconProxy.creationCode without encoding constructor parameters
      * @return the token logic to be used in a proxy contract.
      */
-    function getBeacon() external view override returns (address) {
+    function beacon() external view override returns (address) {
         return templateERC20;
     }
 }

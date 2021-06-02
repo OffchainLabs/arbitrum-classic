@@ -23,14 +23,14 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
-import "../../libraries/ITokenBridge.sol";
+import "../../libraries/ITokenGateway.sol";
 import "../../libraries/TokenGateway.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {
     address router;
 
-    function initialize(address _l2Target, address _router) public virtual {
-        super.initialize(_l2Target);
+    function initialize(address _l2Counterpart, address _router) public virtual {
+        super.initialize(_l2Counterpart);
         require(_router != address(0), "BAD_ROUTER");
         require(router == address(0), "ALREADY_INIT");
         router = _router;
@@ -53,7 +53,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
             IInbox(_handler).createRetryableTicket{ value: msg.value }(
-                target,
+                counterpartGateway,
                 0,
                 _maxSubmissionCost,
                 _user,
@@ -116,11 +116,11 @@ abstract contract L1ArbitrumGateway is TokenGateway {
     }
 }
 
-contract ERC20Bridge is L1ArbitrumGateway {
+contract L1ERC20Gateway is L1ArbitrumGateway {
     using SafeERC20 for IERC20;
 
-    function initialize(address _l2Target, address _router) public virtual override {
-        super.initialize(_l2Target, _router);
+    function initialize(address _l2Counterpart, address _router) public virtual override {
+        super.initialize(_l2Counterpart, _router);
     }
 
     /**
@@ -155,7 +155,7 @@ contract ERC20Bridge is L1ArbitrumGateway {
             );
 
         outboundCalldata = abi.encodeWithSelector(
-            ITokenBridge.finalizeInboundTransfer.selector,
+            ITokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,
@@ -180,7 +180,7 @@ contract ERC20Bridge is L1ArbitrumGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external virtual override returns (bytes memory) {
+    ) external virtual override onlyCounterpartGateway returns (bytes memory) {
         // TODO: implement withdrawal
         revert("NOT_IMPLEMENTED");
     }

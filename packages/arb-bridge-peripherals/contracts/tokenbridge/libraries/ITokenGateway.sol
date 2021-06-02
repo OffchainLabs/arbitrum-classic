@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-interface ITokenBridge {
+interface ITokenGateway {
     event OutboundTransferInitiated(
         address indexed token,
         address indexed _from,

@@ -20,9 +20,9 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "../../libraries/ITokenBridge.sol";
+import "../../libraries/ITokenGateway.sol";
 
-contract Router is ITokenBridge {
+contract Router is ITokenGateway {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -67,7 +67,7 @@ contract Router is ITokenBridge {
         bytes memory consumerData = abi.encode(inbox, msg.sender, _data);
 
         return
-            ITokenBridge(consumer).outboundTransfer{ value: msg.value }(
+            ITokenGateway(consumer).outboundTransfer{ value: msg.value }(
                 _token,
                 _to,
                 _amount,
