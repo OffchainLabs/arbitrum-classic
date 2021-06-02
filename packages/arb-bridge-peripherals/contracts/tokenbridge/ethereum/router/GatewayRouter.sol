@@ -19,10 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-
+import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 import "../../libraries/ITokenGateway.sol";
 
-contract GatewayRouter is ITokenGateway {
+contract GatewayRouter is WhitelistConsumer, ITokenGateway {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -44,12 +44,17 @@ contract GatewayRouter is ITokenGateway {
         _;
     }
 
-    function initialize(address _owner, address _defaultGateway) public {
+    function initialize(
+        address _owner,
+        address _defaultGateway,
+        address _whitelist
+    ) public {
         require(_owner != address(0), "INVALID_OWNER");
         require(owner == address(0), "ALREADY_INIT");
         owner = _owner;
-        // if 0, only tokens in mapping will not revert
+        // if defaultGateway is address(0), only tokens in mapping will not revert
         defaultGateway = _defaultGateway;
+        WhitelistConsumer.whitelist = _whitelist;
     }
 
     function setDefaultGateway(address newDefaultGateway) external onlyOwner {
@@ -88,8 +93,7 @@ contract GatewayRouter is ITokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable override returns (bytes memory) {
-        // TODO: check whitelist
+    ) external payable override onlyWhitelisted returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = abi.encode(msg.sender, _data);
 
