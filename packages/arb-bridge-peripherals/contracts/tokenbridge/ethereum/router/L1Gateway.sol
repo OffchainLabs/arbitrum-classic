@@ -28,8 +28,8 @@ import "../../libraries/ITokenGateway.sol";
 import "../../libraries/TokenGateway.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {
-    address router;
-    address inbox;
+    address public router;
+    address public inbox;
 
     modifier onlyCounterpartGateway {
         IOutbox outbox = IOutbox(IInbox(inbox).bridge().activeOutbox());
