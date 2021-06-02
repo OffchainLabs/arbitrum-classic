@@ -32,6 +32,13 @@ contract GatewayRouter is ITokenGateway {
     address public owner;
     address public defaultGateway;
 
+    event TransferRouted(
+        address indexed token,
+        address indexed _userFrom,
+        address indexed _userTo,
+        address gateway
+    );
+
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
@@ -86,6 +93,7 @@ contract GatewayRouter is ITokenGateway {
         address gateway = getGateway(_token);
         bytes memory gatewayData = abi.encode(msg.sender, _data);
 
+        emit TransferRouted(_token, msg.sender, _to, gateway);
         return
             ITokenGateway(gateway).outboundTransfer{ value: msg.value }(
                 _token,

@@ -61,7 +61,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual returns (bytes memory) {
+    ) internal virtual returns (uint256) {
         // msg.value is sent, but 0 is set to the L2 call value
         // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
@@ -75,7 +75,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
                 _gasPriceBid,
                 _data
             );
-        return abi.encode(seqNum);
+        return seqNum;
     }
 }
 
@@ -98,19 +98,30 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) external payable virtual override onlyRouter returns (bytes memory res) {
-        (address _from, uint256 _maxSubmissionCost, bytes memory extraData) =
-            parseOutboundData(_data);
+        address _from;
+        uint256 seqNum;
+        {
+            uint256 _maxSubmissionCost;
+            bytes memory extraData;
+            (_from, _maxSubmissionCost, extraData) = parseOutboundData(_data);
 
-        // escrow funds in gateway
-        IERC20(_token).safeTransferFrom(_from, address(this), _amount);
+            // escrow funds in gateway
+            IERC20(_token).safeTransferFrom(_from, address(this), _amount);
 
-        bytes memory outboundCalldata = getOutboundCalldata(_token, _from, _to, _amount, extraData);
+            bytes memory outboundCalldata =
+                getOutboundCalldata(_token, _from, _to, _amount, extraData);
 
-        res = createOutboundTx(_from, _maxSubmissionCost, _maxGas, _gasPriceBid, outboundCalldata);
+            seqNum = createOutboundTx(
+                _from,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                outboundCalldata
+            );
+        }
 
-        emit OutboundTransferInitiated(_token, _from, _to, _amount, _data);
-
-        return res;
+        emit OutboundTransferInitiated(_token, _from, _to, seqNum, _amount, _data);
+        return abi.encode(seqNum);
     }
 
     function parseOutboundData(bytes memory _data)
@@ -184,7 +195,6 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         // TODO: add withdraw and call
         // TODO: add transferExit
         IERC20(_token).safeTransfer(_to, _amount);
-
-        // emit WithdrawExecuted(initialDestination, dest, erc20, amount, exitNum);
+        emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
     }
 }

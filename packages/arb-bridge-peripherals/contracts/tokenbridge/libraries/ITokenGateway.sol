@@ -20,9 +20,19 @@ pragma solidity ^0.6.11;
 
 interface ITokenGateway {
     event OutboundTransferInitiated(
-        address indexed token,
+        address token,
         address indexed _from,
         address indexed _to,
+        uint256 indexed _transferId,
+        uint256 _amount,
+        bytes _data
+    );
+
+    event InboundTransferFinalized(
+        address token,
+        address indexed _from,
+        address indexed _to,
+        uint256 indexed _transferId,
         uint256 _amount,
         bytes _data
     );

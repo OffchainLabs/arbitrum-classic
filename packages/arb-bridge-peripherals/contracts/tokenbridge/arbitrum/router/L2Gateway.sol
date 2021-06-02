@@ -42,9 +42,9 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         super.initialize(_target);
     }
 
-    function createOutboundTx(bytes memory _data) internal virtual returns (bytes memory) {
+    function createOutboundTx(bytes memory _data) internal virtual returns (uint256) {
         uint256 id = ArbSys(arbsysAddr).sendTxToL1(counterpartGateway, _data);
-        return abi.encode(id);
+        return id;
     }
 }
 
@@ -97,27 +97,29 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable virtual override returns (bytes memory res) {
+    ) external payable virtual override returns (bytes memory) {
         require(msg.value == 0, "NO_VALUE");
 
         address _from = msg.sender;
+        uint256 id;
+        {
+            (address l1TokenAddr, bytes memory extraData) = abi.decode(_data, (address, bytes));
 
-        (address l1TokenAddr, bytes memory extraData) = abi.decode(_data, (address, bytes));
+            address expectedTokenAddr = calculateL2TokenAddress(l1TokenAddr);
+            require(_token == expectedTokenAddr, "WRONG_TOKEN_ADDR");
 
-        address expectedTokenAddr = calculateL2TokenAddress(l1TokenAddr);
-        require(_token == expectedTokenAddr, "WRONG_TOKEN_ADDR");
+            // burns L2 tokens in order to release escrowed L1 tokens
+            IArbStandardToken(_token).bridgeBurn(_from, _amount);
 
-        // burns L2 tokens in order to release escrowed L1 tokens
-        IArbStandardToken(_token).bridgeBurn(_from, _amount);
+            bytes memory outboundCalldata =
+                getOutboundCalldata(l1TokenAddr, _from, _to, _amount, extraData);
 
-        bytes memory outboundCalldata =
-            getOutboundCalldata(l1TokenAddr, _from, _to, _amount, extraData);
-
-        res = createOutboundTx(outboundCalldata);
+            id = createOutboundTx(outboundCalldata);
+        }
         // exitNum incremented after being used in getOutboundCalldata
         exitNum++;
-        emit OutboundTransferInitiated(_token, _from, _to, _amount, _data);
-        return res;
+        emit OutboundTransferInitiated(_token, _from, _to, id, _amount, _data);
+        return abi.encode(id);
     }
 
     function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
@@ -202,6 +204,15 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
             token.bridgeMint(_to, _amount);
             // emit TokenMinted(l1ERC20, expectedAddress, _from, _to, _amount, false);
         }
+
+        emit InboundTransferFinalized(
+            _token,
+            _from,
+            _to,
+            uint256(uint160(expectedAddress)),
+            _amount,
+            _data
+        );
 
         return bytes("");
     }
