@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -13,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 )
 
 type Accounts struct {
@@ -20,9 +23,10 @@ type Accounts struct {
 	addresses   []common.Address
 	privateKeys map[common.Address]*ecdsa.PrivateKey
 	signer      types.Signer
+	counter     *prometheus.CounterVec
 }
 
-func NewAccounts(ethServer *Server, privateKeys []*ecdsa.PrivateKey) *Accounts {
+func NewAccounts(ethServer *Server, privateKeys []*ecdsa.PrivateKey, metricsConfig *metrics.MetricsConfig) *Accounts {
 	keys := make(map[common.Address]*ecdsa.PrivateKey)
 	addresses := make([]common.Address, 0, len(privateKeys))
 	for _, privKey := range privateKeys {
@@ -35,6 +39,7 @@ func NewAccounts(ethServer *Server, privateKeys []*ecdsa.PrivateKey) *Accounts {
 		addresses:   addresses,
 		privateKeys: keys,
 		signer:      types.NewEIP155Signer(new(big.Int).SetUint64(uint64(ethServer.ChainId()))),
+		counter:     metricsConfig.MethodCallCounter,
 	}
 }
 
@@ -59,6 +64,7 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	}
 	privKey, ok := s.privateKeys[sender]
 	if !ok {
+		s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 		return common.Hash{}, errors.New("sender does not have unlocked wallet")
 	}
 
@@ -69,6 +75,7 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 		pendingNum := rpc.PendingBlockNumber
 		rawNonce, err := s.srv.GetTransactionCount(ctx, &sender, &pendingNum)
 		if err != nil {
+			s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 			return common.Hash{}, err
 		}
 		nonce = uint64(rawNonce)
@@ -89,6 +96,7 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	if gasPrice == nil {
 		gasPriceRaw, err := s.srv.GasPrice()
 		if err != nil {
+			s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 			return [32]byte{}, err
 		}
 		gasPrice = (*big.Int)(gasPriceRaw)
@@ -114,33 +122,40 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	}
 	signedTx, err := types.SignTx(tx, s.signer, privKey)
 	if err != nil {
+		s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 		return [32]byte{}, err
 	}
 
 	if err := s.srv.srv.SendTransaction(ctx, signedTx); err != nil {
+		s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 		return [32]byte{}, err
 	}
+	s.counter.WithLabelValues("eth_sendTransaction", "true").Inc()
 	return signedTx.Hash(), nil
 }
 
 func (s *Accounts) Sign(account common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
 	privKey, ok := s.privateKeys[account]
 	if !ok {
+		s.counter.WithLabelValues("eth_sign", "false").Inc()
 		return nil, errors.New("signer does not have unlocked wallet")
 	}
 	sig, err := crypto.Sign(accounts.TextHash(data), privKey)
 	if err != nil {
+		s.counter.WithLabelValues("eth_sign", "false").Inc()
 		return nil, err
 	}
 	sig[64] += 27
+	s.counter.WithLabelValues("eth_sign", "true").Inc()
 	return sig, nil
 }
 
 type PersonalAccounts struct {
 	privateKeys map[common.Address]*ecdsa.PrivateKey
+	counter     *prometheus.CounterVec
 }
 
-func NewPersonalAccounts(privateKeys []*ecdsa.PrivateKey) *PersonalAccounts {
+func NewPersonalAccounts(privateKeys []*ecdsa.PrivateKey, metricsConfig *metrics.MetricsConfig) *PersonalAccounts {
 	keys := make(map[common.Address]*ecdsa.PrivateKey)
 	for _, privKey := range privateKeys {
 		addr := crypto.PubkeyToAddress(privKey.PublicKey)
@@ -148,6 +163,7 @@ func NewPersonalAccounts(privateKeys []*ecdsa.PrivateKey) *PersonalAccounts {
 	}
 	return &PersonalAccounts{
 		privateKeys: keys,
+		counter:     metricsConfig.MethodCallCounter,
 	}
 }
 
@@ -155,12 +171,15 @@ func (s *PersonalAccounts) Sign(data hexutil.Bytes, account common.Address, _ *h
 	// Password ignored
 	privKey, ok := s.privateKeys[account]
 	if !ok {
+		s.counter.WithLabelValues("personal_sign", "false").Inc()
 		return nil, errors.New("signer does not have unlocked wallet")
 	}
 	sig, err := crypto.Sign(accounts.TextHash(data), privKey)
 	if err != nil {
+		s.counter.WithLabelValues("personal_sign", "false").Inc()
 		return nil, err
 	}
 	sig[64] += 27
+	s.counter.WithLabelValues("personal_sign", "true").Inc()
 	return sig, nil
 }
