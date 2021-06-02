@@ -91,7 +91,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
     }
 
     function outboundTransfer(
-        address _token,
+        address _l1Token,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
@@ -103,22 +103,19 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         address _from = msg.sender;
         uint256 id;
         {
-            (address l1TokenAddr, bytes memory extraData) = abi.decode(_data, (address, bytes));
-
-            address expectedTokenAddr = calculateL2TokenAddress(l1TokenAddr);
-            require(_token == expectedTokenAddr, "WRONG_TOKEN_ADDR");
-
+            address l2Token = calculateL2TokenAddress(_l1Token);
+            require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
             // burns L2 tokens in order to release escrowed L1 tokens
-            IArbStandardToken(_token).bridgeBurn(_from, _amount);
+            IArbStandardToken(l2Token).bridgeBurn(_from, _amount);
 
             bytes memory outboundCalldata =
-                getOutboundCalldata(l1TokenAddr, _from, _to, _amount, extraData);
+                getOutboundCalldata(_l1Token, _from, _to, _amount, _data);
 
             id = createOutboundTx(outboundCalldata);
         }
         // exitNum incremented after being used in getOutboundCalldata
         exitNum++;
-        emit OutboundTransferInitiated(_token, _from, _to, id, _amount, _data);
+        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _data);
         return abi.encode(id);
     }
 
