@@ -30,15 +30,13 @@ contract GatewayRouter is ITokenGateway {
 
     mapping(address => address) public tokenToConsumer;
     address public owner;
-    address public inbox;
     // TODO: set defaultConsumer
     address public defaultConsumer;
 
-    function initialize(address _owner, address _inbox) public {
-        require(_inbox != address(0), "INVALID_INBOX");
-        require(inbox == address(0), "ALREADY_INIT");
+    function initialize(address _owner) public {
+        require(_owner != address(0), "INVALID_OWNER");
+        require(owner == address(0), "ALREADY_INIT");
         owner = _owner;
-        inbox = _inbox;
     }
 
     function getGateway(address _token) public view virtual returns (address gateway) {
@@ -64,7 +62,7 @@ contract GatewayRouter is ITokenGateway {
     ) external payable override returns (bytes memory) {
         // TODO: check whitelist
         address gateway = getGateway(_token);
-        bytes memory gatewayData = abi.encode(inbox, msg.sender, _data);
+        bytes memory gatewayData = abi.encode(msg.sender, _data);
 
         return
             ITokenGateway(gateway).outboundTransfer{ value: msg.value }(

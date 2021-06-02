@@ -23,11 +23,6 @@ import "./ITokenGateway.sol";
 abstract contract TokenGateway is ITokenGateway {
     address public counterpartGateway;
 
-    modifier onlyCounterpartGateway {
-        require(msg.sender == counterpartGateway, "ONLY_L1_GATEWAY");
-        _;
-    }
-
     function initialize(address _counterpartGateway) public virtual {
         require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
         require(counterpartGateway == address(0), "ALREADY_INIT");
@@ -43,25 +38,13 @@ abstract contract TokenGateway is ITokenGateway {
         bytes calldata _data
     ) external payable virtual override returns (bytes memory);
 
-    // make it public so it can be used internally and externally for gas estimation
     function getOutboundCalldata(
         address _token,
         address _from,
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual returns (bytes memory outboundCalldata) {
-        outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
-            _token,
-            _from,
-            _to,
-            _amount,
-            _data
-        );
-
-        return outboundCalldata;
-    }
+    ) public view virtual returns (bytes memory);
 
     function finalizeInboundTransfer(
         address _token,

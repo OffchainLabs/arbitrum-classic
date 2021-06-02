@@ -33,6 +33,11 @@ import "../../libraries/IERC677.sol";
 abstract contract L2ArbitrumGateway is TokenGateway {
     address internal constant arbsysAddr = address(100);
 
+    modifier onlyCounterpartGateway {
+        require(msg.sender == counterpartGateway, "ONLY_L1_GATEWAY");
+        _;
+    }
+
     function initialize(address _target) public virtual override {
         super.initialize(_target);
     }
@@ -57,12 +62,32 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
      * @return the beacon to be used by the proxy contract.
      */
     address public override beacon;
+    uint256 public exitNum;
 
     function initialize(address _target, address _beacon) public virtual {
         super.initialize(_target);
         require(_beacon != address(0), "INVALID_BEACON");
         require(beacon == address(0), "ALREADY_INIT");
         beacon = _beacon;
+    }
+
+    function getOutboundCalldata(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) public view virtual override returns (bytes memory outboundCalldata) {
+        outboundCalldata = abi.encodeWithSelector(
+            ITokenGateway.finalizeInboundTransfer.selector,
+            _token,
+            _from,
+            _to,
+            _amount,
+            abi.encode(exitNum, _data)
+        );
+
+        return outboundCalldata;
     }
 
     function outboundTransfer(
@@ -89,9 +114,9 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
             getOutboundCalldata(l1TokenAddr, _from, _to, _amount, extraData);
 
         res = createOutboundTx(outboundCalldata);
-
+        // exitNum incremented after being used in getOutboundCalldata
+        exitNum++;
         emit OutboundTransferInitiated(_token, _from, _to, _amount, _data);
-
         return res;
     }
 

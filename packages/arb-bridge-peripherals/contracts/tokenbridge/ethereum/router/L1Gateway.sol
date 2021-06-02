@@ -22,18 +22,32 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "../../libraries/ITokenGateway.sol";
 import "../../libraries/TokenGateway.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {
     address router;
+    address inbox;
 
-    function initialize(address _l2Counterpart, address _router) public virtual {
+    modifier onlyCounterpartGateway {
+        IOutbox outbox = IOutbox(IInbox(inbox).bridge().activeOutbox());
+        require(counterpartGateway == outbox.l2ToL1Sender(), "Not from l2 buddy");
+        _;
+    }
+
+    function initialize(
+        address _l2Counterpart,
+        address _router,
+        address _inbox
+    ) public virtual {
         super.initialize(_l2Counterpart);
+        require(_inbox != address(0), "BAD_INBOX");
         require(_router != address(0), "BAD_ROUTER");
         require(router == address(0), "ALREADY_INIT");
         router = _router;
+        inbox = _inbox;
     }
 
     modifier onlyRouter {
@@ -42,7 +56,6 @@ abstract contract L1ArbitrumGateway is TokenGateway {
     }
 
     function createOutboundTx(
-        address _inbox,
         address _user,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -52,7 +65,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         // msg.value is sent, but 0 is set to the L2 call value
         // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
-            IInbox(_inbox).createRetryableTicket{ value: msg.value }(
+            IInbox(inbox).createRetryableTicket{ value: msg.value }(
                 counterpartGateway,
                 0,
                 _maxSubmissionCost,
@@ -69,8 +82,12 @@ abstract contract L1ArbitrumGateway is TokenGateway {
 contract L1ERC20Gateway is L1ArbitrumGateway {
     using SafeERC20 for IERC20;
 
-    function initialize(address _l2Counterpart, address _router) public virtual override {
-        super.initialize(_l2Counterpart, _router);
+    function initialize(
+        address _l2Counterpart,
+        address _router,
+        address _inbox
+    ) public virtual override {
+        super.initialize(_l2Counterpart, _router, _inbox);
     }
 
     function outboundTransfer(
@@ -81,41 +98,33 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) external payable virtual override onlyRouter returns (bytes memory res) {
-        (address _inbox, address _from, uint256 _maxSubmissionCost, bytes memory extraData) =
-            parseArbitrumData(_data);
+        (address _from, uint256 _maxSubmissionCost, bytes memory extraData) =
+            parseOutboundData(_data);
 
         // escrow funds in gateway
         IERC20(_token).safeTransferFrom(_from, address(this), _amount);
 
         bytes memory outboundCalldata = getOutboundCalldata(_token, _from, _to, _amount, extraData);
 
-        res = createOutboundTx(
-            _inbox,
-            _from,
-            _maxSubmissionCost,
-            _maxGas,
-            _gasPriceBid,
-            outboundCalldata
-        );
+        res = createOutboundTx(_from, _maxSubmissionCost, _maxGas, _gasPriceBid, outboundCalldata);
 
         emit OutboundTransferInitiated(_token, _from, _to, _amount, _data);
 
         return res;
     }
 
-    function parseArbitrumData(bytes memory _data)
+    function parseOutboundData(bytes memory _data)
         internal
         pure
         virtual
         returns (
-            address _inbox,
             address _from,
             uint256 _maxSubmissionCost,
             bytes memory _extraData
         )
     {
         // router encoded
-        (_inbox, _from, _extraData) = abi.decode(_data, (address, address, bytes));
+        (_from, _extraData) = abi.decode(_data, (address, bytes));
         // user encoded
         (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
     }
@@ -170,7 +179,12 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         uint256 _amount,
         bytes calldata _data
     ) external virtual override onlyCounterpartGateway returns (bytes memory) {
-        // TODO: implement withdrawal
-        revert("NOT_IMPLEMENTED");
+        (uint256 exitNum, bytes memory extraData) = abi.decode(_data, (uint256, bytes));
+
+        // TODO: add withdraw and call
+        // TODO: add transferExit
+        IERC20(_token).safeTransfer(_to, _amount);
+
+        // emit WithdrawExecuted(initialDestination, dest, erc20, amount, exitNum);
     }
 }
