@@ -28,22 +28,26 @@ void sleep() {
 
 constexpr bool clearDb = false;
 
+bool exclusively_code_points(value val);
+
 bool exclusively_code_points(Tuple tup) {
     for (size_t i = 0; i < tup.tuple_size(); i++) {
         auto elem = tup.get_element(i);
-        if (std::holds_alternative<CodePointStub>(elem)) {
-            continue;
+        if (!exclusively_code_points(elem)) {
+            return false;
         }
-
-        if (auto inner_tup = std::get_if<Tuple>(&elem)) {
-            if (exclusively_code_points(*inner_tup)) {
-                continue;
-            }
-        }
-
-        return false;
     }
     return true;
+}
+
+bool exclusively_code_points(value val) {
+    if (std::holds_alternative<CodePointStub>(val)) {
+        return true;
+    } else if (auto tup = std::get_if<Tuple>(&val)) {
+        return exclusively_code_points(*tup);
+    } else {
+        return false;
+    }
 }
 
 std::string print_path(const std::vector<size_t>& path) {
@@ -115,6 +119,9 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     auto arbos1Machine = std::move(res.data);
+    MachineExecutionConfig config;
+    arbos1Machine->machine_state.context = AssertionContext(config);
+    arbos1Machine->run();
     std::cout << "Got arbos1Machine with "
               << arbos1Machine->machine_state.output.arb_gas_used << " gas used"
               << std::endl;
@@ -130,7 +137,6 @@ int main(int argc, char* argv[]) {
     for (auto& message : messages.data) {
         message.insert(message.begin(), 32, 0);
     }
-    MachineExecutionConfig config;
     config.setInboxMessagesFromBytes(messages.data);
     arbos2Machine.machine_state.context = AssertionContext(std::move(config));
     arbos2Machine.run();
@@ -153,8 +159,7 @@ int main(int argc, char* argv[]) {
         auto path = path_stack.back();
         path_stack.pop_back();
 
-        if (std::holds_alternative<CodePointStub>(left) &&
-            std::holds_alternative<CodePointStub>(right)) {
+        if (exclusively_code_points(left) && exclusively_code_points(right)) {
             continue;
         }
 
@@ -183,7 +188,7 @@ int main(int argc, char* argv[]) {
                 auto left_size = left_tup->tuple_size();
                 auto right_size = right_tup->tuple_size();
                 if (left_size == right_size) {
-                    for (size_t i = 0; i < left_size; i++) {
+                    for (int i = left_size - 1; i >= 0; i--) {
                         left_stack.push_back(left_tup->get_element(i));
                         right_stack.push_back(right_tup->get_element(i));
                         std::vector<size_t> new_path = path;
@@ -191,18 +196,15 @@ int main(int argc, char* argv[]) {
                         path_stack.push_back(new_path);
                     }
                     continue;
-                } else if (exclusively_code_points(*left_tup) &&
-                           exclusively_code_points(*right_tup)) {
-                    continue;
                 } else {
                     if (left_tup->getSize() > 100 ||
                         right_tup->getSize() > 100) {
                         std::cout << "Differing tuple sizes" << std::endl
                                   << "Path:  " << print_path(path) << std::endl
-                                  << "Left:  " << left_size << " "
-                                  << left_tup->getSize() << std::endl
-                                  << "Right: " << right_size << " "
-                                  << right_tup->getSize() << std::endl;
+                                  << "Left:  " << left_size << " (value size "
+                                  << left_tup->getSize() << ")" << std::endl
+                                  << "Right: " << right_size << " (value size "
+                                  << right_tup->getSize() << ")" << std::endl;
                     } else {
                         std::cout << "Differing tuples" << std::endl
                                   << "Path:  " << print_path(path) << std::endl
