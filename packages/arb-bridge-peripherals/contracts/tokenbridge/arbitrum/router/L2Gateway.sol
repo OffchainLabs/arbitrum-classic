@@ -94,10 +94,19 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         address _l1Token,
         address _to,
         uint256 _amount,
+        bytes calldata _data
+    ) public payable returns (bytes memory) {
+        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+    }
+
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable virtual override returns (bytes memory) {
+    ) public payable virtual override returns (bytes memory) {
         require(msg.value == 0, "NO_VALUE");
 
         address _from = msg.sender;
