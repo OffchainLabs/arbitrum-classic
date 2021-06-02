@@ -196,6 +196,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
                 token.bridgeMint(_from, _amount);
                 // success default value is false
             }
+            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
         } else {
             token.bridgeMint(_to, _amount);
         }
