@@ -21,7 +21,6 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../../libraries/ITokenBridge.sol";
-import "../../libraries/RouterConsumer.sol";
 
 contract Router is ITokenBridge {
     using Address for address;
@@ -32,8 +31,7 @@ contract Router is ITokenBridge {
     mapping(address => address) public tokenToConsumer;
     address public owner;
     address public inbox;
-    // consumers
-    // TODO: set this
+    // TODO: set defaultConsumer
     address public defaultConsumer;
 
     function initialize(address _owner, address _inbox) public {
@@ -69,7 +67,7 @@ contract Router is ITokenBridge {
         bytes memory consumerData = abi.encode(inbox, msg.sender, _data);
 
         return
-            RouterConsumer(consumer).outboundTransfer{ value: msg.value }(
+            ITokenBridge(consumer).outboundTransfer{ value: msg.value }(
                 _token,
                 _to,
                 _amount,
@@ -81,6 +79,7 @@ contract Router is ITokenBridge {
 
     function finalizeInboundTransfer(
         address _token,
+        address _from,
         address _to,
         uint256 _amount,
         bytes calldata _data

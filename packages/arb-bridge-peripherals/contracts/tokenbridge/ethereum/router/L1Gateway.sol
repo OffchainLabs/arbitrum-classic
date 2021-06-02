@@ -21,13 +21,28 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import "../../libraries/ITokenBridge.sol";
-import "../../libraries/RouterConsumer.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
-abstract contract L1ArbitrumConsumer is RouterConsumer {
+import "../../libraries/ITokenBridge.sol";
+import "../../libraries/TokenGateway.sol";
+
+abstract contract L1ArbitrumGateway is TokenGateway {
+    address router;
+
+    function initialize(address _l2Target, address _router) public virtual {
+        super.initialize(_l2Target);
+        require(_router != address(0), "BAD_ROUTER");
+        require(router == address(0), "ALREADY_INIT");
+        router = _router;
+    }
+
+    modifier onlyRouter {
+        require(msg.sender == router, "ONLY_ROUTER");
+        _;
+    }
+
     function createOutboundTx(
         address _handler,
-        address _target,
         address _user,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
@@ -38,7 +53,7 @@ abstract contract L1ArbitrumConsumer is RouterConsumer {
         // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
             IInbox(_handler).createRetryableTicket{ value: msg.value }(
-                _target,
+                target,
                 0,
                 _maxSubmissionCost,
                 _user,
@@ -49,14 +64,63 @@ abstract contract L1ArbitrumConsumer is RouterConsumer {
             );
         return abi.encode(seqNum);
     }
+
+    function outboundTransfer(
+        address _token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable virtual override onlyRouter returns (bytes memory res) {
+        (
+            address _handler, // inbox
+            address _from,
+            uint256 _maxSubmissionCost,
+            bytes memory extraData
+        ) = parseArbitrumData(_data);
+
+        handleEscrow(_token, _from, _amount);
+
+        bytes memory outboundCalldata = getOutboundCalldata(_token, _from, _to, _amount, extraData);
+
+        res = createOutboundTx(
+            _handler,
+            _from,
+            _maxSubmissionCost,
+            _maxGas,
+            _gasPriceBid,
+            outboundCalldata
+        );
+
+        emit OutboundTransferInitiated(_token, _from, _to, _amount, _data);
+
+        return res;
+    }
+
+    function parseArbitrumData(bytes memory _data)
+        internal
+        pure
+        virtual
+        returns (
+            address inbox,
+            address from,
+            uint256 maxSubmissionCost,
+            bytes memory _extraData
+        )
+    {
+        // router encoded
+        (inbox, from, _extraData) = abi.decode(_data, (address, address, bytes));
+        // user encoded
+        (maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
+    }
 }
 
-contract ERC20Bridge is L1ArbitrumConsumer {
+contract ERC20Bridge is L1ArbitrumGateway {
     using SafeERC20 for IERC20;
 
-    function initialize(address _l2Target) public virtual override {
-        super.initialize(_l2Target);
-        // TODO: add onlyRouter to `outboundTransfer`
+    function initialize(address _l2Target, address _router) public virtual override {
+        super.initialize(_l2Target, _router);
     }
 
     /**
@@ -77,9 +141,8 @@ contract ERC20Bridge is L1ArbitrumConsumer {
 
     function getOutboundCalldata(
         address _token,
-        address _l2Target,
-        address _sender,
-        address _destination,
+        address _from,
+        address _to,
         uint256 _amount,
         bytes memory _data
     ) public view virtual override returns (bytes memory outboundCalldata) {
@@ -93,18 +156,17 @@ contract ERC20Bridge is L1ArbitrumConsumer {
 
         outboundCalldata = abi.encodeWithSelector(
             ITokenBridge.finalizeInboundTransfer.selector,
-            // _token,
-            // sender,
-            // destination,
-            // amount,
-            deployData,
-            _data
+            _token,
+            _from,
+            _to,
+            _amount,
+            abi.encode(deployData, _data)
         );
 
         return outboundCalldata;
     }
 
-    function triggerEscrow(
+    function handleEscrow(
         address _token,
         address _from,
         uint256 _amount
@@ -114,10 +176,12 @@ contract ERC20Bridge is L1ArbitrumConsumer {
 
     function finalizeInboundTransfer(
         address _token,
+        address _from,
         address _to,
         uint256 _amount,
         bytes calldata _data
     ) external virtual override returns (bytes memory) {
+        // TODO: implement withdrawal
         revert("NOT_IMPLEMENTED");
     }
 }
