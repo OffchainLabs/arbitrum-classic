@@ -36,7 +36,7 @@ import { providers, Signer } from 'ethers'
 import { ArbAddressTable } from './abi/ArbAddressTable'
 import { ArbAddressTable__factory } from './abi/factories/ArbAddressTable__factory'
 
-const ARB_ADDRESS_TABLE_ADDRESS = '0x0000000000000000000000000000000000000066'
+import { ARB_ADDRESS_TABLE_ADDRESS } from './precompile_addresses'
 
 type PrimativeType = string | number | boolean | BigNumber
 type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]

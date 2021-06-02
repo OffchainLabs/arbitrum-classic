@@ -15,13 +15,13 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
+import { Signer, BigNumber, ethers, ContractReceipt } from 'ethers'
 import { L1Bridge } from './l1Bridge'
-import { L2Bridge, ARB_SYS_ADDRESS } from './l2Bridge'
+import { L2Bridge } from './l2Bridge'
 import { BridgeHelper } from './bridge_helpers'
 import { PayableOverrides } from '@ethersproject/contracts'
-
-const { Zero } = constants
+import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
+import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
@@ -86,12 +86,15 @@ export class Bridge extends L2Bridge {
     return this.l1Bridge.l1EthBalance
   }
 
-  get ethERC20Bridge() {
-    return this.l1Bridge.ethERC20Bridge
+  get gatewayRouter() {
+    return this.l1Bridge.gatewayRouter
+  }
+  defaultL1Gateway() {
+    return this.l1Bridge.getDefaultL1Gateway()
   }
 
   /**
-   * Set allowance for L1 bridge contract
+   * Set allowance for L1 router contract
    */
   public async approveToken(
     erc20L1Address: string,
@@ -101,7 +104,7 @@ export class Bridge extends L2Bridge {
   }
 
   /**
-   * Deposit ether from L1 to L2. Users L1MessageType_L2FundedByL1 txn type ( type 7)
+   * Deposit ether from L1 to L2.
    */
   public async depositETH(
     value: BigNumber,
@@ -133,21 +136,32 @@ export class Bridge extends L2Bridge {
 
     const sender = await this.l1Bridge.l1Signer.getAddress()
 
-    const [
-      isDeployed,
-      depositCalldata,
-    ] = await this.ethERC20Bridge.getDepositCalldata(
+    const defaultGateway = await this.l1Bridge.getDefaultL1Gateway()
+
+    const depositCalldata = await defaultGateway.getOutboundCalldata(
       erc20L1Address,
       sender,
       destinationAddress ? destinationAddress : sender,
       amount,
       '0x'
     )
-    const expectedGas = await this.l2Provider.estimateGas({
-      from: this.ethERC20Bridge.address,
-      to: this.arbTokenBridge.address,
-      data: depositCalldata,
-    })
+
+    // TODO: i'm confused
+    // const  = nodeInterface.estimateRetryableTicket(
+    //   this.gatewayRouter.address,
+    //   deposit,
+    //   this.l2ERC20Gateway.address,
+    //   deposit,
+    //   maxSubmissionPrice,
+    //   sender,
+    //   sender,
+    //   0,
+    //   0,
+    //   depositCalldata
+    // )
+
+    const expectedGas = BigNumber.from(42069)
+
     const maxGas = retryableGasArgs.maxGas || expectedGas
 
     const maxSubmissionPriceIncreaseRatio =
@@ -159,25 +173,15 @@ export class Bridge extends L2Bridge {
       .mul(maxSubmissionPriceIncreaseRatio)
       .div(BigNumber.from(10))
 
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      this.l2Provider
+    )
+
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
     if (!ethDeposit || BigNumber.from(ethDeposit).isZero()) {
       ethDeposit = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
-      // TODO: might reactivate if we switch to arb-os deducting from sender's EOA
-      // const l2Balance = await this.getAndUpdateL2EthBalance()
-
-      // const requiredEth = await maxSubmissionPrice.add(gasPriceBid.mul(maxGas))
-
-      // if (l2Balance.lt(requiredEth)) {
-      //   console.info(
-      //     'insufficient L2 balance to pay for retryable:',
-      //     l2Balance.toNumber(),
-      //     'Depositing additional ETH'
-      //   )
-      //   ethDeposit = requiredEth.sub(l2Balance)
-      // } else {
-      //   console.info('l2 account adequately funded for retryable')
-      // }
     }
 
     return this.l1Bridge.deposit(
@@ -238,11 +242,11 @@ export class Bridge extends L2Bridge {
   /**
    * Hash of L2 ArbOs generated "auto-redeem" transaction; if it succeeded, a transaction queryable by {@link calculateL2RetryableTransactionHash} will then be created
    */
-  public calculateRetryableAutoReedemTxnHash(
+  public calculateRetryableAutoRedeemTxnHash(
     inboxSequenceNumber: BigNumber,
     l2ChainId?: BigNumber
   ): Promise<string> {
-    return BridgeHelper.calculateRetryableAutoReedemTxnHash(
+    return BridgeHelper.calculateRetryableAutoRedeemTxnHash(
       inboxSequenceNumber,
       l2ChainId || this.l2Provider
     )
@@ -290,12 +294,14 @@ export class Bridge extends L2Bridge {
     )
   }
 
-  public getDepositTokenEventData(
+  public async getDepositTokenEventData(
     l1Transaction: ethers.providers.TransactionReceipt
   ) {
+    const defaultGatewayAddress = (await this.l1Bridge.getDefaultL1Gateway())
+      .address
     return BridgeHelper.getDepositTokenEventData(
       l1Transaction,
-      this.arbTokenBridge.address
+      defaultGatewayAddress
     )
   }
 
@@ -386,14 +392,14 @@ export class Bridge extends L2Bridge {
   /**
    * Return receipt of retryable transaction after execution
    */
-  public async waitForRetriableReceipt(seqNum: BigNumber) {
-    return BridgeHelper.waitForRetriableReceipt(seqNum, this.l2Provider)
+  public async waitForRetryableReceipt(seqNum: BigNumber) {
+    return BridgeHelper.waitForRetryableReceipt(seqNum, this.l2Provider)
   }
 
   public async getTokenWithdrawEventData(destinationAddress: string) {
     return BridgeHelper.getTokenWithdrawEventData(
       destinationAddress,
-      this.arbTokenBridge.address,
+      this.l2ERC20Gateway.address,
       this.l2Provider
     )
   }

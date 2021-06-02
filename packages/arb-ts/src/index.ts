@@ -16,8 +16,8 @@
 
 export { Bridge } from './lib/bridge'
 export {
+  OutboundTransferInitiatedResult,
   L2ToL1EventResult,
-  DepositTokenEventResult,
   OutgoingMessageState,
 } from './lib/bridge_helpers'
 export { L1Bridge, L1TokenData } from './lib/l1Bridge'
