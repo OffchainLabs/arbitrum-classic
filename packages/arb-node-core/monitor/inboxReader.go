@@ -22,15 +22,42 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+)
+
+var (
+	EthHeightGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "arbitrum",
+		Subsystem: "ethereum",
+		Name:      "block_height",
+		Help:      "Current best block in the anchoring Ethereum chain.",
+	})
+	DelayedCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "delayed",
+		Help:      "Number of Delayed Inbox Messages Processed",
+	})
+	BatchesCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "processed",
+		Help:      "Number of Inbox Message Batches",
+	})
+	MessageGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "messages",
+		Help:      "Total Messages Inserted",
+	})
 )
 
 type InboxReader struct {
@@ -175,6 +202,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			}
 		}
 
+		EthHeightGauge.Set(float64(currentHeight.Uint64()))
 		if ir.healthChan != nil && currentHeight != nil {
 			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
 		}
@@ -315,6 +343,9 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					from = from.Add(to, big.NewInt(1))
 				}
 			}
+			DelayedCounter.Add(float64(len(delayedMessages)))
+			BatchesCounter.Add(float64(len(sequencerBatches)))
+			MessageGauge.Set(float64(ir.db.MachineMessagesRead().Uint64()))
 		}
 		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:

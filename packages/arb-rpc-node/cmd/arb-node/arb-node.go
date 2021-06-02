@@ -29,10 +29,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -42,13 +38,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -101,6 +101,7 @@ func startup() error {
 	disableOpenEthereumCheck := fs.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
 	healthcheckMetrics := fs.Bool("metrics", false, "enable prometheus endpoint")
 	healthcheckRPC := fs.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+	metricsPrefix := fs.String("metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -169,9 +170,10 @@ func startup() error {
 	}
 	defer mon.Close()
 
+	metricsConfig := metrics.NewMetricsConfig(metricsPrefix)
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -275,7 +277,9 @@ func startup() error {
 		}
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
+	nodeStore := mon.Storage.GetNodeStore()
+	metrics.RegisterNodeStoreMetrics(nodeStore, metricsConfig)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
@@ -306,8 +310,11 @@ func startup() error {
 		time.Sleep(time.Second * 5)
 	}
 
+	metricsConfig.RegisterSystemMetrics()
+	metricsConfig.RegisterStaticMetrics()
+
 	srv := aggregator.NewServer(batch, rollupArgs.Address, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil, metricsConfig)
 	if err != nil {
 		return err
 	}

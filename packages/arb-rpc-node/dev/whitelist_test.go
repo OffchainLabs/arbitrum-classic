@@ -25,6 +25,7 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
@@ -54,7 +55,7 @@ func TestWhitelist(t *testing.T) {
 	ownerAuth, err := bind.NewKeyedTransactorWithChainID(ownerKey, backend.chainID)
 	test.FailIfError(t, err)
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metrics.NewMetricsConfig(nil))
 
 	_, _, simple, err := arbostestcontracts.DeploySimple(senderAuth, client)
 	test.FailIfError(t, err)

@@ -29,8 +29,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -42,9 +40,11 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -82,16 +82,6 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	const largeChannelBuffer = 200
-	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
-
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
-
 	if len(os.Args) < 6 {
 		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [bridge utils address] [validator utils address] [validator wallet factory address] [strategy] " + cmdhelp.WalletArgsString
 		fmt.Println(usageStr)
@@ -108,6 +98,7 @@ func startup() error {
 	disableOpenEthereumCheck := flagSet.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
 	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
 	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+	metricsPrefix := flagSet.String("metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 
 	if err := flagSet.Parse(os.Args[8:]); err != nil {
 		return errors.Wrap(err, "failed parsing command line arguments")
@@ -125,6 +116,20 @@ func startup() error {
 
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+
+	metricsConfig := metrics.NewMetricsConfig(metricsPrefix)
+	metricsConfig.RegisterSystemMetrics()
+	metricsConfig.RegisterStaticMetrics()
+
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
 
 	folder := os.Args[1]
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}

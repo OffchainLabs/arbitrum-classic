@@ -19,9 +19,11 @@ package web3
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Web3 struct {
+	counter *prometheus.CounterVec
 }
 
 func (web3 *Web3) ClientVersion() string {
@@ -29,5 +31,6 @@ func (web3 *Web3) ClientVersion() string {
 }
 
 func (web3 *Web3) Sha3(data hexutil.Bytes) hexutil.Bytes {
+	web3.counter.WithLabelValues("web3_sha3", "true")
 	return crypto.Keccak256(data)
 }
