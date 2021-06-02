@@ -139,7 +139,7 @@ TEST_CASE("Code serialization") {
 }
 
 TEST_CASE("Code forks are identical to original") {
-    Code code;
+    CoreCode code;
     std::vector<CodePointStub> stubs(1, code.addSegment());
     constexpr size_t num_ops = 45;
     for (size_t i = 0; i < num_ops; i++) {
