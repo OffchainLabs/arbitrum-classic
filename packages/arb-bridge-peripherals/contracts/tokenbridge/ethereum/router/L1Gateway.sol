@@ -64,6 +64,14 @@ abstract contract L1ArbitrumGateway is TokenGateway {
             );
         return abi.encode(seqNum);
     }
+}
+
+contract L1ERC20Gateway is L1ArbitrumGateway {
+    using SafeERC20 for IERC20;
+
+    function initialize(address _l2Counterpart, address _router) public virtual override {
+        super.initialize(_l2Counterpart, _router);
+    }
 
     function outboundTransfer(
         address _token,
@@ -113,14 +121,6 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         (inbox, from, _extraData) = abi.decode(_data, (address, address, bytes));
         // user encoded
         (maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
-    }
-}
-
-contract L1ERC20Gateway is L1ArbitrumGateway {
-    using SafeERC20 for IERC20;
-
-    function initialize(address _l2Counterpart, address _router) public virtual override {
-        super.initialize(_l2Counterpart, _router);
     }
 
     /**

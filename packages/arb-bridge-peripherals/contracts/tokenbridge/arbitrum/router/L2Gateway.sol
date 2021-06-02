@@ -23,7 +23,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
-import "../IArbToken.sol";
 import "../IArbStandardToken.sol";
 
 import "../../libraries/ClonableBeaconProxy.sol";
@@ -36,18 +35,6 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         super.initialize(_target);
     }
 
-    function outboundTransfer(
-        address _l1Token,
-        address _to,
-        uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data
-    ) external payable virtual override returns (bytes memory) {
-        // TODO: implement withdrawal
-        revert("NOT_IMPLEMENTED");
-    }
-
     function createOutboundTx(
         address _handler,
         address _user,
@@ -56,28 +43,8 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual override returns (bytes memory) {
-        require(_handler == address(100), "ONLY_ARBSYS");
         uint256 id = ArbSys(_handler).sendTxToL1(counterpartGateway, _data);
         return abi.encode(id);
-    }
-
-    // make it public so it can be used internally and externally for gas estimation
-    function getOutboundCalldata(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) public view virtual override returns (bytes memory) {
-        return
-            abi.encodeWithSelector(
-                ITokenGateway.finalizeInboundTransfer.selector,
-                _token,
-                _from,
-                _to,
-                _amount,
-                _data
-            );
     }
 }
 
@@ -101,6 +68,34 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         require(_beacon != address(0), "INVALID_BEACON");
         require(beacon == address(0), "ALREADY_INIT");
         beacon = _beacon;
+    }
+
+    function outboundTransfer(
+        address _token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable virtual override returns (bytes memory res) {
+        require(msg.value == 0, "NO_VALUE");
+
+        address _from = msg.sender;
+
+        (address l1TokenAddr, bytes memory extraData) = abi.decode(_data, (address, bytes));
+
+        address expectedTokenAddr = calculateL2TokenAddress(l1TokenAddr);
+        require(_token == expectedTokenAddr, "WRONG_TOKEN_ADDR");
+
+        handleEscrow(_token, _from, _amount);
+        bytes memory outboundCalldata =
+            getOutboundCalldata(l1TokenAddr, _from, _to, _amount, extraData);
+
+        res = createOutboundTx(address(100), _from, 0, _maxGas, _gasPriceBid, outboundCalldata);
+
+        emit OutboundTransferInitiated(l1TokenAddr, _from, _to, _amount, _data);
+
+        return res;
     }
 
     function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
@@ -206,13 +201,31 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         return createdContract;
     }
 
+    // make it public so it can be used internally and externally for gas estimation
+    function getOutboundCalldata(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) public view virtual override returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                ITokenGateway.finalizeInboundTransfer.selector,
+                _l1Token,
+                _from,
+                _to,
+                _amount,
+                _data
+            );
+    }
+
     function handleEscrow(
         address _token,
         address _from,
         uint256 _amount
     ) internal virtual override {
-        // TODO: burn tokens
-        revert("not implemented");
+        IArbStandardToken(_token).bridgeBurn(_from, _amount);
     }
 
     // TODO: add transferAndCall affordance

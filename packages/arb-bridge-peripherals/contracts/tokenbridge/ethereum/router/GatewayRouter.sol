@@ -22,7 +22,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "../../libraries/ITokenGateway.sol";
 
-contract Router is ITokenGateway {
+contract GatewayRouter is ITokenGateway {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -41,17 +41,17 @@ contract Router is ITokenGateway {
         inbox = _inbox;
     }
 
-    function getConsumer(address _token) public view virtual returns (address consumer) {
-        consumer = tokenToConsumer[_token];
-        require(consumer != BLACKLISTED, "BLACKLIST");
+    function getGateway(address _token) public view virtual returns (address gateway) {
+        gateway = tokenToConsumer[_token];
+        require(gateway != BLACKLISTED, "BLACKLIST");
 
-        if (consumer == ZERO_ADDR) {
-            consumer = defaultConsumer;
+        if (gateway == ZERO_ADDR) {
+            gateway = defaultConsumer;
         }
 
-        require(consumer.isContract(), "NO_CONSUMER_DEPLOYED");
+        require(gateway.isContract(), "NO_CONSUMER_DEPLOYED");
 
-        return consumer;
+        return gateway;
     }
 
     function outboundTransfer(
@@ -63,17 +63,17 @@ contract Router is ITokenGateway {
         bytes calldata _data
     ) external payable override returns (bytes memory) {
         // TODO: check whitelist
-        address consumer = getConsumer(_token);
-        bytes memory consumerData = abi.encode(inbox, msg.sender, _data);
+        address gateway = getGateway(_token);
+        bytes memory gatewayData = abi.encode(inbox, msg.sender, _data);
 
         return
-            ITokenGateway(consumer).outboundTransfer{ value: msg.value }(
+            ITokenGateway(gateway).outboundTransfer{ value: msg.value }(
                 _token,
                 _to,
                 _amount,
                 _maxGas,
                 _gasPriceBid,
-                consumerData
+                gatewayData
             );
     }
 
