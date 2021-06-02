@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/pkg/errors"
-	"io"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -119,7 +118,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 			default:
 			}
 
-			msg, op, err := bc.readData(ctx, bc.conn, ws.StateClientSide, ws.OpText|ws.OpBinary)
+			msg, op, err := bc.readData(ctx, ws.StateClientSide)
 			if err != nil {
 				if bc.shuttingDown {
 					return
@@ -158,10 +157,10 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 	}()
 }
 
-func (bc *BroadcastClient) readData(ctx context.Context, conn io.ReadWriter, state ws.State, want ws.OpCode) ([]byte, ws.OpCode, error) {
-	controlHandler := wsutil.ControlFrameHandler(conn, state)
+func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte, ws.OpCode, error) {
+	controlHandler := wsutil.ControlFrameHandler(bc.conn, state)
 	reader := wsutil.Reader{
-		Source:          conn,
+		Source:          bc.conn,
 		State:           state,
 		CheckUTF8:       true,
 		SkipHeaderCheck: false,
@@ -199,7 +198,8 @@ func (bc *BroadcastClient) readData(ctx context.Context, conn io.ReadWriter, sta
 			}
 			continue
 		}
-		if header.OpCode&want == 0 {
+		if header.OpCode != ws.OpText &&
+			header.OpCode != ws.OpBinary {
 			if err := reader.Discard(); err != nil {
 				return nil, 0, err
 			}
