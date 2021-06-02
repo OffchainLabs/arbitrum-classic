@@ -28,10 +28,10 @@ contract GatewayRouter is ITokenGateway {
     address internal constant ZERO_ADDR = address(0);
     address internal constant BLACKLISTED = address(1);
 
-    mapping(address => address) public tokenToConsumer;
+    mapping(address => address) public tokenToGateway;
     address public owner;
-    // TODO: set defaultConsumer
-    address public defaultConsumer;
+    // TODO: set defaultGateway
+    address public defaultGateway;
 
     function initialize(address _owner) public {
         require(_owner != address(0), "INVALID_OWNER");
@@ -39,15 +39,29 @@ contract GatewayRouter is ITokenGateway {
         owner = _owner;
     }
 
+    function setOwner(address newOwner) external {
+        require(msg.sender == owner, "ONLY_OWNER");
+        owner = newOwner;
+    }
+
+    function setGateways(address[] memory token, address[] memory gateway) external {
+        require(msg.sender == owner, "ONLY_OWNER");
+        require(token.length == gateway.length, "WRONG_LENGTH");
+
+        for (uint256 i = 0; i < token.length; i++) {
+            tokenToGateway[token[i]] = gateway[i];
+        }
+    }
+
     function getGateway(address _token) public view virtual returns (address gateway) {
-        gateway = tokenToConsumer[_token];
+        gateway = tokenToGateway[_token];
         require(gateway != BLACKLISTED, "BLACKLIST");
 
         if (gateway == ZERO_ADDR) {
-            gateway = defaultConsumer;
+            gateway = defaultGateway;
         }
 
-        require(gateway.isContract(), "NO_CONSUMER_DEPLOYED");
+        require(gateway.isContract(), "NO_GATEWAY_DEPLOYED");
 
         return gateway;
     }
