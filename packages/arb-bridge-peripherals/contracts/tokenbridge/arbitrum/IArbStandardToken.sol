@@ -28,12 +28,4 @@ interface IArbStandardToken is IArbToken {
      * @param _data encoded symbol/name/decimal data for initial deploy
      */
     function bridgeInit(address _l1Address, bytes memory _data) external;
-
-    /**
-     * @notice Migrate tokens from a StandardArbERC20 to a custom token contract; this should only happen/matter
-     * if a standard ERC20 is deployed for an L1 custom contract before the L2 custom contract gets registered
-     * @param destination destination address
-     * @param amount amount of tokens withdrawn
-     */
-    function migrate(address destination, uint256 amount) external;
 }

@@ -84,22 +84,4 @@ const _abi = [
     stateMutability: 'view',
     type: 'function',
   },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'destination',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'migrate',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
 ]
