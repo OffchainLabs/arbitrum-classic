@@ -319,6 +319,45 @@ func enableL1Addresses(rollup, whitelist ethcommon.Address, users []ethcommon.Ad
 	return waitForTx(tx, "SetWhitelistEntries")
 }
 
+func disableL1Whitelist(inbox ethcommon.Address) error {
+	inboxCon, err := ethbridgecontracts.NewInbox(inbox, config.client)
+	if err != nil {
+		return err
+	}
+	bridgeArr, err := inboxCon.Bridge(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	bridgeCon, err := ethbridgecontracts.NewBridge(bridgeArr, config.client)
+	if err != nil {
+		return err
+	}
+	rollupAddr, err := bridgeCon.Owner(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	whitelistAddr, err := inboxCon.Whitelist(&bind.CallOpts{})
+	if err != nil {
+		return err
+	}
+	admin, err := ethbridgecontracts.NewRollupAdminFacet(rollupAddr, config.client)
+	if err != nil {
+		return err
+	}
+	targets := []ethcommon.Address{inbox}
+	tx, err := admin.UpdateWhitelistConsumers(config.auth, whitelistAddr, ethcommon.Address{}, targets)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Waiting for receipt for", tx.Hash())
+	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "UpdateWhitelistConsumers")
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transaction completed successfully")
+	return nil
+}
+
 func deposit(inboxAddress ethcommon.Address, value *big.Int, submissionPrice *big.Int) error {
 	inbox, err := ethbridgecontracts.NewInbox(inboxAddress, config.client)
 	if err != nil {
@@ -646,7 +685,7 @@ func handleCommand(fields []string) error {
 		owner := ethcommon.HexToAddress("0x1c7d91ccBdBf378bAC0F074678b09CB589184e4E")
 		sequencer := ethcommon.HexToAddress("0xcCe5c6cFF61C49b4d53dd6024f8295F3c5230513")
 		return createChain(creator, owner, sequencer, 13.2, 60*60*24*7, nil)
-	case "create-chain":
+	case "create-testnet-chain":
 		if len(fields) != 6 {
 			return errors.New("Expected address argument")
 		}
@@ -689,6 +728,12 @@ func handleCommand(fields []string) error {
 			users = append(users, ethcommon.HexToAddress(val))
 		}
 		return enableL1Addresses(rollup, whitelist, users)
+	case "disable-l1-whitelist":
+		if len(fields) != 2 {
+			return errors.New("Expected [inbox] arguments")
+		}
+		inbox := ethcommon.HexToAddress(fields[1])
+		return disableL1Whitelist(inbox)
 	default:
 		fmt.Println("Unknown command")
 	}
