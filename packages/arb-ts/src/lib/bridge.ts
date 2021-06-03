@@ -160,10 +160,12 @@ export class Bridge extends L2Bridge {
       this.l2Provider
     )
 
+    const defaultGateWayAddress = (await this.l1Bridge.getDefaultL1Gateway())
+      .address
     const maxGas = (
       await nodeInterface.estimateRetryableTicket(
-        this.gatewayRouter.address,
-        ethers.utils.parseEther('1'),
+        defaultGateWayAddress,
+        ethers.utils.parseEther('0.05'),
         this.l2ERC20Gateway.address,
         0,
         maxSubmissionPrice,
@@ -174,6 +176,7 @@ export class Bridge extends L2Bridge {
         depositCalldata
       )
     )[0]
+    console.log('DONE ESTIMATING GAS')
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)

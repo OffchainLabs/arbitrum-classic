@@ -277,17 +277,18 @@ describe('ERC20', () => {
     expect(balance.eq(tokenDepositAmount)).to.be.true
   })
 
-  it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-    // this uses the l2ERC20Gateway implementation
-    const erc20L2AddressAsPerL2 = await bridge.getERC20L2Address(erc20Address)
+  // TODO: L1 address oracle
+  // it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
+  //   // this uses the l2ERC20Gateway implementation
+  //   const erc20L2AddressAsPerL2 = await bridge.getERC20L2Address(erc20Address)
 
-    const l1Gateway = await bridge.defaultL1Gateway()
-    const erc20L2AddressAsPerL1 = await l1Gateway.calculateL2TokenAddress(
-      erc20Address
-    )
-    prettyLog('Token L2 Address: ' + erc20L2AddressAsPerL1)
-    expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
-  })
+  //   const l1Gateway = await bridge.defaultL1Gateway()
+  //   const erc20L2AddressAsPerL1 = await l1Gateway.functions.calculateL2TokenAddress(
+  //     erc20Address
+  //   )
+  //   prettyLog('Token L2 Address: ' + erc20L2AddressAsPerL1)
+  //   expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
+  // })
 
   it('withdraw erc20 succeeds and emits event data', async () => {
     const withdrawRes = await bridge.withdrawERC20(
@@ -315,7 +316,7 @@ describe('ERC20', () => {
   })
 })
 
-describe.skip('Ether', () => {
+describe('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
   let initialTestWalletEth2Balance: BigNumber
