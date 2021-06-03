@@ -34,18 +34,17 @@ The Arbitrum protocol itself technically has no native notion of any token stand
 
 ### Design Rationale
 
-_Our design and thinking has been influenced by many in the Ethereum community, including [this proposal](https://ethereum-magicians.org/t/outlining-a-standard-interface-for-cross-domain-erc20-transfers/6151) from Maurelian & Ben Jones,
-work with David Mihal, and feedback from many projects building on Arbitrum, too numerous to mention!_
+_Our design and thinking has been influenced by many in the Ethereum community, including [this proposal](https://ethereum-magicians.org/t/outlining-a-standard-interface-for-cross-domain-erc20-transfers/6151) from Maurelian & Ben Jones, work with David Mihal, and feedback from many projects building on Arbitrum, too numerous to mention!_
 
-_We use the term "Gateway" (a contract for facilitating cross-domain transfers) as per the proposal linked above_
+_We use the term "Gateway" (a contract for facilitating cross-domain transfers) as per the proposal linked above_.
 
 Three core goals motivate the design of our bridging system:
 
-####1. Custom "Gateway" functionality
+#### 1. Custom "Gateway" functionality
 
-For many ERC20 tokens, standard bridging functionality is sufficient, which entails the following: a token contract on Ethereum is associated with a "paired" token contract on Arbitrum. Depositing a token entails escrowing some amount of the token in an L1 bridge contract, and minting the same amount at the paired token contract on L2. On L2, the paired contract behaves much like a normal ERC20 token contract. Withdrawing entails burning some amount of the token in the L2 contract, which then can later be claimed from the L1 bridge contract.
+For many ERC20 tokens, "standard" bridging functionality is sufficient, which entails the following: a token contract on Ethereum is associated with a "paired" token contract on Arbitrum. Depositing a token entails escrowing some amount of the token in an L1 bridge contract, and minting the same amount at the paired token contract on L2. On L2, the paired contract behaves much like a normal ERC20 token contract. Withdrawing entails burning some amount of the token in the L2 contract, which then can later be claimed from the L1 bridge contract.
 
-Many tokens, however, require custom Gateway systems which are hard to generalize. E.g.,
+Many tokens, however, require custom Gateway systems which are hard to generalize. E.g:
 
 - Tokens which accrue interest to their holders need to ensure that interest is dispersed properly across layers, and doesn't simply accrue to the bridge contracts
 - Our cross-domain WETH implementations requires tokens be wrapped and unwrappeded as they move accross layers.
@@ -53,10 +52,12 @@ Many tokens, however, require custom Gateway systems which are hard to generaliz
 
 Thus, our bridge architecture must allow for new, custom Gateways to be dynamically added over time.
 
-####2. Canonical L2 Representation Per L1 Token Contract
+#### 2. Canonical L2 Representation Per L1 Token Contract
+
 ...having multiple custom Gateways is well and good, but we also want to avoid a situation in which a single L1 token that uses our bridging system can be represented at multiple addresses/contracts on L2 (as this adds significant friction and confusion for users and developers). Thus, we need a way to track which L1 token uses which gateway, and in turn, to have a canonical address oracle that maps the tokens addresses across the Ethereum and Arbitrum domains.
 
-####3. Domain Agnostic
+#### 3. Domain Agnostic
+
 [This post](<(https://ethereum-magicians.org/t/outlining-a-standard-interface-for-cross-domain-erc20-transfers/6151)>) convinced us thinking about this early on is important; while here we are focused on bridging assets between Ethereum L1 and a single Arbitrum chain, we expect that overtime, Gateways will be developed to transfer assets between any combination of Rollups, Shards, and other L1s. Thus, we follow domain-neutral semantics like "outBoundTransfer" over things like "deposit" and "withdraw", and ensure that common interfaces are sufficiently extensible to support custom (i.e., domain-specific) functionality.
 
 ### Canonical Token Bridge Implementation
