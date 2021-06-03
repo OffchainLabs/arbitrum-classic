@@ -22,7 +22,7 @@ The most common use-case for direct inter-chain communication is depositing and 
 
 #### Explanation
 
-Arbitrum offers several ways for an Ethereum transaction to send a message to Arbitrum ([see "L2 Messages"](https://github.com/OffchainLabs/arb-os/blob/develop/doc/DataFormats.md)); however, the generally recommended method to use for direct L1 to L2 communication is via retryable tickets.
+Arbitrum offers several ways for an Ethereum transaction to send a message to Arbitrum ([see "L2 Messages"](https://github.com/OffchainLabs/arb-os/blob/develop/doc/DataFormats.md#l2-messages)); however, the generally recommended method to use for direct L1 to L2 communication is via retryable tickets.
 
 The idea is the following: a layer 1 transaction is put in the Inbox with instructions to submit a transaction to L2 (including calldata, callvalue, and gas info) in such a way that if it doesn't execute successfully the first time, it gets put into an L2 "retry buffer." This means that for a period of time (likely on the scale of the chain's dispute window, so roughly one week), anybody can attempt to "redeem" the the L2 transaction ticket by re-executing it.
 
