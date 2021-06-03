@@ -82,7 +82,15 @@ func TestWhitelist(t *testing.T) {
 
 	_, err = simple.Exists(senderAuth)
 	if err == nil {
-		t.Error()
+		t.Error("tx should fail")
+	}
+	if arbosVersion >= 31 {
+		_, err = simple.Y(&bind.CallOpts{
+			From: senderAuth.From,
+		})
+		if err != nil {
+			t.Error("shouldn't error from call", err)
+		}
 	}
 
 	_, err = arbOwner.AddAllowedSender(ownerAuth, senderAuth.From)
