@@ -40,11 +40,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 )
 
@@ -186,7 +188,7 @@ func depositSubmissionCost() error {
 }
 
 // This expects to be run with an L1 key and address
-func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime float64) error {
+func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime float64, chainId *big.Int) error {
 	creator, err := ethbridgecontracts.NewRollupCreator(rollupCreator, config.client)
 	if err != nil {
 		return err
@@ -213,6 +215,16 @@ func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime fl
 	sequencerDelaySeconds := big.NewInt(seqDelaySeconds)
 	sequencerDelayBlocks := big.NewInt(int64(float64(seqDelaySeconds) / blockTime))
 
+	var confs []message.ChainConfigOption
+	if chainId != nil {
+		conf := message.ChainIDConfig{ChainId: chainId}
+		confs = append(confs, conf)
+	}
+
+	init, err := message.NewInitMessage(protocol.ChainParams{}, common.Address{}, confs)
+	if err != nil {
+		return err
+	}
 	tx, err := creator.CreateRollup(
 		config.auth,
 		initialMachine.Hash(),
@@ -225,7 +237,7 @@ func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime fl
 		sequencer,
 		sequencerDelayBlocks,
 		sequencerDelaySeconds,
-		nil,
+		init.ExtraConfig,
 	)
 
 	if err != nil {
@@ -634,9 +646,9 @@ func handleCommand(fields []string) error {
 		creator := ethcommon.HexToAddress(fields[1])
 		owner := ethcommon.HexToAddress("0x1c7d91ccBdBf378bAC0F074678b09CB589184e4E")
 		sequencer := ethcommon.HexToAddress("0xcCe5c6cFF61C49b4d53dd6024f8295F3c5230513")
-		return createChain(creator, owner, sequencer, 13.2)
+		return createChain(creator, owner, sequencer, 13.2, nil)
 	case "create-chain":
-		if len(fields) != 2 {
+		if len(fields) != 6 {
 			return errors.New("Expected address argument")
 		}
 		creator := ethcommon.HexToAddress(fields[1])
@@ -646,7 +658,11 @@ func handleCommand(fields []string) error {
 		if err != nil {
 			return err
 		}
-		return createChain(creator, owner, sequencer, blockTime)
+		chainId, ok := new(big.Int).SetString(fields[5], 10)
+		if !ok {
+			return errors.New("expected base-10 chainid")
+		}
+		return createChain(creator, owner, sequencer, blockTime, chainId)
 	case "enable-validators":
 		if len(fields) < 3 {
 			return errors.New("Expected [rollup] [validator...] arguments")
@@ -713,6 +729,7 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Using chain id", chainId)
 	privKey, err := crypto.HexToECDSA(privKeystr)
 	if err != nil {
 		return err
