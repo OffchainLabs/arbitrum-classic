@@ -32,128 +32,62 @@ Upon withdrawing, the Ether balance is burnt on the Arbitrum side, and will late
 
 The Arbitrum protocol itself technically has no native notion of any token standards, and gives no built-in advantage or special recognition to any particular token bridge. Described here is the "Canonical Bridge," which we at Offchain Labs implemented, and which should be the primary bridge most users and applications use; it is (effectively) a DApp with contracts on both Ethereum and Arbitrum that leverages Arbitrum's cross-chain message passing system to achieve basic desired token-bridging functionality. We recommend that you use it!
 
-"Basic desired token bridging functionality" for most ERC20 tokens is the following: a token contract on Ethereum is associated with a "paired" token contract on Arbitrum. Depositing a token entails escrowing some amount of the token in an L1 bridge contract, and minting the same amount at the paired token contract on L2. On L2, the paired contract behaves much like a normal ERC20 token contract. Withdrawing entails burning some amount of the token in the L2 contract, which then can later be claimed from the L1 bridge contract.
+### Design Rationale
+
+_Our design and thinking has been influenced by many in the Ethereum community, including [this proposal](https://ethereum-magicians.org/t/outlining-a-standard-interface-for-cross-domain-erc20-transfers/6151) from Maurelian & Ben Jones,
+work with David Mihal, and feedback from many projects building on Arbitrum, too numerous to mention!_
+
+_We use the term "Gateway" (a contract for facilitating cross-domain transfers) as per the proposal linked above_
+
+Three core goals motivate the design of our bridging system:
+
+####1. Custom "Gateway" functionality
+
+For many ERC20 tokens, standard bridging functionality is sufficient, which entails the following: a token contract on Ethereum is associated with a "paired" token contract on Arbitrum. Depositing a token entails escrowing some amount of the token in an L1 bridge contract, and minting the same amount at the paired token contract on L2. On L2, the paired contract behaves much like a normal ERC20 token contract. Withdrawing entails burning some amount of the token in the L2 contract, which then can later be claimed from the L1 bridge contract.
+
+Many tokens, however, require custom Gateway systems which are hard to generalize. E.g.,
+
+- Tokens which accrue interest to their holders need to ensure that interest is dispersed properly across layers, and doesn't simply accrue to the bridge contracts
+- Our cross-domain WETH implementations requires tokens be wrapped and unwrappeded as they move accross layers.
+- Etc.
+
+Thus, our bridge architecture must allow for new, custom Gateways to be dynamically added over time.
+
+####2. Canonical L2 Representation Per L1 Token Contract
+...having multiple custom Gateways is well and good, but we also want to avoid a situation in which a single L1 token that uses our bridging system can be represented at multiple addresses/contracts on L2 (as this adds significant friction and confusion for users and developers). Thus, we need a way to track which L1 token uses which gateway, and in turn, to have a canonical address oracle that maps the tokens addresses across the Ethereum and Arbitrum domains.
+
+####3. Domain Agnostic
+[This post](<(https://ethereum-magicians.org/t/outlining-a-standard-interface-for-cross-domain-erc20-transfers/6151)>) convinced us thinking about this early on is important; while here we are focused on bridging assets between Ethereum L1 and a single Arbitrum chain, we expect that overtime, Gateways will be developed to transfer assets between any combination of Rollups, Shards, and other L1s. Thus, we follow domain-neutral semantics like "outBoundTransfer" over things like "deposit" and "withdraw", and ensure that common interfaces are sufficiently extensible to support custom (i.e., domain-specific) functionality.
 
 ### Canonical Token Bridge Implementation
 
-The two main bridging contracts are EthERC20Bridge.sol (L1 side) and ArbTokenBridge.sol (L2 side). The system offers two options for creating an L2 pairing for a token contract: the standard ERC20 option and the "custom token" option. Custom tokens should only be used if you have a good reason to.
+With that, we can outline our Token Bridge implementation.
+
+On Ethereum L1 resides a single `GatewayRouter` contract; this contract is responsible for mapping the addresses of tokens on L1 to its corresponding L1 `TokenGateway` contract; a token can opt-in to one and only one `TokenGateway`.
+
+Each L1 `TokenGateway` corresponds to exactly one L2 `TokenGateway`; this pair of contracts together handles the cross-domain asset transfers.
+
+Important to note is that GatewayRouter itself conforms to the `TokenGateway` interface. Crucially, _all L1 to L2 messages are initiated via the GatewayRouter_. I.e., the gateway router forwards a token's Outgoing Message to its corresponding L1Gateway.
 
 #### Standard Arb-ERC20 Bridging
 
-Any ERC20 token on Ethereum can be bridged onto Arbitrum "the standard way" by simply calling `EthERC20Bridge.deposit` with the token's L1 address:
+To help illustrate what this looks like in practice, let's go through the steps of what depositing and withdrawing `SomeERC20Token` via our Standard ERC20 gateway looks like. Here, we're assuming that `SomeERC20Token` has already opted in to the Standard ERC20 Gateway.
 
-```sol
-    /**
-     * @notice Deposit standard or custom ERC20 token. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy.
-     * @param erc20 L1 address of ERC20
-     * @param destination account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
-     * @param amount Token Amount
-     * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
-     * @param gasPriceBid Gas price for L2 execution
-     * @param callHookData optional data for external call upon minting
-     * @return ticket ID used to redeem the retryable transaction in the L2
-     */
-    function deposit(
-        address erc20,
-        address destination,
-        uint256 amount,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        bytes calldata callHookData
-    ) external payable override returns (uint256)
-```
+#### Deposits
 
-If no paired-L2 has yet been deployed (i.e., if this is the first deposit), a [StandardArbERC20](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/StandardArbERC20.md) will be deployed on Arbitrum at a deterministically generated address. StandardArbErc20 implements the ERC20 standard with additional bridging-related methods (i.e., `bridgeMint, withdraw`, etc.) as well as extensions to improve UX (ERC1363 & ERC2612). The L1 contracts name, symbol, and decimals will also be pushed directly into the new StandardArbERC20.
+1. A user calls `GatewayRouter.outBoundTransfer` with `SomeERC20Token`'s L1 address as a parameter.
+2. `GatewayRouter` looks up `SomeERC20Token`'s canonical gateway, and finds that it's the Standard ERC20 gateway (the `L1ERC20Gateway` contract).
+3. `GatewayRouter` calls `L1ERC20Gateway.outBoundTransfer`, forwarding the appropriate parameters.
+4. `L1ERC20Gateway` escrows tokens, and creates a retryable ticket to trigger `L2ERC20Gateway`'s `finalizeInboundTransfer` method on L2.
+5. `finalizeInboundTransfer` mints the appropriate amount of tokens at the `arbSomeERC20Token` contract on L2.
 
-To withdraw from a standard ERC20 from Arbitrum , call `SomeStandardArbERC20.withdraw`
+#### Withdrawals
 
-```sol
-    /**
-     * @notice Initiates a token withdrawal
-     * @param account destination address
-     * @param amount amount of tokens withdrawn
-     */
-    function withdraw(address account, uint256 amount) external override {
-```
+1. On Arbitrum, a user calls `L2ERC20Gateway.outBoundTransfer`.
+2. This burns tokens on L2, and calls ArbSys with an encoded message to `L1ERC20Gateway.finalizeInboundTransfer`, which will be eventually executed on L1.
+3. After the dispute window expires and the assertion with the user's transaction is confirmed, a user can call `Outbox.executeTransaction`, which in turn calls the encoded `L1ERC20Gateway.finalizeInboundTransfer` message, releasing the user's tokens from escrow.
 
-This initiates the withdrawal process (i.e., tokens can later be claimed via the Outbox.)
-
-#### Custom Token Bridging
-
-The Canonical Token Bridge also allows for pairing an ERC20 on L1 with a custom token contract on Arbitrum.
-
-**It is important to note**: The Canonical Token Bridge can't account for every possible token contract; if your custom token logic is [sufficiently weird](https://quoteinvestigator.com/2018/12/25/universe/#:~:text=Professor%20J.%20B.%20S.%20Haldane%20once%20shrewdly,the%20ultimate%20queerness%20of%20time.), (i.e., rebasing stablecoins, passively interest accruing tokens, etc.) it may require it's own, custom, tailor-made bridge as well. The implications of a particular custom token should be thought through carefully; feel free to [reach out to us](https://discord.gg/ZpZuw7p). With that said, the steps for creating a custom token pairing in the canonical bridge are as follows.
-
-#### Setting up a custom token pairing
-
-**1. Deploy L2 custom token contract**
-
-Start by deploying the L2 token contract [directly onto Arbitrum](Contract_Deployment.md). A custom L2 contract should conform to the minimal IArbToken interface:
-
-```sol
-/**
- * @title Minimum expected interface for L2 token that interacts with the L2 token bridge (this is the interface necessary
- * for a custom token that interacts with the bridge, see TestArbCustomToken.sol for an example implementation).
- */
-interface IArbToken {
-    /**
-     * @notice should increase token supply by amount, and should (probably) only be callable by the L1 bridge.
-     */
-    function bridgeMint(address account, uint256 amount) external;
-
-    /**
-     * @notice should decrease token supply by amount, and should (probably) only be callable by the L1 bridge.
-     */
-    function bridgeBurn(address account, uint256 amount) external;
-
-    /**
-     * @notice withdraw user tokens from L2 to the L1
-     */
-    function withdraw(address account, uint256 amount) external;
-}
-```
-
-**2. Deploy L1 custom token contract**
-
-The L1 contract should conform to the minimal `ICustomToken` interface:
-
-```sol
-/**
- * @title Minimum expected interface for L1 custom token (see TestCustomTokenL1.sol for an example implementation)
- */
-interface ICustomToken {
-    /**
-     * @notice Should make an external call to EthERC20Bridge.registerCustomL2Token
-     */
-    function registerTokenOnL2(
-        address l2CustomTokenAddress,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 gasPriceBid,
-        address refundAddress
-    ) external virtual;
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external virtual returns (bool);
-
-    function balanceOf(address account) external view virtual returns (uint256);
-}
-```
-
-**3. Register L1/L2 custom pairing**
-
-Calling `MyCustomL1Token.registerTokenOnL2` should make an external call to `EthERC20Bridge.registerCustomL2Token` with the custom L2 token's address (see [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol) for an example implementation). Once registered, calling `EthERC20Bridge.deposit` with a custom token's L1 address with deposit into the corresponding custom L2 pairing.
-
-It should be noted that if no token contract is actually registered at the L2 address given, a temporary standard token contract will be deployed, ensuring any deposits are safely recoverable. However, we highly recommend you simply save yourself such hassle and simply follow the steps outlined here 😉.
-
-Note that [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) provides client side convenience methods for the functionality listed above, and more.
-
-See [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts) for example usage.
+Note that in the system described above, one pair of Gateway contracts handles the bridging of many ERC20s; other custom Gateways may well be made to connect a single L1 contract to an L2 counterpart (i.e., the Arb-WETH bridge alluded to earlier). Ultimately, the Gateway interface is flexible enough to support many different use-cases.
 
 ## Arbitrum-Native ERC20 Tokens
 
