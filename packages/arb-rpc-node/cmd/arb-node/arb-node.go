@@ -128,9 +128,10 @@ func startup() error {
 	}
 
 	if fs.NArg() != 4 || (*sequencerMode && *feedURL != "") {
-		fmt.Printf("usage       sequencer: arb-node --sequencer [optional arguments] <ethereum node> <rollup chain address> <bridge utils address> %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> <database directory> <ethereum node> <rollup chain address> <bridge utils address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> <database directory> <ethereum node> <rollup chain address> <bridge utils address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("\n")
+		fmt.Printf("usage       sequencer: arb-node --sequencer [optional arguments] %s %s\n", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> [optional arguments] %s %s\n", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> [optional arguments] %s %s\n\n", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		return errors.New("invalid arguments")
 	}
 
@@ -203,7 +204,12 @@ func startup() error {
 				}
 				logger.Warn().Err(err).
 					Msg("failed connect to sequencer broadcast, waiting and retrying")
-				time.Sleep(time.Second * 5)
+
+				select {
+				case <-ctx.Done():
+					return errors.New("ctx cancelled broadcast client connect")
+				case <-time.After(5 * time.Second):
+				}
 			}
 		}
 	}
@@ -218,7 +224,12 @@ func startup() error {
 			Str("rollup", rollupArgs.Address.Hex()).
 			Str("bridgeUtils", rollupArgs.BridgeUtilsAddress.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
-		time.Sleep(time.Second * 5)
+
+		select {
+		case <-ctx.Done():
+			return errors.New("ctx cancelled StartInboxReader retry loop")
+		case <-time.After(5 * time.Second):
+		}
 	}
 
 	var broadcasterSettings broadcaster.Settings
@@ -307,7 +318,12 @@ func startup() error {
 			break
 		}
 		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
-		time.Sleep(time.Second * 5)
+
+		select {
+		case <-ctx.Done():
+			return errors.New("ctx cancelled setup batcher")
+		case <-time.After(5 * time.Second):
+		}
 	}
 
 	metricsConfig.RegisterSystemMetrics()
