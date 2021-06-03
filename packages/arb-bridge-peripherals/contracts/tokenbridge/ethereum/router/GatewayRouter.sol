@@ -62,6 +62,8 @@ contract GatewayRouter is WhitelistConsumer, ITokenGateway {
     }
 
     function setOwner(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "INVALID_OWNER");
+        // set newOwner to address(1) to disable owner and keep `initialize` safe
         owner = newOwner;
     }
 
