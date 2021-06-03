@@ -6,7 +6,7 @@
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
     "typechain": "hardhat typechain",
-    "deploy:tokenbridge": "hardhat run scripts/deploy_token_bridge_l1.ts --network kovan",
+    "deploy:tokenbridge": "hardhat run scripts/deploy_token_bridge_l1.ts --network rinkeby",
     "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network kovan5",
     "deploy": "yarn deploy:tokenbridge"
   },

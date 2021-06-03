@@ -3,6 +3,8 @@ import { ethers } from 'hardhat'
 import { providers, Signer } from 'ethers'
 import { L1ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L1ERC20Gateway__factory'
 import { L2ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L2ERC20Gateway__factory'
+import { GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/GatewayRouter__factory'
+
 import { writeFileSync } from 'fs'
 // import { writeFileSync } from 'fs'
 // import { spawnSync } from 'child_process'
@@ -129,8 +131,13 @@ const main = async () => {
 
   // TODO: set default gateway to address(0) instead of standardERC20
   // set whitelistAddress to address(0) to disable whitelist
-  const initRouterTx = await gatewayRouterProxy.initialize(
-    accounts[0],
+
+  const gatewayRouterConnected = GatewayRouter__factory.connect(
+    gatewayRouterProxy.address,
+    accounts[0]
+  )
+  const initRouterTx = await gatewayRouterConnected.initialize(
+    accounts[0].address,
     l1ERC20GatewayProxy.address,
     whitelistAddress
   )
