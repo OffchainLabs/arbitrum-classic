@@ -78,15 +78,6 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
     }
 
     /**
-     * @notice Initiates a token withdrawal
-     * @param account destination address
-     * @param amount amount of tokens withdrawn
-     */
-    function withdraw(address account, uint256 amount) external override {
-        bridge.withdraw(l1Address, msg.sender, account, amount);
-    }
-
-    /**
      * @notice Migrate tokens from to a custom token contract; this should only happen/matter if a standard ERC20 is deployed for an L1 custom contract before the L2 custom contract gets registered
      * @param account destination address
      * @param amount amount of tokens withdrawn

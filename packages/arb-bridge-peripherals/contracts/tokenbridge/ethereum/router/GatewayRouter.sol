@@ -22,6 +22,10 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 import "../../libraries/ITokenGateway.sol";
 
+/**
+ * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
+ * @notice Router also serves as an L1-L2 token address oracle.
+ */
 contract GatewayRouter is WhitelistConsumer, ITokenGateway {
     using Address for address;
 
