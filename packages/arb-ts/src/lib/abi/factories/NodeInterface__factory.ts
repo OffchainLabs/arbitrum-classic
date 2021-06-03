@@ -20,6 +20,75 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: 'address',
+        name: 'sender',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'deposit',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'destAddr',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'l2CallValue',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxSubmissionCost',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'excessFeeRefundAddress',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: 'callValueRefundAddress',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'maxGas',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'gasPriceBid',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+    ],
+    name: 'estimateRetryableTicket',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'uint256',
         name: 'batchNum',
         type: 'uint256',

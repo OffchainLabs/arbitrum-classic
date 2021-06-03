@@ -22,12 +22,12 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ArbTokenBridgeInterface extends ethers.utils.Interface {
   functions: {
+    'beacon()': FunctionFragment
     'calculateL2ERC20TokenAddress(address)': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'customL2Token(address)': FunctionFragment
     'customTokenRegistered(address,address)': FunctionFragment
     'ethTokenBridge()': FunctionFragment
-    'getBeacon()': FunctionFragment
     'initialize(address,address)': FunctionFragment
     'isCustomToken(address)': FunctionFragment
     'migrate(address,address,address,uint256)': FunctionFragment
@@ -37,6 +37,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     'withdraw(address,address,address,uint256)': FunctionFragment
   }
 
+  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'calculateL2ERC20TokenAddress',
     values: [string]
@@ -57,7 +58,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'ethTokenBridge',
     values?: undefined
   ): string
-  encodeFunctionData(functionFragment: 'getBeacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
     values: [string, string]
@@ -87,6 +87,7 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish]
   ): string
 
+  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2ERC20TokenAddress',
     data: BytesLike
@@ -107,7 +108,6 @@ interface ArbTokenBridgeInterface extends ethers.utils.Interface {
     functionFragment: 'ethTokenBridge',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'getBeacon', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'isCustomToken',
@@ -153,6 +153,10 @@ export class ArbTokenBridge extends Contract {
   interface: ArbTokenBridgeInterface
 
   functions: {
+    beacon(overrides?: CallOverrides): Promise<[string]>
+
+    'beacon()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateL2ERC20TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -195,10 +199,6 @@ export class ArbTokenBridge extends Contract {
     ethTokenBridge(overrides?: CallOverrides): Promise<[string]>
 
     'ethTokenBridge()'(overrides?: CallOverrides): Promise<[string]>
-
-    getBeacon(overrides?: CallOverrides): Promise<[string]>
-
-    'getBeacon()'(overrides?: CallOverrides): Promise<[string]>
 
     initialize(
       _ethTokenBridge: string,
@@ -297,6 +297,10 @@ export class ArbTokenBridge extends Contract {
     ): Promise<ContractTransaction>
   }
 
+  beacon(overrides?: CallOverrides): Promise<string>
+
+  'beacon()'(overrides?: CallOverrides): Promise<string>
+
   calculateL2ERC20TokenAddress(
     l1ERC20: string,
     overrides?: CallOverrides
@@ -339,10 +343,6 @@ export class ArbTokenBridge extends Contract {
   ethTokenBridge(overrides?: CallOverrides): Promise<string>
 
   'ethTokenBridge()'(overrides?: CallOverrides): Promise<string>
-
-  getBeacon(overrides?: CallOverrides): Promise<string>
-
-  'getBeacon()'(overrides?: CallOverrides): Promise<string>
 
   initialize(
     _ethTokenBridge: string,
@@ -438,6 +438,10 @@ export class ArbTokenBridge extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    beacon(overrides?: CallOverrides): Promise<string>
+
+    'beacon()'(overrides?: CallOverrides): Promise<string>
+
     calculateL2ERC20TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -480,10 +484,6 @@ export class ArbTokenBridge extends Contract {
     ethTokenBridge(overrides?: CallOverrides): Promise<string>
 
     'ethTokenBridge()'(overrides?: CallOverrides): Promise<string>
-
-    getBeacon(overrides?: CallOverrides): Promise<string>
-
-    'getBeacon()'(overrides?: CallOverrides): Promise<string>
 
     initialize(
       _ethTokenBridge: string,
@@ -623,6 +623,10 @@ export class ArbTokenBridge extends Contract {
   }
 
   estimateGas: {
+    beacon(overrides?: CallOverrides): Promise<BigNumber>
+
+    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateL2ERC20TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -665,10 +669,6 @@ export class ArbTokenBridge extends Contract {
     ethTokenBridge(overrides?: CallOverrides): Promise<BigNumber>
 
     'ethTokenBridge()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    getBeacon(overrides?: CallOverrides): Promise<BigNumber>
-
-    'getBeacon()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initialize(
       _ethTokenBridge: string,
@@ -768,6 +768,10 @@ export class ArbTokenBridge extends Contract {
   }
 
   populateTransaction: {
+    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateL2ERC20TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -813,10 +817,6 @@ export class ArbTokenBridge extends Contract {
     ethTokenBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'ethTokenBridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    getBeacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'getBeacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     initialize(
       _ethTokenBridge: string,

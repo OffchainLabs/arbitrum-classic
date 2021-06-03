@@ -21,14 +21,34 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface NodeInterfaceInterface extends ethers.utils.Interface {
   functions: {
+    'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)': FunctionFragment
     'lookupMessageBatchProof(uint256,uint64)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'estimateRetryableTicket',
+    values: [
+      string,
+      BigNumberish,
+      string,
+      BigNumberish,
+      BigNumberish,
+      string,
+      string,
+      BigNumberish,
+      BigNumberish,
+      BytesLike
+    ]
+  ): string
   encodeFunctionData(
     functionFragment: 'lookupMessageBatchProof',
     values: [BigNumberish, BigNumberish]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'estimateRetryableTicket',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'lookupMessageBatchProof',
     data: BytesLike
@@ -51,6 +71,34 @@ export class NodeInterface extends Contract {
   interface: NodeInterfaceInterface
 
   functions: {
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>
+
+    'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>
+
     lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
@@ -107,6 +155,34 @@ export class NodeInterface extends Contract {
       }
     >
   }
+
+  estimateRetryableTicket(
+    sender: string,
+    deposit: BigNumberish,
+    destAddr: string,
+    l2CallValue: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    data: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber]>
+
+  'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+    sender: string,
+    deposit: BigNumberish,
+    destAddr: string,
+    l2CallValue: BigNumberish,
+    maxSubmissionCost: BigNumberish,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    maxGas: BigNumberish,
+    gasPriceBid: BigNumberish,
+    data: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, BigNumber]>
 
   lookupMessageBatchProof(
     batchNum: BigNumberish,
@@ -165,6 +241,34 @@ export class NodeInterface extends Contract {
   >
 
   callStatic: {
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>
+
+    'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber, BigNumber]>
+
     lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
@@ -225,6 +329,34 @@ export class NodeInterface extends Contract {
   filters: {}
 
   estimateGas: {
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
@@ -239,6 +371,34 @@ export class NodeInterface extends Contract {
   }
 
   populateTransaction: {
+    estimateRetryableTicket(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'estimateRetryableTicket(address,uint256,address,uint256,uint256,address,address,uint256,uint256,bytes)'(
+      sender: string,
+      deposit: BigNumberish,
+      destAddr: string,
+      l2CallValue: BigNumberish,
+      maxSubmissionCost: BigNumberish,
+      excessFeeRefundAddress: string,
+      callValueRefundAddress: string,
+      maxGas: BigNumberish,
+      gasPriceBid: BigNumberish,
+      data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     lookupMessageBatchProof(
       batchNum: BigNumberish,
       index: BigNumberish,
