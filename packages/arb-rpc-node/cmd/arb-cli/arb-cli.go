@@ -188,7 +188,7 @@ func depositSubmissionCost() error {
 }
 
 // This expects to be run with an L1 key and address
-func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime float64, chainId *big.Int) error {
+func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime float64, confirmSeconds int, chainId *big.Int) error {
 	creator, err := ethbridgecontracts.NewRollupCreator(rollupCreator, config.client)
 	if err != nil {
 		return err
@@ -203,14 +203,13 @@ func createChain(rollupCreator, owner, sequencer ethcommon.Address, blockTime fl
 		return err
 	}
 
-	confirmSeconds := float64(60 * 60 * 24 * 7)
 	extraChallengeTimeBlocks := big.NewInt(0)
 	avmGasPerSecond := float64(40_000_000)
 	seqDelaySeconds := int64(86400)
 	baseStake := big.NewInt(5_000_000_000_000_000_000)
 	stakeToken := ethcommon.Address{}
 
-	confirmPeriodBlocks := big.NewInt(int64(confirmSeconds / blockTime))
+	confirmPeriodBlocks := big.NewInt(int64(float64(confirmSeconds) / blockTime))
 	arbGasSpeedLimitPerBlock := big.NewInt(int64(avmGasPerSecond * blockTime))
 	sequencerDelaySeconds := big.NewInt(seqDelaySeconds)
 	sequencerDelayBlocks := big.NewInt(int64(float64(seqDelaySeconds) / blockTime))
@@ -646,7 +645,7 @@ func handleCommand(fields []string) error {
 		creator := ethcommon.HexToAddress(fields[1])
 		owner := ethcommon.HexToAddress("0x1c7d91ccBdBf378bAC0F074678b09CB589184e4E")
 		sequencer := ethcommon.HexToAddress("0xcCe5c6cFF61C49b4d53dd6024f8295F3c5230513")
-		return createChain(creator, owner, sequencer, 13.2, nil)
+		return createChain(creator, owner, sequencer, 13.2, 60*60*24*7, nil)
 	case "create-chain":
 		if len(fields) != 6 {
 			return errors.New("Expected address argument")
@@ -662,7 +661,7 @@ func handleCommand(fields []string) error {
 		if !ok {
 			return errors.New("expected base-10 chainid")
 		}
-		return createChain(creator, owner, sequencer, blockTime, chainId)
+		return createChain(creator, owner, sequencer, blockTime, 60*60*24, chainId)
 	case "enable-validators":
 		if len(fields) < 3 {
 			return errors.New("Expected [rollup] [validator...] arguments")
