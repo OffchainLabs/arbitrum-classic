@@ -250,6 +250,6 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
 
 Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) client side library.
 
-For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
+For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
 
 TODO: execution market?
