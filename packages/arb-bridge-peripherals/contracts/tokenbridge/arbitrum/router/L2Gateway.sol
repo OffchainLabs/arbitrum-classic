@@ -31,7 +31,11 @@ import "../../libraries/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
 abstract contract L2ArbitrumGateway is TokenGateway {
+    using Address for address;
+
     address internal constant arbsysAddr = address(100);
+
+    uint256 public exitNum;
 
     modifier onlyCounterpartGateway {
         require(msg.sender == counterpartGateway, "ONLY_L1_GATEWAY");
@@ -42,33 +46,15 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         super.initialize(_l1Counterpart);
     }
 
+    function arbgasReserveIfCallRevert() internal pure virtual returns (uint256) {
+        // amount of arbgas necessary to send user tokens in case
+        // of the "onTokenTransfer" call consumes all available gas
+        return 2500;
+    }
+
     function createOutboundTx(bytes memory _data) internal virtual returns (uint256) {
         uint256 id = ArbSys(arbsysAddr).sendTxToL1(counterpartGateway, _data);
         return id;
-    }
-}
-
-contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
-    using Address for address;
-
-    // amount of arbgas necessary to send user tokens in case
-    // of the "onTokenTransfer" call consumes all available gas
-    uint256 internal constant arbgasReserveIfCallRevert = 2500;
-    bytes32 public constant cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
-
-    /**
-     * @notice utility function used in ClonableBeaconProxy.
-     * @dev this method makes it possible to use ClonableBeaconProxy.creationCode without encoding constructor parameters
-     * @return the beacon to be used by the proxy contract.
-     */
-    address public override beacon;
-    uint256 public exitNum;
-
-    function initialize(address _l1Counterpart, address _beacon) public virtual {
-        super.initialize(_l1Counterpart);
-        require(_beacon != address(0), "INVALID_BEACON");
-        require(beacon == address(0), "ALREADY_INIT");
-        beacon = _beacon;
     }
 
     function getOutboundCalldata(
@@ -138,22 +124,6 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         return abi.encode(id);
     }
 
-    function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
-        return keccak256(abi.encode(l1ERC20));
-    }
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20) public view virtual returns (address) {
-        bytes32 salt = getSalt(l1ERC20);
-        return Create2.computeAddress(salt, cloneableProxyHash, address(this));
-    }
-
     /**
      * @notice this function can only be callable by the bridge itself
      * @dev This method is inspired by EIP 677/1363 for calls to be executed after minting.
@@ -173,7 +143,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         token.bridgeMint(dest, amount);
 
         // ~73 000 arbgas used to get here
-        uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert;
+        uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert();
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
         IERC677Receiver(dest).onTokenTransfer{ gas: gasAvailable }(sender, amount, data);
@@ -202,8 +172,8 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
-            address deployedToken = deployToken(_token, deployData);
-            assert(deployedToken == expectedAddress);
+            bool shouldHalt = handleNoContract(_token, expectedAddress, deployData);
+            if (shouldHalt) return bytes("");
         }
         // ignores deployData if token already deployed
 
@@ -235,19 +205,87 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
     }
 
     /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
+    function calculateL2TokenAddress(address l1ERC20) public view virtual returns (address);
+
+    // returns if function should halt after
+    function handleNoContract(
+        address l1ERC20,
+        address expectedL2Address,
+        bytes memory data
+    ) internal virtual returns (bool shouldHalt);
+}
+
+contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
+    // used for create2 address calculation
+    bytes32 public constant cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
+
+    /**
+     * @notice utility function used in ClonableBeaconProxy.
+     * @dev this method makes it possible to use ClonableBeaconProxy.creationCode without encoding constructor parameters
+     * @return the beacon to be used by the proxy contract.
+     */
+    address public override beacon;
+
+    function initialize(address _l1Counterpart, address _beacon) public virtual {
+        super.initialize(_l1Counterpart);
+        require(_beacon != address(0), "INVALID_BEACON");
+        require(beacon == address(0), "ALREADY_INIT");
+        beacon = _beacon;
+    }
+
+    function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
+        return keccak256(abi.encode(l1ERC20));
+    }
+
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
+    function calculateL2TokenAddress(address l1ERC20)
+        public
+        view
+        virtual
+        override
+        returns (address)
+    {
+        bytes32 salt = getSalt(l1ERC20);
+        return Create2.computeAddress(salt, cloneableProxyHash, address(this));
+    }
+
+    /**
      * @notice internal utility function used to deploy ERC20 tokens with the beacon proxy pattern.
      * @dev the transparent proxy implementation by OpenZeppelin can't be used if we want to be able to
      * upgrade the token logic.
      * @param l1ERC20 L1 address of ERC20
+     * @param expectedL2Address L2 address of ERC20
      * @param deployData encoded symbol/name/decimal data for initial deploy
      */
-    function deployToken(address l1ERC20, bytes memory deployData) internal returns (address) {
+    function handleNoContract(
+        address l1ERC20,
+        address expectedL2Address,
+        bytes memory deployData
+    ) internal virtual override returns (bool shouldHalt) {
         bytes32 salt = getSalt(l1ERC20);
         address createdContract = address(new ClonableBeaconProxy{ salt: salt }());
 
         IArbStandardToken(createdContract).bridgeInit(l1ERC20, deployData);
 
-        // emit TokenCreated(l1ERC20, createdContract);
-        return createdContract;
+        if (createdContract == expectedL2Address) {
+            // emit TokenCreated(l1ERC20, createdContract);
+            shouldHalt = false;
+        } else {
+            // L1 gateway shouldn't allow this codepath to be triggered
+            // TODO: trigger withdrawal instead of reverting
+            revert("WRONG_DEPLOYMENT_ADDR");
+        }
     }
 }

@@ -28,6 +28,8 @@ import "../../libraries/ITokenGateway.sol";
 import "../../libraries/TokenGateway.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {
+    using SafeERC20 for IERC20;
+
     address public router;
     address public inbox;
 
@@ -55,6 +57,31 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         _;
     }
 
+    /**
+     * @notice Finalizes a withdrawal via Outbox message; callable only by L2Gateway.outboundTransfer
+     * @param _token L1 address of token being withdrawn from
+     * @param _from initiator of withdrawal
+     * @param _to address the L2 withdrawal call set as the destination.
+     * @param _amount Token amount being withdrawn
+     * @param _data encoded exitNum (Sequentially increasing exit counter determined by the L2Gateway) and additinal hook data
+     */
+    function finalizeInboundTransfer(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) external virtual override onlyCounterpartGateway returns (bytes memory) {
+        (uint256 exitNum, bytes memory extraData) = abi.decode(_data, (uint256, bytes));
+
+        // TODO: add withdraw and call
+        // TODO: add transferExit
+        IERC20(_token).safeTransfer(_to, _amount);
+        emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
+
+        return bytes("");
+    }
+
     function createOutboundTx(
         address _user,
         uint256 _maxSubmissionCost,
@@ -77,25 +104,6 @@ abstract contract L1ArbitrumGateway is TokenGateway {
             );
         return seqNum;
     }
-}
-
-/**
- * @title Layer 1 contract for bridging standard ERC20s
- * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ultimately) finalizes withdrawals.
- * @dev Any ERC20 that requires non-standard functionality should use a separate gateway.
- * Messages to layer 2 use the inbox's createRetryableTicket method.
- */
-
-contract L1ERC20Gateway is L1ArbitrumGateway {
-    using SafeERC20 for IERC20;
-
-    function initialize(
-        address _l2Counterpart,
-        address _router,
-        address _inbox
-    ) public virtual override {
-        super.initialize(_l2Counterpart, _router, _inbox);
-    }
 
     /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
@@ -104,7 +112,7 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
      * @param _amount Token Amount
      * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
      * @param _gasPriceBid Gas price for L2 execution
-     * @param _data TODO ???
+     * @param _data encoded data from router and user
      * @return res abi encoded inbox sequence number
      */
     //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
@@ -158,6 +166,30 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
     }
 
+    function getOutboundCalldata(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) public view virtual override returns (bytes memory outboundCalldata);
+}
+
+/**
+ * @title Layer 1 contract for bridging standard ERC20s
+ * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ultimately) finalizes withdrawals.
+ * @dev Any ERC20 that requires non-standard functionality should use a separate gateway.
+ * Messages to layer 2 use the inbox's createRetryableTicket method.
+ */
+contract L1ERC20Gateway is L1ArbitrumGateway {
+    function initialize(
+        address _l2Counterpart,
+        address _router,
+        address _inbox
+    ) public virtual override {
+        super.initialize(_l2Counterpart, _router, _inbox);
+    }
+
     /**
      * @notice utility function used to perform external read-only calls.
      * @dev the result is returned even if the call failed, the L2 is expected to
@@ -199,30 +231,5 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         );
 
         return outboundCalldata;
-    }
-
-    /**
-     * @notice Finalizes a withdrawal via Outbox message; callable only by L2Gateway.outboundTransfer
-     * @param _token L1 address of token being withdrawn from
-     * @param _from initiator of withdrawal
-     * @param _to address the L2 withdrawal call set as the destination.
-     * @param _amount Token amount being withdrawn
-     * @param _data encoded exitNum (Sequentially increasing exit counter determined by the L2Gateway) and additinal hook data
-     */
-    function finalizeInboundTransfer(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes calldata _data
-    ) external virtual override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory extraData) = abi.decode(_data, (uint256, bytes));
-
-        // TODO: add withdraw and call
-        // TODO: add transferExit
-        IERC20(_token).safeTransfer(_to, _amount);
-        emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
-
-        return bytes("");
     }
 }
