@@ -21,12 +21,12 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ProxySetterInterface extends ethers.utils.Interface {
   functions: {
-    'getBeacon()': FunctionFragment
+    'beacon()': FunctionFragment
   }
 
-  encodeFunctionData(functionFragment: 'getBeacon', values?: undefined): string
+  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'getBeacon', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
 
   events: {}
 }
@@ -45,32 +45,32 @@ export class ProxySetter extends Contract {
   interface: ProxySetterInterface
 
   functions: {
-    getBeacon(overrides?: CallOverrides): Promise<[string]>
+    beacon(overrides?: CallOverrides): Promise<[string]>
 
-    'getBeacon()'(overrides?: CallOverrides): Promise<[string]>
+    'beacon()'(overrides?: CallOverrides): Promise<[string]>
   }
 
-  getBeacon(overrides?: CallOverrides): Promise<string>
+  beacon(overrides?: CallOverrides): Promise<string>
 
-  'getBeacon()'(overrides?: CallOverrides): Promise<string>
+  'beacon()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
-    getBeacon(overrides?: CallOverrides): Promise<string>
+    beacon(overrides?: CallOverrides): Promise<string>
 
-    'getBeacon()'(overrides?: CallOverrides): Promise<string>
+    'beacon()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {}
 
   estimateGas: {
-    getBeacon(overrides?: CallOverrides): Promise<BigNumber>
+    beacon(overrides?: CallOverrides): Promise<BigNumber>
 
-    'getBeacon()'(overrides?: CallOverrides): Promise<BigNumber>
+    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
-    getBeacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'getBeacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }
