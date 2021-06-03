@@ -224,7 +224,7 @@ const _abi = [
     outputs: [
       {
         internalType: 'bytes',
-        name: '',
+        name: 'outboundCalldata',
         type: 'bytes',
       },
     ],
@@ -317,7 +317,7 @@ const _abi = [
     outputs: [
       {
         internalType: 'bytes',
-        name: '',
+        name: 'res',
         type: 'bytes',
       },
     ],
