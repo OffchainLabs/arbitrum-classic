@@ -188,8 +188,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
      * @param _from account that initiated the deposit in the L1
      * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
      * @param _amount token amount to be minted to the user
-     * @param _data encoded symbol/name/decimal data for initial deploy, in addition to any additional callhook data
-     * @param callHookData optional data for external call upon minting
+     * @param _data encoded symbol/name/decimal data for deploy, in addition to any additional callhook data
      */
     function finalizeInboundTransfer(
         address _token,
