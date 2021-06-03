@@ -48,4 +48,4 @@ func ParseRollupCommand(fs *flag.FlagSet, startIndex int) RollupArgs {
 	}
 }
 
-const RollupArgsString = "<validator_folder> <ethURL> <rollup_address> <bridge_utils_address>"
+const RollupArgsString = "<database directory> <ethereum L1 node URL> <rollup address> <bridge utils address>"
