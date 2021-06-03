@@ -146,24 +146,6 @@ export class Bridge extends L2Bridge {
       '0x'
     )
 
-    // TODO: i'm confused
-    // const  = nodeInterface.estimateRetryableTicket(
-    //   this.gatewayRouter.address,
-    //   deposit,
-    //   this.l2ERC20Gateway.address,
-    //   deposit,
-    //   maxSubmissionPrice,
-    //   sender,
-    //   sender,
-    //   0,
-    //   0,
-    //   depositCalldata
-    // )
-
-    const expectedGas = BigNumber.from(42069)
-
-    const maxGas = retryableGasArgs.maxGas || expectedGas
-
     const maxSubmissionPriceIncreaseRatio =
       retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
 
@@ -177,6 +159,21 @@ export class Bridge extends L2Bridge {
       NODE_INTERFACE_ADDRESS,
       this.l2Provider
     )
+
+    const maxGas = (
+      await nodeInterface.estimateRetryableTicket(
+        this.gatewayRouter.address,
+        ethers.utils.parseEther('1'),
+        this.l2ERC20Gateway.address,
+        0,
+        maxSubmissionPrice,
+        sender,
+        sender,
+        0,
+        0,
+        depositCalldata
+      )
+    )[0]
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
