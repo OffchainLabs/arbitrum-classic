@@ -196,7 +196,8 @@ const main = async () => {
   console.log('Proxies have been initted')
 
   const contracts = JSON.stringify({
-    gatewayRouter: gatewayRouterProxy.address,
+    l1GatewayRouter: gatewayRouterProxy.address,
+    l2GatewayRouter: l2GatewayRouterProxy.address,
     l1ERC20GatewayProxy: l1ERC20GatewayProxy.address,
     l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
     inbox: inboxAddress,
