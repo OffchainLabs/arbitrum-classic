@@ -68,19 +68,17 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         owner = newOwner;
     }
 
-    function setGateways(
+    function _setGateways(
         address[] memory _token,
         address[] memory _gateway,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable onlyOwner returns (uint256) {
+    ) internal returns (uint256) {
         require(_token.length == _gateway.length, "WRONG_LENGTH");
 
         for (uint256 i = 0; i < _token.length; i++) {
             l1TokenToGateway[_token[i]] = _gateway[i];
-            // it is assumed that token and gateway are both contracts
-            // require(_token[i].isContract() && _gateway[i].isContract(), "NOT_CONTRACT");
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
             _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
@@ -109,31 +107,28 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
     ) external payable returns (uint256) {
-        address _token = msg.sender;
-        require(_token.isContract(), "NOT_FROM_CONTRACT");
+        require(address(msg.sender).isContract(), "NOT_FROM_CONTRACT");
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
 
-        l1TokenToGateway[_token] = _gateway;
-        emit GatewaySet(_token, _gateway);
+        address[] memory _tokenArr = new address[](1);
+        _tokenArr[0] = address(msg.sender);
 
-        // overwrite memory so the L2 router receives the L2 address of each gateway
-        _gateway = TokenGateway(_gateway).counterpartGateway();
+        address[] memory _gatewayArr = new address[](1);
+        _gatewayArr[0] = _gateway;
 
-        bytes memory data =
-            abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, [_token], [_gateway]);
+        return _setGateways(_tokenArr, _gatewayArr, _maxGas, _gasPriceBid, _maxSubmissionCost);
+    }
 
-        uint256 seqNum =
-            IInbox(inbox).createRetryableTicket{ value: msg.value }(
-                counterpartGateway,
-                0,
-                _maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                _maxGas,
-                _gasPriceBid,
-                data
-            );
-        return seqNum;
+    function setGateways(
+        address[] memory _token,
+        address[] memory _gateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost
+    ) external payable onlyOwner returns (uint256) {
+        // it is assumed that token and gateway are both contracts
+        // require(_token[i].isContract() && _gateway[i].isContract(), "NOT_CONTRACT");
+        return _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost);
     }
 
     function preTransferHook() internal virtual override onlyWhitelisted {
