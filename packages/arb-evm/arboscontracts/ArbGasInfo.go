@@ -27,7 +27,7 @@ var (
 )
 
 // ArbGasInfoABI is the input ABI used to generate the binding from.
-const ArbGasInfoABI = "[{\"inputs\":[],\"name\":\"getGasAccountingParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInArbGas\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInWei\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ArbGasInfoABI = "[{\"inputs\":[],\"name\":\"getGasAccountingParams\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInArbGas\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getPricesInArbGasWithAggregator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getPricesInWei\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"getPricesInWeiWithAggregator\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ArbGasInfo is an auto generated Go binding around an Ethereum contract.
 type ArbGasInfo struct {
@@ -237,6 +237,39 @@ func (_ArbGasInfo *ArbGasInfoCallerSession) GetPricesInArbGas() (*big.Int, *big.
 	return _ArbGasInfo.Contract.GetPricesInArbGas(&_ArbGasInfo.CallOpts)
 }
 
+// GetPricesInArbGasWithAggregator is a free data retrieval call binding the contract method 0x7a1ea732.
+//
+// Solidity: function getPricesInArbGasWithAggregator(address aggregator) view returns(uint256, uint256, uint256)
+func (_ArbGasInfo *ArbGasInfoCaller) GetPricesInArbGasWithAggregator(opts *bind.CallOpts, aggregator common.Address) (*big.Int, *big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _ArbGasInfo.contract.Call(opts, &out, "getPricesInArbGasWithAggregator", aggregator)
+
+	if err != nil {
+		return *new(*big.Int), *new(*big.Int), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	out2 := *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+
+	return out0, out1, out2, err
+
+}
+
+// GetPricesInArbGasWithAggregator is a free data retrieval call binding the contract method 0x7a1ea732.
+//
+// Solidity: function getPricesInArbGasWithAggregator(address aggregator) view returns(uint256, uint256, uint256)
+func (_ArbGasInfo *ArbGasInfoSession) GetPricesInArbGasWithAggregator(aggregator common.Address) (*big.Int, *big.Int, *big.Int, error) {
+	return _ArbGasInfo.Contract.GetPricesInArbGasWithAggregator(&_ArbGasInfo.CallOpts, aggregator)
+}
+
+// GetPricesInArbGasWithAggregator is a free data retrieval call binding the contract method 0x7a1ea732.
+//
+// Solidity: function getPricesInArbGasWithAggregator(address aggregator) view returns(uint256, uint256, uint256)
+func (_ArbGasInfo *ArbGasInfoCallerSession) GetPricesInArbGasWithAggregator(aggregator common.Address) (*big.Int, *big.Int, *big.Int, error) {
+	return _ArbGasInfo.Contract.GetPricesInArbGasWithAggregator(&_ArbGasInfo.CallOpts, aggregator)
+}
+
 // GetPricesInWei is a free data retrieval call binding the contract method 0x41b247a8.
 //
 // Solidity: function getPricesInWei() view returns(uint256, uint256, uint256, uint256, uint256, uint256)
@@ -271,4 +304,40 @@ func (_ArbGasInfo *ArbGasInfoSession) GetPricesInWei() (*big.Int, *big.Int, *big
 // Solidity: function getPricesInWei() view returns(uint256, uint256, uint256, uint256, uint256, uint256)
 func (_ArbGasInfo *ArbGasInfoCallerSession) GetPricesInWei() (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int, *big.Int, error) {
 	return _ArbGasInfo.Contract.GetPricesInWei(&_ArbGasInfo.CallOpts)
+}
+
+// GetPricesInWeiWithAggregator is a free data retrieval call binding the contract method 0xba9c916e.
+//
+// Solidity: function getPricesInWeiWithAggregator(address aggregator) view returns(uint256, uint256, uint256, uint256, uint256, uint256)
+func (_ArbGasInfo *ArbGasInfoCaller) GetPricesInWeiWithAggregator(opts *bind.CallOpts, aggregator common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _ArbGasInfo.contract.Call(opts, &out, "getPricesInWeiWithAggregator", aggregator)
+
+	if err != nil {
+		return *new(*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	out2 := *abi.ConvertType(out[2], new(*big.Int)).(**big.Int)
+	out3 := *abi.ConvertType(out[3], new(*big.Int)).(**big.Int)
+	out4 := *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
+	out5 := *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
+
+	return out0, out1, out2, out3, out4, out5, err
+
+}
+
+// GetPricesInWeiWithAggregator is a free data retrieval call binding the contract method 0xba9c916e.
+//
+// Solidity: function getPricesInWeiWithAggregator(address aggregator) view returns(uint256, uint256, uint256, uint256, uint256, uint256)
+func (_ArbGasInfo *ArbGasInfoSession) GetPricesInWeiWithAggregator(aggregator common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int, *big.Int, error) {
+	return _ArbGasInfo.Contract.GetPricesInWeiWithAggregator(&_ArbGasInfo.CallOpts, aggregator)
+}
+
+// GetPricesInWeiWithAggregator is a free data retrieval call binding the contract method 0xba9c916e.
+//
+// Solidity: function getPricesInWeiWithAggregator(address aggregator) view returns(uint256, uint256, uint256, uint256, uint256, uint256)
+func (_ArbGasInfo *ArbGasInfoCallerSession) GetPricesInWeiWithAggregator(aggregator common.Address) (*big.Int, *big.Int, *big.Int, *big.Int, *big.Int, *big.Int, error) {
+	return _ArbGasInfo.Contract.GetPricesInWeiWithAggregator(&_ArbGasInfo.CallOpts, aggregator)
 }
