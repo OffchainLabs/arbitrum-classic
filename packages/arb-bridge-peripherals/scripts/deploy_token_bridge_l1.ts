@@ -3,7 +3,7 @@ import { ethers } from 'hardhat'
 import { providers, Signer } from 'ethers'
 import { L1ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L1ERC20Gateway__factory'
 import { L2ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L2ERC20Gateway__factory'
-import { GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/GatewayRouter__factory'
+import { L1GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L2GatewayRouter__factory'
 
 import { writeFileSync } from 'fs'
@@ -14,10 +14,13 @@ const main = async () => {
   const accounts = await ethers.getSigners()
 
   // parse needed vars
-  const inboxAddress = process.env.INBOX_ADDRESS
+  const inboxAddress =
+    process.env.INBOX_ADDRESS || '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e'
   if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
-  const whitelistAddress = process.env.WHITELIST_ADDRESS
+  const whitelistAddress =
+    process.env.WHITELIST_ADDRESS ||
+    '0x0000000000000000000000000000000000000000'
   if (!whitelistAddress)
     throw new Error('Please set whitelist address! WHITELIST_ADDRESS')
 
@@ -25,14 +28,14 @@ const main = async () => {
   if (!l2PrivKey) throw new Error('Missing l2 priv key DEVNET_PRIVKEY')
 
   const l2ProviderRpc =
-    process.env['DEVNET_RPC'] || 'https://kovan5.arbitrum.io/rpc'
+    process.env['DEVNET_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
   if (!l2ProviderRpc) throw new Error('Missing l2 rpc DEVNET_RPC')
 
   // deploy L1 logic contracts
-  const GatewayRouter = await ethers.getContractFactory('GatewayRouter')
-  const gatewayRouter = await GatewayRouter.deploy()
-  await gatewayRouter.deployed()
-  console.log('GatewayRouter logic deployed to:', gatewayRouter.address)
+  const L1GatewayRouter = await ethers.getContractFactory('L1GatewayRouter')
+  const l1GatewayRouter = await L1GatewayRouter.deploy()
+  await l1GatewayRouter.deployed()
+  console.log('L1 GatewayRouter logic deployed to:', l1GatewayRouter.address)
 
   const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
   const l1ERC20Gateway = await L1ERC20Gateway.deploy()
@@ -49,13 +52,13 @@ const main = async () => {
     'TransparentUpgradeableProxy'
   )
 
-  const gatewayRouterProxy = await L1TransparentUpgradeableProxy.deploy(
-    gatewayRouter.address,
+  const l1GatewayRouterProxy = await L1TransparentUpgradeableProxy.deploy(
+    l1GatewayRouter.address,
     l1ProxyAdmin.address,
     '0x'
   )
-  await gatewayRouterProxy.deployed()
-  console.log('L1 GatewayRouter Proxy at', gatewayRouterProxy.address)
+  await l1GatewayRouterProxy.deployed()
+  console.log('L1 GatewayRouter Proxy at', l1GatewayRouterProxy.address)
 
   const l1ERC20GatewayProxy = await L1TransparentUpgradeableProxy.deploy(
     l1ERC20Gateway.address,
@@ -134,7 +137,7 @@ const main = async () => {
 
   const initL1Bridge = await l1ERC20GatewayConnectedAsProxy[
     'initialize(address,address,address)'
-  ](l2ERC20GatewayProxy.address, gatewayRouterProxy.address, inboxAddress)
+  ](l2ERC20GatewayProxy.address, l1GatewayRouterProxy.address, inboxAddress)
 
   const l2ERC20GatewayConnectedAsProxy = L2ERC20Gateway__factory.connect(
     l2ERC20GatewayProxy.address,
@@ -154,8 +157,8 @@ const main = async () => {
 
   const defaultGateway = l1ERC20GatewayProxy.address
 
-  const l1GatewayRouterConnected = GatewayRouter__factory.connect(
-    gatewayRouterProxy.address,
+  const l1GatewayRouterConnected = L1GatewayRouter__factory.connect(
+    l1GatewayRouterProxy.address,
     accounts[0]
   )
   const initL1RouterTx = await l1GatewayRouterConnected.initialize(
@@ -173,7 +176,7 @@ const main = async () => {
 
   const initL2Router = await l2GatewayRouterConnectedAtProxy[
     'initialize(address,address)'
-  ](gatewayRouterProxy.address, defaultGateway)
+  ](l1GatewayRouterProxy.address, defaultGateway)
 
   console.log('init L1 Router hash', initL1RouterTx.hash)
   console.log('init L1 Router hash', initL1RouterTx.hash)
@@ -196,7 +199,7 @@ const main = async () => {
   console.log('Proxies have been initted')
 
   const contracts = JSON.stringify({
-    l1GatewayRouter: gatewayRouterProxy.address,
+    l1GatewayRouter: l1GatewayRouterProxy.address,
     l2GatewayRouter: l2GatewayRouterProxy.address,
     l1ERC20GatewayProxy: l1ERC20GatewayProxy.address,
     l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
