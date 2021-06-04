@@ -4,6 +4,7 @@ import { providers, Signer } from 'ethers'
 import { L1ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L1ERC20Gateway__factory'
 import { L2ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L2ERC20Gateway__factory'
 import { GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/GatewayRouter__factory'
+import { L2GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L2GatewayRouter__factory'
 
 import { writeFileSync } from 'fs'
 // import { writeFileSync } from 'fs'
@@ -89,6 +90,13 @@ const main = async () => {
   await l2ERC20Gateway.deployed()
   console.log('L2 ERC20 gateway logic deployed to:', l2ERC20Gateway.address)
 
+  const L2GatewayRouter = (
+    await ethers.getContractFactory('L2GatewayRouter')
+  ).connect(l2Signer)
+  const l2GatewayRouter = await L2GatewayRouter.deploy()
+  await l2GatewayRouter.deployed()
+  console.log('L2 gateway router logic deployed to:', l2GatewayRouter.address)
+
   // deploy L2 proxy contracts
   const L2ProxyAdmin = (await ethers.getContractFactory('ProxyAdmin')).connect(
     l2Signer
@@ -109,6 +117,14 @@ const main = async () => {
   await l2ERC20GatewayProxy.deployed()
   console.log('L2 ERC20Gateway Proxy at', l2ERC20GatewayProxy.address)
 
+  const l2GatewayRouterProxy = await L2TransparentUpgradeableProxy.deploy(
+    l2GatewayRouter.address,
+    l2ProxyAdmin.address,
+    '0x'
+  )
+  await l2GatewayRouterProxy.deployed()
+  console.log('L2 ERC20Gateway Proxy at', l2ERC20GatewayProxy.address)
+
   // initialize proxies and setup txs
 
   const l1ERC20GatewayConnectedAsProxy = L1ERC20Gateway__factory.connect(
@@ -126,29 +142,50 @@ const main = async () => {
   )
 
   const initL2Bridge = await l2ERC20GatewayConnectedAsProxy[
-    'initialize(address,address)'
-  ](l1ERC20GatewayProxy.address, erc20Beacon.address)
+    'initialize(address,address,address)'
+  ](
+    l1ERC20GatewayProxy.address,
+    l2GatewayRouterProxy.address,
+    erc20Beacon.address
+  )
 
   // TODO: set default gateway to address(0) instead of standardERC20
   // set whitelistAddress to address(0) to disable whitelist
 
-  const gatewayRouterConnected = GatewayRouter__factory.connect(
+  const defaultGateway = l1ERC20GatewayProxy.address
+
+  const l1GatewayRouterConnected = GatewayRouter__factory.connect(
     gatewayRouterProxy.address,
     accounts[0]
   )
-  const initRouterTx = await gatewayRouterConnected.initialize(
+  const initL1RouterTx = await l1GatewayRouterConnected.initialize(
     accounts[0].address,
-    l1ERC20GatewayProxy.address,
-    whitelistAddress
+    defaultGateway,
+    whitelistAddress,
+    l2GatewayRouterProxy.address,
+    inboxAddress
   )
 
-  console.log('init Router hash', initRouterTx.hash)
+  const l2GatewayRouterConnectedAtProxy = L2GatewayRouter__factory.connect(
+    l2ERC20GatewayProxy.address,
+    l2Signer
+  )
+
+  const initL2Router = await l2GatewayRouterConnectedAtProxy[
+    'initialize(address,address)'
+  ](gatewayRouterProxy.address, defaultGateway)
+
+  console.log('init L1 Router hash', initL1RouterTx.hash)
+  console.log('init L1 Router hash', initL1RouterTx.hash)
   console.log('init L1 hash', initL1Bridge.hash)
   console.log('init L2 hash', initL2Bridge.hash)
 
   // wait for inits
-  await initRouterTx.wait()
+  await initL1RouterTx.wait()
   console.warn('l1 router proxy initted')
+
+  await initL2Router.wait()
+  console.warn('l2 router proxy initted')
 
   await initL1Bridge.wait()
   console.warn('l1 bridge proxy initted')
