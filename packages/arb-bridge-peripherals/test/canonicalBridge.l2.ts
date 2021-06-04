@@ -58,8 +58,9 @@ describe('Bridge peripherals layer 2', () => {
 
     erc20Proxy = standardArbERC20Proxy.address
     testBridge = await TestBridge.deploy()
-    await testBridge.functions['initialize(address,address)'](
+    await testBridge.initialize(
       accounts[0].address,
+      accounts[3].address,
       standardArbERC20Proxy.address
     )
   })
@@ -71,7 +72,10 @@ describe('Bridge peripherals layer 2', () => {
       'ClonableBeaconProxy'
     )
     const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
     const encoded = ethers.utils.defaultAbiCoder.encode(['address'], [l1ERC20])
     const salt = ethers.utils.solidityKeccak256(['bytes'], [encoded])
     const initCodeHash = ethers.utils.keccak256(ClonableBeaconProxy.bytecode)
@@ -99,7 +103,10 @@ describe('Bridge peripherals layer 2', () => {
     const decimals = '18'
     const deployData = encodeTokenInitData(name, symbol, decimals)
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -143,7 +150,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -181,7 +191,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -245,7 +258,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -310,7 +326,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -389,7 +408,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -493,7 +515,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '10'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const data = ethers.utils.defaultAbiCoder.encode(
       ['bytes', 'bytes'],
