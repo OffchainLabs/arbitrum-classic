@@ -42,10 +42,10 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         address _router,
         address _inbox
     ) internal virtual {
+        // L1 gateway must have a router
+        require(_router != address(0), "BAD_ROUTER");
         TokenGateway._initialize(_l2Counterpart, _router);
         require(_inbox != address(0), "BAD_INBOX");
-        require(_router != address(0), "BAD_ROUTER");
-        require(router == address(0), "ALREADY_INIT");
         router = _router;
         inbox = _inbox;
     }

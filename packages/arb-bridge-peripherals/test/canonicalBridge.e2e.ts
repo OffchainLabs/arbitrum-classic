@@ -20,10 +20,11 @@ import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { Contract, ContractFactory } from 'ethers'
 
-describe('Bridge peripherals layer 1', () => {
+describe('Bridge peripherals end-to-end', () => {
   let accounts: SignerWithAddress[]
 
   let l1RouterTestBridge: Contract
+  let l2RouterTestBridge: Contract
   let l1TestBridge: Contract
   let l2TestBridge: Contract
 
@@ -36,7 +37,7 @@ describe('Bridge peripherals layer 1', () => {
 
     // l1 side deploy
     const L1RouterTestBridge: ContractFactory = await ethers.getContractFactory(
-      'GatewayRouter'
+      'L1GatewayRouter'
     )
     l1RouterTestBridge = await L1RouterTestBridge.deploy()
 
@@ -60,22 +61,32 @@ describe('Bridge peripherals layer 1', () => {
     )
     l2TestBridge = await L2TestBridge.deploy()
 
-    await l1TestBridge.functions['initialize(address,address,address)'](
+    const L2RouterTestBridge: ContractFactory = await ethers.getContractFactory(
+      'L2GatewayRouter'
+    )
+    l2RouterTestBridge = await L2RouterTestBridge.deploy()
+
+    await l1TestBridge.functions.initialize(
       l2TestBridge.address,
       l1RouterTestBridge.address,
       accounts[0].address // inbox
     )
 
-    await l2TestBridge.functions['initialize(address,address)'](
+    await l2TestBridge.initialize(
       l1TestBridge.address,
+      l2RouterTestBridge.address,
       beacon.address
     )
 
-    await l1RouterTestBridge.functions['initialize(address,address,address)'](
+    await l1RouterTestBridge.functions.initialize(
       accounts[0].address,
       l1TestBridge.address,
-      '0x0000000000000000000000000000000000000000' // no whitelist
+      '0x0000000000000000000000000000000000000000', // no whitelist
+      l2RouterTestBridge.address,
+      accounts[0].address // inbox
     )
+
+    await l2RouterTestBridge.functions.initialize(l1RouterTestBridge.address)
   })
 
   it('should deposit tokens', async function () {

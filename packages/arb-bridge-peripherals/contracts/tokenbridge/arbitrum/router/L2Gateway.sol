@@ -42,6 +42,7 @@ abstract contract L2ArbitrumGateway is TokenGateway {
     }
 
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
+        // L2 gateway may have a router address(0)
         TokenGateway._initialize(_l1Counterpart, _router);
     }
 
