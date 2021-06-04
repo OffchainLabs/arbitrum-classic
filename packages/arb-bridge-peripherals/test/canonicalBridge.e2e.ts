@@ -118,7 +118,7 @@ describe('Bridge peripherals end-to-end', () => {
     const escrowedTokens = await token.balanceOf(l1TestBridge.address)
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
 
-    const l2TokenAddress = await l2TestBridge.calculateL2TokenAddress(
+    const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
       token.address
     )
     const l2Token = await Token.attach(l2TokenAddress)

@@ -116,5 +116,15 @@ abstract contract GatewayRouter is TokenGateway {
         return gateway;
     }
 
+    function _calculateL2TokenAddress(address l1ERC20)
+        internal
+        view
+        virtual
+        override
+        returns (address)
+    {
+        return TokenGateway(getGateway(l1ERC20)).calculateL2TokenAddress(l1ERC20);
+    }
+
     function preTransferHook() internal virtual;
 }

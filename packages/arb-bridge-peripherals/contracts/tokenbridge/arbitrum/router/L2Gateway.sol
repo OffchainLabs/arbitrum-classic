@@ -110,7 +110,7 @@ abstract contract L2ArbitrumGateway is TokenGateway {
 
         uint256 id;
         {
-            address l2Token = calculateL2TokenAddress(_l1Token);
+            address l2Token = _calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
             // burns L2 tokens in order to release escrowed L1 tokens
             IArbStandardToken(l2Token).bridgeBurn(_from, _amount);
@@ -185,7 +185,7 @@ abstract contract L2ArbitrumGateway is TokenGateway {
     ) external virtual override onlyCounterpartGateway returns (bytes memory) {
         (bytes memory deployData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
 
-        address expectedAddress = calculateL2TokenAddress(_token);
+        address expectedAddress = _calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
             bool shouldHalt = handleNoContract(_token, expectedAddress, deployData);
@@ -223,15 +223,6 @@ abstract contract L2ArbitrumGateway is TokenGateway {
     function isRouter() internal view virtual override returns (bool) {
         return msg.sender == router;
     }
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20) public view virtual returns (address);
 
     // returns if function should halt after
     function handleNoContract(
@@ -275,7 +266,26 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
      * @return L2 address of a bridged ERC20 token
      */
     function calculateL2TokenAddress(address l1ERC20)
-        public
+        external
+        view
+        virtual
+        override
+        onlyRouter
+        returns (address)
+    {
+        // will revert if not called by router
+        return _calculateL2TokenAddress(l1ERC20);
+    }
+
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
+    function _calculateL2TokenAddress(address l1ERC20)
+        internal
         view
         virtual
         override

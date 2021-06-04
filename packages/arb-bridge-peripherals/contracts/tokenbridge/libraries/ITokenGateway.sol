@@ -61,4 +61,6 @@ interface ITokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) external returns (bytes memory);
+
+    function calculateL2TokenAddress(address l1ERC20) external view returns (address);
 }

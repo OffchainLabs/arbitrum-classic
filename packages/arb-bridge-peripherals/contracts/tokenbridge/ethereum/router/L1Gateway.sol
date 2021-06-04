@@ -20,12 +20,14 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import "../../libraries/ITokenGateway.sol";
 import "../../libraries/TokenGateway.sol";
+import "../../libraries/ClonableBeaconProxy.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {
     using SafeERC20 for IERC20;
@@ -184,6 +186,9 @@ abstract contract L1ArbitrumGateway is TokenGateway {
  * Messages to layer 2 use the inbox's createRetryableTicket method.
  */
 contract L1ERC20Gateway is L1ArbitrumGateway {
+    // used for create2 address calculation
+    bytes32 public constant cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
+
     function initialize(
         address _l2Counterpart,
         address _router,
@@ -233,5 +238,39 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         );
 
         return outboundCalldata;
+    }
+
+    /**
+     * @notice Calculate the address used when bridging an ERC20 token
+     * @dev this always returns the same as the L1 oracle, but may be out of date.
+     * For example, a custom token may have been registered but not deploy or the contract self destructed.
+     * @param l1ERC20 address of L1 token
+     * @return L2 address of a bridged ERC20 token
+     */
+    function calculateL2TokenAddress(address l1ERC20)
+        external
+        view
+        virtual
+        override
+        onlyRouter
+        returns (address)
+    {
+        // will revert if not called by router
+        return _calculateL2TokenAddress(l1ERC20);
+    }
+
+    function _calculateL2TokenAddress(address l1ERC20)
+        internal
+        view
+        virtual
+        override
+        returns (address)
+    {
+        bytes32 salt = getSalt(l1ERC20);
+        return Create2.computeAddress(salt, cloneableProxyHash, counterpartGateway);
+    }
+
+    function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
+        return keccak256(abi.encode(l1ERC20));
     }
 }
