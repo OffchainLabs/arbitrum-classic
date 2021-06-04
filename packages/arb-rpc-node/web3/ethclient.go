@@ -33,6 +33,10 @@ func NewEthClient(srv *aggregator.Server, ganacheMode bool, metricsConfig *metri
 	}
 }
 
+func (c *EthClient) UpdateAggForEstimation(newAgg arbcommon.Address) {
+	c.srv.aggregator = &newAgg
+}
+
 func (c *EthClient) BalanceAt(_ context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
 	var blockNum *int64
 	if blockNumber != nil {
