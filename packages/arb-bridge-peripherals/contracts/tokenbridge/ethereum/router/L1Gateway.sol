@@ -33,10 +33,9 @@ abstract contract L1ArbitrumGateway is TokenGateway {
     address public router;
     address public inbox;
 
-    modifier onlyCounterpartGateway {
+    function isCounterpartGateway() internal view virtual override returns (bool) {
         IOutbox outbox = IOutbox(IInbox(inbox).bridge().activeOutbox());
-        require(counterpartGateway == outbox.l2ToL1Sender(), "Not from l2 buddy");
-        _;
+        return counterpartGateway == outbox.l2ToL1Sender();
     }
 
     function initialize(

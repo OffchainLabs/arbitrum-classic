@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "scripts": {
+    "test:e2e": "hardhat test test/*.e2e.ts",
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
     "typechain": "hardhat typechain",

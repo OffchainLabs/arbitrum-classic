@@ -37,9 +37,8 @@ abstract contract L2ArbitrumGateway is TokenGateway {
 
     uint256 public exitNum;
 
-    modifier onlyCounterpartGateway {
-        require(msg.sender == counterpartGateway, "ONLY_L1_GATEWAY");
-        _;
+    function isCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
     }
 
     function initialize(address _l1Counterpart) public virtual override {
