@@ -111,12 +111,11 @@ describe('Bridge peripherals layer 1', () => {
     assert.equal(l2Balance, tokenAmount, 'Tokens not minted')
   })
 
-  it.skip('should withdraw erc20 tokens from L2', async function () {
+  it('should withdraw erc20 tokens from L2', async function () {
     const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
     // send escrowed tokens to bridge
     const tokenAmount = 100
-
     await token.mint()
     await token.approve(l1TestBridge.address, tokenAmount)
 
@@ -136,19 +135,9 @@ describe('Bridge peripherals layer 1', () => {
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
 
-    const exitNum = 0
-    const withdrawData = ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [exitNum, '0x']
-    )
-
-    await l1TestBridge.finalizeInboundTransfer(
-      token.address,
-      accounts[0].address,
-      accounts[0].address,
-      tokenAmount,
-      withdrawData
-    )
+    await l2TestBridge.functions[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](token.address, accounts[0].address, tokenAmount, '0x')
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
