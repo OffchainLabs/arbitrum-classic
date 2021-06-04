@@ -18,23 +18,24 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
-import "../../libraries/ITokenGateway.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "../../libraries/GatewayRouter.sol";
+import "../../arbitrum/router/L2GatewayRouter.sol";
 
 /**
  * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
  * @notice Router also serves as an L1-L2 token address oracle.
  */
-contract GatewayRouter is WhitelistConsumer, ITokenGateway {
+contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
     address internal constant BLACKLISTED = address(1);
 
-    mapping(address => address) public tokenToGateway;
     address public owner;
     address public defaultGateway;
+    address public inbox;
 
     event TransferRouted(
         address indexed token,
@@ -51,14 +52,15 @@ contract GatewayRouter is WhitelistConsumer, ITokenGateway {
     function initialize(
         address _owner,
         address _defaultGateway,
-        address _whitelist
-    ) public {
-        require(_owner != address(0), "INVALID_OWNER");
-        require(owner == address(0), "ALREADY_INIT");
+        address _whitelist,
+        address _counterpartGateway,
+        address _inbox
+    ) public virtual {
+        GatewayRouter._initialize(_counterpartGateway);
         owner = _owner;
-        // if defaultGateway is address(0), only tokens in mapping will not revert
         defaultGateway = _defaultGateway;
         WhitelistConsumer.whitelist = _whitelist;
+        inbox = _inbox;
     }
 
     function setDefaultGateway(address newDefaultGateway) external onlyOwner {
@@ -71,16 +73,39 @@ contract GatewayRouter is WhitelistConsumer, ITokenGateway {
         owner = newOwner;
     }
 
-    function setGateways(address[] memory token, address[] memory gateway) external onlyOwner {
-        require(token.length == gateway.length, "WRONG_LENGTH");
+    function setGateways(
+        address[] memory _token,
+        address[] memory _gateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost
+    ) external payable onlyOwner returns (uint256) {
+        require(_token.length == _gateway.length, "WRONG_LENGTH");
 
-        for (uint256 i = 0; i < token.length; i++) {
-            tokenToGateway[token[i]] = gateway[i];
+        for (uint256 i = 0; i < _token.length; i++) {
+            l1TokenToGateway[_token[i]] = _gateway[i];
+            emit GatewaySet(_token[i], _gateway[i]);
         }
+
+        bytes memory data =
+            abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
+
+        uint256 seqNum =
+            IInbox(inbox).createRetryableTicket{ value: msg.value }(
+                counterpartGateway,
+                0,
+                _maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                _maxGas,
+                _gasPriceBid,
+                data
+            );
+        return seqNum;
     }
 
-    function getGateway(address _token) public view virtual returns (address gateway) {
-        gateway = tokenToGateway[_token];
+    function getGateway(address _token) public view virtual override returns (address gateway) {
+        gateway = l1TokenToGateway[_token];
         require(gateway != BLACKLISTED, "BLACKLIST");
 
         if (gateway == ZERO_ADDR) {
@@ -92,36 +117,12 @@ contract GatewayRouter is WhitelistConsumer, ITokenGateway {
         return gateway;
     }
 
-    function outboundTransfer(
-        address _token,
-        address _to,
-        uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data
-    ) external payable override onlyWhitelisted returns (bytes memory) {
-        address gateway = getGateway(_token);
-        bytes memory gatewayData = abi.encode(msg.sender, _data);
-
-        emit TransferRouted(_token, msg.sender, _to, gateway);
-        return
-            ITokenGateway(gateway).outboundTransfer{ value: msg.value }(
-                _token,
-                _to,
-                _amount,
-                _maxGas,
-                _gasPriceBid,
-                gatewayData
-            );
+    function preTransferHook() internal virtual override onlyWhitelisted {
+        // will revert if msg.sender is not whitelisted
     }
 
-    function finalizeInboundTransfer(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes calldata _data
-    ) external override returns (bytes memory) {
-        revert("ONLY_OUTBOUND_ROUTER");
+    function isCounterpartGateway() internal view virtual override returns (bool) {
+        // don't expect messages from L2 router
+        return false;
     }
 }

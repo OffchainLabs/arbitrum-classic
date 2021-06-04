@@ -41,8 +41,8 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         return msg.sender == counterpartGateway;
     }
 
-    function initialize(address _l1Counterpart) public virtual override {
-        super.initialize(_l1Counterpart);
+    function _initialize(address _l1Counterpart, address _router) internal virtual override {
+        TokenGateway._initialize(_l1Counterpart, _router);
     }
 
     function arbgasReserveIfCallRevert() internal pure virtual returns (uint256) {
@@ -102,9 +102,11 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
+        // can be triggered directly or by router
         require(msg.value == 0, "NO_VALUE");
 
-        address _from = msg.sender;
+        (address _from, bytes memory _extraData) = parseOutboundData(_data);
+
         uint256 id;
         {
             address l2Token = calculateL2TokenAddress(_l1Token);
@@ -113,14 +115,28 @@ abstract contract L2ArbitrumGateway is TokenGateway {
             IArbStandardToken(l2Token).bridgeBurn(_from, _amount);
 
             bytes memory outboundCalldata =
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _data);
+                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
 
             id = createOutboundTx(outboundCalldata);
         }
         // exitNum incremented after being used in getOutboundCalldata
         exitNum++;
-        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _data);
+        emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _extraData);
         return abi.encode(id);
+    }
+
+    function parseOutboundData(bytes memory _data)
+        internal
+        view
+        virtual
+        returns (address _from, bytes memory _extraData)
+    {
+        if (isRouter()) {
+            (_from, _extraData) = abi.decode(_data, (address, bytes));
+        } else {
+            _from = msg.sender;
+            _extraData = _data;
+        }
     }
 
     /**
@@ -203,6 +219,10 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         return bytes("");
     }
 
+    function isRouter() internal view virtual override returns (bool) {
+        return msg.sender == router;
+    }
+
     /**
      * @notice Calculate the address used when bridging an ERC20 token
      * @dev this always returns the same as the L1 oracle, but may be out of date.
@@ -231,8 +251,12 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
      */
     address public override beacon;
 
-    function initialize(address _l1Counterpart, address _beacon) public virtual {
-        super.initialize(_l1Counterpart);
+    function initialize(
+        address _l1Counterpart,
+        address _router,
+        address _beacon
+    ) public virtual {
+        L2ArbitrumGateway._initialize(_l1Counterpart, _router);
         require(_beacon != address(0), "INVALID_BEACON");
         require(beacon == address(0), "ALREADY_INIT");
         beacon = _beacon;

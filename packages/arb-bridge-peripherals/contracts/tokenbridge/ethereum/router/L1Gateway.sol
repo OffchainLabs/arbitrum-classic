@@ -30,7 +30,6 @@ import "../../libraries/TokenGateway.sol";
 abstract contract L1ArbitrumGateway is TokenGateway {
     using SafeERC20 for IERC20;
 
-    address public router;
     address public inbox;
 
     function isCounterpartGateway() internal view virtual override returns (bool) {
@@ -38,22 +37,17 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         return counterpartGateway == outbox.l2ToL1Sender();
     }
 
-    function initialize(
+    function _initialize(
         address _l2Counterpart,
         address _router,
         address _inbox
-    ) public virtual {
-        super.initialize(_l2Counterpart);
+    ) internal virtual {
+        TokenGateway._initialize(_l2Counterpart, _router);
         require(_inbox != address(0), "BAD_INBOX");
         require(_router != address(0), "BAD_ROUTER");
         require(router == address(0), "ALREADY_INIT");
         router = _router;
         inbox = _inbox;
-    }
-
-    modifier onlyRouter {
-        require(msg.sender == router, "ONLY_ROUTER");
-        _;
     }
 
     /**
@@ -151,7 +145,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
 
     function parseOutboundData(bytes memory _data)
         internal
-        pure
+        view
         virtual
         returns (
             address _from,
@@ -159,10 +153,19 @@ abstract contract L1ArbitrumGateway is TokenGateway {
             bytes memory _extraData
         )
     {
-        // router encoded
-        (_from, _extraData) = abi.decode(_data, (address, bytes));
+        if (isRouter()) {
+            // router encoded
+            (_from, _extraData) = abi.decode(_data, (address, bytes));
+        } else {
+            _from = msg.sender;
+            _extraData = _data;
+        }
         // user encoded
         (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
+    }
+
+    function isRouter() internal view virtual override returns (bool) {
+        return msg.sender == router;
     }
 
     function getOutboundCalldata(
@@ -185,8 +188,8 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         address _l2Counterpart,
         address _router,
         address _inbox
-    ) public virtual override {
-        super.initialize(_l2Counterpart, _router, _inbox);
+    ) public virtual {
+        L1ArbitrumGateway._initialize(_l2Counterpart, _router, _inbox);
     }
 
     /**

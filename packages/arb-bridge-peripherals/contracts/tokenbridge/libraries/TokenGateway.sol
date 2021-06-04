@@ -22,17 +22,26 @@ import "./ITokenGateway.sol";
 
 abstract contract TokenGateway is ITokenGateway {
     address public counterpartGateway;
+    address public router;
 
     modifier onlyCounterpartGateway {
         require(isCounterpartGateway(), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 
-    function initialize(address _counterpartGateway) public virtual {
+    modifier onlyRouter {
+        require(isRouter(), "ONLY_ROUTER");
+        _;
+    }
+
+    function _initialize(address _counterpartGateway, address _router) internal virtual {
         require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
         require(counterpartGateway == address(0), "ALREADY_INIT");
         counterpartGateway = _counterpartGateway;
+        router = _router;
     }
+
+    function isRouter() internal view virtual returns (bool);
 
     function isCounterpartGateway() internal view virtual returns (bool);
 

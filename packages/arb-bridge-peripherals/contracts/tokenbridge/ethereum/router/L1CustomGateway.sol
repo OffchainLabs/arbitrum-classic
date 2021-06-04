@@ -24,8 +24,12 @@ contract L1CustomGateway is L1ArbitrumGateway {
     // stores addresses of L2 tokens to be used
     mapping(address => address) public l1ToL2Token;
 
-    function initialize(address _l1Counterpart) public virtual override {
-        super.initialize(_l1Counterpart);
+    function initialize(
+        address _l1Counterpart,
+        address _l1Router,
+        address _inbox
+    ) public virtual {
+        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
     }
 
     function getOutboundCalldata(
