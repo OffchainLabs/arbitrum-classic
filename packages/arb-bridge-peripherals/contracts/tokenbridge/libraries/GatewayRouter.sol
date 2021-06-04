@@ -28,7 +28,11 @@ import "./TokenGateway.sol";
 abstract contract GatewayRouter is TokenGateway {
     using Address for address;
 
+    address internal constant ZERO_ADDR = address(0);
+    address internal constant BLACKLISTED = address(1);
+
     mapping(address => address) public l1TokenToGateway;
+    address public defaultGateway;
 
     event TransferRouted(
         address indexed token,
@@ -39,9 +43,16 @@ abstract contract GatewayRouter is TokenGateway {
 
     event GatewaySet(address indexed l1Token, address indexed gateway);
 
-    function _initialize(address _counterpartGateway) internal virtual {
+    function _initialize(address _counterpartGateway, address _defaultGateway)
+        internal
+        virtual
+        override
+    {
         TokenGateway._initialize(_counterpartGateway, address(0));
+        defaultGateway = _defaultGateway;
     }
+
+    function setDefaultGateway(address newDefaultGateway) external virtual;
 
     function finalizeInboundTransfer(
         address _token,
@@ -60,7 +71,7 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable virtual override returns (bytes memory) {
+    ) public payable virtual override returns (bytes memory) {
         preTransferHook();
         address gateway = getGateway(_token);
         bytes memory gatewayData = getOutboundCalldata(_token, msg.sender, _to, _amount, _data);
@@ -92,7 +103,18 @@ abstract contract GatewayRouter is TokenGateway {
         return false;
     }
 
-    function getGateway(address _token) public view virtual returns (address gateway);
+    function getGateway(address _token) public view virtual returns (address gateway) {
+        gateway = l1TokenToGateway[_token];
+        require(gateway != BLACKLISTED, "BLACKLIST");
+
+        if (gateway == ZERO_ADDR) {
+            gateway = defaultGateway;
+        }
+
+        require(gateway.isContract(), "NO_GATEWAY_DEPLOYED");
+
+        return gateway;
+    }
 
     function preTransferHook() internal virtual;
 }

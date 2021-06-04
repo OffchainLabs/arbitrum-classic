@@ -26,8 +26,8 @@ import "../../ethereum/router/L1GatewayRouter.sol";
  * @notice Router also serves as an L2-L1 token address oracle.
  */
 contract L2GatewayRouter is GatewayRouter {
-    function initialize(address _counterpartGateway) public virtual {
-        GatewayRouter._initialize(_counterpartGateway);
+    function initialize(address _counterpartGateway, address _defaultGateway) public virtual {
+        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
     }
 
     function setGateway(address[] memory _l1Token, address[] memory _gateway)
@@ -44,11 +44,13 @@ contract L2GatewayRouter is GatewayRouter {
         }
     }
 
-    function getGateway(address _l1Token) public view virtual override returns (address gateway) {
-        gateway = l1TokenToGateway[_l1Token];
-        // if no gateway is set, address(0) will cause a revert in this check
-        require(gateway.isContract(), "NO_GATEWAY_DEPLOYED");
-        return gateway;
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) public payable virtual returns (bytes memory) {
+        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
     function preTransferHook() internal virtual override {
@@ -57,5 +59,14 @@ contract L2GatewayRouter is GatewayRouter {
 
     function isCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
+    }
+
+    function setDefaultGateway(address newDefaultGateway)
+        external
+        virtual
+        override
+        onlyCounterpartGateway
+    {
+        defaultGateway = newDefaultGateway;
     }
 }

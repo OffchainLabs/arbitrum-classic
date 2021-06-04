@@ -80,13 +80,17 @@ describe('Bridge peripherals end-to-end', () => {
 
     await l1RouterTestBridge.functions.initialize(
       accounts[0].address,
-      l1TestBridge.address,
+      l1TestBridge.address, // defaultGateway
       '0x0000000000000000000000000000000000000000', // no whitelist
-      l2RouterTestBridge.address,
+      l2RouterTestBridge.address, // counterparty
       accounts[0].address // inbox
     )
 
-    await l2RouterTestBridge.functions.initialize(l1RouterTestBridge.address)
+    const l2DefaultGateway = await l1TestBridge.counterpartGateway()
+    await l2RouterTestBridge.functions.initialize(
+      l1RouterTestBridge.address,
+      l2DefaultGateway
+    )
   })
 
   it('should deposit tokens', async function () {
@@ -122,7 +126,7 @@ describe('Bridge peripherals end-to-end', () => {
     assert.equal(l2Balance, tokenAmount, 'Tokens not minted')
   })
 
-  it('should withdraw erc20 tokens from L2', async function () {
+  it('should withdraw erc20 tokens from L2 without router', async function () {
     const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
     // send escrowed tokens to bridge
@@ -147,6 +151,43 @@ describe('Bridge peripherals end-to-end', () => {
     const prevUserBalance = await token.balanceOf(accounts[0].address)
 
     await l2TestBridge.functions[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](token.address, accounts[0].address, tokenAmount, '0x')
+
+    const postUserBalance = await token.balanceOf(accounts[0].address)
+
+    assert.equal(
+      prevUserBalance.toNumber() + tokenAmount,
+      postUserBalance.toNumber(),
+      'Tokens not escrowed'
+    )
+  })
+
+  it('should withdraw erc20 tokens from L2 using router', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    await l1RouterTestBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
+
+    const prevUserBalance = await token.balanceOf(accounts[0].address)
+
+    await l2RouterTestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
 

@@ -28,13 +28,7 @@ import "../../arbitrum/router/L2GatewayRouter.sol";
  * @notice Router also serves as an L1-L2 token address oracle.
  */
 contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
-    using Address for address;
-
-    address internal constant ZERO_ADDR = address(0);
-    address internal constant BLACKLISTED = address(1);
-
     address public owner;
-    address public defaultGateway;
     address public inbox;
 
     event TransferRouted(
@@ -56,15 +50,16 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         address _counterpartGateway,
         address _inbox
     ) public virtual {
-        GatewayRouter._initialize(_counterpartGateway);
+        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
         owner = _owner;
-        defaultGateway = _defaultGateway;
         WhitelistConsumer.whitelist = _whitelist;
         inbox = _inbox;
     }
 
-    function setDefaultGateway(address newDefaultGateway) external onlyOwner {
-        defaultGateway = newDefaultGateway;
+    function setDefaultGateway(address newDefaultGateway) external virtual override onlyOwner {
+        // TODO: send message to L2 after updating in L1
+        // send gateway.counterpartGateway()
+        revert("NOT_IMPLEMENTED");
     }
 
     function setOwner(address newOwner) external onlyOwner {
@@ -85,6 +80,8 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         for (uint256 i = 0; i < _token.length; i++) {
             l1TokenToGateway[_token[i]] = _gateway[i];
             emit GatewaySet(_token[i], _gateway[i]);
+            // overwrite memory so the L2 router receives the L2 address of each gateway
+            _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
         }
 
         bytes memory data =
@@ -102,19 +99,6 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
                 data
             );
         return seqNum;
-    }
-
-    function getGateway(address _token) public view virtual override returns (address gateway) {
-        gateway = l1TokenToGateway[_token];
-        require(gateway != BLACKLISTED, "BLACKLIST");
-
-        if (gateway == ZERO_ADDR) {
-            gateway = defaultGateway;
-        }
-
-        require(gateway.isContract(), "NO_GATEWAY_DEPLOYED");
-
-        return gateway;
     }
 
     function preTransferHook() internal virtual override onlyWhitelisted {
