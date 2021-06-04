@@ -57,7 +57,25 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
 option(ENABLE_JEMALLOC "Enable jemalloc" OFF)
-option(AVM_BUILD_TESTING "Build tests" ON)
+
+set(AVM_FUZZER "" CACHE STRING "Build fuzzing target for the requested fuzzer")
+
+if (${AVM_FUZZER} MATCHES "afl")
+    SET(CMAKE_C_COMPILER "/usr/local/bin/afl-clang-lto" CACHE PATH "" FORCE)
+    SET(CMAKE_CXX_COMPILER "/usr/local/bin/afl-clang-lto++" CACHE PATH "" FORCE)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+elseif (${AVM_FUZZER} MATCHES "libfuzzer")
+    SET(CMAKE_C_COMPILER "/usr/bin/clang" CACHE PATH "" FORCE)
+    SET(CMAKE_CXX_COMPILER "/usr/bin/clang++" CACHE PATH "" FORCE)
+    add_compile_options(-fsanitize=address,fuzzer-no-link)
+    add_link_options(-fsanitize=address,fuzzer)
+elseif (${AVM_FUZZER} MATCHES "honggfuzz")
+    SET(CMAKE_C_COMPILER "/usr/local/bin/hfuzz-clang" CACHE PATH "" FORCE)
+    SET(CMAKE_CXX_COMPILER "/usr/local/bin/hfuzz-clang++" CACHE PATH "" FORCE)
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif ()
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
@@ -74,7 +92,7 @@ endif (ENABLE_JEMALLOC)
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     execute_process(
-        COMMAND brew --prefix OpenSSL 
+        COMMAND brew --prefix OpenSSL
         RESULT_VARIABLE BREW_OPENSSL
         OUTPUT_VARIABLE BREW_OPENSSL_PREFIX
         OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -147,15 +165,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm_values")
     add_subdirectory(avm_values)
 endif()
-if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data_storage")
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/data_storage" AND NOT AVM_FUZZER)
     add_subdirectory(data_storage)
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm")
     add_subdirectory(avm)
 endif()
-if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
+if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm" AND NOT AVM_FUZZER)
     add_subdirectory(cavm)
-    
+
     get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
     if (NOT _isMultiConfig)
         set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
@@ -179,11 +197,13 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     endif()
 
 endif()
-if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app")
+if(AVM_FUZZER)
+    add_subdirectory(fuzz_target)
+elseif(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app")
     add_subdirectory(app)
 endif()
 
-if (BUILD_TESTING)
+if (BUILD_TESTING AND NOT AVM_FUZZER)
   add_subdirectory(tests)
 endif()
 

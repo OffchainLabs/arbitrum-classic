@@ -143,10 +143,12 @@ std::variant<G1<alt_bn128_pp>, std::string> g1PfromBytes(const G1Point& point) {
     }
 
     if (mpz_cmp(mpzx, modulus) >= 0) {
+        mpz_clears(mpzx, mpzy, modulus, NULL);
         return std::string("bad x");
     }
 
     if (mpz_cmp(mpzy, modulus) >= 0) {
+        mpz_clears(mpzx, mpzy, modulus, NULL);
         return std::string("bad y");
     }
 

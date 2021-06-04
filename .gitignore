@@ -7,6 +7,7 @@ compiled.json
 ci
 debug
 build
+build-fuzz
 release
 xcode
 validator-states
