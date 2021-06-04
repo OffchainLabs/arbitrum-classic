@@ -22,7 +22,7 @@ The most common use-case for direct inter-chain communication is depositing and 
 
 #### Explanation
 
-Arbitrum offers several ways for an Ethereum transaction to send a message to Arbitrum ([see "L2 Messages"](Data_Formats.md)); however, the generally recommended method to use for direct L1 to L2 communication is via retryable tickets.
+Arbitrum offers several ways for an Ethereum transaction to send a message to Arbitrum ([see "L2 Messages"](ArbOS_Formats.md#l2-messages)); however, the generally recommended method to use for direct L1 to L2 communication is via retryable tickets.
 
 The idea is the following: a layer 1 transaction is put in the Inbox with instructions to submit a transaction to L2 (including calldata, callvalue, and gas info) in such a way that if it doesn't execute successfully the first time, it gets put into an L2 "retry buffer." This means that for a period of time (likely on the scale of the chain's dispute window, so roughly one week), anybody can attempt to "redeem" the the L2 transaction ticket by re-executing it.
 
@@ -250,6 +250,6 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
 
 Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) client side library.
 
-For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
+For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
 
 TODO: execution market?

@@ -114,7 +114,7 @@ First, we note that in practice the tree of futures is not binary but 4-ary. Thi
 
 Logically, the protocol's state consists of:
 
-- a LatestConfirmed node: a node of the rollup treee which is the latest node that has been fully confirmed and executed on the L1 chain;
+- a LatestConfirmed node: a node of the rollup tree which is the latest node that has been fully confirmed and executed on the L1 chain;
 - a tree of nodes rooted at LatestConfirmed, and the DAs that induce that tree, including the deadlines of those DAs;
 - a set of stakers, and on which node of the tree each staker is staked; and
 - a set of challenges currently in progress.
@@ -139,7 +139,7 @@ If a staker is staked on the LatestConfirmed node, or any node that is at a lowe
 
 In the current implementation, there are several conditions for recovering a stake, which together cover all of the ways a stake could become older than LatestConfirmed, or otherwise mooted. In the implementation, a stake can be recovered if: the stake is at LatestConfirmed or a predecessor of it, or if the stake is at a node that is not LatestConfirmed and is neither a predecessor nor a successor of LatestConfirmed. (Such a stake is "moot" or irrelevant. It cannot participate in challenges, nor can it affect which node gets Confirmed. So a rational staker will let such a stake sit idle until it is older than Latest Confirmed, then recover it. The current implementation allows such a stake to be recovered immediately.)
 
-In addition, the current implementation allows any party to forcibly refund a stake if that stake is at a node that has a successor whose deadline has passed. This is designed to incent stakers to keep their stake moving forward. A staker can never get into this situation if it moves its stake to the frontier of the tree at least once per challenge period.
+In addition, the current implementation allows any party to forcibly refund a stake if that stake is at a node that has a successor whose deadline has passed. This is designed to incentive stakers to keep their stake moving forward. A staker can never get into this situation if it moves its stake to the frontier of the tree at least once per challenge period.
 
 ### Making assertions and growing the tree
 

@@ -47,7 +47,7 @@ Our [token bridge](Bridging_Assets.md) includes an implementation of this:
 
 To carry out fast withdrawal via an atomic swap, an Arbitrum user who wants to "withdraw" onto L1 pays a liquidity provider directly on L2, who in turn transfers funds to the user's address on L1. [Hashed time locked contracts (HTLCs)](https://www.investopedia.com/terms/h/hashed-timelock-contract.asp) are used to ensure that these two operations are ultimately atomic; i.e., either both take place or neither of them do, preserving trustlessness.
 
-Variants of both of these approaches can also be extended to provide fast transfers between multiple L2 chains (i.e., 2 different Arbitrum chains.)
+Variants of both of these approaches can also be extended to provide fast transfers between multiple L2 chains (i.e. 2 different Arbitrum chains.)
 
 ## NFTs and Messages
 
