@@ -22,7 +22,6 @@ import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
 import "./IArbStandardToken.sol";
 import "../libraries/BytesParser.sol";
-import "./router/L2Gateway.sol";
 
 /**
  * @title Standard (i.e., non-custom) contract deployed by ArbTokenBridge.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws

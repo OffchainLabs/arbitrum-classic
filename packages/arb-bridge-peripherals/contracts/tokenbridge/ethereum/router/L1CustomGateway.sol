@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "./L1Gateway.sol";
+import "./L1ArbitrumGateway.sol";
 
 contract L1CustomGateway is L1ArbitrumGateway {
     // stores addresses of L2 tokens to be used

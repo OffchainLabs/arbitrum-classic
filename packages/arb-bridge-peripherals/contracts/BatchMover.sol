@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./MMR.sol";
 import "./tokenbridge/arbitrum/StandardArbERC20.sol";
-import "./tokenbridge/arbitrum/router/L2Gateway.sol";
+import "./tokenbridge/arbitrum/router/L2ArbitrumGateway.sol";
 import "./buddybridge/ethereum/L1Buddy.sol";
 
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
