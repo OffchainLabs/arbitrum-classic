@@ -71,4 +71,3 @@ This includes the data from a smart contract return or the revert reason if you 
 | 10          | Transaction is below the minimum required arbgas                                                                                     |
 | 11          | Transaction set an arbgas price that was too low                                                                                     |
 | 255         | Unknown failure                                                                                                                      |
-
