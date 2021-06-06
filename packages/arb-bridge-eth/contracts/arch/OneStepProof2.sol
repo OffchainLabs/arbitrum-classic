@@ -289,7 +289,7 @@ contract OneStepProof2 is OneStepProofCommon {
     ) internal pure returns (uint256) {
         bytes memory res = new bytes(8);
         bytes32 word = get(buf, offset / 32, proof.proof1);
-        if ((offset % 32) + 8 >= 32) {
+        if ((offset % 32) + 8 > 32) {
             bytes32 word2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 0; i < 8 - ((offset % 32) + 8 - 32); i++) {
                 res[i] = bytes1(uint8(getByte(word, (offset % 32) + i)));
@@ -312,12 +312,12 @@ contract OneStepProof2 is OneStepProofCommon {
     ) internal pure returns (uint256) {
         bytes memory res = new bytes(32);
         bytes32 word = get(buf, offset / 32, proof.proof1);
-        if ((offset % 32) + 32 >= 32) {
+        if ((offset % 32) + 32 > 32) {
             bytes32 word2 = get(buf, offset / 32 + 1, proof.proof2);
             for (uint256 i = 0; i < 32 - ((offset % 32) + 32 - 32); i++) {
                 res[i] = bytes1(uint8(getByte(word, (offset % 32) + i)));
             }
-            for (uint256 i = 8 - ((offset % 32) + 32 - 32); i < 32; i++) {
+            for (uint256 i = 32 - ((offset % 32) + 32 - 32); i < 32; i++) {
                 res[i] = bytes1(uint8(getByte(word2, (offset + i) % 32)));
             }
         } else {

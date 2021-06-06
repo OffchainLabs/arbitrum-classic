@@ -22,6 +22,7 @@
 
 #include <boost/endian/conversion.hpp>
 
+#include <iomanip>
 #include <ostream>
 
 uint64_t deserialize_uint64_t(const char*& bufptr) {
@@ -268,7 +269,14 @@ struct ValuePrinter {
     std::ostream& os;
 
     std::ostream* operator()(const Buffer& b) const {
-        os << "Buffer(" << hash(b) << ")";
+        os << "Buffer(0x";
+        std::ios prev_flags(nullptr);
+        prev_flags.copyfmt(os);
+        for (auto b : b.toFlatVector()) {
+            os << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+        }
+        os.copyfmt(prev_flags);
+        os << ")";
         return &os;
     }
 
