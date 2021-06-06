@@ -18,17 +18,16 @@ const main = async () => {
     process.env.INBOX_ADDRESS || '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e'
   if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
-  const whitelistAddress =
-    process.env.WHITELIST_ADDRESS ||
-    '0x0000000000000000000000000000000000000000'
+  // set whitelistAddress to address(0) to disable whitelist
+  const whitelistAddress = process.env.WHITELIST_ADDRESS
   if (!whitelistAddress)
     throw new Error('Please set whitelist address! WHITELIST_ADDRESS')
 
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key DEVNET_PRIVKEY')
 
-  const l2ProviderRpc =
-    process.env['DEVNET_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
+  const l2ProviderRpc = process.env['DEVNET_RPC'] || 'http://localhost:8080/rpc'
+  // process.env['DEVNET_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
   if (!l2ProviderRpc) throw new Error('Missing l2 rpc DEVNET_RPC')
 
   // deploy L1 logic contracts
@@ -126,7 +125,7 @@ const main = async () => {
     '0x'
   )
   await l2GatewayRouterProxy.deployed()
-  console.log('L2 ERC20Gateway Proxy at', l2ERC20GatewayProxy.address)
+  console.log('L2 Router Proxy at', l2GatewayRouterProxy.address)
 
   // initialize proxies and setup txs
 
@@ -135,25 +134,30 @@ const main = async () => {
     accounts[0]
   )
 
-  const initL1Bridge = await l1ERC20GatewayConnectedAsProxy[
-    'initialize(address,address,address)'
-  ](l2ERC20GatewayProxy.address, l1GatewayRouterProxy.address, inboxAddress)
+  const initL1Bridge = await l1ERC20GatewayConnectedAsProxy.initialize(
+    l2ERC20GatewayProxy.address,
+    l1GatewayRouterProxy.address,
+    inboxAddress
+  )
+  console.log('init L1 hash', initL1Bridge.hash)
+  await initL1Bridge.wait()
+  console.log('l1 bridge proxy initted')
 
   const l2ERC20GatewayConnectedAsProxy = L2ERC20Gateway__factory.connect(
     l2ERC20GatewayProxy.address,
     l2Signer
   )
 
-  const initL2Bridge = await l2ERC20GatewayConnectedAsProxy[
-    'initialize(address,address,address)'
-  ](
+  const initL2Bridge = await l2ERC20GatewayConnectedAsProxy.initialize(
     l1ERC20GatewayProxy.address,
     l2GatewayRouterProxy.address,
     erc20Beacon.address
   )
+  console.log('init L2 hash', initL2Bridge.hash)
+  await initL2Bridge.wait()
+  console.log('l2 bridge proxy initted')
 
   // TODO: set default gateway to address(0) instead of standardERC20
-  // set whitelistAddress to address(0) to disable whitelist
 
   const defaultGateway = l1ERC20GatewayProxy.address
 
@@ -168,43 +172,36 @@ const main = async () => {
     l2GatewayRouterProxy.address,
     inboxAddress
   )
+  console.log('init L1 Router hash', initL1RouterTx.hash)
+  await initL1RouterTx.wait()
+  console.log('l1 router proxy initted')
 
   const l2GatewayRouterConnectedAtProxy = L2GatewayRouter__factory.connect(
-    l2ERC20GatewayProxy.address,
+    l2GatewayRouterProxy.address,
     l2Signer
   )
 
-  const initL2Router = await l2GatewayRouterConnectedAtProxy[
-    'initialize(address,address)'
-  ](l1GatewayRouterProxy.address, defaultGateway)
-
-  console.log('init L1 Router hash', initL1RouterTx.hash)
-  console.log('init L1 Router hash', initL1RouterTx.hash)
-  console.log('init L1 hash', initL1Bridge.hash)
-  console.log('init L2 hash', initL2Bridge.hash)
-
-  // wait for inits
-  await initL1RouterTx.wait()
-  console.warn('l1 router proxy initted')
-
+  const initL2Router = await l2GatewayRouterConnectedAtProxy.initialize(
+    l1GatewayRouterProxy.address,
+    defaultGateway
+  )
+  console.log('init L2 Router hash', initL2Router.hash)
   await initL2Router.wait()
-  console.warn('l2 router proxy initted')
+  console.log('l2 router proxy initted')
 
-  await initL1Bridge.wait()
-  console.warn('l1 bridge proxy initted')
+  console.log('Done.')
 
-  await initL2Bridge.wait()
-  console.warn('l2 bridge proxy initted')
-
-  console.log('Proxies have been initted')
-
-  const contracts = JSON.stringify({
-    l1GatewayRouter: l1GatewayRouterProxy.address,
-    l2GatewayRouter: l2GatewayRouterProxy.address,
-    l1ERC20GatewayProxy: l1ERC20GatewayProxy.address,
-    l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
-    inbox: inboxAddress,
-  })
+  const contracts = JSON.stringify(
+    {
+      l1GatewayRouter: l1GatewayRouterProxy.address,
+      l2GatewayRouter: l2GatewayRouterProxy.address,
+      l1ERC20GatewayProxy: l1ERC20GatewayProxy.address,
+      l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
+      inbox: inboxAddress,
+    },
+    null,
+    4
+  )
 
   const chainId = l2Provider.network.chainId
   const deployFilePath = `./deployment-${chainId}.json`
