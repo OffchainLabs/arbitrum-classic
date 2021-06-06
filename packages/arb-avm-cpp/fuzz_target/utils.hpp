@@ -18,18 +18,38 @@
 
 #include <avm/machine.hpp>
 
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 template <class... Args>
 void fuzz_require(bool check, Args... message) {
     if (!check) {
-        std::cerr << "ERROR: ";
-        ((std::cerr << std::forward<Args>(message)), ...);
-        std::cerr << std::endl;
-        __builtin_trap();
+        std::stringstream err_stream;
+        err_stream << "fuzz_require failed: ";
+        ((err_stream << std::forward<Args>(message)), ...);
+        err_stream << std::endl;
+        throw std::runtime_error(err_stream.str());
     }
 }
 
 Machine parseFuzzInput(const uint8_t* buf, size_t len);
 
-void testMachine(Machine machine);
+class ProofTester {
+   protected:
+    std::string queryPipePath;
+    std::string resultPipePath;
+    std::fstream queryPipe;
+    std::fstream resultPipe;
+
+    void writeMachineState(const Machine& machine);
+    void writeVarSizedBytes(const std::vector<unsigned char>& data);
+    void writeProof(const OneStepProof& proof);
+    uint8_t readResult();
+
+   public:
+    ProofTester(bool debug);
+    ~ProofTester();
+
+    void testMachine(Machine machine);
+};

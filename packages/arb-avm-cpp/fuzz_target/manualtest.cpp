@@ -28,6 +28,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    ProofTester tester(true);
+
     for (size_t i = 1; i < argc; i++) {
         std::cerr << "Testing " << argv[i] << std::endl;
         std::ifstream file(argv[i], std::ios::binary | std::ios::ate);
@@ -45,12 +47,13 @@ int main(int argc, char** argv) {
                       << std::endl;
             auto segment = machine.machine_state.code->loadCodeSegment(0);
             for (size_t i = 0; i < segment.op_count; i++) {
-                auto code_point = segment.segment->loadCodePoint(i);
+                auto code_point =
+                    segment.segment->loadCodePoint(segment.op_count - i - 1);
                 std::cerr << std::setw(3) << i << std::setw(0) << " "
                           << code_point.op << std::endl;
             }
         }
-        testMachine(machine);
+        tester.testMachine(machine);
         std::cerr << "Success" << std::endl;
     }
 

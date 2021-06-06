@@ -18,13 +18,15 @@
 
 #include <avm/machine.hpp>
 
+static std::unique_ptr<ProofTester> tester;
+
 extern "C" int LLVMFuzzerInitialize(int* argc, char*** argv) {
-    // TODO start up Go checker
+    tester = std::make_unique<ProofTester>(true);
     return 0;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(uint8_t* buf, size_t len) {
     auto machine = parseFuzzInput(buf, len);
-    testMachine(machine);
+    tester->testMachine(machine);
     return 0;
 }
