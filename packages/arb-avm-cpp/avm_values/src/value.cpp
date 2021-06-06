@@ -164,7 +164,7 @@ void marshal_value(const value& full_val, std::vector<unsigned char>& buf) {
 
 namespace {
 void marshalForProof(const HashPreImage& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(HASH_PRE_IMAGE);
@@ -172,30 +172,30 @@ void marshalForProof(const HashPreImage& val,
 }
 
 void marshalForProof(const std::shared_ptr<HashPreImage>& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(HASH_PRE_IMAGE);
     val->marshal(buf);
 }
 
-MarshalLevel childNestLevel(MarshalLevel level) {
-    if (level == MarshalLevel::FULL) {
-        return MarshalLevel::FULL;
+size_t childNestLevel(size_t level) {
+    if (level > 0) {
+        return level - 1;
     } else {
-        return MarshalLevel::STUB;
+        return 0;
     }
 }
 
 void marshalForProof(const Tuple& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
-    if (marshal_level == MarshalLevel::STUB) {
+    if (marshal_level == 0) {
         marshalForProof(val.getHashPreImage(), marshal_level, buf, code);
     } else {
         buf.push_back(TUPLE + val.tuple_size());
-        MarshalLevel nested_level = childNestLevel(marshal_level);
+        size_t nested_level = childNestLevel(marshal_level);
         for (uint64_t i = 0; i < val.tuple_size(); i++) {
             auto itemval = val.get_element(i);
             marshalForProof(itemval, nested_level, buf, code);
@@ -204,7 +204,7 @@ void marshalForProof(const Tuple& val,
 }
 
 void marshalForProof(const CodePointStub& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
     auto cp = code.loadCodePoint(val.pc);
@@ -214,7 +214,7 @@ void marshalForProof(const CodePointStub& val,
 }
 
 void marshalForProof(const uint256_t& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(NUM);
@@ -222,7 +222,7 @@ void marshalForProof(const uint256_t& val,
 }
 
 void marshalForProof(const Buffer& val,
-                     MarshalLevel,
+                     size_t,
                      std::vector<unsigned char>& buf,
                      const Code&) {
     buf.push_back(BUFFER);
@@ -232,7 +232,7 @@ void marshalForProof(const Buffer& val,
 }  // namespace
 
 void marshalForProof(const value& val,
-                     MarshalLevel marshal_level,
+                     size_t marshal_level,
                      std::vector<unsigned char>& buf,
                      const Code& code) {
     return std::visit(

@@ -105,7 +105,7 @@ class Datastack {
         }
     }
 
-    DataStackProof marshalForProof(const std::vector<MarshalLevel>& stackInfo,
+    DataStackProof marshalForProof(const std::vector<size_t>& stackInfo,
                                    const Code& code) const;
 
     value& peek() {

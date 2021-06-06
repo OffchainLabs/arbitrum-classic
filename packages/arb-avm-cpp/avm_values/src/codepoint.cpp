@@ -26,7 +26,7 @@ Operation::Operation(OpCode opcode_, value immediate_)
     : opcode(opcode_), immediate(std::make_unique<value>(immediate_)) {}
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
-                                MarshalLevel marshal_level,
+                                size_t marshal_level,
                                 const Code& code) const {
     if (immediate) {
         buf.push_back(1);

@@ -155,8 +155,8 @@ void marshalState(std::vector<unsigned char>& buf,
     stackPreImage.marshal(buf);
     auxStackPreImage.marshal(buf);
 
-    ::marshalForProof(registerVal, MarshalLevel::STUB, buf, code);
-    ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
+    ::marshalForProof(registerVal, 0, buf, code);
+    ::marshalForProof(staticVal, 0, buf, code);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
 }
@@ -359,7 +359,7 @@ OneStepProof MachineState::marshalForProof() const {
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
 
-    std::vector<MarshalLevel> stackPops = [&]() {
+    std::vector<size_t> stackPops = [&]() {
         auto it = InstructionStackPops.find(opcode);
         if (it == InstructionStackPops.end()) {
             return InstructionStackPops.at(OpCode::ERROR);
@@ -367,7 +367,7 @@ OneStepProof MachineState::marshalForProof() const {
         return it->second;
     }();
 
-    std::vector<MarshalLevel> auxStackPops = [&]() {
+    std::vector<size_t> auxStackPops = [&]() {
         auto it = InstructionAuxStackPops.find(opcode);
         if (it == InstructionAuxStackPops.end()) {
             return InstructionAuxStackPops.at(OpCode::ERROR);
@@ -375,9 +375,7 @@ OneStepProof MachineState::marshalForProof() const {
         return it->second;
     }();
 
-    if (stackPops.size() > stack.stacksize()) {
-    }
-    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
+    size_t immediateMarshalLevel = 0;
     if (current_op.immediate && !stackPops.empty()) {
         immediateMarshalLevel = stackPops[0];
         stackPops.erase(stackPops.cbegin());
