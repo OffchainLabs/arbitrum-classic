@@ -81,7 +81,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 }
 
 func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
-	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:7429/", nil)
+	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:7429/", nil, 20*time.Second)
 	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	defer wg.Done()
 	messageCount := 0

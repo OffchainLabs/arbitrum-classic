@@ -187,8 +187,8 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 	}
 
 	avmLogs := assertion.Logs
-	if len(avmLogs) != 3 {
-		return nil, nil, errors.Errorf("unexpected result count %v", len(avmLogs))
+	if len(avmLogs) == 0 {
+		return nil, nil, errors.New("no logs emitted processing retryable")
 	}
 	res, err := evm.NewTxResultFromValue(avmLogs[0])
 	if err != nil {
@@ -200,6 +200,24 @@ func (s *Snapshot) EstimateRetryableGas(msg message.RetryableTx, sender common.A
 	if res.IncomingRequest.MessageID != targetHash {
 		return nil, debugPrints, errors.Errorf("ticket creation got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
+
+	if len(avmLogs) == 2 {
+		// Redeem must have failed
+		res2, err := evm.NewTxResultFromValue(avmLogs[1])
+		if err != nil {
+			return nil, nil, err
+		}
+		if res2.ResultCode != evm.ReturnCode {
+			return nil, nil, evm.HandleCallError(res2, false)
+		} else {
+			return nil, nil, errors.New("Redeem succeeded, but failed to trigger redeemed tx")
+		}
+	}
+
+	if len(avmLogs) != 3 {
+		return nil, nil, errors.Errorf("unexpected result count %v", len(avmLogs))
+	}
+
 	res2, err := evm.NewTxResultFromValue(avmLogs[2])
 	if err != nil {
 		return nil, nil, err
