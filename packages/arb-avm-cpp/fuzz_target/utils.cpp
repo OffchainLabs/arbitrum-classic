@@ -186,6 +186,7 @@ constexpr uint64_t MAX_STEPS = 100;
 
 void ProofTester::testMachine(Machine machine) {
     Machine machine2 = machine;
+    size_t buffered_results = 0;
     while (machine.currentStatus() == Status::Extensive &&
            machine.machine_state.output.arb_gas_used < MAX_GAS &&
            machine.machine_state.output.total_steps < MAX_STEPS &&
@@ -203,6 +204,13 @@ void ProofTester::testMachine(Machine machine) {
                      assertion.stepCount);
         writeMachineState(machine);
         queryPipe.flush();
+        if (buffered_results < 4) {
+            buffered_results++;
+        } else if (readResult() != 0) {
+            throw std::runtime_error("Go proof tester errored");
+        }
+    }
+    for (; buffered_results > 0; buffered_results--) {
         if (readResult() != 0) {
             throw std::runtime_error("Go proof tester errored");
         }
