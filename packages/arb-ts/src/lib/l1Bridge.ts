@@ -16,14 +16,15 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, constants, utils } from 'ethers'
-import { GatewayRouter__factory } from './abi/factories/GatewayRouter__factory'
-import { GatewayRouter } from './abi/GatewayRouter'
+import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
+import { L1GatewayRouter } from './abi/L1GatewayRouter'
 import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 
 import { Inbox } from './abi/Inbox'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ERC20 } from './abi/ERC20'
+import networks from './networks'
 
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { addressToSymbol } from './bridge_helpers'
@@ -58,14 +59,14 @@ export interface Tokens {
  */
 export class L1Bridge {
   l1Signer: Signer
-  gatewayRouter: GatewayRouter
+  l1GatewayRouter: L1GatewayRouter
   walletAddressCache?: string
   inboxCached?: Inbox
   l1Tokens: Tokens
   l1Provider: providers.Provider
   l1EthBalance: BigNumber
 
-  constructor(erc20BridgeAddress: string, l1Signer: Signer) {
+  constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
     this.l1Signer = l1Signer
     this.l1Tokens = {}
 
@@ -75,8 +76,8 @@ export class L1Bridge {
       throw new Error('Signer must be connected to an Ethereum provider')
     }
     this.l1Provider = l1Provider
-    this.gatewayRouter = GatewayRouter__factory.connect(
-      erc20BridgeAddress,
+    this.l1GatewayRouter = L1GatewayRouter__factory.connect(
+      l1GatewayRouterAddress,
       l1Signer
     )
     this.l1EthBalance = BigNumber.from(0)
@@ -176,12 +177,12 @@ export class L1Bridge {
   }
 
   public async getGatewayAddress(erc20L1Address: string) {
-    return (await this.gatewayRouter.functions.getGateway(erc20L1Address))
+    return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
 
   public async getDefaultL1Gateway() {
-    const defaultGatewayAddress = await this.gatewayRouter.defaultGateway()
+    const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
     return L1ERC20Gateway__factory.connect(
       defaultGatewayAddress,
       this.l1Provider
@@ -196,7 +197,7 @@ export class L1Bridge {
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
     }
-
+    // you approve tokens to the gateway that the router will use
     const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
     return tokenData.ERC20.contract.functions.approve(
       gatewayAddress,
@@ -223,7 +224,7 @@ export class L1Bridge {
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
     )
-    return this.gatewayRouter.functions.outboundTransfer(
+    return this.l1GatewayRouter.functions.outboundTransfer(
       erc20L1Address,
       destination,
       amount,
