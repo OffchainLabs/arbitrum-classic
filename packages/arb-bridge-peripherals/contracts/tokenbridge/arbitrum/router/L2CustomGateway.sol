@@ -39,8 +39,9 @@ contract L2CustomGateway is L2ArbitrumGateway {
         address expectedL2Address,
         bytes memory deployData
     ) internal virtual override returns (bool shouldHalt) {
+        // it is assumed that the custom token is deployed in the L2 before deposits are made
         shouldHalt = true;
-        // TODO: trigger withdrawal instead of reverting
+        // TODO: trigger withdrawal to L1 or create temporary ERC20 token
         revert("NO_CUSTOM_TOKEN");
     }
 
