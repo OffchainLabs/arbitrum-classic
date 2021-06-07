@@ -21,15 +21,15 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface L1CustomGatewayInterface extends ethers.utils.Interface {
+interface L1GatewayTesterInterface extends ethers.utils.Interface {
   functions: {
     'calculateL2TokenAddress(address)': FunctionFragment
+    'cloneableProxyHash()': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'inbox()': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
-    'l1ToL2Token(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'router()': FunctionFragment
   }
@@ -37,6 +37,10 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'cloneableProxyHash',
+    values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'counterpartGateway',
@@ -55,7 +59,6 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'initialize',
     values: [string, string, string]
   ): string
-  encodeFunctionData(functionFragment: 'l1ToL2Token', values: [string]): string
   encodeFunctionData(
     functionFragment: 'outboundTransfer',
     values: [
@@ -74,6 +77,10 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'cloneableProxyHash',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'counterpartGateway',
     data: BytesLike
   ): Result
@@ -87,7 +94,6 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'l1ToL2Token', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
@@ -105,7 +111,7 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
 }
 
-export class L1CustomGateway extends Contract {
+export class L1GatewayTester extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -116,7 +122,7 @@ export class L1CustomGateway extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: L1CustomGatewayInterface
+  interface: L1GatewayTesterInterface
 
   functions: {
     calculateL2TokenAddress(
@@ -128,6 +134,10 @@ export class L1CustomGateway extends Contract {
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<[string]>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<[string]>
+
+    'cloneableProxyHash()'(overrides?: CallOverrides): Promise<[string]>
 
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
 
@@ -174,25 +184,18 @@ export class L1CustomGateway extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<[string]>
 
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
-
-    l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<[string]>
-
-    'l1ToL2Token(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<[string]>
 
     outboundTransfer(
       _token: string,
@@ -228,6 +231,10 @@ export class L1CustomGateway extends Contract {
     l1ERC20: string,
     overrides?: CallOverrides
   ): Promise<string>
+
+  cloneableProxyHash(overrides?: CallOverrides): Promise<string>
+
+  'cloneableProxyHash()'(overrides?: CallOverrides): Promise<string>
 
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
@@ -274,25 +281,18 @@ export class L1CustomGateway extends Contract {
   'inbox()'(overrides?: CallOverrides): Promise<string>
 
   initialize(
-    _l1Counterpart: string,
-    _l1Router: string,
+    _l2Counterpart: string,
+    _router: string,
     _inbox: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'initialize(address,address,address)'(
-    _l1Counterpart: string,
-    _l1Router: string,
+    _l2Counterpart: string,
+    _router: string,
     _inbox: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
-
-  l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<string>
-
-  'l1ToL2Token(address)'(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<string>
 
   outboundTransfer(
     _token: string,
@@ -328,6 +328,10 @@ export class L1CustomGateway extends Contract {
       l1ERC20: string,
       overrides?: CallOverrides
     ): Promise<string>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<string>
+
+    'cloneableProxyHash()'(overrides?: CallOverrides): Promise<string>
 
     counterpartGateway(overrides?: CallOverrides): Promise<string>
 
@@ -374,25 +378,18 @@ export class L1CustomGateway extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<string>
 
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: CallOverrides
     ): Promise<void>
 
     'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: CallOverrides
     ): Promise<void>
-
-    l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<string>
-
-    'l1ToL2Token(address)'(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<string>
 
     outboundTransfer(
       _token: string,
@@ -458,6 +455,10 @@ export class L1CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    cloneableProxyHash(overrides?: CallOverrides): Promise<BigNumber>
+
+    'cloneableProxyHash()'(overrides?: CallOverrides): Promise<BigNumber>
+
     counterpartGateway(overrides?: CallOverrides): Promise<BigNumber>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -503,24 +504,17 @@ export class L1CustomGateway extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: Overrides
-    ): Promise<BigNumber>
-
-    l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'l1ToL2Token(address)'(
-      arg0: string,
-      overrides?: CallOverrides
     ): Promise<BigNumber>
 
     outboundTransfer(
@@ -556,6 +550,12 @@ export class L1CustomGateway extends Contract {
 
     'calculateL2TokenAddress(address)'(
       l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'cloneableProxyHash()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -606,27 +606,17 @@ export class L1CustomGateway extends Contract {
     'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
+      _l2Counterpart: string,
+      _router: string,
       _inbox: string,
       overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    l1ToL2Token(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'l1ToL2Token(address)'(
-      arg0: string,
-      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     outboundTransfer(

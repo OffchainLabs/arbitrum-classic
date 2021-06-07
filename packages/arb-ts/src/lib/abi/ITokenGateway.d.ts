@@ -23,10 +23,15 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ITokenGatewayInterface extends ethers.utils.Interface {
   functions: {
+    'calculateL2TokenAddress(address)': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'calculateL2TokenAddress',
+    values: [string]
+  ): string
   encodeFunctionData(
     functionFragment: 'finalizeInboundTransfer',
     values: [string, string, string, BigNumberish, BytesLike]
@@ -43,6 +48,10 @@ interface ITokenGatewayInterface extends ethers.utils.Interface {
     ]
   ): string
 
+  decodeFunctionResult(
+    functionFragment: 'calculateL2TokenAddress',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'finalizeInboundTransfer',
     data: BytesLike
@@ -77,6 +86,16 @@ export class ITokenGateway extends Contract {
   interface: ITokenGatewayInterface
 
   functions: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -115,6 +134,16 @@ export class ITokenGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
   }
+
+  calculateL2TokenAddress(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateL2TokenAddress(address)'(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   finalizeInboundTransfer(
     _token: string,
@@ -155,6 +184,16 @@ export class ITokenGateway extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -223,6 +262,16 @@ export class ITokenGateway extends Contract {
   }
 
   estimateGas: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -263,6 +312,16 @@ export class ITokenGateway extends Contract {
   }
 
   populateTransaction: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,

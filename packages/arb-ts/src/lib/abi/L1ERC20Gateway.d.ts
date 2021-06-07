@@ -23,6 +23,8 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   functions: {
+    'calculateL2TokenAddress(address)': FunctionFragment
+    'cloneableProxyHash()': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
@@ -32,6 +34,14 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     'router()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'calculateL2TokenAddress',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'cloneableProxyHash',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'counterpartGateway',
     values?: undefined
@@ -62,6 +72,14 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
+  decodeFunctionResult(
+    functionFragment: 'calculateL2TokenAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'cloneableProxyHash',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'counterpartGateway',
     data: BytesLike
@@ -107,6 +125,20 @@ export class L1ERC20Gateway extends Contract {
   interface: L1ERC20GatewayInterface
 
   functions: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<[string]>
+
+    'cloneableProxyHash()'(overrides?: CallOverrides): Promise<[string]>
+
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
@@ -151,15 +183,17 @@ export class L1ERC20Gateway extends Contract {
 
     'inbox()'(overrides?: CallOverrides): Promise<[string]>
 
-    'initialize(address,address,address)'(
+    initialize(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address)'(
-      _counterpartGateway: string,
+    'initialize(address,address,address)'(
+      _l2Counterpart: string,
+      _router: string,
+      _inbox: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -187,6 +221,20 @@ export class L1ERC20Gateway extends Contract {
 
     'router()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  calculateL2TokenAddress(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateL2TokenAddress(address)'(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  cloneableProxyHash(overrides?: CallOverrides): Promise<string>
+
+  'cloneableProxyHash()'(overrides?: CallOverrides): Promise<string>
 
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
@@ -232,15 +280,17 @@ export class L1ERC20Gateway extends Contract {
 
   'inbox()'(overrides?: CallOverrides): Promise<string>
 
-  'initialize(address,address,address)'(
+  initialize(
     _l2Counterpart: string,
     _router: string,
     _inbox: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address)'(
-    _counterpartGateway: string,
+  'initialize(address,address,address)'(
+    _l2Counterpart: string,
+    _router: string,
+    _inbox: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -269,6 +319,20 @@ export class L1ERC20Gateway extends Contract {
   'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<string>
+
+    'cloneableProxyHash()'(overrides?: CallOverrides): Promise<string>
+
     counterpartGateway(overrides?: CallOverrides): Promise<string>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
@@ -313,15 +377,17 @@ export class L1ERC20Gateway extends Contract {
 
     'inbox()'(overrides?: CallOverrides): Promise<string>
 
-    'initialize(address,address,address)'(
+    initialize(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address)'(
-      _counterpartGateway: string,
+    'initialize(address,address,address)'(
+      _l2Counterpart: string,
+      _router: string,
+      _inbox: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -379,6 +445,20 @@ export class L1ERC20Gateway extends Contract {
   }
 
   estimateGas: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<BigNumber>
+
+    'cloneableProxyHash()'(overrides?: CallOverrides): Promise<BigNumber>
+
     counterpartGateway(overrides?: CallOverrides): Promise<BigNumber>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -423,15 +503,17 @@ export class L1ERC20Gateway extends Contract {
 
     'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    'initialize(address,address,address)'(
+    initialize(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address)'(
-      _counterpartGateway: string,
+    'initialize(address,address,address)'(
+      _l2Counterpart: string,
+      _router: string,
+      _inbox: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -461,6 +543,22 @@ export class L1ERC20Gateway extends Contract {
   }
 
   populateTransaction: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    cloneableProxyHash(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'cloneableProxyHash()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     counterpartGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'counterpartGateway()'(
@@ -507,15 +605,17 @@ export class L1ERC20Gateway extends Contract {
 
     'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'initialize(address,address,address)'(
+    initialize(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address)'(
-      _counterpartGateway: string,
+    'initialize(address,address,address)'(
+      _l2Counterpart: string,
+      _router: string,
+      _inbox: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

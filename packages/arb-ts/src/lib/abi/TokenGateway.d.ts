@@ -23,13 +23,18 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface TokenGatewayInterface extends ethers.utils.Interface {
   functions: {
+    'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'initialize(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'router()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'calculateL2TokenAddress',
+    values: [string]
+  ): string
   encodeFunctionData(
     functionFragment: 'counterpartGateway',
     values?: undefined
@@ -42,7 +47,6 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
-  encodeFunctionData(functionFragment: 'initialize', values: [string]): string
   encodeFunctionData(
     functionFragment: 'outboundTransfer',
     values: [
@@ -54,7 +58,12 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
+  decodeFunctionResult(
+    functionFragment: 'calculateL2TokenAddress',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'counterpartGateway',
     data: BytesLike
@@ -67,11 +76,11 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -98,6 +107,16 @@ export class TokenGateway extends Contract {
   interface: TokenGatewayInterface
 
   functions: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
@@ -138,16 +157,6 @@ export class TokenGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    initialize(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     outboundTransfer(
       _token: string,
       _to: string,
@@ -167,7 +176,21 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  calculateL2TokenAddress(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateL2TokenAddress(address)'(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
@@ -209,16 +232,6 @@ export class TokenGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  initialize(
-    _counterpartGateway: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address)'(
-    _counterpartGateway: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   outboundTransfer(
     _token: string,
     _to: string,
@@ -239,7 +252,21 @@ export class TokenGateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
+
   callStatic: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     counterpartGateway(overrides?: CallOverrides): Promise<string>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
@@ -280,16 +307,6 @@ export class TokenGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    initialize(
-      _counterpartGateway: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     outboundTransfer(
       _token: string,
       _to: string,
@@ -309,6 +326,10 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -340,6 +361,16 @@ export class TokenGateway extends Contract {
   }
 
   estimateGas: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     counterpartGateway(overrides?: CallOverrides): Promise<BigNumber>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -380,16 +411,6 @@ export class TokenGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    initialize(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     outboundTransfer(
       _token: string,
       _to: string,
@@ -409,9 +430,23 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     counterpartGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'counterpartGateway()'(
@@ -454,16 +489,6 @@ export class TokenGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    initialize(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     outboundTransfer(
       _token: string,
       _to: string,
@@ -483,5 +508,9 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

@@ -28,9 +28,9 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'initialize(address)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'router()': FunctionFragment
   }
 
   encodeFunctionData(
@@ -50,7 +50,6 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
-  encodeFunctionData(functionFragment: 'initialize', values: [string]): string
   encodeFunctionData(
     functionFragment: 'mintAndCall',
     values: [string, BigNumberish, string, string, BytesLike]
@@ -59,6 +58,7 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
@@ -77,12 +77,12 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -163,16 +163,6 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
 
-    initialize(
-      _l1Counterpart: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address)'(
-      _l1Counterpart: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     mintAndCall(
       token: string,
       amount: BigNumberish,
@@ -208,6 +198,10 @@ export class L2ArbitrumGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   calculateL2TokenAddress(
@@ -264,16 +258,6 @@ export class L2ArbitrumGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  initialize(
-    _l1Counterpart: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address)'(
-    _l1Counterpart: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   mintAndCall(
     token: string,
     amount: BigNumberish,
@@ -309,6 +293,10 @@ export class L2ArbitrumGateway extends Contract {
     _data: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
+
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
     calculateL2TokenAddress(
@@ -365,13 +353,6 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    initialize(_l1Counterpart: string, overrides?: CallOverrides): Promise<void>
-
-    'initialize(address)'(
-      _l1Counterpart: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     mintAndCall(
       token: string,
       amount: BigNumberish,
@@ -407,6 +388,10 @@ export class L2ArbitrumGateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -492,16 +477,6 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    initialize(
-      _l1Counterpart: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address)'(
-      _l1Counterpart: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     mintAndCall(
       token: string,
       amount: BigNumberish,
@@ -537,6 +512,10 @@ export class L2ArbitrumGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -596,16 +575,6 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    initialize(
-      _l1Counterpart: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address)'(
-      _l1Counterpart: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     mintAndCall(
       token: string,
       amount: BigNumberish,
@@ -641,5 +610,9 @@ export class L2ArbitrumGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }
