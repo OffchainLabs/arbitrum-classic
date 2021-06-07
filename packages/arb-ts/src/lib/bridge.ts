@@ -555,4 +555,12 @@ export class Bridge {
       overrides
     )
   }
+
+  public isWhiteListed(address: string, whiteListAddress: string) {
+    return BridgeHelper.isWhiteListed(
+      address,
+      whiteListAddress,
+      this.l1Bridge.l1Provider
+    )
+  }
 }

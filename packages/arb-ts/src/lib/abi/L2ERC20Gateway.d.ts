@@ -30,9 +30,10 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'initialize(address,address)': FunctionFragment
+    'initialize(address,address,address)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'router()': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
@@ -59,7 +60,7 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [string, string]
+    values: [string, string, string]
   ): string
   encodeFunctionData(
     functionFragment: 'mintAndCall',
@@ -69,6 +70,7 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
   decodeFunctionResult(
@@ -98,6 +100,7 @@ interface L2ERC20GatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -186,14 +189,17 @@ export class L2ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
 
-    'initialize(address,address)'(
+    initialize(
       _l1Counterpart: string,
+      _router: string,
       _beacon: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address)'(
+    'initialize(address,address,address)'(
       _l1Counterpart: string,
+      _router: string,
+      _beacon: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -232,6 +238,10 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   beacon(overrides?: CallOverrides): Promise<string>
@@ -296,14 +306,17 @@ export class L2ERC20Gateway extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  'initialize(address,address)'(
+  initialize(
     _l1Counterpart: string,
+    _router: string,
     _beacon: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address)'(
+  'initialize(address,address,address)'(
     _l1Counterpart: string,
+    _router: string,
+    _beacon: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -342,6 +355,10 @@ export class L2ERC20Gateway extends Contract {
     _data: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
+
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
     beacon(overrides?: CallOverrides): Promise<string>
@@ -406,14 +423,17 @@ export class L2ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    'initialize(address,address)'(
+    initialize(
       _l1Counterpart: string,
+      _router: string,
       _beacon: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address)'(
+    'initialize(address,address,address)'(
       _l1Counterpart: string,
+      _router: string,
+      _beacon: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -452,6 +472,10 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -545,14 +569,17 @@ export class L2ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'initialize(address,address)'(
+    initialize(
       _l1Counterpart: string,
+      _router: string,
       _beacon: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address)'(
+    'initialize(address,address,address)'(
       _l1Counterpart: string,
+      _router: string,
+      _beacon: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -591,6 +618,10 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -660,14 +691,17 @@ export class L2ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address)'(
+    initialize(
       _l1Counterpart: string,
+      _router: string,
       _beacon: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address)'(
+    'initialize(address,address,address)'(
       _l1Counterpart: string,
+      _router: string,
+      _beacon: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -706,5 +740,9 @@ export class L2ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

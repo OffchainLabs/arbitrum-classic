@@ -266,19 +266,6 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'address',
-        name: '_l1Counterpart',
-        type: 'address',
-      },
-    ],
-    name: 'initialize',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'contract IArbToken',
         name: 'token',
         type: 'address',
@@ -385,6 +372,19 @@ const _abi = [
       },
     ],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'router',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
 ]
