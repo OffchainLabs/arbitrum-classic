@@ -269,13 +269,18 @@ struct ValuePrinter {
     std::ostream& os;
 
     std::ostream* operator()(const Buffer& b) const {
-        os << "Buffer(0x";
-        std::ios prev_flags(nullptr);
-        prev_flags.copyfmt(os);
-        for (auto b : b.toFlatVector()) {
-            os << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+        os << "Buffer(";
+        if (b.data_length() <= 64) {
+            os << "0x";
+            std::ios prev_flags(nullptr);
+            prev_flags.copyfmt(os);
+            for (auto b : b.toFlatVector()) {
+                os << std::hex << std::setw(2) << std::setfill('0') << (int)b;
+            }
+            os.copyfmt(prev_flags);
+        } else {
+            os << b.hash();
         }
-        os.copyfmt(prev_flags);
         os << ")";
         return &os;
     }
