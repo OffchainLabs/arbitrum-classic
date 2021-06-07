@@ -19,10 +19,15 @@
 pragma solidity ^0.6.11;
 
 import "./L1ArbitrumGateway.sol";
+import "../../arbitrum/router/L2CustomGateway.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 contract L1CustomGateway is L1ArbitrumGateway {
+    using Address for address;
     // stores addresses of L2 tokens to be used
     mapping(address => address) public l1ToL2Token;
+
+    event TokenSet(address indexed l1Address, address indexed l2Address);
 
     function initialize(
         address _l1Counterpart,
@@ -89,5 +94,22 @@ contract L1CustomGateway is L1ArbitrumGateway {
         return _calculateL2TokenAddress(l1ERC20);
     }
 
-    // TODO: add function to register custom token
+    function registerTokenToL2(
+        address l2Address,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost
+    ) external virtual returns (uint256) {
+        require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
+        l1ToL2Token[msg.sender] = l2Address;
+
+        bytes memory _data =
+            abi.encodeWithSelector(
+                L2CustomGateway.registerTokenFromL1.selector,
+                msg.sender,
+                l2Address
+            );
+
+        return createOutboundTx(msg.sender, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+    }
 }

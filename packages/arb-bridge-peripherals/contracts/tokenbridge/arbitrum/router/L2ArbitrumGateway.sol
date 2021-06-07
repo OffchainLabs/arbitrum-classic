@@ -23,7 +23,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
-import "../IArbStandardToken.sol";
+import "../IArbToken.sol";
 
 import "../../libraries/ITokenGateway.sol";
 import "../../libraries/TokenGateway.sol";
@@ -112,7 +112,7 @@ abstract contract L2ArbitrumGateway is TokenGateway {
             address l2Token = _calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
             // burns L2 tokens in order to release escrowed L1 tokens
-            IArbStandardToken(l2Token).bridgeBurn(_from, _amount);
+            IArbToken(l2Token).bridgeBurn(_from, _amount);
 
             bytes memory outboundCalldata =
                 getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);

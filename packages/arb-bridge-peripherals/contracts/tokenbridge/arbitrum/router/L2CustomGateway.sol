@@ -39,8 +39,7 @@ contract L2CustomGateway is L2ArbitrumGateway {
         address expectedL2Address,
         bytes memory deployData
     ) internal virtual override returns (bool shouldHalt) {
-        shouldHalt = false;
-        // L1 gateway shouldn't allow this codepath to be triggered
+        shouldHalt = true;
         // TODO: trigger withdrawal instead of reverting
         revert("NO_CUSTOM_TOKEN");
     }
@@ -79,5 +78,13 @@ contract L2CustomGateway is L2ArbitrumGateway {
     {
         // will revert if not called by router
         return _calculateL2TokenAddress(l1ERC20);
+    }
+
+    function registerTokenFromL1(address l1Address, address l2Address)
+        external
+        virtual
+        onlyCounterpartGateway
+    {
+        l1ToL2Token[l1Address] = l2Address;
     }
 }

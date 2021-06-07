@@ -20,13 +20,13 @@ pragma solidity ^0.6.11;
 
 import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
-import "./IArbStandardToken.sol";
+import "./IArbToken.sol";
 import "../libraries/BytesParser.sol";
 
 /**
- * @title Standard (i.e., non-custom) contract deployed by ArbTokenBridge.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
+ * @title Standard (i.e., non-custom) contract deployed by L2Gateway.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
  */
-contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
+contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
     address public gatewayAddress;
     address public override l1Address;
 
@@ -41,7 +41,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
      * @param _l1Address L1 address of ERC20
      * @param _data encoded symbol/name/decimal data for initial deploy
      */
-    function bridgeInit(address _l1Address, bytes memory _data) external override {
+    function bridgeInit(address _l1Address, bytes memory _data) external {
         require(address(l1Address) == address(0), "Already inited");
         gatewayAddress = msg.sender;
         l1Address = _l1Address;
@@ -58,7 +58,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
     }
 
     /**
-     * @notice Mint tokens on L2. Callable path is EthErc20Bridge.depositToken (which handles L1 escrow), which triggers ArbTokenBridge.mintFromL1, which calls this
+     * @notice Mint tokens on L2. Callable path is L1Gateway depositToken (which handles L1 escrow), which triggers L2Gateway, which calls this
      * @param account recipient of tokens
      * @param amount amount of tokens minted
      */

@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "../../libraries/ClonableBeaconProxy.sol";
 import "./L2ArbitrumGateway.sol";
+import "../StandardArbERC20.sol";
 
 contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
     // used for create2 address calculation
@@ -100,7 +101,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         bytes32 salt = getSalt(l1ERC20);
         address createdContract = address(new ClonableBeaconProxy{ salt: salt }());
 
-        IArbStandardToken(createdContract).bridgeInit(l1ERC20, deployData);
+        StandardArbERC20(createdContract).bridgeInit(l1ERC20, deployData);
 
         if (createdContract == expectedL2Address) {
             // emit TokenCreated(l1ERC20, createdContract);
