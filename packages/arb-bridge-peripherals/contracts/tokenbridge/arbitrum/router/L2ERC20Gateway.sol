@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "../../libraries/ClonableBeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 import "./L2ArbitrumGateway.sol";
 import "../StandardArbERC20.sol";
 

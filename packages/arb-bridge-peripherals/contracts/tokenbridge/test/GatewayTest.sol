@@ -58,8 +58,6 @@ contract L2GatewayTester is L2ERC20Gateway {
 }
 
 contract L1CustomGatewayTester is L1CustomGateway {
-    event EventErr(bytes errmsg);
-
     function isCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
@@ -72,8 +70,7 @@ contract L1CustomGatewayTester is L1CustomGateway {
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = counterpartGateway.call(_data);
-        emit EventErr(retdata);
-        // require(success, retdata);
+        require(success, "OUTBOUND_REVERT");
         return 1337;
     }
 }
