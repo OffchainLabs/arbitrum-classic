@@ -35,6 +35,11 @@ void fuzz_require(bool check, Args... message) {
 
 Machine parseFuzzInput(const uint8_t* buf, size_t len);
 
+bool opcodeAllowed(OpCode opcode);
+
+constexpr uint256_t FUZZ_MAX_GAS = 10'000;
+constexpr uint64_t FUZZ_MAX_STEPS = 100;
+
 class ProofTester {
    protected:
     std::string queryPipePath;

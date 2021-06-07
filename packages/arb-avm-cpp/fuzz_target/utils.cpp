@@ -181,15 +181,12 @@ uint8_t ProofTester::readResult() {
     return buf[0];
 }
 
-constexpr uint256_t MAX_GAS = 10'000;
-constexpr uint64_t MAX_STEPS = 100;
-
 void ProofTester::testMachine(Machine machine) {
     Machine machine2 = machine;
     size_t buffered_results = 0;
     while (machine.currentStatus() == Status::Extensive &&
-           machine.machine_state.output.arb_gas_used < MAX_GAS &&
-           machine.machine_state.output.total_steps < MAX_STEPS &&
+           machine.machine_state.output.arb_gas_used < FUZZ_MAX_GAS &&
+           machine.machine_state.output.total_steps < FUZZ_MAX_STEPS &&
            opcodeAllowed(machine.machine_state.loadCurrentOperation().opcode)) {
         MachineExecutionConfig config;
         config.max_gas = machine.machine_state.output.arb_gas_used + 1;
