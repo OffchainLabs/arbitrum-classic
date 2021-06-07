@@ -28,7 +28,6 @@ interface AddInterface extends ethers.utils.Interface {
     'isNotTopLevel()': FunctionFragment
     'isTopLevel()': FunctionFragment
     'mult(uint256,uint256)': FunctionFragment
-    'payTo(address)': FunctionFragment
     'pythag(uint256,uint256)': FunctionFragment
     'withdraw5000()': FunctionFragment
     'withdrawMyEth()': FunctionFragment
@@ -48,7 +47,6 @@ interface AddInterface extends ethers.utils.Interface {
     functionFragment: 'mult',
     values: [BigNumberish, BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'payTo', values: [string]): string
   encodeFunctionData(
     functionFragment: 'pythag',
     values: [BigNumberish, BigNumberish]
@@ -70,7 +68,6 @@ interface AddInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'isTopLevel', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mult', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'payTo', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'pythag', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'withdraw5000',
@@ -134,16 +131,6 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    payTo(
-      addr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'payTo(address)'(
-      addr: string,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
     pythag(
       x: BigNumberish,
       y: BigNumberish,
@@ -203,16 +190,6 @@ export class Add extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  payTo(
-    addr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'payTo(address)'(
-    addr: string,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
   pythag(
     x: BigNumberish,
     y: BigNumberish,
@@ -269,10 +246,6 @@ export class Add extends Contract {
       y: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
-
-    payTo(addr: string, overrides?: CallOverrides): Promise<void>
-
-    'payTo(address)'(addr: string, overrides?: CallOverrides): Promise<void>
 
     pythag(
       x: BigNumberish,
@@ -334,13 +307,6 @@ export class Add extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    payTo(addr: string, overrides?: PayableOverrides): Promise<BigNumber>
-
-    'payTo(address)'(
-      addr: string,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
     pythag(
       x: BigNumberish,
       y: BigNumberish,
@@ -397,16 +363,6 @@ export class Add extends Contract {
       x: BigNumberish,
       y: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    payTo(
-      addr: string,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'payTo(address)'(
-      addr: string,
-      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     pythag(

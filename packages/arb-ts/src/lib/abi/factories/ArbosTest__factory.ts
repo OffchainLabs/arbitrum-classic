@@ -20,19 +20,6 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'uint256',
-        name: 'gasAmount',
-        type: 'uint256',
-      },
-    ],
-    name: 'burnArbGas',
-    outputs: [],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
         internalType: 'address',
         name: 'addr',
         type: 'address',
