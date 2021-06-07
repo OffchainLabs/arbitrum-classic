@@ -211,13 +211,14 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
             static_cast<uint8_t>((v >> ((wordSize - 1 - i) * 8)) & 0xff));
     }
     auto proof1 = buffer.makeProof(loc);
-    auto nproof1 = nbuffer1.makeNormalizationProof();
 
     if (aligned) {
+        auto nproof1 = nbuffer.makeNormalizationProof();
         insertSizes(buf, proof1.size(), nproof1.size(), 0, 0);
         buf.insert(buf.end(), proof1.begin(), proof1.end());
         buf.insert(buf.end(), nproof1.begin(), nproof1.end());
     } else {
+        auto nproof1 = nbuffer1.makeNormalizationProof();
         auto proof2 = nbuffer1.makeProof(loc + (wordSize - 1));
         auto nproof2 = nbuffer.makeNormalizationProof();
         insertSizes(buf, proof1.size(), nproof1.size(), proof2.size(),
