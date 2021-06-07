@@ -26,8 +26,8 @@ const main = async () => {
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key DEVNET_PRIVKEY')
 
-  const l2ProviderRpc = process.env['DEVNET_RPC'] || 'http://localhost:8080/rpc'
-  // process.env['DEVNET_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
+  const l2ProviderRpc =
+    process.env['DEVNET_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
   if (!l2ProviderRpc) throw new Error('Missing l2 rpc DEVNET_RPC')
 
   // deploy L1 logic contracts
@@ -159,7 +159,8 @@ const main = async () => {
 
   // TODO: set default gateway to address(0) instead of standardERC20
 
-  const defaultGateway = l1ERC20GatewayProxy.address
+  const l1DefaultGateway = l1ERC20GatewayProxy.address
+  const l2DefaultGateway = l2ERC20GatewayProxy.address
 
   const l1GatewayRouterConnected = L1GatewayRouter__factory.connect(
     l1GatewayRouterProxy.address,
@@ -167,7 +168,7 @@ const main = async () => {
   )
   const initL1RouterTx = await l1GatewayRouterConnected.initialize(
     accounts[0].address,
-    defaultGateway,
+    l1DefaultGateway,
     whitelistAddress,
     l2GatewayRouterProxy.address,
     inboxAddress
@@ -183,7 +184,7 @@ const main = async () => {
 
   const initL2Router = await l2GatewayRouterConnectedAtProxy.initialize(
     l1GatewayRouterProxy.address,
-    defaultGateway
+    l2DefaultGateway
   )
   console.log('init L2 Router hash', initL2Router.hash)
   await initL2Router.wait()
@@ -197,6 +198,10 @@ const main = async () => {
       l2GatewayRouter: l2GatewayRouterProxy.address,
       l1ERC20GatewayProxy: l1ERC20GatewayProxy.address,
       l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
+      l1ProxyAdmin: l1ProxyAdmin.address,
+      l2ProxyAdmin: l2ProxyAdmin.address,
+      l1Deployer: accounts[0].address,
+      l2Deployer: l2Signer.address,
       inbox: inboxAddress,
     },
     null,

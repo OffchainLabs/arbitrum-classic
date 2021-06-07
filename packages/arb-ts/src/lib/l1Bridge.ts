@@ -90,6 +90,12 @@ export class L1Bridge {
     return this.l1Tokens
   }
 
+  public getERC20L2Address(erc20L1Address: string) {
+    return this.l1GatewayRouter.functions
+      .calculateL2TokenAddress(erc20L1Address)
+      .then(([res]) => res)
+  }
+
   public async getAndUpdateL1TokenData(erc20L1Address: string) {
     const tokenData = this.l1Tokens[erc20L1Address] || {
       ERC20: undefined,

@@ -106,9 +106,9 @@ before('setup', () => {
   it("'pre-funded wallet' is indeed pre-funded", async () => {
     bridge = await Bridge.init(
       l1TestWallet,
-      l2TestWallet
-      // erc20BridgeAddress,
-      // arbTokenBridgeAddress,
+      l2TestWallet,
+      erc20BridgeAddress,
+      arbTokenBridgeAddress
     )
     const balance = await preFundedWallet.getBalance()
     const hasBalance = balance.gt(utils.parseEther(depositAmount))

@@ -121,20 +121,24 @@ export class L2Bridge {
 
   public async updateAllL2Tokens() {
     for (const l1Address in this.l2Tokens) {
-      await this.getAndUpdateL2TokenData(l1Address)
+      const l2Address = this.l2Tokens[l1Address]?.ERC20?.contract.address
+      if (l2Address) {
+        await this.getAndUpdateL2TokenData(l1Address, l2Address)
+      }
     }
     return this.l2Tokens
   }
 
-  public async getAndUpdateL2TokenData(erc20L1Address: string) {
+  public async getAndUpdateL2TokenData(
+    erc20L1Address: string,
+    l2ERC20Address: string
+  ) {
     const tokenData = this.l2Tokens[erc20L1Address] || {
       ERC20: undefined,
       CUSTOM: undefined,
     }
     this.l2Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
-
-    const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
 
     // check if standard arb erc20:
     if (!tokenData.ERC20) {
@@ -174,15 +178,15 @@ export class L2Bridge {
     }
   }
 
-  public getERC20L2Address(erc20L1Address: string) {
-    let address: string | undefined
-    if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
-      return address
-    }
-    return this.l2GatewayRouter.functions
-      .calculateL2TokenAddress(erc20L1Address)
-      .then(([res]) => res)
-  }
+  // public getERC20L2Address(erc20L1Address: string) {
+  //   let address: string | undefined
+  //   if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
+  //     return address
+  //   }
+  //   return this.l2GatewayRouter.functions
+  //     .calculateL2TokenAddress(erc20L1Address)
+  //     .then(([res]) => res)
+  // }
 
   public async getGatewayAddress(erc20L1Address: string) {
     return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))

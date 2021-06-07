@@ -224,20 +224,21 @@ export class Bridge {
     const l2Dest = await l1Gateway.counterpartGateway()
     console.log({ l2Dest })
 
-    const maxGas = (
-      await nodeInterface.estimateRetryableTicket(
-        expectedL1GatewayAddress,
-        ethers.utils.parseEther('0.05'),
-        l2Dest,
-        0,
-        maxSubmissionPrice,
-        sender,
-        sender,
-        0,
-        0,
-        depositCalldata
-      )
-    )[0]
+    const maxGas = BigNumber.from('8000000')
+    // const maxGas = (
+    //   await nodeInterface.estimateRetryableTicket(
+    //     expectedL1GatewayAddress,
+    //     ethers.utils.parseEther('0.05'),
+    //     l2Dest,
+    //     0,
+    //     maxSubmissionPrice,
+    //     sender,
+    //     sender,
+    //     0,
+    //     0,
+    //     depositCalldata
+    //   )
+    // )[0]
     console.log('DONE ESTIMATING GAS')
 
     // calculate required forwarding gas
@@ -261,8 +262,9 @@ export class Bridge {
     return this.l1Bridge.getAndUpdateL1TokenData(erc20l1Address)
   }
 
-  public getAndUpdateL2TokenData(erc20l1Address: string) {
-    return this.l2Bridge.getAndUpdateL2TokenData(erc20l1Address)
+  public async getAndUpdateL2TokenData(erc20l1Address: string) {
+    const l2TokenAddress = await this.l1Bridge.getERC20L2Address(erc20l1Address)
+    return this.l2Bridge.getAndUpdateL2TokenData(erc20l1Address, l2TokenAddress)
   }
 
   public async getAndUpdateL1EthBalance() {
@@ -529,7 +531,7 @@ export class Bridge {
   }
 
   public async getERC20L2Address(erc20L1Address: string) {
-    return this.l2Bridge.getERC20L2Address(erc20L1Address)
+    return this.l1Bridge.getERC20L2Address(erc20L1Address)
   }
 
   public async withdrawETH(

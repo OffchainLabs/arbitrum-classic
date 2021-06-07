@@ -19,14 +19,14 @@ const networks: Network = {
   421611: {
     l1: {
       chainId: 4,
-      l1GatewayRouter: '0x753A61f15212327931FED5B089315302A6903E74',
-      l1ERC20GatewayProxy: '0x3aa4c5C6D0Ec415E17ca2B75383208D459056F90',
+      l1GatewayRouter: '0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380',
+      l1ERC20GatewayProxy: '0x91169Dbb45e6804743F94609De50D511C437572E',
       inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
     },
     l2: {
       chainId: 421611,
-      l2GatewayRouter: '0xA35Ee00f10fF3195085dc1b0F8eF9C8843d67540',
-      l2ERC20GatewayProxy: '0x12AcE03143cdD43659C38699C07d2E3FBb8EcC60',
+      l2GatewayRouter: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
+      l2ERC20GatewayProxy: '0x195C107F3F75c4C93Eba7d9a1312F19305d6375f',
     },
   },
 }
