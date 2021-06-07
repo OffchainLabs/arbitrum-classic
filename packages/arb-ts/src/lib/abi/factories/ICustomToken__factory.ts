@@ -58,11 +58,6 @@ const _abi = [
         name: 'gasPriceBid',
         type: 'uint256',
       },
-      {
-        internalType: 'address',
-        name: 'refundAddress',
-        type: 'address',
-      },
     ],
     name: 'registerTokenOnL2',
     outputs: [],

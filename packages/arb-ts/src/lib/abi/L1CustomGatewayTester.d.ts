@@ -21,7 +21,7 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface L1CustomGatewayInterface extends ethers.utils.Interface {
+interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   functions: {
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
@@ -116,7 +116,7 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
 }
 
-export class L1CustomGateway extends Contract {
+export class L1CustomGatewayTester extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -127,7 +127,7 @@ export class L1CustomGateway extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: L1CustomGatewayInterface
+  interface: L1CustomGatewayTesterInterface
 
   functions: {
     calculateL2TokenAddress(

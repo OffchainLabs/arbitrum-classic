@@ -18,12 +18,14 @@
 
 pragma solidity ^0.6.11;
 
-import "../ethereum/router/L1ERC20Gateway.sol";
-import "../arbitrum/router/L2ERC20Gateway.sol";
+import "../ethereum/gateway/L1CustomGateway.sol";
+import "../ethereum/gateway/L1ERC20Gateway.sol";
+import "../arbitrum/gateway/L2CustomGateway.sol";
+import "../arbitrum/gateway/L2ERC20Gateway.sol";
 
 contract L1GatewayTester is L1ERC20Gateway {
     function isCounterpartGateway() internal view virtual override returns (bool) {
-        return true;
+        return msg.sender == counterpartGateway;
     }
 
     function createOutboundTx(
@@ -41,7 +43,41 @@ contract L1GatewayTester is L1ERC20Gateway {
 
 contract L2GatewayTester is L2ERC20Gateway {
     function isCounterpartGateway() internal view virtual override returns (bool) {
-        return true;
+        return msg.sender == counterpartGateway;
+    }
+
+    function createOutboundTx(bytes memory _data) internal virtual override returns (uint256) {
+        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+        require(success, "OUTBOUND_REVERT");
+        return 1337;
+    }
+
+    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+        return 50000;
+    }
+}
+
+contract L1CustomGatewayTester is L1CustomGateway {
+    function isCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
+    }
+
+    function createOutboundTx(
+        address _user,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual override returns (uint256) {
+        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+        require(success, "OUTBOUND_REVERT");
+        return 1337;
+    }
+}
+
+contract L2CustomGatewayTester is L2CustomGateway {
+    function isCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
     }
 
     function createOutboundTx(bytes memory _data) internal virtual override returns (uint256) {
