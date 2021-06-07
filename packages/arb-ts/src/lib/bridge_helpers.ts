@@ -15,6 +15,8 @@ import { BigNumber, Contract, Signer } from 'ethers'
 
 import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
 
+import { Whitelist__factory } from './abi/factories/Whitelist__factory'
+
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
 }
@@ -819,5 +821,13 @@ export class BridgeHelper {
       console.warn('666: error in getOutgoingMessageState:', e)
       return OutgoingMessageState.NOT_FOUND
     }
+  }
+  static isWhiteListed(
+    address: string,
+    whiteListAddress: string,
+    l1Provider: providers.Provider
+  ) {
+    const whiteList = Whitelist__factory.connect(whiteListAddress, l1Provider)
+    return whiteList.isAllowed(address)
   }
 }
