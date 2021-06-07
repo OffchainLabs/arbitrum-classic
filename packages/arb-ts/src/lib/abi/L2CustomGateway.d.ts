@@ -32,6 +32,7 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     'l1ToL2Token(address)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'registerTokenFromL1(address,address)': FunctionFragment
     'router()': FunctionFragment
   }
 
@@ -65,6 +66,10 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(
+    functionFragment: 'registerTokenFromL1',
+    values: [string, string]
+  ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
@@ -89,6 +94,10 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'registerTokenFromL1',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
@@ -227,6 +236,18 @@ export class L2CustomGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    registerTokenFromL1(
+      l1Address: string,
+      l2Address: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'registerTokenFromL1(address,address)'(
+      l1Address: string,
+      l2Address: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     router(overrides?: CallOverrides): Promise<[string]>
 
     'router()'(overrides?: CallOverrides): Promise<[string]>
@@ -339,6 +360,18 @@ export class L2CustomGateway extends Contract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  registerTokenFromL1(
+    l1Address: string,
+    l2Address: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'registerTokenFromL1(address,address)'(
+    l1Address: string,
+    l2Address: string,
+    overrides?: Overrides
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -454,6 +487,18 @@ export class L2CustomGateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    registerTokenFromL1(
+      l1Address: string,
+      l2Address: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'registerTokenFromL1(address,address)'(
+      l1Address: string,
+      l2Address: string,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     router(overrides?: CallOverrides): Promise<string>
 
@@ -598,6 +643,18 @@ export class L2CustomGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    registerTokenFromL1(
+      l1Address: string,
+      l2Address: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'registerTokenFromL1(address,address)'(
+      l1Address: string,
+      l2Address: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     router(overrides?: CallOverrides): Promise<BigNumber>
 
     'router()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -716,6 +773,18 @@ export class L2CustomGateway extends Contract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    registerTokenFromL1(
+      l1Address: string,
+      l2Address: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'registerTokenFromL1(address,address)'(
+      l1Address: string,
+      l2Address: string,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

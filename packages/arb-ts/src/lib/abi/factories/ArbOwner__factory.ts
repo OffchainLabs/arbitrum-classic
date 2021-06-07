@@ -18,10 +18,37 @@ export class ArbOwner__factory {
 
 const _abi = [
   {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'addr',
+        type: 'address',
+      },
+    ],
+    name: 'addAllowedSender',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'addToReserveFunds',
     outputs: [],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'allowAllSenders',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'allowOnlyOwnerToSend',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -88,7 +115,12 @@ const _abi = [
     inputs: [
       {
         internalType: 'bytes32',
-        name: 'requiredCodeHash',
+        name: 'newCodeHash',
+        type: 'bytes32',
+      },
+      {
+        internalType: 'bytes32',
+        name: 'oldCodeHash',
         type: 'bytes32',
       },
     ],
@@ -113,6 +145,32 @@ const _abi = [
     name: 'finishCodeUploadAsPluggable',
     outputs: [],
     stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getAllAllowedSenders',
+    outputs: [
+      {
+        internalType: 'bytes',
+        name: '',
+        type: 'bytes',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'getAllFairGasPriceSenders',
+    outputs: [
+      {
+        internalType: 'bytes',
+        name: '',
+        type: 'bytes',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -180,6 +238,62 @@ const _abi = [
         type: 'address',
       },
     ],
+    name: 'isAllowedSender',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'addr',
+        type: 'address',
+      },
+    ],
+    name: 'isFairGasPriceSender',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'addr',
+        type: 'address',
+      },
+    ],
+    name: 'removeAllowedSender',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'addr',
+        type: 'address',
+      },
+      {
+        internalType: 'bool',
+        name: 'isFairGasPriceSender',
+        type: 'bool',
+      },
+    ],
     name: 'setFairGasPriceSender',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -235,6 +349,19 @@ const _abi = [
       },
     ],
     name: 'setGasAccountingParams',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'priceInGwei',
+        type: 'uint256',
+      },
+    ],
+    name: 'setL1GasPriceEstimate',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
