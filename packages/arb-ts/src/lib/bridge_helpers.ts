@@ -42,6 +42,7 @@ export interface OutboundTransferInitiatedResult {
   _transferId: BigNumber
   _amount: BigNumber
   bytes: string
+  txHash: string
 }
 
 export interface BuddyDeployEventResult {
