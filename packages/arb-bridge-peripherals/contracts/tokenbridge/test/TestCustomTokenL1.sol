@@ -4,7 +4,7 @@ pragma solidity ^0.6.11;
 
 import "../libraries/aeERC20.sol";
 import "../ethereum/ICustomToken.sol";
-import "../ethereum/router/L1CustomGateway.sol";
+import "../ethereum/gateway/L1CustomGateway.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";

@@ -25,8 +25,8 @@ import "@openzeppelin/contracts/utils/Create2.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
-import "../../libraries/ITokenGateway.sol";
-import "../../libraries/TokenGateway.sol";
+import "../../libraries/gateway/ITokenGateway.sol";
+import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/ClonableBeaconProxy.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {

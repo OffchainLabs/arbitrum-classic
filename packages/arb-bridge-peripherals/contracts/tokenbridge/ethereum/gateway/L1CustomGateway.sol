@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./L1ArbitrumGateway.sol";
-import "../../arbitrum/router/L2CustomGateway.sol";
+import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 contract L1CustomGateway is L1ArbitrumGateway {

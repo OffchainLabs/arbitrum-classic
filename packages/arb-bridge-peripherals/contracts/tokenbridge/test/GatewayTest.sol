@@ -18,10 +18,10 @@
 
 pragma solidity ^0.6.11;
 
-import "../ethereum/router/L1CustomGateway.sol";
-import "../ethereum/router/L1ERC20Gateway.sol";
-import "../arbitrum/router/L2CustomGateway.sol";
-import "../arbitrum/router/L2ERC20Gateway.sol";
+import "../ethereum/gateway/L1CustomGateway.sol";
+import "../ethereum/gateway/L1ERC20Gateway.sol";
+import "../arbitrum/gateway/L2CustomGateway.sol";
+import "../arbitrum/gateway/L2ERC20Gateway.sol";
 
 contract L1GatewayTester is L1ERC20Gateway {
     function isCounterpartGateway() internal view virtual override returns (bool) {

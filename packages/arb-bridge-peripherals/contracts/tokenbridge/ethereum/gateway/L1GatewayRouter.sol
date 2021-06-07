@@ -20,8 +20,8 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "../../libraries/GatewayRouter.sol";
-import "../../arbitrum/router/L2GatewayRouter.sol";
+import "../../libraries/gateway/GatewayRouter.sol";
+import "../../arbitrum/gateway/L2GatewayRouter.sol";
 
 /**
  * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).

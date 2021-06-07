@@ -104,14 +104,12 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
-    'EventErr(bytes)': EventFragment
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
   }
 
-  getEvent(nameOrSignatureOrTopic: 'EventErr'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
@@ -481,8 +479,6 @@ export class L1CustomGatewayTester extends Contract {
   }
 
   filters: {
-    EventErr(errmsg: null): EventFilter
-
     InboundTransferFinalized(
       token: null,
       _from: string | null,

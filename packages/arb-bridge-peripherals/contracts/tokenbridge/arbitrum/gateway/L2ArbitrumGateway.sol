@@ -25,8 +25,8 @@ import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 import "../IArbToken.sol";
 
-import "../../libraries/ITokenGateway.sol";
-import "../../libraries/TokenGateway.sol";
+import "../../libraries/gateway/ITokenGateway.sol";
+import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
 abstract contract L2ArbitrumGateway is TokenGateway {
