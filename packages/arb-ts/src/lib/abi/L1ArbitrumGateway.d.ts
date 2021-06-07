@@ -23,15 +23,19 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
   functions: {
+    'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'inbox()': FunctionFragment
-    'initialize(address,address,address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'router()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'calculateL2TokenAddress',
+    values: [string]
+  ): string
   encodeFunctionData(
     functionFragment: 'counterpartGateway',
     values?: undefined
@@ -46,10 +50,6 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, string]
-  ): string
-  encodeFunctionData(
     functionFragment: 'outboundTransfer',
     values: [
       string,
@@ -63,6 +63,10 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
+    functionFragment: 'calculateL2TokenAddress',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'counterpartGateway',
     data: BytesLike
   ): Result
@@ -75,7 +79,6 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
@@ -107,6 +110,16 @@ export class L1ArbitrumGateway extends Contract {
   interface: L1ArbitrumGatewayInterface
 
   functions: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
@@ -151,18 +164,6 @@ export class L1ArbitrumGateway extends Contract {
 
     'inbox()'(overrides?: CallOverrides): Promise<[string]>
 
-    'initialize(address,address,address)'(
-      _l2Counterpart: string,
-      _router: string,
-      _inbox: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     outboundTransfer(
       _token: string,
       _to: string,
@@ -187,6 +188,16 @@ export class L1ArbitrumGateway extends Contract {
 
     'router()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  calculateL2TokenAddress(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'calculateL2TokenAddress(address)'(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
@@ -232,18 +243,6 @@ export class L1ArbitrumGateway extends Contract {
 
   'inbox()'(overrides?: CallOverrides): Promise<string>
 
-  'initialize(address,address,address)'(
-    _l2Counterpart: string,
-    _router: string,
-    _inbox: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(address)'(
-    _counterpartGateway: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   outboundTransfer(
     _token: string,
     _to: string,
@@ -269,6 +268,16 @@ export class L1ArbitrumGateway extends Contract {
   'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     counterpartGateway(overrides?: CallOverrides): Promise<string>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
@@ -312,18 +321,6 @@ export class L1ArbitrumGateway extends Contract {
     inbox(overrides?: CallOverrides): Promise<string>
 
     'inbox()'(overrides?: CallOverrides): Promise<string>
-
-    'initialize(address,address,address)'(
-      _l2Counterpart: string,
-      _router: string,
-      _inbox: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     outboundTransfer(
       _token: string,
@@ -379,6 +376,16 @@ export class L1ArbitrumGateway extends Contract {
   }
 
   estimateGas: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     counterpartGateway(overrides?: CallOverrides): Promise<BigNumber>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -423,18 +430,6 @@ export class L1ArbitrumGateway extends Contract {
 
     'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    'initialize(address,address,address)'(
-      _l2Counterpart: string,
-      _router: string,
-      _inbox: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     outboundTransfer(
       _token: string,
       _to: string,
@@ -461,6 +456,16 @@ export class L1ArbitrumGateway extends Contract {
   }
 
   populateTransaction: {
+    calculateL2TokenAddress(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'calculateL2TokenAddress(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     counterpartGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'counterpartGateway()'(
@@ -506,18 +511,6 @@ export class L1ArbitrumGateway extends Contract {
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'initialize(address,address,address)'(
-      _l2Counterpart: string,
-      _router: string,
-      _inbox: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(address)'(
-      _counterpartGateway: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
 
     outboundTransfer(
       _token: string,

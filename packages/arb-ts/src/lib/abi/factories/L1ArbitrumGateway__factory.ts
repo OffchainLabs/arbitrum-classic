@@ -141,6 +141,25 @@ const _abi = [
     type: 'event',
   },
   {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'l1ERC20',
+        type: 'address',
+      },
+    ],
+    name: 'calculateL2TokenAddress',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'counterpartGateway',
     outputs: [
@@ -242,42 +261,6 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '_l2Counterpart',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_router',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_inbox',
-        type: 'address',
-      },
-    ],
-    name: 'initialize',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '_counterpartGateway',
-        type: 'address',
-      },
-    ],
-    name: 'initialize',
-    outputs: [],
-    stateMutability: 'nonpayable',
     type: 'function',
   },
   {

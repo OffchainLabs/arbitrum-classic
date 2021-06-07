@@ -144,6 +144,25 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
+        name: 'l1ERC20',
+        type: 'address',
+      },
+    ],
+    name: 'calculateL2TokenAddress',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
         name: '_token',
         type: 'address',
       },

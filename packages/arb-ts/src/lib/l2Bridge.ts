@@ -21,7 +21,8 @@ import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { StandardArbERC20 } from './abi/StandardArbERC20'
 import { ICustomToken } from './abi/ICustomToken'
 import { ICustomToken__factory } from './abi/factories/ICustomToken__factory'
-import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
+import { L2GatewayRouter__factory } from './abi/factories/L2GatewayRouter__factory'
+import { L2GatewayRouter } from './abi/L2GatewayRouter'
 import { L2ERC20Gateway } from './abi/L2ERC20Gateway'
 
 import { StandardArbERC20__factory } from './abi/factories/StandardArbERC20__factory'
@@ -50,14 +51,14 @@ export interface Tokens {
 export class L2Bridge {
   l2Signer: Signer
   arbSys: ArbSys
-  l2ERC20Gateway: L2ERC20Gateway
+  l2GatewayRouter: L2GatewayRouter
   l2Tokens: Tokens
   l2Provider: providers.Provider
   l2EthBalance: BigNumber
   arbRetryableTx: ArbRetryableTx
   walletAddressCache?: string
 
-  constructor(arbTokenBridgeAddress: string, l2Signer: Signer) {
+  constructor(l2GatewayRouterAddress: string, l2Signer: Signer) {
     this.l2Tokens = {}
 
     this.l2Signer = l2Signer
@@ -71,8 +72,8 @@ export class L2Bridge {
 
     this.arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
 
-    this.l2ERC20Gateway = L2ERC20Gateway__factory.connect(
-      arbTokenBridgeAddress,
+    this.l2GatewayRouter = L2GatewayRouter__factory.connect(
+      l2GatewayRouterAddress,
       l2Signer
     )
 
@@ -113,27 +114,31 @@ export class L2Bridge {
   ) {
     const to = destinationAddress || (await this.getWalletAddress())
 
-    return this.l2ERC20Gateway.functions[
+    return this.l2GatewayRouter.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](erc20l1Address, to, amount, '0x', overrides)
   }
 
   public async updateAllL2Tokens() {
     for (const l1Address in this.l2Tokens) {
-      await this.getAndUpdateL2TokenData(l1Address)
+      const l2Address = this.l2Tokens[l1Address]?.ERC20?.contract.address
+      if (l2Address) {
+        await this.getAndUpdateL2TokenData(l1Address, l2Address)
+      }
     }
     return this.l2Tokens
   }
 
-  public async getAndUpdateL2TokenData(erc20L1Address: string) {
+  public async getAndUpdateL2TokenData(
+    erc20L1Address: string,
+    l2ERC20Address: string
+  ) {
     const tokenData = this.l2Tokens[erc20L1Address] || {
       ERC20: undefined,
       CUSTOM: undefined,
     }
     this.l2Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
-
-    const l2ERC20Address = await this.getERC20L2Address(erc20L1Address)
 
     // check if standard arb erc20:
     if (!tokenData.ERC20) {
@@ -173,14 +178,19 @@ export class L2Bridge {
     }
   }
 
-  public getERC20L2Address(erc20L1Address: string) {
-    let address: string | undefined
-    if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
-      return address
-    }
-    return this.l2ERC20Gateway.functions
-      .calculateL2TokenAddress(erc20L1Address)
-      .then(([res]) => res)
+  // public getERC20L2Address(erc20L1Address: string) {
+  //   let address: string | undefined
+  //   if ((address = this.l2Tokens[erc20L1Address]?.ERC20?.contract.address)) {
+  //     return address
+  //   }
+  //   return this.l2GatewayRouter.functions
+  //     .calculateL2TokenAddress(erc20L1Address)
+  //     .then(([res]) => res)
+  // }
+
+  public async getGatewayAddress(erc20L1Address: string) {
+    return (await this.l2GatewayRouter.functions.getGateway(erc20L1Address))
+      .gateway
   }
 
   public getERC20L1Address(erc20L2Address: string) {

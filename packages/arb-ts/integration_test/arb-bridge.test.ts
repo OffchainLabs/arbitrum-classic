@@ -99,17 +99,17 @@ let erc20Address = existentTestERC20
 prettyLog('Using preFundedWallet: ' + preFundedWallet.address)
 prettyLog('Randomly generated test wallet: ' + l1TestWallet.address)
 
-const bridge = new Bridge(
-  erc20BridgeAddress,
-  arbTokenBridgeAddress,
-  l1TestWallet,
-  l2TestWallet
-)
-
 const outGoingMessages: L2ToL1EventResult[] = []
 
+let bridge: Bridge
 before('setup', () => {
   it("'pre-funded wallet' is indeed pre-funded", async () => {
+    bridge = await Bridge.init(
+      l1TestWallet,
+      l2TestWallet,
+      erc20BridgeAddress,
+      arbTokenBridgeAddress
+    )
     const balance = await preFundedWallet.getBalance()
     const hasBalance = balance.gt(utils.parseEther(depositAmount))
     expect(hasBalance).to.be.true
@@ -182,9 +182,11 @@ describe('ERC20', () => {
 
   it('initial erc20 deposit txns — L1 and L2 — both succeed', async () => {
     const tokenContract = TestERC20__factory.connect(erc20Address, ethProvider)
-    const defaultL1GatewayAddress = (await bridge.defaultL1Gateway()).address
+    const expectedL1GatewayAddress = await bridge.l1Bridge.getGatewayAddress(
+      tokenContract.address
+    )
     const initialBridgeTokenBalance = await tokenContract.balanceOf(
-      defaultL1GatewayAddress
+      expectedL1GatewayAddress
     )
     prettyLog('depositing')
     const depositRes = await bridge.deposit(
@@ -193,6 +195,7 @@ describe('ERC20', () => {
       {},
       undefined
     )
+    console.log(depositRes)
     prettyLog('depositing done')
 
     const depositRec = await depositRes.wait()
@@ -202,7 +205,7 @@ describe('ERC20', () => {
 
     expect(depositRec.status).to.equal(1)
     const finalBridgeTokenBalance = await tokenContract.balanceOf(
-      defaultL1GatewayAddress
+      expectedL1GatewayAddress
     )
     prettyLog('final bridge bal passed')
     expect(

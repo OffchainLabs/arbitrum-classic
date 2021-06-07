@@ -28,10 +28,11 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'initialize(address)': FunctionFragment
+    'initialize(address,address)': FunctionFragment
     'l1ToL2Token(address)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'router()': FunctionFragment
   }
 
   encodeFunctionData(
@@ -51,7 +52,10 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
-  encodeFunctionData(functionFragment: 'initialize', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [string, string]
+  ): string
   encodeFunctionData(functionFragment: 'l1ToL2Token', values: [string]): string
   encodeFunctionData(
     functionFragment: 'mintAndCall',
@@ -61,6 +65,7 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
@@ -86,6 +91,7 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -168,11 +174,13 @@ export class L2CustomGateway extends Contract {
 
     initialize(
       _l1Counterpart: string,
+      _router: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address)'(
+    'initialize(address,address)'(
       _l1Counterpart: string,
+      _router: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -218,6 +226,10 @@ export class L2CustomGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
 
   calculateL2TokenAddress(
@@ -276,11 +288,13 @@ export class L2CustomGateway extends Contract {
 
   initialize(
     _l1Counterpart: string,
+    _router: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address)'(
+  'initialize(address,address)'(
     _l1Counterpart: string,
+    _router: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -326,6 +340,10 @@ export class L2CustomGateway extends Contract {
     _data: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
+
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
     calculateL2TokenAddress(
@@ -382,10 +400,15 @@ export class L2CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    initialize(_l1Counterpart: string, overrides?: CallOverrides): Promise<void>
-
-    'initialize(address)'(
+    initialize(
       _l1Counterpart: string,
+      _router: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initialize(address,address)'(
+      _l1Counterpart: string,
+      _router: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -431,6 +454,10 @@ export class L2CustomGateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -518,11 +545,13 @@ export class L2CustomGateway extends Contract {
 
     initialize(
       _l1Counterpart: string,
+      _router: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address)'(
+    'initialize(address,address)'(
       _l1Counterpart: string,
+      _router: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -568,6 +597,10 @@ export class L2CustomGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -629,11 +662,13 @@ export class L2CustomGateway extends Contract {
 
     initialize(
       _l1Counterpart: string,
+      _router: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address)'(
+    'initialize(address,address)'(
       _l1Counterpart: string,
+      _router: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -682,5 +717,9 @@ export class L2CustomGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

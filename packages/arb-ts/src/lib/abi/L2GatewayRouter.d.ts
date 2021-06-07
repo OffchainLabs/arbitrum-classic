@@ -21,17 +21,20 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface L1CustomGatewayInterface extends ethers.utils.Interface {
+interface L2GatewayRouterInterface extends ethers.utils.Interface {
   functions: {
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
+    'defaultGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
+    'getGateway(address)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'inbox()': FunctionFragment
-    'initialize(address,address,address)': FunctionFragment
-    'l1ToL2Token(address)': FunctionFragment
-    'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'initialize(address,address)': FunctionFragment
+    'l1TokenToGateway(address)': FunctionFragment
+    'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
     'router()': FunctionFragment
+    'setDefaultGateway(address)': FunctionFragment
+    'setGateway(address[],address[])': FunctionFragment
   }
 
   encodeFunctionData(
@@ -43,31 +46,39 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'defaultGateway',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'finalizeInboundTransfer',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'getGateway', values: [string]): string
   encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
-  encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [string, string, string]
+    values: [string, string]
   ): string
-  encodeFunctionData(functionFragment: 'l1ToL2Token', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'l1TokenToGateway',
+    values: [string]
+  ): string
   encodeFunctionData(
     functionFragment: 'outboundTransfer',
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BytesLike
-    ]
+    values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'setDefaultGateway',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'setGateway',
+    values: [string[], string[]]
+  ): string
 
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
@@ -78,34 +89,50 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'defaultGateway',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'finalizeInboundTransfer',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'getGateway', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'l1ToL2Token', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'l1TokenToGateway',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'setDefaultGateway',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'setGateway', data: BytesLike): Result
 
   events: {
+    'GatewaySet(address,address)': EventFragment
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
+    'TransferRouted(address,address,address,address)': EventFragment
   }
 
+  getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
 }
 
-export class L1CustomGateway extends Contract {
+export class L2GatewayRouter extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -116,7 +143,7 @@ export class L1CustomGateway extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: L1CustomGatewayInterface
+  interface: L2GatewayRouterInterface
 
   functions: {
     calculateL2TokenAddress(
@@ -132,6 +159,10 @@ export class L1CustomGateway extends Contract {
     counterpartGateway(overrides?: CallOverrides): Promise<[string]>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
+
+    defaultGateway(overrides?: CallOverrides): Promise<[string]>
+
+    'defaultGateway()'(overrides?: CallOverrides): Promise<[string]>
 
     finalizeInboundTransfer(
       _token: string,
@@ -151,6 +182,16 @@ export class L1CustomGateway extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    getGateway(
+      _token: string,
+      overrides?: CallOverrides
+    ): Promise<[string] & { gateway: string }>
+
+    'getGateway(address)'(
+      _token: string,
+      overrides?: CallOverrides
+    ): Promise<[string] & { gateway: string }>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -158,7 +199,7 @@ export class L1CustomGateway extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string] & { outboundCalldata: string }>
+    ): Promise<[string]>
 
     'getOutboundCalldata(address,address,address,uint256,bytes)'(
       _token: string,
@@ -167,39 +208,31 @@ export class L1CustomGateway extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string] & { outboundCalldata: string }>
-
-    inbox(overrides?: CallOverrides): Promise<[string]>
-
-    'inbox()'(overrides?: CallOverrides): Promise<[string]>
+    ): Promise<[string]>
 
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+    'initialize(address,address)'(
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<[string]>
+    l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<[string]>
 
-    'l1ToL2Token(address)'(
+    'l1TokenToGateway(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    outboundTransfer(
-      _token: string,
+    'outboundTransfer(address,address,uint256,bytes)'(
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
@@ -217,6 +250,28 @@ export class L1CustomGateway extends Contract {
     router(overrides?: CallOverrides): Promise<[string]>
 
     'router()'(overrides?: CallOverrides): Promise<[string]>
+
+    setDefaultGateway(
+      newDefaultGateway: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setDefaultGateway(address)'(
+      newDefaultGateway: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    setGateway(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setGateway(address[],address[])'(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
   }
 
   calculateL2TokenAddress(
@@ -232,6 +287,10 @@ export class L1CustomGateway extends Contract {
   counterpartGateway(overrides?: CallOverrides): Promise<string>
 
   'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
+
+  defaultGateway(overrides?: CallOverrides): Promise<string>
+
+  'defaultGateway()'(overrides?: CallOverrides): Promise<string>
 
   finalizeInboundTransfer(
     _token: string,
@@ -251,6 +310,13 @@ export class L1CustomGateway extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  getGateway(_token: string, overrides?: CallOverrides): Promise<string>
+
+  'getGateway(address)'(
+    _token: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   getOutboundCalldata(
     _token: string,
     _from: string,
@@ -269,37 +335,29 @@ export class L1CustomGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  inbox(overrides?: CallOverrides): Promise<string>
-
-  'inbox()'(overrides?: CallOverrides): Promise<string>
-
   initialize(
-    _l1Counterpart: string,
-    _l1Router: string,
-    _inbox: string,
+    _counterpartGateway: string,
+    _defaultGateway: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address,address,address)'(
-    _l1Counterpart: string,
-    _l1Router: string,
-    _inbox: string,
+  'initialize(address,address)'(
+    _counterpartGateway: string,
+    _defaultGateway: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<string>
+  l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<string>
 
-  'l1ToL2Token(address)'(
+  'l1TokenToGateway(address)'(
     arg0: string,
     overrides?: CallOverrides
   ): Promise<string>
 
-  outboundTransfer(
-    _token: string,
+  'outboundTransfer(address,address,uint256,bytes)'(
+    _l1Token: string,
     _to: string,
     _amount: BigNumberish,
-    _maxGas: BigNumberish,
-    _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
@@ -318,6 +376,28 @@ export class L1CustomGateway extends Contract {
 
   'router()'(overrides?: CallOverrides): Promise<string>
 
+  setDefaultGateway(
+    newDefaultGateway: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setDefaultGateway(address)'(
+    newDefaultGateway: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  setGateway(
+    _l1Token: string[],
+    _gateway: string[],
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setGateway(address[],address[])'(
+    _l1Token: string[],
+    _gateway: string[],
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   callStatic: {
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -332,6 +412,10 @@ export class L1CustomGateway extends Contract {
     counterpartGateway(overrides?: CallOverrides): Promise<string>
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
+
+    defaultGateway(overrides?: CallOverrides): Promise<string>
+
+    'defaultGateway()'(overrides?: CallOverrides): Promise<string>
 
     finalizeInboundTransfer(
       _token: string,
@@ -348,6 +432,13 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    getGateway(_token: string, overrides?: CallOverrides): Promise<string>
+
+    'getGateway(address)'(
+      _token: string,
       overrides?: CallOverrides
     ): Promise<string>
 
@@ -369,37 +460,29 @@ export class L1CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    inbox(overrides?: CallOverrides): Promise<string>
-
-    'inbox()'(overrides?: CallOverrides): Promise<string>
-
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+    'initialize(address,address)'(
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<string>
+    l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<string>
 
-    'l1ToL2Token(address)'(
+    'l1TokenToGateway(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<string>
 
-    outboundTransfer(
-      _token: string,
+    'outboundTransfer(address,address,uint256,bytes)'(
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
@@ -417,9 +500,33 @@ export class L1CustomGateway extends Contract {
     router(overrides?: CallOverrides): Promise<string>
 
     'router()'(overrides?: CallOverrides): Promise<string>
+
+    setDefaultGateway(
+      newDefaultGateway: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'setDefaultGateway(address)'(
+      newDefaultGateway: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    setGateway(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'setGateway(address[],address[])'(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: CallOverrides
+    ): Promise<void>
   }
 
   filters: {
+    GatewaySet(l1Token: string | null, gateway: string | null): EventFilter
+
     InboundTransferFinalized(
       token: null,
       _from: string | null,
@@ -445,6 +552,13 @@ export class L1CustomGateway extends Contract {
       _amount: null,
       callHookData: null
     ): EventFilter
+
+    TransferRouted(
+      token: string | null,
+      _userFrom: string | null,
+      _userTo: string | null,
+      gateway: null
+    ): EventFilter
   }
 
   estimateGas: {
@@ -462,6 +576,10 @@ export class L1CustomGateway extends Contract {
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    defaultGateway(overrides?: CallOverrides): Promise<BigNumber>
+
+    'defaultGateway()'(overrides?: CallOverrides): Promise<BigNumber>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -478,6 +596,13 @@ export class L1CustomGateway extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: Overrides
+    ): Promise<BigNumber>
+
+    getGateway(_token: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'getGateway(address)'(
+      _token: string,
+      overrides?: CallOverrides
     ): Promise<BigNumber>
 
     getOutboundCalldata(
@@ -498,37 +623,32 @@ export class L1CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    inbox(overrides?: CallOverrides): Promise<BigNumber>
-
-    'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
-
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+    'initialize(address,address)'(
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    l1ToL2Token(arg0: string, overrides?: CallOverrides): Promise<BigNumber>
-
-    'l1ToL2Token(address)'(
+    l1TokenToGateway(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    outboundTransfer(
-      _token: string,
+    'l1TokenToGateway(address)'(
+      arg0: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'outboundTransfer(address,address,uint256,bytes)'(
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
@@ -546,6 +666,28 @@ export class L1CustomGateway extends Contract {
     router(overrides?: CallOverrides): Promise<BigNumber>
 
     'router()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    setDefaultGateway(
+      newDefaultGateway: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'setDefaultGateway(address)'(
+      newDefaultGateway: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    setGateway(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'setGateway(address[],address[])'(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: Overrides
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -565,6 +707,10 @@ export class L1CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    defaultGateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'defaultGateway()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -581,6 +727,16 @@ export class L1CustomGateway extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    getGateway(
+      _token: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getGateway(address)'(
+      _token: string,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     getOutboundCalldata(
@@ -601,40 +757,32 @@ export class L1CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     initialize(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address,address)'(
-      _l1Counterpart: string,
-      _l1Router: string,
-      _inbox: string,
+    'initialize(address,address)'(
+      _counterpartGateway: string,
+      _defaultGateway: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    l1ToL2Token(
+    l1TokenToGateway(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'l1ToL2Token(address)'(
+    'l1TokenToGateway(address)'(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    outboundTransfer(
-      _token: string,
+    'outboundTransfer(address,address,uint256,bytes)'(
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
-      _maxGas: BigNumberish,
-      _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
@@ -652,5 +800,27 @@ export class L1CustomGateway extends Contract {
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    setDefaultGateway(
+      newDefaultGateway: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setDefaultGateway(address)'(
+      newDefaultGateway: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    setGateway(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setGateway(address[],address[])'(
+      _l1Token: string[],
+      _gateway: string[],
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
   }
 }
