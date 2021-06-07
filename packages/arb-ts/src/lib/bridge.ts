@@ -182,11 +182,9 @@ export class Bridge {
     destinationAddress?: string,
     overrides?: PayableOverrides
   ) {
-    console.log('startin deposit')
     const gasPriceBid =
       retryableGasArgs.gasPriceBid ||
       (await this.l2Bridge.l2Provider.getGasPrice())
-    console.log({ gasPriceBid })
 
     const sender = await this.l1Bridge.l1Signer.getAddress()
 
@@ -205,7 +203,6 @@ export class Bridge {
       amount,
       '0x'
     )
-    console.log({ depositCalldata })
 
     const maxSubmissionPriceIncreaseRatio =
       retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
@@ -222,23 +219,21 @@ export class Bridge {
     )
 
     const l2Dest = await l1Gateway.counterpartGateway()
-    console.log({ l2Dest })
 
-    const maxGas = BigNumber.from('8000000')
-    // const maxGas = (
-    //   await nodeInterface.estimateRetryableTicket(
-    //     expectedL1GatewayAddress,
-    //     ethers.utils.parseEther('0.05'),
-    //     l2Dest,
-    //     0,
-    //     maxSubmissionPrice,
-    //     sender,
-    //     sender,
-    //     0,
-    //     0,
-    //     depositCalldata
-    //   )
-    // )[0]
+    const maxGas = (
+      await nodeInterface.estimateRetryableTicket(
+        expectedL1GatewayAddress,
+        ethers.utils.parseEther('0.05'),
+        l2Dest,
+        0,
+        maxSubmissionPrice,
+        sender,
+        sender,
+        0,
+        0,
+        depositCalldata
+      )
+    )[0]
     console.log('DONE ESTIMATING GAS')
 
     // calculate required forwarding gas
