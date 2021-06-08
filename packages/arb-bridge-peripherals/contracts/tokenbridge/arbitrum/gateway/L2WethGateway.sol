@@ -92,7 +92,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _dest,
         uint256 _amount
     ) internal virtual override {
-        IWETH9(_l2TokenAddress).deposit{ value: msg.value }();
+        IWETH9(_l2TokenAddress).deposit{ value: _amount }();
         IWETH9(_l2TokenAddress).safeTransfer(_dest, _amount);
     }
 
