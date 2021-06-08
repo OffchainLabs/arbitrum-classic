@@ -97,6 +97,9 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
     function handleNoContract(
         address l1ERC20,
         address expectedL2Address,
+        address _from,
+        address _to,
+        uint256 _amount,
         bytes memory deployData
     ) internal virtual override returns (bool shouldHalt) {
         bytes32 salt = getSalt(l1ERC20);
@@ -105,12 +108,10 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         StandardArbERC20(createdContract).bridgeInit(l1ERC20, deployData);
 
         if (createdContract == expectedL2Address) {
-            // emit TokenCreated(l1ERC20, createdContract);
             shouldHalt = false;
         } else {
-            // L1 gateway shouldn't allow this codepath to be triggered
-            // TODO: trigger withdrawal instead of reverting
-            revert("WRONG_DEPLOYMENT_ADDR");
+            // trigger withdrawal
+            createOutboundTx(l1ERC20, address(this), _from, _amount, "");
         }
     }
 }

@@ -211,7 +211,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address expectedAddress = _calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
-            bool shouldHalt = handleNoContract(_token, expectedAddress, gatewayData);
+            bool shouldHalt =
+                handleNoContract(_token, expectedAddress, _from, _to, _amount, gatewayData);
             if (shouldHalt) return bytes("");
         }
         // ignores gatewayData if token already deployed
@@ -248,8 +249,11 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
     // returns if function should halt after
     function handleNoContract(
-        address l1ERC20,
+        address _l1Token,
         address expectedL2Address,
-        bytes memory data
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory gatewayData
     ) internal virtual returns (bool shouldHalt);
 }

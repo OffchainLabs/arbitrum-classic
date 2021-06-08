@@ -30,19 +30,22 @@ contract L2CustomGateway is L2ArbitrumGateway {
 
     /**
      * @notice internal utility function used to handle when no contract is deployed at expected address
-     * @param l1ERC20 L1 address of ERC20
+     * @param _l1Token L1 address of ERC20
      * @param expectedL2Address L2 address of ERC20
-     * @param deployData encoded symbol/name/decimal data for initial deploy
+     * @param gatewayData encoded symbol/name/decimal data for initial deploy
      */
     function handleNoContract(
-        address l1ERC20,
+        address _l1Token,
         address expectedL2Address,
-        bytes memory deployData
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory gatewayData
     ) internal virtual override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
         shouldHalt = true;
-        // TODO: trigger withdrawal to L1 or create temporary ERC20 token
-        revert("NO_CUSTOM_TOKEN");
+        // trigger withdrawal
+        createOutboundTx(_l1Token, address(this), _from, _amount, "");
     }
 
     /**
