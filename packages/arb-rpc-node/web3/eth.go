@@ -121,13 +121,14 @@ func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) 
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
+func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
 	snap, err := s.getSnapshot(blockNum)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getStorageAt", "false").Inc()
 		return nil, err
 	}
-	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
+	index := new(big.Int).SetBytes(key)
+	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), index)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getStorageAt", "false").Inc()
 		return nil, errors.Wrap(err, "error getting storage")
