@@ -61,12 +61,12 @@ contract L2GatewayRouter is GatewayRouter {
         return msg.sender == counterpartGateway;
     }
 
-    function setDefaultGateway(address newDefaultGateway)
+    function setDefaultGateway(address newL2DefaultGateway)
         external
         virtual
-        override
         onlyCounterpartGateway
     {
-        defaultGateway = newDefaultGateway;
+        defaultGateway = newL2DefaultGateway;
+        emit DefaultGatewayUpdated(newL2DefaultGateway);
     }
 }

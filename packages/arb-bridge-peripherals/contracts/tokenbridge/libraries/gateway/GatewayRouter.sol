@@ -42,6 +42,7 @@ abstract contract GatewayRouter is TokenGateway {
     );
 
     event GatewaySet(address indexed l1Token, address indexed gateway);
+    event DefaultGatewayUpdated(address newDefaultGateway);
 
     function _initialize(address _counterpartGateway, address _defaultGateway)
         internal
@@ -51,8 +52,6 @@ abstract contract GatewayRouter is TokenGateway {
         TokenGateway._initialize(_counterpartGateway, address(0));
         defaultGateway = _defaultGateway;
     }
-
-    function setDefaultGateway(address newDefaultGateway) external virtual;
 
     function finalizeInboundTransfer(
         address _token,

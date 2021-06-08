@@ -31,13 +31,6 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
     address public owner;
     address public inbox;
 
-    event TransferRouted(
-        address indexed token,
-        address indexed _userFrom,
-        address indexed _userTo,
-        address gateway
-    );
-
     modifier onlyOwner {
         require(msg.sender == owner, "ONLY_OWNER");
         _;
@@ -56,10 +49,33 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         inbox = _inbox;
     }
 
-    function setDefaultGateway(address newDefaultGateway) external virtual override onlyOwner {
-        // TODO: send message to L2 after updating in L1
-        // send gateway.counterpartGateway()
-        revert("NOT_IMPLEMENTED");
+    function setDefaultGateway(
+        address newL1DefaultGateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost
+    ) external payable virtual onlyOwner returns (uint256) {
+        defaultGateway = newL1DefaultGateway;
+
+        emit DefaultGatewayUpdated(newL1DefaultGateway);
+
+        address l2NewDefaultGateway = TokenGateway(newL1DefaultGateway).counterpartGateway();
+
+        bytes memory data =
+            abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
+
+        uint256 seqNum =
+            IInbox(inbox).createRetryableTicket{ value: msg.value }(
+                counterpartGateway,
+                0,
+                _maxSubmissionCost,
+                msg.sender,
+                msg.sender,
+                _maxGas,
+                _gasPriceBid,
+                data
+            );
+        return seqNum;
     }
 
     function setOwner(address newOwner) external onlyOwner {
