@@ -21,6 +21,19 @@ const _abi = [
     anonymous: false,
     inputs: [
       {
+        indexed: false,
+        internalType: 'address',
+        name: 'newDefaultGateway',
+        type: 'address',
+      },
+    ],
+    name: 'DefaultGatewayUpdated',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: true,
         internalType: 'address',
         name: 'l1Token',
@@ -271,7 +284,7 @@ const _abi = [
         type: 'bytes',
       },
     ],
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     type: 'function',
   },
   {
@@ -406,19 +419,6 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'newDefaultGateway',
-        type: 'address',
-      },
-    ],
-    name: 'setDefaultGateway',
-    outputs: [],
-    stateMutability: 'nonpayable',
     type: 'function',
   },
 ]

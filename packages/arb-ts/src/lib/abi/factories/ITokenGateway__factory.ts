@@ -195,7 +195,7 @@ const _abi = [
         type: 'bytes',
       },
     ],
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     type: 'function',
   },
   {

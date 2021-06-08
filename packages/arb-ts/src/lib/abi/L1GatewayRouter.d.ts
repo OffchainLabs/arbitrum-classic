@@ -35,7 +35,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'owner()': FunctionFragment
     'router()': FunctionFragment
-    'setDefaultGateway(address)': FunctionFragment
+    'setDefaultGateway(address,uint256,uint256,uint256)': FunctionFragment
     'setGateway(address,uint256,uint256,uint256)': FunctionFragment
     'setGateways(address[],address[],uint256,uint256,uint256)': FunctionFragment
     'setOwner(address)': FunctionFragment
@@ -88,7 +88,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'setDefaultGateway',
-    values: [string]
+    values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'setGateway',
@@ -152,6 +152,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
+    'DefaultGatewayUpdated(address)': EventFragment
     'GatewaySet(address,address)': EventFragment
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -160,6 +161,7 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     'WhitelistSourceUpdated(address)': EventFragment
   }
 
+  getEvent(nameOrSignatureOrTopic: 'DefaultGatewayUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
@@ -206,7 +208,7 @@ export class L1GatewayRouter extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -215,7 +217,7 @@ export class L1GatewayRouter extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     getGateway(
@@ -304,13 +306,19 @@ export class L1GatewayRouter extends Contract {
     'router()'(overrides?: CallOverrides): Promise<[string]>
 
     setDefaultGateway(
-      newDefaultGateway: string,
-      overrides?: Overrides
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    'setDefaultGateway(address)'(
-      newDefaultGateway: string,
-      overrides?: Overrides
+    'setDefaultGateway(address,uint256,uint256,uint256)'(
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     setGateway(
@@ -396,7 +404,7 @@ export class L1GatewayRouter extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -405,7 +413,7 @@ export class L1GatewayRouter extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   getGateway(_token: string, overrides?: CallOverrides): Promise<string>
@@ -491,13 +499,19 @@ export class L1GatewayRouter extends Contract {
   'router()'(overrides?: CallOverrides): Promise<string>
 
   setDefaultGateway(
-    newDefaultGateway: string,
-    overrides?: Overrides
+    newL1DefaultGateway: string,
+    _maxGas: BigNumberish,
+    _gasPriceBid: BigNumberish,
+    _maxSubmissionCost: BigNumberish,
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  'setDefaultGateway(address)'(
-    newDefaultGateway: string,
-    overrides?: Overrides
+  'setDefaultGateway(address,uint256,uint256,uint256)'(
+    newL1DefaultGateway: string,
+    _maxGas: BigNumberish,
+    _gasPriceBid: BigNumberish,
+    _maxSubmissionCost: BigNumberish,
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   setGateway(
@@ -678,14 +692,20 @@ export class L1GatewayRouter extends Contract {
     'router()'(overrides?: CallOverrides): Promise<string>
 
     setDefaultGateway(
-      newDefaultGateway: string,
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
-    'setDefaultGateway(address)'(
-      newDefaultGateway: string,
+    'setDefaultGateway(address,uint256,uint256,uint256)'(
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     setGateway(
       _gateway: string,
@@ -744,6 +764,8 @@ export class L1GatewayRouter extends Contract {
   }
 
   filters: {
+    DefaultGatewayUpdated(newDefaultGateway: null): EventFilter
+
     GatewaySet(l1Token: string | null, gateway: string | null): EventFilter
 
     InboundTransferFinalized(
@@ -807,7 +829,7 @@ export class L1GatewayRouter extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -816,7 +838,7 @@ export class L1GatewayRouter extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     getGateway(_token: string, overrides?: CallOverrides): Promise<BigNumber>
@@ -905,13 +927,19 @@ export class L1GatewayRouter extends Contract {
     'router()'(overrides?: CallOverrides): Promise<BigNumber>
 
     setDefaultGateway(
-      newDefaultGateway: string,
-      overrides?: Overrides
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    'setDefaultGateway(address)'(
-      newDefaultGateway: string,
-      overrides?: Overrides
+    'setDefaultGateway(address,uint256,uint256,uint256)'(
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     setGateway(
@@ -997,7 +1025,7 @@ export class L1GatewayRouter extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -1006,7 +1034,7 @@ export class L1GatewayRouter extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     getGateway(
@@ -1098,13 +1126,19 @@ export class L1GatewayRouter extends Contract {
     'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     setDefaultGateway(
-      newDefaultGateway: string,
-      overrides?: Overrides
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    'setDefaultGateway(address)'(
-      newDefaultGateway: string,
-      overrides?: Overrides
+    'setDefaultGateway(address,uint256,uint256,uint256)'(
+      newL1DefaultGateway: string,
+      _maxGas: BigNumberish,
+      _gasPriceBid: BigNumberish,
+      _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     setGateway(

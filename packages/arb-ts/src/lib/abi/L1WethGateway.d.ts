@@ -13,6 +13,7 @@ import {
 import {
   Contract,
   ContractTransaction,
+  Overrides,
   PayableOverrides,
   CallOverrides,
 } from '@ethersproject/contracts'
@@ -20,13 +21,16 @@ import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
-interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
+interface L1WethGatewayInterface extends ethers.utils.Interface {
   functions: {
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'inbox()': FunctionFragment
+    'initialize(address,address,address,address,address)': FunctionFragment
+    'l1Weth()': FunctionFragment
+    'l2Weth()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'router()': FunctionFragment
   }
@@ -48,6 +52,12 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'initialize',
+    values: [string, string, string, string, string]
+  ): string
+  encodeFunctionData(functionFragment: 'l1Weth', values?: undefined): string
+  encodeFunctionData(functionFragment: 'l2Weth', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'outboundTransfer',
     values: [
@@ -78,6 +88,9 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'l1Weth', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'l2Weth', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
@@ -97,7 +110,7 @@ interface L1ArbitrumGatewayInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
 }
 
-export class L1ArbitrumGateway extends Contract {
+export class L1WethGateway extends Contract {
   connect(signerOrProvider: Signer | Provider | string): this
   attach(addressOrName: string): this
   deployed(): Promise<this>
@@ -108,7 +121,7 @@ export class L1ArbitrumGateway extends Contract {
   removeAllListeners(eventName: EventFilter | string): this
   removeListener(eventName: any, listener: Listener): this
 
-  interface: L1ArbitrumGatewayInterface
+  interface: L1WethGatewayInterface
 
   functions: {
     calculateL2TokenAddress(
@@ -144,7 +157,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<ContractTransaction>
 
     getOutboundCalldata(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -153,7 +166,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<[string] & { outboundCalldata: string }>
 
     'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -164,6 +177,32 @@ export class L1ArbitrumGateway extends Contract {
     inbox(overrides?: CallOverrides): Promise<[string]>
 
     'inbox()'(overrides?: CallOverrides): Promise<[string]>
+
+    initialize(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'initialize(address,address,address,address,address)'(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    l1Weth(overrides?: CallOverrides): Promise<[string]>
+
+    'l1Weth()'(overrides?: CallOverrides): Promise<[string]>
+
+    l2Weth(overrides?: CallOverrides): Promise<[string]>
+
+    'l2Weth()'(overrides?: CallOverrides): Promise<[string]>
 
     outboundTransfer(
       _l1Token: string,
@@ -223,7 +262,7 @@ export class L1ArbitrumGateway extends Contract {
   ): Promise<ContractTransaction>
 
   getOutboundCalldata(
-    _token: string,
+    _l1Token: string,
     _from: string,
     _to: string,
     _amount: BigNumberish,
@@ -232,7 +271,7 @@ export class L1ArbitrumGateway extends Contract {
   ): Promise<string>
 
   'getOutboundCalldata(address,address,address,uint256,bytes)'(
-    _token: string,
+    _l1Token: string,
     _from: string,
     _to: string,
     _amount: BigNumberish,
@@ -243,6 +282,32 @@ export class L1ArbitrumGateway extends Contract {
   inbox(overrides?: CallOverrides): Promise<string>
 
   'inbox()'(overrides?: CallOverrides): Promise<string>
+
+  initialize(
+    _l1Counterpart: string,
+    _l1Router: string,
+    _inbox: string,
+    _l1Weth: string,
+    _l2Weth: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'initialize(address,address,address,address,address)'(
+    _l1Counterpart: string,
+    _l1Router: string,
+    _inbox: string,
+    _l1Weth: string,
+    _l2Weth: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  l1Weth(overrides?: CallOverrides): Promise<string>
+
+  'l1Weth()'(overrides?: CallOverrides): Promise<string>
+
+  l2Weth(overrides?: CallOverrides): Promise<string>
+
+  'l2Weth()'(overrides?: CallOverrides): Promise<string>
 
   outboundTransfer(
     _l1Token: string,
@@ -302,7 +367,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<string>
 
     getOutboundCalldata(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -311,7 +376,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<string>
 
     'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -322,6 +387,32 @@ export class L1ArbitrumGateway extends Contract {
     inbox(overrides?: CallOverrides): Promise<string>
 
     'inbox()'(overrides?: CallOverrides): Promise<string>
+
+    initialize(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'initialize(address,address,address,address,address)'(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    l1Weth(overrides?: CallOverrides): Promise<string>
+
+    'l1Weth()'(overrides?: CallOverrides): Promise<string>
+
+    l2Weth(overrides?: CallOverrides): Promise<string>
+
+    'l2Weth()'(overrides?: CallOverrides): Promise<string>
 
     outboundTransfer(
       _l1Token: string,
@@ -417,7 +508,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<BigNumber>
 
     getOutboundCalldata(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -426,7 +517,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<BigNumber>
 
     'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -437,6 +528,32 @@ export class L1ArbitrumGateway extends Contract {
     inbox(overrides?: CallOverrides): Promise<BigNumber>
 
     'inbox()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    initialize(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'initialize(address,address,address,address,address)'(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    l1Weth(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l1Weth()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2Weth(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2Weth()'(overrides?: CallOverrides): Promise<BigNumber>
 
     outboundTransfer(
       _l1Token: string,
@@ -499,7 +616,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<PopulatedTransaction>
 
     getOutboundCalldata(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -508,7 +625,7 @@ export class L1ArbitrumGateway extends Contract {
     ): Promise<PopulatedTransaction>
 
     'getOutboundCalldata(address,address,address,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _from: string,
       _to: string,
       _amount: BigNumberish,
@@ -519,6 +636,32 @@ export class L1ArbitrumGateway extends Contract {
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'inbox()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    initialize(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'initialize(address,address,address,address,address)'(
+      _l1Counterpart: string,
+      _l1Router: string,
+      _inbox: string,
+      _l1Weth: string,
+      _l2Weth: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    l1Weth(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l1Weth()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    l2Weth(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2Weth()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     outboundTransfer(
       _l1Token: string,

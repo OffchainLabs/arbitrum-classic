@@ -13,7 +13,6 @@ import {
 import {
   Contract,
   ContractTransaction,
-  Overrides,
   PayableOverrides,
   CallOverrides,
 } from '@ethersproject/contracts'
@@ -127,7 +126,7 @@ export class TokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -136,7 +135,7 @@ export class TokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     getOutboundCalldata(
@@ -202,7 +201,7 @@ export class TokenGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -211,7 +210,7 @@ export class TokenGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   getOutboundCalldata(
@@ -381,7 +380,7 @@ export class TokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -390,7 +389,7 @@ export class TokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     getOutboundCalldata(
@@ -459,7 +458,7 @@ export class TokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -468,7 +467,7 @@ export class TokenGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     getOutboundCalldata(

@@ -108,12 +108,14 @@ interface L1CustomGatewayInterface extends ethers.utils.Interface {
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
+    'TxToL2(address,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
 }
 
 export class L1CustomGateway extends Contract {
@@ -150,7 +152,7 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -159,7 +161,7 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     getOutboundCalldata(
@@ -206,7 +208,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<[string]>
 
     outboundTransfer(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -216,7 +218,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<ContractTransaction>
 
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -266,7 +268,7 @@ export class L1CustomGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -275,7 +277,7 @@ export class L1CustomGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   getOutboundCalldata(
@@ -322,7 +324,7 @@ export class L1CustomGateway extends Contract {
   ): Promise<string>
 
   outboundTransfer(
-    _token: string,
+    _l1Token: string,
     _to: string,
     _amount: BigNumberish,
     _maxGas: BigNumberish,
@@ -332,7 +334,7 @@ export class L1CustomGateway extends Contract {
   ): Promise<ContractTransaction>
 
   'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-    _token: string,
+    _l1Token: string,
     _to: string,
     _amount: BigNumberish,
     _maxGas: BigNumberish,
@@ -438,7 +440,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<string>
 
     outboundTransfer(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -448,7 +450,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<string>
 
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -506,6 +508,13 @@ export class L1CustomGateway extends Contract {
       _amount: null,
       callHookData: null
     ): EventFilter
+
+    TxToL2(
+      _from: string | null,
+      _to: string | null,
+      _seqNum: BigNumberish | null,
+      _data: null
+    ): EventFilter
   }
 
   estimateGas: {
@@ -529,7 +538,7 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -538,7 +547,7 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     getOutboundCalldata(
@@ -585,7 +594,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<BigNumber>
 
     outboundTransfer(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -595,7 +604,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<BigNumber>
 
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -648,7 +657,7 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -657,7 +666,7 @@ export class L1CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     getOutboundCalldata(
@@ -707,7 +716,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<PopulatedTransaction>
 
     outboundTransfer(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,
@@ -717,7 +726,7 @@ export class L1CustomGateway extends Contract {
     ): Promise<PopulatedTransaction>
 
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)'(
-      _token: string,
+      _l1Token: string,
       _to: string,
       _amount: BigNumberish,
       _maxGas: BigNumberish,

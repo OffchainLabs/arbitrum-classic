@@ -141,6 +141,37 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: '_seqNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'TxToL2',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -208,7 +239,7 @@ const _abi = [
         type: 'bytes',
       },
     ],
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     type: 'function',
   },
   {
@@ -267,7 +298,7 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: '_token',
+        name: '_l1Token',
         type: 'address',
       },
       {

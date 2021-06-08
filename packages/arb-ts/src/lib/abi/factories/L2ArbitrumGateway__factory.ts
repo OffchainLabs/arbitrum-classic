@@ -141,6 +141,37 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: '_id',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'TxToL1',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -221,7 +252,7 @@ const _abi = [
         type: 'bytes',
       },
     ],
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     type: 'function',
   },
   {
@@ -266,28 +297,28 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'contract IArbToken',
-        name: 'token',
+        internalType: 'address',
+        name: '_l2Address',
         type: 'address',
       },
       {
         internalType: 'uint256',
-        name: 'amount',
+        name: '_amount',
         type: 'uint256',
       },
       {
         internalType: 'address',
-        name: 'sender',
+        name: '_sender',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: 'dest',
+        name: '_dest',
         type: 'address',
       },
       {
         internalType: 'bytes',
-        name: 'data',
+        name: '_data',
         type: 'bytes',
       },
     ],

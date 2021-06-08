@@ -106,11 +106,13 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
+    'TxToL1(address,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
 }
 
 export class L2CustomGateway extends Contract {
@@ -151,7 +153,7 @@ export class L2CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -160,7 +162,7 @@ export class L2CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     getOutboundCalldata(
@@ -201,20 +203,20 @@ export class L2CustomGateway extends Contract {
     ): Promise<[string]>
 
     mintAndCall(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'mintAndCall(address,uint256,address,address,bytes)'(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -277,7 +279,7 @@ export class L2CustomGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -286,7 +288,7 @@ export class L2CustomGateway extends Contract {
     _to: string,
     _amount: BigNumberish,
     _data: BytesLike,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   getOutboundCalldata(
@@ -327,20 +329,20 @@ export class L2CustomGateway extends Contract {
   ): Promise<string>
 
   mintAndCall(
-    token: string,
-    amount: BigNumberish,
-    sender: string,
-    dest: string,
-    data: BytesLike,
+    _l2Address: string,
+    _amount: BigNumberish,
+    _sender: string,
+    _dest: string,
+    _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'mintAndCall(address,uint256,address,address,bytes)'(
-    token: string,
-    amount: BigNumberish,
-    sender: string,
-    dest: string,
-    data: BytesLike,
+    _l2Address: string,
+    _amount: BigNumberish,
+    _sender: string,
+    _dest: string,
+    _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -453,20 +455,20 @@ export class L2CustomGateway extends Contract {
     ): Promise<string>
 
     mintAndCall(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
     'mintAndCall(address,uint256,address,address,bytes)'(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -531,6 +533,13 @@ export class L2CustomGateway extends Contract {
       _amount: null,
       callHookData: null
     ): EventFilter
+
+    TxToL1(
+      _from: string | null,
+      _to: string | null,
+      _id: BigNumberish | null,
+      _data: null
+    ): EventFilter
   }
 
   estimateGas: {
@@ -558,7 +567,7 @@ export class L2CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -567,7 +576,7 @@ export class L2CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     getOutboundCalldata(
@@ -608,20 +617,20 @@ export class L2CustomGateway extends Contract {
     ): Promise<BigNumber>
 
     mintAndCall(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'mintAndCall(address,uint256,address,address,bytes)'(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -687,7 +696,7 @@ export class L2CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'finalizeInboundTransfer(address,address,address,uint256,bytes)'(
@@ -696,7 +705,7 @@ export class L2CustomGateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     getOutboundCalldata(
@@ -740,20 +749,20 @@ export class L2CustomGateway extends Contract {
     ): Promise<PopulatedTransaction>
 
     mintAndCall(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'mintAndCall(address,uint256,address,address,bytes)'(
-      token: string,
-      amount: BigNumberish,
-      sender: string,
-      dest: string,
-      data: BytesLike,
+      _l2Address: string,
+      _amount: BigNumberish,
+      _sender: string,
+      _dest: string,
+      _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
