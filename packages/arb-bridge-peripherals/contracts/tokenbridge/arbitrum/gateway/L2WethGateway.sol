@@ -103,7 +103,12 @@ contract L2WethGateway is L2ArbitrumGateway {
         uint256 _amount,
         bytes memory _extraData
     ) internal virtual override returns (uint256) {
-        return sendTxToL1(_amount, getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData));
+        return
+            sendTxToL1(
+                _from,
+                _amount,
+                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+            );
     }
 
     function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {

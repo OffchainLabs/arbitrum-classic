@@ -21,18 +21,15 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "arbos-contracts/arbos/builtin/ArbSys.sol";
-
+import "./L2ArbitrumMessenger.sol";
 import "../IArbToken.sol";
 
 import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
-abstract contract L2ArbitrumGateway is TokenGateway {
+abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
     using Address for address;
-
-    address internal constant arbsysAddr = address(100);
 
     uint256 public exitNum;
 
@@ -58,15 +55,15 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         uint256 _amount,
         bytes memory _extraData
     ) internal virtual returns (uint256) {
-        return sendTxToL1(0, getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData));
+        return sendTxToL1(_from, 0, getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData));
     }
 
-    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
-        internal
-        virtual
-        returns (uint256)
-    {
-        return ArbSys(arbsysAddr).sendTxToL1{ value: _l1CallValue }(counterpartGateway, _data);
+    function sendTxToL1(
+        address _from,
+        uint256 _l1CallValue,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        return sendTxToL1(_l1CallValue, _from, counterpartGateway, _data);
     }
 
     function getOutboundCalldata(

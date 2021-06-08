@@ -30,7 +30,9 @@ import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/ClonableBeaconProxy.sol";
 
-abstract contract L1ArbitrumGateway is TokenGateway {
+import "./L1ArbitrumMessenger.sol";
+
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -98,6 +100,8 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         uint256 _maxSubmissionCost,
         bytes memory _extraData
     ) internal virtual returns (uint256) {
+        // msg.value is sent, but 0 is set to the L2 call value
+        // the eth sent is used to pay for the tx's gas
         return
             sendTxToL2(
                 _from,
@@ -117,20 +121,17 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual returns (uint256) {
-        // msg.value is sent, but 0 is set to the L2 call value
-        // the eth sent is used to pay for the tx's gas
-        uint256 seqNum =
-            IInbox(inbox).createRetryableTicket{ value: msg.value }(
+        return
+            sendTxToL2(
+                inbox,
                 counterpartGateway,
+                _user,
                 _l2CallValue,
                 _maxSubmissionCost,
-                _user,
-                _user,
                 _maxGas,
                 _gasPriceBid,
                 _data
             );
-        return seqNum;
     }
 
     /**

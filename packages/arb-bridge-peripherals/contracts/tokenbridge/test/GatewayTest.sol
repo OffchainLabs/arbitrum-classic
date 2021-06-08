@@ -50,12 +50,11 @@ contract L2GatewayTester is L2ERC20Gateway {
         return msg.sender == counterpartGateway;
     }
 
-    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
-        internal
-        virtual
-        override
-        returns (uint256)
-    {
+    function sendTxToL1(
+        address _from,
+        uint256 _l1CallValue,
+        bytes memory _data
+    ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l1CallValue }(_data);
         require(success, "OUTBOUND_REVERT");
@@ -91,12 +90,11 @@ contract L2CustomGatewayTester is L2CustomGateway {
         return msg.sender == counterpartGateway;
     }
 
-    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
-        internal
-        virtual
-        override
-        returns (uint256)
-    {
+    function sendTxToL1(
+        address _from,
+        uint256 _l1CallValue,
+        bytes memory _data
+    ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l1CallValue }(_data);
         require(success, "OUTBOUND_REVERT");
@@ -133,12 +131,11 @@ contract L2WethGatewayTester is L2WethGateway {
         return msg.sender == counterpartGateway;
     }
 
-    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
-        internal
-        virtual
-        override
-        returns (uint256)
-    {
+    function sendTxToL1(
+        address _from,
+        uint256 _l1CallValue,
+        bytes memory _data
+    ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l1CallValue }(_data);
         require(success, "OUTBOUND_REVERT");
