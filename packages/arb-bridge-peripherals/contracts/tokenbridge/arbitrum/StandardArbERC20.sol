@@ -20,19 +20,18 @@ pragma solidity ^0.6.11;
 
 import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
-import "./IArbStandardToken.sol";
-import "./ArbTokenBridge.sol";
+import "./IArbToken.sol";
 import "../libraries/BytesParser.sol";
 
 /**
- * @title Standard (i.e., non-custom) contract deployed by ArbTokenBridge.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
+ * @title Standard (i.e., non-custom) contract deployed by L2Gateway.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
  */
-contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
-    ArbTokenBridge public bridge;
+contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
+    address public gatewayAddress;
     address public override l1Address;
 
-    modifier onlyBridge {
-        require(msg.sender == address(bridge), "ONLY_BRIDGE");
+    modifier onlyGateway {
+        require(msg.sender == address(gatewayAddress), "ONLY_GATEWAY");
         _;
     }
 
@@ -42,9 +41,9 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
      * @param _l1Address L1 address of ERC20
      * @param _data encoded symbol/name/decimal data for initial deploy
      */
-    function bridgeInit(address _l1Address, bytes memory _data) external override {
+    function bridgeInit(address _l1Address, bytes memory _data) external {
         require(address(l1Address) == address(0), "Already inited");
-        bridge = ArbTokenBridge(msg.sender);
+        gatewayAddress = msg.sender;
         l1Address = _l1Address;
 
         (bytes memory name, bytes memory symbol, bytes memory decimals) =
@@ -59,11 +58,11 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
     }
 
     /**
-     * @notice Mint tokens on L2. Callable path is EthErc20Bridge.depositToken (which handles L1 escrow), which triggers ArbTokenBridge.mintFromL1, which calls this
+     * @notice Mint tokens on L2. Callable path is L1Gateway depositToken (which handles L1 escrow), which triggers L2Gateway, which calls this
      * @param account recipient of tokens
      * @param amount amount of tokens minted
      */
-    function bridgeMint(address account, uint256 amount) external override onlyBridge {
+    function bridgeMint(address account, uint256 amount) external override onlyGateway {
         _mint(account, amount);
     }
 
@@ -73,25 +72,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbStandardToken {
      * @param account owner of tokens
      * @param amount amount of tokens burnt
      */
-    function bridgeBurn(address account, uint256 amount) external override onlyBridge {
+    function bridgeBurn(address account, uint256 amount) external override onlyGateway {
         _burn(account, amount);
-    }
-
-    /**
-     * @notice Initiates a token withdrawal
-     * @param account destination address
-     * @param amount amount of tokens withdrawn
-     */
-    function withdraw(address account, uint256 amount) external override {
-        bridge.withdraw(l1Address, msg.sender, account, amount);
-    }
-
-    /**
-     * @notice Migrate tokens from to a custom token contract; this should only happen/matter if a standard ERC20 is deployed for an L1 custom contract before the L2 custom contract gets registered
-     * @param account destination address
-     * @param amount amount of tokens withdrawn
-     */
-    function migrate(address account, uint256 amount) external override {
-        bridge.migrate(l1Address, msg.sender, account, amount);
     }
 }

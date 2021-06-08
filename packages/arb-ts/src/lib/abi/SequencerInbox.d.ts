@@ -26,6 +26,7 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
     'addSequencerL2BatchFromOrigin(bytes,uint256[],uint256[],bytes32)': FunctionFragment
     'delayedInbox()': FunctionFragment
     'forceInclusion(uint256,uint8,uint256[2],uint256,uint256,address,bytes32,bytes32)': FunctionFragment
+    'getInboxAccsLength()': FunctionFragment
     'inboxAccs(uint256)': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
     'isMaster()': FunctionFragment
@@ -36,6 +37,7 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
     'rollup()': FunctionFragment
     'sequencer()': FunctionFragment
     'setSequencer(address)': FunctionFragment
+    'totalDelayedMessagesRead()': FunctionFragment
   }
 
   encodeFunctionData(
@@ -62,6 +64,10 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
       BytesLike,
       BytesLike
     ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getInboxAccsLength',
+    values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'inboxAccs',
@@ -91,6 +97,10 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'rollup', values?: undefined): string
   encodeFunctionData(functionFragment: 'sequencer', values?: undefined): string
   encodeFunctionData(functionFragment: 'setSequencer', values: [string]): string
+  encodeFunctionData(
+    functionFragment: 'totalDelayedMessagesRead',
+    values?: undefined
+  ): string
 
   decodeFunctionResult(
     functionFragment: 'addSequencerL2Batch',
@@ -106,6 +116,10 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'forceInclusion',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getInboxAccsLength',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inboxAccs', data: BytesLike): Result
@@ -131,6 +145,10 @@ interface SequencerInboxInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'sequencer', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'setSequencer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'totalDelayedMessagesRead',
     data: BytesLike
   ): Result
 
@@ -223,6 +241,10 @@ export class SequencerInbox extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    getInboxAccsLength(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
     'inboxAccs(uint256)'(
@@ -289,6 +311,12 @@ export class SequencerInbox extends Contract {
       newSequencer: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    totalDelayedMessagesRead(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'totalDelayedMessagesRead()'(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
   }
 
   addSequencerL2Batch(
@@ -350,6 +378,10 @@ export class SequencerInbox extends Contract {
     delayedAcc: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
+
+  getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
+
+  'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
 
   inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -418,6 +450,10 @@ export class SequencerInbox extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  totalDelayedMessagesRead(overrides?: CallOverrides): Promise<BigNumber>
+
+  'totalDelayedMessagesRead()'(overrides?: CallOverrides): Promise<BigNumber>
+
   callStatic: {
     addSequencerL2Batch(
       transactions: BytesLike,
@@ -478,6 +514,10 @@ export class SequencerInbox extends Contract {
       delayedAcc: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
+
+    getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
 
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -542,6 +582,10 @@ export class SequencerInbox extends Contract {
       newSequencer: string,
       overrides?: CallOverrides
     ): Promise<void>
+
+    totalDelayedMessagesRead(overrides?: CallOverrides): Promise<BigNumber>
+
+    'totalDelayedMessagesRead()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   filters: {
@@ -638,6 +682,10 @@ export class SequencerInbox extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
+
     inboxAccs(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>
 
     'inboxAccs(uint256)'(
@@ -704,6 +752,10 @@ export class SequencerInbox extends Contract {
       newSequencer: string,
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    totalDelayedMessagesRead(overrides?: CallOverrides): Promise<BigNumber>
+
+    'totalDelayedMessagesRead()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -765,6 +817,12 @@ export class SequencerInbox extends Contract {
       messageDataHash: BytesLike,
       delayedAcc: BytesLike,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    getInboxAccsLength(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'getInboxAccsLength()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     inboxAccs(
@@ -837,6 +895,14 @@ export class SequencerInbox extends Contract {
     'setSequencer(address)'(
       newSequencer: string,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    totalDelayedMessagesRead(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'totalDelayedMessagesRead()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
   }
 }

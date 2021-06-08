@@ -18,9 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "../arbitrum/ArbTokenBridge.sol";
 import "../libraries/IERC677.sol";
-import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
 contract L2Called is IERC677Receiver {
     event Called(uint256 num);

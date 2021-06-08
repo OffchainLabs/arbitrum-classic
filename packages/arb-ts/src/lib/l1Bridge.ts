@@ -16,11 +16,15 @@
 /* eslint-env node */
 'use strict'
 import { Signer, BigNumber, providers, constants, utils } from 'ethers'
-import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
-import { EthERC20Bridge } from './abi/EthERC20Bridge'
+import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
+import { L1GatewayRouter } from './abi/L1GatewayRouter'
+import { L1ERC20Gateway } from './abi/L1ERC20Gateway'
+import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+
 import { Inbox } from './abi/Inbox'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ERC20 } from './abi/ERC20'
+import networks from './networks'
 
 import { ERC20__factory } from './abi/factories/ERC20__factory'
 import { addressToSymbol } from './bridge_helpers'
@@ -55,14 +59,14 @@ export interface Tokens {
  */
 export class L1Bridge {
   l1Signer: Signer
-  ethERC20Bridge: EthERC20Bridge
+  l1GatewayRouter: L1GatewayRouter
   walletAddressCache?: string
   inboxCached?: Inbox
   l1Tokens: Tokens
   l1Provider: providers.Provider
   l1EthBalance: BigNumber
 
-  constructor(erc20BridgeAddress: string, l1Signer: Signer) {
+  constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
     this.l1Signer = l1Signer
     this.l1Tokens = {}
 
@@ -72,8 +76,8 @@ export class L1Bridge {
       throw new Error('Signer must be connected to an Ethereum provider')
     }
     this.l1Provider = l1Provider
-    this.ethERC20Bridge = EthERC20Bridge__factory.connect(
-      erc20BridgeAddress,
+    this.l1GatewayRouter = L1GatewayRouter__factory.connect(
+      l1GatewayRouterAddress,
       l1Signer
     )
     this.l1EthBalance = BigNumber.from(0)
@@ -86,6 +90,12 @@ export class L1Bridge {
     return this.l1Tokens
   }
 
+  public getERC20L2Address(erc20L1Address: string) {
+    return this.l1GatewayRouter.functions
+      .calculateL2TokenAddress(erc20L1Address)
+      .then(([res]) => res)
+  }
+
   public async getAndUpdateL1TokenData(erc20L1Address: string) {
     const tokenData = this.l1Tokens[erc20L1Address] || {
       ERC20: undefined,
@@ -93,6 +103,7 @@ export class L1Bridge {
     }
     this.l1Tokens[erc20L1Address] = tokenData
     const walletAddress = await this.getWalletAddress()
+    const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
 
     if (!tokenData.ERC20) {
       if ((await this.l1Provider.getCode(erc20L1Address)).length > 2) {
@@ -107,7 +118,7 @@ export class L1Bridge {
 
         const [allowance] = await ethERC20TokenContract.functions.allowance(
           walletAddress,
-          this.ethERC20Bridge.address
+          gatewayAddress
         )
         // non-standard
         const symbol = await ethERC20TokenContract.functions
@@ -150,7 +161,7 @@ export class L1Bridge {
       if (!tokenData.ERC20.allowed) {
         const [allowance] = await ethERC20TokenContract.functions.allowance(
           walletAddress,
-          this.ethERC20Bridge.address
+          gatewayAddress
         )
         tokenData.ERC20.allowed = allowance.gte(MIN_APPROVAL.div(2))
       }
@@ -171,6 +182,19 @@ export class L1Bridge {
     })
   }
 
+  public async getGatewayAddress(erc20L1Address: string) {
+    return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
+      .gateway
+  }
+
+  public async getDefaultL1Gateway() {
+    const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
+    return L1ERC20Gateway__factory.connect(
+      defaultGatewayAddress,
+      this.l1Provider
+    )
+  }
+
   public async approveToken(
     erc20L1Address: string,
     overrides: PayableOverrides = {}
@@ -179,37 +203,13 @@ export class L1Bridge {
     if (!tokenData.ERC20) {
       throw new Error(`Can't approve; token ${erc20L1Address} not found`)
     }
+    // you approve tokens to the gateway that the router will use
+    const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
     return tokenData.ERC20.contract.functions.approve(
-      this.ethERC20Bridge.address,
+      gatewayAddress,
       MIN_APPROVAL,
       overrides
     )
-  }
-
-  public async getDepositCallDataLength(
-    erc20L1Address: string,
-    amount: BigNumber,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
-    destinationAddress?: string,
-    overrides: PayableOverrides = {}
-  ) {
-    const destination = destinationAddress || (await this.getWalletAddress())
-    const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
-    if (!tokenData.ERC20) {
-      throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
-    }
-    const [seqNum, len] = await this.ethERC20Bridge.callStatic.deposit(
-      erc20L1Address,
-      destination,
-      amount,
-      0,
-      maxGas,
-      gasPriceBid,
-      '0x',
-      overrides
-    )
-    return len
   }
 
   public async deposit(
@@ -226,14 +226,17 @@ export class L1Bridge {
     if (!tokenData.ERC20) {
       throw new Error(`Can't deposit; No ERC20 at ${erc20L1Address}`)
     }
-    return this.ethERC20Bridge.functions.deposit(
+    const data = utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+    return this.l1GatewayRouter.functions.outboundTransfer(
       erc20L1Address,
       destination,
       amount,
-      maxSubmissionCost,
       maxGas,
       gasPriceBid,
-      '0x',
+      data,
       overrides
     )
   }
@@ -250,7 +253,9 @@ export class L1Bridge {
     if (this.inboxCached) {
       return this.inboxCached
     }
-    const inboxAddress = await this.ethERC20Bridge.inbox()
+    const gateway = await this.getDefaultL1Gateway()
+
+    const inboxAddress = await gateway.inbox()
     this.inboxCached = Inbox__factory.connect(inboxAddress, this.l1Signer)
     return this.inboxCached
   }
