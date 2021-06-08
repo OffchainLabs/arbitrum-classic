@@ -71,7 +71,6 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
-        preTransferHook();
         address gateway = getGateway(_token);
         bytes memory gatewayData = getOutboundCalldata(_token, msg.sender, _to, _amount, _data);
 
@@ -124,6 +123,4 @@ abstract contract GatewayRouter is TokenGateway {
     {
         return TokenGateway(getGateway(l1ERC20)).calculateL2TokenAddress(l1ERC20);
     }
-
-    function preTransferHook() internal virtual;
 }

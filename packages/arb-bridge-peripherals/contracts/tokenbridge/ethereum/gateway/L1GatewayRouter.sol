@@ -147,8 +147,16 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         return _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost);
     }
 
-    function preTransferHook() internal virtual override onlyWhitelisted {
+    function outboundTransfer(
+        address _token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
         // will revert if msg.sender is not whitelisted
+        super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     function isSenderCounterpartGateway() internal view virtual override returns (bool) {
