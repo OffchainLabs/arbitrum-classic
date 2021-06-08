@@ -59,7 +59,11 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
 
         emit DefaultGatewayUpdated(newL1DefaultGateway);
 
-        address l2NewDefaultGateway = TokenGateway(newL1DefaultGateway).counterpartGateway();
+        address l2NewDefaultGateway;
+
+        if (newL1DefaultGateway != address(0)) {
+            l2NewDefaultGateway = TokenGateway(newL1DefaultGateway).counterpartGateway();
+        }
 
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
