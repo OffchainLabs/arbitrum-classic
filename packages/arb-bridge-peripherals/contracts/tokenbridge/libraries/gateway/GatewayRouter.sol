@@ -60,7 +60,7 @@ abstract contract GatewayRouter is TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external virtual override returns (bytes memory) {
+    ) external payable virtual override returns (bytes memory) {
         revert("ONLY_OUTBOUND_ROUTER");
     }
 

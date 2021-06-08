@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
@@ -31,6 +32,7 @@ import "../../libraries/ClonableBeaconProxy.sol";
 
 abstract contract L1ArbitrumGateway is TokenGateway {
     using SafeERC20 for IERC20;
+    using Address for address;
 
     address public inbox;
 
@@ -66,19 +68,50 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external virtual override onlyCounterpartGateway returns (bytes memory) {
+    ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
         (uint256 exitNum, bytes memory extraData) = abi.decode(_data, (uint256, bytes));
 
         // TODO: add withdraw and call
         // TODO: add transferExit
-        IERC20(_token).safeTransfer(_to, _amount);
+        inboundEscrowTransfer(_token, _to, _amount);
+
         emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
 
         return bytes("");
     }
 
+    function inboundEscrowTransfer(
+        address _l1Token,
+        address _dest,
+        uint256 _amount
+    ) internal virtual {
+        IERC20(_l1Token).safeTransfer(_dest, _amount);
+    }
+
     function createOutboundTx(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        bytes memory _extraData
+    ) internal virtual returns (uint256) {
+        return
+            sendTxToL2(
+                _from,
+                0, // l2 call value 0 by default
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+            );
+    }
+
+    function sendTxToL2(
         address _user,
+        uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
@@ -89,7 +122,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
         uint256 seqNum =
             IInbox(inbox).createRetryableTicket{ value: msg.value }(
                 counterpartGateway,
-                0,
+                _l2CallValue,
                 _maxSubmissionCost,
                 _user,
                 _user,
@@ -102,7 +135,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
 
     /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
-     * @param _token L1 address of ERC20
+     * @param _l1Token L1 address of ERC20
      * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
      * @param _amount Token Amount
      * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
@@ -112,7 +145,7 @@ abstract contract L1ArbitrumGateway is TokenGateway {
      */
     //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
     function outboundTransfer(
-        address _token,
+        address _l1Token,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
@@ -126,23 +159,35 @@ abstract contract L1ArbitrumGateway is TokenGateway {
             bytes memory extraData;
             (_from, _maxSubmissionCost, extraData) = parseOutboundData(_data);
 
-            // escrow funds in gateway
-            IERC20(_token).safeTransferFrom(_from, address(this), _amount);
+            require(_l1Token.isContract(), "L1_NOT_CONTRACT");
+            // this validates if the l1 token was set correctly
+            address l2Token = _calculateL2TokenAddress(_l1Token);
 
-            bytes memory outboundCalldata =
-                getOutboundCalldata(_token, _from, _to, _amount, extraData);
+            outboundEscrowTransfer(_l1Token, _from, _amount);
 
             seqNum = createOutboundTx(
+                _l1Token,
                 _from,
+                _to,
+                _amount,
                 _maxSubmissionCost,
                 _maxGas,
                 _gasPriceBid,
-                outboundCalldata
+                extraData
             );
         }
 
-        emit OutboundTransferInitiated(_token, _from, _to, seqNum, _amount, _data);
+        emit OutboundTransferInitiated(_l1Token, _from, _to, seqNum, _amount, _data);
         return abi.encode(seqNum);
+    }
+
+    function outboundEscrowTransfer(
+        address _l1Token,
+        address _from,
+        uint256 _amount
+    ) internal virtual {
+        // escrow funds in gateway
+        IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
     }
 
     function parseOutboundData(bytes memory _data)

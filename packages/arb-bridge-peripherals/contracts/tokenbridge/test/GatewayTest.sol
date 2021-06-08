@@ -18,8 +18,11 @@
 
 pragma solidity ^0.6.11;
 
+import "../ethereum/gateway/L1WethGateway.sol";
 import "../ethereum/gateway/L1CustomGateway.sol";
 import "../ethereum/gateway/L1ERC20Gateway.sol";
+
+import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 
@@ -28,8 +31,9 @@ contract L1GatewayTester is L1ERC20Gateway {
         return msg.sender == counterpartGateway;
     }
 
-    function createOutboundTx(
+    function sendTxToL2(
         address _user,
+        uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
@@ -46,8 +50,14 @@ contract L2GatewayTester is L2ERC20Gateway {
         return msg.sender == counterpartGateway;
     }
 
-    function createOutboundTx(bytes memory _data) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
+        internal
+        virtual
+        override
+        returns (uint256)
+    {
+        (bool success, bytes memory retdata) =
+            counterpartGateway.call{ value: _l1CallValue }(_data);
         require(success, "OUTBOUND_REVERT");
         return 1337;
     }
@@ -62,8 +72,9 @@ contract L1CustomGatewayTester is L1CustomGateway {
         return msg.sender == counterpartGateway;
     }
 
-    function createOutboundTx(
+    function sendTxToL2(
         address _user,
+        uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
@@ -80,8 +91,56 @@ contract L2CustomGatewayTester is L2CustomGateway {
         return msg.sender == counterpartGateway;
     }
 
-    function createOutboundTx(bytes memory _data) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
+        internal
+        virtual
+        override
+        returns (uint256)
+    {
+        (bool success, bytes memory retdata) =
+            counterpartGateway.call{ value: _l1CallValue }(_data);
+        require(success, "OUTBOUND_REVERT");
+        return 1337;
+    }
+
+    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+        return 50000;
+    }
+}
+
+contract L1WethGatewayTester is L1WethGateway {
+    function isCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
+    }
+
+    function sendTxToL2(
+        address _user,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual override returns (uint256) {
+        (bool success, bytes memory retdata) =
+            counterpartGateway.call{ value: _l2CallValue }(_data);
+        require(success, "OUTBOUND_REVERT");
+        return 1337;
+    }
+}
+
+contract L2WethGatewayTester is L2WethGateway {
+    function isCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
+    }
+
+    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
+        internal
+        virtual
+        override
+        returns (uint256)
+    {
+        (bool success, bytes memory retdata) =
+            counterpartGateway.call{ value: _l1CallValue }(_data);
         require(success, "OUTBOUND_REVERT");
         return 1337;
     }

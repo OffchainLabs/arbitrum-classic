@@ -51,9 +51,22 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         return 2500;
     }
 
-    function createOutboundTx(bytes memory _data) internal virtual returns (uint256) {
-        uint256 id = ArbSys(arbsysAddr).sendTxToL1(counterpartGateway, _data);
-        return id;
+    function createOutboundTx(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _extraData
+    ) internal virtual returns (uint256) {
+        return sendTxToL1(0, getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData));
+    }
+
+    function sendTxToL1(uint256 _l1CallValue, bytes memory _data)
+        internal
+        virtual
+        returns (uint256)
+    {
+        return ArbSys(arbsysAddr).sendTxToL1{ value: _l1CallValue }(counterpartGateway, _data);
     }
 
     function getOutboundCalldata(
@@ -111,18 +124,24 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         {
             address l2Token = _calculateL2TokenAddress(_l1Token);
             require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
-            // burns L2 tokens in order to release escrowed L1 tokens
-            IArbToken(l2Token).bridgeBurn(_from, _amount);
 
-            bytes memory outboundCalldata =
-                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData);
+            outboundEscrowTransfer(l2Token, _from, _amount);
 
-            id = createOutboundTx(outboundCalldata);
+            id = createOutboundTx(_l1Token, _from, _to, _amount, _extraData);
         }
-        // exitNum incremented after being used in getOutboundCalldata
+        // exitNum incremented after being used in createOutboundTx
         exitNum++;
         emit OutboundTransferInitiated(_l1Token, _from, _to, id, _amount, _extraData);
         return abi.encode(id);
+    }
+
+    function outboundEscrowTransfer(
+        address _l2Token,
+        address _from,
+        uint256 _amount
+    ) internal virtual {
+        // burns L2 tokens in order to release escrowed L1 tokens
+        IArbToken(_l2Token).bridgeBurn(_from, _amount);
     }
 
     function parseOutboundData(bytes memory _data)
@@ -146,22 +165,30 @@ abstract contract L2ArbitrumGateway is TokenGateway {
      * The reserve is the amount of gas needed to catch the revert and do the necessary alternative logic.
      */
     function mintAndCall(
-        IArbToken token,
-        uint256 amount,
-        address sender,
-        address dest,
-        bytes memory data
-    ) external {
+        address _l2Address,
+        uint256 _amount,
+        address _sender,
+        address _dest,
+        bytes memory _data
+    ) external virtual {
         require(msg.sender == address(this), "Mint can only be called by self");
-        require(dest.isContract(), "Destination must be a contract");
+        require(_dest.isContract(), "Destination must be a contract");
 
-        token.bridgeMint(dest, amount);
+        inboundEscrowTransfer(_l2Address, _dest, _amount);
 
         // ~73 000 arbgas used to get here
         uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert();
         require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
 
-        IERC677Receiver(dest).onTokenTransfer{ gas: gasAvailable }(sender, amount, data);
+        IERC677Receiver(_dest).onTokenTransfer{ gas: gasAvailable }(_sender, _amount, _data);
+    }
+
+    function inboundEscrowTransfer(
+        address _l2Address,
+        address _dest,
+        uint256 _amount
+    ) internal virtual {
+        IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
 
     /**
@@ -181,30 +208,29 @@ abstract contract L2ArbitrumGateway is TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) external virtual override onlyCounterpartGateway returns (bytes memory) {
-        (bytes memory deployData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
+    ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
+        (bytes memory gatewayData, bytes memory callHookData) = abi.decode(_data, (bytes, bytes));
 
         address expectedAddress = _calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
-            bool shouldHalt = handleNoContract(_token, expectedAddress, deployData);
+            bool shouldHalt = handleNoContract(_token, expectedAddress, gatewayData);
             if (shouldHalt) return bytes("");
         }
-        // ignores deployData if token already deployed
+        // ignores gatewayData if token already deployed
 
-        IArbToken token = IArbToken(expectedAddress);
         if (callHookData.length > 0) {
             bool success;
-            try this.mintAndCall(token, _amount, _from, _to, callHookData) {
+            try this.mintAndCall(expectedAddress, _amount, _from, _to, callHookData) {
                 success = true;
             } catch {
                 // if reverted, then credit _from's account
-                token.bridgeMint(_from, _amount);
+                inboundEscrowTransfer(expectedAddress, _from, _amount);
                 // success default value is false
             }
             emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
         } else {
-            token.bridgeMint(_to, _amount);
+            inboundEscrowTransfer(expectedAddress, _to, _amount);
         }
 
         emit InboundTransferFinalized(

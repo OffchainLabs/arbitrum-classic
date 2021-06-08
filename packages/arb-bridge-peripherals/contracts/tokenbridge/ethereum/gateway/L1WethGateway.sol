@@ -18,27 +18,33 @@
 
 pragma solidity ^0.6.11;
 
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "../../libraries/IWETH9.sol";
+import "../../test/TestWETH9.sol";
 import "./L1ArbitrumGateway.sol";
-import "../../arbitrum/gateway/L2CustomGateway.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 
-contract L1CustomGateway is L1ArbitrumGateway {
-    using Address for address;
-    // stores addresses of L2 tokens to be used
-    mapping(address => address) public l1ToL2Token;
+contract L1WethGateway is L1ArbitrumGateway {
+    using SafeERC20 for IWETH9;
 
-    event TokenSet(address indexed l1Address, address indexed l2Address);
+    address public l1Weth;
+    address public l2Weth;
 
     function initialize(
         address _l1Counterpart,
         address _l1Router,
-        address _inbox
+        address _inbox,
+        address _l1Weth,
+        address _l2Weth
     ) public virtual {
         L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        require(_l1Weth != address(0), "INVALID_L1WETH");
+        require(_l2Weth != address(0), "INVALID_L2WETH");
+        l1Weth = _l1Weth;
+        l2Weth = _l2Weth;
     }
 
     function getOutboundCalldata(
-        address _token,
+        address _l1Token,
         address _from,
         address _to,
         uint256 _amount,
@@ -48,7 +54,7 @@ contract L1CustomGateway is L1ArbitrumGateway {
 
         outboundCalldata = abi.encodeWithSelector(
             ITokenGateway.finalizeInboundTransfer.selector,
-            _token,
+            _l1Token,
             _from,
             _to,
             _amount,
@@ -56,6 +62,45 @@ contract L1CustomGateway is L1ArbitrumGateway {
         );
 
         return outboundCalldata;
+    }
+
+    function createOutboundTx(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        bytes memory _extraData
+    ) internal virtual override returns (uint256) {
+        return
+            sendTxToL2(
+                _from,
+                _amount, // send token amount to L2 as call value
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
+            );
+    }
+
+    function outboundEscrowTransfer(
+        address _l1Token,
+        address _from,
+        uint256 _amount
+    ) internal virtual override {
+        IWETH9(_l1Token).safeTransferFrom(_from, address(this), _amount);
+        IWETH9(_l1Token).withdraw(_amount);
+    }
+
+    function inboundEscrowTransfer(
+        address _l1Token,
+        address _dest,
+        uint256 _amount
+    ) internal virtual override {
+        IWETH9(_l1Token).deposit{ value: msg.value }();
+        IWETH9(_l1Token).safeTransfer(_dest, _amount);
     }
 
     /**
@@ -72,7 +117,8 @@ contract L1CustomGateway is L1ArbitrumGateway {
         override
         returns (address)
     {
-        return l1ToL2Token[l1ERC20];
+        require(l1ERC20 == l1Weth, "WRONG_L1WETH");
+        return l2Weth;
     }
 
     /**
@@ -94,22 +140,5 @@ contract L1CustomGateway is L1ArbitrumGateway {
         return _calculateL2TokenAddress(l1ERC20);
     }
 
-    function registerTokenToL2(
-        address l2Address,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost
-    ) external virtual returns (uint256) {
-        require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
-        l1ToL2Token[msg.sender] = l2Address;
-
-        bytes memory _data =
-            abi.encodeWithSelector(
-                L2CustomGateway.registerTokenFromL1.selector,
-                msg.sender,
-                l2Address
-            );
-
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
-    }
+    receive() external payable {}
 }
