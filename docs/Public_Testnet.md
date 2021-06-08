@@ -64,12 +64,21 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 ## Rinkeby Deployment
 
-All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/5521d2e8720b8e6724d4dc7a6d7711d72e634e36/packages/arb-bridge-eth/contracts
+All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/69c58d6b33c4dfb7d8293ccfdcb1675798201b7e/packages/arb-bridge-eth/contracts
 
 #### Important Addresses
 
 - Main L1 Rollup Contract: [0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c](https://rinkeby.etherscan.io/address/0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c)
 - Ethereum Inbox Contract [0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e](https://rinkeby.etherscan.io/address/0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e)
+
+## V5 Arbitrum Chain
+
+For connecting to our older "v5" Arbitrum chain (running on Kovan), use the following:
+
+- Aggregator RPC Endpoint: https://kovan5.arbitrum.io/rpc
+- Chain ID: 144545313136048
+- Symbol: ETH
+- Block Explorer URL: https://explorer5.arbitrum.io/#/
 
 <!--
 ## Running your own node
