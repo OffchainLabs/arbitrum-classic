@@ -10,22 +10,12 @@ For a general introduction to the Arbitrum Testnet, see our [announcement](https
 
 For a convenient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
 
-## Connection Information
-
-Hosted Aggregator Node (JSON-RPC Endpoint): [https://rinkeby.arbitrum.io/rpc](https://rinkeby.arbitrum.io/rpc)
-
-Rollup Chain ID: 144545313136048
-
-Testnet Version: v5
-
-Chain Launched on May 15, 2021
-
 ## Connecting to the chain
 
 If you're using Metamask, add a custom RPC network to connect to the Arbitrum testnet:
 
 - Network Name: Arbitrum Testnet
-- New RPC URL: https://rinkeby.arbitrum.io/rpc
+- RPC URL: https://rinkeby.arbitrum.io/rpc
 - ChainID: 421611
 - Symbol: ETH
 - Block Explorer URL: https://rinkeby-explorer.arbitrum.io/#/
