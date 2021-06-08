@@ -151,7 +151,7 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         // will revert if msg.sender is not whitelisted
     }
 
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         // don't expect messages from L2 router
         return false;
     }

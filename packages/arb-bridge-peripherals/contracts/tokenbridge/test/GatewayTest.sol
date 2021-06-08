@@ -27,7 +27,7 @@ import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 
 contract L1GatewayTester is L1ERC20Gateway {
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
@@ -46,7 +46,7 @@ contract L1GatewayTester is L1ERC20Gateway {
 }
 
 contract L2GatewayTester is L2ERC20Gateway {
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
@@ -67,7 +67,7 @@ contract L2GatewayTester is L2ERC20Gateway {
 }
 
 contract L1CustomGatewayTester is L1CustomGateway {
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
@@ -86,7 +86,7 @@ contract L1CustomGatewayTester is L1CustomGateway {
 }
 
 contract L2CustomGatewayTester is L2CustomGateway {
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
@@ -107,7 +107,7 @@ contract L2CustomGatewayTester is L2CustomGateway {
 }
 
 contract L1WethGatewayTester is L1WethGateway {
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
@@ -127,7 +127,7 @@ contract L1WethGatewayTester is L1WethGateway {
 }
 
 contract L2WethGatewayTester is L2WethGateway {
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 

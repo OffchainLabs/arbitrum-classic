@@ -33,7 +33,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
     uint256 public exitNum;
 
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
@@ -147,7 +147,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         virtual
         returns (address _from, bytes memory _extraData)
     {
-        if (isRouter()) {
+        if (isSenderRouter()) {
             (_from, _extraData) = abi.decode(_data, (address, bytes));
         } else {
             _from = msg.sender;
@@ -242,7 +242,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         return bytes("");
     }
 
-    function isRouter() internal view virtual override returns (bool) {
+    function isSenderRouter() internal view virtual override returns (bool) {
         return msg.sender == router;
     }
 

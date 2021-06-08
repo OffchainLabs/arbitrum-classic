@@ -57,7 +57,7 @@ contract L2GatewayRouter is GatewayRouter {
         // continue;
     }
 
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 

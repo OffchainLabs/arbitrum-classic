@@ -38,7 +38,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
 
     address public inbox;
 
-    function isCounterpartGateway() internal view virtual override returns (bool) {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         IOutbox outbox = IOutbox(IInbox(inbox).bridge().activeOutbox());
         return counterpartGateway == outbox.l2ToL1Sender();
     }
@@ -201,7 +201,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
             bytes memory _extraData
         )
     {
-        if (isRouter()) {
+        if (isSenderRouter()) {
             // router encoded
             (_from, _extraData) = abi.decode(_data, (address, bytes));
         } else {
@@ -212,7 +212,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
     }
 
-    function isRouter() internal view virtual override returns (bool) {
+    function isSenderRouter() internal view virtual override returns (bool) {
         return msg.sender == router;
     }
 

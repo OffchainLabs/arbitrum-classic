@@ -97,7 +97,7 @@ abstract contract GatewayRouter is TokenGateway {
         return abi.encode(_from, _data);
     }
 
-    function isRouter() internal view virtual override returns (bool) {
+    function isSenderRouter() internal view virtual override returns (bool) {
         // nothing routes to gateway router
         return false;
     }

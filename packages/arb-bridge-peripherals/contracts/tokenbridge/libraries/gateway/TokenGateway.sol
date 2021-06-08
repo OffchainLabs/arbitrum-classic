@@ -25,12 +25,12 @@ abstract contract TokenGateway is ITokenGateway {
     address public router;
 
     modifier onlyCounterpartGateway {
-        require(isCounterpartGateway(), "ONLY_COUNTERPART_GATEWAY");
+        require(isSenderCounterpartGateway(), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 
     modifier onlyRouter {
-        require(isRouter(), "ONLY_ROUTER");
+        require(isSenderRouter(), "ONLY_ROUTER");
         _;
     }
 
@@ -68,9 +68,9 @@ abstract contract TokenGateway is ITokenGateway {
      */
     function _calculateL2TokenAddress(address l1ERC20) internal view virtual returns (address);
 
-    function isRouter() internal view virtual returns (bool);
+    function isSenderRouter() internal view virtual returns (bool);
 
-    function isCounterpartGateway() internal view virtual returns (bool);
+    function isSenderCounterpartGateway() internal view virtual returns (bool);
 
     function outboundTransfer(
         address _token,
