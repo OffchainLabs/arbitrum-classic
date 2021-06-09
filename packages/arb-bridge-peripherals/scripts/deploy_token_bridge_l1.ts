@@ -85,6 +85,17 @@ const main = async () => {
   await erc20Beacon.deployed()
   console.log(`erc20 beacon at ${erc20Beacon.address}`)
 
+  const BeaconProxyFactory = (
+    await ethers.getContractFactory('BeaconProxyFactory')
+  ).connect(l2Signer)
+  const beaconProxyFactory = await BeaconProxyFactory.deploy(
+    erc20Beacon.address
+  )
+  await beaconProxyFactory.deployed()
+  console.log(`beacon proxyfactory at ${beaconProxyFactory.address}`)
+
+  const cloneableProxyHash = await beaconProxyFactory.cloneableProxyHash()
+
   const L2ERC20Gateway = (
     await ethers.getContractFactory('L2ERC20Gateway')
   ).connect(l2Signer)
@@ -129,6 +140,10 @@ const main = async () => {
 
   // initialize proxies and setup txs
 
+  const initBeacon = await beaconProxyFactory.initialize(erc20Beacon.address)
+  console.log('Init beacon factory', initBeacon.hash)
+  await initBeacon.wait()
+
   const l1ERC20GatewayConnectedAsProxy = L1ERC20Gateway__factory.connect(
     l1ERC20GatewayProxy.address,
     accounts[0]
@@ -137,7 +152,9 @@ const main = async () => {
   const initL1Bridge = await l1ERC20GatewayConnectedAsProxy.initialize(
     l2ERC20GatewayProxy.address,
     l1GatewayRouterProxy.address,
-    inboxAddress
+    inboxAddress,
+    cloneableProxyHash,
+    beaconProxyFactory.address
   )
   console.log('init L1 hash', initL1Bridge.hash)
   await initL1Bridge.wait()
@@ -151,7 +168,7 @@ const main = async () => {
   const initL2Bridge = await l2ERC20GatewayConnectedAsProxy.initialize(
     l1ERC20GatewayProxy.address,
     l2GatewayRouterProxy.address,
-    erc20Beacon.address
+    beaconProxyFactory.address
   )
   console.log('init L2 hash', initL2Bridge.hash)
   await initL2Bridge.wait()

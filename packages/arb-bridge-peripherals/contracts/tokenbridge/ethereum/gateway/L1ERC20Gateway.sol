@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./L1ArbitrumGateway.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
 
 /**
  * @title Layer 1 contract for bridging standard ERC20s
@@ -28,14 +29,33 @@ import "./L1ArbitrumGateway.sol";
  */
 contract L1ERC20Gateway is L1ArbitrumGateway {
     // used for create2 address calculation
-    bytes32 public constant cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
+    bytes32 public cloneableProxyHash;
+    // We don't use the solidity creationCode as it breaks when upgrading contracts
+    // keccak256(type(ClonableBeaconProxy).creationCode);
+    address public l2BeaconProxyFactory;
 
     function initialize(
         address _l2Counterpart,
         address _router,
-        address _inbox
+        address _inbox,
+        bytes32 _cloneableProxyHash,
+        address _l2BeaconProxyFactory
     ) public virtual {
         L1ArbitrumGateway._initialize(_l2Counterpart, _router, _inbox);
+        require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
+        require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
+        cloneableProxyHash = _cloneableProxyHash;
+        l2BeaconProxyFactory = _l2BeaconProxyFactory;
+    }
+
+    function postUpgradeInit(bytes32 _cloneableProxyHash, address _l2BeaconProxyFactory) external {
+        // one time use method to initialize new fields from upgrade
+        require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
+        require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
+        require(cloneableProxyHash == bytes32(0), "ALREADY_INIT");
+        require(l2BeaconProxyFactory == address(0), "ALREADY_INIT");
+        cloneableProxyHash = _cloneableProxyHash;
+        l2BeaconProxyFactory = _l2BeaconProxyFactory;
     }
 
     /**
@@ -108,10 +128,11 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         returns (address)
     {
         bytes32 salt = getSalt(l1ERC20);
-        return Create2.computeAddress(salt, cloneableProxyHash, counterpartGateway);
+        return Create2.computeAddress(salt, cloneableProxyHash, l2BeaconProxyFactory);
     }
 
-    function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
-        return keccak256(abi.encode(l1ERC20));
+    function getSalt(address l1ERC20) internal view virtual returns (bytes32) {
+        // TODO: use a library
+        return keccak256(abi.encode(counterpartGateway, keccak256(abi.encode(l1ERC20))));
     }
 }

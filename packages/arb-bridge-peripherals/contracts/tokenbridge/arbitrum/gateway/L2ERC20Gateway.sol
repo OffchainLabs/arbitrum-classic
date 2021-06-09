@@ -18,35 +18,33 @@
 
 pragma solidity ^0.6.11;
 
-import "../../libraries/ClonableBeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts/utils/Create2.sol";
 import "./L2ArbitrumGateway.sol";
 import "../StandardArbERC20.sol";
+import "../../libraries/ClonableBeaconProxy.sol";
 
-contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
-    // used for create2 address calculation
-    bytes32 public constant cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
-
-    /**
-     * @notice utility function used in ClonableBeaconProxy.
-     * @dev this method makes it possible to use ClonableBeaconProxy.creationCode without encoding constructor parameters
-     * @return the beacon to be used by the proxy contract.
-     */
-    address public override beacon;
+contract L2ERC20Gateway is L2ArbitrumGateway {
+    address public beaconProxyFactory;
 
     function initialize(
         address _l1Counterpart,
         address _router,
-        address _beacon
+        address _beaconProxyFactory
     ) public virtual {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
-        require(_beacon != address(0), "INVALID_BEACON");
-        require(beacon == address(0), "ALREADY_INIT");
-        beacon = _beacon;
+        require(_beaconProxyFactory != address(0), "INVALID_BEACON");
+        beaconProxyFactory = _beaconProxyFactory;
     }
 
-    function getSalt(address l1ERC20) internal pure virtual returns (bytes32) {
-        return keccak256(abi.encode(l1ERC20));
+    function postUpgradeInit(address _beaconProxyFactory) external {
+        // This function is for one time use to update the storage value of beaconFactory
+        // after being upgraded
+        require(
+            beaconProxyFactory == address(0x86B4b312140B4117A7b0D252eC53Fa6D0753fE85),
+            "ALREADY_UPDATED"
+        );
+        beaconProxyFactory = _beaconProxyFactory;
     }
 
     /**
@@ -82,8 +80,19 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         override
         returns (address)
     {
-        bytes32 salt = getSalt(l1ERC20);
-        return Create2.computeAddress(salt, cloneableProxyHash, address(this));
+        return
+            BeaconProxyFactory(beaconProxyFactory).calculateExpectedAddress(
+                address(this),
+                getUserSalt(l1ERC20)
+            );
+    }
+
+    function cloneableProxyHash() public view returns (bytes32) {
+        return BeaconProxyFactory(beaconProxyFactory).cloneableProxyHash();
+    }
+
+    function getUserSalt(address l1ERC20) public pure returns (bytes32) {
+        return keccak256(abi.encode(l1ERC20));
     }
 
     /**
@@ -102,14 +111,15 @@ contract L2ERC20Gateway is L2ArbitrumGateway, ProxySetter {
         uint256 _amount,
         bytes memory deployData
     ) internal virtual override returns (bool shouldHalt) {
-        bytes32 salt = getSalt(l1ERC20);
-        address createdContract = address(new ClonableBeaconProxy{ salt: salt }());
+        bytes32 userSalt = getUserSalt(l1ERC20);
+        address createdContract = BeaconProxyFactory(beaconProxyFactory).createProxy(userSalt);
 
         StandardArbERC20(createdContract).bridgeInit(l1ERC20, deployData);
 
         if (createdContract == expectedL2Address) {
             shouldHalt = false;
         } else {
+            revert("SHOULDNT BE HERE");
             // trigger withdrawal
             createOutboundTx(l1ERC20, address(this), _from, _amount, "");
         }

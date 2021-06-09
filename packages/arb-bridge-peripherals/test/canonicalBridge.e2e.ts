@@ -55,6 +55,13 @@ describe('Bridge peripherals end-to-end', () => {
       'UpgradeableBeacon'
     )
     const beacon = await UpgradeableBeacon.deploy(standardArbERC20Logic.address)
+    const BeaconProxyFactory = await ethers.getContractFactory(
+      'BeaconProxyFactory'
+    )
+    const beaconProxyFactory = await BeaconProxyFactory.deploy()
+    const cloneableProxyHash = await beaconProxyFactory.cloneableProxyHash()
+
+    await beaconProxyFactory.initialize(beacon.address)
 
     const L2TestBridge: ContractFactory = await ethers.getContractFactory(
       'L2GatewayTester'
@@ -69,13 +76,15 @@ describe('Bridge peripherals end-to-end', () => {
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,
       l1RouterTestBridge.address,
-      accounts[0].address // inbox
+      accounts[0].address, // inbox
+      cloneableProxyHash,
+      beaconProxyFactory.address
     )
 
     await l2TestBridge.initialize(
       l1TestBridge.address,
       l2RouterTestBridge.address,
-      beacon.address
+      beaconProxyFactory.address
     )
 
     await l1RouterTestBridge.functions.initialize(
@@ -90,6 +99,17 @@ describe('Bridge peripherals end-to-end', () => {
     await l2RouterTestBridge.functions.initialize(
       l1RouterTestBridge.address,
       l2DefaultGateway
+    )
+
+    assert.equal(
+      cloneableProxyHash.toLowerCase(),
+      await l1TestBridge.cloneableProxyHash(),
+      'Wrong hash l1'
+    )
+    assert.equal(
+      cloneableProxyHash.toLowerCase(),
+      await l2TestBridge.cloneableProxyHash(),
+      'Wrong hash l1'
     )
   })
 
@@ -121,6 +141,15 @@ describe('Bridge peripherals end-to-end', () => {
     const l2TokenAddress = await l2RouterTestBridge.calculateL2TokenAddress(
       token.address
     )
+    const l2TokenAddressFromL1Router = await l1RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+    assert.equal(
+      l2TokenAddressFromL1Router,
+      l2TokenAddress,
+      'Wrong address oracle'
+    )
+
     const l2Token = await Token.attach(l2TokenAddress)
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
     assert.equal(l2Balance, tokenAmount, 'Tokens not minted')

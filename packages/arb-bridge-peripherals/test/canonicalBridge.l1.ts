@@ -41,10 +41,12 @@ describe('Bridge peripherals layer 1', () => {
     const Inbox = await ethers.getContractFactory('InboxMock')
     inbox = await Inbox.deploy()
 
-    await testBridge.functions['initialize(address,address,address)'](
+    await testBridge.initialize(
       l2Address,
       accounts[0].address,
-      inbox.address
+      inbox.address,
+      '0x0000000000000000000000000000000000000000000000000000000000000001', // cloneable proxy hash
+      accounts[0].address // beaconProxyFactory
     )
   })
 
