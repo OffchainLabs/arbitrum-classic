@@ -15,11 +15,7 @@
  */
 
 export { Bridge } from './lib/bridge'
-export {
-  L2ToL1EventResult,
-  DepositTokenEventResult,
-  OutgoingMessageState,
-} from './lib/bridge_helpers'
+export { L2ToL1EventResult, OutgoingMessageState } from './lib/bridge_helpers'
 export { L1Bridge, L1TokenData } from './lib/l1Bridge'
 export { L2Bridge, L2TokenData } from './lib/l2Bridge'
 
@@ -32,3 +28,4 @@ export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__fac
 export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
 
 export { argSerializerConstructor } from './lib/byte_serialize_params'
+export { WETH9__factory } from './lib/abi/factories/WETH9__factory'
