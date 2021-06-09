@@ -30,25 +30,29 @@ func TestReceiveMessages(t *testing.T) {
 	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
-	tmb := broadcaster.NewRandomMessageGenerator(10, 100)
+	tmb := broadcaster.NewRandomMessageGenerator(10, 100*time.Millisecond)
 	tmb.SetBroadcaster(b)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 2; i++ {
 		wg.Add(1)
-		go makeBroadcastClient(t, 10, &wg)
+		makeBroadcastClient(ctx, t, i, 10, &wg)
 	}
 
-	tmb.StartWorker()
+	errChan := tmb.Start(ctx)
 	wg.Wait()
-	tmb.StopWorker()
+	//tmb.Stop()
+
+	select {
+	case err := <-errChan:
+		t.Fatal(err)
+	default:
+	}
 }
 
-func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
+func makeBroadcastClient(ctx context.Context, t *testing.T, index int, expectedCount int, wg *sync.WaitGroup) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9742/", nil, 20*time.Second)
-	defer wg.Done()
 	messageCount := 0
-	ctx := context.Background()
 
 	// connect returns
 	messageReceiver, err := broadcastClient.Connect(ctx)
@@ -57,20 +61,26 @@ func makeBroadcastClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	}
 	accListener := broadcastClient.ConfirmedAccumulatorListener
 
-	for {
-		select {
-		case receivedMsg := <-messageReceiver:
-			t.Logf("Received Message, Sequence Message: %v\n", receivedMsg.FeedItem.BatchItem.SequencerMessage)
-			messageCount++
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case receivedMsg := <-messageReceiver:
+				t.Logf("Client %d received Message %d, Sequence Message: %v\n", index, messageCount, receivedMsg.FeedItem.BatchItem.SequencerMessage)
+				messageCount++
 
-			if messageCount == expectedCount {
-				broadcastClient.Close()
+				if messageCount == expectedCount {
+					broadcastClient.Close()
+					return
+				}
+			case confirmedAccumulator := <-accListener:
+				t.Logf("Client %d received confirmedAccumulator, Sequence Message: %v\n", index, confirmedAccumulator.ShortString())
+			case <-time.After(60 * time.Second):
+				t.Logf("Client %d expected %d meesages, only got %d messages\n", index, expectedCount, messageCount)
 				return
 			}
-		case confirmedAccumulator := <-accListener:
-			t.Logf("Received confirmedAccumulator, Sequence Message: %v\n", confirmedAccumulator.ShortString())
 		}
-	}
+	}()
 
 }
 
@@ -206,7 +216,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
-		go connectAndGetCachedMessages(t, i, &wg)
+		connectAndGetCachedMessages(ctx, t, i, &wg)
 	}
 
 	wg.Wait()
@@ -246,34 +256,35 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	}
 }
 
-func connectAndGetCachedMessages(t *testing.T, clientIndex int, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	ctx := context.Background()
-
+func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex int, wg *sync.WaitGroup) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9642/", nil, 60*time.Second)
 	testClient, err := broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer broadcastClient.Close()
 
-	t.Logf("client %d %v connected\n", clientIndex, (*broadcastClient).conn.LocalAddr())
+	go func() {
+		defer wg.Done()
+		defer broadcastClient.Close()
 
-	// Wait for client to receive first item
-	select {
-	case receivedMsg := <-testClient:
-		t.Logf("client %d received first message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
-	case <-time.After(10 * time.Second):
-		t.Fatalf("client %d did not receive first batch item\n", clientIndex)
-	}
+		t.Logf("client %d %v connected\n", clientIndex, (*broadcastClient).conn.LocalAddr())
 
-	// Wait for client to receive second item
-	select {
-	case receivedMsg := <-testClient:
-		t.Logf("client %d received second message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
-	case <-time.After(10 * time.Second):
-		t.Fatalf("client %d did not receive second batch item\n", clientIndex)
-	}
+		// Wait for client to receive first item
+		select {
+		case receivedMsg := <-testClient:
+			t.Logf("client %d received first message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
+		case <-time.After(10 * time.Second):
+			t.Logf("client %d did not receive first batch item\n", clientIndex)
+			return
+		}
 
+		// Wait for client to receive second item
+		select {
+		case receivedMsg := <-testClient:
+			t.Logf("client %d received second message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
+		case <-time.After(10 * time.Second):
+			t.Logf("client %d did not receive second batch item\n", clientIndex)
+			return
+		}
+	}()
 }

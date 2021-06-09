@@ -17,10 +17,10 @@
 package broadcaster
 
 import (
+	"context"
 	"errors"
 	"math/big"
 	"reflect"
-	"sync"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -57,7 +57,7 @@ func setSequenceNumberInData(data []byte, sequenceNumber *big.Int) []byte {
 	return completeDataWithSequenceNumberSet
 }
 
-// returns a function that when called returns the next random message in the sequence
+// SequencedMessages returns a function that when called returns the next random message in the sequence
 func SequencedMessages() func() (common.Hash, SequencerFeedItem, *big.Int) {
 	sequenceNumber := big.NewInt(41)
 	accumulator := common.RandHash()
@@ -86,22 +86,19 @@ func SequencedMessages() func() (common.Hash, SequencerFeedItem, *big.Int) {
 	}
 }
 
-// This sends out generated test broadcast messages
+// RandomMessageGenerator sends out generated test broadcast messages
 type RandomMessageGenerator struct {
-	broadcaster              *Broadcaster
-	startWorkerMutex         *sync.Mutex
-	messageBroadcasterWorker *time.Ticker
-	count                    int
-	intervalDuration         time.Duration
-	workerStarted            bool
+	broadcaster      *Broadcaster
+	cancelFunc       context.CancelFunc
+	count            int
+	intervalDuration time.Duration
+	workerStarted    bool
 }
 
-// create a new test message generator
-func NewRandomMessageGenerator(count int, ms int) *RandomMessageGenerator {
+// NewRandomMessageGenerator creates a new test message generator
+func NewRandomMessageGenerator(count int, interval time.Duration) *RandomMessageGenerator {
 	gm := &RandomMessageGenerator{}
-	gm.startWorkerMutex = &sync.Mutex{}
-	gm.intervalDuration = time.Duration(ms) * time.Millisecond
-	gm.workerStarted = false
+	gm.intervalDuration = interval
 	gm.count = count
 	return gm
 }
@@ -111,42 +108,54 @@ func (mg *RandomMessageGenerator) SetBroadcaster(broadcaster *Broadcaster) {
 	mg.broadcaster = broadcaster
 }
 
-func (mg *RandomMessageGenerator) StartWorker() {
-	mg.startWorkerMutex.Lock()
-	defer mg.startWorkerMutex.Unlock()
-	if mg.workerStarted {
-		return
-	}
+func (mg *RandomMessageGenerator) Start(parentCtx context.Context) <-chan error {
+	errChan := make(chan error, 1)
+	ctx, cancelFunc := context.WithCancel(parentCtx)
 
-	ticker := time.NewTicker(mg.intervalDuration)
-	messageCount := 0
 	go func() {
-		for range ticker.C {
-			_ = mg.broadcaster.BroadcastSingle(
-				common.HexToHash("0x0001"),
-				inbox.SequencerBatchItem{
-					LastSeqNum:        big.NewInt(0),
-					Accumulator:       common.HexToHash("0x01"),
-					TotalDelayedCount: big.NewInt(0),
-					SequencerMessage:  big.NewInt(42).Bytes(),
-				},
-				make([]byte, 0),
-			)
-			messageCount++
-			if messageCount == mg.count {
-				ticker.Stop()
+		defer cancelFunc()
+		ticker := time.NewTicker(mg.intervalDuration)
+		defer ticker.Stop()
+
+		prevAcc := common.RandHash()
+		currAcc := common.RandHash()
+
+		var lastSeq int64
+
+		messageCount := 0
+		for {
+			currSeq := lastSeq + 1
+			select {
+			case <-ctx.Done():
 				return
+			case <-ticker.C:
+				err := mg.broadcaster.BroadcastSingle(
+					prevAcc,
+					inbox.SequencerBatchItem{
+						LastSeqNum:        big.NewInt(lastSeq),
+						Accumulator:       currAcc,
+						TotalDelayedCount: big.NewInt(0),
+						SequencerMessage:  big.NewInt(currSeq).Bytes(),
+					},
+					make([]byte, 0),
+				)
+				if err != nil {
+					errChan <- errors.New("error broadcasting message")
+					return
+				}
+				messageCount++
+				prevAcc = currAcc
+				lastSeq = currSeq
+				if messageCount == mg.count {
+					return
+				}
 			}
 		}
 	}()
 
-	mg.messageBroadcasterWorker = ticker
-	mg.workerStarted = true
+	return errChan
 }
 
-func (mg *RandomMessageGenerator) StopWorker() {
-	if mg.messageBroadcasterWorker != nil {
-		mg.messageBroadcasterWorker.Stop()
-		mg.workerStarted = false
-	}
+func (mg *RandomMessageGenerator) Stop() {
+	mg.cancelFunc()
 }

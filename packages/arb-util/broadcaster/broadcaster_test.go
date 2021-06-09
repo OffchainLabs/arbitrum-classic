@@ -19,6 +19,7 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
+	"github.com/mailru/easygo/netpoll"
 	"net"
 	"sync"
 	"testing"
@@ -26,7 +27,6 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/mailru/easygo/netpoll"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -59,7 +59,7 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	accumulatorConfirmed := make(chan common.Hash)
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go receivedConfirmedAccumulator(t, &wg, accumulatorConfirmed)
+	startReceivedConfirmedAccumulator(t, &wg, accumulatorConfirmed)
 
 	time.Sleep(2 * time.Second)
 
@@ -74,74 +74,79 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	wg.Wait()
 }
 
-func receivedConfirmedAccumulator(t *testing.T, wg *sync.WaitGroup, accumulatorConfirmed chan common.Hash) {
+func startReceivedConfirmedAccumulator(t *testing.T, wg *sync.WaitGroup, accumulatorConfirmed chan common.Hash) {
 
-	confirmedAccumulatorReceived := 0
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
-	if err != nil {
-		t.Errorf("Can not connect: %v\n", err)
-		return
-	}
-
-	poller, err := netpoll.New(nil)
-	if err != nil {
-		t.Error("error starting net poller")
-		return
-	}
-
-	desc, err := netpoll.HandleRead(conn)
-	if err != nil {
-		t.Error("error getting netpoll descriptor")
-		return
-	}
-
-	_ = poller.Start(desc, func(ev netpoll.Event) {
-		if ev&netpoll.EventReadHup != 0 {
-			t.Error("received hang up")
-			_ = poller.Stop(desc)
-			_ = conn.Close()
-			wg.Done()
-			return
-		}
-
-		msg, _, err := wsutil.ReadServerData(conn)
+	go func() {
+		confirmedAccumulatorReceived := 0
+		conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
 		if err != nil {
-			t.Error("error calling ReadServerData")
-			_ = poller.Stop(desc)
-			_ = conn.Close()
-			wg.Done()
+			t.Errorf("Can not connect: %v\n", err)
 			return
 		}
 
-		res := BroadcastMessage{}
-		err = json.Unmarshal(msg, &res)
+		poller, err := netpoll.New(nil)
 		if err != nil {
-			logger.Error().Err(err).Msg("error unmarshalling message")
-			_ = poller.Stop(desc)
-			_ = conn.Close()
-			wg.Done()
-
+			t.Error("error starting net poller")
 			return
 		}
 
-		if res.Version != 1 {
-			t.Error("This is not version 1")
-		}
-
-		if res.ConfirmedAccumulator.IsConfirmed {
-			confirmedAccumulatorReceived++
-			accumulatorConfirmed <- res.ConfirmedAccumulator.Accumulator
-		}
-
-		if confirmedAccumulatorReceived == 1 { // this gets called twice from the test
-			_ = poller.Stop(desc)
-			_ = conn.Close()
-			wg.Done()
+		desc, err := netpoll.HandleRead(conn)
+		if err != nil {
+			t.Error("error getting netpoll descriptor")
 			return
 		}
 
-	})
+		err = poller.Start(desc, func(ev netpoll.Event) {
+			if ev&netpoll.EventReadHup != 0 {
+				t.Error("received hang up")
+				_ = poller.Stop(desc)
+				_ = conn.Close()
+				wg.Done()
+				return
+			}
 
+			msg, _, err := wsutil.ReadServerData(conn)
+			if err != nil {
+				t.Error("error calling ReadServerData")
+				_ = poller.Stop(desc)
+				_ = conn.Close()
+				wg.Done()
+				return
+			}
+
+			res := BroadcastMessage{}
+			err = json.Unmarshal(msg, &res)
+			if err != nil {
+				logger.Error().Err(err).Msg("error unmarshalling message")
+				_ = poller.Stop(desc)
+				_ = conn.Close()
+				wg.Done()
+
+				return
+			}
+
+			if res.Version != 1 {
+				t.Error("This is not version 1")
+			}
+
+			if res.ConfirmedAccumulator.IsConfirmed {
+				confirmedAccumulatorReceived++
+				accumulatorConfirmed <- res.ConfirmedAccumulator.Accumulator
+			}
+
+			if confirmedAccumulatorReceived == 1 { // this gets called twice from the test
+				_ = poller.Stop(desc)
+				_ = conn.Close()
+				wg.Done()
+				return
+			}
+
+		})
+
+		if err != nil {
+			t.Errorf("Problem starting poller: %v\n", err)
+		}
+	}()
 }
 
 func TestBroadcasterRespondsToPing(t *testing.T) {
