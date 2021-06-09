@@ -114,8 +114,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		ClientNoResponseTimeout: b.settings.ClientNoResponseTimeout,
 	}
 	var clientManager = NewClientManager(pool, b.poller, cmSettings)
-	clientManager.startWriter(ctx)
-	clientManager.startVerifier(ctx)
+	clientManager.Start(ctx)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 
@@ -261,10 +260,6 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	return nil
 }
 
-func (b *Broadcaster) ClientConnectionCount() int {
-	return b.clientManager.ClientConnectionCount()
-}
-
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
@@ -286,16 +281,11 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.Sequence
 	return nil
 }
 
-func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {
-	err := b.clientManager.confirmedAccumulator(accumulator)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
+	b.clientManager.confirmedAccumulator(accumulator)
 }
 
-func (b *Broadcaster) messageCacheCount() int {
+func (b *Broadcaster) MessageCacheCount() int {
 	count := len(b.clientManager.broadcastMessages)
 	return count
 }
@@ -316,7 +306,7 @@ func (b *Broadcaster) Stop() {
 		logger.Warn().Err(err).Msg("error in acceptDesc.Close")
 	}
 
-	b.clientManager.RemoveAll()
+	b.clientManager.Stop()
 	b.broadcasterStarted = false
 }
 

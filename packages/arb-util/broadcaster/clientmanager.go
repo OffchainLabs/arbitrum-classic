@@ -20,8 +20,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/pkg/errors"
 	"net"
-	"sync"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -40,53 +40,63 @@ type ClientManagerSettings struct {
 
 // ClientManager manages client connections
 type ClientManager struct {
-	mu                sync.RWMutex
+	cancelFunc        context.CancelFunc
 	clientPtrMap      map[*ClientConnection]bool
 	broadcastMessages []*BroadcastFeedMessage
 	pool              *gopool.Pool
 	poller            netpoll.Poller
-	out               chan []byte
+	broadcastChan     chan *BroadcastMessage
+	clientAdd         chan *ClientConnection
+	clientRemove      chan *ClientConnection
+	accConfirm        chan common.Hash
 	settings          ClientManagerSettings
 }
 
 func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientManagerSettings) *ClientManager {
 	return &ClientManager{
-		poller:       poller,
-		pool:         pool,
-		clientPtrMap: make(map[*ClientConnection]bool),
-		out:          make(chan []byte, 1),
-		settings:     settings,
+		poller:        poller,
+		pool:          pool,
+		clientPtrMap:  make(map[*ClientConnection]bool),
+		broadcastChan: make(chan *BroadcastMessage, 1),
+		clientAdd:     make(chan *ClientConnection, 128),
+		clientRemove:  make(chan *ClientConnection, 128),
+		accConfirm:    make(chan common.Hash, 128),
+		settings:      settings,
 	}
+}
+
+func (cm *ClientManager) registerClient(clientConnection *ClientConnection) error {
+	if len(cm.broadcastMessages) > 0 {
+		// send the newly connected client all the messages we've got...
+		bm := BroadcastMessage{
+			Version:  1,
+			Messages: cm.broadcastMessages,
+		}
+
+		err := clientConnection.write(bm)
+		if err != nil {
+			return err
+		}
+	}
+
+	cm.clientPtrMap[clientConnection] = true
+
+	clientConnection.Start()
+
+	return nil
 }
 
 // Register registers new connection as a Client.
 func (cm *ClientManager) Register(ctx context.Context, conn net.Conn, desc *netpoll.Desc) *ClientConnection {
-	clientConnection := NewClientConnection(conn, desc, cm)
+	clientConnection := NewClientConnection(ctx, conn, desc, cm)
 
-	{
-		cm.mu.Lock()
-
-		cm.clientPtrMap[clientConnection] = true
-
-		if len(cm.broadcastMessages) > 0 {
-			// send the newly connected client all the messages we've got...
-			bm := BroadcastMessage{Version: 1, Messages: cm.broadcastMessages}
-
-			_ = clientConnection.write(bm)
-		}
-
-		clientConnection.Start(ctx)
-		cm.mu.Unlock()
-	}
+	cm.clientAdd <- clientConnection
 
 	return clientConnection
 }
 
-// RemoveAll removes all clients.
-func (cm *ClientManager) RemoveAll() {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
+// removeAll removes all clients after main ClientManager thread exits
+func (cm *ClientManager) removeAll() {
 	// Make copy of list because the remove() affects the client list held by the instance
 	clientList := make([]*ClientConnection, len(cm.clientPtrMap))
 	var i uint64
@@ -95,225 +105,13 @@ func (cm *ClientManager) RemoveAll() {
 		i++
 	}
 
-	// Only called by destructor, so keep mutex while looping through client list
-	for i := range clientList {
-		cm.remove(clientList[i])
-	}
-}
-
-// Remove removes client from stream.
-func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	cm.remove(clientConnection)
-}
-
-// ConfirmedAccumulator clears out entry that matches accumulator and all older entries
-func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) error {
-	cm.mu.Lock()
-	defer cm.mu.Unlock()
-
-	for i, msg := range cm.broadcastMessages {
-		if msg.FeedItem.BatchItem.Accumulator == accumulator {
-			// This entry was confirmed, so this and all previous messages should be removed from cache
-			unconfirmedIndex := i + 1
-			if unconfirmedIndex >= len(cm.broadcastMessages) {
-				//  Nothing newer, so clear entire cache
-				cm.broadcastMessages = cm.broadcastMessages[:0]
-			} else {
-				cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
-			}
-			break
-		}
-	}
-
-	bm := BroadcastMessage{Version: 1}
-	bm.ConfirmedAccumulator = ConfirmedAccumulator{
-		IsConfirmed: true,
-		Accumulator: accumulator,
-	}
-
-	var buf bytes.Buffer
-	w := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(bm); err != nil {
-		return err
-	}
-
-	if err := w.Flush(); err != nil {
-		return err
-	}
-
-	cm.out <- buf.Bytes()
-
-	return nil
-}
-
-// Broadcast sends message to all clients.
-func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
-	var buf bytes.Buffer
-
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
-
-	writer := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(writer)
-
-	var broadcastMessages []*BroadcastFeedMessage
-
-	msg := BroadcastFeedMessage{
-		FeedItem:  SequencerFeedItem{BatchItem: batchItem, PrevAcc: prevAcc},
-		Signature: signature,
-	}
-
-	broadcastMessages = append(broadcastMessages, &msg)
-
-	// also add this to our global list for broadcasting to clients when connecting
-	{
-		cm.mu.Lock()
-
-		if len(cm.broadcastMessages) == 0 {
-			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
-		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == prevAcc {
-			cm.broadcastMessages = append(cm.broadcastMessages, &msg)
-		} else {
-			// We need to do a re-org
-			logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
-			i := len(cm.broadcastMessages) - 1
-			for ; i >= 0; i-- {
-				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == prevAcc {
-					cm.broadcastMessages = append(cm.broadcastMessages[:i+1], &msg)
-					break
-				}
-			}
-
-			if i == -1 {
-				// Don't use anything in existing slice
-				cm.broadcastMessages = append(cm.broadcastMessages[:0], &msg)
-			}
-		}
-
-		cm.mu.Unlock()
-	}
-
-	bm := BroadcastMessage{Version: 1, Messages: broadcastMessages}
-
-	if err := encoder.Encode(bm); err != nil {
-		return err
-	}
-	if err := writer.Flush(); err != nil {
-		return err
-	}
-
-	cm.out <- buf.Bytes()
-
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("batch item queued")
-
-	return nil
-}
-
-func (cm *ClientManager) ClientConnectionCount() int {
-	cm.mu.RLock()
-	defer cm.mu.RUnlock()
-	return len(cm.clientPtrMap)
-}
-
-// verifyClients should be called every cm.settings.ClientPingInterval
-func (cm *ClientManager) verifyClients() {
-	cm.mu.RLock()
-	clientConnectionCount := len(cm.clientPtrMap)
-	logger.Debug().Int("feed_client_count", clientConnectionCount).Send()
-
-	// Create list of clients to ping and clients to remove
-	clientList := make([]*ClientConnection, 0, clientConnectionCount)
-	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
-	var deadClientCount uint64
-	var aliveClientCount uint64
-	for client := range cm.clientPtrMap {
-		diff := time.Since(client.GetLastHeard())
-		if diff > cm.settings.ClientNoResponseTimeout {
-			deadClientList = append(deadClientList, client)
-			deadClientCount++
-		} else {
-			clientList = append(clientList, client)
-			aliveClientCount++
-		}
-	}
-	cm.mu.RUnlock()
-
-	logger.Debug().Uint64("disconnecting clients", deadClientCount).Send()
-	for _, deadClient := range deadClientList {
-		cm.Remove(deadClient)
-	}
-
-	logger.Debug().Uint64("pinging clients", aliveClientCount).Send()
+	// Only called after main ClientManager thread exits, so use removeClient directly
 	for _, client := range clientList {
-		err := client.Ping()
-		if err != nil {
-			logger.Debug().Err(err).Str("name", client.name).Uint64("error pinging client", aliveClientCount).Send()
-		}
+		cm.removeClient(client)
 	}
 }
 
-// startWriter starts thread to write broadcast messages from cm.out channel.
-func (cm *ClientManager) startWriter(ctx context.Context) {
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case data := <-cm.out:
-				cm.mu.Lock()
-				clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
-				// Lock mutex while writing to channels to ensure items delivered in order
-				for i := 0; i < MaxSendCount; i++ {
-					for client := range cm.clientPtrMap {
-						if len(client.out) == MaxSendQueue {
-							// Queue for client too backed up, so delete after going through all other clients
-							clientDeleteList = append(clientDeleteList, client)
-						} else {
-							client.out <- data
-						}
-					}
-
-					select {
-					case <-ctx.Done():
-						return
-					case data = <-cm.out:
-						continue
-					default:
-					}
-					break
-				}
-				cm.mu.Unlock()
-
-				for _, client := range clientDeleteList {
-					logger.Warn().Str("client", client.name).Msg("disconnecting client, queue too large")
-					cm.Remove(client)
-				}
-			}
-		}
-	}()
-}
-
-// startVerifier starts thread to ping active connections and remove expired connections
-func (cm *ClientManager) startVerifier(ctx context.Context) {
-	go func() {
-		pingInterval := time.NewTicker(cm.settings.ClientPingInterval)
-		defer pingInterval.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-pingInterval.C:
-				cm.verifyClients()
-			}
-		}
-	}()
-}
-
-// mutex must be held before calling
-func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
+func (cm *ClientManager) removeClient(clientConnection *ClientConnection) bool {
 	if !cm.clientPtrMap[clientConnection] {
 		return false
 	}
@@ -337,4 +135,197 @@ func (cm *ClientManager) remove(clientConnection *ClientConnection) bool {
 	//_ = clientConnection.desc.Close()
 
 	return true
+}
+
+func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
+	cm.clientRemove <- clientConnection
+}
+
+// ConfirmedAccumulator clears out entry that matches accumulator and all older entries
+func (cm *ClientManager) doConfirmedAccumulator(accumulator common.Hash) {
+	for i, msg := range cm.broadcastMessages {
+		if msg.FeedItem.BatchItem.Accumulator == accumulator {
+			// This entry was confirmed, so this and all previous messages should be removed from cache
+			unconfirmedIndex := i + 1
+			if unconfirmedIndex >= len(cm.broadcastMessages) {
+				//  Nothing newer, so clear entire cache
+				cm.broadcastMessages = cm.broadcastMessages[:0]
+			} else {
+				cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
+			}
+			break
+		}
+	}
+
+	bm := BroadcastMessage{
+		Version: 1,
+		ConfirmedAccumulator: ConfirmedAccumulator{
+			IsConfirmed: true,
+			Accumulator: accumulator,
+		},
+	}
+
+	cm.broadcastChan <- &bm
+}
+
+func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
+	cm.accConfirm <- accumulator
+}
+
+// Broadcast sends batch item to all clients.
+func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
+
+	var broadcastMessages []*BroadcastFeedMessage
+
+	msg := BroadcastFeedMessage{
+		FeedItem: SequencerFeedItem{
+			BatchItem: batchItem,
+			PrevAcc:   prevAcc,
+		},
+		Signature: signature,
+	}
+
+	broadcastMessages = append(broadcastMessages, &msg)
+
+	bm := BroadcastMessage{
+		Version:  1,
+		Messages: broadcastMessages,
+	}
+
+	cm.broadcastChan <- &bm
+
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("batch item queued")
+
+	return nil
+}
+
+func (cm *ClientManager) doBroadcast(bm *BroadcastMessage) error {
+	// Don't add confirmed accumulator to cache
+	if len(bm.Messages) > 0 {
+		// Add to cache to send to new clients
+		if len(cm.broadcastMessages) == 0 {
+			// Current list is empty
+			cm.broadcastMessages = append(cm.broadcastMessages, bm.Messages...)
+		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == bm.Messages[0].FeedItem.PrevAcc {
+			cm.broadcastMessages = append(cm.broadcastMessages, bm.Messages...)
+		} else {
+			// We need to do a re-org
+			logger.Debug().Hex("acc", bm.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
+			i := len(cm.broadcastMessages) - 1
+			for ; i >= 0; i-- {
+				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == bm.Messages[0].FeedItem.PrevAcc {
+					cm.broadcastMessages = append(cm.broadcastMessages[:i+1], bm.Messages...)
+					break
+				}
+			}
+
+			if i == -1 {
+				// All existing messages are out of date
+				cm.broadcastMessages = append(cm.broadcastMessages[:0], bm.Messages...)
+			}
+		}
+	}
+
+	var buf bytes.Buffer
+	writer := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
+	encoder := json.NewEncoder(writer)
+	if err := encoder.Encode(bm); err != nil {
+		return errors.Wrap(err, "unable to encode message")
+	}
+	if err := writer.Flush(); err != nil {
+		return errors.Wrap(err, "unable to flush message")
+	}
+
+	clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
+	for client := range cm.clientPtrMap {
+		if len(client.out) == MaxSendQueue {
+			// Queue for client too backed up, so delete after going through all other clients
+			clientDeleteList = append(clientDeleteList, client)
+		} else {
+			client.out <- buf.Bytes()
+		}
+	}
+
+	for _, client := range clientDeleteList {
+		logger.Warn().Str("client", client.name).Msg("disconnecting client, queue too large")
+		cm.Remove(client)
+	}
+
+	return nil
+}
+
+// verifyClients should be called every cm.settings.ClientPingInterval
+func (cm *ClientManager) verifyClients() {
+	clientConnectionCount := len(cm.clientPtrMap)
+	logger.Debug().Int("feed_client_count", clientConnectionCount).Send()
+
+	// Create list of clients to clients to remove
+	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
+	for client := range cm.clientPtrMap {
+		diff := time.Since(client.GetLastHeard())
+		if diff > cm.settings.ClientNoResponseTimeout {
+			deadClientList = append(deadClientList, client)
+		}
+	}
+
+	if len(deadClientList) > 0 {
+		logger.Debug().Int("count", len(deadClientList)).Msg("disconnecting timed out clients")
+		for _, deadClient := range deadClientList {
+			cm.Remove(deadClient)
+		}
+	}
+
+	// Send ping to all remaining clients
+	logger.Debug().Int("count", len(cm.clientPtrMap)).Msg("pinging clients")
+	for client := range cm.clientPtrMap {
+		err := client.Ping()
+		if err != nil {
+			logger.Error().Err(err).Str("name", client.name).Msg("error pinging client")
+		}
+	}
+}
+
+func (cm *ClientManager) Stop() {
+	cm.cancelFunc()
+}
+
+func (cm *ClientManager) Start(parentCtx context.Context) {
+	ctx, cancelFunc := context.WithCancel(parentCtx)
+	cm.cancelFunc = cancelFunc
+
+	go func() {
+		defer cancelFunc()
+		defer cm.removeAll()
+
+		pingInterval := time.NewTicker(cm.settings.ClientPingInterval)
+		defer pingInterval.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case clientConnection := <-cm.clientAdd:
+				err := cm.registerClient(clientConnection)
+				if err != nil {
+					logger.Error().Err(err).Str("client", clientConnection.name).Msg("Failed to register client")
+					close(clientConnection.out)
+				}
+			case clientConnection := <-cm.clientRemove:
+				cm.removeClient(clientConnection)
+			case accumulator := <-cm.accConfirm:
+				cm.doConfirmedAccumulator(accumulator)
+			case bm := <-cm.broadcastChan:
+				err := cm.doBroadcast(bm)
+				if err != nil {
+					logger.Error().Err(err).Msg("Failed to do broadcast")
+				}
+			case <-time.After(cm.settings.ClientPingInterval / 2):
+			}
+			select {
+			case <-pingInterval.C:
+				cm.verifyClients()
+			default:
+			}
+		}
+	}()
 }

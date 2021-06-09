@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -170,7 +171,7 @@ func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte
 	// Remove timeout when leaving this function
 	defer func(conn net.Conn) {
 		err := conn.SetReadDeadline(time.Time{})
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 			logger.Error().Err(err).Msg("error removing read deadline")
 		}
 	}(bc.conn)

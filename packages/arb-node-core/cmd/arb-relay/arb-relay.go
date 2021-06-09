@@ -182,14 +182,7 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 				if debug {
 					logger.Info().Hex("acc", ca.Bytes()).Msg("confirmed accumulator")
 				}
-				err = ar.broadcaster.ConfirmedAccumulator(ca)
-				if err != nil {
-					logger.
-						Error().
-						Err(err).
-						Hex("acc", ca.Bytes()).
-						Msg("unable to broadcast confirmed accumulator")
-				}
+				ar.broadcaster.ConfirmedAccumulator(ca)
 			}
 		}
 	}()

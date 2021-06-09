@@ -31,112 +31,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
-func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
-	ctx := context.Background()
-
-	broadcasterSettings := Settings{
-		Addr:                    ":9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
-	}
-
-	b := NewBroadcaster(broadcasterSettings)
-
-	err := b.Start(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer b.Stop()
-
-	newBroadcastMessage := SequencedMessages()
-
-	hash1, feedItem1, signature1 := newBroadcastMessage()
-	err = b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(1 * time.Second)
-
-	hash2, feedItem2, signature2 := newBroadcastMessage()
-	err = b.BroadcastSingle(hash2, feedItem2.BatchItem, signature2.Bytes())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go connectAndGetCachedMessages(t, i, &wg)
-	}
-
-	wg.Wait()
-
-	// give the above connections time to reconnect
-	time.Sleep(4 * time.Second)
-
-	// Confirmed Accumulator will also broadcast to the clients.
-	err = b.ConfirmedAccumulator(feedItem1.BatchItem.Accumulator) // remove the first message we generated
-	if err != nil {
-		t.Errorf("Error calling ConfirmedAccumulator feed1: %v", err)
-	}
-
-	if b.messageCacheCount() != 1 { // should have left the second message
-		t.Errorf("1. Failed to clear cached inbox message. MessageCacheCount: %v", b.messageCacheCount())
-	}
-
-	err = b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator) // remove the second message we generated
-	if err != nil {
-		t.Errorf("Error calling ConfirmedAccumulator feed2: %v", err)
-	}
-	if b.messageCacheCount() != 0 { // should have emptied.
-		t.Errorf("2. Failed to clear cached inbox message. MessageCacheCount: %v", b.messageCacheCount())
-	}
-
-}
-
-func connectAndGetCachedMessages(t *testing.T, i int, wg *sync.WaitGroup) {
-	defer wg.Done()
-	messagesReceived := 0
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
-	if err != nil {
-		t.Errorf("%d can not connect: %v\n", i, err)
-		return
-	}
-
-	defer func(conn net.Conn) {
-		err := conn.Close()
-		if err != nil {
-			t.Errorf("%d can not close: %v\n", i, err)
-		} else {
-			t.Logf("%d closed\n", i)
-		}
-	}(conn)
-
-	t.Logf("%d connected\n", i)
-
-	msg, op, err := wsutil.ReadServerData(conn)
-	if err != nil {
-		t.Errorf("%d can not receive: %v\n", i, err)
-		return
-	} else {
-		res := BroadcastMessage{}
-		err = json.Unmarshal(msg, &res)
-		if err != nil {
-			t.Errorf("%d error unmarshalling message: %s\n", i, err)
-			return
-		}
-		messagesReceived = len(res.Messages)
-		t.Logf("%d receive: %v，type: %v\n", i, res, op)
-	}
-
-	if messagesReceived != 2 {
-		t.Errorf("%d Should have received two cached messages: %s\n", i, err)
-	}
-}
-
 func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	ctx := context.Background()
 
@@ -170,14 +64,11 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// Confirmed Accumulator will also broadcast to the clients.
-	err = b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
-	if err != nil {
-		t.Errorf("Error calling ConfirmedAccumulator feed2: %v", err)
-	}
+	b.ConfirmedAccumulator(feedItem.BatchItem.Accumulator) // remove the first message we generated
 
 	acc := <-accumulatorConfirmed
 	if acc != feedItem.BatchItem.Accumulator {
-		t.Error("Did not receive expected accumultaor")
+		t.Error("Did not receive expected accumulator")
 	}
 
 	wg.Wait()
@@ -358,8 +249,8 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if b.messageCacheCount() != 2 {
-		t.Errorf("1. Failed to reorganized cached inbox message. MessageCacheCount: %v", b.messageCacheCount())
+	if b.MessageCacheCount() != 2 {
+		t.Errorf("1. Failed to reorganized cached inbox message. MessageCacheCount: %v", b.MessageCacheCount())
 	}
 
 	//TODO: Add some more assertions about the state of the cache
