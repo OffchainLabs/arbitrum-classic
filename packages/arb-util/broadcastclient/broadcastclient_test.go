@@ -33,7 +33,7 @@ func TestReceiveMessages(t *testing.T) {
 	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
-	tmb := broadcaster.NewRandomMessageGenerator(messageCount, 100*time.Millisecond)
+	tmb := broadcaster.NewRandomMessageGenerator(messageCount, 0*time.Millisecond)
 	tmb.SetBroadcaster(b)
 
 	var wg sync.WaitGroup
