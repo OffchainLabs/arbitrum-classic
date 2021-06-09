@@ -14,12 +14,15 @@ func TestReceiveMessages(t *testing.T) {
 
 	broadcasterSettings := broadcaster.Settings{
 		Addr:                    ":9742",
-		Workers:                 1,
+		Workers:                 128,
 		Queue:                   1,
 		IoReadWriteTimeout:      2 * time.Second,
 		ClientPingInterval:      5 * time.Second,
 		ClientNoResponseTimeout: 15 * time.Second,
 	}
+
+	messageCount := 10
+	clientCount := 2
 
 	b := broadcaster.NewBroadcaster(broadcasterSettings)
 
@@ -30,13 +33,13 @@ func TestReceiveMessages(t *testing.T) {
 	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
-	tmb := broadcaster.NewRandomMessageGenerator(10, 100*time.Millisecond)
+	tmb := broadcaster.NewRandomMessageGenerator(messageCount, 100*time.Millisecond)
 	tmb.SetBroadcaster(b)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 2; i++ {
+	for i := 0; i < clientCount; i++ {
 		wg.Add(1)
-		makeBroadcastClient(ctx, t, i, 10, &wg)
+		makeBroadcastClient(ctx, t, i, messageCount, &wg)
 	}
 
 	errChan := tmb.Start(ctx)
