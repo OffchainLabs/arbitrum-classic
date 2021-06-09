@@ -56,8 +56,6 @@ const main = async () => {
   console.log('unique tokens')
   console.log(new Set(tokens).size)
 
-  return
-
   const BeaconProxyFactory = (
     await ethers.getContractFactory('BeaconProxyFactory')
   ).connect(l2Signer)
@@ -72,7 +70,7 @@ const main = async () => {
   console.log('deployed beacon proxy factory')
   const cloneableProxyHash = await beaconProxyFactory.cloneableProxyHash()
 
-  const factoryInitTx = await beaconProxyFactory.initialize(beacon.address)
+  const factoryInitTx = await beaconProxyFactory.initialize(beacon)
   await factoryInitTx.wait()
   console.log('initted beacon proxy factory')
 
