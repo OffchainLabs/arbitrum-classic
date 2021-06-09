@@ -114,8 +114,10 @@ func (mg *RandomMessageGenerator) Start(parentCtx context.Context) <-chan error 
 
 	go func() {
 		defer cancelFunc()
-		ticker := time.NewTicker(mg.intervalDuration)
-		defer ticker.Stop()
+		var ticker *time.Ticker
+		if mg.intervalDuration > 0 {
+			ticker = time.NewTicker(mg.intervalDuration)
+		}
 
 		prevAcc := common.RandHash()
 		currAcc := common.RandHash()
@@ -123,12 +125,44 @@ func (mg *RandomMessageGenerator) Start(parentCtx context.Context) <-chan error 
 		var lastSeq int64
 
 		messageCount := 0
-		for {
-			currSeq := lastSeq + 1
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
+		if ticker != nil {
+			for {
+				currSeq := lastSeq + 1
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					err := mg.broadcaster.BroadcastSingle(
+						prevAcc,
+						inbox.SequencerBatchItem{
+							LastSeqNum:        big.NewInt(lastSeq),
+							Accumulator:       currAcc,
+							TotalDelayedCount: big.NewInt(0),
+							SequencerMessage:  big.NewInt(currSeq).Bytes(),
+						},
+						make([]byte, 0),
+					)
+					if err != nil {
+						errChan <- errors.New("error broadcasting message")
+						return
+					}
+					messageCount++
+					prevAcc = currAcc
+					lastSeq = currSeq
+					if messageCount == mg.count {
+						return
+					}
+				}
+			}
+		} else {
+			for {
+				currSeq := lastSeq + 1
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
 				err := mg.broadcaster.BroadcastSingle(
 					prevAcc,
 					inbox.SequencerBatchItem{
