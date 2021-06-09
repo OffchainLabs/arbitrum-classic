@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -43,6 +44,7 @@ type ClientManager struct {
 	cancelFunc        context.CancelFunc
 	clientPtrMap      map[*ClientConnection]bool
 	broadcastMessages []*BroadcastFeedMessage
+	cacheSize         int32
 	pool              *gopool.Pool
 	poller            netpoll.Poller
 	broadcastChan     chan *BroadcastMessage
@@ -314,11 +316,13 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 				cm.removeClient(clientConnection)
 			case accumulator := <-cm.accConfirm:
 				cm.doConfirmedAccumulator(accumulator)
+				atomic.StoreInt32(&cm.cacheSize, int32(len(cm.broadcastMessages)))
 			case bm := <-cm.broadcastChan:
 				err := cm.doBroadcast(bm)
 				if err != nil {
 					logger.Error().Err(err).Msg("Failed to do broadcast")
 				}
+				atomic.StoreInt32(&cm.cacheSize, int32(len(cm.broadcastMessages)))
 			case <-time.After(cm.settings.ClientPingInterval / 2):
 			}
 			select {
@@ -328,4 +332,8 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 			}
 		}
 	}()
+}
+
+func (cm *ClientManager) MessageCacheCount() int {
+	return int(atomic.LoadInt32(&cm.cacheSize))
 }

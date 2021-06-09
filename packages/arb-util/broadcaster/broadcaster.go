@@ -286,8 +286,7 @@ func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
 }
 
 func (b *Broadcaster) MessageCacheCount() int {
-	count := len(b.clientManager.broadcastMessages)
-	return count
+	return b.clientManager.MessageCacheCount()
 }
 
 func (b *Broadcaster) Stop() {
