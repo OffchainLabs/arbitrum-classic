@@ -119,7 +119,6 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         if (createdContract == expectedL2Address) {
             shouldHalt = false;
         } else {
-            revert("SHOULDNT BE HERE");
             // trigger withdrawal
             createOutboundTx(l1ERC20, address(this), _from, _amount, "");
         }
