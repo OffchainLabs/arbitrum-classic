@@ -36,8 +36,9 @@ const MaxSendQueue = 20
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
-	ioMutex sync.Mutex
-	conn    io.ReadWriteCloser
+	parentCtx context.Context
+	ioMutex   sync.Mutex
+	conn      io.ReadWriteCloser
 
 	desc          *netpoll.Desc
 	name          string
@@ -45,25 +46,26 @@ type ClientConnection struct {
 
 	timeoutMutex sync.Mutex
 	lastHeard    time.Time
-	cancelFunc context.CancelFunc
-	out        chan []byte
+	cancelFunc   context.CancelFunc
+	out          chan []byte
 }
 
-func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+func NewClientConnection(ctx context.Context, conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
 	return &ClientConnection{
+		parentCtx:     ctx,
 		conn:          conn,
 		desc:          desc,
 		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
 		lastHeard:     time.Now(),
+		out:           make(chan []byte, MaxSendQueue),
 	}
 }
 
-func (cc *ClientConnection) Start(parentCtx context.Context) {
-	ctx, cancelFunc := context.WithCancel(parentCtx)
+func (cc *ClientConnection) Start() {
+	ctx, cancelFunc := context.WithCancel(cc.parentCtx)
 	cc.cancelFunc = cancelFunc
 
-	cc.out = make(chan []byte, MaxSendQueue)
 	go func() {
 		defer cancelFunc()
 		defer close(cc.out)
@@ -116,12 +118,12 @@ func (cc *ClientConnection) readRequest() error {
 	cc.timeoutMutex.Unlock()
 
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
-	if err != nil && !h.OpCode.IsControl() {
-		return err
-	}
+	if err != nil {
+		if h.OpCode.IsControl() {
+			return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
+		}
 
-	if h.OpCode.IsControl() {
-		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
+		return err
 	}
 
 	return nil
