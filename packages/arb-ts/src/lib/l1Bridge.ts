@@ -65,6 +65,7 @@ export class L1Bridge {
   l1Tokens: Tokens
   l1Provider: providers.Provider
   l1EthBalance: BigNumber
+  chainIdCache?: number
 
   constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
     this.l1Signer = l1Signer
@@ -187,12 +188,21 @@ export class L1Bridge {
       .gateway
   }
   public async getDefaultL1Gateway() {
-    const { chainId } = await this.l1Provider.getNetwork()
-    // patch: mainnet has not default gateway set, client treats standard as default
+    const chainId = await this.getChainId()
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
-    if (chainId === 1 && defaultGatewayAddress === constants.AddressZero) {
+
+    if (defaultGatewayAddress === constants.AddressZero) {
+      const network = networks[chainId]
+
+      if (!network)
+        throw new Error('No default network, and no fallback provided')
+
+      console.log(
+        'No default network assigned in contract, using standard l1ERC20Gateway:'
+      )
+
       return L1ERC20Gateway__factory.connect(
-        '0xEd66239C7400f9C29D9127C5C95c18c03DDF3106',
+        network.tokenBridge.l1ERC20Gateway,
         this.l1Provider
       )
     }
@@ -261,11 +271,10 @@ export class L1Bridge {
     if (this.inboxCached) {
       return this.inboxCached
     }
-    const { chainId } = await this.l1Provider.getNetwork()
-    if (chainId === 1) {
-      // patch: mainnet has no default gateway set
+    const chainId = await this.getChainId()
+    if (networks[chainId]) {
       this.inboxCached = Inbox__factory.connect(
-        '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
+        networks[chainId].tokenBridge.inbox,
         this.l1Signer
       )
       return this.inboxCached
@@ -281,5 +290,13 @@ export class L1Bridge {
     const bal = await this.l1Signer.getBalance()
     this.l1EthBalance = bal
     return bal
+  }
+
+  public async getChainId() {
+    if (this.chainIdCache) {
+      return this.chainIdCache
+    }
+    this.chainIdCache = await this.l1Signer.getChainId()
+    return this.chainIdCache
   }
 }
