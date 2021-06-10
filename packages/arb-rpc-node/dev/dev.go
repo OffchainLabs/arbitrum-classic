@@ -85,7 +85,10 @@ type EVM struct {
 }
 
 func NewEVM(backend *Backend) *EVM {
-	return &EVM{backend: backend}
+	return &EVM{
+		backend:   backend,
+		snapshots: make(map[uint64]uint64),
+	}
 }
 
 func (s *EVM) Snapshot() (hexutil.Uint64, error) {
