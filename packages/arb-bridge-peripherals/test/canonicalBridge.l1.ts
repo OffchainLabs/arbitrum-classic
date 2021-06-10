@@ -190,14 +190,19 @@ describe('Bridge peripherals layer 1', () => {
     await passiveFastExitManager.setBridge(testBridge.address)
 
     const tradeData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint256', 'address', 'bytes', 'bytes'],
-      [accounts[0].address, maxFee, fastExitMock.address, liquidityProof, '0x']
+      ['address', 'uint256', 'address', 'uint256', 'address', 'bytes', 'bytes'],
+      [
+        accounts[0].address,
+        maxFee,
+        fastExitMock.address,
+        tokenAmount,
+        token.address,
+        liquidityProof,
+        '0x',
+      ]
     )
 
     await testBridge.transferExitAndCall(
-      accounts[0].address,
-      token.address,
-      tokenAmount,
       exitNum,
       accounts[0].address,
       passiveFastExitManager.address,

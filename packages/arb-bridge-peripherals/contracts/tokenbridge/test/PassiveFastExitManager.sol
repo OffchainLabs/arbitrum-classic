@@ -36,50 +36,63 @@ contract PassiveFastExitManager is ITradeableExitReceiver {
         _;
     }
 
+    struct ExitDataFrame {
+        address initialDestination;
+        uint256 maxFee;
+        address liquidityProvider;
+        uint256 amount;
+        address erc20;
+        bytes liquidityProof;
+        bytes spareData;
+    }
+
     function onExitTransfer(
         address sender,
-        uint256 amount,
-        address erc20,
         uint256 exitNum,
         bytes calldata data
     ) external override onlyBridge returns (bool) {
-        (
-            address initialDestination,
-            uint256 maxFee,
-            address liquidityProvider,
-            bytes memory liquidityProof,
-            bytes memory spareData
-        ) = abi.decode(data, (address, uint256, address, bytes, bytes));
+        ExitDataFrame memory frame;
+        {
+            (
+                frame.initialDestination,
+                frame.maxFee,
+                frame.liquidityProvider,
+                frame.amount,
+                frame.erc20,
+                frame.liquidityProof,
+                frame.spareData
+            ) = abi.decode(data, (address, uint256, address, uint256, address, bytes, bytes));
+        }
 
         {
-            uint256 balancePrior = IERC20(erc20).balanceOf(sender);
+            uint256 balancePrior;
+            {
+                balancePrior = IERC20(frame.erc20).balanceOf(sender);
+            }
 
             // Liquidity provider is responsible for validating if this is a valid exit
-            IExitLiquidityProvider(liquidityProvider).requestLiquidity(
-                initialDestination,
-                erc20,
-                amount,
+            IExitLiquidityProvider(frame.liquidityProvider).requestLiquidity(
+                frame.initialDestination,
+                frame.erc20,
+                frame.amount,
                 exitNum,
-                liquidityProof
+                frame.liquidityProof
             );
 
-            uint256 balancePost = IERC20(erc20).balanceOf(sender);
+            uint256 balancePost = IERC20(frame.erc20).balanceOf(sender);
 
             // User must be sent at least (amount - maxFee) or execution reverts
             require(
-                SafeMath.sub(balancePost, balancePrior) >= SafeMath.sub(amount, maxFee),
+                SafeMath.sub(balancePost, balancePrior) >= SafeMath.sub(frame.amount, frame.maxFee),
                 "User did not get credited with enough tokens"
             );
         }
 
         L1ArbitrumExtendedGateway(bridge).transferExitAndCall(
-            initialDestination,
-            erc20,
-            amount,
             exitNum,
-            liquidityProvider,
-            liquidityProvider,
-            spareData
+            frame.initialDestination,
+            frame.liquidityProvider,
+            frame.spareData
         );
         return true;
     }
