@@ -43,7 +43,7 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         address _counterpartGateway,
         address _inbox
     ) public virtual {
-        GatewayRouter._initialize(_counterpartGateway, _defaultGateway);
+        super._initialize(_counterpartGateway, _defaultGateway);
         owner = _owner;
         WhitelistConsumer.whitelist = _whitelist;
         inbox = _inbox;

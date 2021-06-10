@@ -34,7 +34,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _l1Weth,
         address _l2Weth
     ) public virtual {
-        L2ArbitrumGateway._initialize(_l1Counterpart, _router);
+        super._initialize(_l1Counterpart, _router);
         require(_l1Weth != address(0), "INVALID_L1WETH");
         require(_l2Weth != address(0), "INVALID_L2WETH");
         l1Weth = _l1Weth;

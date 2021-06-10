@@ -34,6 +34,14 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     address internal constant USED_ADDRESS = address(0x01);
     mapping(bytes32 => address) public redirectedExits;
 
+    function _initialize(
+        address _l2Counterpart,
+        address _router,
+        address _inbox
+    ) internal virtual override {
+        super._initialize(_l2Counterpart, _router, _inbox);
+    }
+
     event WithdrawRedirected(
         address indexed from,
         address indexed to,

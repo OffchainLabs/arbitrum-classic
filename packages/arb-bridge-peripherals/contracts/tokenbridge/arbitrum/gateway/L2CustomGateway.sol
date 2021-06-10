@@ -25,7 +25,7 @@ contract L2CustomGateway is L2ArbitrumGateway {
     mapping(address => address) public l1ToL2Token;
 
     function initialize(address _l1Counterpart, address _router) public virtual {
-        L2ArbitrumGateway._initialize(_l1Counterpart, _router);
+        super._initialize(_l1Counterpart, _router);
     }
 
     /**

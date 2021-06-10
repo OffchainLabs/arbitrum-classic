@@ -26,12 +26,10 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
+import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
-import "../../libraries/gateway/TokenGateway.sol";
-// import "../../libraries/ClonableBeaconProxy.sol";
+import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/IERC677.sol";
-
-import "./L1ArbitrumMessenger.sol";
 
 abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     using SafeERC20 for IERC20;
@@ -49,9 +47,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         address _router,
         address _inbox
     ) internal virtual {
+        super._initialize(_l2Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
-        TokenGateway._initialize(_l2Counterpart, _router);
         require(_inbox != address(0), "BAD_INBOX");
         router = _router;
         inbox = _inbox;

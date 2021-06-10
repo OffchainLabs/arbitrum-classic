@@ -20,12 +20,10 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./L2ArbitrumMessenger.sol";
 import "../IArbToken.sol";
 
-import "../../libraries/IERC677.sol";
+import { L2ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/ITokenGateway.sol";
-import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 
 abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
@@ -39,7 +37,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
 
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
         // L2 gateway may have a router address(0)
-        TokenGateway._initialize(_l1Counterpart, _router);
+        super._initialize(_l1Counterpart, _router);
     }
 
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
