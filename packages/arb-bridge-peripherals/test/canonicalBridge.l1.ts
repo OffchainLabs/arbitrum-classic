@@ -26,7 +26,7 @@ describe('Bridge peripherals layer 1', () => {
   let testBridge: Contract
 
   let inbox: Contract
-  const maxSubmissionCost = 0
+  const maxSubmissionCost = 1
   const maxGas = 1000000000
   const gasPrice = 0
   const l2Template20 = '0x0000000000000000000000000000000000000020'
@@ -227,5 +227,50 @@ describe('Bridge peripherals layer 1', () => {
       liquidityProviderBalance + maxFee,
       'Liquidity provider balance not as expected'
     )
+  })
+
+  it('should submit the correct submission cost to the inbox', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(testBridge.address, tokenAmount)
+
+    let data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    // router usually does this encoding part
+    data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [accounts[0].address, data]
+    )
+
+    const tx = await testBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
+    const receipt = await tx.wait()
+    const expectedTopic =
+      '0x7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9'
+    const logs = receipt.events
+      .filter((curr: any) => curr.topics[0] === expectedTopic)
+      .map((curr: any) => inbox.interface.parseLog(curr))
+
+    assert.equal(
+      logs[0].args.maxSubmissionCost.toNumber(),
+      maxSubmissionCost,
+      'Invalid submission cost'
+    )
+    // const vals = testBridge.interface.parseLog(logs[0])
+
+    const escrowedTokens = await token.balanceOf(testBridge.address)
+    assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
 })

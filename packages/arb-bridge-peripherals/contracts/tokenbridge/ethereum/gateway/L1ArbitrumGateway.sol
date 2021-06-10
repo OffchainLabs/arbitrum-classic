@@ -171,9 +171,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
                 _from,
                 _to,
                 _amount,
-                _maxSubmissionCost,
                 _maxGas,
                 _gasPriceBid,
+                _maxSubmissionCost,
                 extraData
             );
         }
