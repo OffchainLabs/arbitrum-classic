@@ -71,7 +71,7 @@ FROM offchainlabs/cpp-base:0.3.2 as arb-validator
 # Export binary
 
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
-COPY --chown=user arb-os/arb_os/arbos.mexe /home/user/
+COPY --chown=user arb-os/arb_os/arbos.mexe /home/user/arb-os/arb_os/
 
 ENTRYPOINT ["/home/user/go/bin/arb-validator"]
 EXPOSE 8547 8548
