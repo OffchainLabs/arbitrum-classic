@@ -37,27 +37,6 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         super._initialize(_l1Counterpart, _l1Router, _inbox);
     }
 
-    function getOutboundCalldata(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata) {
-        bytes memory emptyBytes = "";
-
-        outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
-            _token,
-            _from,
-            _to,
-            _amount,
-            abi.encode(emptyBytes, _data)
-        );
-
-        return outboundCalldata;
-    }
-
     /**
      * @notice Calculate the address used when bridging an ERC20 token
      * @dev this always returns the same as the L1 oracle, but may be out of date.

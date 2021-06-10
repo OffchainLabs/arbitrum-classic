@@ -43,27 +43,6 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         l2Weth = _l2Weth;
     }
 
-    function getOutboundCalldata(
-        address _l1Token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata) {
-        bytes memory emptyBytes = "";
-
-        outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
-            _l1Token,
-            _from,
-            _to,
-            _amount,
-            abi.encode(emptyBytes, _data)
-        );
-
-        return outboundCalldata;
-    }
-
     function createOutboundTx(
         address _l1Token,
         address _from,

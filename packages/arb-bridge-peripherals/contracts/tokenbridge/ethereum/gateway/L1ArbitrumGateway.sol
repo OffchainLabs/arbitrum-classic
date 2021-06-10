@@ -100,16 +100,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         return 30000;
     }
 
-    function handleInboundData(
-        address _from,
-        address _to,
-        uint256 _exitNum,
-        bytes memory _data
-    ) internal virtual {
-        // don't do anything with outbound data in a regular gateway
-        return;
-    }
-
     function getCurrentDestination(uint256 _exitNum, address _initialDestination)
         public
         view
@@ -265,10 +255,23 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     }
 
     function getOutboundCalldata(
-        address _token,
+        address _l1Token,
         address _from,
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata);
+    ) public view virtual override returns (bytes memory outboundCalldata) {
+        bytes memory emptyBytes = "";
+
+        outboundCalldata = abi.encodeWithSelector(
+            ITokenGateway.finalizeInboundTransfer.selector,
+            _l1Token,
+            _from,
+            _to,
+            _amount,
+            abi.encode(emptyBytes, _data)
+        );
+
+        return outboundCalldata;
+    }
 }
