@@ -26,6 +26,9 @@ import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 
+// these contracts are used to "flatten" out communication between contracts
+// this way the token bridge can be tested fully in the base layer
+// assembly code from OZ's proxy is used to surface revert messages correctly
 contract L1GatewayTester is L1ERC20Gateway {
     function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
@@ -41,9 +44,7 @@ contract L1GatewayTester is L1ERC20Gateway {
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = counterpartGateway.call(_data);
         assembly {
-            // Copy the returned data.
             returndatacopy(0, 0, returndatasize())
-
             switch success
                 case 0 {
                     revert(0, retdata)
@@ -65,7 +66,13 @@ contract L2GatewayTester is L2ERC20Gateway {
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l1CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
     }
 
@@ -88,7 +95,13 @@ contract L1CustomGatewayTester is L1CustomGateway {
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = counterpartGateway.call(_data);
-        require(success, "OUTBOUND_REVERT");
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
     }
 }
@@ -105,7 +118,13 @@ contract L2CustomGatewayTester is L2CustomGateway {
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l1CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
     }
 
@@ -129,7 +148,13 @@ contract L1WethGatewayTester is L1WethGateway {
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l2CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
     }
 }
@@ -146,7 +171,13 @@ contract L2WethGatewayTester is L2WethGateway {
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) =
             counterpartGateway.call{ value: _l1CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
     }
 
