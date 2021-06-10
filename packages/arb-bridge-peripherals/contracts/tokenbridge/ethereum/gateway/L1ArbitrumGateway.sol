@@ -26,13 +26,14 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
-import "../../libraries/gateway/ITokenGateway.sol";
+import "../../libraries/gateway/ArbitrumGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
-import "../../libraries/ClonableBeaconProxy.sol";
+// import "../../libraries/ClonableBeaconProxy.sol";
+import "../../libraries/IERC677.sol";
 
 import "./L1ArbitrumMessenger.sol";
 
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -71,17 +72,32 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory extraData) = parseInboundData(_data);
+        (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
 
         _to = getCurrentDestination(exitNum, _to);
 
-        inboundEscrowTransfer(_token, _to, _amount);
+        if (callHookData.length > 0) {
+            bool success;
+            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookData) {
+                success = true;
+            } catch {
+                // if reverted, then credit _from's account
+                inboundEscrowTransfer(_token, _from, _amount);
+                // success default value is false
+            }
+            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
+        } else {
+            inboundEscrowTransfer(_token, _to, _amount);
+        }
 
         emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
-
-        handleInboundData(_from, _to, exitNum, extraData);
-
         return bytes("");
+    }
+
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        // amount of gas necessary to send user tokens in case
+        // of the "onTokenTransfer" call consumes all available gas
+        return 30000;
     }
 
     function handleInboundData(
@@ -118,7 +134,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         address _l1Token,
         address _dest,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual override {
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 

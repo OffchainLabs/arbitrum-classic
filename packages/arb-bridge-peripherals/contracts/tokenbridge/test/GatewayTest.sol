@@ -76,7 +76,7 @@ contract L2GatewayTester is L2ERC20Gateway {
         return 1337;
     }
 
-    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         return 50000;
     }
 }
@@ -128,7 +128,7 @@ contract L2CustomGatewayTester is L2CustomGateway {
         return 1337;
     }
 
-    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         return 50000;
     }
 }
@@ -181,7 +181,7 @@ contract L2WethGatewayTester is L2WethGateway {
         return 1337;
     }
 
-    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         return 50000;
     }
 }

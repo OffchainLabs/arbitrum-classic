@@ -23,11 +23,12 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./L2ArbitrumMessenger.sol";
 import "../IArbToken.sol";
 
+import "../../libraries/IERC677.sol";
 import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
-import "../../libraries/IERC677.sol";
+import "../../libraries/gateway/ArbitrumGateway.sol";
 
-abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
+abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
     using Address for address;
 
     uint256 public exitNum;
@@ -41,7 +42,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         TokenGateway._initialize(_l1Counterpart, _router);
     }
 
-    function arbgasReserveIfCallRevert() internal pure virtual returns (uint256) {
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         // amount of arbgas necessary to send user tokens in case
         // of the "onTokenTransfer" call consumes all available gas
         return 2500;
@@ -154,36 +155,11 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         }
     }
 
-    /**
-     * @notice this function can only be callable by the bridge itself
-     * @dev This method is inspired by EIP 677/1363 for calls to be executed after minting.
-     * A reserve amount of gas is always kept in case this call reverts or uses up all gas.
-     * The reserve is the amount of gas needed to catch the revert and do the necessary alternative logic.
-     */
-    function mintAndCall(
-        address _l2Address,
-        uint256 _amount,
-        address _sender,
-        address _dest,
-        bytes memory _data
-    ) external virtual {
-        require(msg.sender == address(this), "Mint can only be called by self");
-        require(_dest.isContract(), "Destination must be a contract");
-
-        inboundEscrowTransfer(_l2Address, _dest, _amount);
-
-        // ~73 000 arbgas used to get here
-        uint256 gasAvailable = gasleft() - arbgasReserveIfCallRevert();
-        require(gasleft() > gasAvailable, "Mint and call gas left calculation undeflow");
-
-        IERC677Receiver(_dest).onTokenTransfer{ gas: gasAvailable }(_sender, _amount, _data);
-    }
-
     function inboundEscrowTransfer(
         address _l2Address,
         address _dest,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual override {
         IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
 
@@ -218,7 +194,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
         if (callHookData.length > 0) {
             bool success;
-            try this.mintAndCall(expectedAddress, _amount, _from, _to, callHookData) {
+            try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookData) {
                 success = true;
             } catch {
                 // if reverted, then credit _from's account

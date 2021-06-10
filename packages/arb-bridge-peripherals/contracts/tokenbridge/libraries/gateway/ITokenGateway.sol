@@ -37,14 +37,6 @@ interface ITokenGateway {
         bytes _data
     );
 
-    event TransferAndCallTriggered(
-        bool success,
-        address indexed _from,
-        address indexed _to,
-        uint256 _amount,
-        bytes callHookData
-    );
-
     function outboundTransfer(
         address _token,
         address _to,

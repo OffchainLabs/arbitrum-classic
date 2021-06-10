@@ -42,19 +42,6 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         bool madeExternalCall
     );
 
-    function handleInboundData(
-        address _from,
-        address _to,
-        uint256 _exitNum,
-        bytes memory _data
-    ) internal virtual override {
-        if (_data.length > 0) {
-            require(_to.isContract(), "TO_NOT_CONTRACT");
-            bool success = ITradeableExitReceiver(_to).onExitTransfer(_from, _exitNum, _data);
-            require(success, "TRANSFER_HOOK_FAIL");
-        }
-    }
-
     /**
      * @notice Allows a user to redirect their right to claim a withdrawal to another address.
      * @dev This method also allows you to make an arbitrary call after the transfer, similar to ERC677.
@@ -77,8 +64,16 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
 
         updateDestination(_exitNum, _initialDestination, _newDestination);
 
-        // should we allow users to specify a different target to the call
-        handleInboundData(expectedSender, _newDestination, _exitNum, _data);
+        if (_data.length > 0) {
+            require(_newDestination.isContract(), "TO_NOT_CONTRACT");
+            bool success =
+                ITradeableExitReceiver(_newDestination).onExitTransfer(
+                    expectedSender,
+                    _exitNum,
+                    _data
+                );
+            require(success, "TRANSFER_HOOK_FAIL");
+        }
 
         emit WithdrawRedirected(expectedSender, _newDestination, _exitNum, _data, _data.length > 0);
     }
