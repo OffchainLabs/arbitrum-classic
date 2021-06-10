@@ -68,6 +68,7 @@ const networks: Networks = {
     isArbitrum: false,
     tokenBridge: RinkebyBridge,
     confirmPeriodBlocks: 6545, // TODO
+    blockTime: 15,
   },
   '421611': {
     chainID: '421611',
