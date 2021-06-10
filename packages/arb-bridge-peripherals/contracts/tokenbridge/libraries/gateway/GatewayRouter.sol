@@ -22,8 +22,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 
 /**
- * @title Handles routing tokens to their appropriate gateways (Router itself also conforms to the Gateway interface).
- * @notice Router also serves as an L1-L2 token address oracle.
+ * @title Common interface for L1 and L2 Gateway Routers
  */
 abstract contract GatewayRouter is TokenGateway {
     using Address for address;
