@@ -186,9 +186,12 @@ export class L1Bridge {
     return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
-
   public async getDefaultL1Gateway() {
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
+
+    if (defaultGatewayAddress === constants.AddressZero) {
+      throw new Error('No default gateway set')
+    }
     return L1ERC20Gateway__factory.connect(
       defaultGatewayAddress,
       this.l1Provider
@@ -251,6 +254,15 @@ export class L1Bridge {
 
   public async getInbox() {
     if (this.inboxCached) {
+      return this.inboxCached
+    }
+    const { chainId } = await this.l1Provider.getNetwork()
+    if (chainId === 1) {
+      // patch: mainnet has no default gateway set
+      this.inboxCached = Inbox__factory.connect(
+        '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
+        this.l1Signer
+      )
       return this.inboxCached
     }
     const gateway = await this.getDefaultL1Gateway()
