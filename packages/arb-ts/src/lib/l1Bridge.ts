@@ -187,11 +187,16 @@ export class L1Bridge {
       .gateway
   }
   public async getDefaultL1Gateway() {
+    const { chainId } = await this.l1Provider.getNetwork()
+    // patch: mainnet has not default gateway set, client treats standard as default
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
-
-    if (defaultGatewayAddress === constants.AddressZero) {
-      throw new Error('No default gateway set')
+    if (chainId === 1 && defaultGatewayAddress === constants.AddressZero) {
+      return L1ERC20Gateway__factory.connect(
+        '0xEd66239C7400f9C29D9127C5C95c18c03DDF3106',
+        this.l1Provider
+      )
     }
+
     return L1ERC20Gateway__factory.connect(
       defaultGatewayAddress,
       this.l1Provider
