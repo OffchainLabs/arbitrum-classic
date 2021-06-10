@@ -18,11 +18,11 @@
 
 pragma solidity ^0.6.11;
 
-import "./L1ArbitrumGateway.sol";
+import "./L1ArbitrumExtendedGateway.sol";
 import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-contract L1CustomGateway is L1ArbitrumGateway {
+contract L1CustomGateway is L1ArbitrumExtendedGateway {
     using Address for address;
     // stores addresses of L2 tokens to be used
     mapping(address => address) public l1ToL2Token;
@@ -34,7 +34,7 @@ contract L1CustomGateway is L1ArbitrumGateway {
         address _l1Router,
         address _inbox
     ) public virtual {
-        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        super._initialize(_l1Counterpart, _l1Router, _inbox);
     }
 
     function getOutboundCalldata(

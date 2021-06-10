@@ -138,22 +138,32 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it.skip('should process fast withdrawal correctly', async function () {
+  it('should process fast withdrawal correctly', async function () {
     const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
     // send escrowed tokens to bridge
     const tokenAmount = 100
 
+    let data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    // router usually does this encoding part
+    data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [accounts[0].address, data]
+    )
+
     await token.mint()
     await token.approve(testBridge.address, tokenAmount)
-    await testBridge.deposit(
+    await testBridge.outboundTransfer(
       token.address,
       accounts[0].address,
       tokenAmount,
-      0,
-      1000000,
-      0,
-      '0x'
+      maxGas,
+      gasPrice,
+      data
     )
 
     // parameters used for exit
@@ -179,16 +189,9 @@ describe('Bridge peripherals layer 1', () => {
     const passiveFastExitManager = await PassiveFastExitManager.deploy()
     await passiveFastExitManager.setBridge(testBridge.address)
 
-    const data = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint256', 'uint256', 'address', 'bytes', 'bytes'],
-      [
-        accounts[0].address,
-        exitNum,
-        maxFee,
-        fastExitMock.address,
-        liquidityProof,
-        '0x',
-      ]
+    const tradeData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'uint256', 'address', 'bytes', 'bytes'],
+      [accounts[0].address, maxFee, fastExitMock.address, liquidityProof, '0x']
     )
 
     await testBridge.transferExitAndCall(
@@ -196,8 +199,9 @@ describe('Bridge peripherals layer 1', () => {
       token.address,
       tokenAmount,
       exitNum,
+      accounts[0].address,
       passiveFastExitManager.address,
-      data
+      tradeData
     )
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
@@ -213,11 +217,17 @@ describe('Bridge peripherals layer 1', () => {
     // withdrawal should now be sent to liquidity provider
     // const prevLPBalance = await token.balanceOf(expensiveFastExitMock[0].address)
 
-    await testBridge.withdrawFromL2(
-      exitNum,
+    const inboundData = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [exitNum, '0x']
+    )
+
+    await testBridge.finalizeInboundTransfer(
       token.address,
       accounts[0].address,
-      tokenAmount
+      accounts[0].address,
+      tokenAmount,
+      inboundData
     )
 
     const postLPBalance = await token.balanceOf(fastExitMock.address)

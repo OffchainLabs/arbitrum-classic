@@ -71,15 +71,37 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory extraData) = abi.decode(_data, (uint256, bytes));
+        (uint256 exitNum, bytes memory extraData) = parseInboundData(_data);
 
-        // TODO: add withdraw and call
-        // TODO: add transferExit
-        inboundEscrowTransfer(_token, _to, _amount);
+        address newTo = getCurrentDestination(exitNum, _to);
 
-        emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
+        inboundEscrowTransfer(_token, newTo, _amount);
+
+        // TODO: add withdrawAndCall using `extraData` parsed
+
+        emit InboundTransferFinalized(_token, _from, newTo, exitNum, _amount, _data);
 
         return bytes("");
+    }
+
+    function getCurrentDestination(uint256 _exitNum, address _initialDestination)
+        public
+        view
+        virtual
+        returns (address)
+    {
+        // current destination can be changed for tradeable exits in a super class
+        return _initialDestination;
+    }
+
+    function parseInboundData(bytes calldata _data)
+        public
+        pure
+        virtual
+        returns (uint256 _exitNum, bytes memory _extraData)
+    {
+        // this data is encoded by the counterpart gateway, so this shouldn't revert
+        (_exitNum, _extraData) = abi.decode(_data, (uint256, bytes));
     }
 
     function inboundEscrowTransfer(

@@ -35,6 +35,7 @@ contract FastExitMock is IExitLiquidityProvider {
         uint256 exitNum,
         bytes calldata liquidityProof
     ) external override {
+        require(amount > fee, "UNDERFLOW");
         IERC20(erc20).transfer(dest, amount - fee);
     }
 }

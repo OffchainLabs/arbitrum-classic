@@ -21,9 +21,9 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "../../libraries/IWETH9.sol";
 import "../../test/TestWETH9.sol";
-import "./L1ArbitrumGateway.sol";
+import "./L1ArbitrumExtendedGateway.sol";
 
-contract L1WethGateway is L1ArbitrumGateway {
+contract L1WethGateway is L1ArbitrumExtendedGateway {
     using SafeERC20 for IWETH9;
 
     address public l1Weth;
@@ -36,7 +36,7 @@ contract L1WethGateway is L1ArbitrumGateway {
         address _l1Weth,
         address _l2Weth
     ) public virtual {
-        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        super._initialize(_l1Counterpart, _l1Router, _inbox);
         require(_l1Weth != address(0), "INVALID_L1WETH");
         require(_l2Weth != address(0), "INVALID_L2WETH");
         l1Weth = _l1Weth;

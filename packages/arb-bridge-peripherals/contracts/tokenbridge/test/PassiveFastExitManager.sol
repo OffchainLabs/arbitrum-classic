@@ -22,8 +22,9 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import "../ethereum/IExitLiquidityProvider.sol";
+import "../ethereum/gateway/L1ArbitrumExtendedGateway.sol";
 
-contract PassiveFastExitManager {
+contract PassiveFastExitManager is ITradeableExitReceiver {
     address bridge;
 
     function setBridge(address _bridge) external {
@@ -35,20 +36,20 @@ contract PassiveFastExitManager {
         _;
     }
 
-    function onExitTransfered(
+    function onExitTransfer(
         address sender,
         uint256 amount,
         address erc20,
+        uint256 exitNum,
         bytes calldata data
-    ) external onlyBridge returns (bytes4) {
+    ) external override onlyBridge returns (bool) {
         (
             address initialDestination,
-            uint256 exitNum,
             uint256 maxFee,
             address liquidityProvider,
             bytes memory liquidityProof,
             bytes memory spareData
-        ) = abi.decode(data, (address, uint256, uint256, address, bytes, bytes));
+        ) = abi.decode(data, (address, uint256, address, bytes, bytes));
 
         {
             uint256 balancePrior = IERC20(erc20).balanceOf(sender);
@@ -71,14 +72,15 @@ contract PassiveFastExitManager {
             );
         }
 
-        // IEthERC20Bridge(bridge).transferExitAndCall(
-        //     initialDestination,
-        //     erc20,
-        //     amount,
-        //     exitNum,
-        //     liquidityProvider,
-        //     spareData
-        // );
-        return PassiveFastExitManager.onExitTransfered.selector;
+        L1ArbitrumExtendedGateway(bridge).transferExitAndCall(
+            initialDestination,
+            erc20,
+            amount,
+            exitNum,
+            liquidityProvider,
+            liquidityProvider,
+            spareData
+        );
+        return true;
     }
 }
