@@ -27,8 +27,9 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     'counterpartGateway()': FunctionFragment
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
+    'gasReserveIfCallRevert()': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
-    'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
     'router()': FunctionFragment
   }
@@ -47,11 +48,15 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'gasReserveIfCallRevert',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
-    functionFragment: 'mintAndCall',
+    functionFragment: 'inboundEscrowAndCall',
     values: [string, BigNumberish, string, string, BytesLike]
   ): string
   encodeFunctionData(
@@ -74,10 +79,17 @@ interface L2ArbitrumGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'gasReserveIfCallRevert',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'inboundEscrowAndCall',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
@@ -147,6 +159,10 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -165,20 +181,20 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
 
-    mintAndCall(
+    inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'mintAndCall(address,uint256,address,address,bytes)'(
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -242,6 +258,10 @@ export class L2ArbitrumGateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+  'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
   getOutboundCalldata(
     _token: string,
     _from: string,
@@ -260,20 +280,20 @@ export class L2ArbitrumGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  mintAndCall(
+  inboundEscrowAndCall(
     _l2Address: string,
     _amount: BigNumberish,
-    _sender: string,
-    _dest: string,
+    _from: string,
+    _to: string,
     _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'mintAndCall(address,uint256,address,address,bytes)'(
+  'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
     _l2Address: string,
     _amount: BigNumberish,
-    _sender: string,
-    _dest: string,
+    _from: string,
+    _to: string,
     _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -337,6 +357,10 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -355,20 +379,20 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    mintAndCall(
+    inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'mintAndCall(address,uint256,address,address,bytes)'(
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
@@ -468,6 +492,10 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -486,20 +514,20 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    mintAndCall(
+    inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'mintAndCall(address,uint256,address,address,bytes)'(
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -566,6 +594,14 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
+    gasReserveIfCallRevert(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'gasReserveIfCallRevert()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -584,20 +620,20 @@ export class L2ArbitrumGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    mintAndCall(
+    inboundEscrowAndCall(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'mintAndCall(address,uint256,address,address,bytes)'(
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
       _l2Address: string,
       _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
+      _from: string,
+      _to: string,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>

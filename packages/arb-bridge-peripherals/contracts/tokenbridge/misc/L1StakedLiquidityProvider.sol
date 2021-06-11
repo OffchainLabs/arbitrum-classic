@@ -19,10 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/rollup/Rollup.sol";
-import "./ConfirmRoots.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-import "./IExitLiquidityProvider.sol";
+import "./ConfirmRoots.sol";
+import { IExitLiquidityProvider } from "./L1PassiveFastExitManager.sol";
 
 import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
 

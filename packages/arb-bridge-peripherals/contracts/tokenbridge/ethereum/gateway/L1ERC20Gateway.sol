@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import "./L1ArbitrumGateway.sol";
+import "./L1ArbitrumExtendedGateway.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 
 /**
@@ -27,7 +27,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
  * @dev Any ERC20 that requires non-standard functionality should use a separate gateway.
  * Messages to layer 2 use the inbox's createRetryableTicket method.
  */
-contract L1ERC20Gateway is L1ArbitrumGateway {
+contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
     // used for create2 address calculation
     bytes32 public cloneableProxyHash;
     // We don't use the solidity creationCode as it breaks when upgrading contracts
@@ -41,7 +41,7 @@ contract L1ERC20Gateway is L1ArbitrumGateway {
         bytes32 _cloneableProxyHash,
         address _l2BeaconProxyFactory
     ) public virtual {
-        L1ArbitrumGateway._initialize(_l2Counterpart, _router, _inbox);
+        L1ArbitrumExtendedGateway._initialize(_l2Counterpart, _router, _inbox);
         require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
         require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
         cloneableProxyHash = _cloneableProxyHash;

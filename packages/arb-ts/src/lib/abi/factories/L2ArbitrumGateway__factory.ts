@@ -256,6 +256,19 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'gasReserveIfCallRevert',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -308,12 +321,12 @@ const _abi = [
       },
       {
         internalType: 'address',
-        name: '_sender',
+        name: '_from',
         type: 'address',
       },
       {
         internalType: 'address',
-        name: '_dest',
+        name: '_to',
         type: 'address',
       },
       {
@@ -322,7 +335,7 @@ const _abi = [
         type: 'bytes',
       },
     ],
-    name: 'mintAndCall',
+    name: 'inboundEscrowAndCall',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',

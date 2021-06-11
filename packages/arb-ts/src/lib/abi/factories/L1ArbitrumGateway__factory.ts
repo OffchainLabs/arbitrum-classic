@@ -243,10 +243,47 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'gasReserveIfCallRevert',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: '_initialDestination',
+        type: 'address',
+      },
+    ],
+    name: 'getCurrentDestination',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
-        name: '_token',
+        name: '_l1Token',
         type: 'address',
       },
       {
@@ -279,6 +316,39 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '_l2Address',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'inboundEscrowAndCall',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
@@ -336,6 +406,30 @@ const _abi = [
       },
     ],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'parseInboundData',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: '_extraData',
+        type: 'bytes',
+      },
+    ],
+    stateMutability: 'pure',
     type: 'function',
   },
   {

@@ -156,8 +156,8 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
     'GatewaySet(address,address)': EventFragment
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
-    'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TransferRouted(address,address,address,address)': EventFragment
+    'TxToL2(address,address,uint256,bytes)': EventFragment
     'WhitelistSourceUpdated(address)': EventFragment
   }
 
@@ -165,8 +165,8 @@ interface L1GatewayRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
 }
 
@@ -786,19 +786,18 @@ export class L1GatewayRouter extends Contract {
       _data: null
     ): EventFilter
 
-    TransferAndCallTriggered(
-      success: null,
-      _from: string | null,
-      _to: string | null,
-      _amount: null,
-      callHookData: null
-    ): EventFilter
-
     TransferRouted(
       token: string | null,
       _userFrom: string | null,
       _userTo: string | null,
       gateway: null
+    ): EventFilter
+
+    TxToL2(
+      _from: string | null,
+      _to: string | null,
+      _seqNum: BigNumberish | null,
+      _data: null
     ): EventFilter
 
     WhitelistSourceUpdated(newSource: null): EventFilter
