@@ -65,6 +65,7 @@ export class L1Bridge {
   l1Tokens: Tokens
   l1Provider: providers.Provider
   l1EthBalance: BigNumber
+  chainIdCache?: number
 
   constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
     this.l1Signer = l1Signer
@@ -186,9 +187,26 @@ export class L1Bridge {
     return (await this.l1GatewayRouter.functions.getGateway(erc20L1Address))
       .gateway
   }
-
   public async getDefaultL1Gateway() {
+    const chainId = await this.getChainId()
     const defaultGatewayAddress = await this.l1GatewayRouter.defaultGateway()
+
+    if (defaultGatewayAddress === constants.AddressZero) {
+      const network = networks[chainId]
+
+      if (!network)
+        throw new Error('No default network, and no fallback provided')
+
+      console.log(
+        'No default network assigned in contract, using standard l1ERC20Gateway:'
+      )
+
+      return L1ERC20Gateway__factory.connect(
+        network.tokenBridge.l1ERC20Gateway,
+        this.l1Provider
+      )
+    }
+
     return L1ERC20Gateway__factory.connect(
       defaultGatewayAddress,
       this.l1Provider
@@ -253,6 +271,14 @@ export class L1Bridge {
     if (this.inboxCached) {
       return this.inboxCached
     }
+    const chainId = await this.getChainId()
+    if (networks[chainId]) {
+      this.inboxCached = Inbox__factory.connect(
+        networks[chainId].tokenBridge.inbox,
+        this.l1Signer
+      )
+      return this.inboxCached
+    }
     const gateway = await this.getDefaultL1Gateway()
 
     const inboxAddress = await gateway.inbox()
@@ -264,5 +290,13 @@ export class L1Bridge {
     const bal = await this.l1Signer.getBalance()
     this.l1EthBalance = bal
     return bal
+  }
+
+  public async getChainId() {
+    if (this.chainIdCache) {
+      return this.chainIdCache
+    }
+    this.chainIdCache = await this.l1Signer.getChainId()
+    return this.chainIdCache
   }
 }
