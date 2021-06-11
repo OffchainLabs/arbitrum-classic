@@ -18,6 +18,8 @@ title: ArbOwner.sol Spec
 
 ### `setSecondsPerSend(uint256 blocksPerSend)` (external)
 
+### `deployContract(bytes constructorData, address deemedSender, uint256 deemedNonce) → address` (external)
+
 ### `startCodeUpload()` (external)
 
 ### `continueCodeUpload(bytes marshalledCode)` (external)
@@ -29,3 +31,5 @@ title: ArbOwner.sol Spec
 ### `finishCodeUploadAsPluggable(uint256 id, bool keepState)` (external)
 
 ### `bindAddressToPluggable(address addr, uint256 pluggableId)` (external)
+
+### `getTotalOfEthBalances() → uint256` (external)

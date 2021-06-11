@@ -6,11 +6,11 @@ title: ArbTokenBridge.sol Spec
 
 This ensures that a method can only be called from the L1 pair of this contract
 
-### `initialize(address _l1Pair, address _templateERC20)` (external)
+### `initialize(address _ethTokenBridge, address _templateERC20)` (external)
 
 Initialize L2 bridge
 
-- `_l1Pair`: Address of L1 side of token bridge (EthERC20Bridge.sol)
+- `_ethTokenBridge`: Address of L1 side of token bridge (EthERC20Bridge.sol)
 
 - `_templateERC20`: Address of template ERC20 (i.e, StandardArbERC20.sol). Used for salt in computing L2 address.
 

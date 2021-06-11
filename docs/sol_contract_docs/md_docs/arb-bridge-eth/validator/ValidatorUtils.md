@@ -2,7 +2,7 @@
 title: ValidatorUtils.sol Spec
 ---
 
-### `getConfig(contract Rollup rollup) → uint256 confirmPeriodBlocks, uint256 extraChallengeTimeBlocks, uint256 arbGasSpeedLimitPerBlock, uint256 baseStake, address stakeToken` (external)
+### `getConfig(contract Rollup rollup) → uint256 confirmPeriodBlocks, uint256 extraChallengeTimeBlocks, uint256 arbGasSpeedLimitPerBlock, uint256 baseStake` (external)
 
 ### `stakerInfo(contract Rollup rollup, address stakerAddress) → bool isStaked, uint256 latestStakedNode, uint256 amountStaked, address currentChallenge` (external)
 
