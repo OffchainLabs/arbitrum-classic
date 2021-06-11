@@ -18,23 +18,15 @@
 
 pragma solidity ^0.6.11;
 
-import "../libraries/aeERC20.sol";
 import "arb-bridge-eth/contracts/libraries/Cloneable.sol";
-import "./IArbToken.sol";
+import "../libraries/L2GatewayToken.sol";
 import "../libraries/BytesParser.sol";
+import "./IArbToken.sol";
 
 /**
  * @title Standard (i.e., non-custom) contract deployed by L2Gateway.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
  */
-contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
-    address public gatewayAddress;
-    address public override l1Address;
-
-    modifier onlyGateway {
-        require(msg.sender == address(gatewayAddress), "ONLY_GATEWAY");
-        _;
-    }
-
+contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
     /**
      * @notice initialize the token
      * @dev the L2 bridge assumes this does not fail or revert
@@ -42,37 +34,16 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
      * @param _data encoded symbol/name/decimal data for initial deploy
      */
     function bridgeInit(address _l1Address, bytes memory _data) public virtual {
-        require(address(l1Address) == address(0), "Already inited");
-        gatewayAddress = msg.sender;
-        l1Address = _l1Address;
-
         (bytes memory name, bytes memory symbol, bytes memory decimals) =
             abi.decode(_data, (bytes, bytes, bytes));
         // what if decode reverts? shouldn't as this is encoded by L1 contract
 
-        aeERC20.initialize(
+        L2GatewayToken.initialize(
             BytesParserWithDefault.toString(name, ""),
             BytesParserWithDefault.toString(symbol, ""),
-            BytesParserWithDefault.toUint8(decimals, 18)
+            BytesParserWithDefault.toUint8(decimals, 18),
+            msg.sender, // _l2Gateway,
+            _l1Address // _l1Counterpart
         );
-    }
-
-    /**
-     * @notice Mint tokens on L2. Callable path is L1Gateway depositToken (which handles L1 escrow), which triggers L2Gateway, which calls this
-     * @param account recipient of tokens
-     * @param amount amount of tokens minted
-     */
-    function bridgeMint(address account, uint256 amount) external virtual override onlyGateway {
-        _mint(account, amount);
-    }
-
-    /**
-     * @notice Burn tokens on L2.
-     * @dev only the token bridge can call this
-     * @param account owner of tokens
-     * @param amount amount of tokens burnt
-     */
-    function bridgeBurn(address account, uint256 amount) external virtual override onlyGateway {
-        _burn(account, amount);
     }
 }

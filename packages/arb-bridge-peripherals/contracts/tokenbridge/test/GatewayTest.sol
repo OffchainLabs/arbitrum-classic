@@ -26,12 +26,15 @@ import "../arbitrum/gateway/L2WethGateway.sol";
 import "../arbitrum/gateway/L2CustomGateway.sol";
 import "../arbitrum/gateway/L2ERC20Gateway.sol";
 
-contract L1GatewayTester is L1ERC20Gateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
-    }
+import "../libraries/gateway/ArbitrumMessenger.sol";
 
+// these contracts are used to "flatten" out communication between contracts
+// this way the token bridge can be tested fully in the base layer
+// assembly code from OZ's proxy is used to surface revert messages correctly
+abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
     function sendTxToL2(
+        address _inbox,
+        address _to,
         address _user,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
@@ -39,11 +42,9 @@ contract L1GatewayTester is L1ERC20Gateway {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
-            // Copy the returned data.
             returndatacopy(0, 0, returndatasize())
-
             switch success
                 case 0 {
                     revert(0, retdata)
@@ -53,104 +54,165 @@ contract L1GatewayTester is L1ERC20Gateway {
     }
 }
 
-contract L2GatewayTester is L2ERC20Gateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
-    }
-
+abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
     function sendTxToL1(
-        address _from,
         uint256 _l1CallValue,
+        address _from,
+        address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l1CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
+        (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
+        assembly {
+            returndatacopy(0, 0, returndatasize())
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
-    }
-
-    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
-        return 50000;
     }
 }
 
-contract L1CustomGatewayTester is L1CustomGateway {
+contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
     function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
     function sendTxToL2(
+        address _inbox,
+        address _to,
         address _user,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
-        require(success, "OUTBOUND_REVERT");
-        return 1337;
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
+        return
+            L1ArbitrumTestMessenger.sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 }
 
-contract L2CustomGatewayTester is L2CustomGateway {
+contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
     function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
     function sendTxToL1(
-        address _from,
         uint256 _l1CallValue,
+        address _from,
+        address _to,
         bytes memory _data
-    ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l1CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
-        return 1337;
+    ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
+        return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
 
-    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         return 50000;
     }
 }
 
-contract L1WethGatewayTester is L1WethGateway {
+contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
     function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
     function sendTxToL2(
+        address _inbox,
+        address _to,
         address _user,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l2CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
-        return 1337;
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
+        return
+            L1ArbitrumTestMessenger.sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 }
 
-contract L2WethGatewayTester is L2WethGateway {
+contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
     function isSenderCounterpartGateway() internal view virtual override returns (bool) {
         return msg.sender == counterpartGateway;
     }
 
     function sendTxToL1(
-        address _from,
         uint256 _l1CallValue,
+        address _from,
+        address _to,
         bytes memory _data
-    ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l1CallValue }(_data);
-        require(success, "OUTBOUND_REVERT");
-        return 1337;
+    ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
+        return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
     }
 
-    function arbgasReserveIfCallRevert() internal pure virtual override returns (uint256) {
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        return 50000;
+    }
+}
+
+contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
+    }
+
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
+        return
+            L1ArbitrumTestMessenger.sendTxToL2(
+                _inbox,
+                _to,
+                _user,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
+    }
+}
+
+contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
+    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
+        return msg.sender == counterpartGateway;
+    }
+
+    function sendTxToL1(
+        uint256 _l1CallValue,
+        address _from,
+        address _to,
+        bytes memory _data
+    ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
+        return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
+    }
+
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         return 50000;
     }
 }

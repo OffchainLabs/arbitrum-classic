@@ -31,11 +31,11 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     'bridgeMint(address,uint256)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
-    'gatewayAddress()': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
     'initialize(string,string,uint8)': FunctionFragment
     'isMaster()': FunctionFragment
     'l1Address()': FunctionFragment
+    'l2Gateway()': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
@@ -77,10 +77,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(
-    functionFragment: 'gatewayAddress',
-    values?: undefined
-  ): string
-  encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
   ): string
@@ -90,6 +86,7 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
+  encodeFunctionData(functionFragment: 'l2Gateway', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
   encodeFunctionData(functionFragment: 'nonces', values: [string]): string
   encodeFunctionData(
@@ -138,16 +135,13 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'gatewayAddress',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'l2Gateway', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
@@ -273,10 +267,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    gatewayAddress(overrides?: CallOverrides): Promise<[string]>
-
-    'gatewayAddress()'(overrides?: CallOverrides): Promise<[string]>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
@@ -310,6 +300,10 @@ export class StandardArbERC20 extends Contract {
     l1Address(overrides?: CallOverrides): Promise<[string]>
 
     'l1Address()'(overrides?: CallOverrides): Promise<[string]>
+
+    l2Gateway(overrides?: CallOverrides): Promise<[string]>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<[string]>
 
     name(overrides?: CallOverrides): Promise<[string]>
 
@@ -480,10 +474,6 @@ export class StandardArbERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  gatewayAddress(overrides?: CallOverrides): Promise<string>
-
-  'gatewayAddress()'(overrides?: CallOverrides): Promise<string>
-
   increaseAllowance(
     spender: string,
     addedValue: BigNumberish,
@@ -517,6 +507,10 @@ export class StandardArbERC20 extends Contract {
   l1Address(overrides?: CallOverrides): Promise<string>
 
   'l1Address()'(overrides?: CallOverrides): Promise<string>
+
+  l2Gateway(overrides?: CallOverrides): Promise<string>
+
+  'l2Gateway()'(overrides?: CallOverrides): Promise<string>
 
   name(overrides?: CallOverrides): Promise<string>
 
@@ -687,10 +681,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    gatewayAddress(overrides?: CallOverrides): Promise<string>
-
-    'gatewayAddress()'(overrides?: CallOverrides): Promise<string>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
@@ -724,6 +714,10 @@ export class StandardArbERC20 extends Contract {
     l1Address(overrides?: CallOverrides): Promise<string>
 
     'l1Address()'(overrides?: CallOverrides): Promise<string>
+
+    l2Gateway(overrides?: CallOverrides): Promise<string>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<string>
 
     name(overrides?: CallOverrides): Promise<string>
 
@@ -910,10 +904,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    gatewayAddress(overrides?: CallOverrides): Promise<BigNumber>
-
-    'gatewayAddress()'(overrides?: CallOverrides): Promise<BigNumber>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
@@ -947,6 +937,10 @@ export class StandardArbERC20 extends Contract {
     l1Address(overrides?: CallOverrides): Promise<BigNumber>
 
     'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2Gateway(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<BigNumber>
 
     name(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -1123,10 +1117,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    gatewayAddress(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'gatewayAddress()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     increaseAllowance(
       spender: string,
       addedValue: BigNumberish,
@@ -1160,6 +1150,10 @@ export class StandardArbERC20 extends Contract {
     l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    l2Gateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     name(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

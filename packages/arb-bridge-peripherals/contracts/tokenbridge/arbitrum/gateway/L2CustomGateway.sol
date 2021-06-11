@@ -84,13 +84,16 @@ contract L2CustomGateway is L2ArbitrumGateway {
         return _calculateL2TokenAddress(l1ERC20);
     }
 
-    function registerTokenFromL1(address l1Address, address l2Address)
+    function registerTokenFromL1(address[] calldata l1Address, address[] calldata l2Address)
         external
         virtual
         onlyCounterpartGateway
     {
-        // here we don't check if l2Address is a contract and instead deal with that behaviour
-        // in `handleNoContract` this way we keep the l1 and l2 address oracles in sync
-        l1ToL2Token[l1Address] = l2Address;
+        // we assume both arrays are the same length, safe since its encoded by the L1
+        for (uint256 i = 0; i < l1Address.length; i++) {
+            // here we don't check if l2Address is a contract and instead deal with that behaviour
+            // in `handleNoContract` this way we keep the l1 and l2 address oracles in sync
+            l1ToL2Token[l1Address[i]] = l2Address[i];
+        }
     }
 }
