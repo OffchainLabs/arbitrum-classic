@@ -5,14 +5,18 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { L2ArbitrumGateway } from '../L2ArbitrumGateway'
+import type { L1ArbitrumExtendedGateway } from '../L1ArbitrumExtendedGateway'
 
-export class L2ArbitrumGateway__factory {
+export class L1ArbitrumExtendedGateway__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): L2ArbitrumGateway {
-    return new Contract(address, _abi, signerOrProvider) as L2ArbitrumGateway
+  ): L1ArbitrumExtendedGateway {
+    return new Contract(
+      address,
+      _abi,
+      signerOrProvider
+    ) as L1ArbitrumExtendedGateway
   }
 }
 
@@ -158,7 +162,7 @@ const _abi = [
       {
         indexed: true,
         internalType: 'uint256',
-        name: '_id',
+        name: '_seqNum',
         type: 'uint256',
       },
       {
@@ -168,7 +172,44 @@ const _abi = [
         type: 'bytes',
       },
     ],
-    name: 'TxToL1',
+    name: 'TxToL2',
+    type: 'event',
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'to',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'exitNum',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
+      },
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'madeExternalCall',
+        type: 'bool',
+      },
+    ],
+    name: 'WithdrawRedirected',
     type: 'event',
   },
   {
@@ -204,16 +245,27 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [],
-    name: 'exitNum',
-    outputs: [
+    inputs: [
       {
         internalType: 'uint256',
-        name: '',
+        name: '_exitNum',
         type: 'uint256',
       },
+      {
+        internalType: 'address',
+        name: '_initialDestination',
+        type: 'address',
+      },
     ],
-    stateMutability: 'view',
+    name: 'encodeWithdrawal',
+    outputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    stateMutability: 'pure',
     type: 'function',
   },
   {
@@ -271,8 +323,32 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
         internalType: 'address',
-        name: '_token',
+        name: '_initialDestination',
+        type: 'address',
+      },
+    ],
+    name: 'getCurrentDestination',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '_l1Token',
         type: 'address',
       },
       {
@@ -341,37 +417,16 @@ const _abi = [
     type: 'function',
   },
   {
-    inputs: [
-      {
-        internalType: 'address',
-        name: '_l1Token',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        internalType: 'bytes',
-        name: '_data',
-        type: 'bytes',
-      },
-    ],
-    name: 'outboundTransfer',
+    inputs: [],
+    name: 'inbox',
     outputs: [
       {
-        internalType: 'bytes',
+        internalType: 'address',
         name: '',
-        type: 'bytes',
+        type: 'address',
       },
     ],
-    stateMutability: 'payable',
+    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -411,11 +466,54 @@ const _abi = [
     outputs: [
       {
         internalType: 'bytes',
-        name: '',
+        name: 'res',
         type: 'bytes',
       },
     ],
     stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'parseInboundData',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bytes',
+        name: '_extraData',
+        type: 'bytes',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes32',
+        name: '',
+        type: 'bytes32',
+      },
+    ],
+    name: 'redirectedExits',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
     type: 'function',
   },
   {
@@ -429,6 +527,34 @@ const _abi = [
       },
     ],
     stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '_exitNum',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: '_initialDestination',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: '_newDestination',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'transferExitAndCall',
+    outputs: [],
+    stateMutability: 'nonpayable',
     type: 'function',
   },
 ]

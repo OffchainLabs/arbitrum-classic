@@ -26,14 +26,21 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     'calculateL2TokenAddress(address)': FunctionFragment
     'cloneableProxyHash()': FunctionFragment
     'counterpartGateway()': FunctionFragment
+    'encodeWithdrawal(uint256,address)': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
+    'gasReserveIfCallRevert()': FunctionFragment
+    'getCurrentDestination(uint256,address)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'inbox()': FunctionFragment
     'initialize(address,address,address,bytes32,address)': FunctionFragment
     'l2BeaconProxyFactory()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'parseInboundData(bytes)': FunctionFragment
     'postUpgradeInit(bytes32,address)': FunctionFragment
+    'redirectedExits(bytes32)': FunctionFragment
     'router()': FunctionFragment
+    'transferExitAndCall(uint256,address,address,bytes)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -49,12 +56,28 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'encodeWithdrawal',
+    values: [BigNumberish, string]
+  ): string
+  encodeFunctionData(
     functionFragment: 'finalizeInboundTransfer',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'gasReserveIfCallRevert',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getCurrentDestination',
+    values: [BigNumberish, string]
+  ): string
+  encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'inboundEscrowAndCall',
+    values: [string, BigNumberish, string, string, BytesLike]
   ): string
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
@@ -77,10 +100,22 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     ]
   ): string
   encodeFunctionData(
+    functionFragment: 'parseInboundData',
+    values: [BytesLike]
+  ): string
+  encodeFunctionData(
     functionFragment: 'postUpgradeInit',
     values: [BytesLike, string]
   ): string
+  encodeFunctionData(
+    functionFragment: 'redirectedExits',
+    values: [BytesLike]
+  ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'transferExitAndCall',
+    values: [BigNumberish, string, string, BytesLike]
+  ): string
 
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
@@ -95,11 +130,27 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'encodeWithdrawal',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'finalizeInboundTransfer',
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'gasReserveIfCallRevert',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getCurrentDestination',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'inboundEscrowAndCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
@@ -113,22 +164,36 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'parseInboundData',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'postUpgradeInit',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'redirectedExits',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'transferExitAndCall',
+    data: BytesLike
+  ): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
+    'WithdrawRedirected(address,address,uint256,bytes,bool)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
 }
 
 export class L1ERC20Gateway extends Contract {
@@ -163,6 +228,18 @@ export class L1ERC20Gateway extends Contract {
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<[string]>
 
+    encodeWithdrawal(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'encodeWithdrawal(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -181,6 +258,22 @@ export class L1ERC20Gateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    getCurrentDestination(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'getCurrentDestination(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -198,6 +291,24 @@ export class L1ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     inbox(overrides?: CallOverrides): Promise<[string]>
 
@@ -245,6 +356,20 @@ export class L1ERC20Gateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    parseInboundData(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
+    >
+
+    'parseInboundData(bytes)'(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
+    >
+
     postUpgradeInit(
       _cloneableProxyHash: BytesLike,
       _l2BeaconProxyFactory: string,
@@ -257,9 +382,35 @@ export class L1ERC20Gateway extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    redirectedExits(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'redirectedExits(bytes32)'(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     router(overrides?: CallOverrides): Promise<[string]>
 
     'router()'(overrides?: CallOverrides): Promise<[string]>
+
+    transferExitAndCall(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'transferExitAndCall(uint256,address,address,bytes)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
   }
 
   calculateL2TokenAddress(
@@ -280,6 +431,18 @@ export class L1ERC20Gateway extends Contract {
 
   'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
 
+  encodeWithdrawal(
+    _exitNum: BigNumberish,
+    _initialDestination: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'encodeWithdrawal(uint256,address)'(
+    _exitNum: BigNumberish,
+    _initialDestination: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   finalizeInboundTransfer(
     _token: string,
     _from: string,
@@ -298,6 +461,22 @@ export class L1ERC20Gateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+  'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
+  getCurrentDestination(
+    _exitNum: BigNumberish,
+    _initialDestination: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'getCurrentDestination(uint256,address)'(
+    _exitNum: BigNumberish,
+    _initialDestination: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   getOutboundCalldata(
     _token: string,
     _from: string,
@@ -315,6 +494,24 @@ export class L1ERC20Gateway extends Contract {
     _data: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
+
+  inboundEscrowAndCall(
+    _l2Address: string,
+    _amount: BigNumberish,
+    _from: string,
+    _to: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+    _l2Address: string,
+    _amount: BigNumberish,
+    _from: string,
+    _to: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   inbox(overrides?: CallOverrides): Promise<string>
 
@@ -362,6 +559,16 @@ export class L1ERC20Gateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  parseInboundData(
+    _data: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
+
+  'parseInboundData(bytes)'(
+    _data: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
+
   postUpgradeInit(
     _cloneableProxyHash: BytesLike,
     _l2BeaconProxyFactory: string,
@@ -374,9 +581,32 @@ export class L1ERC20Gateway extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
+
+  'redirectedExits(bytes32)'(
+    arg0: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   router(overrides?: CallOverrides): Promise<string>
 
   'router()'(overrides?: CallOverrides): Promise<string>
+
+  transferExitAndCall(
+    _exitNum: BigNumberish,
+    _initialDestination: string,
+    _newDestination: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'transferExitAndCall(uint256,address,address,bytes)'(
+    _exitNum: BigNumberish,
+    _initialDestination: string,
+    _newDestination: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   callStatic: {
     calculateL2TokenAddress(
@@ -397,6 +627,18 @@ export class L1ERC20Gateway extends Contract {
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<string>
 
+    encodeWithdrawal(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'encodeWithdrawal(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -412,6 +654,22 @@ export class L1ERC20Gateway extends Contract {
       _to: string,
       _amount: BigNumberish,
       _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getCurrentDestination(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'getCurrentDestination(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
       overrides?: CallOverrides
     ): Promise<string>
 
@@ -432,6 +690,24 @@ export class L1ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     inbox(overrides?: CallOverrides): Promise<string>
 
@@ -479,6 +755,20 @@ export class L1ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    parseInboundData(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
+    >
+
+    'parseInboundData(bytes)'(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
+    >
+
     postUpgradeInit(
       _cloneableProxyHash: BytesLike,
       _l2BeaconProxyFactory: string,
@@ -491,9 +781,32 @@ export class L1ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
+
+    'redirectedExits(bytes32)'(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     router(overrides?: CallOverrides): Promise<string>
 
     'router()'(overrides?: CallOverrides): Promise<string>
+
+    transferExitAndCall(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'transferExitAndCall(uint256,address,address,bytes)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
   }
 
   filters: {
@@ -529,6 +842,14 @@ export class L1ERC20Gateway extends Contract {
       _seqNum: BigNumberish | null,
       _data: null
     ): EventFilter
+
+    WithdrawRedirected(
+      from: string | null,
+      to: string | null,
+      exitNum: BigNumberish | null,
+      data: null,
+      madeExternalCall: null
+    ): EventFilter
   }
 
   estimateGas: {
@@ -550,6 +871,18 @@ export class L1ERC20Gateway extends Contract {
 
     'counterpartGateway()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    encodeWithdrawal(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'encodeWithdrawal(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -568,6 +901,22 @@ export class L1ERC20Gateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getCurrentDestination(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'getCurrentDestination(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -584,6 +933,24 @@ export class L1ERC20Gateway extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
     ): Promise<BigNumber>
 
     inbox(overrides?: CallOverrides): Promise<BigNumber>
@@ -632,6 +999,16 @@ export class L1ERC20Gateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    parseInboundData(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'parseInboundData(bytes)'(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     postUpgradeInit(
       _cloneableProxyHash: BytesLike,
       _l2BeaconProxyFactory: string,
@@ -644,9 +1021,35 @@ export class L1ERC20Gateway extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    redirectedExits(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'redirectedExits(bytes32)'(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     router(overrides?: CallOverrides): Promise<BigNumber>
 
     'router()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    transferExitAndCall(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'transferExitAndCall(uint256,address,address,bytes)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
@@ -672,6 +1075,18 @@ export class L1ERC20Gateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    encodeWithdrawal(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'encodeWithdrawal(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     finalizeInboundTransfer(
       _token: string,
       _from: string,
@@ -690,6 +1105,26 @@ export class L1ERC20Gateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
+    gasReserveIfCallRevert(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'gasReserveIfCallRevert()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getCurrentDestination(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getCurrentDestination(uint256,address)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -706,6 +1141,24 @@ export class L1ERC20Gateway extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -758,6 +1211,16 @@ export class L1ERC20Gateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
+    parseInboundData(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'parseInboundData(bytes)'(
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     postUpgradeInit(
       _cloneableProxyHash: BytesLike,
       _l2BeaconProxyFactory: string,
@@ -770,8 +1233,34 @@ export class L1ERC20Gateway extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    redirectedExits(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'redirectedExits(bytes32)'(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    transferExitAndCall(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'transferExitAndCall(uint256,address,address,bytes)'(
+      _exitNum: BigNumberish,
+      _initialDestination: string,
+      _newDestination: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
   }
 }

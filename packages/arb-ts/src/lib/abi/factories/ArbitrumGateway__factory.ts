@@ -5,14 +5,14 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { TokenGateway } from '../TokenGateway'
+import type { ArbitrumGateway } from '../ArbitrumGateway'
 
-export class TokenGateway__factory {
+export class ArbitrumGateway__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): TokenGateway {
-    return new Contract(address, _abi, signerOrProvider) as TokenGateway
+  ): ArbitrumGateway {
+    return new Contract(address, _abi, signerOrProvider) as ArbitrumGateway
   }
 }
 
@@ -104,6 +104,43 @@ const _abi = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: 'bool',
+        name: 'success',
+        type: 'bool',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
+        name: 'callHookData',
+        type: 'bytes',
+      },
+    ],
+    name: 'TransferAndCallTriggered',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -175,6 +212,19 @@ const _abi = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'gasReserveIfCallRevert',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'pure',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -217,7 +267,40 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: '_token',
+        name: '_l2Address',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: '_amount',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: '_from',
+        type: 'address',
+      },
+      {
+        internalType: 'address',
+        name: '_to',
+        type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_data',
+        type: 'bytes',
+      },
+    ],
+    name: 'inboundEscrowAndCall',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '_l1Token',
         type: 'address',
       },
       {
