@@ -35,6 +35,8 @@ contract L1GatewayTester is L1ERC20Gateway {
     }
 
     function sendTxToL2(
+        address _inbox,
+        address _to,
         address _user,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
@@ -42,7 +44,7 @@ contract L1GatewayTester is L1ERC20Gateway {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
             returndatacopy(0, 0, returndatasize())
             switch success
@@ -60,12 +62,12 @@ contract L2GatewayTester is L2ERC20Gateway {
     }
 
     function sendTxToL1(
-        address _from,
         uint256 _l1CallValue,
+        address _from,
+        address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l1CallValue }(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             returndatacopy(0, 0, returndatasize())
             switch success
@@ -87,6 +89,8 @@ contract L1CustomGatewayTester is L1CustomGateway {
     }
 
     function sendTxToL2(
+        address _inbox,
+        address _to,
         address _user,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
@@ -94,7 +98,7 @@ contract L1CustomGatewayTester is L1CustomGateway {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) = counterpartGateway.call(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
             returndatacopy(0, 0, returndatasize())
             switch success
@@ -112,12 +116,12 @@ contract L2CustomGatewayTester is L2CustomGateway {
     }
 
     function sendTxToL1(
-        address _from,
         uint256 _l1CallValue,
+        address _from,
+        address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l1CallValue }(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             returndatacopy(0, 0, returndatasize())
             switch success
@@ -139,6 +143,8 @@ contract L1WethGatewayTester is L1WethGateway {
     }
 
     function sendTxToL2(
+        address _inbox,
+        address _to,
         address _user,
         uint256 _l2CallValue,
         uint256 _maxSubmissionCost,
@@ -146,8 +152,7 @@ contract L1WethGatewayTester is L1WethGateway {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l2CallValue }(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l2CallValue }(_data);
         assembly {
             returndatacopy(0, 0, returndatasize())
             switch success
@@ -165,12 +170,12 @@ contract L2WethGatewayTester is L2WethGateway {
     }
 
     function sendTxToL1(
-        address _from,
         uint256 _l1CallValue,
+        address _from,
+        address _to,
         bytes memory _data
     ) internal virtual override returns (uint256) {
-        (bool success, bytes memory retdata) =
-            counterpartGateway.call{ value: _l1CallValue }(_data);
+        (bool success, bytes memory retdata) = _to.call{ value: _l1CallValue }(_data);
         assembly {
             returndatacopy(0, 0, returndatasize())
             switch success
