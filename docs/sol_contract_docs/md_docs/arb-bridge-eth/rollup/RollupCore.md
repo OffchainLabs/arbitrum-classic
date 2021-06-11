@@ -70,6 +70,8 @@ Get Latest node that the given zombie at the given index is staked on
 
 **Returns**: Current: number of un-removed zombies
 
+### `isZombie(address staker) → bool` (public)
+
 ### `withdrawableFunds(address owner) → uint256` (public)
 
 Get the amount of funds withdrawable by the given address
