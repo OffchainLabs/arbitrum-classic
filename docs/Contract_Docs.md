@@ -21,7 +21,7 @@ sidebar_label: Contract Docs
 
 ### Token Bridge
 
-- [GatewayRouter](GatewayRouter)
+- [GatewayRouter](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/libraries/gateway/GatewayRouter.md)
 - [L1GatewayRouter](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/gateway/L1GatewayRouter.md)
 - [L1ERC20Gateway](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/gateway/L1ERC20Gateway.md)
 
