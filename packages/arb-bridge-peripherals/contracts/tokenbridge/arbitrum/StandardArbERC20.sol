@@ -41,7 +41,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
      * @param _l1Address L1 address of ERC20
      * @param _data encoded symbol/name/decimal data for initial deploy
      */
-    function bridgeInit(address _l1Address, bytes memory _data) external {
+    function bridgeInit(address _l1Address, bytes memory _data) public virtual {
         require(address(l1Address) == address(0), "Already inited");
         gatewayAddress = msg.sender;
         l1Address = _l1Address;
@@ -62,7 +62,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
      * @param account recipient of tokens
      * @param amount amount of tokens minted
      */
-    function bridgeMint(address account, uint256 amount) external override onlyGateway {
+    function bridgeMint(address account, uint256 amount) external virtual override onlyGateway {
         _mint(account, amount);
     }
 
@@ -72,7 +72,7 @@ contract StandardArbERC20 is aeERC20, Cloneable, IArbToken {
      * @param account owner of tokens
      * @param amount amount of tokens burnt
      */
-    function bridgeBurn(address account, uint256 amount) external override onlyGateway {
+    function bridgeBurn(address account, uint256 amount) external virtual override onlyGateway {
         _burn(account, amount);
     }
 }

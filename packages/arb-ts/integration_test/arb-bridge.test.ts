@@ -11,6 +11,8 @@ import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import { Rollup__factory } from '../src/lib/abi/factories/Rollup__factory'
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
 import { Outbox__factory } from '../src/lib/abi/factories/Outbox__factory'
+import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
+
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { StandardArbERC20 } from '../src/lib/abi/StandardArbERC20'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
@@ -60,8 +62,8 @@ const {
   ethRPC,
   arbRPC,
   preFundedSignerPK,
-  erc20BridgeAddress,
-  arbTokenBridgeAddress,
+  l1GatewayRouterAddress,
+  l2GatewayRouterAddress,
   l1gasPrice,
   existentTestERC20,
   existentCustomTokenL1,
@@ -104,12 +106,7 @@ const outGoingMessages: L2ToL1EventResult[] = []
 let bridge: Bridge
 before('setup', () => {
   it("'pre-funded wallet' is indeed pre-funded", async () => {
-    bridge = await Bridge.init(
-      l1TestWallet,
-      l2TestWallet,
-      erc20BridgeAddress,
-      arbTokenBridgeAddress
-    )
+    bridge = await Bridge.init(l1TestWallet, l2TestWallet)
     const balance = await preFundedWallet.getBalance()
     const hasBalance = balance.gt(utils.parseEther(depositAmount))
     expect(hasBalance).to.be.true
@@ -195,7 +192,6 @@ describe('ERC20', () => {
       {},
       undefined
     )
-    console.log(depositRes)
     prettyLog('depositing done')
 
     const depositRec = await depositRes.wait()
@@ -280,45 +276,23 @@ describe('ERC20', () => {
     expect(balance.eq(tokenDepositAmount)).to.be.true
   })
 
-  // TODO: L1 address oracle
-  // it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-  //   // this uses the l2ERC20Gateway implementation
-  //   const erc20L2AddressAsPerL2 = await bridge.getERC20L2Address(erc20Address)
-
-  //   const l1Gateway = await bridge.defaultL1Gateway()
-  //   const erc20L2AddressAsPerL1 = await l1Gateway.functions.calculateL2TokenAddress(
-  //     erc20Address
-  //   )
-  //   prettyLog('Token L2 Address: ' + erc20L2AddressAsPerL1)
-  //   expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
-  // })
-
-  it('withdraw erc20 succeeds and emits event data', async () => {
-    const withdrawRes = await bridge.withdrawERC20(
-      erc20Address,
-      tokenWithdrawAmount
+  it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
+    // this uses the l2ERC20Gateway implementation
+    const erc20L2AddressAsPerL1 = await bridge.getERC20L2Address(erc20Address)
+    const l2gr = L2GatewayRouter__factory.connect(
+      l2GatewayRouterAddress,
+      arbProvider
     )
-    const withdrawRec = await withdrawRes.wait()
-    expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = (
-      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
-    )[0]
+    const erc20L2AddressAsPerL2 = await l2gr.calculateL2TokenAddress(
+      erc20Address
+    )
 
-    expect(withdrawEventData).to.exist
-    outGoingMessages.push(withdrawEventData)
-  })
-
-  it('balance properly deducted after erc20 withdraw', async () => {
-    await wait()
-    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
-    const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
-    expect(
-      testWalletL2Balance &&
-        testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmount)
-    ).to.be.true
+    prettyLog(
+      `Token L2 Address: ${erc20L2AddressAsPerL1}, ${erc20L2AddressAsPerL2}`
+    )
+    expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
 })
-
 describe('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
@@ -353,7 +327,7 @@ describe('Ether', () => {
     const l2TxnRec = await arbProvider.waitForTransaction(
       l2TxHash,
       undefined,
-      120 * 1000
+      1000 * 60 * 12
     )
     prettyLog('l2 transaction found!')
     expect(l2TxnRec.status).to.equal(1)
@@ -364,12 +338,14 @@ describe('Ether', () => {
       await wait(5000)
       testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
       if (!initialTestWalletEth2Balance.eq(testWalletL2EthBalance)) {
-        prettyLog('balance updated!')
+        prettyLog(
+          `balance updated! ${initialTestWalletEth2Balance.toString()} ${testWalletL2EthBalance.toString()}`
+        )
         break
       }
     }
 
-    expect(testWalletL2EthBalance.gte(ethToL2DepositAmount)).to.be.true
+    expect(testWalletL2EthBalance.gte(initialTestWalletEth2Balance)).to.be.true
   })
   it('withdraw Ether transaction succeeds and emits event', async () => {
     preWithdrawalL2Balance = await bridge.getAndUpdateL2EthBalance()
@@ -392,7 +368,7 @@ describe('Ether', () => {
   })
 })
 
-describe.skip('ERC20', () => {
+describe('ERC20', () => {
   it('2nd pass, prefunded: initial erc20 deposit txns — L1 and L2 — both succeed', async () => {
     const tokenContract = TestERC20__factory.connect(erc20Address, ethProvider)
     const defaultL1GatewayAddress = (await bridge.defaultL1Gateway()).address
@@ -454,6 +430,31 @@ describe.skip('ERC20', () => {
     expect(retryableReceipt.status).to.equal(1)
 
     prettyLog('retryable succeeded ' + l2RetryableHash)
+  })
+
+  it('withdraw erc20 succeeds and emits event data', async () => {
+    const withdrawRes = await bridge.withdrawERC20(
+      erc20Address,
+      tokenWithdrawAmount
+    )
+    const withdrawRec = await withdrawRes.wait()
+    expect(withdrawRec.status).to.equal(1)
+    const withdrawEventData = (
+      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
+    )[0]
+
+    expect(withdrawEventData).to.exist
+    outGoingMessages.push(withdrawEventData)
+  })
+
+  it('balance properly deducted after erc20 withdraw', async () => {
+    await wait()
+    const l2Data = await bridge.getAndUpdateL2TokenData(erc20Address)
+    const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
+    expect(
+      testWalletL2Balance &&
+        testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmount)
+    ).to.be.true
   })
 })
 

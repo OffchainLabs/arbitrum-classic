@@ -40,7 +40,15 @@ contract L1GatewayTester is L1ERC20Gateway {
         bytes memory _data
     ) internal virtual override returns (uint256) {
         (bool success, bytes memory retdata) = counterpartGateway.call(_data);
-        require(success, "OUTBOUND_REVERT");
+        assembly {
+            // Copy the returned data.
+            returndatacopy(0, 0, returndatasize())
+
+            switch success
+                case 0 {
+                    revert(0, retdata)
+                }
+        }
         return 1337;
     }
 }
