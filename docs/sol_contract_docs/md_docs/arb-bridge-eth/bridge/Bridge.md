@@ -2,6 +2,8 @@
 title: Bridge.sol Spec
 ---
 
+### `initialize()` (external)
+
 ### `allowedInboxes(address inbox) → bool` (external)
 
 ### `allowedOutboxes(address outbox) → bool` (external)
