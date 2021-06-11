@@ -52,43 +52,20 @@ describe('Bridge peripherals layer 2', () => {
       'UpgradeableBeacon'
     )
 
-    const standardArbERC20Proxy = await UpgradeableBeacon.deploy(
-      standardArbERC20Logic.address
-    )
+    const beacon = await UpgradeableBeacon.deploy(standardArbERC20Logic.address)
 
-    erc20Proxy = standardArbERC20Proxy.address
+    const BeaconProxyFactory = await ethers.getContractFactory(
+      'BeaconProxyFactory'
+    )
+    const beaconProxyFactory = await BeaconProxyFactory.deploy()
+
+    await beaconProxyFactory.initialize(beacon.address)
+
     testBridge = await TestBridge.deploy()
     await testBridge.initialize(
       accounts[0].address,
       accounts[3].address,
-      standardArbERC20Proxy.address
-    )
-  })
-
-  it('should calculate proxy address correctly', async function () {
-    const address: string = (await testBridge.functions.beacon())[0]
-
-    const ClonableBeaconProxy = await ethers.getContractFactory(
-      'ClonableBeaconProxy'
-    )
-    const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    // connect to account 3 to query as if gateway router
-    const l2ERC20Address = await testBridge
-      .connect(accounts[3])
-      .calculateL2TokenAddress(l1ERC20)
-    const encoded = ethers.utils.defaultAbiCoder.encode(['address'], [l1ERC20])
-    const salt = ethers.utils.solidityKeccak256(['bytes'], [encoded])
-    const initCodeHash = ethers.utils.keccak256(ClonableBeaconProxy.bytecode)
-
-    const l2AddressExpected = ethers.utils.getCreate2Address(
-      testBridge.address,
-      salt,
-      initCodeHash
-    )
-    assert.equal(
-      l2ERC20Address,
-      l2AddressExpected,
-      'Address calculated incorrectly'
+      beaconProxyFactory.address
     )
   })
 

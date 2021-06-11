@@ -23,20 +23,25 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L2GatewayTesterInterface extends ethers.utils.Interface {
   functions: {
-    'beacon()': FunctionFragment
+    'beaconProxyFactory()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'cloneableProxyHash()': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
+    'getUserSalt(address)': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
     'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'postUpgradeInit(address)': FunctionFragment
     'router()': FunctionFragment
   }
 
-  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'beaconProxyFactory',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -58,6 +63,7 @@ interface L2GatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'getUserSalt', values: [string]): string
   encodeFunctionData(
     functionFragment: 'initialize',
     values: [string, string, string]
@@ -70,9 +76,16 @@ interface L2GatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values: [string]
+  ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'beaconProxyFactory',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -94,10 +107,15 @@ interface L2GatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'getUserSalt', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
@@ -129,9 +147,9 @@ export class L2GatewayTester extends Contract {
   interface: L2GatewayTesterInterface
 
   functions: {
-    beacon(overrides?: CallOverrides): Promise<[string]>
+    beaconProxyFactory(overrides?: CallOverrides): Promise<[string]>
 
-    'beacon()'(overrides?: CallOverrides): Promise<[string]>
+    'beaconProxyFactory()'(overrides?: CallOverrides): Promise<[string]>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -191,17 +209,24 @@ export class L2GatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
 
+    getUserSalt(l1ERC20: string, overrides?: CallOverrides): Promise<[string]>
+
+    'getUserSalt(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     initialize(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'initialize(address,address,address)'(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -241,14 +266,24 @@ export class L2GatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(
+      _beaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'postUpgradeInit(address)'(
+      _beaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     router(overrides?: CallOverrides): Promise<[string]>
 
     'router()'(overrides?: CallOverrides): Promise<[string]>
   }
 
-  beacon(overrides?: CallOverrides): Promise<string>
+  beaconProxyFactory(overrides?: CallOverrides): Promise<string>
 
-  'beacon()'(overrides?: CallOverrides): Promise<string>
+  'beaconProxyFactory()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -308,17 +343,24 @@ export class L2GatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  getUserSalt(l1ERC20: string, overrides?: CallOverrides): Promise<string>
+
+  'getUserSalt(address)'(
+    l1ERC20: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
   initialize(
     _l1Counterpart: string,
     _router: string,
-    _beacon: string,
+    _beaconProxyFactory: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'initialize(address,address,address)'(
     _l1Counterpart: string,
     _router: string,
-    _beacon: string,
+    _beaconProxyFactory: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -358,14 +400,24 @@ export class L2GatewayTester extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  postUpgradeInit(
+    _beaconProxyFactory: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'postUpgradeInit(address)'(
+    _beaconProxyFactory: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   router(overrides?: CallOverrides): Promise<string>
 
   'router()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
-    beacon(overrides?: CallOverrides): Promise<string>
+    beaconProxyFactory(overrides?: CallOverrides): Promise<string>
 
-    'beacon()'(overrides?: CallOverrides): Promise<string>
+    'beaconProxyFactory()'(overrides?: CallOverrides): Promise<string>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -425,17 +477,24 @@ export class L2GatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    getUserSalt(l1ERC20: string, overrides?: CallOverrides): Promise<string>
+
+    'getUserSalt(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
     initialize(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: CallOverrides
     ): Promise<void>
 
     'initialize(address,address,address)'(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -474,6 +533,16 @@ export class L2GatewayTester extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    postUpgradeInit(
+      _beaconProxyFactory: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'postUpgradeInit(address)'(
+      _beaconProxyFactory: string,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     router(overrides?: CallOverrides): Promise<string>
 
@@ -516,9 +585,9 @@ export class L2GatewayTester extends Contract {
   }
 
   estimateGas: {
-    beacon(overrides?: CallOverrides): Promise<BigNumber>
+    beaconProxyFactory(overrides?: CallOverrides): Promise<BigNumber>
 
-    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
+    'beaconProxyFactory()'(overrides?: CallOverrides): Promise<BigNumber>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -578,17 +647,24 @@ export class L2GatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    getUserSalt(l1ERC20: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'getUserSalt(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     initialize(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'initialize(address,address,address)'(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -628,15 +704,27 @@ export class L2GatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    postUpgradeInit(
+      _beaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'postUpgradeInit(address)'(
+      _beaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     router(overrides?: CallOverrides): Promise<BigNumber>
 
     'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
-    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    beaconProxyFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    'beaconProxyFactory()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
     calculateL2TokenAddress(
       l1ERC20: string,
@@ -700,17 +788,27 @@ export class L2GatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    getUserSalt(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getUserSalt(address)'(
+      l1ERC20: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     initialize(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'initialize(address,address,address)'(
       _l1Counterpart: string,
       _router: string,
-      _beacon: string,
+      _beaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -748,6 +846,16 @@ export class L2GatewayTester extends Contract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      _beaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'postUpgradeInit(address)'(
+      _beaconProxyFactory: string,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

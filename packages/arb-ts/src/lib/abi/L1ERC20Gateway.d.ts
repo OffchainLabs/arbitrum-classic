@@ -29,8 +29,10 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'inbox()': FunctionFragment
-    'initialize(address,address,address)': FunctionFragment
+    'initialize(address,address,address,bytes32,address)': FunctionFragment
+    'l2BeaconProxyFactory()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
+    'postUpgradeInit(bytes32,address)': FunctionFragment
     'router()': FunctionFragment
   }
 
@@ -57,7 +59,11 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'inbox', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'initialize',
-    values: [string, string, string]
+    values: [string, string, string, BytesLike, string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'l2BeaconProxyFactory',
+    values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'outboundTransfer',
@@ -69,6 +75,10 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
       BigNumberish,
       BytesLike
     ]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values: [BytesLike, string]
   ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
@@ -95,7 +105,15 @@ interface L1ERC20GatewayInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'inbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(
+    functionFragment: 'l2BeaconProxyFactory',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'outboundTransfer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
@@ -189,15 +207,23 @@ export class L1ERC20Gateway extends Contract {
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,bytes32,address)'(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    l2BeaconProxyFactory(overrides?: CallOverrides): Promise<[string]>
+
+    'l2BeaconProxyFactory()'(overrides?: CallOverrides): Promise<[string]>
 
     outboundTransfer(
       _l1Token: string,
@@ -217,6 +243,18 @@ export class L1ERC20Gateway extends Contract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    postUpgradeInit(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'postUpgradeInit(bytes32,address)'(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: Overrides
     ): Promise<ContractTransaction>
 
     router(overrides?: CallOverrides): Promise<[string]>
@@ -286,15 +324,23 @@ export class L1ERC20Gateway extends Contract {
     _l2Counterpart: string,
     _router: string,
     _inbox: string,
+    _cloneableProxyHash: BytesLike,
+    _l2BeaconProxyFactory: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(address,address,address)'(
+  'initialize(address,address,address,bytes32,address)'(
     _l2Counterpart: string,
     _router: string,
     _inbox: string,
+    _cloneableProxyHash: BytesLike,
+    _l2BeaconProxyFactory: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
+
+  l2BeaconProxyFactory(overrides?: CallOverrides): Promise<string>
+
+  'l2BeaconProxyFactory()'(overrides?: CallOverrides): Promise<string>
 
   outboundTransfer(
     _l1Token: string,
@@ -314,6 +360,18 @@ export class L1ERC20Gateway extends Contract {
     _gasPriceBid: BigNumberish,
     _data: BytesLike,
     overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  postUpgradeInit(
+    _cloneableProxyHash: BytesLike,
+    _l2BeaconProxyFactory: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'postUpgradeInit(bytes32,address)'(
+    _cloneableProxyHash: BytesLike,
+    _l2BeaconProxyFactory: string,
+    overrides?: Overrides
   ): Promise<ContractTransaction>
 
   router(overrides?: CallOverrides): Promise<string>
@@ -383,15 +441,23 @@ export class L1ERC20Gateway extends Contract {
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,bytes32,address)'(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: CallOverrides
     ): Promise<void>
+
+    l2BeaconProxyFactory(overrides?: CallOverrides): Promise<string>
+
+    'l2BeaconProxyFactory()'(overrides?: CallOverrides): Promise<string>
 
     outboundTransfer(
       _l1Token: string,
@@ -412,6 +478,18 @@ export class L1ERC20Gateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    postUpgradeInit(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'postUpgradeInit(bytes32,address)'(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     router(overrides?: CallOverrides): Promise<string>
 
@@ -516,15 +594,23 @@ export class L1ERC20Gateway extends Contract {
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,bytes32,address)'(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    l2BeaconProxyFactory(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2BeaconProxyFactory()'(overrides?: CallOverrides): Promise<BigNumber>
 
     outboundTransfer(
       _l1Token: string,
@@ -544,6 +630,18 @@ export class L1ERC20Gateway extends Contract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    postUpgradeInit(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'postUpgradeInit(bytes32,address)'(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: Overrides
     ): Promise<BigNumber>
 
     router(overrides?: CallOverrides): Promise<BigNumber>
@@ -618,14 +716,26 @@ export class L1ERC20Gateway extends Contract {
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(address,address,address)'(
+    'initialize(address,address,address,bytes32,address)'(
       _l2Counterpart: string,
       _router: string,
       _inbox: string,
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
       overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    l2BeaconProxyFactory(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'l2BeaconProxyFactory()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     outboundTransfer(
@@ -646,6 +756,18 @@ export class L1ERC20Gateway extends Contract {
       _gasPriceBid: BigNumberish,
       _data: BytesLike,
       overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    postUpgradeInit(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'postUpgradeInit(bytes32,address)'(
+      _cloneableProxyHash: BytesLike,
+      _l2BeaconProxyFactory: string,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     router(overrides?: CallOverrides): Promise<PopulatedTransaction>

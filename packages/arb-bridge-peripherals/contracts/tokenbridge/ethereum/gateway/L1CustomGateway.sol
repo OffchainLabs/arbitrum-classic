@@ -22,6 +22,10 @@ import "./L1ArbitrumGateway.sol";
 import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+/**
+ * @title Gatway for "custom" bridging functionality
+ * @notice Handles some (but not all!) custom Gateway needs.
+ */
 contract L1CustomGateway is L1ArbitrumGateway {
     using Address for address;
     // stores addresses of L2 tokens to be used
@@ -94,6 +98,15 @@ contract L1CustomGateway is L1ArbitrumGateway {
         return _calculateL2TokenAddress(l1ERC20);
     }
 
+    /**
+     * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart.
+
+     * @param l2Address address of L1 token
+     * @param _maxGas max gas for L2 retryable exrecution 
+     * @param _gasPriceBid gas price for L2 retryable ticket 
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
+     * @return Retryable ticket ID
+     */
     function registerTokenToL2(
         address l2Address,
         uint256 _maxGas,

@@ -75,7 +75,11 @@ interface InboxMockInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
 
-  events: {}
+  events: {
+    'TicketData(uint256)': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'TicketData'): EventFragment
 }
 
 export class InboxMock extends Contract {
@@ -230,7 +234,9 @@ export class InboxMock extends Contract {
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    TicketData(maxSubmissionCost: null): EventFilter
+  }
 
   estimateGas: {
     activeOutbox(overrides?: Overrides): Promise<BigNumber>

@@ -18,7 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./L2ArbitrumMessenger.sol";
@@ -28,6 +27,9 @@ import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
+/**
+ * @title Common interface for gatways on Arbitrum messaging to L1.
+ */
 abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
     using Address for address;
 
