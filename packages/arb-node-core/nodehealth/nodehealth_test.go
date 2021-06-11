@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/heptiolabs/healthcheck"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type testConfigStruct struct {
@@ -178,8 +179,8 @@ func startUpDelayTest(testConfig *testConfigStruct, healthChan chan Log) error {
 }
 
 //Initialize the nodehealth server
-func initNodeHealthCheck(ctx context.Context, healthChan chan Log) {
-	go StartNodeHealthCheck(ctx, healthChan)
+func initNodeHealthCheck(ctx context.Context, healthChan chan Log, prometheusRegistry *prometheus.Registry) {
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 	setNodeHealthBaseConfig(healthChan)
 	setOpenEthereumEndpoint(healthChan)
 	Init(healthChan)
@@ -659,7 +660,8 @@ func TestNodeHealth(t *testing.T) {
 
 	//Start the healthcheck server with a background context for testing
 	ctx, cancel := context.WithCancel(context.Background())
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry := prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Test the startup delay works properly
 	err := startUpDelayTest(testConfig, healthChan)
@@ -676,7 +678,8 @@ func TestNodeHealth(t *testing.T) {
 	//Restart the healthcheck server with a fresh context and healthchan
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Test the server doesn't bind when the healthcheck is disabled
 	err = disableHealthcheckTest(testConfig, healthChan)
@@ -689,7 +692,8 @@ func TestNodeHealth(t *testing.T) {
 	time.Sleep(5 * time.Second) //TCP Timeout
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Test the server removes the primary healthcheck when it is disabled
 	err = disablePrimaryCheckTest(testConfig, healthChan)
@@ -702,7 +706,8 @@ func TestNodeHealth(t *testing.T) {
 	time.Sleep(5 * time.Second) //TCP Timeout
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Test the server removes the OpenEthereum healthcheck when it is disabled
 	err = disableOpenEthereumCheckTest(testConfig, healthChan)
@@ -715,7 +720,8 @@ func TestNodeHealth(t *testing.T) {
 	time.Sleep(5 * time.Second) //TCP Timeout
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Test the healthcheck can disable both OpenEthereum and primary check
 	err = disableOpenEthereumPrimaryCheckTest(testConfig, healthChan)
@@ -734,7 +740,8 @@ func TestNodeHealth(t *testing.T) {
 	time.Sleep(5 * time.Second) //TCP Timeout
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//OpenEthereum failure test
 	err = openethereumFailureTest(testConfig, healthChan)
@@ -747,7 +754,8 @@ func TestNodeHealth(t *testing.T) {
 	time.Sleep(5 * time.Second) //TCP Timeout
 	ctx, cancel = context.WithCancel(context.Background())
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Primary failure test
 	err = primaryFailureTest(testConfig, healthChan)
@@ -760,7 +768,8 @@ func TestNodeHealth(t *testing.T) {
 	time.Sleep(5 * time.Second) //TCP Timeout
 	ctx = context.Background()
 	healthChan = make(chan Log, testConfig.bufferSize)
-	go StartNodeHealthCheck(ctx, healthChan)
+	prometheusRegistry = prometheus.NewRegistry()
+	go StartNodeHealthCheck(ctx, healthChan, prometheusRegistry, prometheusRegistry)
 
 	//Test InboxReader catch up status
 	err = inboxReaderCatchUpTest(testConfig, healthChan)

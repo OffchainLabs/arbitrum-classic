@@ -18,12 +18,15 @@ package web3
 
 import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 )
 
 type Arb struct {
-	srv *aggregator.Server
+	srv     *aggregator.Server
+	counter *prometheus.CounterVec
 }
 
 func (a *Arb) GetAggregator() *batcher.AggregatorInfo {
@@ -33,5 +36,6 @@ func (a *Arb) GetAggregator() *batcher.AggregatorInfo {
 		tmp := agg.ToEthAddress()
 		ret = &tmp
 	}
+	a.counter.WithLabelValues("arb_getAggregator", "true").Inc()
 	return &batcher.AggregatorInfo{Address: ret}
 }

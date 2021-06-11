@@ -21,10 +21,9 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "../ethereum/IEthERC20Bridge.sol";
 import "../ethereum/IExitLiquidityProvider.sol";
 
-contract PassiveFastExitManager is IExitTransferCallReceiver {
+contract PassiveFastExitManager {
     address bridge;
 
     function setBridge(address _bridge) external {
@@ -41,7 +40,7 @@ contract PassiveFastExitManager is IExitTransferCallReceiver {
         uint256 amount,
         address erc20,
         bytes calldata data
-    ) external override onlyBridge returns (bytes4) {
+    ) external onlyBridge returns (bytes4) {
         (
             address initialDestination,
             uint256 exitNum,
@@ -72,14 +71,14 @@ contract PassiveFastExitManager is IExitTransferCallReceiver {
             );
         }
 
-        IEthERC20Bridge(bridge).transferExitAndCall(
-            initialDestination,
-            erc20,
-            amount,
-            exitNum,
-            liquidityProvider,
-            spareData
-        );
+        // IEthERC20Bridge(bridge).transferExitAndCall(
+        //     initialDestination,
+        //     erc20,
+        //     amount,
+        //     exitNum,
+        //     liquidityProvider,
+        //     spareData
+        // );
         return PassiveFastExitManager.onExitTransfered.selector;
     }
 }

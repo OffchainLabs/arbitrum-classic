@@ -29,10 +29,13 @@ import (
 	"os"
 	"os/signal"
 
+	accounts2 "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/miguelmota/go-ethereum-hdwallet"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,19 +43,15 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
-
-	accounts2 "github.com/ethereum/go-ethereum/accounts"
-	gethlog "github.com/ethereum/go-ethereum/log"
-	"github.com/miguelmota/go-ethereum-hdwallet"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 var logger zerolog.Logger
@@ -289,7 +288,7 @@ func startup() error {
 	srv := aggregator.NewServer(backend, rollupAddress, chainId, db)
 
 	if deleteDir {
-		client := web3.NewEthClient(srv, true)
+		client := web3.NewEthClient(srv, true, metrics.NewMetricsConfig(nil))
 		arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
 		if err != nil {
 			return err
@@ -360,7 +359,7 @@ func startup() error {
 	plugins := make(map[string]interface{})
 	plugins["evm"] = dev.NewEVM(backend)
 
-	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins)
+	web3Server, err := web3.GenerateWeb3Server(srv, privateKeys, true, plugins, metrics.NewMetricsConfig(nil))
 	if err != nil {
 		return err
 	}

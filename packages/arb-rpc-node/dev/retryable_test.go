@@ -33,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
@@ -49,6 +50,7 @@ func setupTest(t *testing.T) (
 	*aggregator.Server,
 	*Backend,
 	func(),
+	*metrics.MetricsConfig,
 ) {
 	config := protocol.ChainParams{
 		StakeRequirement:          big.NewInt(10),
@@ -84,7 +86,9 @@ func setupTest(t *testing.T) (
 	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
-	return sender, beneficiaryAuth, otherAuth, srv, backend, cancelDevNode
+	metricsConfig := metrics.NewMetricsConfig(nil)
+
+	return sender, beneficiaryAuth, otherAuth, srv, backend, cancelDevNode, metricsConfig
 }
 
 func setupTicket(t *testing.T, backend *Backend, sender, destination common.Address, data []byte, beneficiary common.Address) (message.RetryableTx, common.Hash) {
@@ -107,10 +111,10 @@ func setupTicket(t *testing.T, backend *Backend, sender, destination common.Addr
 }
 
 func TestRetryableRedeem(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -239,12 +243,12 @@ func TestRetryableRedeem(t *testing.T) {
 }
 
 func TestRetryableCancel(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -280,12 +284,12 @@ func TestRetryableCancel(t *testing.T) {
 }
 
 func TestRetryableTimeout(t *testing.T) {
-	sender, beneficiaryAuth, _, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, _, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 	retryableTx, requestId := setupTicket(t, backend, sender, common.RandAddress(), nil, common.NewAddressFromEth(beneficiaryAuth.From))
 	ticketId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 	retryable, err := arboscontracts.NewArbRetryableTx(arbos.ARB_RETRYABLE_ADDRESS, client)
 	test.FailIfError(t, err)
 
@@ -396,10 +400,10 @@ func balanceCheck(
 	}
 }
 func TestRetryableReverted(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -439,10 +443,10 @@ func TestRetryableReverted(t *testing.T) {
 }
 
 func TestRetryableWithReturnData(t *testing.T) {
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -493,10 +497,10 @@ func TestRetryableWithReturnData(t *testing.T) {
 
 func TestRetryableImmediateReceipts(t *testing.T) {
 	skipBelowVersion(t, 12)
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -535,10 +539,10 @@ func TestRetryableImmediateReceipts(t *testing.T) {
 func TestRetryableImmediateNoGas(t *testing.T) {
 	skipBelowVersion(t, 12)
 
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)
@@ -585,10 +589,10 @@ func TestRetryableImmediateNoGas(t *testing.T) {
 
 func TestRetryableSeparateReceipts(t *testing.T) {
 	skipBelowVersion(t, 12)
-	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc := setupTest(t)
+	sender, beneficiaryAuth, otherAuth, srv, backend, closeFunc, metricsConfig := setupTest(t)
 	defer closeFunc()
 
-	client := web3.NewEthClient(srv, true)
+	client := web3.NewEthClient(srv, true, metricsConfig)
 
 	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
 	test.FailIfError(t, err)

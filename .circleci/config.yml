@@ -315,5 +315,10 @@ jobs:
           command: |
             yarn test:l2
           working_directory: /home/user/project/packages/arb-bridge-peripherals
+      - run:
+          name: test arb-bridge-peripherals e2e
+          command: |
+            yarn test:e2e
+          working_directory: /home/user/project/packages/arb-bridge-peripherals
       - store_test_results:
           path: *test-path

@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
@@ -24,9 +25,9 @@ type EthClient struct {
 	filter *filters.PublicFilterAPI
 }
 
-func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
+func NewEthClient(srv *aggregator.Server, ganacheMode bool, metricsConfig *metrics.MetricsConfig) *EthClient {
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode),
+		srv:    NewServer(srv, ganacheMode, metricsConfig),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}
