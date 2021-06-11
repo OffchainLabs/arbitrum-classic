@@ -8,7 +8,6 @@ import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
-import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
 import { OutboxEntry } from './abi/OutboxEntry'
 
