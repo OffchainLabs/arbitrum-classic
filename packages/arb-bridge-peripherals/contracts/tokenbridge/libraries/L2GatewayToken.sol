@@ -23,7 +23,7 @@ import "./BytesParser.sol";
 import "../arbitrum/IArbToken.sol";
 
 /**
- * @title Standard (i.e., non-custom) contract deployed by L2Gateway.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
+ * @title Standard (i.e., non-custom) contract used as a base for different L2 Gateways
  */
 abstract contract L2GatewayToken is aeERC20, IArbToken {
     address public l2Gateway;
