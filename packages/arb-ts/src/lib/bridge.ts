@@ -69,25 +69,34 @@ export class Bridge {
 
     if (ethSignerAddress !== arbSignerAddress) {
       throw new Error('L1 & L2 wallets must be of the same address')
-    } else {
-      if (!l2GatewayRouterAddress) {
-        const currNetwork = networks[l2ChainId]
+    }
 
-        if (currNetwork.l2.chainId !== l2ChainId) {
-          throw new Error('WRONG L2 CHAIN ID')
-        }
+    const l1Network = networks[l1ChainId]
+    const l2Network = networks[l2ChainId]
 
-        l2GatewayRouterAddress = currNetwork.l2.l2GatewayRouter
-      }
-      if (!l1GatewayRouterAddress) {
-        const currNetwork = networks[l2ChainId]
+    if (l1Network) {
+      if (l1Network.isArbitrum)
+        throw new Error('Connected to an Arbitrum networks as the L1...')
+      l1GatewayRouterAddress = l1Network.tokenBridge.l1GatewayRouter
+    } else if (!l1GatewayRouterAddress) {
+      throw new Error(
+        'Network not in config, and no l1GatewayRouter Address provided'
+      )
+    }
 
-        if (currNetwork.l1.chainId !== l1ChainId) {
-          throw new Error('WRONG L1 CHAIN ID')
-        }
+    if (l2Network) {
+      if (!l2Network.isArbitrum)
+        throw new Error('Connected to an L1 network as the L2...')
+      l2GatewayRouterAddress = l2Network.tokenBridge.l2GatewayRouter
+    } else if (!l2GatewayRouterAddress) {
+      throw new Error(
+        'Network not in config, and no l2GatewayRouter address provided'
+      )
+    }
 
-        l1GatewayRouterAddress = currNetwork.l1.l1GatewayRouter
-      }
+    if (l1Network && l2Network) {
+      if (l1Network.partnerChainID !== l2Network.chainID)
+        throw new Error('L1 and L2 networks are not connected')
     }
 
     // check routers are deployed

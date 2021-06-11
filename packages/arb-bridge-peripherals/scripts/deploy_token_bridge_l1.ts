@@ -88,9 +88,7 @@ const main = async () => {
   const BeaconProxyFactory = (
     await ethers.getContractFactory('BeaconProxyFactory')
   ).connect(l2Signer)
-  const beaconProxyFactory = await BeaconProxyFactory.deploy(
-    erc20Beacon.address
-  )
+  const beaconProxyFactory = await BeaconProxyFactory.deploy()
   await beaconProxyFactory.deployed()
   console.log(`beacon proxyfactory at ${beaconProxyFactory.address}`)
 

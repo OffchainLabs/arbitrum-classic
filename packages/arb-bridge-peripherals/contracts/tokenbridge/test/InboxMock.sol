@@ -25,6 +25,8 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 contract InboxMock {
     address l2ToL1SenderMock = address(0);
 
+    event TicketData(uint256 maxSubmissionCost);
+
     function createRetryableTicket(
         address destAddr,
         uint256 l2CallValue,
@@ -35,6 +37,7 @@ contract InboxMock {
         uint256 gasPriceBid,
         bytes calldata data
     ) external payable returns (uint256) {
+        emit TicketData(maxSubmissionCost);
         return 0;
     }
 

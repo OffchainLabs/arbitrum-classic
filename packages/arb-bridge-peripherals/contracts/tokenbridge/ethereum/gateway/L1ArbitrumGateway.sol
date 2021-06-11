@@ -31,6 +31,9 @@ import "../../libraries/gateway/ArbitrumGateway.sol";
 import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
+/**
+ * @title Common interface for gatways on L1 messaging to Arbitrum.
+ */
 abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     using SafeERC20 for IERC20;
     using Address for address;
@@ -207,9 +210,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
                 _from,
                 _to,
                 _amount,
-                _maxSubmissionCost,
                 _maxGas,
                 _gasPriceBid,
+                _maxSubmissionCost,
                 extraData
             );
         }

@@ -26,6 +26,9 @@ import { L2ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.s
 import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 
+/**
+ * @title Common interface for gatways on Arbitrum messaging to L1.
+ */
 abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
     using Address for address;
 
