@@ -1,5 +1,6 @@
 ---
 title: ERC677Token.sol Spec
+id: ERC677Token
 ---
 
 ### `transferAndCall(address _to, uint256 _value, bytes _data) → bool success` (public)

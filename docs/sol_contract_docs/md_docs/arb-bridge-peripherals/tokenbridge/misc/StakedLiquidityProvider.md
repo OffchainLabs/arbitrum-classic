@@ -1,5 +1,6 @@
 ---
 title: StakedLiquidityProvider.sol Spec
+id: StakedLiquidityProvider
 ---
 
 ### `constructor(address _tokenBridge, address _confirmRoots, address _trustedStaker)` (public)

@@ -1,5 +1,6 @@
 ---
 title: IRollupCore.sol Spec
+id: IRollupCore
 ---
 
 ### `_stakerMap(address stakerAddress) → uint256, uint256, uint256, address, bool` (external)

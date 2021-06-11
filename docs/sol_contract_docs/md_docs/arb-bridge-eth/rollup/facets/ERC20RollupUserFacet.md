@@ -1,5 +1,6 @@
 ---
 title: ERC20RollupUserFacet.sol Spec
+id: ERC20RollupUserFacet
 ---
 
 ### `initialize(address _stakeToken)` (public)

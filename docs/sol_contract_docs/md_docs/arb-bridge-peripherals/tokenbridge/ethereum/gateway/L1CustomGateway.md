@@ -1,5 +1,6 @@
 ---
 title: L1CustomGateway.sol Spec
+id: L1CustomGateway
 ---
 
 Gatway for "custom" bridging functionality

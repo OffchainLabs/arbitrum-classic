@@ -1,5 +1,6 @@
 ---
 title: aeERC20.sol Spec
+id: aeERC20
 ---
 
 Arbitrum extended ERC20

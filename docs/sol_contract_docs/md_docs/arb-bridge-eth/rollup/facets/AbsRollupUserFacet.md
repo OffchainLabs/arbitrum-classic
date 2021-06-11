@@ -1,5 +1,6 @@
 ---
 title: AbsRollupUserFacet.sol Spec
+id: AbsRollupUserFacet
 ---
 
 ### `onlyValidator()`

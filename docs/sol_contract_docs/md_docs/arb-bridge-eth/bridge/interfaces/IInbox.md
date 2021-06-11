@@ -1,5 +1,6 @@
 ---
 title: IInbox.sol Spec
+id: IInbox
 ---
 
 ### `sendL2Message(bytes messageData) → uint256` (external)

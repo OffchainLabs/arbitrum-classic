@@ -1,5 +1,6 @@
 ---
 title: NodeInterface.sol Spec
+id: NodeInterface
 ---
 
 Interface for providing Outbox proof data

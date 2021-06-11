@@ -1,5 +1,6 @@
 ---
 title: SequencerInbox.sol Spec
+id: SequencerInbox
 ---
 
 ### `initialize(contract IBridge _delayedInbox, address _sequencer, address _rollup)` (external)

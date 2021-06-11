@@ -1,5 +1,6 @@
 ---
 title: ArbOwner.sol Spec
+id: ArbOwner
 ---
 
 ### `giveOwnership(address newOwnerAddr)` (external)

@@ -1,5 +1,6 @@
 ---
 title: IRollupAdmin.sol Spec
+id: IRollupAdmin
 ---
 
 ### `setOutbox(contract IOutbox _outbox)` (external)

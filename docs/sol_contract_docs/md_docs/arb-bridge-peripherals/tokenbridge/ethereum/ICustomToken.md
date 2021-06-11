@@ -1,5 +1,6 @@
 ---
 title: ICustomToken.sol Spec
+id: ICustomToken
 ---
 
 Minimum expected interface for L1 custom token (see TestCustomTokenL1.sol for an example implementation)

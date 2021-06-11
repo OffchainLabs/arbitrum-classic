@@ -1,5 +1,6 @@
 ---
 title: IArbToken.sol Spec
+id: IArbToken
 ---
 
 ### `bridgeMint(address account, uint256 amount)` (external)

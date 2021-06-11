@@ -1,5 +1,6 @@
 ---
 title: L1ArbitrumExtendedGateway.sol Spec
+id: L1ArbitrumExtendedGateway
 ---
 
 ### `transferExitAndCall(uint256 _exitNum, address _initialDestination, address _newDestination, bytes _data)` (external)

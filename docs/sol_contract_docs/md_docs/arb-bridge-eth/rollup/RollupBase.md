@@ -1,5 +1,6 @@
 ---
 title: RollupBase.sol Spec
+id: RollupBase
 ---
 
 ### `RollupCreated(bytes32 machineHash)`

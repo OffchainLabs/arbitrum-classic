@@ -1,5 +1,6 @@
 ---
 title: L2GatewayRouter.sol Spec
+id: L2GatewayRouter
 ---
 
 Handles withdrawals from Ethereum into Arbitrum. Tokens are routered to their appropriate L2 gateway (Router itself also conforms to the Gateway interface).

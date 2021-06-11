@@ -1,5 +1,6 @@
 ---
 title: TokenGateway.sol Spec
+id: TokenGateway
 ---
 
 ### `onlyCounterpartGateway()`

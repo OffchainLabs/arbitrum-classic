@@ -1,5 +1,6 @@
 ---
 title: ITokenGateway.sol Spec
+id: ITokenGateway
 ---
 
 ### `outboundTransfer(address _token, address _to, uint256 _amount, uint256 _maxGas, uint256 _gasPriceBid, bytes _data) → bytes` (external)

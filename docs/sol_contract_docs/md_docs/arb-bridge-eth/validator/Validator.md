@@ -1,5 +1,6 @@
 ---
 title: Validator.sol Spec
+id: Validator
 ---
 
 ### `initialize()` (external)

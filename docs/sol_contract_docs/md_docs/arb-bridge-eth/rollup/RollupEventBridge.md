@@ -1,5 +1,6 @@
 ---
 title: RollupEventBridge.sol Spec
+id: RollupEventBridge
 ---
 
 ### `onlyRollup()`

@@ -1,5 +1,6 @@
 ---
 title: L2GatewayToken.sol Spec
+id: L2GatewayToken
 ---
 
 Standard (i.e., non-custom) contract used as a base for different L2 Gateways

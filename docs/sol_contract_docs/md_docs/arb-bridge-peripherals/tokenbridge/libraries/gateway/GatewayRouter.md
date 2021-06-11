@@ -1,5 +1,6 @@
 ---
 title: GatewayRouter.sol Spec
+id: GatewayRouter
 ---
 
 Common interface for L1 and L2 Gateway Routers

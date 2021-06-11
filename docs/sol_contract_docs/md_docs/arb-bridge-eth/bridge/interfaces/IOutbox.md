@@ -1,5 +1,6 @@
 ---
 title: IOutbox.sol Spec
+id: IOutbox
 ---
 
 ### `l2ToL1Sender() → address` (external)

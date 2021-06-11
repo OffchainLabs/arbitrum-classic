@@ -1,5 +1,6 @@
 ---
 title: ArbAggregator.sol Spec
+id: ArbAggregator
 ---
 
 ### `getPreferredAggregator(address addr) → address, bool` (external)

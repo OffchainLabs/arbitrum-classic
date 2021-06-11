@@ -1,5 +1,6 @@
 ---
 title: IRollupUser.sol Spec
+id: IRollupUser
 ---
 
 ### `initialize(address _stakeToken)` (external)

@@ -1,5 +1,6 @@
 ---
 title: BridgeCreator.sol Spec
+id: BridgeCreator
 ---
 
 ### `updateTemplates(address _delayedBridgeTemplate, address _sequencerInboxTemplate, address _inboxTemplate, address _rollupEventBridgeTemplate, address _outboxTemplate)` (external)

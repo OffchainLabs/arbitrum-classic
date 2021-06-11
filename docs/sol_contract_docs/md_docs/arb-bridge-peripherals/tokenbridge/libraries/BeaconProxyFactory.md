@@ -1,5 +1,6 @@
 ---
 title: BeaconProxyFactory.sol Spec
+id: BeaconProxyFactory
 ---
 
 ### `initialize(address _beacon)` (external)

@@ -1,5 +1,6 @@
 ---
 title: L1PassiveFastExitManager.sol Spec
+id: L1PassiveFastExitManager
 ---
 
 ### `onlyBridge()`

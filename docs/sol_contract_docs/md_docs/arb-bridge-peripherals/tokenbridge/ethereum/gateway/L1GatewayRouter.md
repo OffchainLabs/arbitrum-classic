@@ -1,5 +1,6 @@
 ---
 title: L1GatewayRouter.sol Spec
+id: L1GatewayRouter
 ---
 
 Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).

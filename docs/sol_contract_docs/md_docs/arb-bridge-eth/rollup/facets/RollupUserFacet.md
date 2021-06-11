@@ -1,5 +1,6 @@
 ---
 title: RollupUserFacet.sol Spec
+id: RollupUserFacet
 ---
 
 ### `initialize(address _stakeToken)` (public)

@@ -1,5 +1,6 @@
 ---
 title: RollupCreator.sol Spec
+id: RollupCreator
 ---
 
 ### `setTemplates(contract BridgeCreator _bridgeCreator, contract ICloneable _rollupTemplate, address _challengeFactory, address _nodeFactory, address _rollupAdminFacet, address _rollupUserFacet)` (external)

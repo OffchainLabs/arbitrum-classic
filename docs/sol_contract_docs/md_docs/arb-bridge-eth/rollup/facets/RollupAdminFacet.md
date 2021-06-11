@@ -1,5 +1,6 @@
 ---
 title: RollupAdminFacet.sol Spec
+id: RollupAdminFacet
 ---
 
 ### `setOutbox(contract IOutbox _outbox)` (external)

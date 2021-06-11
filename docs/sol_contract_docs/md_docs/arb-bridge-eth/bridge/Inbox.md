@@ -1,5 +1,6 @@
 ---
 title: Inbox.sol Spec
+id: Inbox
 ---
 
 ### `initialize(contract IBridge _bridge, address _whitelist)` (external)

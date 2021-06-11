@@ -1,5 +1,6 @@
 ---
 title: L1ERC20Gateway.sol Spec
+id: L1ERC20Gateway
 ---
 
 Layer 1 Gateway contract for bridging standard ERC20s

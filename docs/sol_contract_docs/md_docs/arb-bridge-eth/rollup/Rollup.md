@@ -1,5 +1,6 @@
 ---
 title: Rollup.sol Spec
+id: Rollup
 ---
 
 ### `initialize(bytes32 _machineHash, uint256[4] _rollupParams, address _stakeToken, address _owner, bytes _extraConfig, address[6] connectedContracts, address[2] _facets, uint256[2] sequencerInboxParams)` (public)

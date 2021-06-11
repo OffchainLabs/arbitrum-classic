@@ -1,5 +1,6 @@
 ---
 title: L1ArbitrumGateway.sol Spec
+id: L1ArbitrumGateway
 ---
 
 Common interface for gatways on L1 messaging to Arbitrum.

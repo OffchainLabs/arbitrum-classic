@@ -1,5 +1,6 @@
 ---
 title: IWETH9.sol Spec
+id: IWETH9
 ---
 
 ### `deposit()` (external)

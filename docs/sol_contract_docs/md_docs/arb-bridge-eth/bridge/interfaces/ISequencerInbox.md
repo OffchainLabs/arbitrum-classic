@@ -1,5 +1,6 @@
 ---
 title: ISequencerInbox.sol Spec
+id: ISequencerInbox
 ---
 
 ### `setSequencer(address newSequencer)` (external)
