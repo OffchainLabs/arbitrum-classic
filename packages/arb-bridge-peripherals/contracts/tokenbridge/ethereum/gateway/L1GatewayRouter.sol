@@ -19,7 +19,8 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
-import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+
+import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
 
@@ -27,7 +28,7 @@ import "../../arbitrum/gateway/L2GatewayRouter.sol";
  * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
  * @notice Router also serves as an L1-L2 token address oracle.
  */
-contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
+contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRouter {
     address public owner;
     address public inbox;
 
@@ -49,6 +50,27 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         inbox = _inbox;
     }
 
+    function sendTxToL2(
+        address _user,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        return
+            L1ArbitrumMessenger.sendTxToL2(
+                inbox,
+                counterpartGateway,
+                _user,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
+    }
+
     function setDefaultGateway(
         address newL1DefaultGateway,
         uint256 _maxGas,
@@ -68,18 +90,7 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setDefaultGateway.selector, l2NewDefaultGateway);
 
-        uint256 seqNum =
-            IInbox(inbox).createRetryableTicket{ value: msg.value }(
-                counterpartGateway,
-                0,
-                _maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                _maxGas,
-                _gasPriceBid,
-                data
-            );
-        return seqNum;
+        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
     }
 
     function setOwner(address newOwner) external onlyOwner {
@@ -107,18 +118,7 @@ contract L1GatewayRouter is WhitelistConsumer, GatewayRouter {
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
 
-        uint256 seqNum =
-            IInbox(inbox).createRetryableTicket{ value: msg.value }(
-                counterpartGateway,
-                0,
-                _maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                _maxGas,
-                _gasPriceBid,
-                data
-            );
-        return seqNum;
+        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
     }
 
     function setGateway(

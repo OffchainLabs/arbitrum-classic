@@ -34,8 +34,6 @@ abstract contract L1ArbitrumMessenger {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual returns (uint256) {
-        // msg.value is sent, but 0 is set to the L2 call value
-        // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
             IInbox(_inbox).createRetryableTicket{ value: msg.value }(
                 _to,
