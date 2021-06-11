@@ -22,7 +22,7 @@ import "./L1ArbitrumGateway.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 
 /**
- * @title Layer 1 contract for bridging standard ERC20s
+ * @title Layer 1 Gateway contract for bridging standard ERC20s
  * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ultimately) finalizes withdrawals.
  * @dev Any ERC20 that requires non-standard functionality should use a separate gateway.
  * Messages to layer 2 use the inbox's createRetryableTicket method.

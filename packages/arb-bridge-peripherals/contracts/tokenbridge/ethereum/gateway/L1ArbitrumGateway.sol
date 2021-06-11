@@ -32,6 +32,9 @@ import "../../libraries/ClonableBeaconProxy.sol";
 
 import "./L1ArbitrumMessenger.sol";
 
+/**
+ * @title Common interface for gatways on L1 messaging to Arbitrum.
+ */
 abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     using SafeERC20 for IERC20;
     using Address for address;
