@@ -4,9 +4,10 @@ import { providers } from 'ethers'
 const main = async () => {
   const l2PrivKey = process.env['DEVNET_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key')
-
+  const owner = '0xAddA0B73Fe69a6E3e7c1072Bb9523105753e08f8'
   const l2Provider = new providers.JsonRpcProvider(
-    'https://arb1.arbitrum.io/rpc'
+    // 'https://arb1.arbitrum.io/rpc'
+    'https://rinkeby.arbitrum.io/rpc'
   )
   const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
 
@@ -21,12 +22,11 @@ const main = async () => {
 
   const WETH9Proxy = await L2TransparentUpgradeableProxy.deploy(
     WETH9Logic.address,
-    '0x18877d60d370893c41b3154ee107e4d520df22d4',
+    owner,
     '0x'
   )
   console.log('WETH9Proxy deployed at', WETH9Proxy.address)
-
-  await WETH9Proxy.init()
+  console.log('Proxy owner', owner)
 }
 
 main()
