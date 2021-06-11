@@ -1,38 +1,10 @@
 ---
-title: AbsRollup.sol Spec
+title: AbsRollupUserFacet.sol Spec
 ---
 
-### `onlyOwner()`
+### `onlyValidator()`
 
-### `initialize(bytes32 _machineHash, uint256 _confirmPeriodBlocks, uint256 _extraChallengeTimeBlocks, uint256 _arbGasSpeedLimitPerBlock, uint256 _baseStake, address _stakeToken, address _owner, bytes _extraConfig, address[6] connectedContracts)` (public)
-
-### `setOutbox(contract IOutbox _outbox)` (external)
-
-Add a contract authorized to put messages into this rollup's inbox
-
-- `_outbox`: Outbox contract to add
-
-### `removeOldOutbox(address _outbox)` (external)
-
-Disable an old outbox from interacting with the bridge
-
-- `_outbox`: Outbox contract to remove
-
-### `setInbox(address _inbox, bool _enabled)` (external)
-
-Enable or disable an inbox contract
-
-- `_inbox`: Inbox contract to add or remove
-
-- `_enabled`: New status of inbox
-
-### `pause()` (external)
-
-Pause interaction with the rollup contract
-
-### `resume()` (external)
-
-Resume interaction with the rollup contract
+### `initialize(address _stakeToken)` (public)
 
 ### `rejectNextNode(address stakerAddress)` (external)
 

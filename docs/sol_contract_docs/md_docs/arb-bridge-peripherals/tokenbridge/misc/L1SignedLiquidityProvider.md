@@ -1,5 +1,5 @@
 ---
-title: SignedLiquidityProvider.sol Spec
+title: L1SignedLiquidityProvider.sol Spec
 ---
 
 ### `constructor(address _tokenBridge, address _signer)` (public)

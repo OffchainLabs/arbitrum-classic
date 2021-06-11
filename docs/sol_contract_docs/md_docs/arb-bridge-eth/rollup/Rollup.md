@@ -2,24 +2,24 @@
 title: Rollup.sol Spec
 ---
 
-### `newStake()` (external)
+### `initialize(bytes32 _machineHash, uint256[4] _rollupParams, address _stakeToken, address _owner, bytes _extraConfig, address[6] connectedContracts, address[2] _facets, uint256[2] sequencerInboxParams)` (public)
 
-Create a new stake
+### `getFacets() → address, address` (public)
 
-It is recomended to call stakeOnExistingNode after creating a new stake
-so that a griefer doesn't remove your stake by immediately calling returnOldDeposit
-/
+Fallback and delegate functions from OZ
+https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/proxy/TransparentUpgradeableProxy.sol
+And dispatch pattern from EIP-2535: Diamonds
 
-### `addToDeposit(address stakerAddress)` (external)
+### `getAdminFacet() → address` (public)
 
-Increase the amount staked eth for the given staker
+### `getUserFacet() → address` (public)
 
-- `stakerAddress`: Address of the staker whose stake is increased
-  /
+### `fallback()` (external)
 
-### `withdrawStakerFunds(address payable destination) → uint256` (external)
+Fallback function that delegates calls to the address returned by `_implementation()`. Will run if no other
+function in the contract matches the call data.
 
-Withdraw uncomitted funds owned by sender from the rollup chain
+### `receive()` (external)
 
-- `destination`: Address to transfer the withdrawn funds to
-  /
+Fallback function that delegates calls to the address returned by `_implementation()`. Will run if call data
+is empty.
