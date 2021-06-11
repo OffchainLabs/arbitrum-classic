@@ -84,12 +84,10 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
-    'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
 }
 
 export class TokenGateway extends Contract {
@@ -348,14 +346,6 @@ export class TokenGateway extends Contract {
       _transferId: BigNumberish | null,
       _amount: null,
       _data: null
-    ): EventFilter
-
-    TransferAndCallTriggered(
-      success: null,
-      _from: string | null,
-      _to: string | null,
-      _amount: null,
-      callHookData: null
     ): EventFilter
   }
 

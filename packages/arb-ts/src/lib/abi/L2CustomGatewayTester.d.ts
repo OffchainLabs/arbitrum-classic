@@ -27,12 +27,13 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     'counterpartGateway()': FunctionFragment
     'exitNum()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
+    'gasReserveIfCallRevert()': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'initialize(address,address)': FunctionFragment
     'l1ToL2Token(address)': FunctionFragment
-    'mintAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
-    'registerTokenFromL1(address,address)': FunctionFragment
+    'registerTokenFromL1(address[],address[])': FunctionFragment
     'router()': FunctionFragment
   }
 
@@ -50,8 +51,16 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'gasReserveIfCallRevert',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'inboundEscrowAndCall',
+    values: [string, BigNumberish, string, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'initialize',
@@ -59,16 +68,12 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'l1ToL2Token', values: [string]): string
   encodeFunctionData(
-    functionFragment: 'mintAndCall',
-    values: [string, BigNumberish, string, string, BytesLike]
-  ): string
-  encodeFunctionData(
     functionFragment: 'outboundTransfer',
     values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'registerTokenFromL1',
-    values: [string, string]
+    values: [string[], string[]]
   ): string
   encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
@@ -86,12 +91,19 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'gasReserveIfCallRevert',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'getOutboundCalldata',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'inboundEscrowAndCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1ToL2Token', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'mintAndCall', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'outboundTransfer',
     data: BytesLike
@@ -165,6 +177,10 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -182,6 +198,24 @@ export class L2CustomGatewayTester extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string] & { outboundCalldata: string }>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     initialize(
       _l1Counterpart: string,
@@ -202,24 +236,6 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    mintAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'mintAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     'outboundTransfer(address,address,uint256,bytes)'(
       _l1Token: string,
       _to: string,
@@ -239,14 +255,14 @@ export class L2CustomGatewayTester extends Contract {
     ): Promise<ContractTransaction>
 
     registerTokenFromL1(
-      l1Address: string,
-      l2Address: string,
+      l1Address: string[],
+      l2Address: string[],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'registerTokenFromL1(address,address)'(
-      l1Address: string,
-      l2Address: string,
+    'registerTokenFromL1(address[],address[])'(
+      l1Address: string[],
+      l2Address: string[],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -291,6 +307,10 @@ export class L2CustomGatewayTester extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+  'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
   getOutboundCalldata(
     _token: string,
     _from: string,
@@ -308,6 +328,24 @@ export class L2CustomGatewayTester extends Contract {
     _data: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>
+
+  inboundEscrowAndCall(
+    _l2Address: string,
+    _amount: BigNumberish,
+    _from: string,
+    _to: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+    _l2Address: string,
+    _amount: BigNumberish,
+    _from: string,
+    _to: string,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   initialize(
     _l1Counterpart: string,
@@ -328,24 +366,6 @@ export class L2CustomGatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  mintAndCall(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _sender: string,
-    _dest: string,
-    _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'mintAndCall(address,uint256,address,address,bytes)'(
-    _l2Address: string,
-    _amount: BigNumberish,
-    _sender: string,
-    _dest: string,
-    _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   'outboundTransfer(address,address,uint256,bytes)'(
     _l1Token: string,
     _to: string,
@@ -365,14 +385,14 @@ export class L2CustomGatewayTester extends Contract {
   ): Promise<ContractTransaction>
 
   registerTokenFromL1(
-    l1Address: string,
-    l2Address: string,
+    l1Address: string[],
+    l2Address: string[],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'registerTokenFromL1(address,address)'(
-    l1Address: string,
-    l2Address: string,
+  'registerTokenFromL1(address[],address[])'(
+    l1Address: string[],
+    l2Address: string[],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -417,6 +437,10 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -434,6 +458,24 @@ export class L2CustomGatewayTester extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     initialize(
       _l1Counterpart: string,
@@ -454,24 +496,6 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    mintAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'mintAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     'outboundTransfer(address,address,uint256,bytes)'(
       _l1Token: string,
       _to: string,
@@ -491,14 +515,14 @@ export class L2CustomGatewayTester extends Contract {
     ): Promise<string>
 
     registerTokenFromL1(
-      l1Address: string,
-      l2Address: string,
+      l1Address: string[],
+      l2Address: string[],
       overrides?: CallOverrides
     ): Promise<void>
 
-    'registerTokenFromL1(address,address)'(
-      l1Address: string,
-      l2Address: string,
+    'registerTokenFromL1(address[],address[])'(
+      l1Address: string[],
+      l2Address: string[],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -579,6 +603,10 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
+
+    'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -595,6 +623,24 @@ export class L2CustomGatewayTester extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
     ): Promise<BigNumber>
 
     initialize(
@@ -616,24 +662,6 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    mintAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'mintAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     'outboundTransfer(address,address,uint256,bytes)'(
       _l1Token: string,
       _to: string,
@@ -653,14 +681,14 @@ export class L2CustomGatewayTester extends Contract {
     ): Promise<BigNumber>
 
     registerTokenFromL1(
-      l1Address: string,
-      l2Address: string,
+      l1Address: string[],
+      l2Address: string[],
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'registerTokenFromL1(address,address)'(
-      l1Address: string,
-      l2Address: string,
+    'registerTokenFromL1(address[],address[])'(
+      l1Address: string[],
+      l2Address: string[],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -708,6 +736,14 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
+    gasReserveIfCallRevert(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'gasReserveIfCallRevert()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getOutboundCalldata(
       _token: string,
       _from: string,
@@ -724,6 +760,24 @@ export class L2CustomGatewayTester extends Contract {
       _amount: BigNumberish,
       _data: BytesLike,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    inboundEscrowAndCall(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'inboundEscrowAndCall(address,uint256,address,address,bytes)'(
+      _l2Address: string,
+      _amount: BigNumberish,
+      _from: string,
+      _to: string,
+      _data: BytesLike,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     initialize(
@@ -748,24 +802,6 @@ export class L2CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    mintAndCall(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'mintAndCall(address,uint256,address,address,bytes)'(
-      _l2Address: string,
-      _amount: BigNumberish,
-      _sender: string,
-      _dest: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     'outboundTransfer(address,address,uint256,bytes)'(
       _l1Token: string,
       _to: string,
@@ -785,14 +821,14 @@ export class L2CustomGatewayTester extends Contract {
     ): Promise<PopulatedTransaction>
 
     registerTokenFromL1(
-      l1Address: string,
-      l2Address: string,
+      l1Address: string[],
+      l2Address: string[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'registerTokenFromL1(address,address)'(
-      l1Address: string,
-      l2Address: string,
+    'registerTokenFromL1(address[],address[])'(
+      l1Address: string[],
+      l2Address: string[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

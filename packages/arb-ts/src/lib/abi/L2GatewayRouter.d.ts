@@ -122,7 +122,6 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
     'GatewaySet(address,address)': EventFragment
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
-    'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TransferRouted(address,address,address,address)': EventFragment
   }
 
@@ -130,7 +129,6 @@ interface L2GatewayRouterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'GatewaySet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
-  getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferRouted'): EventFragment
 }
 
@@ -547,14 +545,6 @@ export class L2GatewayRouter extends Contract {
       _transferId: BigNumberish | null,
       _amount: null,
       _data: null
-    ): EventFilter
-
-    TransferAndCallTriggered(
-      success: null,
-      _from: string | null,
-      _to: string | null,
-      _amount: null,
-      callHookData: null
     ): EventFilter
 
     TransferRouted(

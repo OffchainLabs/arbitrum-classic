@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "../ethereum/IExitLiquidityProvider.sol";
+import "../misc/L1PassiveFastExitManager.sol";
 
 contract FastExitMock is IExitLiquidityProvider {
     uint256 fee = 0;
@@ -35,6 +35,7 @@ contract FastExitMock is IExitLiquidityProvider {
         uint256 exitNum,
         bytes calldata liquidityProof
     ) external override {
+        require(amount > fee, "UNDERFLOW");
         IERC20(erc20).transfer(dest, amount - fee);
     }
 }

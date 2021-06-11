@@ -61,7 +61,8 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,
       l1RouterTestBridge.address,
-      accounts[0].address // inbox
+      accounts[0].address, // inbox
+      accounts[0].address // owner
     )
 
     await l2TestBridge.initialize(

@@ -104,43 +104,6 @@ const _abi = [
     type: 'event',
   },
   {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: false,
-        internalType: 'bool',
-        name: 'success',
-        type: 'bool',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: '_to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: '_amount',
-        type: 'uint256',
-      },
-      {
-        indexed: false,
-        internalType: 'bytes',
-        name: 'callHookData',
-        type: 'bytes',
-      },
-    ],
-    name: 'TransferAndCallTriggered',
-    type: 'event',
-  },
-  {
     inputs: [
       {
         internalType: 'address',

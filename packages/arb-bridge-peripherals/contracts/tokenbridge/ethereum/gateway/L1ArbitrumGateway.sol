@@ -26,16 +26,14 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
-import "../../libraries/gateway/ITokenGateway.sol";
-import "../../libraries/gateway/TokenGateway.sol";
-import "../../libraries/ClonableBeaconProxy.sol";
-
-import "./L1ArbitrumMessenger.sol";
+import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
+import "../../libraries/gateway/ArbitrumGateway.sol";
+import "../../libraries/IERC677.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -51,9 +49,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         address _router,
         address _inbox
     ) internal virtual {
+        ArbitrumGateway._initialize(_l2Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
-        TokenGateway._initialize(_l2Counterpart, _router);
         require(_inbox != address(0), "BAD_INBOX");
         router = _router;
         inbox = _inbox;
@@ -74,22 +72,59 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
-        (uint256 exitNum, bytes memory extraData) = abi.decode(_data, (uint256, bytes));
+        (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
 
-        // TODO: add withdraw and call
-        // TODO: add transferExit
-        inboundEscrowTransfer(_token, _to, _amount);
+        _to = getCurrentDestination(exitNum, _to);
+
+        if (callHookData.length > 0) {
+            bool success;
+            try this.inboundEscrowAndCall(_token, _amount, _from, _to, callHookData) {
+                success = true;
+            } catch {
+                // if reverted, then credit _from's account
+                inboundEscrowTransfer(_token, _from, _amount);
+                // success default value is false
+            }
+            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
+        } else {
+            inboundEscrowTransfer(_token, _to, _amount);
+        }
 
         emit InboundTransferFinalized(_token, _from, _to, exitNum, _amount, _data);
-
         return bytes("");
+    }
+
+    function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
+        // amount of gas necessary to send user tokens in case
+        // of the "onTokenTransfer" call consumes all available gas
+        return 30000;
+    }
+
+    function getCurrentDestination(uint256 _exitNum, address _initialDestination)
+        public
+        view
+        virtual
+        returns (address)
+    {
+        // current destination can be changed for tradeable exits in a super class
+        return _initialDestination;
+    }
+
+    function parseInboundData(bytes calldata _data)
+        public
+        pure
+        virtual
+        returns (uint256 _exitNum, bytes memory _extraData)
+    {
+        // this data is encoded by the counterpart gateway, so this shouldn't revert
+        (_exitNum, _extraData) = abi.decode(_data, (uint256, bytes));
     }
 
     function inboundEscrowTransfer(
         address _l1Token,
         address _dest,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual override {
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
@@ -220,10 +255,23 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     }
 
     function getOutboundCalldata(
-        address _token,
+        address _l1Token,
         address _from,
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) public view virtual override returns (bytes memory outboundCalldata);
+    ) public view virtual override returns (bytes memory outboundCalldata) {
+        bytes memory emptyBytes = "";
+
+        outboundCalldata = abi.encodeWithSelector(
+            ArbitrumGateway.finalizeInboundTransfer.selector,
+            _l1Token,
+            _from,
+            _to,
+            _amount,
+            abi.encode(emptyBytes, _data)
+        );
+
+        return outboundCalldata;
+    }
 }

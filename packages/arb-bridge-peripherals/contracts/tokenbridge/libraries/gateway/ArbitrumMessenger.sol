@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 abstract contract L1ArbitrumMessenger {
     event TxToL2(address indexed _from, address indexed _to, uint256 indexed _seqNum, bytes _data);
@@ -33,8 +34,6 @@ abstract contract L1ArbitrumMessenger {
         uint256 _gasPriceBid,
         bytes memory _data
     ) internal virtual returns (uint256) {
-        // msg.value is sent, but 0 is set to the L2 call value
-        // the eth sent is used to pay for the tx's gas
         uint256 seqNum =
             IInbox(_inbox).createRetryableTicket{ value: msg.value }(
                 _to,
@@ -48,5 +47,22 @@ abstract contract L1ArbitrumMessenger {
             );
         emit TxToL2(_user, _to, seqNum, _data);
         return seqNum;
+    }
+}
+
+abstract contract L2ArbitrumMessenger {
+    address internal constant arbsysAddr = address(100);
+
+    event TxToL1(address indexed _from, address indexed _to, uint256 indexed _id, bytes _data);
+
+    function sendTxToL1(
+        uint256 _l1CallValue,
+        address _from,
+        address _to,
+        bytes memory _data
+    ) internal virtual returns (uint256) {
+        uint256 _id = ArbSys(arbsysAddr).sendTxToL1{ value: _l1CallValue }(_to, _data);
+        emit TxToL1(_from, _to, _id, _data);
+        return _id;
     }
 }
