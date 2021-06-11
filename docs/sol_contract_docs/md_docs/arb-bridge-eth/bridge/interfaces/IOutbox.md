@@ -13,3 +13,5 @@ title: IOutbox.sol Spec
 ### `processOutgoingMessages(bytes sendsData, uint256[] sendLengths)` (external)
 
 ### `OutboxEntryCreated(uint256 batchNum, uint256 outboxIndex, bytes32 outputRoot, uint256 numInBatch)`
+
+### `OutBoxTransactionExecuted(address destAddr, address l2Sender, uint256 outboxIndex, uint256 transactionIndex)`

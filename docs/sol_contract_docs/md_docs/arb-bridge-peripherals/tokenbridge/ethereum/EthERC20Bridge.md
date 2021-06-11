@@ -41,16 +41,11 @@ If the L2 side hasn't yet been deployed, a safe, temporary fallback scenario wil
 
 - `refundAddress`: Address to refund overbid for maxSubmissionCost and/or maxGas\*gasPriceBid execution
 
-### `fastWithdrawalFromL2(address liquidityProvider, bytes liquidityProof, address initialDestination, address erc20, uint256 amount, uint256 exitNum, uint256 maxFee)` (external)
+### `transferExitAndCall(address initialDestination, address erc20, uint256 amount, uint256 exitNum, address to, bytes data)` (external)
 
-Allows a user to redirect their right to claim a withdrawal to a liquidityProvider, in exchange for a fee.
+Allows a user to redirect their right to claim a withdrawal to another address
 
-This method expects the liquidityProvider to verify the liquidityProof, but it ensures the withdrawer's balance
-is appropriately updated. It is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity.
-
-- `liquidityProvider`: address of an IExitLiquidityProvider
-
-- `liquidityProof`: encoded data required by the liquidityProvider in order to validate a fast withdrawal.
+This method also allows you to make an arbitrary call after the transfer, similar to ERC677
 
 - `initialDestination`: address the L2 withdrawal call initially set as the destination.
 
@@ -60,7 +55,7 @@ is appropriately updated. It is otherwise agnostic to the details of IExitLiquid
 
 - `exitNum`: Sequentially increasing exit counter determined by the L2 bridge
 
-- `maxFee`: max mount of erc20 token user will pay for fast exit
+- `data`: optional data for external call upon transfering the exit
 
 ### `withdrawFromL2(uint256 exitNum, address erc20, address initialDestination, uint256 amount)` (external)
 
@@ -74,7 +69,25 @@ Finalizes a withdraw via Outbox message; callable only by ArbTokenBridge.\_withd
 
 - `amount`: Token amount being withdrawn
 
-### `deposit(address erc20, address destination, uint256 amount, uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid, bytes callHookData) → uint256` (external)
+### `getDepositCalldata(address erc20, address sender, address destination, uint256 amount, bytes callHookData) → bool isDeployed, bytes depositCalldata` (public)
+
+Utility method that allows you to get the calldata to be submitted to the L2 for a token deposit
+
+- `erc20`: L1 address of ERC20
+
+- `sender`: account initiating the L1 deposit
+
+- `destination`: account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+
+- `amount`: Token Amount
+
+- `callHookData`: optional data for external call upon minting
+
+**Returns**: isDeployed: if token has already been deployed to the L2
+
+**Returns**: depositCalldata: calldata submitted to the L2
+
+### `deposit(address erc20, address destination, uint256 amount, uint256 maxSubmissionCost, uint256 maxGas, uint256 gasPriceBid, bytes callHookData) → uint256 seqNum, uint256 depositCalldataLength` (external)
 
 Deposit standard or custom ERC20 token. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy.
 
@@ -92,7 +105,9 @@ Deposit standard or custom ERC20 token. If L2 side hasn't been deployed yet, inc
 
 - `callHookData`: optional data for external call upon minting
 
-**Returns**: ticket: ID used to redeem the retryable transaction in the L2
+**Returns**: seqNum: ticket ID used to redeem the retryable transaction in the L2
+
+**Returns**: depositCalldataLength: length of calldata submitted to the L2
 
 ### `calculateL2TokenAddress(address erc20) → address` (public)
 

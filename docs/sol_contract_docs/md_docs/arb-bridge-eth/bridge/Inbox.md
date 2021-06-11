@@ -2,7 +2,7 @@
 title: Inbox.sol Spec
 ---
 
-### `constructor(contract IBridge _bridge)` (public)
+### `initialize(contract IBridge _bridge)` (external)
 
 ### `sendL2MessageFromOrigin(bytes messageData) → uint256` (external)
 

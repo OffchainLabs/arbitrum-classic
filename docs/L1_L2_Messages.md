@@ -144,7 +144,7 @@ interface ArbRetryableTx {
 
 ```
 
-This ArbRetryableTx interface is instantiated and exposed `bridge` class of [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts), i.e.,
+This ArbRetryableTx interface is instantiated and exposed `bridge` class of [arb-ts](https://arb-ts-docs.netlify.app/), i.e.,
 
 ```ts
 myBridge.ArbRetryableTx.redeem('mytxid')
@@ -248,7 +248,7 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
     )
 ```
 
-Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts) client side library.
+Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://arb-ts-docs.netlify.app/) client side library.
 
 For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
 
