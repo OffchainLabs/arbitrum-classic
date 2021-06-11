@@ -72,8 +72,9 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	if args.Nonce != nil {
 		nonce = uint64(*args.Nonce)
 	} else {
-		pendingNum := rpc.PendingBlockNumber
-		rawNonce, err := s.srv.GetTransactionCount(ctx, &sender, &pendingNum)
+		pending := rpc.PendingBlockNumber
+		block := rpc.BlockNumberOrHash{BlockNumber: &pending}
+		rawNonce, err := s.srv.GetTransactionCount(ctx, &sender, block)
 		if err != nil {
 			s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 			return common.Hash{}, err
