@@ -62,7 +62,7 @@ def remove_unwanted_docs():
                 lines = len([line for line in file_data if len(line.strip()) > 0])
                 is_test = _file.find("/test") > -1
                 file_data.close()
-                if lines <= 3 or is_test:
+                if lines <= 4 or is_test:
                     print("removing", _file)
                     os.system("rm " + _file)
 
