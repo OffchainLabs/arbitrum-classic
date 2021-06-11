@@ -29,10 +29,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
@@ -42,13 +38,17 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -101,6 +101,7 @@ func startup() error {
 	disableOpenEthereumCheck := fs.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
 	healthcheckMetrics := fs.Bool("metrics", false, "enable prometheus endpoint")
 	healthcheckRPC := fs.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+	metricsPrefix := fs.String("metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 
 	maxBatchTime := fs.Int64(
 		"maxBatchTime",
@@ -126,10 +127,11 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 3 || (!*sequencerMode && *feedURL == "") {
-		fmt.Printf("usage       sequencer: arb-node --sequencer [optional arguments] <ethereum node> <rollup chain address> %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> <database directory> <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
-		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> <database directory> <ethereum node> <rollup chain address> [optional arguments] %s %s", cmdhelp.WalletArgsString, utils.RollupArgsString)
+	if fs.NArg() != 4 || (*sequencerMode && *feedURL != "") {
+		fmt.Printf("\n")
+		fmt.Printf("usage       sequencer: arb-node --sequencer [optional arguments] %s %s\n", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or aggregator node: arb-node --feed-url=<feed address> --inbox=<inbox address> [optional arguments] %s %s\n", cmdhelp.WalletArgsString, utils.RollupArgsString)
+		fmt.Printf("   or            node: arb-node --feed-url=<feed address> --forward-url=<sequencer RPC> [optional arguments] %s %s\n\n", cmdhelp.WalletArgsString, utils.RollupArgsString)
 		return errors.New("invalid arguments")
 	}
 
@@ -169,9 +171,10 @@ func startup() error {
 	}
 	defer mon.Close()
 
+	metricsConfig := metrics.NewMetricsConfig(metricsPrefix)
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
 		if err != nil {
 			log.Error().Err(err).Msg("healthcheck server failed")
 		}
@@ -193,7 +196,7 @@ func startup() error {
 		if *feedURL == "" {
 			logger.Warn().Msg("Missing --feed-url so not subscribing to feed")
 		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil)
+			broadcastClient := broadcastclient.NewBroadcastClient(*feedURL, nil, 20*time.Second)
 			for {
 				sequencerFeed, err = broadcastClient.Connect(ctx)
 				if err == nil {
@@ -201,21 +204,32 @@ func startup() error {
 				}
 				logger.Warn().Err(err).
 					Msg("failed connect to sequencer broadcast, waiting and retrying")
-				time.Sleep(time.Second * 5)
+
+				select {
+				case <-ctx.Done():
+					return errors.New("ctx cancelled broadcast client connect")
+				case <-time.After(5 * time.Second):
+				}
 			}
 		}
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupArgs.Address, rollupArgs.BridgeUtilsAddress, healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}
 		logger.Warn().Err(err).
 			Str("url", rollupArgs.EthURL).
 			Str("rollup", rollupArgs.Address.Hex()).
+			Str("bridgeUtils", rollupArgs.BridgeUtilsAddress.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
-		time.Sleep(time.Second * 5)
+
+		select {
+		case <-ctx.Done():
+			return errors.New("ctx cancelled StartInboxReader retry loop")
+		case <-time.After(5 * time.Second):
+		}
 	}
 
 	var broadcasterSettings broadcaster.Settings
@@ -274,11 +288,17 @@ func startup() error {
 		}
 	}
 
-	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
+	nodeStore := mon.Storage.GetNodeStore()
+	metrics.RegisterNodeStoreMetrics(nodeStore, metricsConfig)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
 	defer db.Close()
+
+	if *waitToCatchUp {
+		inboxReader.WaitToCatchUp(ctx)
+	}
 
 	var batch batcher.TransactionBatcher
 	for {
@@ -298,15 +318,19 @@ func startup() error {
 			break
 		}
 		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
-		time.Sleep(time.Second * 5)
+
+		select {
+		case <-ctx.Done():
+			return errors.New("ctx cancelled setup batcher")
+		case <-time.After(5 * time.Second):
+		}
 	}
 
-	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp(ctx)
-	}
+	metricsConfig.RegisterSystemMetrics()
+	metricsConfig.RegisterStaticMetrics()
 
 	srv := aggregator.NewServer(batch, rollupArgs.Address, l2ChainId, db)
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil, metricsConfig)
 	if err != nil {
 		return err
 	}

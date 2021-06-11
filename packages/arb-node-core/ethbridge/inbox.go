@@ -156,12 +156,30 @@ func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte
 	return common.NewHashFromEth(tx.Hash()), nil
 }
 
-func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, transactions []byte, lengths []*big.Int, l1BlockNumber *big.Int, timestamp *big.Int, _totalDelayedMessagesRead *big.Int, afterAcc [32]byte) (*types.Transaction, error) {
+func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
 	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, l1BlockNumber, timestamp, _totalDelayedMessagesRead, afterAcc)
+		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
 	})
 	if err != nil {
 		return nil, err
+	}
+	return tx, nil
+}
+
+// Like AddSequencerL2BatchFromOrigin but with a custom nonce that will be incremented on success
+func AddSequencerL2BatchFromOriginCustomNonce(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, nonce *big.Int, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
+	rawAuth, err := auth.getAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rawAuth.Nonce = nonce
+	tx, err := inbox.AddSequencerL2BatchFromOrigin(rawAuth, transactions, lengths, sectionsMetadata, afterAcc)
+	if err != nil {
+		return nil, err
+	}
+	nonce.Add(nonce, big.NewInt(1))
+	if auth.auth.Nonce.Cmp(nonce) < 0 {
+		auth.auth.Nonce.Set(nonce)
 	}
 	return tx, nil
 }

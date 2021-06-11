@@ -123,7 +123,6 @@ contract Rollup is RollupBase {
 
         rollupEventBridge.rollupInitialized(
             _rollupParams[0],
-            _rollupParams[1],
             _rollupParams[2],
             _rollupParams[3],
             _stakeToken,
@@ -187,6 +186,12 @@ contract Rollup is RollupBase {
                 )
             );
     }
+
+    /**
+     * Fallback and delegate functions from OZ
+     * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/proxy/TransparentUpgradeableProxy.sol
+     * And dispatch pattern from EIP-2535: Diamonds
+     */
 
     function getFacets() public view returns (address, address) {
         return (getAdminFacet(), getUserFacet());

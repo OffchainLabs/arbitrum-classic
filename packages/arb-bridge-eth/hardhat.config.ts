@@ -137,6 +137,25 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
+    // mainnet: {
+    //   url: process.env['MAINNET_URL'],
+    //   accounts: process.env['MAINNET_PRIVKEY']
+    //     ? [process.env['MAINNET_PRIVKEY']]
+    //     : [],
+    // },
+    rinkeby: {
+      url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbRinkeby: {
+      gasPrice: 0,
+      url: 'https://rinkeby.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
     arbkovan4: {
       gasPrice: 0,
       url: 'https://kovan4.arbitrum.io/rpc',

@@ -34,10 +34,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
@@ -98,9 +100,11 @@ func setupFeeChain(t *testing.T) (*Backend, *web3.Server, *web3.EthClient, *bind
 		t.Fatal(err)
 	}
 
-	web3Server := web3.NewServer(srv, true)
+	metricsConfig := metrics.NewMetricsConfig(nil)
 
-	client := web3.NewEthClient(srv, true)
+	web3Server := web3.NewServer(srv, true, metricsConfig)
+
+	client := web3.NewEthClient(srv, true, metricsConfig)
 
 	arbAggregator, err := arboscontracts.NewArbAggregator(arbos.ARB_AGGREGATOR_ADDRESS, client)
 	test.FailIfError(t, err)
@@ -312,6 +316,65 @@ func TestNonAggregatorFee(t *testing.T) {
 	tx, err := simple.Exists(auth)
 	test.FailIfError(t, err)
 	checkFees(t, backend, tx)
+}
+
+func TestRetryableFee(t *testing.T) {
+	skipBelowVersion(t, 3)
+	backend, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	defer cancel()
+	nodeInterface, err := arboscontracts.NewNodeInterface(arbos.ARB_NODE_INTERFACE_ADDRESS, client)
+	test.FailIfError(t, err)
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	test.FailIfError(t, err)
+	dest, _, _, err := arbostestcontracts.DeploySimple(auth, client)
+	test.FailIfError(t, err)
+
+	retryableTx := message.RetryableTx{
+		Destination:       common.NewAddressFromEth(dest),
+		Value:             big.NewInt(20),
+		Deposit:           new(big.Int).Exp(big.NewInt(10), big.NewInt(20), nil),
+		MaxSubmissionCost: new(big.Int).Exp(big.NewInt(10), big.NewInt(17), nil),
+		CreditBack:        common.RandAddress(),
+		Beneficiary:       common.RandAddress(),
+		MaxGas:            big.NewInt(0),
+		GasPriceBid:       big.NewInt(0),
+		Data:              simpleABI.Methods["exists"].ID,
+	}
+
+	sender := common.RandAddress()
+	gasUsedEstimate, gasPriceEstimate, err := nodeInterface.EstimateRetryableTicket(
+		&bind.CallOpts{},
+		sender.ToEthAddress(),
+		retryableTx.Deposit,
+		retryableTx.Destination.ToEthAddress(),
+		retryableTx.Value,
+		retryableTx.MaxSubmissionCost,
+		retryableTx.CreditBack.ToEthAddress(),
+		retryableTx.Beneficiary.ToEthAddress(),
+		big.NewInt(0),
+		big.NewInt(0),
+		retryableTx.Data,
+	)
+	test.FailIfError(t, err)
+
+	retryableTx.MaxGas = big.NewInt(1000000000)
+	retryableTx.GasPriceBid = big.NewInt(10000000000)
+	requestId, err := backend.AddInboxMessage(retryableTx, sender)
+	test.FailIfError(t, err)
+
+	redeemId := hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(1)))
+	res, err := backend.db.GetRequest(redeemId)
+	test.FailIfError(t, err)
+
+	if new(big.Int).Mul(res.GasPrice, big.NewInt(2)).Cmp(gasPriceEstimate) != 0 {
+		t.Error("wrong gas price")
+	}
+
+	if res.CalcGasUsed().Cmp(gasUsedEstimate) >= 0 {
+		t.Error("more gas used than estimate")
+	} else if new(big.Rat).SetFrac(res.CalcGasUsed(), gasUsedEstimate).Cmp(big.NewRat(9, 10)) < 0 {
+		t.Error("too much less gas used than estimate")
+	}
 }
 
 func TestDeposit(t *testing.T) {

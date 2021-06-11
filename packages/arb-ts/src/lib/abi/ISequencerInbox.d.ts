@@ -13,6 +13,7 @@ import {
 import {
   Contract,
   ContractTransaction,
+  Overrides,
   CallOverrides,
 } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
@@ -21,13 +22,19 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ISequencerInboxInterface extends ethers.utils.Interface {
   functions: {
+    'getInboxAccsLength()': FunctionFragment
     'inboxAccs(uint256)': FunctionFragment
     'maxDelayBlocks()': FunctionFragment
     'maxDelaySeconds()': FunctionFragment
     'messageCount()': FunctionFragment
     'proveBatchContainsSequenceNumber(bytes,uint256)': FunctionFragment
+    'setSequencer(address)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'getInboxAccsLength',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'inboxAccs',
     values: [BigNumberish]
@@ -48,7 +55,12 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
     functionFragment: 'proveBatchContainsSequenceNumber',
     values: [BytesLike, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'setSequencer', values: [string]): string
 
+  decodeFunctionResult(
+    functionFragment: 'getInboxAccsLength',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'inboxAccs', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'maxDelayBlocks',
@@ -66,14 +78,20 @@ interface ISequencerInboxInterface extends ethers.utils.Interface {
     functionFragment: 'proveBatchContainsSequenceNumber',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'setSequencer',
+    data: BytesLike
+  ): Result
 
   events: {
     'DelayedInboxForced(uint256,bytes32,uint256,uint256,bytes32[2],uint256)': EventFragment
-    'SequencerBatchDelivered(uint256,bytes32,uint256,bytes32,bytes,uint256[],uint256,uint256,uint256,bytes32,uint256)': EventFragment
-    'SequencerBatchDeliveredFromOrigin(uint256,bytes32,uint256,bytes32,bytes32,uint256)': EventFragment
+    'SequencerAddressUpdated(address)': EventFragment
+    'SequencerBatchDelivered(uint256,bytes32,uint256,bytes32,bytes,uint256[],uint256[],uint256,address)': EventFragment
+    'SequencerBatchDeliveredFromOrigin(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'DelayedInboxForced'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'SequencerAddressUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'SequencerBatchDelivered'): EventFragment
   getEvent(
     nameOrSignatureOrTopic: 'SequencerBatchDeliveredFromOrigin'
@@ -94,6 +112,10 @@ export class ISequencerInbox extends Contract {
   interface: ISequencerInboxInterface
 
   functions: {
+    getInboxAccsLength(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
     inboxAccs(index: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
     'inboxAccs(uint256)'(
@@ -124,7 +146,21 @@ export class ISequencerInbox extends Contract {
       inboxCount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
+
+    setSequencer(
+      newSequencer: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setSequencer(address)'(
+      newSequencer: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
   }
+
+  getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
+
+  'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
 
   inboxAccs(index: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -157,7 +193,21 @@ export class ISequencerInbox extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string]>
 
+  setSequencer(
+    newSequencer: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setSequencer(address)'(
+    newSequencer: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   callStatic: {
+    getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
+
     inboxAccs(index: BigNumberish, overrides?: CallOverrides): Promise<string>
 
     'inboxAccs(uint256)'(
@@ -188,6 +238,13 @@ export class ISequencerInbox extends Contract {
       inboxCount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber, string]>
+
+    setSequencer(newSequencer: string, overrides?: CallOverrides): Promise<void>
+
+    'setSequencer(address)'(
+      newSequencer: string,
+      overrides?: CallOverrides
+    ): Promise<void>
   }
 
   filters: {
@@ -200,6 +257,8 @@ export class ISequencerInbox extends Contract {
       seqBatchIndex: null
     ): EventFilter
 
+    SequencerAddressUpdated(newAddress: null): EventFilter
+
     SequencerBatchDelivered(
       firstMessageNum: BigNumberish | null,
       beforeAcc: BytesLike | null,
@@ -207,11 +266,9 @@ export class ISequencerInbox extends Contract {
       afterAcc: null,
       transactions: null,
       lengths: null,
-      l1BlockNumber: null,
-      timestamp: null,
-      totalDelayedMessagesRead: null,
-      delayedAcc: null,
-      seqBatchIndex: null
+      sectionsMetadata: null,
+      seqBatchIndex: null,
+      sequencer: null
     ): EventFilter
 
     SequencerBatchDeliveredFromOrigin(
@@ -219,12 +276,15 @@ export class ISequencerInbox extends Contract {
       beforeAcc: BytesLike | null,
       newMessageCount: null,
       afterAcc: null,
-      delayedAcc: null,
       seqBatchIndex: null
     ): EventFilter
   }
 
   estimateGas: {
+    getInboxAccsLength(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getInboxAccsLength()'(overrides?: CallOverrides): Promise<BigNumber>
+
     inboxAccs(
       index: BigNumberish,
       overrides?: CallOverrides
@@ -258,9 +318,25 @@ export class ISequencerInbox extends Contract {
       inboxCount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    setSequencer(
+      newSequencer: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'setSequencer(address)'(
+      newSequencer: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
   }
 
   populateTransaction: {
+    getInboxAccsLength(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'getInboxAccsLength()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     inboxAccs(
       index: BigNumberish,
       overrides?: CallOverrides
@@ -295,6 +371,16 @@ export class ISequencerInbox extends Contract {
       proof: BytesLike,
       inboxCount: BigNumberish,
       overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    setSequencer(
+      newSequencer: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setSequencer(address)'(
+      newSequencer: string,
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
   }
 }

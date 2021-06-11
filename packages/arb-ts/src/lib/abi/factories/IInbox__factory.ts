@@ -116,46 +116,12 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: 'address',
-        name: 'destAddr',
-        type: 'address',
-      },
-    ],
-    name: 'depositEth',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'destAddr',
-        type: 'address',
-      },
-      {
         internalType: 'uint256',
         name: 'maxSubmissionCost',
         type: 'uint256',
       },
-      {
-        internalType: 'uint256',
-        name: 'maxGas',
-        type: 'uint256',
-      },
-      {
-        internalType: 'uint256',
-        name: 'maxGasPrice',
-        type: 'uint256',
-      },
     ],
-    name: 'depositEthRetryable',
+    name: 'depositEth',
     outputs: [
       {
         internalType: 'uint256',

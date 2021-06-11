@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
@@ -172,20 +173,35 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 		extraConfig,
 	)
 
+	bridgeUtilsAddr, _, _, err := ethbridgecontracts.DeployBridgeUtils(auth, client)
+	test.FailIfError(t, err)
+
 	validatorUtilsAddr, _, _, err := ethbridgecontracts.DeployValidatorUtils(auth, client)
 	test.FailIfError(t, err)
 
-	validatorAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(auth, client)
-	test.FailIfError(t, err)
-	client.Commit()
-	_, err = validatorCon.Initialize(auth)
+	validatorWalletFactory, _, _, err := ethbridgecontracts.DeployValidatorWalletCreator(auth, client)
 	test.FailIfError(t, err)
 
-	validatorAddress2, _, validatorCon2, err := ethbridgecontracts.DeployValidator(auth2, client)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
 	test.FailIfError(t, err)
-	client.Commit()
-	_, err = validatorCon2.Initialize(auth2)
+	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
 	test.FailIfError(t, err)
+
+	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, valAuth, client)
+	test.FailIfError(t, err)
+
+	// Should lookup WalletCreated event
+	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, valAuth, client)
+	test.FailIfError(t, err)
+	if validatorAddress != checkValidatorAddress {
+		t.Error("CreateValidatorWallet didn't reuse existing wallet")
+	}
+
+	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, val2Auth, client)
+	test.FailIfError(t, err)
+	if validatorAddress == validatorAddress2 {
+		t.Error("CreateValidatorWallet reused existing wallet for different address")
+	}
 
 	client.Commit()
 
@@ -195,21 +211,18 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	test.FailIfError(t, err)
 	client.Commit()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
-	test.FailIfError(t, err)
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
-	test.FailIfError(t, err)
+	mon, shutdown := monitor.PrepareArbCore(t)
+	defer shutdown()
 
-	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
+	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	test.FailIfError(t, err)
 	val2, err := ethbridge.NewValidator(validatorAddress2, rollupAddr, client, val2Auth)
 	test.FailIfError(t, err)
 
-	mon, shutdown := monitor.PrepareArbCore(t)
-	defer shutdown()
-
 	staker, _, err := NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
+
+	staker.Validator.GasThreshold = big.NewInt(0)
 
 	seqInboxAddr, err := staker.rollup.SequencerBridge(ctx)
 	test.FailIfError(t, err)
@@ -244,15 +257,22 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	)
 
 	endBlockBatchItem := inbox.NewSequencerItem(big.NewInt(1), endOfBlockMessage, batchItem.Accumulator)
-	_, err = seqInbox.AddSequencerL2BatchFromOrigin(seqAuth, []byte{}, []*big.Int{}, currentBlockNumber, currentTimestamp, big.NewInt(1), endBlockBatchItem.Accumulator)
+	delayedAccInt := new(big.Int).SetBytes(delayedAcc[:])
+	metadata := []*big.Int{big.NewInt(0), currentBlockNumber, currentTimestamp, big.NewInt(1), delayedAccInt}
+	_, err = seqInbox.AddSequencerL2BatchFromOrigin(seqAuth, []byte{}, []*big.Int{}, metadata, endBlockBatchItem.Accumulator)
 	test.FailIfError(t, err)
-	client.Commit()
+	for i := 0; i < 5; i++ {
+		client.Commit()
+	}
 
 	faultyCore := challenge.NewFaultyCore(mon.Core, faultConfig)
 
 	faultyStaker, _, err := NewStaker(ctx, faultyCore, client, val2, common.NewAddressFromEth(validatorUtilsAddr), MakeNodesStrategy)
 	test.FailIfError(t, err)
 
+	faultyStaker.Validator.GasThreshold = big.NewInt(0)
+
+	registry := prometheus.NewRegistry()
 	const largeChannelBuffer = 200
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: false}
@@ -262,14 +282,14 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	nodehealth.Init(healthChan)
 
 	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, registry, registry)
 		test.FailIfError(t, err)
 	}()
 
 	// Make a dummy feed for now
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, sequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, sequencerFeed)
 	test.FailIfError(t, err)
 
 	for i := 1; i <= 10; i++ {

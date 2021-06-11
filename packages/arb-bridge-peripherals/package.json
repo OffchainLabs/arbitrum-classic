@@ -3,14 +3,13 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "scripts": {
+    "test:e2e": "hardhat test test/*.e2e.ts",
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
     "typechain": "hardhat typechain",
-    "deploy:tokenbridge:l1": "hardhat run scripts/deploy_token_bridge_l1.ts --network kovan",
-    "deploy:tokenbridge:l2": "hardhat run scripts/deploy_token_bridge_l2.ts --network kovan5",
-    "deploy:tokenbridge": "yarn deploy:tokenbridge:l2 && yarn deploy:tokenbridge:l1",
+    "deploy:tokenbridge": "hardhat run scripts/deploy_token_bridge_l1.ts --network rinkeby",
     "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network kovan5",
-    "deploy": "yarn deploy:buddydeployer && yarn deploy:tokenbridge"
+    "deploy": "yarn deploy:tokenbridge"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",

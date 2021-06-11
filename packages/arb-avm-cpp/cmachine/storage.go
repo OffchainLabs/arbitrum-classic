@@ -59,7 +59,7 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 	success := C.initializeArbStorage(s.c, cContractPath)
 
 	if success == 0 {
-		return errors.New("failed to initialize storage")
+		return errors.Errorf("failed to initialize storage with mexe %v", contractPath)
 	}
 	return nil
 }

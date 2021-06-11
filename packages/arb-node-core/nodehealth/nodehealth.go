@@ -40,7 +40,9 @@ type configStruct struct {
 
 	//Map to dynamically allocate Prometheus Histograms
 	prometheusHistograms map[string]*prometheus.HistogramVec
-	//Prometheus registry to register histograms on
+	//Prometheus Registerer to register histograms on
+	prometheusRegisterer prometheus.Registerer
+	//Prometheus Registery to handle the exposed service
 	prometheusRegistry *prometheus.Registry
 
 	//Aggregator Healthcheck Config
@@ -174,7 +176,7 @@ type Log struct {
 }
 
 // Default configuration values for the healthcheck server
-func newConfig() *configStruct {
+func newConfig(prometheusRegistry *prometheus.Registry, prometheusRegisterer prometheus.Registerer) *configStruct {
 	config := configStruct{}
 	const init = false
 
@@ -201,7 +203,8 @@ func newConfig() *configStruct {
 
 	//Load configuration into struct
 	config.prometheusHistograms = make(map[string]*prometheus.HistogramVec)
-	config.prometheusRegistry = prometheus.NewRegistry()
+	config.prometheusRegisterer = prometheusRegisterer
+	config.prometheusRegistry = prometheusRegistry
 
 	config.init = init
 	config.healthcheckRPC = healthcheckRPC
@@ -329,7 +332,7 @@ func metricsHandler(config *configStruct, logMessage Log) {
 		}, []string{logMessage.Comp})
 
 		//Register the histogram with the prometheus registry
-		config.prometheusRegistry.MustRegister(config.prometheusHistograms[logMessage.Comp])
+		config.prometheusRegisterer.MustRegister(config.prometheusHistograms[logMessage.Comp])
 	}
 
 	//Observe the function's runtime using the function name as the label
@@ -850,7 +853,7 @@ func waitConfig(config *configStruct) {
 //Start the healthcheck
 func startHealthCheck(ctx context.Context, config *configStruct, state *healthState) error {
 	//Create the main healthcheck handler
-	health := healthcheck.NewMetricsHandler(config.prometheusRegistry, "healthcheck")
+	health := healthcheck.NewMetricsHandler(config.prometheusRegisterer, "healthcheck")
 
 	//Create an HTTP server mux to serve the endpoints
 	httpMux := http.NewServeMux()
@@ -909,12 +912,12 @@ func startHealthCheck(ctx context.Context, config *configStruct, state *healthSt
 }
 
 // NodeHealthCheck Create a node healthcheck that listens on the given channel
-func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log) error {
+func StartNodeHealthCheck(ctx context.Context, logMsgChan <-chan Log, prometheusRegistry *prometheus.Registry, prometheusRegisterer prometheus.Registerer) error {
 	//Create the configuration struct
 	state := newHealthState()
 
 	//Load the default configuration
-	config := newConfig()
+	config := newConfig(prometheusRegistry, prometheusRegisterer)
 
 	//Start the channel logger
 	go logger(ctx, config, state, logMsgChan)

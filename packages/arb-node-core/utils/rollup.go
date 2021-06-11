@@ -25,23 +25,27 @@ import (
 //go:generate go run arboshash.go
 
 type RollupArgs struct {
-	ValidatorFolder string
-	EthURL          string
-	Address         common.Address
+	ValidatorFolder    string
+	EthURL             string
+	Address            common.Address
+	BridgeUtilsAddress common.Address
 }
 
 func ParseRollupCommand(fs *flag.FlagSet, startIndex int) RollupArgs {
 	validatorFolder := fs.Arg(startIndex)
 	ethURL := fs.Arg(startIndex + 1)
 	addressString := fs.Arg(startIndex + 2)
+	bridgeUtilsAddressString := fs.Arg(startIndex + 3)
 
 	address := common.HexToAddress(addressString)
+	bridgeUtilsAddress := common.HexToAddress(bridgeUtilsAddressString)
 
 	return RollupArgs{
-		ValidatorFolder: validatorFolder,
-		EthURL:          ethURL,
-		Address:         address,
+		ValidatorFolder:    validatorFolder,
+		EthURL:             ethURL,
+		Address:            address,
+		BridgeUtilsAddress: bridgeUtilsAddress,
 	}
 }
 
-const RollupArgsString = "<validator_folder> <ethURL> <rollup_address>"
+const RollupArgsString = "<database directory> <ethereum L1 node URL> <rollup address> <bridge utils address>"

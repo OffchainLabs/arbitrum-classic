@@ -17,7 +17,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -30,10 +29,6 @@ import (
 	"path"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -44,11 +39,12 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -62,26 +58,6 @@ func init() {
 
 type ChainState struct {
 	ValidatorWallet string `json:"validatorWallet"`
-}
-
-func createValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, auth *bind.TransactOpts, client ethutils.EthClient) (ethcommon.Address, error) {
-	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	tx, err := walletCreator.CreateWallet(auth)
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	receipt, err := ethbridge.WaitForReceiptWithResults(ctx, client, auth.From, tx, "CreateWallet")
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	ev, err := walletCreator.ParseWalletCreated(*receipt.Logs[len(receipt.Logs)-1])
-	if err != nil {
-		return ethcommon.Address{}, err
-	}
-	return ev.WalletAddress, nil
 }
 
 func main() {
@@ -106,18 +82,8 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	const largeChannelBuffer = 200
-	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
-
-	go func() {
-		err := nodehealth.StartNodeHealthCheck(ctx, healthChan)
-		if err != nil {
-			log.Error().Err(err).Msg("healthcheck server failed")
-		}
-	}()
-
-	if len(os.Args) < 5 {
-		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [validator utils address] [validator wallet factory address] [strategy] " + cmdhelp.WalletArgsString
+	if len(os.Args) < 6 {
+		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [bridge utils address] [validator utils address] [validator wallet factory address] [strategy] " + cmdhelp.WalletArgsString
 		fmt.Println(usageStr)
 		return errors.New("invalid arguments")
 	}
@@ -132,8 +98,9 @@ func startup() error {
 	disableOpenEthereumCheck := flagSet.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
 	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
 	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
+	metricsPrefix := flagSet.String("metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 
-	if err := flagSet.Parse(os.Args[7:]); err != nil {
+	if err := flagSet.Parse(os.Args[8:]); err != nil {
 		return errors.Wrap(err, "failed parsing command line arguments")
 	}
 	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
@@ -149,6 +116,20 @@ func startup() error {
 
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
+
+	metricsConfig := metrics.NewMetricsConfig(metricsPrefix)
+	metricsConfig.RegisterSystemMetrics()
+	metricsConfig.RegisterStaticMetrics()
+
+	const largeChannelBuffer = 200
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
+		if err != nil {
+			log.Error().Err(err).Msg("healthcheck server failed")
+		}
+	}()
 
 	folder := os.Args[1]
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
@@ -175,15 +156,16 @@ func startup() error {
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	rollupAddr := ethcommon.HexToAddress(os.Args[3])
-	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[4])
-	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[5])
+	bridgeUtilsAddr := ethcommon.HexToAddress(os.Args[4])
+	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[5])
+	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[6])
 	auth, _, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 
-	strategyString := os.Args[6]
+	strategyString := os.Args[7]
 	var strategy staker.Strategy
 	if strategyString == "MakeNodes" {
 		strategy = staker.MakeNodesStrategy
@@ -213,10 +195,14 @@ func startup() error {
 		}
 	}
 
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, *gasPriceUrl)
+	if err != nil {
+		return errors.Wrap(err, "error creating connecting to chain")
+	}
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = createValidatorWallet(ctx, validatorWalletFactoryAddr, auth, client)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, valAuth, client)
 			if err == nil {
 				break
 			}
@@ -246,10 +232,6 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, *gasPriceUrl)
-	if err != nil {
-		return errors.Wrap(err, "error creating connecting to chain")
-	}
 	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error creating validator wallet")
@@ -276,7 +258,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), healthChan, dummySequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}

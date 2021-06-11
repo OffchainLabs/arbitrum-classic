@@ -28,8 +28,10 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
     'nodeFactory()': FunctionFragment
     'owner()': FunctionFragment
     'renounceOwnership()': FunctionFragment
+    'rollupAdminFacet()': FunctionFragment
     'rollupTemplate()': FunctionFragment
-    'setTemplates(address,address,address,address)': FunctionFragment
+    'rollupUserFacet()': FunctionFragment
+    'setTemplates(address,address,address,address,address,address)': FunctionFragment
     'transferOwnership(address)': FunctionFragment
   }
 
@@ -67,12 +69,20 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'rollupAdminFacet',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'rollupTemplate',
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'rollupUserFacet',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'setTemplates',
-    values: [string, string, string, string]
+    values: [string, string, string, string, string, string]
   ): string
   encodeFunctionData(
     functionFragment: 'transferOwnership',
@@ -98,7 +108,15 @@ interface RollupCreatorInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'rollupAdminFacet',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'rollupTemplate',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'rollupUserFacet',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -185,23 +203,35 @@ export class RollupCreator extends Contract {
 
     'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
 
+    rollupAdminFacet(overrides?: CallOverrides): Promise<[string]>
+
+    'rollupAdminFacet()'(overrides?: CallOverrides): Promise<[string]>
+
     rollupTemplate(overrides?: CallOverrides): Promise<[string]>
 
     'rollupTemplate()'(overrides?: CallOverrides): Promise<[string]>
+
+    rollupUserFacet(overrides?: CallOverrides): Promise<[string]>
+
+    'rollupUserFacet()'(overrides?: CallOverrides): Promise<[string]>
 
     setTemplates(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'setTemplates(address,address,address,address)'(
+    'setTemplates(address,address,address,address,address,address)'(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -266,23 +296,35 @@ export class RollupCreator extends Contract {
 
   'renounceOwnership()'(overrides?: Overrides): Promise<ContractTransaction>
 
+  rollupAdminFacet(overrides?: CallOverrides): Promise<string>
+
+  'rollupAdminFacet()'(overrides?: CallOverrides): Promise<string>
+
   rollupTemplate(overrides?: CallOverrides): Promise<string>
 
   'rollupTemplate()'(overrides?: CallOverrides): Promise<string>
+
+  rollupUserFacet(overrides?: CallOverrides): Promise<string>
+
+  'rollupUserFacet()'(overrides?: CallOverrides): Promise<string>
 
   setTemplates(
     _bridgeCreator: string,
     _rollupTemplate: string,
     _challengeFactory: string,
     _nodeFactory: string,
+    _rollupAdminFacet: string,
+    _rollupUserFacet: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'setTemplates(address,address,address,address)'(
+  'setTemplates(address,address,address,address,address,address)'(
     _bridgeCreator: string,
     _rollupTemplate: string,
     _challengeFactory: string,
     _nodeFactory: string,
+    _rollupAdminFacet: string,
+    _rollupUserFacet: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -347,23 +389,35 @@ export class RollupCreator extends Contract {
 
     'renounceOwnership()'(overrides?: CallOverrides): Promise<void>
 
+    rollupAdminFacet(overrides?: CallOverrides): Promise<string>
+
+    'rollupAdminFacet()'(overrides?: CallOverrides): Promise<string>
+
     rollupTemplate(overrides?: CallOverrides): Promise<string>
 
     'rollupTemplate()'(overrides?: CallOverrides): Promise<string>
+
+    rollupUserFacet(overrides?: CallOverrides): Promise<string>
+
+    'rollupUserFacet()'(overrides?: CallOverrides): Promise<string>
 
     setTemplates(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setTemplates(address,address,address,address)'(
+    'setTemplates(address,address,address,address,address,address)'(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -444,23 +498,35 @@ export class RollupCreator extends Contract {
 
     'renounceOwnership()'(overrides?: Overrides): Promise<BigNumber>
 
+    rollupAdminFacet(overrides?: CallOverrides): Promise<BigNumber>
+
+    'rollupAdminFacet()'(overrides?: CallOverrides): Promise<BigNumber>
+
     rollupTemplate(overrides?: CallOverrides): Promise<BigNumber>
 
     'rollupTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    rollupUserFacet(overrides?: CallOverrides): Promise<BigNumber>
+
+    'rollupUserFacet()'(overrides?: CallOverrides): Promise<BigNumber>
 
     setTemplates(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'setTemplates(address,address,address,address)'(
+    'setTemplates(address,address,address,address,address,address)'(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -528,23 +594,39 @@ export class RollupCreator extends Contract {
 
     'renounceOwnership()'(overrides?: Overrides): Promise<PopulatedTransaction>
 
+    rollupAdminFacet(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'rollupAdminFacet()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     rollupTemplate(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'rollupTemplate()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    rollupUserFacet(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'rollupUserFacet()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
     setTemplates(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'setTemplates(address,address,address,address)'(
+    'setTemplates(address,address,address,address,address,address)'(
       _bridgeCreator: string,
       _rollupTemplate: string,
       _challengeFactory: string,
       _nodeFactory: string,
+      _rollupAdminFacet: string,
+      _rollupUserFacet: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

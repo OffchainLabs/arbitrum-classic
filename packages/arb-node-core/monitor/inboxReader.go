@@ -22,21 +22,49 @@ import (
 	"sync"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
+)
+
+var (
+	EthHeightGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "arbitrum",
+		Subsystem: "ethereum",
+		Name:      "block_height",
+		Help:      "Current best block in the anchoring Ethereum chain.",
+	})
+	DelayedCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "delayed",
+		Help:      "Number of Delayed Inbox Messages Processed",
+	})
+	BatchesCounter = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "processed",
+		Help:      "Number of Inbox Message Batches",
+	})
+	MessageGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: "arbitrum",
+		Subsystem: "inbox",
+		Name:      "messages",
+		Help:      "Total Messages Inserted",
+	})
 )
 
 type InboxReader struct {
 	// Only in run thread
 	delayedBridge      *ethbridge.DelayedBridgeWatcher
 	sequencerInbox     *ethbridge.SequencerInboxWatcher
+	bridgeUtils        *ethbridge.BridgeUtils
 	db                 core.ArbCore
 	firstMessageBlock  *big.Int
 	caughtUp           bool
@@ -61,6 +89,7 @@ func NewInboxReader(
 	ctx context.Context,
 	bridge *ethbridge.DelayedBridgeWatcher,
 	sequencerInbox *ethbridge.SequencerInboxWatcher,
+	bridgeUtils *ethbridge.BridgeUtils,
 	db core.ArbCore,
 	healthChan chan nodehealth.Log,
 	broadcastFeed chan broadcaster.BroadcastFeedMessage,
@@ -72,6 +101,7 @@ func NewInboxReader(
 	return &InboxReader{
 		delayedBridge:     bridge,
 		sequencerInbox:    sequencerInbox,
+		bridgeUtils:       bridgeUtils,
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
 		completed:         make(chan bool, 1),
@@ -121,6 +151,8 @@ func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
 
 }
 
+const inboxReaderDelay int64 = 4
+
 func (ir *InboxReader) getMessages(ctx context.Context) error {
 	from, err := ir.getNextBlockToRead()
 	if err != nil {
@@ -129,7 +161,6 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 	if ir.healthChan != nil && from != nil {
 		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(from)}
 	}
-	reorging := false
 	blocksToFetch := uint64(100)
 	for {
 		select {
@@ -143,6 +174,35 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			return err
 		}
 
+		reorgingDelayed := false
+		reorgingSequencer := false
+		if ir.caughtUp {
+			latestDelayed, latestSeq, err := ir.bridgeUtils.GetCountsAndAccumulators(ctx)
+			if err != nil {
+				return err
+			}
+			if latestDelayed.Count.Sign() > 0 {
+				dbDelayedAcc, err := ir.db.GetDelayedInboxAcc(new(big.Int).Sub(latestDelayed.Count, big.NewInt(1)))
+				if err == nil && dbDelayedAcc != latestDelayed.Accumulator {
+					reorgingDelayed = true
+				}
+			}
+			if latestSeq.Count.Sign() > 0 {
+				dbSeqAcc, err := ir.db.GetInboxAcc(new(big.Int).Sub(latestSeq.Count, big.NewInt(1)))
+				if err == nil && dbSeqAcc != latestSeq.Accumulator {
+					reorgingSequencer = true
+				}
+			}
+		}
+
+		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelay > 0 {
+			currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelay))
+			if currentHeight.Sign() <= 0 {
+				currentHeight = currentHeight.SetInt64(1)
+			}
+		}
+
+		EthHeightGauge.Set(float64(currentHeight.Uint64()))
 		if ir.healthChan != nil && currentHeight != nil {
 			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
 		}
@@ -215,24 +275,25 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-				reorging = false
+				reorgingSequencer = false
 				if checkingStart {
 					if matching == 0 {
-						reorging = true
+						reorgingSequencer = true
 					} else {
 						matching--
 					}
 				}
 				sequencerBatches = sequencerBatches[matching:]
 			}
-			if !reorging && len(delayedMessages) > 0 {
+			if len(delayedMessages) > 0 {
 				firstMsg := delayedMessages[0]
 				beforeAcc := firstMsg.BeforeInboxAcc
 				beforeSeqNum := new(big.Int).Sub(firstMsg.Message.InboxSeqNum, big.NewInt(1))
-				if beforeSeqNum.Cmp(big.NewInt(0)) >= 0 {
+				reorgingDelayed = false
+				if beforeSeqNum.Sign() >= 0 {
 					haveAcc, err := ir.db.GetDelayedInboxAcc(beforeSeqNum)
 					if err != nil || haveAcc != beforeAcc {
-						reorging = true
+						reorgingDelayed = true
 					}
 				}
 			}
@@ -244,8 +305,8 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			} else if len(sequencerBatches) > 10 {
 				blocksToFetch /= 2
 			}
-			if blocksToFetch == 0 {
-				blocksToFetch++
+			if blocksToFetch < 2 {
+				blocksToFetch = 2
 			}
 
 			logMsg := logger.Debug().
@@ -259,7 +320,7 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					Str("afterCount", sequencerBatches[len(sequencerBatches)-1].GetAfterCount().String())
 			}
 			logMsg.Msg("Looking up messages")
-			if reorging {
+			if reorgingDelayed || reorgingSequencer {
 				from, err = ir.getPrevBlockForReorg(from)
 				if err != nil {
 					return err
@@ -271,8 +332,20 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 						return err
 					}
 				}
-				from = from.Add(to, big.NewInt(1))
+				delta := new(big.Int).SetUint64(blocksToFetch)
+				if new(big.Int).Add(to, delta).Cmp(currentHeight) >= 0 {
+					delta = delta.Div(delta, big.NewInt(2))
+					from = from.Add(from, delta)
+					if from.Cmp(to) > 0 {
+						from = from.Set(to)
+					}
+				} else {
+					from = from.Add(to, big.NewInt(1))
+				}
 			}
+			DelayedCounter.Add(float64(len(delayedMessages)))
+			BatchesCounter.Add(float64(len(sequencerBatches)))
+			MessageGauge.Set(float64(ir.db.MachineMessagesRead().Uint64()))
 		}
 		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:
@@ -403,6 +476,9 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		beforeCount = firstRef.GetBeforeCount()
 		beforeAcc = firstRef.GetBeforeAcc()
 		logger.Debug().Str("prevAcc", beforeAcc.String()).Str("acc", seqBatchItems[len(seqBatchItems)-1].Accumulator.String()).Int("count", len(seqBatchItems)).Msg("delivering on-chain inbox items")
+	}
+	if len(delayedMessages) > 0 {
+		logger.Debug().Str("acc", delayedMessages[len(delayedMessages)-1].DelayedAccumulator.String()).Int("count", len(delayedMessages)).Msg("delivering delayed inbox messages")
 	}
 	err := core.DeliverMessagesAndWait(ir.db, beforeCount, beforeAcc, seqBatchItems, delayedMessages, nil)
 	if err != nil {

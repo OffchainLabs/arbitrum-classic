@@ -26,9 +26,7 @@ interface ISequencerInbox {
         bytes32 afterAcc,
         bytes transactions,
         uint256[] lengths,
-        uint256[2] l1BlockNumberAndTimestamp,
-        uint256 totalDelayedMessagesRead,
-        bytes32 delayedAcc,
+        uint256[] sectionsMetadata,
         uint256 seqBatchIndex,
         address sequencer
     );
@@ -38,7 +36,6 @@ interface ISequencerInbox {
         bytes32 indexed beforeAcc,
         uint256 newMessageCount,
         bytes32 afterAcc,
-        bytes32 delayedAcc,
         uint256 seqBatchIndex
     );
 
@@ -62,6 +59,8 @@ interface ISequencerInbox {
     function maxDelaySeconds() external view returns (uint256);
 
     function inboxAccs(uint256 index) external view returns (bytes32);
+
+    function getInboxAccsLength() external view returns (uint256);
 
     function proveBatchContainsSequenceNumber(bytes calldata proof, uint256 inboxCount)
         external

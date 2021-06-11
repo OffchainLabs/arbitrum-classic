@@ -27,15 +27,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/pkg/errors"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
@@ -46,11 +42,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/dev"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -91,7 +90,7 @@ func startup() error {
 	enablePProf := fs.Bool("pprof", false, "enable profiling server")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 	privKeyString := fs.String("privkey", "979f020f6f6f71577c09db93ba944c89945f10fade64cfc7eb26137d5816fb76", "funded private key")
-	fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
+	//fundedAccount := fs.String("account", "0x9a6C04fBf4108E2c1a1306534A126381F99644cf", "account to fund")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -100,8 +99,8 @@ func startup() error {
 		return errors.Wrap(err, "error parsing arguments")
 	}
 
-	if fs.NArg() != 2 {
-		fmt.Println("usage: arb-dev-sequencer <ethURL> <rollup_creator_address>")
+	if fs.NArg() != 3 {
+		fmt.Println("usage: arb-dev-sequencer <ethURL> <rollup_creator_address> <bridge_utils_adddress>")
 		return errors.New("invalid arguments")
 	}
 
@@ -118,7 +117,9 @@ func startup() error {
 
 	ethURL := fs.Arg(0)
 	rollupCreatorAddresssString := fs.Arg(1)
+	bridgeUtilsAddressString := fs.Arg(2)
 	rollupCreator := common.HexToAddress(rollupCreatorAddresssString)
+	bridgeUtilsAddress := common.HexToAddress(bridgeUtilsAddressString)
 
 	ethclint, err := ethutils.NewRPCEthClient(ethURL)
 	if err != nil {
@@ -197,7 +198,7 @@ func startup() error {
 		return err
 	}
 	rollupAddress := common.NewAddressFromEth(createdEvent.RollupAddress)
-	inboxAddress := createdEvent.InboxAddress
+	//inboxAddress := createdEvent.InboxAddress
 
 	l2ChainId := new(big.Int).SetUint64(*chainId64)
 	l2OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l2ChainId)
@@ -228,13 +229,14 @@ func startup() error {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, nil, dummySequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, bridgeUtilsAddress, nil, dummySequencerFeed)
 		if err == nil {
 			break
 		}
 		logger.Warn().Err(err).
 			Str("url", ethURL).
 			Str("rollup", rollupAddress.Hex()).
+			Str("bridgeUtils", bridgeUtilsAddress.Hex()).
 			Msg("failed to start inbox reader, waiting and retrying")
 		time.Sleep(time.Second * 5)
 	}
@@ -318,22 +320,23 @@ func startup() error {
 
 	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
 
-	inboxCon, err := ethbridgecontracts.NewInbox(inboxAddress, ethclint)
-	if err != nil {
-		return err
-	}
-
-	deployer.Value = transferSize
-	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
-	if err != nil {
-		return err
-	}
-
-	_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
-	if err != nil {
-		return err
-	}
-	deployer.Value = nil
+	// TODO: Add back in funding of fundedAccount
+	// Note: The dev sequencer isn't being used anywhere currently
+	//inboxCon, err := ethbridgecontracts.NewInbox(inboxAddress, ethclint)
+	//if err != nil {
+	//	return err
+	//}
+	//deployer.Value = transferSize
+	//_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//_, err = inboxCon.DepositEth(deployer, ethcommon.HexToAddress(*fundedAccount))
+	//if err != nil {
+	//	return err
+	//}
+	//deployer.Value = nil
 
 	time.Sleep(time.Second * 40)
 
@@ -341,7 +344,7 @@ func startup() error {
 		return err
 	}
 
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil, metrics.NewMetricsConfig(nil))
 	if err != nil {
 		return err
 	}

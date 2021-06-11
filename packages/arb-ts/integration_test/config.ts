@@ -38,6 +38,21 @@ export default {
     executeOutGoingMessages: false,
     outBoxUpdateTimeout: 100000,
   },
+  arbRinkeby: {
+    ethRPC: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
+    arbRPC: 'https://rinkeby.arbitrum.io/rpc',
+    // arbRPC: 'http://localhost:8547/' /* for port-forwarding */,
+    preFundedSignerPK:
+      process.env['DEVNET_PRIVKEY'] ||
+      '0x8803565d1ab75cf6a04656e2a638c65a2984f810ce2f5f8270601aca4e25e067',
+    erc20BridgeAddress: '0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380',
+    arbTokenBridgeAddress: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
+    l1gasPrice: utils.parseUnits('4', 'gwei'),
+    existentTestERC20: '0x2616Fd3e4e89dB180F570b200b13195597bEb337',
+    defaultWait: 0,
+    executeOutGoingMessages: false,
+    outBoxUpdateTimeout: 100000,
+  },
 
   devnet: {
     ethRPC: 'https://devnet.arbitrum.io/rpc',

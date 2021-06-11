@@ -23,14 +23,14 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface ICustomTokenInterface extends ethers.utils.Interface {
   functions: {
     'balanceOf(address)': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
   encodeFunctionData(
     functionFragment: 'registerTokenOnL2',
-    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
+    values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
     functionFragment: 'transferFrom',
@@ -76,16 +76,14 @@ export class ICustomToken extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -116,16 +114,14 @@ export class ICustomToken extends Contract {
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
-    refundAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+  'registerTokenOnL2(address,uint256,uint256,uint256)'(
     l2CustomTokenAddress: string,
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
-    refundAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -156,16 +152,14 @@ export class ICustomToken extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -199,16 +193,14 @@ export class ICustomToken extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -243,16 +235,14 @@ export class ICustomToken extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

@@ -165,7 +165,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
             );
     }
 
-    function depositEth(address destAddr)
+    function depositEth(uint256 maxSubmissionCost)
         external
         payable
         virtual
@@ -175,49 +175,35 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     {
         return
             _deliverMessage(
-                L1MessageType_L2FundedByL1,
-                destAddr,
+                L1MessageType_submitRetryableTx,
+                msg.sender,
                 abi.encodePacked(
-                    L2MessageType_unsignedContractTx,
+                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(0),
+                    msg.value,
+                    maxSubmissionCost,
+                    uint256(uint160(bytes20(msg.sender))),
+                    uint256(uint160(bytes20(msg.sender))),
                     uint256(0),
                     uint256(0),
-                    uint256(uint160(bytes20(destAddr))),
-                    msg.value
+                    uint256(0),
+                    ""
                 )
             );
     }
 
-    function depositEthRetryable(
-        address destAddr,
-        uint256 maxSubmissionCost,
-        uint256 maxGas,
-        uint256 maxGasPrice
-    ) external payable virtual override onlyWhitelisted returns (uint256) {
-        return
-            this.createRetryableTicket(
-                destAddr,
-                msg.value,
-                maxSubmissionCost,
-                msg.sender,
-                msg.sender,
-                maxGas,
-                maxGasPrice,
-                ""
-            );
-    }
-
     /**
-    @notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
-    * @dev all msg.value will deposited to callValueRefundAddress on L2
-    * @param destAddr destination L2 contract address
-    * @param l2CallValue call value for retryable L2 message 
-    * @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-    * @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance
-    * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
-    * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
-    * @param gasPriceBid price bid for L2 execution
-    * @param data ABI encoded data of L2 message 
-    * @return unique id for retryable transaction (keccak256(requestID, uint(0) )
+     * @notice Put an message in the L2 inbox that can be reexecuted for some fixed amount of time if it reverts
+     * @dev all msg.value will deposited to callValueRefundAddress on L2
+     * @param destAddr destination L2 contract address
+     * @param l2CallValue call value for retryable L2 message
+     * @param  maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+     * @param excessFeeRefundAddress maxgas x gasprice - execution cost gets credited here on L2 balance
+     * @param callValueRefundAddress l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
+     * @param maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param gasPriceBid price bid for L2 execution
+     * @param data ABI encoded data of L2 message
+     * @return unique id for retryable transaction (keccak256(requestID, uint(0) )
      */
     function createRetryableTicket(
         address destAddr,

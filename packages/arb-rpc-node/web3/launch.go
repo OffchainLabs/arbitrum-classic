@@ -23,13 +23,14 @@ import (
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 )
 
-func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}) (*rpc.Server, error) {
+func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateKey, ganacheMode bool, plugins map[string]interface{}, metricsConfig *metrics.MetricsConfig) (*rpc.Server, error) {
 	s := rpc.NewServer()
 
-	ethServer := NewServer(server, ganacheMode)
+	ethServer := NewServer(server, ganacheMode, metricsConfig)
 
 	if err := s.RegisterName("eth", ethServer); err != nil {
 		return nil, err
@@ -39,24 +40,24 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
-	if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys)); err != nil {
+	if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, metricsConfig)); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("arb", &Arb{srv: server}); err != nil {
+	if err := s.RegisterName("arb", &Arb{srv: server, counter: metricsConfig.MethodCallCounter}); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys)); err != nil {
+	if err := s.RegisterName("personal", NewPersonalAccounts(privateKeys, metricsConfig)); err != nil {
 		return nil, err
 	}
 
-	net := &Net{chainId: server.ChainId().Uint64()}
+	net := &Net{chainId: server.ChainId().Uint64(), counter: metricsConfig.MethodCallCounter}
 	if err := s.RegisterName("net", net); err != nil {
 		return nil, err
 	}
 
-	if err := s.RegisterName("web3", &Web3{}); err != nil {
+	if err := s.RegisterName("web3", &Web3{counter: metricsConfig.MethodCallCounter}); err != nil {
 		return nil, err
 	}
 
