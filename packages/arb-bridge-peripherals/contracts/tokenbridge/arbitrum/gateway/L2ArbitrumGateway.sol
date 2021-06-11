@@ -40,7 +40,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
 
     function _initialize(address _l1Counterpart, address _router) internal virtual override {
         // L2 gateway may have a router address(0)
-        super._initialize(_l1Counterpart, _router);
+        ArbitrumGateway._initialize(_l1Counterpart, _router);
     }
 
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {

@@ -38,7 +38,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         address _l1Router,
         address _inbox
     ) public virtual {
-        super._initialize(_l1Counterpart, _l1Router, _inbox);
+        L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
     }
 
     /**

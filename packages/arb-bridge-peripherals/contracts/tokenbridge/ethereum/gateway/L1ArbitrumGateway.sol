@@ -50,7 +50,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         address _router,
         address _inbox
     ) internal virtual {
-        super._initialize(_l2Counterpart, _router);
+        ArbitrumGateway._initialize(_l2Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
         require(_inbox != address(0), "BAD_INBOX");

@@ -41,7 +41,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         bytes32 _cloneableProxyHash,
         address _l2BeaconProxyFactory
     ) public virtual {
-        super._initialize(_l2Counterpart, _router, _inbox);
+        L1ArbitrumExtendedGateway._initialize(_l2Counterpart, _router, _inbox);
         require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
         require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
         cloneableProxyHash = _cloneableProxyHash;

@@ -32,7 +32,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         address _router,
         address _beaconProxyFactory
     ) public virtual {
-        super._initialize(_l1Counterpart, _router);
+        L2ArbitrumGateway._initialize(_l1Counterpart, _router);
         require(_beaconProxyFactory != address(0), "INVALID_BEACON");
         beaconProxyFactory = _beaconProxyFactory;
     }

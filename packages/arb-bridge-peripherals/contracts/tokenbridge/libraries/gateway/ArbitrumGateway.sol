@@ -34,6 +34,10 @@ abstract contract ArbitrumGateway is TokenGateway {
         bytes callHookData
     );
 
+    function _initialize(address _counterpartGateway, address _router) internal virtual override {
+        TokenGateway._initialize(_counterpartGateway, _router);
+    }
+
     function inboundEscrowAndCall(
         address _l2Address,
         uint256 _amount,

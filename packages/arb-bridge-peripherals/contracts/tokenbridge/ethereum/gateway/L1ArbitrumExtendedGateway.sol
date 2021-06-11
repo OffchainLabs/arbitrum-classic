@@ -39,7 +39,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address _router,
         address _inbox
     ) internal virtual override {
-        super._initialize(_l2Counterpart, _router, _inbox);
+        L1ArbitrumGateway._initialize(_l2Counterpart, _router, _inbox);
     }
 
     event WithdrawRedirected(
