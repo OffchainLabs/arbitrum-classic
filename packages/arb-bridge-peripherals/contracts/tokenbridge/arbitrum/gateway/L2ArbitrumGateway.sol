@@ -23,7 +23,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "../IArbToken.sol";
 
 import { L2ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
-import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 
 /**
@@ -75,7 +74,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         bytes memory _data
     ) public view virtual override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
+            ArbitrumGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,

@@ -184,7 +184,7 @@ describe('Bridge peripherals layer 1', () => {
 
     // request liquidity from them
     const PassiveFastExitManager = await ethers.getContractFactory(
-      'PassiveFastExitManager'
+      'L1PassiveFastExitManager'
     )
     const passiveFastExitManager = await PassiveFastExitManager.deploy()
     await passiveFastExitManager.setBridge(testBridge.address)

@@ -21,10 +21,19 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import "../ethereum/IExitLiquidityProvider.sol";
 import "../ethereum/gateway/L1ArbitrumExtendedGateway.sol";
 
-contract PassiveFastExitManager is ITradeableExitReceiver {
+interface IExitLiquidityProvider {
+    function requestLiquidity(
+        address dest,
+        address erc20,
+        uint256 amount,
+        uint256 exitNum,
+        bytes calldata liquidityProof
+    ) external;
+}
+
+contract L1PassiveFastExitManager is ITradeableExitReceiver {
     address bridge;
 
     function setBridge(address _bridge) external {

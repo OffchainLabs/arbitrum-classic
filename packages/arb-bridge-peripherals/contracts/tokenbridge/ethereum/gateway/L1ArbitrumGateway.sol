@@ -28,7 +28,6 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
 import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
-import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/IERC677.sol";
 
 /**
@@ -265,7 +264,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         bytes memory emptyBytes = "";
 
         outboundCalldata = abi.encodeWithSelector(
-            ITokenGateway.finalizeInboundTransfer.selector,
+            ArbitrumGateway.finalizeInboundTransfer.selector,
             _l1Token,
             _from,
             _to,
