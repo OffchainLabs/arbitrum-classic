@@ -103,12 +103,13 @@ func (s *EVM) Snapshot() (hexutil.Uint64, error) {
 }
 
 func (s *EVM) Revert(snapId hexutil.Uint64) error {
-	logger.Info().Uint64("snap", uint64(snapId)).Msg("revert")
-	blockCount, ok := s.snapshots[uint64(snapId)]
+	messageCount := uint64(snapId)
+	logger.Info().Uint64("snap", messageCount).Msg("revert")
+	blockCount, ok := s.snapshots[messageCount]
 	if !ok {
 		return errors.New("no such snapshot")
 	}
-	err := s.backend.Reorg(uint64(snapId), blockCount)
+	err := s.backend.Reorg(messageCount, blockCount)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't revert")
 	}
@@ -267,9 +268,23 @@ func (b *Backend) Reorg(messageCount, blockCount uint64) error {
 
 func (b *Backend) reorg(messageCount, blockCount uint64) error {
 	b.l1Emulator.Reorg(blockCount)
-	logger.Info().Msg("Reorged chain")
+	logger.Info().Uint64("message", messageCount).Uint64("block", blockCount).Msg("Reorged chain")
 	if err := core.ReorgAndWait(b.arbcore, new(big.Int).SetUint64(messageCount)); err != nil {
 		return err
+	}
+	return b.waitForBlockCount(blockCount)
+}
+
+func (b *Backend) waitForBlockCount(blockCount uint64) error {
+	for {
+		blocks, err := b.db.BlockCount()
+		if err != nil {
+			return err
+		}
+		if blocks == blockCount {
+			break
+		}
+		time.Sleep(time.Millisecond * 500)
 	}
 	return nil
 }
@@ -312,6 +327,9 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 	block := b.l1Emulator.GenerateBlock()
 	if _, err := b.addInboxMessage(message.NewSafeL2Message(arbMsg), b.currentAggregator, b.l1GasPrice, block); err != nil {
+		return err
+	}
+	if err := b.waitForBlockCount(block.blockId.Height.AsInt().Uint64()); err != nil {
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
