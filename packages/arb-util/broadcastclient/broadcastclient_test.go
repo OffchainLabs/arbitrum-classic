@@ -33,13 +33,13 @@ func TestReceiveMessages(t *testing.T) {
 	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
-	tmb := broadcaster.NewRandomMessageGenerator(messageCount, 0*time.Millisecond)
+	tmb := broadcaster.NewRandomMessageGenerator(messageCount, 100*time.Nanosecond)
 	tmb.SetBroadcaster(b)
 
 	var wg sync.WaitGroup
 	for i := 0; i < clientCount; i++ {
 		wg.Add(1)
-		makeBroadcastClient(ctx, t, i, messageCount, &wg)
+		startMakeBroadcastClient(ctx, t, i, messageCount, &wg)
 	}
 
 	errChan := tmb.Start(ctx)
@@ -53,7 +53,7 @@ func TestReceiveMessages(t *testing.T) {
 	}
 }
 
-func makeBroadcastClient(ctx context.Context, t *testing.T, index int, expectedCount int, wg *sync.WaitGroup) {
+func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expectedCount int, wg *sync.WaitGroup) {
 	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9742/", nil, 20*time.Second)
 	messageCount := 0
 
@@ -79,7 +79,7 @@ func makeBroadcastClient(ctx context.Context, t *testing.T, index int, expectedC
 			case confirmedAccumulator := <-accListener:
 				t.Logf("Client %d received confirmedAccumulator, Sequence Message: %v\n", index, confirmedAccumulator.ShortString())
 			case <-time.After(60 * time.Second):
-				t.Logf("Client %d expected %d meesages, only got %d messages\n", index, expectedCount, messageCount)
+				t.Errorf("Client %d expected %d meesages, only got %d messages\n", index, expectedCount, messageCount)
 				return
 			}
 		}

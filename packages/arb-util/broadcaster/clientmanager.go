@@ -197,8 +197,6 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 
 	cm.broadcastChan <- &bm
 
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("batch item queued")
-
 	return nil
 }
 
