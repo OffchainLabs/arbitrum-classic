@@ -325,7 +325,11 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		// && txRes.ResultCode != evm.RevertCode
 		if txRes.ResultCode != evm.ReturnCode {
 			// If this log was for an invalid transaction, only save the request if it hasn't been saved before
-			if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) != nil {
+			orig, err := db.GetRequest(txRes.IncomingRequest.MessageID)
+			if err != nil {
+				return err
+			}
+			if orig != nil {
 				continue
 			}
 		}
