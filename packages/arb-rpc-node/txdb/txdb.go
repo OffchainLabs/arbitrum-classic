@@ -157,6 +157,10 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 
 func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	logger.Info().Int("count", len(avmLogs)).Msg("deleting logs")
+	oldHeight, err := db.BlockCount()
+	if err != nil {
+		return err
+	}
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
 	var reorgBlockHeight uint64
 	blockReceiptFound := false
@@ -203,6 +207,11 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 		if err != nil {
 			return err
 		}
+
+		for i := oldHeight; i > reorgBlockHeight; i-- {
+			db.snapshotCache.Remove(i)
+		}
+		db.snapshotCache.Remove(reorgBlockHeight)
 	}
 
 	return nil
