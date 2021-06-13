@@ -154,7 +154,12 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 		}
 		logger.Warn().Err(err).
 			Msg("failed connect to sequencer broadcast, waiting and retrying")
-		time.Sleep(time.Second * 5)
+
+		select {
+		case <-ctx.Done():
+			return nil, errors.New("ctx cancelled broadcast client connect")
+		case <-time.After(5 * time.Second):
+		}
 	}
 
 	go func() {
