@@ -50,7 +50,6 @@ type ClientManager struct {
 	broadcastChan     chan *BroadcastMessage
 	clientAdd         chan *ClientConnection
 	clientRemove      chan *ClientConnection
-	accConfirm        chan common.Hash
 	settings          ClientManagerSettings
 }
 
@@ -62,7 +61,6 @@ func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientM
 		broadcastChan: make(chan *BroadcastMessage, 1),
 		clientAdd:     make(chan *ClientConnection, 128),
 		clientRemove:  make(chan *ClientConnection, 128),
-		accConfirm:    make(chan common.Hash, 128),
 		settings:      settings,
 	}
 }
@@ -143,22 +141,7 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 	cm.clientRemove <- clientConnection
 }
 
-// ConfirmedAccumulator clears out entry that matches accumulator and all older entries
-func (cm *ClientManager) doConfirmedAccumulator(accumulator common.Hash) {
-	for i, msg := range cm.broadcastMessages {
-		if msg.FeedItem.BatchItem.Accumulator == accumulator {
-			// This entry was confirmed, so this and all previous messages should be removed from cache
-			unconfirmedIndex := i + 1
-			if unconfirmedIndex >= len(cm.broadcastMessages) {
-				//  Nothing newer, so clear entire cache
-				cm.broadcastMessages = cm.broadcastMessages[:0]
-			} else {
-				cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
-			}
-			break
-		}
-	}
-
+func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
 	bm := BroadcastMessage{
 		Version: 1,
 		ConfirmedAccumulator: ConfirmedAccumulator{
@@ -168,10 +151,6 @@ func (cm *ClientManager) doConfirmedAccumulator(accumulator common.Hash) {
 	}
 
 	cm.broadcastChan <- &bm
-}
-
-func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
-	cm.accConfirm <- accumulator
 }
 
 // Broadcast sends batch item to all clients.
@@ -201,8 +180,21 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 }
 
 func (cm *ClientManager) doBroadcast(bm *BroadcastMessage) error {
-	// Don't add confirmed accumulator to cache
-	if len(bm.Messages) > 0 {
+	if bm.ConfirmedAccumulator.IsConfirmed {
+		for i, msg := range cm.broadcastMessages {
+			if msg.FeedItem.BatchItem.Accumulator == bm.ConfirmedAccumulator.Accumulator {
+				// This entry was confirmed, so this and all previous messages should be removed from cache
+				unconfirmedIndex := i + 1
+				if unconfirmedIndex >= len(cm.broadcastMessages) {
+					//  Nothing newer, so clear entire cache
+					cm.broadcastMessages = cm.broadcastMessages[:0]
+				} else {
+					cm.broadcastMessages = cm.broadcastMessages[unconfirmedIndex:]
+				}
+				break
+			}
+		}
+	} else if len(bm.Messages) > 0 {
 		// Add to cache to send to new clients
 		if len(cm.broadcastMessages) == 0 {
 			// Current list is empty
@@ -312,9 +304,6 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 				}
 			case clientConnection := <-cm.clientRemove:
 				cm.removeClient(clientConnection)
-			case accumulator := <-cm.accConfirm:
-				cm.doConfirmedAccumulator(accumulator)
-				atomic.StoreInt32(&cm.cacheSize, int32(len(cm.broadcastMessages)))
 			case bm := <-cm.broadcastChan:
 				err := cm.doBroadcast(bm)
 				if err != nil {
