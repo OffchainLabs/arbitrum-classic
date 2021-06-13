@@ -30,7 +30,7 @@ interface IExitLiquidityProvider {
         uint256 amount,
         uint256 exitNum,
         bytes calldata liquidityProof
-    ) external;
+    ) external returns (bytes memory);
 }
 
 contract L1PassiveFastExitManager is ITradeableExitReceiver {
@@ -73,6 +73,7 @@ contract L1PassiveFastExitManager is ITradeableExitReceiver {
             ) = abi.decode(data, (address, uint256, address, uint256, address, bytes, bytes));
         }
 
+        bytes memory liquidityProviderData;
         {
             uint256 balancePrior;
             {
@@ -80,7 +81,8 @@ contract L1PassiveFastExitManager is ITradeableExitReceiver {
             }
 
             // Liquidity provider is responsible for validating if this is a valid exit
-            IExitLiquidityProvider(frame.liquidityProvider).requestLiquidity(
+            liquidityProviderData = IExitLiquidityProvider(frame.liquidityProvider)
+                .requestLiquidity(
                 frame.initialDestination,
                 frame.erc20,
                 frame.amount,
@@ -101,6 +103,7 @@ contract L1PassiveFastExitManager is ITradeableExitReceiver {
             exitNum,
             frame.initialDestination,
             frame.liquidityProvider,
+            liquidityProviderData,
             frame.spareData
         );
         return true;

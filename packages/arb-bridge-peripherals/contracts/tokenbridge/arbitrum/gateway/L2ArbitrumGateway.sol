@@ -147,6 +147,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         virtual
         returns (address _from, bytes memory _extraData)
     {
+        // TODO: staticcall to msg.sender to check if "isRouter" to make permissionless
         if (isSenderRouter()) {
             (_from, _extraData) = abi.decode(_data, (address, bytes));
         } else {

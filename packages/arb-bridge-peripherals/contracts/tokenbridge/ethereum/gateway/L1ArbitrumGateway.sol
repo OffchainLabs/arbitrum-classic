@@ -74,7 +74,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
         (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
 
-        _to = getCurrentDestination(exitNum, _to);
+        (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
         if (callHookData.length > 0) {
             bool success;
@@ -100,14 +100,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         return 30000;
     }
 
-    function getCurrentDestination(uint256 _exitNum, address _initialDestination)
-        public
-        view
-        virtual
-        returns (address)
-    {
+    function getExternalCall(
+        uint256 _exitNum,
+        address _initialDestination,
+        bytes memory _initialData
+    ) public view virtual returns (address target, bytes memory data) {
         // current destination can be changed for tradeable exits in a super class
-        return _initialDestination;
+        target = _initialDestination;
+        data = _initialData;
     }
 
     function parseInboundData(bytes calldata _data)
@@ -239,6 +239,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
             bytes memory _extraData
         )
     {
+        // TODO: staticcall to msg.sender to check if "isRouter" to make permissionless
         if (isSenderRouter()) {
             // router encoded
             (_from, _extraData) = abi.decode(_data, (address, bytes));

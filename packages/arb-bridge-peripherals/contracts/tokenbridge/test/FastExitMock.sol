@@ -20,12 +20,25 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../misc/L1PassiveFastExitManager.sol";
+import "../libraries/IERC677.sol";
 
-contract FastExitMock is IExitLiquidityProvider {
+contract FastExitMock is IExitLiquidityProvider, IERC677Receiver {
     uint256 fee = 0;
+    bytes constant RETVALUE = "0x1234";
 
     function setFee(uint256 _fee) external {
         fee = _fee;
+    }
+
+    event Triggered();
+
+    function onTokenTransfer(
+        address _sender,
+        uint256 _value,
+        bytes memory _data
+    ) external override {
+        require(keccak256(_data) == keccak256(RETVALUE), "WRONG_DATA");
+        emit Triggered();
     }
 
     function requestLiquidity(
@@ -34,8 +47,10 @@ contract FastExitMock is IExitLiquidityProvider {
         uint256 amount,
         uint256 exitNum,
         bytes calldata liquidityProof
-    ) external override {
+    ) external override returns (bytes memory) {
         require(amount > fee, "UNDERFLOW");
         IERC20(erc20).transfer(dest, amount - fee);
+        // new exit will now call fast exit mock with this data
+        return RETVALUE;
     }
 }

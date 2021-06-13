@@ -32,7 +32,13 @@ interface ITradeableExitReceiver {
 
 abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
     address internal constant USED_ADDRESS = address(0x01);
-    mapping(bytes32 => address) public redirectedExits;
+
+    struct ExitData {
+        address _newTo;
+        bytes _newData;
+    }
+
+    mapping(bytes32 => ExitData) public redirectedExits;
 
     function _initialize(
         address _l2Counterpart,
@@ -46,6 +52,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         address indexed from,
         address indexed to,
         uint256 indexed exitNum,
+        bytes newData,
         bytes data,
         bool madeExternalCall
     );
@@ -58,19 +65,24 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
      * @param _exitNum Sequentially increasing exit counter determined by the L2 bridge
      * @param _initialDestination address the L2 withdrawal call initially set as the destination.
      * @param _newDestination address the L1 will now call instead of the previously set destination
+     * @param _newData data to be used in inboundEscrowAndCall
      * @param _data optional data for external call upon transfering the exit
      */
     function transferExitAndCall(
         uint256 _exitNum,
         address _initialDestination,
         address _newDestination,
+        bytes calldata _newData,
         bytes calldata _data
     ) external virtual {
+        // the initial data doesn't make a difference when transfering you exit
+        // since the L2 bridge gives a unique exit ID to each exit
+        (address expectedSender, ) = getExternalCall(_exitNum, _initialDestination, "");
+
         // if you want to transfer your exit, you must be the current destination
-        address expectedSender = getCurrentDestination(_exitNum, _initialDestination);
         require(msg.sender == expectedSender, "NOT_EXPECTED_SENDER");
 
-        updateDestination(_exitNum, _initialDestination, _newDestination);
+        setRedirectedExit(_exitNum, _initialDestination, _newDestination, _newData);
 
         if (_data.length > 0) {
             require(_newDestination.isContract(), "TO_NOT_CONTRACT");
@@ -83,30 +95,37 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
             require(success, "TRANSFER_HOOK_FAIL");
         }
 
-        emit WithdrawRedirected(expectedSender, _newDestination, _exitNum, _data, _data.length > 0);
+        emit WithdrawRedirected(
+            expectedSender,
+            _newDestination,
+            _exitNum,
+            _newData,
+            _data,
+            _data.length > 0
+        );
     }
 
-    function getCurrentDestination(uint256 _exitNum, address _initialDestination)
-        public
-        view
-        virtual
-        override
-        returns (address)
-    {
-        // here we assume the L2 bridge gives a unique exitNum to each exit
-        bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        address redirectedAddress = redirectedExits[withdrawData];
-        require(redirectedAddress != USED_ADDRESS, "ALREADY_EXITED");
-        return redirectedAddress == address(0) ? _initialDestination : redirectedAddress;
-    }
-
-    function updateDestination(
+    function getExternalCall(
         uint256 _exitNum,
         address _initialDestination,
-        address _newDestination
+        bytes memory _initialData
+    ) public view virtual override returns (address target, bytes memory data) {
+        bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
+        ExitData memory exit = redirectedExits[withdrawData];
+        require(exit._newTo != USED_ADDRESS, "ALREADY_EXITED");
+        target = exit._newTo == address(0) ? _initialDestination : exit._newTo;
+        data = exit._newData;
+        return (target, data);
+    }
+
+    function setRedirectedExit(
+        uint256 _exitNum,
+        address _initialDestination,
+        address _newDestination,
+        bytes memory _newData
     ) internal virtual {
         bytes32 withdrawData = encodeWithdrawal(_exitNum, _initialDestination);
-        redirectedExits[withdrawData] = _newDestination;
+        redirectedExits[withdrawData] = ExitData(_newDestination, _newData);
     }
 
     function encodeWithdrawal(uint256 _exitNum, address _initialDestination)
@@ -115,6 +134,7 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
         virtual
         returns (bytes32)
     {
+        // here we assume the L2 bridge gives a unique exitNum to each exit
         return keccak256(abi.encode(_exitNum, _initialDestination));
     }
 }
