@@ -47,10 +47,14 @@ type ClientManager struct {
 	cacheSize         int32
 	pool              *gopool.Pool
 	poller            netpoll.Poller
-	broadcastChan     chan *BroadcastMessage
-	clientAdd         chan *ClientConnection
-	clientRemove      chan *ClientConnection
+	broadcastChan     chan BroadcastMessage
+	clientAction      chan ClientConnectionAction
 	settings          ClientManagerSettings
+}
+
+type ClientConnectionAction struct {
+	cc     *ClientConnection
+	create bool
 }
 
 func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientManagerSettings) *ClientManager {
@@ -58,14 +62,14 @@ func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientM
 		poller:        poller,
 		pool:          pool,
 		clientPtrMap:  make(map[*ClientConnection]bool),
-		broadcastChan: make(chan *BroadcastMessage, 1),
-		clientAdd:     make(chan *ClientConnection, 128),
-		clientRemove:  make(chan *ClientConnection, 128),
+		broadcastChan: make(chan BroadcastMessage, 1),
+		clientAction:  make(chan ClientConnectionAction, 128),
 		settings:      settings,
 	}
 }
 
 func (cm *ClientManager) registerClient(clientConnection *ClientConnection) error {
+	start := time.Now()
 	if len(cm.broadcastMessages) > 0 {
 		// send the newly connected client all the messages we've got...
 		bm := BroadcastMessage{
@@ -75,6 +79,7 @@ func (cm *ClientManager) registerClient(clientConnection *ClientConnection) erro
 
 		err := clientConnection.write(bm)
 		if err != nil {
+			logger.Error().Err(err).Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
 			return err
 		}
 	}
@@ -82,40 +87,32 @@ func (cm *ClientManager) registerClient(clientConnection *ClientConnection) erro
 	cm.clientPtrMap[clientConnection] = true
 
 	clientConnection.Start()
+	logger.Info().Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("client registered")
 
 	return nil
 }
 
 // Register registers new connection as a Client.
 func (cm *ClientManager) Register(ctx context.Context, conn net.Conn, desc *netpoll.Desc) *ClientConnection {
-	clientConnection := NewClientConnection(ctx, conn, desc, cm)
+	createClient := ClientConnectionAction{
+		NewClientConnection(ctx, conn, desc, cm),
+		true,
+	}
 
-	cm.clientAdd <- clientConnection
+	cm.clientAction <- createClient
 
-	return clientConnection
+	return createClient.cc
 }
 
 // removeAll removes all clients after main ClientManager thread exits
 func (cm *ClientManager) removeAll() {
-	// Make copy of list because the remove() affects the client list held by the instance
-	clientList := make([]*ClientConnection, len(cm.clientPtrMap))
-	var i uint64
+	// Only called after main ClientManager thread exits, so remove client directly
 	for client := range cm.clientPtrMap {
-		clientList[i] = client
-		i++
-	}
-
-	// Only called after main ClientManager thread exits, so use removeClient directly
-	for _, client := range clientList {
-		cm.removeClient(client)
+		cm.removeClientImpl(client)
 	}
 }
 
-func (cm *ClientManager) removeClient(clientConnection *ClientConnection) bool {
-	if !cm.clientPtrMap[clientConnection] {
-		return false
-	}
-
+func (cm *ClientManager) removeClientImpl(clientConnection *ClientConnection) bool {
 	clientConnection.Stop()
 
 	err := cm.poller.Stop(clientConnection.desc)
@@ -129,16 +126,27 @@ func (cm *ClientManager) removeClient(clientConnection *ClientConnection) bool {
 		logger.Warn().Err(err).Msg("Failed to close client connection")
 	}
 
-	delete(cm.clientPtrMap, clientConnection)
-
-	// TODO: properly close file descriptor
-	//_ = clientConnection.desc.Close()
-
 	return true
 }
 
+func (cm *ClientManager) removeClient(clientConnection *ClientConnection) bool {
+	if !cm.clientPtrMap[clientConnection] {
+		return false
+	}
+
+	status := cm.removeClientImpl(clientConnection)
+
+	// Delete from map even if error occurred
+	delete(cm.clientPtrMap, clientConnection)
+
+	return status
+}
+
 func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
-	cm.clientRemove <- clientConnection
+	cm.clientAction <- ClientConnectionAction{
+		clientConnection,
+		false,
+	}
 }
 
 func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
@@ -150,13 +158,11 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
 		},
 	}
 
-	cm.broadcastChan <- &bm
+	cm.broadcastChan <- bm
 }
 
 // Broadcast sends batch item to all clients.
 func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
-
 	var broadcastMessages []*BroadcastFeedMessage
 
 	msg := BroadcastFeedMessage{
@@ -174,7 +180,7 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 		Messages: broadcastMessages,
 	}
 
-	cm.broadcastChan <- &bm
+	cm.broadcastChan <- bm
 
 	return nil
 }
@@ -261,11 +267,9 @@ func (cm *ClientManager) verifyClients() {
 		}
 	}
 
-	if len(deadClientList) > 0 {
-		logger.Debug().Int("count", len(deadClientList)).Msg("disconnecting timed out clients")
-		for _, deadClient := range deadClientList {
-			cm.Remove(deadClient)
-		}
+	for _, deadClient := range deadClientList {
+		logger.Debug().Str("client", deadClient.name).Msg("disconnecting because connection timed out")
+		cm.Remove(deadClient)
 	}
 
 	// Send ping to all remaining clients
@@ -296,26 +300,24 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 			select {
 			case <-ctx.Done():
 				return
-			case clientConnection := <-cm.clientAdd:
-				err := cm.registerClient(clientConnection)
-				if err != nil {
-					logger.Error().Err(err).Str("client", clientConnection.name).Msg("Failed to register client")
-					close(clientConnection.out)
+			case clientAction := <-cm.clientAction:
+				if clientAction.create {
+					err := cm.registerClient(clientAction.cc)
+					if err != nil {
+						// Log message already output in registerClient
+						cm.removeClientImpl(clientAction.cc)
+					}
+				} else {
+					cm.removeClient(clientAction.cc)
 				}
-			case clientConnection := <-cm.clientRemove:
-				cm.removeClient(clientConnection)
 			case bm := <-cm.broadcastChan:
-				err := cm.doBroadcast(bm)
+				err := cm.doBroadcast(&bm)
 				if err != nil {
-					logger.Error().Err(err).Msg("Failed to do broadcast")
+					logger.Error().Err(err).Msg("failed to do broadcast")
 				}
 				atomic.StoreInt32(&cm.cacheSize, int32(len(cm.broadcastMessages)))
-			case <-time.After(cm.settings.ClientPingInterval / 2):
-			}
-			select {
 			case <-pingInterval.C:
 				cm.verifyClients()
-			default:
 			}
 		}
 	}()

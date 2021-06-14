@@ -24,6 +24,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gobwas/ws"
@@ -31,8 +32,9 @@ import (
 	"github.com/mailru/easygo/netpoll"
 )
 
-const MaxSendCount = 10
-const MaxSendQueue = 20
+// MaxSendQueue is the maximum number of items in a clients out channel before client gets disconnected.
+// If set too low, a burst of items will cause all clients to be disconnected
+const MaxSendQueue = 1000
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
@@ -44,10 +46,9 @@ type ClientConnection struct {
 	name          string
 	clientManager *ClientManager
 
-	timeoutMutex sync.Mutex
-	lastHeard    time.Time
-	cancelFunc   context.CancelFunc
-	out          chan []byte
+	lastHeardUnix int64
+	cancelFunc    context.CancelFunc
+	out           chan []byte
 }
 
 func NewClientConnection(ctx context.Context, conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
@@ -57,7 +58,7 @@ func NewClientConnection(ctx context.Context, conn net.Conn, desc *netpoll.Desc,
 		desc:          desc,
 		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
-		lastHeard:     time.Now(),
+		lastHeardUnix: time.Now().Unix(),
 		out:           make(chan []byte, MaxSendQueue),
 	}
 }
@@ -78,7 +79,14 @@ func (cc *ClientConnection) Start() {
 				if err != nil {
 					logger.Error().Err(err).Str("client", cc.name).Msg("error writing data to client")
 					cc.clientManager.Remove(cc)
-					return
+					for {
+						// Consume and ignore channel data until client properly stopped to prevent deadlock
+						select {
+						case <-ctx.Done():
+							return
+						case <-cc.out:
+						}
+					}
 				}
 			}
 		}
@@ -86,14 +94,16 @@ func (cc *ClientConnection) Start() {
 }
 
 func (cc *ClientConnection) Stop() {
-	cc.cancelFunc()
+	if cc.cancelFunc != nil {
+		cc.cancelFunc()
+	} else {
+		// If client connection never started, need to close channel
+		close(cc.out)
+	}
 }
 
 func (cc *ClientConnection) GetLastHeard() time.Time {
-	cc.timeoutMutex.Lock()
-	defer cc.timeoutMutex.Unlock()
-
-	return cc.lastHeard
+	return time.Unix(atomic.LoadInt64(&cc.lastHeardUnix), 0)
 }
 
 // Receive reads next message from client's underlying connection.
@@ -113,15 +123,13 @@ func (cc *ClientConnection) readRequest() error {
 	cc.ioMutex.Lock()
 	defer cc.ioMutex.Unlock()
 
-	cc.timeoutMutex.Lock()
-	cc.lastHeard = time.Now()
-	cc.timeoutMutex.Unlock()
+	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
 	h, r, err := wsutil.NextReader(cc.conn, ws.StateServerSide)
+	if h.OpCode.IsControl() {
+		return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
+	}
 	if err != nil {
-		if h.OpCode.IsControl() {
-			return wsutil.ControlFrameHandler(cc.conn, ws.StateServerSide)(h, r)
-		}
 
 		return err
 	}

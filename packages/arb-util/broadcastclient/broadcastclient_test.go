@@ -18,10 +18,11 @@ func TestReceiveMessages(t *testing.T) {
 		Queue:                   1,
 		IoReadWriteTimeout:      2 * time.Second,
 		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+		ClientNoResponseTimeout: 30 * time.Second,
 	}
 
-	messageCount := 10
+	messageCount := 1000
+	messageDelay := 0 * time.Millisecond
 	clientCount := 2
 
 	b := broadcaster.NewBroadcaster(broadcasterSettings)
@@ -33,7 +34,7 @@ func TestReceiveMessages(t *testing.T) {
 	defer b.Stop()
 
 	// this will send test messages to the clients at an interval
-	tmb := broadcaster.NewRandomMessageGenerator(messageCount, 100*time.Nanosecond)
+	tmb := broadcaster.NewRandomMessageGenerator(messageCount, messageDelay)
 	tmb.SetBroadcaster(b)
 
 	var wg sync.WaitGroup
@@ -68,16 +69,14 @@ func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expe
 		defer wg.Done()
 		for {
 			select {
-			case receivedMsg := <-messageReceiver:
-				t.Logf("Client %d received Message %d, Sequence Message: %v\n", index, messageCount, receivedMsg.FeedItem.BatchItem.SequencerMessage)
+			case <-messageReceiver:
 				messageCount++
 
 				if messageCount == expectedCount {
 					broadcastClient.Close()
 					return
 				}
-			case confirmedAccumulator := <-accListener:
-				t.Logf("Client %d received confirmedAccumulator, Sequence Message: %v\n", index, confirmedAccumulator.ShortString())
+			case <-accListener:
 			case <-time.After(60 * time.Second):
 				t.Errorf("Client %d expected %d meesages, only got %d messages\n", index, expectedCount, messageCount)
 				return
