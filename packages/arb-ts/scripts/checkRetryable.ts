@@ -1,7 +1,6 @@
 import { Bridge, BridgeHelper } from '../src'
 import { providers, Wallet } from 'ethers'
 import { ArbRetryableTx__factory } from 'arb-ts/src/lib/abi/factories/ArbRetryableTx__factory'
-// import { L2GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L2GatewayRouter__factory'
 
 const l1Hash =
   '0x9945b0773f0da582f729507b018c25c0e2f34baa46663926e497d07a34eb9b37'
