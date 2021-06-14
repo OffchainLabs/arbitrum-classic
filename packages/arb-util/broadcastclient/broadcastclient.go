@@ -138,12 +138,6 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					continue
 				}
 
-				if len(res.Messages) > 0 {
-					logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
-				} else {
-					logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
-				}
-
 				if res.Version == 1 {
 					for _, message := range res.Messages {
 						messageReceiver <- *message
@@ -189,16 +183,17 @@ func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte
 		}
 
 		header, err := reader.NextFrame()
+		if header.OpCode.IsControl() {
+			// Control packet may be returned even if err set
+			if err2 := controlHandler(header, &reader); err != nil {
+				return nil, 0, err2
+			}
+			continue
+		}
 		if err != nil {
 			return nil, 0, err
 		}
 
-		if header.OpCode.IsControl() {
-			if err := controlHandler(header, &reader); err != nil {
-				return nil, 0, err
-			}
-			continue
-		}
 		if header.OpCode != ws.OpText &&
 			header.OpCode != ws.OpBinary {
 			if err := reader.Discard(); err != nil {
