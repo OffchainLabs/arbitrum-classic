@@ -85,20 +85,19 @@ func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *C
 		}
 	}
 
+	clientConnection.Start(ctx)
 	cm.clientPtrMap[clientConnection] = true
-
-	clientConnection.Start()
-	logger.Info().Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("client registered")
-
 	atomic.AddInt32(&cm.clientCount, 1)
+
+	logger.Info().Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("client registered")
 
 	return nil
 }
 
 // Register registers new connection as a Client.
-func (cm *ClientManager) Register(ctx context.Context, conn net.Conn, desc *netpoll.Desc) *ClientConnection {
+func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConnection {
 	createClient := ClientConnectionAction{
-		NewClientConnection(ctx, conn, desc, cm),
+		NewClientConnection(conn, desc, cm),
 		true,
 	}
 
