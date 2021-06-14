@@ -12,8 +12,8 @@ const connectedL1Wallet = new Wallet(myPrivateKey, ethProvider)
 const connectedL2Wallet = new Wallet(myPrivateKey, arbProvider)
 
 const bridge = new Bridge(
-  erc20BridgeAddress,
-  arbTokenBridgeAddress,
+  l1GatewayRouter,
+  l2GatewayRouter,
   connectedL1Wallet,
   connectedL2Wallet
 )
@@ -27,7 +27,7 @@ See [integration tests](https://github.com/OffchainLabs/arbitrum/blob/develop/pa
 
 `yarn test:integration`
 
-Defaults to `kovan4`, for custom network use `--network` flag.
+Defaults to `rinkArby`, for custom network use `--network` flag.
 
-`kovan4` expects env var `DEVNET_PRIVKEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+`rinkArby` expects env var `DEVNET_PRIVKEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
