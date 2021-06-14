@@ -36,7 +36,7 @@ func TestBroadcasterLoad(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := Settings{
-		Addr:                    ":9642",
+		Addr:                    ":9942",
 		Workers:                 128,
 		Queue:                   1,
 		IoReadWriteTimeout:      2 * time.Second,
@@ -69,7 +69,7 @@ func TestBroadcasterLoad(t *testing.T) {
 
 func startReceiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 	messagesReceived := 0
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
+	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9942/")
 	if err != nil {
 		t.Errorf("%d can not connect: %v\n", i, err)
 		return
