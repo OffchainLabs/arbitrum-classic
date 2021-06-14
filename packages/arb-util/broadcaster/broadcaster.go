@@ -92,6 +92,10 @@ func NewBroadcaster(settings Settings) *Broadcaster {
 	}
 }
 
+func (b *Broadcaster) ClientCount() int32 {
+	return b.clientManager.ClientCount()
+}
+
 func (b *Broadcaster) Start(ctx context.Context) error {
 	b.startBroadcasterMutex.Lock()
 	defer b.startBroadcasterMutex.Unlock()
