@@ -88,37 +88,34 @@ func startReceiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 
 		var prevAcc common.Hash
 
-		//t.Logf("%d connected\n", i)
-
 		for {
-			msg, op, err := wsutil.ReadServerData(conn)
+			msg, _, err := wsutil.ReadServerData(conn)
 			if err != nil {
 				t.Errorf("%d can not receive: %v\n", i, err)
 				return
-			} else {
-				res := BroadcastMessage{}
-				err = json.Unmarshal(msg, &res)
-				if err != nil {
-					t.Errorf("%d error unmarshalling message: %s\n", i, err)
-					return
-				}
-				messagesReceived += len(res.Messages)
-				for i := range res.Messages {
-					msg := res.Messages[i]
-					if prevAcc == common.HexToHash("0x0") || prevAcc == msg.FeedItem.PrevAcc {
-						prevAcc = msg.FeedItem.BatchItem.Accumulator
-					} else if prevAcc == msg.FeedItem.BatchItem.Accumulator {
-						t.Logf("Duplicate message received: current: %v, client: %v\n", msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
-					} else {
+			}
 
-						t.Errorf("Message received out of order: previous: %v, expected previous: %v, current: %v, client: %v\n", prevAcc, msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
-					}
+			res := BroadcastMessage{}
+			err = json.Unmarshal(msg, &res)
+			if err != nil {
+				t.Errorf("%d error unmarshalling message: %s\n", i, err)
+				return
+			}
+			messagesReceived += len(res.Messages)
+			for i := range res.Messages {
+				msg := res.Messages[i]
+				if prevAcc == common.HexToHash("0x0") || prevAcc == msg.FeedItem.PrevAcc {
+					prevAcc = msg.FeedItem.BatchItem.Accumulator
+				} else if prevAcc == msg.FeedItem.BatchItem.Accumulator {
+					t.Logf("Duplicate message received: current: %v, client: %v\n", msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
+				} else {
+
+					t.Errorf("Message received out of order: previous: %v, expected previous: %v, current: %v, client: %v\n", prevAcc, msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
 				}
-				_ = op
-				//t.Logf("%d receive: %v，type: %v\n", i, res, op)
-				if messagesReceived == MessageCount {
-					break
-				}
+			}
+
+			if messagesReceived == MessageCount {
+				break
 			}
 		}
 

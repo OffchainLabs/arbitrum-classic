@@ -45,7 +45,6 @@ func TestReceiveMessages(t *testing.T) {
 
 	errChan := tmb.Start(ctx)
 	wg.Wait()
-	//tmb.Stop()
 
 	select {
 	case err := <-errChan:
@@ -67,13 +66,13 @@ func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expe
 
 	go func() {
 		defer wg.Done()
+		defer broadcastClient.Close()
 		for {
 			select {
 			case <-messageReceiver:
 				messageCount++
 
 				if messageCount == expectedCount {
-					broadcastClient.Close()
 					return
 				}
 			case <-accListener:
@@ -273,7 +272,7 @@ func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex 
 		case receivedMsg := <-testClient:
 			t.Logf("client %d received first message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
 		case <-time.After(10 * time.Second):
-			t.Logf("client %d did not receive first batch item\n", clientIndex)
+			t.Errorf("client %d did not receive first batch item\n", clientIndex)
 			return
 		}
 
@@ -282,7 +281,7 @@ func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex 
 		case receivedMsg := <-testClient:
 			t.Logf("client %d received second message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
 		case <-time.After(10 * time.Second):
-			t.Logf("client %d did not receive second batch item\n", clientIndex)
+			t.Errorf("client %d did not receive second batch item\n", clientIndex)
 			return
 		}
 	}()
