@@ -93,11 +93,15 @@ To help illustrate what this looks like in practice, let's go through the steps 
 
 Note that arbSomeERC20Token is an instance of StandardArbERC20, which includes `bridgeMint` and `bridgeBurn` methods only callable by the L2ERC20Gateway.
 
+![img](assets/bridge_deposits.png)
+
 #### Withdrawals
 
 1. On Arbitrum, a user calls `L2GatewayRouter.outBoundTransfer`, which in turn calls `outBoundTransfer` on arbSomeERC20Token's gateway (i.e., L2ERC20Gateway).
 1. This burns arbSomeERC20Token tokens, and calls ArbSys with an encoded message to `L1ERC20Gateway.finalizeInboundTransfer`, which will be eventually executed on L1.
 1. After the dispute window expires and the assertion with the user's transaction is confirmed, a user can call `Outbox.executeTransaction`, which in turn calls the encoded `L1ERC20Gateway.finalizeInboundTransfer` message, releasing the user's tokens from the L1ERC20Gateway contract's escrow.
+
+![img](assets/bridge_withdrawals.png)
 
 #### Other Flavors of Gateways
 
