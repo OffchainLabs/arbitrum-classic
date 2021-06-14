@@ -38,22 +38,26 @@ const MaxSendQueue = 1000
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
-	parentCtx context.Context
-	ioMutex   sync.Mutex
-	conn      io.ReadWriteCloser
+	ctx        context.Context
+	cancelFunc context.CancelFunc
+
+	ioMutex sync.Mutex
+	conn    io.ReadWriteCloser
 
 	desc          *netpoll.Desc
 	name          string
 	clientManager *ClientManager
 
 	lastHeardUnix int64
-	cancelFunc    context.CancelFunc
 	out           chan []byte
 }
 
-func NewClientConnection(ctx context.Context, conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+func NewClientConnection(parentCtx context.Context, conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+	ctx, cancelFunc := context.WithCancel(parentCtx)
+
 	return &ClientConnection{
-		parentCtx:     ctx,
+		ctx:           ctx,
+		cancelFunc:    cancelFunc,
 		conn:          conn,
 		desc:          desc,
 		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
@@ -64,15 +68,12 @@ func NewClientConnection(ctx context.Context, conn net.Conn, desc *netpoll.Desc,
 }
 
 func (cc *ClientConnection) Start() {
-	ctx, cancelFunc := context.WithCancel(cc.parentCtx)
-	cc.cancelFunc = cancelFunc
-
 	go func() {
-		defer cancelFunc()
+		defer cc.cancelFunc()
 		defer close(cc.out)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-cc.ctx.Done():
 				return
 			case data := <-cc.out:
 				err := cc.writeRaw(data)
@@ -82,7 +83,7 @@ func (cc *ClientConnection) Start() {
 					for {
 						// Consume and ignore channel data until client properly stopped to prevent deadlock
 						select {
-						case <-ctx.Done():
+						case <-cc.ctx.Done():
 							return
 						case <-cc.out:
 						}

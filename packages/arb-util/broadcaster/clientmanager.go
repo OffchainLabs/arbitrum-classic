@@ -69,7 +69,7 @@ func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientM
 	}
 }
 
-func (cm *ClientManager) registerClient(clientConnection *ClientConnection) error {
+func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *ClientConnection) error {
 	start := time.Now()
 	if len(cm.broadcastMessages) > 0 {
 		// send the newly connected client all the messages we've got...
@@ -305,7 +305,7 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 				return
 			case clientAction := <-cm.clientAction:
 				if clientAction.create {
-					err := cm.registerClient(clientAction.cc)
+					err := cm.registerClient(ctx, clientAction.cc)
 					if err != nil {
 						// Log message already output in registerClient
 						cm.removeClientImpl(clientAction.cc)

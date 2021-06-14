@@ -77,7 +77,6 @@ func TestRelayRebroadcasts(t *testing.T) {
 
 	errChan := tmb.Start(ctx)
 	wg.Wait()
-	//tmb.Stop()
 
 	select {
 	case err := <-errChan:

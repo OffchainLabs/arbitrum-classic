@@ -182,6 +182,7 @@ func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte
 			return nil, 0, err
 		}
 
+		// Control packet may be returned even if err set
 		header, err := reader.NextFrame()
 		if header.OpCode.IsControl() {
 			// Control packet may be returned even if err set
