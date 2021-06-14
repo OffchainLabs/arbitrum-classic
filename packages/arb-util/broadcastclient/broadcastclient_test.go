@@ -181,7 +181,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9642",
+		Addr:                    ":9842",
 		Workers:                 128,
 		Queue:                   1,
 		IoReadWriteTimeout:      2 * time.Second,
@@ -255,7 +255,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 }
 
 func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex int, wg *sync.WaitGroup) {
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9642/", nil, 60*time.Second)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", nil, 60*time.Second)
 	testClient, err := broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
