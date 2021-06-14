@@ -87,7 +87,6 @@ func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expe
 }
 
 func TestServerClientDisconnect(t *testing.T) {
-	t.Skip()
 	ctx := context.Background()
 
 	broadcasterSettings := broadcaster.Settings{
@@ -128,20 +127,18 @@ func TestServerClientDisconnect(t *testing.T) {
 
 	broadcastClient.Close()
 
-	/* TODO
 	disconnectTimeout := time.After(5 * time.Second)
 	for {
-		if b.ClientConnectionCount() == 0 {
+		if b.ClientCount() == 0 {
 			break
 		}
 
 		select {
 		case <-disconnectTimeout:
-			t.Fatal("Client did not receive batch item")
+			t.Fatal("Client was not disconnected")
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-	*/
 }
 
 func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {

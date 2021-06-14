@@ -43,6 +43,7 @@ type ClientManagerSettings struct {
 type ClientManager struct {
 	cancelFunc        context.CancelFunc
 	clientPtrMap      map[*ClientConnection]bool
+	clientCount       int32
 	broadcastMessages []*BroadcastFeedMessage
 	cacheSize         int32
 	pool              *gopool.Pool
@@ -89,6 +90,8 @@ func (cm *ClientManager) registerClient(clientConnection *ClientConnection) erro
 	clientConnection.Start()
 	logger.Info().Str("client", clientConnection.name).Str("elapsed", time.Since(start).String()).Msg("client registered")
 
+	atomic.AddInt32(&cm.clientCount, 1)
+
 	return nil
 }
 
@@ -112,13 +115,12 @@ func (cm *ClientManager) removeAll() {
 	}
 }
 
-func (cm *ClientManager) removeClientImpl(clientConnection *ClientConnection) bool {
+func (cm *ClientManager) removeClientImpl(clientConnection *ClientConnection) {
 	clientConnection.Stop()
 
 	err := cm.poller.Stop(clientConnection.desc)
 	if err != nil {
 		logger.Warn().Err(err).Msg("Failed to stop poller")
-		return false
 	}
 
 	err = clientConnection.conn.Close()
@@ -126,20 +128,17 @@ func (cm *ClientManager) removeClientImpl(clientConnection *ClientConnection) bo
 		logger.Warn().Err(err).Msg("Failed to close client connection")
 	}
 
-	return true
+	atomic.AddInt32(&cm.clientCount, -1)
 }
 
-func (cm *ClientManager) removeClient(clientConnection *ClientConnection) bool {
+func (cm *ClientManager) removeClient(clientConnection *ClientConnection) {
 	if !cm.clientPtrMap[clientConnection] {
-		return false
+		return
 	}
 
-	status := cm.removeClientImpl(clientConnection)
+	cm.removeClientImpl(clientConnection)
 
-	// Delete from map even if error occurred
 	delete(cm.clientPtrMap, clientConnection)
-
-	return status
 }
 
 func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
@@ -147,6 +146,10 @@ func (cm *ClientManager) Remove(clientConnection *ClientConnection) {
 		clientConnection,
 		false,
 	}
+}
+
+func (cm *ClientManager) ClientCount() int32 {
+	return atomic.LoadInt32(&cm.clientCount)
 }
 
 func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
