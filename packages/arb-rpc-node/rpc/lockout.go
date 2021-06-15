@@ -159,6 +159,18 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			b.mutex.Unlock()
 			holdingMutex = false
 		}
+		refreshDelay := time.Millisecond * 100
+		if b.currentBatcher == b.sequencerBatcher {
+			lockoutRefresh := b.lockoutExpiresAt.Add(time.Second * -10).Sub(time.Now())
+			if lockoutRefresh > refreshDelay {
+				refreshDelay = lockoutRefresh
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(refreshDelay):
+		}
 	}
 }
 
