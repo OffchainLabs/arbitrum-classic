@@ -92,6 +92,10 @@ func NewBroadcaster(settings Settings) *Broadcaster {
 	}
 }
 
+func (b *Broadcaster) ClientCount() int32 {
+	return b.clientManager.ClientCount()
+}
+
 func (b *Broadcaster) Start(ctx context.Context) error {
 	b.startBroadcasterMutex.Lock()
 	defer b.startBroadcasterMutex.Unlock()
@@ -114,8 +118,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		ClientNoResponseTimeout: b.settings.ClientNoResponseTimeout,
 	}
 	var clientManager = NewClientManager(pool, b.poller, cmSettings)
-	clientManager.startWriter(ctx)
-	clientManager.startVerifier(ctx)
+	clientManager.Start(ctx)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 
@@ -150,7 +153,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		}
 
 		// Register incoming client in clientManager.
-		client := clientManager.Register(ctx, safeConn, desc)
+		client := clientManager.Register(safeConn, desc)
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {
@@ -261,10 +264,6 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	return nil
 }
 
-func (b *Broadcaster) ClientConnectionCount() int {
-	return b.clientManager.ClientConnectionCount()
-}
-
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
@@ -286,18 +285,12 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.Sequence
 	return nil
 }
 
-func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {
-	err := b.clientManager.confirmedAccumulator(accumulator)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
+	b.clientManager.confirmedAccumulator(accumulator)
 }
 
-func (b *Broadcaster) messageCacheCount() int {
-	count := len(b.clientManager.broadcastMessages)
-	return count
+func (b *Broadcaster) MessageCacheCount() int {
+	return b.clientManager.MessageCacheCount()
 }
 
 func (b *Broadcaster) Stop() {
@@ -316,7 +309,7 @@ func (b *Broadcaster) Stop() {
 		logger.Warn().Err(err).Msg("error in acceptDesc.Close")
 	}
 
-	b.clientManager.RemoveAll()
+	b.clientManager.Stop()
 	b.broadcasterStarted = false
 }
 

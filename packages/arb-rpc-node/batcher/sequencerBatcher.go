@@ -648,10 +648,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 		if b.feedBroadcaster != nil {
 			// Confirm feed messages that are already on chain
-			err = b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
-			if err != nil {
-				logger.Warn().Err(err).Msg("error broadcasting confirmed accumulator")
-			}
+			b.feedBroadcaster.ConfirmedAccumulator(lastAcc)
 		}
 
 		if b.logBatchGasCosts {
