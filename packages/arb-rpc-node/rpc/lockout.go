@@ -176,7 +176,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 
 func (b *LockoutBatcher) ShouldSequence() bool {
 	b.mutex.RLock()
-	b.mutex.RUnlock()
+	defer b.mutex.RUnlock()
 	return b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.Before(time.Now())
 }
 
