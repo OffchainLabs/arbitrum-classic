@@ -95,7 +95,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external virtual returns (uint256) {
+    ) external payable virtual returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
 
@@ -130,7 +130,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external virtual returns (uint256) {
+    ) external payable virtual returns (uint256) {
         require(msg.sender == owner, "ONLY_OWNER");
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 
