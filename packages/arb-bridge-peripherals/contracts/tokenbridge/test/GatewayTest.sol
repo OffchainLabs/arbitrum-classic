@@ -74,8 +74,8 @@ abstract contract L2ArbitrumTestMessenger is L2ArbitrumMessenger {
 }
 
 contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+        return _target == counterpartGateway;
     }
 
     function sendTxToL2(
@@ -103,8 +103,8 @@ contract L1GatewayTester is L1ArbitrumTestMessenger, L1ERC20Gateway {
 }
 
 contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+        return _target == counterpartGateway;
     }
 
     function sendTxToL1(
@@ -122,8 +122,8 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
 }
 
 contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+        return _target == counterpartGateway;
     }
 
     function sendTxToL2(
@@ -151,8 +151,8 @@ contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
 }
 
 contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+        return _target == counterpartGateway;
     }
 
     function sendTxToL1(
@@ -170,8 +170,8 @@ contract L2CustomGatewayTester is L2ArbitrumTestMessenger, L2CustomGateway {
 }
 
 contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+        return _target == counterpartGateway;
     }
 
     function sendTxToL2(
@@ -199,8 +199,8 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
 }
 
 contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+        return _target == counterpartGateway;
     }
 
     function sendTxToL1(

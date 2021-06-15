@@ -19,18 +19,16 @@
 pragma solidity ^0.6.11;
 
 import "./ITokenGateway.sol";
+import "./IGatewayRouter.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 abstract contract TokenGateway is ITokenGateway {
+    using Address for address;
     address public counterpartGateway;
-    address public router;
+    address public STORAGE_GAP;
 
     modifier onlyCounterpartGateway {
-        require(isSenderCounterpartGateway(), "ONLY_COUNTERPART_GATEWAY");
-        _;
-    }
-
-    modifier onlyRouter {
-        require(isSenderRouter(), "ONLY_ROUTER");
+        require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 
@@ -38,7 +36,7 @@ abstract contract TokenGateway is ITokenGateway {
         require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
         require(counterpartGateway == address(0), "ALREADY_INIT");
         counterpartGateway = _counterpartGateway;
-        router = _router;
+        // TODO: remove _router parameter
     }
 
     /**
@@ -68,9 +66,26 @@ abstract contract TokenGateway is ITokenGateway {
      */
     function _calculateL2TokenAddress(address l1ERC20) internal view virtual returns (address);
 
-    function isSenderRouter() internal view virtual returns (bool);
+    bytes internal constant BYTES_ONE = abi.encode(true);
 
-    function isSenderCounterpartGateway() internal view virtual returns (bool);
+    function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
+        (bool success, bytes memory ret) =
+            _target.staticcall(abi.encodeWithSelector(IGatewayRouter.isRouter.selector));
+
+        if (!_target.isContract()) return false;
+        if (!success) return false;
+
+        // if calling an EOA the default value of this will be 0
+        assembly {
+            isTargetRouter := mload(ret)
+        }
+
+        return isTargetRouter;
+    }
+
+    function isCounterpartGateway(address _target) internal view virtual returns (bool) {
+        return _target == counterpartGateway;
+    }
 
     function outboundTransfer(
         address _token,

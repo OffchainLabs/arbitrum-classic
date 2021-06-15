@@ -77,7 +77,6 @@ contract L2CustomGateway is L2ArbitrumGateway {
         view
         virtual
         override
-        onlyRouter
         returns (address)
     {
         // will revert if not called by router

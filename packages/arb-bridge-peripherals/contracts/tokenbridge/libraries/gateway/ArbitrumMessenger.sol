@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
 
 abstract contract L1ArbitrumMessenger {
@@ -47,6 +48,14 @@ abstract contract L1ArbitrumMessenger {
             );
         emit TxToL2(_user, _to, seqNum, _data);
         return seqNum;
+    }
+
+    function getL2ToL1Sender(address _inbox) internal view virtual returns (address) {
+        IOutbox outbox = IOutbox(IInbox(_inbox).bridge().activeOutbox());
+        address l2ToL1Sender = outbox.l2ToL1Sender();
+
+        require(l2ToL1Sender != address(0), "NO_SENDER");
+        return l2ToL1Sender;
     }
 }
 

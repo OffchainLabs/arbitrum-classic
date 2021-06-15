@@ -265,15 +265,9 @@ describe('Bridge peripherals layer 1', () => {
     await token.mint()
     await token.approve(testBridge.address, tokenAmount)
 
-    let data = ethers.utils.defaultAbiCoder.encode(
+    const data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
-    )
-
-    // router usually does this encoding part
-    data = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'bytes'],
-      [accounts[0].address, data]
     )
 
     const tx = await testBridge.outboundTransfer(
@@ -285,6 +279,7 @@ describe('Bridge peripherals layer 1', () => {
       data
     )
     const receipt = await tx.wait()
+    // TicketData(uint256)
     const expectedTopic =
       '0x7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9'
     const logs = receipt.events

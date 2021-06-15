@@ -59,7 +59,6 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         view
         virtual
         override
-        onlyRouter
         returns (address)
     {
         // will revert if not called by router
