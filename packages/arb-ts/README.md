@@ -11,11 +11,11 @@ const arbProvider = new providers.JsonRpcProvider(arbRPC)
 const connectedL1Wallet = new Wallet(myPrivateKey, ethProvider)
 const connectedL2Wallet = new Wallet(myPrivateKey, arbProvider)
 
-const bridge = new Bridge(
-  l1GatewayRouter,
-  l2GatewayRouter,
+const bridge = await Bridge.init(
   connectedL1Wallet,
   connectedL2Wallet
+  l1GatewayRouter,
+  l2GatewayRouter
 )
 
 bridge.depositEth(parseEther('32'))
