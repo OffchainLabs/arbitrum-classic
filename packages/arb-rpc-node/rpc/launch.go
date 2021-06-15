@@ -145,7 +145,6 @@ func SetupBatcher(
 		if err != nil {
 			return nil, errors.Wrap(err, "error starting feed broadcaster")
 		}
-		go seqBatcher.Start(ctx)
 		return seqBatcher, nil
 	default:
 		return nil, errors.New("unexpected batcher type")

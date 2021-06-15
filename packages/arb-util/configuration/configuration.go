@@ -3,6 +3,14 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"io"
+	"math/big"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"time"
+
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/confmap"
@@ -13,13 +21,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
-	"io"
-	"math/big"
-	"net/http"
-	"os"
-	"path"
-	"path/filepath"
-	"time"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
@@ -71,6 +72,10 @@ type Node struct {
 		CreateBatchBlockInterval   int64 `koanf:"create-batch-block-interval"`
 		DelayedMessagesTargetDelay int64 `koanf:"delayed-messages-target-delay"`
 		Enable                     bool  `koanf:"enable"`
+		Lockout                    struct {
+			Redis     string `koanf:"redis"`
+			OwnRPCURL string `koanf:"own-rpc-url"`
+		} `koanf:"lockout"`
 	} `koanf:"sequencer"`
 	WS struct {
 		Addr string `koanf:"addr"`
@@ -148,6 +153,8 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	f.Int64("node.sequencer.create-batch-block-interval", 1, "block interval at which to create new batches")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.Bool("node.sequencer.enable", false, "act as sequencer")
+	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
+	f.String("node.sequencer.lockout.own-rpc-url", "", "own RPC URL for other sequencers to failover to")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.String("node.ws.port", "8548", "websocket port")
 
