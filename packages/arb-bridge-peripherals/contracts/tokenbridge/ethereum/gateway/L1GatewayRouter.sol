@@ -112,7 +112,9 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             l1TokenToGateway[_token[i]] = _gateway[i];
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
-            _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
+            if (_gateway[i] != address(0)) {
+                _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
+            }
         }
 
         bytes memory data =
