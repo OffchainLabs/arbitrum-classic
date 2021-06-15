@@ -15,6 +15,10 @@ export interface TokenBridge {
   l2GatewayRouter: string
   l1ERC20Gateway: string
   l2ERC20Gateway: string
+  l1CustomGateway: string
+  l2CustomGateway: string
+  l1WethGateway: string
+  l2WethGateway: string
   inbox: string
 }
 
@@ -30,6 +34,10 @@ const mainnetBridge: TokenBridge = {
   l2GatewayRouter: '0x29f86A78551Fac44217A8763A45540027c3F7cA5',
   l1ERC20Gateway: '0xEd66239C7400f9C29D9127C5C95c18c03DDF3106',
   l2ERC20Gateway: '0x952A6d5D6757BA28dFe11Fc82d85b5880d300E58',
+  l1CustomGateway: '',
+  l2CustomGateway: '',
+  l1WethGateway: '',
+  l2WethGateway: '',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
 }
 
@@ -38,6 +46,10 @@ const RinkebyBridge: TokenBridge = {
   l2GatewayRouter: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
   l1ERC20Gateway: '0x91169Dbb45e6804743F94609De50D511C437572E',
   l2ERC20Gateway: '0x195C107F3F75c4C93Eba7d9a1312F19305d6375f',
+  l1CustomGateway: '0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2',
+  l2CustomGateway: '0x9b014455AcC2Fe90c52803849d0002aeEC184a06',
+  l1WethGateway: '0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9',
+  l2WethGateway: '0xF90EB31045d5b924900afF29344dEb42EAe0b087',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
 }
 
