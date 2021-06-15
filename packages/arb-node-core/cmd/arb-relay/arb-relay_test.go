@@ -66,7 +66,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 	defer arbRelay.Stop()
 
 	// Create RandomMessageGenerator
-	tmb := broadcaster.NewRandomMessageGenerator(10, 100)
+	tmb := broadcaster.NewRandomMessageGenerator(10, 100*time.Millisecond)
 	tmb.SetBroadcaster(bc)
 
 	var wg sync.WaitGroup
@@ -75,9 +75,14 @@ func TestRelayRebroadcasts(t *testing.T) {
 		go makeRelayClient(t, 10, &wg)
 	}
 
-	tmb.StartWorker()
+	errChan := tmb.Start(ctx)
 	wg.Wait()
-	tmb.StopWorker()
+
+	select {
+	case err := <-errChan:
+		t.Fatal(err)
+	default:
+	}
 }
 
 func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
