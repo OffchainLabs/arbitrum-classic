@@ -134,7 +134,11 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 		reason := ""
 		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
 		if unpackError == nil {
-			err = errors.Errorf("execution reverted: %v", revertReason)
+			if ganacheMode {
+				err = errors.Errorf("VM Exception while processing transaction: revert %v", revertReason)
+			} else {
+				err = errors.Errorf("execution reverted: %v", revertReason)
+			}
 			reason = revertReason
 		}
 

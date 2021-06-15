@@ -46,7 +46,7 @@ func init() {
 	estimateRetryableTicket = parsedABI.Methods["estimateRetryableTicket"]
 }
 
-func HandleNodeInterfaceCall(srv *Server, calldata []byte, blockNum *rpc.BlockNumber) ([]byte, error) {
+func HandleNodeInterfaceCall(srv *Server, calldata []byte, blockNum rpc.BlockNumberOrHash) ([]byte, error) {
 	if len(calldata) < 4 {
 		return nil, errors.New("calldata too short")
 	}
@@ -92,7 +92,7 @@ func handleLookupMessageBatch(srv *aggregator.Server, calldata []byte) ([]byte, 
 	})
 }
 
-func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum *rpc.BlockNumber) ([]byte, error) {
+func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum rpc.BlockNumberOrHash) ([]byte, error) {
 	inputs, err := estimateRetryableTicket.Inputs.Unpack(calldata[4:])
 	if err != nil {
 		return nil, err
@@ -120,7 +120,7 @@ func handleEstimateRetryableTicket(srv *Server, calldata []byte, blockNum *rpc.B
 		Data:              data,
 	}
 
-	snap, err := srv.getSnapshot(blockNum)
+	snap, err := srv.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		return nil, err
 	}

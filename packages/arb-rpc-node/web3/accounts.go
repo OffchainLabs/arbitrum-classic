@@ -3,8 +3,10 @@ package web3
 import (
 	"context"
 	"crypto/ecdsa"
+	"encoding/json"
 	"math/big"
 
+	"github.com/ethersphere/bee/pkg/crypto/eip712"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -72,8 +74,9 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 	if args.Nonce != nil {
 		nonce = uint64(*args.Nonce)
 	} else {
-		pendingNum := rpc.PendingBlockNumber
-		rawNonce, err := s.srv.GetTransactionCount(ctx, &sender, &pendingNum)
+		pending := rpc.PendingBlockNumber
+		block := rpc.BlockNumberOrHash{BlockNumber: &pending}
+		rawNonce, err := s.srv.GetTransactionCount(ctx, &sender, block)
 		if err != nil {
 			s.counter.WithLabelValues("eth_sendTransaction", "false").Inc()
 			return common.Hash{}, err
@@ -135,18 +138,46 @@ func (s *Accounts) SendTransaction(ctx context.Context, args *SendTransactionArg
 }
 
 func (s *Accounts) Sign(account common.Address, data hexutil.Bytes) (hexutil.Bytes, error) {
-	privKey, ok := s.privateKeys[account]
-	if !ok {
-		s.counter.WithLabelValues("eth_sign", "false").Inc()
-		return nil, errors.New("signer does not have unlocked wallet")
-	}
-	sig, err := crypto.Sign(accounts.TextHash(data), privKey)
+	dataHash := accounts.TextHash(data)
+	sig, err := s.signHash(account, dataHash)
 	if err != nil {
 		s.counter.WithLabelValues("eth_sign", "false").Inc()
 		return nil, err
 	}
-	sig[64] += 27
 	s.counter.WithLabelValues("eth_sign", "true").Inc()
+	return sig, nil
+}
+
+func (s *Accounts) SignTypedData_v4(account common.Address, typedData string) (hexutil.Bytes, error) {
+	var typed eip712.TypedData
+	err := json.Unmarshal([]byte(typedData), &typed)
+	if err != nil {
+		return nil, errors.Wrap(err, "json failed")
+	}
+	data, err := eip712.EncodeForSigning(&typed)
+	if err != nil {
+		return nil, err
+	}
+	dataHash := crypto.Keccak256(data)
+	sig, err := s.signHash(account, dataHash)
+	if err != nil {
+		s.counter.WithLabelValues("eth_signTypedData", "false").Inc()
+		return nil, err
+	}
+	s.counter.WithLabelValues("eth_signTypedData", "true").Inc()
+	return sig, err
+}
+
+func (s *Accounts) signHash(account common.Address, dataHash []byte) (hexutil.Bytes, error) {
+	privKey, ok := s.privateKeys[account]
+	if !ok {
+		return nil, errors.New("signer does not have unlocked wallet")
+	}
+	sig, err := crypto.Sign(dataHash, privKey)
+	if err != nil {
+		return nil, err
+	}
+	sig[64] += 27
 	return sig, nil
 }
 
