@@ -23,6 +23,7 @@ arb-validator.Dockerfile
 **/arb-avm-cpp/tests/config.hpp
 **/bridge_eth_addresses.json
 **/keys.json
+**/arb-avm-cpp/cmachine/flags.go
 
 # Logs
 **/logs

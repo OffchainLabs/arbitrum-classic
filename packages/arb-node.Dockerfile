@@ -36,6 +36,11 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
+COPY --chown=user arb-avm-cpp/app /home/user/arb-avm-cpp/app
+RUN cd arb-avm-cpp/build && \
+    cmake .. && \
+    cmake --build . -j $(nproc)
+
 FROM offchainlabs/backend-base:0.3.3 as arb-validator-builder
 
 # Build dependencies
@@ -67,15 +72,15 @@ COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd/arb-relay && \
     cd ../arb-rpc-node && go install -v ./cmd/arb-node && go install -v ./cmd/arb-dev-node
 
-FROM offchainlabs/cpp-base:0.3.2 as arb-validator
-# Export binary
+# FROM offchainlabs/cpp-base:0.3.2 as arb-validator
+# # Export binary
 
-COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
-COPY --chown=user arb-os/arb_os/arbos.mexe /home/user/arb-os/arb_os/
-RUN mkdir -p /home/user/.arbitrum && \
-    chown 1000:1000 /home/user/.arbitrum && \
-    curl https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe --output /home/user/.arbitrum/mainnet.arb1.mexe && \
-    curl https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/.arbitrum/testnet.rinkeby.mexe
+# COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
+# COPY --chown=user arb-os/arb_os/arbos.mexe /home/user/arb-os/arb_os/
+# RUN mkdir -p /home/user/.arbitrum && \
+#     chown 1000:1000 /home/user/.arbitrum && \
+#     curl https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe --output /home/user/.arbitrum/mainnet.arb1.mexe && \
+#     curl https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/.arbitrum/testnet.rinkeby.mexe
 
-ENTRYPOINT ["/home/user/go/bin/arb-node"]
-EXPOSE 8547 8548
+# ENTRYPOINT ["/home/user/go/bin/arb-node"]
+# EXPOSE 8547 8548

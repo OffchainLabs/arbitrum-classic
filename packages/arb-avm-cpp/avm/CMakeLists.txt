@@ -71,12 +71,25 @@ target_include_directories(avm PRIVATE
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
+find_package(gflags CONFIG REQUIRED)
+find_package(ZLIB CONFIG REQUIRED)
+find_package(BZip2 CONFIG REQUIRED)
+find_package(zstd CONFIG REQUIRED)
+find_package(LZ4 CONFIG REQUIRED)
+find_package(Snappy CONFIG REQUIRED)
+
 target_link_libraries(
         avm
 PUBLIC
         avm_values
         data_storage
         RocksDB::RocksDB
+        gflags
+        ZLIB::ZLIB
+        BZip2::bz2
+        zstd::libzstd_static
+        LZ4::lz4_static
+        Snappy::snappy
         Threads::Threads
         secp256k1
         ff

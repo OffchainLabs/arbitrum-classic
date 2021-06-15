@@ -38,8 +38,8 @@ cable_configure_toolchain(DEFAULT cxx17)
 
 include("cmake/HunterGate.cmake")
 HunterGate(
-    URL "https://github.com/cpp-pm/hunter/archive/v0.23.260.tar.gz"
-    SHA1 "13775235910a3fa85644568d1c5be8271de72e1c"
+    URL "https://github.com/cpp-pm/hunter/archive/v0.23.304.tar.gz"
+    SHA1 "cae9026e69d7d8333897663688a11f4232fb8826"
 )
 
 cable_set_build_type(DEFAULT RelWithDebInfo CONFIGURATION_TYPES Debug Release RelWithDebInfo)
@@ -59,17 +59,32 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 option(ENABLE_JEMALLOC "Enable jemalloc" OFF)
 option(AVM_BUILD_TESTING "Build tests" ON)
 
+list(INSERT CMAKE_FIND_LIBRARY_SUFFIXES 0 ".a" ".dylib" ".so" )
+set(LIB_EXTENSION ".a")
+
+
+IF(APPLE)
+    set(CMAKE_THREAD_LIBS_INIT "-lpthread")
+    set(CMAKE_HAVE_THREADS_LIBRARY 1)
+    set(CMAKE_USE_WIN32_THREADS_INIT 0)
+    set(CMAKE_USE_PTHREADS_INIT 1)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+ELSE()
+    add_link_options(-static-libgcc -static-libstdc++)
+ENDIF()
+
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
 
 if (ENABLE_JEMALLOC)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules (JEMALLOC REQUIRED jemalloc)
-    message(STATUS "Building with jemalloc")
-    include_directories(${JEMALLOC_INCLUDE_DIRS})
-    link_directories(${JEMALLOC_LIBRARY_DIRS})
+    find_package(JeMalloc REQUIRED)
+    message(STATUS "Building with jemalloc ${JeMalloc_LIBRARIES}")
+    include_directories(${JeMalloc_INCLUDE_DIRS})
+    link_libraries(${JeMalloc_LIBRARIES})
 endif (ENABLE_JEMALLOC)
+
+
 
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
@@ -84,8 +99,8 @@ if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
         set(OPENSSL_ROOT_DIR "${BREW_OPENSSL_PREFIX}/")
         set(OPENSSL_INCLUDE_DIR "${BREW_OPENSSL_PREFIX}/include")
         set(OPENSSL_LIBRARIES "${BREW_OPENSSL_PREFIX}/lib")
-        set(OPENSSL_CRYPTO_LIBRARY "${BREW_OPENSSL_PREFIX}/lib/libcrypto.dylib")
-        set(OPENSSL_SSL_LIBRARY (ADVANCED) "${BREW_OPENSSL_PREFIX}/lib/libssl.dylib")
+        set(OPENSSL_CRYPTO_LIBRARY "${BREW_OPENSSL_PREFIX}/lib/libcrypto.${LIB_EXTENSION}")
+        set(OPENSSL_SSL_LIBRARY (ADVANCED) "${BREW_OPENSSL_PREFIX}/lib/libssl.${LIB_EXTENSION}")
     endif()
 endif()
 
@@ -109,6 +124,20 @@ if(NOT TARGET Boost::system)
     set_property(TARGET Boost::system PROPERTY
         INTERFACE_LINK_LIBRARIES ${Boost_LIBRARIES})
 endif()
+
+hunter_add_package(ZLIB)
+find_package(ZLIB REQUIRED)
+hunter_add_package(gflags)
+find_package(gflags CONFIG REQUIRED)
+hunter_add_package(BZip2)
+find_package(BZip2 CONFIG REQUIRED)
+hunter_add_package(zstd)
+find_package(zstd CONFIG REQUIRED)
+hunter_add_package(lz4)
+find_package(LZ4 CONFIG REQUIRED)
+hunter_add_package(Snappy)
+find_package(Snappy CONFIG REQUIRED)
+
 find_package(RocksDB REQUIRED)
 include(CodeCoverage)
 include(Formatting)
@@ -164,6 +193,7 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
 
         set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/lib)
         set(CFLAGS "-I.")
+        string (REPLACE ";" " " ROCKSDB_DEPS_STR "${ROCKSDB_DEPS}")
         string(CONCAT LDFLAGS
             " -L${C_LIBRARY_PATH}"
             " -L${ETHASH_LIB_FOLDER}"
@@ -172,7 +202,18 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
             " $<TARGET_LINKER_FILE:avm>"
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
-            " ${JEMALLOC_LINK_LIBRARIES}"
+            " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
+            " $<TARGET_LINKER_FILE:ZLIB::ZLIB>"
+            " $<TARGET_LINKER_FILE:gflags>"
+            " $<TARGET_LINKER_FILE:BZip2::bz2>"
+            " $<TARGET_LINKER_FILE:zstd::libzstd_static>"
+            " $<TARGET_LINKER_FILE:LZ4::lz4_static>"
+            " $<TARGET_LINKER_FILE:Snappy::snappy>"
+            " $<TARGET_LINKER_FILE:secp256k1>"
+            " ${GMP_LIBRARY}"
+            " ${GMPXX_LIBRARY}"
+            " ${ROCKSDB_DEPS_STR}"
+            " ${JeMalloc_LIBRARIES}"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
