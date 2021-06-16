@@ -320,18 +320,21 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 					Str("afterCount", sequencerBatches[len(sequencerBatches)-1].GetAfterCount().String())
 			}
 			logMsg.Msg("Looking up messages")
+			if !reorgingDelayed && !reorgingSequencer && len(delayedMessages) != 0 || len(sequencerBatches) != 0 {
+				missingDelayed, err := ir.addMessages(ctx, sequencerBatches, delayedMessages)
+				if err != nil {
+					return err
+				}
+				if missingDelayed {
+					reorgingDelayed = true
+				}
+			}
 			if reorgingDelayed || reorgingSequencer {
 				from, err = ir.getPrevBlockForReorg(from)
 				if err != nil {
 					return err
 				}
 			} else {
-				if len(delayedMessages) != 0 || len(sequencerBatches) != 0 {
-					err := ir.addMessages(ctx, sequencerBatches, delayedMessages)
-					if err != nil {
-						return err
-					}
-				}
 				delta := new(big.Int).SetUint64(blocksToFetch)
 				if new(big.Int).Add(to, delta).Cmp(currentHeight) >= 0 {
 					delta = delta.Div(delta, big.NewInt(2))
@@ -369,23 +372,17 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
 				if len(ir.BroadcastFeed) == 0 {
-					err := ir.deliverQueueItems()
-					if err != nil {
-						return err
-					}
+					ir.deliverQueueItems()
 				}
 			case <-sleepChan:
 				break FeedReadLoop
 			}
 		}
-		err = ir.deliverQueueItems()
-		if err != nil {
-			return err
-		}
+		ir.deliverQueueItems()
 	}
 }
 
-func (ir *InboxReader) deliverQueueItems() error {
+func (ir *InboxReader) deliverQueueItems() {
 	if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
 		queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
 		for _, item := range ir.sequencerFeedQueue {
@@ -396,12 +393,12 @@ func (ir *InboxReader) deliverQueueItems() error {
 		ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
 		err := core.DeliverMessagesAndWait(ir.db, ir.lastCount, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
 		if err != nil {
-			return err
+			logger.Warn().Err(err).Msg("error delivering broadcast feed items")
+		} else {
+			ir.lastCount = new(big.Int).Add(queueItems[len(queueItems)-1].LastSeqNum, big.NewInt(1))
+			ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
 		}
-		ir.lastCount = new(big.Int).Add(queueItems[len(queueItems)-1].LastSeqNum, big.NewInt(1))
-		ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
 	}
-	return nil
 }
 
 func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
@@ -435,7 +432,13 @@ func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	return msg.ChainTime.BlockNum.AsInt(), nil
+	lastSeqBlock := msg.ChainTime.BlockNum.AsInt()
+	// Re-check the last few blocks just in case there are delayed messages we missed
+	startBlock := new(big.Int).Sub(lastSeqBlock, big.NewInt(20))
+	if startBlock.Sign() < 0 {
+		startBlock.SetInt64(0)
+	}
+	return startBlock, nil
 }
 
 func (ir *InboxReader) getPrevBlockForReorg(from *big.Int) (*big.Int, error) {
@@ -449,16 +452,26 @@ func (ir *InboxReader) getPrevBlockForReorg(from *big.Int) (*big.Int, error) {
 	return newFrom, nil
 }
 
-func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []ethbridge.SequencerBatchRef, deliveredDelayedMessages []*ethbridge.DeliveredInboxMessage) error {
+func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []ethbridge.SequencerBatchRef, deliveredDelayedMessages []*ethbridge.DeliveredInboxMessage) (bool, error) {
+	coreDelayedCount, err := ir.db.GetDelayedMessageCount()
+	if err != nil {
+		return false, err
+	}
 	var seqBatchItems []inbox.SequencerBatchItem
 	for _, ref := range sequencerBatchRefs {
 		batch, err := ir.sequencerInbox.ResolveBatchRef(ctx, ref)
 		if err != nil {
-			return err
+			return false, err
 		}
 		items, err := batch.GetItems()
 		if err != nil {
-			return err
+			return false, err
+		}
+		for _, item := range items {
+			if len(deliveredDelayedMessages) == 0 && item.TotalDelayedCount.Cmp(coreDelayedCount) > 0 {
+				// Batch item references a delayed message we don't have, we need to go backwards
+				return true, nil
+			}
 		}
 		seqBatchItems = append(seqBatchItems, items...)
 	}
@@ -480,9 +493,9 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 	if len(delayedMessages) > 0 {
 		logger.Debug().Str("acc", delayedMessages[len(delayedMessages)-1].DelayedAccumulator.String()).Int("count", len(delayedMessages)).Msg("delivering delayed inbox messages")
 	}
-	err := core.DeliverMessagesAndWait(ir.db, beforeCount, beforeAcc, seqBatchItems, delayedMessages, nil)
+	err = core.DeliverMessagesAndWait(ir.db, beforeCount, beforeAcc, seqBatchItems, delayedMessages, nil)
 	if err != nil {
-		return err
+		return false, err
 	}
 	dupBroadcasterItems := 0
 	for _, item := range seqBatchItems {
@@ -505,5 +518,5 @@ func (ir *InboxReader) addMessages(ctx context.Context, sequencerBatchRefs []eth
 		ir.lastCount = new(big.Int).Add(seqBatchItems[len(seqBatchItems)-1].LastSeqNum, big.NewInt(1))
 		ir.lastAcc = seqBatchItems[len(seqBatchItems)-1].Accumulator
 	}
-	return nil
+	return false, nil
 }
