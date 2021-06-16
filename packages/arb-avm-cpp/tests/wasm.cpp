@@ -95,7 +95,7 @@ TEST_CASE("wasm_compile") {
 TEST_CASE("wasm_2") {
     SECTION("Making compiler machine") {
         RunWasm runner("/home/sami/arbitrum/compiler.wasm");
-        auto buf = getFile("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
+        auto buf = getFile("/home/sami/stripped.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
         auto bytes = buf2vec(res.buffer, res.buffer_len);
         uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
