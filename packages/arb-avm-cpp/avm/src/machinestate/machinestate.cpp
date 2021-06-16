@@ -600,13 +600,11 @@ uint256_t runWasmMachine(MachineState &machine_state) {
             }
         }
 
-        /*
         auto op = machine_state.loadCurrentInstruction();
         std::cerr << "op " << op << " state " << int(machine_state.state) << "\n";
         if (machine_state.stack.stacksize() > 0 && !std::get_if<Tuple>(&machine_state.stack[0])) {
             std::cerr << "stack top " << machine_state.stack[0] << "\n";
         }
-        */
 
        if (counter++ % 1000000 == 0) {
            std::cerr << "step " << counter << "\n";
