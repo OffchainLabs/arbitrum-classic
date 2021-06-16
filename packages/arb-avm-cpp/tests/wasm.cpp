@@ -108,7 +108,7 @@ TEST_CASE("wasm_2") {
         std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
         
         // auto arg_buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
-        auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer.wasm");
+        auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer2.wasm");
         auto m = makeWasmMachine(res.extra, arg_buf.size(), vec2buf(arg_buf));
         runWasmMachine(m);
 
