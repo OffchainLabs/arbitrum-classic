@@ -17,6 +17,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/rs/zerolog v1.21.0
+	github.com/go-redis/redis/v8 v8.10.0
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
