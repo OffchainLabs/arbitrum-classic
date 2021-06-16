@@ -17,7 +17,6 @@
 package cmdhelp
 
 import (
-	"flag"
 	"fmt"
 	"math"
 	"math/big"
@@ -29,29 +28,13 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 type WalletFlags struct {
 	passphrase *string
 	gasPrice   *float64
-}
-
-func AddWalletFlags(fs *flag.FlagSet) WalletFlags {
-	passphrase := fs.String(
-		"password",
-		"",
-		"password=pass",
-	)
-	gasPrice := fs.Float64(
-		"gasprice",
-		4.5,
-		"gasprice=FloatInGwei",
-	)
-
-	return WalletFlags{
-		passphrase: passphrase,
-		gasPrice:   gasPrice,
-	}
 }
 
 // GetKeystore returns a transaction authorization based on an existing ethereum
@@ -61,8 +44,7 @@ func AddWalletFlags(fs *flag.FlagSet) WalletFlags {
 // optional "gasprice" arguement.
 func GetKeystore(
 	validatorFolder string,
-	args WalletFlags,
-	flags *flag.FlagSet,
+	wallet *configuration.Wallet,
 	chainId *big.Int,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
 	ks := keystore.NewKeyStore(
@@ -71,15 +53,8 @@ func GetKeystore(
 		keystore.StandardScryptP,
 	)
 
-	found := false
-	flags.Visit(func(f *flag.Flag) {
-		if f.Name == "password" {
-			found = true
-		}
-	})
-
 	var passphrase string
-	if !found {
+	if len(wallet.Password) == 0 {
 		if len(ks.Accounts()) == 0 {
 			fmt.Print("Enter new account password: ")
 		} else {
@@ -94,7 +69,7 @@ func GetKeystore(
 
 		passphrase = strings.TrimSpace(passphrase)
 	} else {
-		passphrase = *args.passphrase
+		passphrase = wallet.Password
 	}
 
 	var account accounts.Account
@@ -116,7 +91,7 @@ func GetKeystore(
 		return nil, nil, err
 	}
 
-	gasPriceAsFloat := 1e9 * (*args.gasPrice)
+	gasPriceAsFloat := 1e9 * wallet.GasPrice
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
