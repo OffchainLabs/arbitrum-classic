@@ -48,16 +48,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
     }
 
-    function postUpgradeInit(bytes32 _cloneableProxyHash, address _l2BeaconProxyFactory) external {
-        // one time use method to initialize new fields from upgrade
-        require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
-        require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
-        require(cloneableProxyHash == bytes32(0), "ALREADY_INIT");
-        require(l2BeaconProxyFactory == address(0), "ALREADY_INIT");
-        cloneableProxyHash = _cloneableProxyHash;
-        l2BeaconProxyFactory = _l2BeaconProxyFactory;
-    }
-
     /**
      * @notice utility function used to perform external read-only calls.
      * @dev the result is returned even if the call failed, the L2 is expected to
