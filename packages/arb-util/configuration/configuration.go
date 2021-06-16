@@ -31,91 +31,91 @@ type Config struct {
 	GasPriceUrl                string `koanf:"gas-price-url"`
 	ChainID                    uint64 `koanf:"chainid"`
 	Healthcheck                struct {
-		Enabled   bool `koanf:"healthcheck.enabled"`
+		Enabled   bool `koanf:"enabled"`
 		Sequencer struct {
-			Enabled bool `koanf:"healthcheck.sequencer.enabled"`
-		}
+			Enabled bool `koanf:"enabled"`
+		} `koanf:"sequencer"`
 		L1Node struct {
-			Enabled bool `koanf:"healthcheck.l1-node.enabled"`
-		}
+			Enabled bool `koanf:"enabled"`
+		} `koanf:"l1-node"`
 		Metrics struct {
-			Enabled bool   `koanf:"healthcheck.metrics.enabled"`
-			Prefix  string `koanf:"healthcheck.metrics.prefix"`
-		}
-		Addr string `koanf:"healthcheck.addr"`
-		Port string `koanf:"healthcheck.port"`
-	}
+			Enabled bool   `koanf:"enabled"`
+			Prefix  string `koanf:"prefix"`
+		} `koanf:"metrics"`
+		Addr string `koanf:"addr"`
+		Port string `koanf:"port"`
+	} `koanf:"healthcheck"`
 
 	MaxBatchTime int64 `koanf:"max-batch-time"`
 	Inbox        struct {
-		Address string `koanf:"inbox.address"`
-	}
+		Address string `koanf:"address"`
+	} `koanf:"inbox"`
 	Forward struct {
-		URL string `koanf:"forward.url"`
-	}
+		URL string `koanf:"url"`
+	} `koanf:"forward"`
 	Feed struct {
-		URL    string `koanf:"feed.url"`
+		URL    string `koanf:"url"`
 		Output struct {
-			Addr    string `koanf:"feed.output.addr"`
-			Port    string `koanf:"feed.output.port"`
-			Ping    string `koanf:"feed.output.ping"`
-			Timeout string `koanf:"feed.output.timeout"`
-		}
-	}
+			Addr    string `koanf:"addr"`
+			Port    string `koanf:"port"`
+			Ping    string `koanf:"ping"`
+			Timeout string `koanf:"timeout"`
+		} `koanf:"output"`
+	} `koanf:"feed"`
 	RPC struct {
-		LogLevel string `koanf:"rcp.loglevel"`
-		Addr     string `koanf:"rpc.addr"`
-		Port     string `koanf:"rpc.port"`
-	}
+		LogLevel string `koanf:"loglevel"`
+		Addr     string `koanf:"addr"`
+		Port     string `koanf:"port"`
+	} `koanf:"rpc"`
 	WS struct {
-		Addr string `koanf:"ws.addr"`
-		Port string `koanf:"ws.port"`
-	}
+		Addr string `koanf:"addr"`
+		Port string `koanf:"port"`
+	} `koanf:"ws"`
 	Pprof struct {
-		Enabled bool `koanf:"pprof.enabled"`
-	}
+		Enabled bool `koanf:"enabled"`
+	} `koanf:"pprof"`
 	LogLevel string `koanf:"loglevel"`
 
 	Database struct {
-		Path string `koanf:"database.path"`
-	}
+		Path string `koanf:"path"`
+	} `koanf:"database"`
 	L1 struct {
-		URL string `koanf:"l1.url"`
-	}
+		URL string `koanf:"url"`
+	} `koanf:"l1"`
 	Rollup struct {
-		Address string `koanf:"rollup.address"`
+		Address string `koanf:"address"`
 		Machine struct {
-			Filename string `koanf:"rollup.machine.filename"`
-			//URL string `koanf:"rollup.machine.url"`
-		}
-	}
+			Filename string `koanf:"filename"`
+			//URL string `koanf:"url"`
+		} `koanf:"machine"`
+	} `koanf:"rollup"`
 	Bridge struct {
 		Utils struct {
-			Address string `koanf:"bridge.utils.address"`
-		}
-	}
+			Address string `koanf:"address"`
+		} `koanf:"utils"`
+	} `koanf:"bridge"`
 	Validator struct {
 		Utils struct {
-			Address string `koanf:"validator.utils.address"`
-		}
+			Address string `koanf:"address"`
+		} `koanf:"utils"`
 		WalletFactory struct {
-			Address string `koanf:"validator.walletfactory.address"`
-		}
-		Strategy string `koanf:"validator.strategy"`
-	}
+			Address string `koanf:"address"`
+		} `koanf:"walletfactory"`
+		Strategy string `koanf:"strategy"`
+	} `koanf:"validator"`
 	Mainnet struct {
-		Arb1 bool `koanf:"mainnet.arb1"`
-	}
+		Arb1 bool `koanf:"arb1"`
+	} `koanf:"mainnet"`
 	Testnet struct {
-		rinkeby bool `koanf:"testnet.rinkeby"`
-	}
+		rinkeby bool `koanf:"rinkeby"`
+	} `koanf:"testnet"`
 }
 
 func Parse() (*Config, *Wallet, error) {
 	f := flag.NewFlagSet("config", flag.ContinueOnError)
 	f.String("conf", "", "name of configuration file")
-	f.String("wallet.password", "", "password=pass")
-	f.Float64("wallet.gasprice", 4.5, "gasprice=FloatInGwei")
+	f.String("wallet.password", "", "password for wallet")
+	f.Float64("wallet.gasprice", 4.5, "wallet.gasprice=FloatInGwei")
 	f.Bool("pending", false, "enable pending state tracking")
 	f.Bool("sequencer", false, "act as sequencer")
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
@@ -150,12 +150,12 @@ func Parse() (*Config, *Wallet, error) {
 	f.Duration("feedoutput.timeout", 15*time.Second, "number of seconds for timeout")
 	f.Bool("pprof.enabled", false, "enable profiling server")
 	f.String("rpc.loglevel", "info", "log level for rpc")
-	f.String("arbloglevel", "info", "log level for general arb node logging")
+	f.String("loglevel", "info", "log level for general arb node logging")
 
 	f.String("database.path", "state", "location database is located")
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 	f.String("rollup.address", "", "layer 2 rollup contract address")
-	f.String("bridgeutils.address", "", "bridgeutils contract address")
+	f.String("bridge.utils.address", "", "bridgeutils contract address")
 
 	f.Bool("mainnet.arb1", false, "connect to arb1 mainnet")
 	f.Bool("testnet.rinkeby", false, "connect to rinkeby testnet")
@@ -212,10 +212,10 @@ func Parse() (*Config, *Wallet, error) {
 		bridgeUtilsAddressString := f.Arg(3)
 
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"database.path":       validatorFolder,
-			"l1.url":              ethURL,
-			"rollup.address":      addressString,
-			"bridgeutils.address": bridgeUtilsAddressString,
+			"database.path":        validatorFolder,
+			"l1.url":               ethURL,
+			"rollup.address":       addressString,
+			"bridge.utils.address": bridgeUtilsAddressString,
 		}, "."), nil)
 
 		if err != nil {
@@ -234,7 +234,7 @@ func Parse() (*Config, *Wallet, error) {
 			"database.path":                   validatorFolder,
 			"l1.url":                          ethURL,
 			"rollup.address":                  addressString,
-			"bridgeutils.address":             bridgeUtilsAddressString,
+			"bridge.utils.address":            bridgeUtilsAddressString,
 			"validator.utils.address":         validatorUtilsAddressString,
 			"validator.walletfactory.address": validatorWalletFactoryAddressString,
 		}, "."), nil)
@@ -260,6 +260,9 @@ func Parse() (*Config, *Wallet, error) {
 
 	var wallet Wallet
 	err = k.Unmarshal("wallet", &wallet)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error unmarshalling configuration")
+	}
 
 	return &out, &wallet, nil
 }
