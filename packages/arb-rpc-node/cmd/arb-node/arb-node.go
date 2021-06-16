@@ -94,6 +94,10 @@ func startup() error {
 		fmt.Printf("   or            node: arb-node --feed.url=<feed websocket> --forward.url=<sequencer RPC> --database.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n\n", cmdhelp.WalletArgsString)
 		fmt.Printf("   or            node: arb-node --l1.url=<url> --database.path=<path> --mainnet.arb1 \n")
 		fmt.Printf("   or            node: arb-node --l1.url=<url> --database.path=<path> --testnet.rinkeby \n")
+		if err != nil {
+			return err
+		}
+
 		return errors.New("invalid arguments")
 	}
 
