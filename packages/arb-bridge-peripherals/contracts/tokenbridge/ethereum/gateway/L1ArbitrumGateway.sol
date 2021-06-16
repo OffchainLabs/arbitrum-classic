@@ -36,9 +36,10 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
 
     address public inbox;
 
-    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
+    modifier onlyCounterpartGateway() virtual override {
         address l2ToL1Sender = getL2ToL1Sender(inbox);
-        return super.isCounterpartGateway(l2ToL1Sender);
+        require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
+        _;
     }
 
     function _initialize(

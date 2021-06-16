@@ -27,7 +27,7 @@ abstract contract TokenGateway is ITokenGateway {
     address public counterpartGateway;
     address public STORAGE_GAP;
 
-    modifier onlyCounterpartGateway {
+    modifier onlyCounterpartGateway() virtual {
         require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
@@ -37,6 +37,26 @@ abstract contract TokenGateway is ITokenGateway {
         require(counterpartGateway == address(0), "ALREADY_INIT");
         counterpartGateway = _counterpartGateway;
         // TODO: remove _router parameter
+    }
+
+    function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
+        (bool success, bytes memory ret) =
+            _target.staticcall(abi.encodeWithSelector(IGatewayRouter.isRouter.selector));
+
+        // TODO: remove isContract check
+        if (!_target.isContract()) return false;
+        if (!success) return false;
+
+        // if calling an EOA the default value of this will be 0
+        assembly {
+            isTargetRouter := mload(ret)
+        }
+
+        return isTargetRouter;
+    }
+
+    function isCounterpartGateway(address _target) internal view virtual returns (bool) {
+        return _target == counterpartGateway;
     }
 
     /**
@@ -65,27 +85,6 @@ abstract contract TokenGateway is ITokenGateway {
      * @return L2 address of a bridged ERC20 token
      */
     function _calculateL2TokenAddress(address l1ERC20) internal view virtual returns (address);
-
-    bytes internal constant BYTES_ONE = abi.encode(true);
-
-    function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
-        (bool success, bytes memory ret) =
-            _target.staticcall(abi.encodeWithSelector(IGatewayRouter.isRouter.selector));
-
-        if (!_target.isContract()) return false;
-        if (!success) return false;
-
-        // if calling an EOA the default value of this will be 0
-        assembly {
-            isTargetRouter := mload(ret)
-        }
-
-        return isTargetRouter;
-    }
-
-    function isCounterpartGateway(address _target) internal view virtual returns (bool) {
-        return _target == counterpartGateway;
-    }
 
     function outboundTransfer(
         address _token,
