@@ -28,7 +28,8 @@
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "update:abi": "./scripts/update-abi && yarn format",
     "test:integration": "yarn run mocha integration_test/arb-bridge.test.ts --timeout 30000000 --bail",
-    "generate_docs": "typedoc --plugin none"
+    "generate_docs": "typedoc --plugin none",
+    "generate_token_list": "ts-node token_lists/generate_json.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",

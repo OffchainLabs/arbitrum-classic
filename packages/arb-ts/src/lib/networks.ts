@@ -8,6 +8,7 @@ export interface Network {
   gif?: string
   confirmPeriodBlocks?: number
   blockTime?: number //seconds
+  rpcURL: string
 }
 
 export interface TokenBridge {
@@ -30,12 +31,12 @@ export const MAINNET_WHITELIST_ADDRESS =
   '0xD485e5c28AA4985b23f6DF13dA03caa766dcd459'
 
 const mainnetBridge: TokenBridge = {
-  l1GatewayRouter: '0x6074515Bc580C76c0C68AE2E13408B680d670F8C',
-  l2GatewayRouter: '0x29f86A78551Fac44217A8763A45540027c3F7cA5',
-  l1ERC20Gateway: '0xEd66239C7400f9C29D9127C5C95c18c03DDF3106',
-  l2ERC20Gateway: '0x952A6d5D6757BA28dFe11Fc82d85b5880d300E58',
-  l1CustomGateway: '',
-  l2CustomGateway: '',
+  l1GatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
+  l2GatewayRouter: '0x5288c571Fd7aD117beA99bF60FE0846C4E84F933',
+  l1ERC20Gateway: '0xa3A7B6F88361F48403514059F1F16C8E78d60EeC',
+  l2ERC20Gateway: '0x09e9222E96E7B4AE2a407B98d48e330053351EEe',
+  l1CustomGateway: '0xcEe284F754E854890e311e3280b767F80797180d',
+  l2CustomGateway: '0x096760F208390250649E3e8763348E783AEF5562',
   l1WethGateway: '',
   l2WethGateway: '',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
@@ -53,7 +54,7 @@ const RinkebyBridge: TokenBridge = {
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
 }
 
-const networks: Networks = {
+export const networks: Networks = {
   '1': {
     chainID: '1',
     name: 'Mainnet',
@@ -62,6 +63,7 @@ const networks: Networks = {
     partnerChainID: '42161',
     tokenBridge: mainnetBridge,
     blockTime: 15,
+    rpcURL: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
   },
   '42161': {
     chainID: '42161',
@@ -71,6 +73,7 @@ const networks: Networks = {
     isArbitrum: true,
     tokenBridge: mainnetBridge,
     confirmPeriodBlocks: 45818,
+    rpcURL: 'https://arb1.arbitrum.io/rpc',
   },
   '4': {
     chainID: '4',
@@ -81,6 +84,7 @@ const networks: Networks = {
     tokenBridge: RinkebyBridge,
     confirmPeriodBlocks: 6545, // TODO
     blockTime: 15,
+    rpcURL: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
   },
   '421611': {
     chainID: '421611',
@@ -90,6 +94,7 @@ const networks: Networks = {
     isArbitrum: true,
     tokenBridge: RinkebyBridge,
     confirmPeriodBlocks: 6545, // TODO
+    rpcURL: 'https://rinkeby.arbitrum.io/rpc',
   },
 }
 
