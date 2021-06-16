@@ -32,6 +32,12 @@ import "../libraries/gateway/ArbitrumMessenger.sol";
 // this way the token bridge can be tested fully in the base layer
 // assembly code from OZ's proxy is used to surface revert messages correctly
 abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
+    bool shouldUseInbox;
+
+    function setInboxUse(bool _shouldUseInbox) public {
+        shouldUseInbox = _shouldUseInbox;
+    }
+
     function sendTxToL2(
         address _inbox,
         address _to,
@@ -53,7 +59,11 @@ abstract contract L1ArbitrumTestMessenger is L1ArbitrumMessenger {
     }
 
     function getL2ToL1Sender(address _inbox) internal view virtual override returns (address) {
-        return msg.sender;
+        if (shouldUseInbox) {
+            return super.getL2ToL1Sender(_inbox);
+        } else {
+            return msg.sender;
+        }
     }
 }
 
