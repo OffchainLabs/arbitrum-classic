@@ -38,7 +38,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
 
     modifier onlyCounterpartGateway() virtual override {
         address l2ToL1Sender = getL2ToL1Sender(inbox);
-        require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
+        require(isCounterpartGateway(l2ToL1Sender), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 
