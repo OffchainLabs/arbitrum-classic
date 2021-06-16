@@ -34,6 +34,9 @@ struct WasmResult {
     Buffer buffer;
     std::vector<uint8_t> extra;
     uint64_t gas_left;
+    std::shared_ptr<value> immed;
+    std::shared_ptr<std::vector<Operation>> insn;
+    std::vector<std::pair<uint64_t, uint64_t>> table; 
 };
 
 class WasmRunner {

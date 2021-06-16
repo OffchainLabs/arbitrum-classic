@@ -132,6 +132,19 @@ wasm_trap_t* cb_push_immed(void* env,
     return NULL;
 }
 
+wasm_trap_t* cb_cptable(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t*) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+
+    uint64_t len = dta->insn->size();
+
+    if (args->data[0].kind == WASM_I32) {
+        dta->table.push_back(std::pair<uint64_t, uint64_t>(args->data[0].of.i32, len));
+    }
+    return NULL;
+}
+
 wasm_trap_t* cb_get_buffer(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t* results) {
@@ -271,6 +284,8 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         store, callback_type_setlen, cb_push_insn, (void*)env, NULL);
     wasm_func_t* callback_func_push_immed = wasm_func_new_with_env(
         store, callback_type_setlen, cb_push_immed, (void*)env, NULL);
+    wasm_func_t* callback_func_cptable = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_cptable, (void*)env, NULL);
 
     wasm_functype_delete(callback_type_setlen);
 
@@ -326,6 +341,8 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
             imports[i] = wasm_func_as_extern(callback_func_push_immed);
         } else if (str.find("pushinst") != std::string::npos) {
             imports[i] = wasm_func_as_extern(callback_func_push);
+        } else if (str.find("cptable") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_cptable);
         } else {
             imports[i] = wasm_func_as_extern(callback_func2);
         }
@@ -388,7 +405,7 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
     }
     std::cerr << "Ran wasm\n";
 
-    return {data->buffer_len, data->buffer, data->extra, data->gas_left};
+    return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
 
 }
 

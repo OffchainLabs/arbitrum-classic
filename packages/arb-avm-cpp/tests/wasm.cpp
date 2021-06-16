@@ -97,6 +97,32 @@ TEST_CASE("wasm_3") {
         RunWasm runner("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
         auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer2.wasm");
         auto res = runner.run_wasm(vec2buf(buf), buf.size());
+
+        std::cerr << "Here\n";
+
+        auto code = std::make_shared<Code>(0);
+        CodePointStub stub = code->addSegment();
+
+        std::vector<CodePointStub> points;
+        std::vector<value> tab_lst;
+
+        for (int i = 0; i < res.insn->size(); i++) {
+            points.push_back(stub);
+            stub = code->addOperation(stub.pc, (*res.insn)[i]);
+        }
+
+        for (int i = 0; i < res.table.size(); i++) {
+            auto offset = res.table[i].first;
+            if (offset >= tab_lst.size()) {
+                tab_lst.resize(offset+1);
+            }
+            tab_lst[offset] = points[res.table[i].second];
+        }
+        auto table = make_table(tab_lst);
+
+        std::cerr << "Made table\n";
+
+        /*
         auto bytes = buf2vec(res.buffer, res.buffer_len);
         uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
         uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
@@ -121,7 +147,8 @@ TEST_CASE("wasm_3") {
         std::chrono::duration<double> elapsed_seconds = end-start;
         std::time_t end_time = std::chrono::system_clock::to_time_t(end);
 
-        std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";        runWasmMachine(m);
+        std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";        
+        */
     }
 
 }
