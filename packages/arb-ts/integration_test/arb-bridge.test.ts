@@ -36,8 +36,8 @@ const argv = yargs(process.argv.slice(2)).argv
 
 const network = ((_network?: string | number) => {
   if (!_network) {
-    prettyLog('Using default network: kovan4')
-    return 'kovan4'
+    prettyLog('Using default network: rinkArby')
+    return 'rinkArby'
   } else if (!Object.keys(config).includes(_network.toString())) {
     warn(
       `Network ${_network} not supported; supported networks: ${Object.keys(
@@ -50,10 +50,10 @@ const network = ((_network?: string | number) => {
     prettyLog('Using network ' + _network)
     return _network.toString()
   }
-})(argv.network as string | number | undefined) as 'kovan4' | 'devnet'
+})(argv.network as string | number | undefined) as 'rinkArby' | 'devnet'
 
-if (network === 'kovan4' && !process.env.INFURA_KEY) {
-  warn('To use kovan, set env var INFURA_KEY')
+if (network === 'rinkArby' && !process.env.INFURA_KEY) {
+  warn('To use rinkArby, set env var INFURA_KEY')
   process.exit(1)
 }
 
@@ -95,7 +95,7 @@ const wait = (ms = 0) => {
   return new Promise(res => setTimeout(res, ms || defaultWait))
 }
 
-const depositAmount = '0.1'
+const depositAmount = '0.01'
 
 let erc20Address = existentTestERC20
 prettyLog('Using preFundedWallet: ' + preFundedWallet.address)
