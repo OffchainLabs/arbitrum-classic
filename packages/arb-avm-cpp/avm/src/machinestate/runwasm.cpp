@@ -48,6 +48,68 @@ wasm_trap_t* cb_usegas(void* env,
     return NULL;
 }
 
+value simple_table_aux(int level) {
+    if (level == 0) {
+        return Tuple(0,0,0,0,0,0,0,0);
+    }
+    return Tuple(
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1),
+        simple_table_aux(level - 1)
+    );
+}
+
+const int LEVEL = 5;
+
+value simple_table() {
+    return simple_table_aux(LEVEL - 1);
+}
+
+wasm_trap_t* cb_uint_immed(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t*) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+
+    if (args->data[0].kind == WASM_I32) {
+        // read uint from memory
+        auto mem = (const char*)wasm_memory_data(dta->memory);
+        mem += + args->data[0].of.i32;
+        uint256_t num = deserializeUint256t(mem);
+        // std::cerr << "load num " << num << "\n";
+        dta->immed = std::make_shared<value>(num);
+    }
+    return NULL;
+}
+
+wasm_trap_t* cb_special_immed(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t*) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+
+    Tuple t(Buffer(), 0);
+
+    std::cerr << "special immed\n";
+    dta->immed = std::make_shared<value>(t);
+    return NULL;
+}
+
+wasm_trap_t* cb_global_immed(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t*) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+
+    Tuple t(Buffer(), 0, Buffer(), 0, 1000000, 0, 0, simple_table());
+
+    std::cerr << "global immed\n";
+    dta->immed = std::make_shared<value>(t);
+    return NULL;
+}
+
 wasm_trap_t* cb_get_buffer(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t* results) {
@@ -111,23 +173,6 @@ wasm_trap_t* cb_write_extra(void* env,
     dta->extra[offset] = v;
     return NULL;
 }
-
-/*
-void exit_with_error(wasmtime_error_t* error, wasm_trap_t* trap) {
-    wasm_byte_vec_t error_message;
-    if (error != NULL) {
-        wasmtime_error_message(error, &error_message);
-        wasmtime_error_delete(error);
-    } else {
-        wasm_trap_message(trap, &error_message);
-        wasm_trap_delete(trap);
-    }
-    fprintf(stderr, "error %.*s\n", (int)error_message.size,
-            error_message.data);
-    wasm_byte_vec_delete(&error_message);
-    exit(1);
-}
-*/
 
 RunWasm::RunWasm(std::string fname) {
     data = new WasmEnvData();
@@ -193,6 +238,14 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         store, callback_type_setlen, cb_set_length, (void*)env, NULL);
     wasm_func_t* callback_func6 = wasm_func_new_with_env(
         store, callback_type_setlen, cb_usegas, (void*)env, NULL);
+
+    wasm_func_t* callback_func_uint = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_uint_immed, (void*)env, NULL);
+    wasm_func_t* callback_func_special = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_special_immed, (void*)env, NULL);
+    wasm_func_t* callback_func_global = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_global_immed, (void*)env, NULL);
+
     wasm_functype_delete(callback_type_setlen);
 
     // printf("Creating get buf callback...\n");
@@ -218,6 +271,8 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     wasm_importtype_vec_t import_vec;
     wasm_module_imports(module, &import_vec);
 
+    std::cerr << "Making imports " << import_vec.size << "\n";
+
     wasm_extern_t* imports[import_vec.size];
     for (uint64_t i = 0; i < import_vec.size; i++) {
         auto imp = import_vec.data[i];
@@ -235,6 +290,12 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
             imports[i] = wasm_func_as_extern(callback_func1);
         } else if (str.find("setlen") != std::string::npos) {
             imports[i] = wasm_func_as_extern(callback_func2);
+        } else if (str.find("uintimmed") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_uint);
+        } else if (str.find("globalimmed") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_global);
+        } else if (str.find("specialimmed") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_special);
         } else {
             imports[i] = wasm_func_as_extern(callback_func2);
         }
@@ -248,13 +309,20 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         exit(1);
     }
 
+    // Get memory from instance
+
+
     // Lookup our `run` export function
     // printf("Extracting export...\n");
     wasm_extern_vec_t externs;
     wasm_instance_exports(instance, &externs);
     for (uint64_t i = 0; i < externs.size; i++) {
-        if (wasm_extern_kind(externs.data[i]) == WASM_EXTERN_FUNC) {
+        auto kind = wasm_extern_kind(externs.data[i]);
+        if (kind == WASM_EXTERN_FUNC) {
             run = wasm_extern_as_func(externs.data[i]);
+        } else if (kind == WASM_EXTERN_MEMORY) {
+            std::cerr << "found memory\n";
+            data->memory = wasm_extern_as_memory(externs.data[i]);
         }
     }
 
@@ -279,6 +347,10 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
 
     data->gas_left = 1000000;
     data->extra.resize(0);
+
+    data->table = std::vector<std::pair<uint64_t, uint64_t>>();
+    data->immed = std::make_shared<value>(0);
+    data->insn = std::make_shared<std::vector<Operation>>();
 
     std::cerr << "Running wasm\n";
     if (wasm_func_call(run, &args_vec, &results_vec)) {

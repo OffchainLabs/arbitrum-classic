@@ -20,6 +20,18 @@
 #include <wasmer/wasm.h>
 #include <avm_values/value.hpp>
 
+
+struct WasmEnvData {
+    uint64_t buffer_len;
+    Buffer buffer;
+    std::vector<uint8_t> extra;
+    uint64_t gas_left;
+    std::shared_ptr<value> immed;
+    std::shared_ptr<std::vector<Operation>> insn;
+    std::vector<std::pair<uint64_t, uint64_t>> table; 
+    wasm_memory_t *memory;
+};
+
 struct RunWasm : WasmRunner {
     WasmEnvData* data;
     wasm_func_t* run;

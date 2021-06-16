@@ -92,6 +92,40 @@ TEST_CASE("wasm_compile") {
     */
 }
 
+TEST_CASE("wasm_3") {
+    SECTION("Making compiler machine") {
+        RunWasm runner("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
+        auto buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer2.wasm");
+        auto res = runner.run_wasm(vec2buf(buf), buf.size());
+        auto bytes = buf2vec(res.buffer, res.buffer_len);
+        uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
+        uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
+        std::cerr << "Result len " << bytes.size() << "\n";
+        std::string hexstr;
+        hexstr.resize(bytes.size()*2);
+        boost::algorithm::hex(bytes.begin(), bytes.end(), hexstr.begin());
+        std::cerr << "Result hash " << hexstr << "\n";
+        std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
+        
+        auto arg_buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
+        // auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer2.wasm");
+        auto m = makeWasmMachine(res.extra, arg_buf.size(), vec2buf(arg_buf));
+        auto start = std::chrono::system_clock::now();
+        runWasmMachine(m);
+        auto end = std::chrono::system_clock::now();
+
+        std::cerr << "Result stack " << m.stack[0] << "\n";
+        std::cerr << "Result stack " << m.stack[1] << "\n";
+        std::cerr << "Result stack " << m.stack[2] << "\n";
+
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+        std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";        runWasmMachine(m);
+    }
+
+}
+
 TEST_CASE("wasm_2") {
     SECTION("Making compiler machine") {
         RunWasm runner("/home/sami/arbitrum/compiler.wasm");
@@ -107,17 +141,22 @@ TEST_CASE("wasm_2") {
         std::cerr << "Result hash " << hexstr << "\n";
         std::cerr << "Result hash " << intx::to_string(hash1, 16) << ", " << intx::to_string(hash2, 16) << "\n";
         
-        // auto arg_buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
-        auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer2.wasm");
+        auto arg_buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
+        // auto arg_buf = getFile("/home/sami/arb-os/wasm-tests/test-buffer2.wasm");
         auto m = makeWasmMachine(res.extra, arg_buf.size(), vec2buf(arg_buf));
+        auto start = std::chrono::system_clock::now();
         runWasmMachine(m);
+        auto end = std::chrono::system_clock::now();
 
         std::cerr << "Result stack " << m.stack[0] << "\n";
         std::cerr << "Result stack " << m.stack[1] << "\n";
         std::cerr << "Result stack " << m.stack[2] << "\n";
 
-    }
+        std::chrono::duration<double> elapsed_seconds = end-start;
+        std::time_t end_time = std::chrono::system_clock::to_time_t(end);
 
+        std::cerr << "elapsed time: " << elapsed_seconds.count() << "s\n";        runWasmMachine(m);
+    }
 
 }
 
