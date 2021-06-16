@@ -110,6 +110,28 @@ wasm_trap_t* cb_global_immed(void* env,
     return NULL;
 }
 
+wasm_trap_t* cb_push_insn(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t*) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+
+    if (args->data[0].kind == WASM_I32) {
+        dta->insn->push_back(Operation(OpCode(args->data[0].of.i32)));
+    }
+    return NULL;
+}
+
+wasm_trap_t* cb_push_immed(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t*) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+
+    if (args->data[0].kind == WASM_I32) {
+        dta->insn->push_back(Operation(OpCode(args->data[0].of.i32), *dta->immed));
+    }
+    return NULL;
+}
+
 wasm_trap_t* cb_get_buffer(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t* results) {
@@ -245,6 +267,10 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         store, callback_type_setlen, cb_special_immed, (void*)env, NULL);
     wasm_func_t* callback_func_global = wasm_func_new_with_env(
         store, callback_type_setlen, cb_global_immed, (void*)env, NULL);
+    wasm_func_t* callback_func_push = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_push_insn, (void*)env, NULL);
+    wasm_func_t* callback_func_push_immed = wasm_func_new_with_env(
+        store, callback_type_setlen, cb_push_immed, (void*)env, NULL);
 
     wasm_functype_delete(callback_type_setlen);
 
@@ -296,6 +322,10 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
             imports[i] = wasm_func_as_extern(callback_func_global);
         } else if (str.find("specialimmed") != std::string::npos) {
             imports[i] = wasm_func_as_extern(callback_func_special);
+        } else if (str.find("pushimmed") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_push_immed);
+        } else if (str.find("pushinst") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_push);
         } else {
             imports[i] = wasm_func_as_extern(callback_func2);
         }
