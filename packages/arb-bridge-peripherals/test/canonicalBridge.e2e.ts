@@ -269,5 +269,65 @@ describe('Bridge peripherals end-to-end', () => {
       postUserBalance.toNumber(),
       'Tokens not escrowed'
     )
+    // unset to avoid affecting other tests
+    await l1TestBridge.setInboxUse(false)
+  })
+
+  it('should force withdraw correctly if deposit is incorrect', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    const prevUserBalance = await token.balanceOf(accounts[0].address)
+    const prevAllowance = await token.allowance(
+      accounts[0].address,
+      l1TestBridge.address
+    )
+
+    // here we set the L2 router to recover in case of a bad BeaconProxyFactory deploy
+    await l2TestBridge.setStubAddressOracleReturn(accounts[0].address)
+
+    await l1RouterTestBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
+
+    const postUserBalance = await token.balanceOf(accounts[0].address)
+    const postAllowance = await token.allowance(
+      accounts[0].address,
+      l1TestBridge.address
+    )
+
+    assert.equal(
+      prevUserBalance.toNumber(),
+      postUserBalance.toNumber(),
+      'Tokens not escrowed'
+    )
+    assert.equal(
+      prevAllowance.toNumber() - tokenAmount,
+      postAllowance.toNumber(),
+      'Tokens not spent in allowance'
+    )
+
+    const l2TokenAddress = await l1RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+
+    const l2Token = await Token.attach(l2TokenAddress)
+    const l2Balance = await l2Token.balanceOf(accounts[0].address)
+
+    assert.equal(l2Balance.toNumber(), 0, 'User has tokens in L2')
   })
 })

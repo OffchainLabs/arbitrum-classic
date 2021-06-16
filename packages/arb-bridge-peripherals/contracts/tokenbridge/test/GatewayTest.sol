@@ -133,6 +133,28 @@ contract L2GatewayTester is L2ArbitrumTestMessenger, L2ERC20Gateway {
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         return 50000;
     }
+
+    address public stubAddressOracleReturn;
+
+    function setStubAddressOracleReturn(address _stubValue) external {
+        stubAddressOracleReturn = _stubValue;
+    }
+
+    function _calculateL2TokenAddress(address l1ERC20)
+        internal
+        view
+        virtual
+        override
+        returns (address)
+    {
+        // only return stub address if it is set
+        // we use this to test the _withdraws initiated by the bridge
+        // in case something goes wrong
+        if (stubAddressOracleReturn != address(0)) {
+            return stubAddressOracleReturn;
+        }
+        return super._calculateL2TokenAddress(l1ERC20);
+    }
 }
 
 contract L1CustomGatewayTester is L1ArbitrumTestMessenger, L1CustomGateway {
@@ -228,6 +250,10 @@ contract L2WethGatewayTester is L2ArbitrumTestMessenger, L2WethGateway {
         bytes memory _data
     ) internal virtual override(L2ArbitrumMessenger, L2ArbitrumTestMessenger) returns (uint256) {
         return L2ArbitrumTestMessenger.sendTxToL1(_l1CallValue, _from, _to, _data);
+    }
+
+    function setL2WethAddress(address _l2Weth) external {
+        L2WethGateway.l2Weth = _l2Weth;
     }
 
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {

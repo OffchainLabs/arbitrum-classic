@@ -56,9 +56,9 @@ contract L2WethGateway is L2ArbitrumGateway {
         bytes memory deployData
     ) internal virtual override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
-        shouldHalt = true;
         // trigger withdrawal
         createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+        return true;
     }
 
     /**

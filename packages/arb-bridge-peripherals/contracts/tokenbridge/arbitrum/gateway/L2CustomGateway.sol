@@ -43,9 +43,9 @@ contract L2CustomGateway is L2ArbitrumGateway {
         bytes memory gatewayData
     ) internal virtual override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
-        shouldHalt = true;
         // trigger withdrawal
         createOutboundTx(_l1Token, address(this), _from, _amount, "");
+        return true;
     }
 
     /**
