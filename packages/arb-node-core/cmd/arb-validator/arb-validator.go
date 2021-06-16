@@ -18,8 +18,8 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -82,32 +82,19 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	if len(os.Args) < 6 {
-		usageStr := "Usage: arb-validator [folder] [RPC URL] [rollup address] [bridge utils address] [validator utils address] [validator wallet factory address] [strategy] " + cmdhelp.WalletArgsString
-		fmt.Println(usageStr)
+	config, wallet, err := configuration.Parse()
+	if err != nil || len(config.Database.Path) == 0 || len(config.L1.URL) == 0 ||
+		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
+		len(config.Validator.Utils.Address) == 0 || len(config.Validator.WalletFactory.Address) == 0 ||
+		len(config.Validator.Strategy) != 0 {
+		fmt.Printf("\n")
+		fmt.Printf("usage arb-validator --conf=<filename> \n")
+		fmt.Printf("   or arb-validator --l1.url=<url> --database.path=<path> --mainnet.arb1 \n")
+		fmt.Printf("   or arb-validator --l1.url=<url> --database.path=<path> --testnet.rinkeby \n")
 		return errors.New("invalid arguments")
 	}
-	flagSet := flag.NewFlagSet("validator", flag.ExitOnError)
-	walletFlags := cmdhelp.AddWalletFlags(flagSet)
-	gasPriceUrl := flagSet.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
-	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
-	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
 
-	//Healthcheck Config
-	disablePrimaryCheck := flagSet.Bool("disable-primary-check", true, "disable checking the health of the primary")
-	disableOpenEthereumCheck := flagSet.Bool("disable-openethereum-check", false, "disable checking the health of the OpenEthereum node")
-	healthcheckMetrics := flagSet.Bool("metrics", false, "enable prometheus endpoint")
-	healthcheckRPC := flagSet.String("healthcheck-rpc", "", "address to bind the healthcheck RPC to")
-	metricsPrefix := flagSet.String("metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
-
-	if err := flagSet.Parse(os.Args[8:]); err != nil {
-		return errors.Wrap(err, "failed parsing command line arguments")
-	}
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
-		return err
-	}
-
-	if *enablePProf {
+	if config.Pprof.Enabled {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
@@ -117,7 +104,7 @@ func startup() error {
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
-	metricsConfig := metrics.NewMetricsConfig(metricsPrefix)
+	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.Metrics.Prefix)
 	metricsConfig.RegisterSystemMetrics()
 	metricsConfig.RegisterStaticMetrics()
 
@@ -132,11 +119,11 @@ func startup() error {
 	}()
 
 	folder := os.Args[1]
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: *healthcheckMetrics}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: *disablePrimaryCheck}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: *disableOpenEthereumCheck}
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: *healthcheckRPC}
-	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: os.Args[2]}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enabled}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: config.Healthcheck.Sequencer.Enabled}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: config.Healthcheck.L1Node.Enabled}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
 
 	client, err := ethutils.NewRPCEthClient(os.Args[2])
@@ -159,7 +146,7 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(os.Args[4])
 	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[5])
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[6])
-	auth, _, err := cmdhelp.GetKeystore(folder, walletFlags, flagSet, l1ChainId)
+	auth, _, err := cmdhelp.GetKeystore(config.Database.Path, wallet, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
@@ -195,7 +182,7 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, *gasPriceUrl)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, config.GasPriceUrl)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
@@ -251,9 +238,6 @@ func startup() error {
 		return errors.Wrap(err, "error loading initial ArbCore machine")
 	}
 	initialMachineHash := initialExecutionCursor.MachineHash()
-	if err != nil {
-		return errors.Wrap(err, "error getting initial machine hash")
-	}
 	if initialMachineHash != chainMachineHash {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
