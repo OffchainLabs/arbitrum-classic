@@ -180,7 +180,7 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, common.HexToAddress(config.Rollup.Address), common.HexToAddress(config.Bridge.Utils.Address), healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.Bridge.Utils.Address), healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}

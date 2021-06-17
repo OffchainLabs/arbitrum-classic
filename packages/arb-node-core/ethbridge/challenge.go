@@ -57,12 +57,12 @@ type Challenge struct {
 	builderCon *ethbridgecontracts.Challenge
 }
 
-func NewChallenge(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
+func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend) (*Challenge, error) {
 	builderCon, err := ethbridgecontracts.NewChallenge(address, builder)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	watcher, err := NewChallengeWatcher(address, client)
+	watcher, err := NewChallengeWatcher(address, fromBlock, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
