@@ -100,8 +100,8 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 		}
 		b.mutex.Unlock()
 		backgroundContext := context.Background()
-		b.redis.releaseLockout(backgroundContext, b.lockoutExpiresAt)
-		b.redis.releaseLiveliness(backgroundContext, b.hostname, b.livelinessExpiresAt)
+		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
+		b.redis.releaseLiveliness(backgroundContext, b.hostname, &b.livelinessExpiresAt)
 		select {
 		case <-ctx.Done():
 			break
@@ -139,15 +139,15 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				}
 				b.currentBatcher = b.sequencerBatcher
 				b.currentSeq = b.hostname
-			}
-			b.mutex.Unlock()
-			holdingMutex = false
-			seqNum, err := b.core.GetMessageCount()
-			if err == nil && (b.lastLockedSeqNum == nil || seqNum.Cmp(b.lastLockedSeqNum) != 0) {
-				b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
-				b.lastLockedSeqNum = seqNum
-			} else {
-				logger.Warn().Err(err).Msg("error getting sequence number")
+				b.mutex.Unlock()
+				holdingMutex = false
+				seqNum, err := b.core.GetMessageCount()
+				if err == nil && (b.lastLockedSeqNum == nil || seqNum.Cmp(b.lastLockedSeqNum) != 0) {
+					b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
+					b.lastLockedSeqNum = seqNum
+				} else {
+					logger.Warn().Err(err).Msg("error getting sequence number")
+				}
 			}
 		} else if b.currentSeq != selectedSeq {
 			if b.currentBatcher == b.sequencerBatcher {
@@ -165,8 +165,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 					} else {
 						logger.Warn().Err(err).Msg("error getting sequence number")
 					}
-					b.lockoutExpiresAt = time.Time{}
-					b.redis.releaseLockout(ctx, b.lockoutExpiresAt)
+					b.redis.releaseLockout(ctx, &b.lockoutExpiresAt)
 				}
 				b.inboxReader.MessageDeliveryMutex.Unlock()
 				b.currentBatcher = nil

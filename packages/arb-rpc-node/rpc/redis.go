@@ -137,8 +137,10 @@ func (r *lockoutRedis) acquireOrUpdateGenericLockout(ctx context.Context, key st
 	}
 }
 
-func (r *lockoutRedis) releaseGenericLockout(parentCtx context.Context, key string, hasLockUntil time.Time) {
-	r.withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
+func (r *lockoutRedis) releaseGenericLockout(parentCtx context.Context, key string, hasLockUntil *time.Time) {
+	timeout := *hasLockUntil
+	*hasLockUntil = time.Time{}
+	r.withTimeout(parentCtx, timeout, func(timedCtx context.Context) error {
 		return r.client.Del(timedCtx, key).Err()
 	})
 }
@@ -147,7 +149,7 @@ func (r *lockoutRedis) acquireOrUpdateLockout(ctx context.Context, hostname stri
 	r.acquireOrUpdateGenericLockout(ctx, LOCKOUT_KEY, hostname, timeout, hasLockUntil)
 }
 
-func (r *lockoutRedis) releaseLockout(ctx context.Context, hasLockUntil time.Time) {
+func (r *lockoutRedis) releaseLockout(ctx context.Context, hasLockUntil *time.Time) {
 	r.releaseGenericLockout(ctx, LOCKOUT_KEY, hasLockUntil)
 }
 
@@ -155,7 +157,7 @@ func (r *lockoutRedis) acquireOrUpdateLiveliness(ctx context.Context, hostname s
 	r.acquireOrUpdateGenericLockout(ctx, LIVELINESS_KEY_PREFIX+hostname, "OK", timeout, hasLockUntil)
 }
 
-func (r *lockoutRedis) releaseLiveliness(ctx context.Context, hostname string, hasLockUntil time.Time) {
+func (r *lockoutRedis) releaseLiveliness(ctx context.Context, hostname string, hasLockUntil *time.Time) {
 	r.releaseGenericLockout(ctx, LIVELINESS_KEY_PREFIX+hostname, hasLockUntil)
 }
 
