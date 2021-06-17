@@ -100,7 +100,8 @@ func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer str
 			targetSequencer = hostname
 			return nil
 		}
-		return errors.New("no prioritized sequencer online")
+		targetSequencer = ""
+		return nil
 	})
 	return
 }
@@ -168,6 +169,10 @@ func (r *lockoutRedis) getLockout(ctx context.Context) (hostname string) {
 	r.withRetry(ctx, func() error {
 		var err error
 		hostname, err = r.client.Get(ctx, LOCKOUT_KEY).Result()
+		if err == redis.Nil {
+			hostname = ""
+			err = nil
+		}
 		return err
 	})
 	return

@@ -190,7 +190,16 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				b.inboxReader.MessageDeliveryMutex.Unlock()
 				b.currentBatcher = nil
 			}
-			if b.redis.getLockout(ctx) == selectedSeq {
+			if selectedSeq == "" {
+				msg := "no prioritized sequencers online"
+				logger.Warn().Msg(msg)
+				b.currentBatcher = &errorBatcher{
+					err: errors.New(msg),
+				}
+				b.currentSeq = selectedSeq
+				b.mutex.Unlock()
+				holdingMutex = false
+			} else if b.redis.getLockout(ctx) == selectedSeq {
 				logger.Info().Str("hostname", selectedSeq).Msg("forwarding to new sequencer")
 				var err error
 				b.currentBatcher, err = batcher.NewForwarder(ctx, RPC_URL_PREFIX+selectedSeq+RPC_URL_POSTFIX)
