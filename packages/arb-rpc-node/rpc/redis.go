@@ -56,7 +56,7 @@ func (r *lockoutRedis) withRetry(ctx context.Context, f func() error) {
 			return
 		default:
 		}
-		err := f()
+		err := errors.WithStack(f())
 		if err == nil {
 			return
 		}
@@ -82,6 +82,9 @@ func (r *lockoutRedis) withTimeout(parentCtx context.Context, timeout time.Time,
 func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer string) {
 	r.withRetry(ctx, func() error {
 		prioritiesString, err := r.client.Get(ctx, PRIORITIES_KEY).Result()
+		if err == redis.Nil {
+			return errors.New("sequencer priorities unset")
+		}
 		if err != nil {
 			return err
 		}

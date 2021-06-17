@@ -142,9 +142,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				b.mutex.Unlock()
 				holdingMutex = false
 				seqNum, err := b.core.GetMessageCount()
-				if err == nil && (b.lastLockedSeqNum == nil || seqNum.Cmp(b.lastLockedSeqNum) != 0) {
-					b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
-					b.lastLockedSeqNum = seqNum
+				if err == nil {
+					if b.lastLockedSeqNum == nil || seqNum.Cmp(b.lastLockedSeqNum) != 0 {
+						b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
+						b.lastLockedSeqNum = seqNum
+					}
 				} else {
 					logger.Warn().Err(err).Msg("error getting sequence number")
 				}
