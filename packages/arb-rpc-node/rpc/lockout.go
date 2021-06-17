@@ -40,37 +40,46 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
 type LockoutBatcher struct {
-	mutex               sync.RWMutex
-	sequencerBatcher    *batcher.SequencerBatcher
-	lockoutExpiresAt    time.Time
-	livelinessExpiresAt time.Time
-	currentSeq          string
-	core                core.ArbOutputLookup
-	inboxReader         *monitor.InboxReader
-	redis               *lockoutRedis
-	hostname            string
-	lastLockedSeqNum    *big.Int
+	mutex            sync.RWMutex
+	sequencerBatcher *batcher.SequencerBatcher
+	core             core.ArbOutputLookup
+	inboxReader      *monitor.InboxReader
+	redis            *lockoutRedis
+	hostname         string
 
 	livelinessTimeout time.Duration
 	lockoutTimeout    time.Duration
 
-	currentBatcher batcher.TransactionBatcher
+	lockoutExpiresAt    time.Time
+	livelinessExpiresAt time.Time
+	currentSeq          string
+	lastLockedSeqNum    *big.Int
+	currentBatcher      batcher.TransactionBatcher
 }
 
 func SetupLockout(
 	ctx context.Context,
 	seqBatcher batcher.TransactionBatcher,
+	core core.ArbOutputLookup,
+	inboxReader *monitor.InboxReader,
 	redisURL string,
 	hostname string,
 ) (*LockoutBatcher, error) {
+	redis, err := newLockoutRedis(ctx, redisURL)
+	if err != nil {
+		return nil, err
+	}
 	newBatcher := &LockoutBatcher{
 		sequencerBatcher: seqBatcher.(*batcher.SequencerBatcher),
 		currentBatcher: &errorBatcher{
 			err: errors.New("sequencer lockout manager starting up"),
 		},
+		core:              core,
+		inboxReader:       inboxReader,
 		livelinessTimeout: time.Second * 30,
 		lockoutTimeout:    time.Second * 30,
 		hostname:          hostname,
+		redis:             redis,
 	}
 	newBatcher.sequencerBatcher.LockoutManager = newBatcher
 	go newBatcher.lockoutManager(ctx)

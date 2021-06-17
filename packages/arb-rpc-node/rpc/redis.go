@@ -37,6 +37,16 @@ const SEQUENCE_NUMBER_KEY string = "lockout.sequenceNumber"
 
 const LOCKOUT_MARGIN time.Duration = time.Second * 10
 
+func newLockoutRedis(ctx context.Context, url string) (*lockoutRedis, error) {
+	opts, err := redis.ParseURL(url)
+	if err != nil {
+		return nil, err
+	}
+	return &lockoutRedis{
+		client: redis.NewClient(opts),
+	}, nil
+}
+
 func (r *lockoutRedis) withRetry(ctx context.Context, f func() error) {
 	backoff := time.Millisecond * 100
 	for {
