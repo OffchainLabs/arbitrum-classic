@@ -30,9 +30,22 @@ type lockoutRedis struct {
 	client *redis.Client
 }
 
+const LOCKOUT_KEY string = "lockout.lockout"
+const PRIORITIES_KEY string = "lockout.priorities"
+const LIVELINESS_KEY_PREFIX string = "lockout.liveliness."
+const SEQUENCE_NUMBER_KEY string = "lockout.sequenceNumber"
+
+const LOCKOUT_MARGIN time.Duration = time.Second * 10
+
 func (r *lockoutRedis) withRetry(ctx context.Context, f func() error) {
 	backoff := time.Millisecond * 100
 	for {
+		select {
+		case <-ctx.Done():
+			logger.Warn().Msg("redis context canceled")
+			return
+		default:
+		}
 		err := f()
 		if err == nil {
 			return
@@ -45,15 +58,26 @@ func (r *lockoutRedis) withRetry(ctx context.Context, f func() error) {
 	}
 }
 
+func (r *lockoutRedis) withTimeout(parentCtx context.Context, timeout time.Time, f func(context.Context) error) {
+	if timeout.Before(time.Now()) {
+		return
+	}
+	timedCtx, cancelTimedCtx := context.WithDeadline(parentCtx, timeout)
+	r.withRetry(timedCtx, func() error {
+		return f(timedCtx)
+	})
+	cancelTimedCtx()
+}
+
 func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer string) {
 	r.withRetry(ctx, func() error {
-		prioritiesString, err := r.client.Get(ctx, "lockout.priorities").Result()
+		prioritiesString, err := r.client.Get(ctx, PRIORITIES_KEY).Result()
 		if err != nil {
 			return err
 		}
 		priorities := strings.Split(prioritiesString, ",")
 		for _, hostname := range priorities {
-			err := r.client.Get(ctx, "lockout.liveliness."+hostname).Err()
+			err := r.client.Get(ctx, LIVELINESS_KEY_PREFIX+hostname).Err()
 			if err == redis.Nil {
 				continue
 			}
@@ -68,41 +92,67 @@ func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer str
 	return
 }
 
-func (r *lockoutRedis) updateLiveliness(ctx context.Context, hostname string, timeout time.Duration) {
+func (r *lockoutRedis) acquireGenericLockout(ctx context.Context, key string, value string, timeout time.Duration, new bool) (hasLockUntil time.Time) {
 	r.withRetry(ctx, func() error {
-		return r.client.Set(ctx, "lockout.liveliness."+hostname, "OK", timeout).Err()
-	})
-}
-
-func (r *lockoutRedis) removeLiveliness(ctx context.Context, hostname string) {
-	r.withRetry(ctx, func() error {
-		return r.client.Del(ctx, "lockout.liveliness."+hostname).Err()
-	})
-}
-
-func (r *lockoutRedis) acquireLockout(ctx context.Context, hostname string, timeout time.Duration) (hasLockUntil time.Time) {
-	r.withRetry(ctx, func() error {
-		hasLockUntil = time.Now().Add(timeout)
-		created, err := r.client.SetNX(ctx, "lockout.lockout", hostname, timeout).Result()
+		attemptingLockUntil := time.Now().Add(timeout)
+		var created bool
+		var err error
+		if new {
+			created, err = r.client.SetNX(ctx, key, value, timeout).Result()
+		} else {
+			err = r.client.Set(ctx, key, value, timeout).Err()
+			created = true
+		}
 		if err != nil {
 			return err
 		}
-		if !created {
-			hasLockUntil = time.Time{}
+		if created {
+			hasLockUntil = attemptingLockUntil
 		}
 		return nil
 	})
 	return
 }
 
-func (r *lockoutRedis) releaseLockoutNoRetry(ctx context.Context, hostname string) error {
-	return r.client.Del(ctx, "lockout.lockout").Err()
+func (r *lockoutRedis) acquireOrUpdateGenericLockout(ctx context.Context, key string, value string, timeout time.Duration, hasLockUntil *time.Time) {
+	if hasLockUntil.Before(time.Now()) {
+		*hasLockUntil = r.acquireGenericLockout(ctx, key, value, timeout, true)
+	} else {
+		timedCtx, cancelTimedCtx := context.WithDeadline(ctx, *hasLockUntil)
+		*hasLockUntil = r.acquireGenericLockout(timedCtx, key, value, timeout, false)
+		cancelTimedCtx()
+	}
+	if *hasLockUntil != (time.Time{}) {
+		*hasLockUntil = hasLockUntil.Add(-LOCKOUT_MARGIN)
+	}
+}
+
+func (r *lockoutRedis) releaseGenericLockout(parentCtx context.Context, key string, hasLockUntil time.Time) {
+	r.withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
+		return r.client.Del(timedCtx, key).Err()
+	})
+}
+
+func (r *lockoutRedis) acquireOrUpdateLockout(ctx context.Context, hostname string, timeout time.Duration, hasLockUntil *time.Time) {
+	r.acquireOrUpdateGenericLockout(ctx, LOCKOUT_KEY, hostname, timeout, hasLockUntil)
+}
+
+func (r *lockoutRedis) releaseLockout(ctx context.Context, hasLockUntil time.Time) {
+	r.releaseGenericLockout(ctx, LOCKOUT_KEY, hasLockUntil)
+}
+
+func (r *lockoutRedis) acquireOrUpdateLiveliness(ctx context.Context, hostname string, timeout time.Duration, hasLockUntil *time.Time) {
+	r.acquireOrUpdateGenericLockout(ctx, LIVELINESS_KEY_PREFIX+hostname, "OK", timeout, hasLockUntil)
+}
+
+func (r *lockoutRedis) releaseLiveliness(ctx context.Context, hostname string, hasLockUntil time.Time) {
+	r.releaseGenericLockout(ctx, LIVELINESS_KEY_PREFIX+hostname, hasLockUntil)
 }
 
 func (r *lockoutRedis) getLockout(ctx context.Context) (hostname string) {
 	r.withRetry(ctx, func() error {
 		var err error
-		hostname, err = r.client.Get(ctx, "lockout.lockout").Result()
+		hostname, err = r.client.Get(ctx, LOCKOUT_KEY).Result()
 		return err
 	})
 	return
@@ -110,7 +160,7 @@ func (r *lockoutRedis) getLockout(ctx context.Context) (hostname string) {
 
 func (r *lockoutRedis) getLatestSeqNum(ctx context.Context) (seqNum *big.Int) {
 	r.withRetry(ctx, func() error {
-		seqNumString, err := r.client.Get(ctx, "lockout.sequenceNumber").Result()
+		seqNumString, err := r.client.Get(ctx, SEQUENCE_NUMBER_KEY).Result()
 		if err == redis.Nil {
 			seqNum = big.NewInt(0)
 			return nil
@@ -128,8 +178,8 @@ func (r *lockoutRedis) getLatestSeqNum(ctx context.Context) (seqNum *big.Int) {
 	return
 }
 
-func (r *lockoutRedis) updateLatestSeqNum(ctx context.Context, seqNum *big.Int) {
-	r.withRetry(ctx, func() error {
-		return r.client.Set(ctx, "lockout.sequenceNumber", seqNum.String(), 0).Err()
+func (r *lockoutRedis) updateLatestSeqNum(parentCtx context.Context, seqNum *big.Int, hasLockUntil time.Time) {
+	r.withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
+		return r.client.Set(timedCtx, SEQUENCE_NUMBER_KEY, seqNum.String(), 0).Err()
 	})
 }

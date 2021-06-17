@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"math/big"
 	"os"
 	"sync"
 	"time"
@@ -39,14 +40,16 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
 type LockoutBatcher struct {
-	mutex            sync.RWMutex
-	sequencerBatcher *batcher.SequencerBatcher
-	lockoutExpiresAt time.Time
-	currentSeq       string
-	core             core.ArbOutputLookup
-	inboxReader      *monitor.InboxReader
-	redis            *lockoutRedis
-	hostname         string
+	mutex               sync.RWMutex
+	sequencerBatcher    *batcher.SequencerBatcher
+	lockoutExpiresAt    time.Time
+	livelinessExpiresAt time.Time
+	currentSeq          string
+	core                core.ArbOutputLookup
+	inboxReader         *monitor.InboxReader
+	redis               *lockoutRedis
+	hostname            string
+	lastLockedSeqNum    *big.Int
 
 	livelinessTimeout time.Duration
 	lockoutTimeout    time.Duration
@@ -87,26 +90,29 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			err: errors.New("sequencer lockout manager shutting down"),
 		}
 		b.mutex.Unlock()
-		b.redis.removeLiveliness(context.Background(), b.hostname)
-		if ctx.Err() == nil {
+		backgroundContext := context.Background()
+		b.redis.releaseLockout(backgroundContext, b.lockoutExpiresAt)
+		b.redis.releaseLiveliness(backgroundContext, b.hostname, b.livelinessExpiresAt)
+		select {
+		case <-ctx.Done():
+			break
+		default:
 			// We aren't shutting down but the lockout manager died
 			logger.Error().Msg("lockout manager died but context isn't shutting down")
 			os.Exit(1)
 		}
 	})()
 	for {
-		b.redis.updateLiveliness(ctx, b.hostname, b.livelinessTimeout)
+		b.redis.acquireOrUpdateLiveliness(ctx, b.hostname, b.livelinessTimeout, &b.livelinessExpiresAt)
 		selectedSeq := b.redis.selectSequencer(ctx)
 		if selectedSeq == b.hostname {
 			if !holdingMutex {
 				b.mutex.Lock()
 				holdingMutex = true
 			}
-			expires := b.redis.acquireLockout(ctx, b.hostname, b.lockoutTimeout)
-			if expires != (time.Time{}) {
-				// Leave a margin of 10 seconds between our expected and real expiry
-				b.lockoutExpiresAt = expires.Add(time.Second * -10)
-				if b.currentSeq != b.hostname {
+			b.redis.acquireOrUpdateLockout(ctx, b.hostname, b.lockoutTimeout, &b.lockoutExpiresAt)
+			if b.lockoutExpiresAt != (time.Time{}) {
+				if b.currentBatcher != b.sequencerBatcher {
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
 					for b.lockoutExpiresAt.Before(time.Now()) {
 						currentSeqNum, err := b.core.GetMessageCount()
@@ -120,12 +126,20 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 						}
 						time.Sleep(500 * time.Millisecond)
 					}
+					b.lastLockedSeqNum = targetSeqNum
 				}
 				b.currentBatcher = b.sequencerBatcher
 				b.currentSeq = b.hostname
 			}
 			b.mutex.Unlock()
 			holdingMutex = false
+			seqNum, err := b.core.GetMessageCount()
+			if err == nil && (b.lastLockedSeqNum == nil || seqNum.Cmp(b.lastLockedSeqNum) != 0) {
+				b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
+				b.lastLockedSeqNum = seqNum
+			} else {
+				logger.Warn().Err(err).Msg("error getting sequence number")
+			}
 		} else if b.currentSeq != selectedSeq {
 			if b.currentBatcher == b.sequencerBatcher {
 				b.inboxReader.MessageDeliveryMutex.Lock()
@@ -138,17 +152,12 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				if b.lockoutExpiresAt.After(time.Now()) {
 					seqNum, err := b.core.GetMessageCount()
 					if err == nil {
-						b.redis.updateLatestSeqNum(ctx, seqNum)
+						b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
 					} else {
 						logger.Warn().Err(err).Msg("error getting sequence number")
 					}
-					releaseCtx, cancelReleaseCtx := context.WithDeadline(ctx, b.lockoutExpiresAt)
-					err = b.redis.releaseLockoutNoRetry(releaseCtx, b.hostname)
-					cancelReleaseCtx()
-					if err != nil {
-						logger.Warn().Err(err).Msg("error releasing redis sequencer lock")
-					}
 					b.lockoutExpiresAt = time.Time{}
+					b.redis.releaseLockout(ctx, b.lockoutExpiresAt)
 				}
 				b.inboxReader.MessageDeliveryMutex.Unlock()
 				b.currentBatcher = nil
@@ -167,7 +176,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				holdingMutex = false
 			}
 		}
-		refreshDelay := time.Millisecond * 100
+		refreshDelay := time.Millisecond * 500
 		if b.currentBatcher == b.sequencerBatcher {
 			lockoutRefresh := time.Until(b.lockoutExpiresAt.Add(time.Second * -10))
 			if lockoutRefresh > refreshDelay {
