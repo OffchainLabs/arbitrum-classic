@@ -103,6 +103,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 		backgroundContext := context.Background()
 		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
 		b.redis.releaseLiveliness(backgroundContext, b.hostname, &b.livelinessExpiresAt)
+		logger.Debug().Msg("shut down sequencer lockout manager and released locks")
 		select {
 		case <-ctx.Done():
 			break
@@ -123,8 +124,10 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			b.redis.acquireOrUpdateLockout(ctx, b.hostname, b.lockoutTimeout, &b.lockoutExpiresAt)
 			if b.lockoutExpiresAt != (time.Time{}) {
 				if b.currentBatcher != b.sequencerBatcher {
+					logger.Info().Str("hostname", b.hostname).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
-					for b.lockoutExpiresAt.Before(time.Now()) {
+					attemptCatchupUntil := b.lockoutExpiresAt.Add(time.Second * -10)
+					for {
 						currentSeqNum, err := b.core.GetMessageCount()
 						if err != nil {
 							logger.Warn().Err(err).Msg("error getting sequence number")
@@ -132,11 +135,24 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							continue
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
+							b.lastLockedSeqNum = targetSeqNum
+							logger.
+								Info().
+								Str("targetSeqNum", targetSeqNum.String()).
+								Str("currentSeqNum", currentSeqNum.String()).
+								Msg("caught up to previous sequencer position")
+							break
+						}
+						if attemptCatchupUntil.After(time.Now()) {
+							logger.
+								Warn().
+								Str("targetSeqNum", targetSeqNum.String()).
+								Str("currentSeqNum", currentSeqNum.String()).
+								Msg("failed to catch up to previous sequencer position")
 							break
 						}
 						time.Sleep(500 * time.Millisecond)
 					}
-					b.lastLockedSeqNum = targetSeqNum
 				}
 				b.currentBatcher = b.sequencerBatcher
 				b.currentSeq = b.hostname
@@ -161,6 +177,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				holdingMutex = true
 			}
 			if b.currentBatcher == b.sequencerBatcher {
+				logger.Info().Str("newPriority", selectedSeq).Msg("releasing sequencer lockout to make way for new sequencer")
 				if b.lockoutExpiresAt.After(time.Now()) {
 					seqNum, err := b.core.GetMessageCount()
 					if err == nil {
@@ -174,12 +191,13 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				b.currentBatcher = nil
 			}
 			if b.redis.getLockout(ctx) == selectedSeq {
+				logger.Info().Str("hostname", selectedSeq).Msg("forwarding to new sequencer")
 				var err error
 				b.currentBatcher, err = batcher.NewForwarder(ctx, RPC_URL_PREFIX+selectedSeq+RPC_URL_POSTFIX)
 				if err == nil {
 					b.currentSeq = selectedSeq
 				} else {
-					logger.Warn().Err(err).Msg("failed to connect to current sequencer")
+					logger.Warn().Err(err).Msg("failed to connect to active sequencer")
 					b.currentBatcher = &errorBatcher{err: err}
 				}
 				// Note that we don't release the mutex if the selected sequencer doesn't have the lockout
