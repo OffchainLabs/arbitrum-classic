@@ -1,6 +1,8 @@
 import { ContractReceipt, ethers } from 'ethers'
 import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
+
 import { Outbox__factory } from './abi/factories/Outbox__factory'
 import { OutboxEntry__factory } from './abi/factories/OutboxEntry__factory'
 
@@ -77,6 +79,11 @@ export interface OutBoxTransactionExecuted {
   l2Sender: string
   outboxIndex: BigNumber
   transactionIndex: BigNumber
+}
+
+export interface L1GatewaySet {
+  l1Token: string
+  gateway: string
 }
 
 export enum OutgoingMessageState {
@@ -257,6 +264,29 @@ export class BridgeHelper {
     return logs.map(
       log =>
         (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
+    )
+  }
+  static getL1GatewaySetEventData = async (
+    l1GatewayRouterAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const contract = L1GatewayRouter__factory.connect(
+      l1GatewayRouterAddress,
+      l1Provider
+    ).interface
+    const iface = contract
+    const gatewaySetEvent = iface.getEvent('GatewaySet')
+    const nodeCreatedEventTopic = iface.getEventTopic(gatewaySetEvent)
+
+    const logs = await l1Provider.getLogs({
+      address: l1GatewayRouterAddress,
+      topics: [nodeCreatedEventTopic],
+      fromBlock: 0,
+      toBlock: 'latest',
+    })
+
+    return logs.map(
+      log => (iface.parseLog(log).args as unknown) as L1GatewaySet
     )
   }
 

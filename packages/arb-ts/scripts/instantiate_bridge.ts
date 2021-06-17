@@ -3,17 +3,25 @@ import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 
 import yargs from 'yargs/yargs'
 
-const pk = process.env['DEVNET_PRIVKEY']
-if (!pk) throw new Error('need DEVNET_PRIVKEY')
+const pk = process.env['DEVNET_PRIVKEY'] as string
+const mnemonic = process.env['DEV_MNEMONIC'] as string
+const defaultNetworkId = 4
+if (!pk && !mnemonic)
+  throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
 
 export const instantiateBridge = async () => {
   const argv = yargs(process.argv.slice(2)).argv
   let networkID = argv.networkID as number
   if (!networkID) {
-    networkID = 4
+    console.log(
+      'No networkID command line arg provided; using network',
+      defaultNetworkId
+    )
+
+    networkID = defaultNetworkId
   }
   const network = networks[networkID]
-  if (network) {
+  if (!network) {
     throw new Error(`Unrecognized network ID: ${networkID}`)
   }
 
@@ -25,8 +33,12 @@ export const instantiateBridge = async () => {
   const ethProvider = new providers.JsonRpcProvider(l1Network.rpcURL)
   const arbProvider = new providers.JsonRpcProvider(l2Network.rpcURL)
 
-  const l1Signer = new Wallet(pk, ethProvider)
-  const l2Signer = new Wallet(pk, arbProvider)
+  const l1Signer = mnemonic
+    ? Wallet.fromMnemonic(mnemonic).connect(ethProvider)
+    : new Wallet(pk, ethProvider)
+  const l2Signer = mnemonic
+    ? Wallet.fromMnemonic(mnemonic).connect(arbProvider)
+    : new Wallet(pk, arbProvider)
 
   const bridge = await Bridge.init(l1Signer, l2Signer)
 

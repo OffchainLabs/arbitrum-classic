@@ -1,3 +1,5 @@
+import { TokenInfo } from './tokenListTypes'
+
 export default [
   {
     name: 'Wrapped Ether',
@@ -340,4 +342,4 @@ export default [
     logoURI:
       'https://assets.coingecko.com/coins/images/605/thumb/melon.png?1547034295',
   },
-]
+] as TokenInfo[]

@@ -1,8 +1,108 @@
 {
   "name": "Arb1",
-  "timestamp": "1623877437368",
-  "version": { "major": 0, "minor": 1, "patch": 0 },
+  "timestamp": "2021-06-17T16:16:41.769Z",
+  "version": {
+    "major": 0,
+    "minor": 1,
+    "patch": 0
+  },
   "tokens": [
+    {
+      "chainId": 42161,
+      "address": "0xf4D48Ce3ee1Ac3651998971541bAdbb9A14D7234",
+      "name": "Cream",
+      "symbol": "CREAM",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/CREAM-icon.png",
+      "extensions": {
+        "l1Address": "0x2ba592f78db6436527729929aaf6c908497cb200",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978",
+      "name": "Curve DAO Token",
+      "symbol": "CRV",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xD533a949740bb3306d119CC777fa900bA034cd52/logo.png",
+      "extensions": {
+        "l1Address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x969131D8ddC06C2Be11a13e6E7fACF22CF57d95e",
+      "name": "dForce EUR",
+      "symbol": "EUX",
+      "decimals": 18,
+      "logoURI": "",
+      "extensions": {
+        "l1Address": "0xb986f3a2d91d3704dc974a24fb735dcc5e3c1e70",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xa0b862F60edEf4452F25B4160F177db44DeB6Cf1",
+      "name": "Gnosis Token",
+      "symbol": "GNO",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png",
+      "extensions": {
+        "l1Address": "0x6810e776880C02933D47DB1b9fc05908e5386b96",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x23A941036Ae778Ac51Ab04CEa08Ed6e2FE103614",
+      "name": "The Graph",
+      "symbol": "GRT",
+      "decimals": 18,
+      "logoURI": "https://assets.coingecko.com/coins/images/13397/thumb/Graph_Token.png?1608145566",
+      "extensions": {
+        "l1Address": "0xc944E90C64B2c07662A292be6244BDf05Cda44a7",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
+      "name": "ChainLink Token",
+      "symbol": "LINK",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png",
+      "extensions": {
+        "l1Address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x2e9a6Df78E42a30712c10a9Dc4b1C8656f8F2879",
+      "name": "Maker",
+      "symbol": "MKR",
+      "decimals": 18,
+      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2/logo.png",
+      "extensions": {
+        "l1Address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "l2TokenType": "standard"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xd4d42F0b6DEF4CE0383636770eF773390d85c61A",
+      "name": "Sushi",
+      "symbol": "SUSHI",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/SUSHI-icon.png",
+      "extensions": {
+        "l1Address": "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+        "l2TokenType": "standard"
+      }
+    },
     {
       "chainId": 42161,
       "address": "0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0",
@@ -29,25 +129,13 @@
     },
     {
       "chainId": 42161,
-      "address": "0x2e9a6Df78E42a30712c10a9Dc4b1C8656f8F2879",
-      "name": "Maker",
-      "symbol": "MKR",
+      "address": "0xcd14C3A2ba27819B352aae73414A26e2b366dC50",
+      "name": "dForce USD",
+      "symbol": "USX",
       "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2/logo.png",
+      "logoURI": "",
       "extensions": {
-        "l1Address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
-        "l2TokenType": "standard"
-      }
-    },
-    {
-      "chainId": 42161,
-      "address": "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
-      "name": "ChainLink Token",
-      "symbol": "LINK",
-      "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png",
-      "extensions": {
-        "l1Address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "l1Address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
         "l2TokenType": "standard"
       }
     },
@@ -60,42 +148,6 @@
       "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
       "extensions": {
         "l1Address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-        "l2TokenType": "standard"
-      }
-    },
-    {
-      "chainId": 42161,
-      "address": "0x23A941036Ae778Ac51Ab04CEa08Ed6e2FE103614",
-      "name": "The Graph",
-      "symbol": "GRT",
-      "decimals": 18,
-      "logoURI": "https://assets.coingecko.com/coins/images/13397/thumb/Graph_Token.png?1608145566",
-      "extensions": {
-        "l1Address": "0xc944E90C64B2c07662A292be6244BDf05Cda44a7",
-        "l2TokenType": "standard"
-      }
-    },
-    {
-      "chainId": 42161,
-      "address": "0xa0b862F60edEf4452F25B4160F177db44DeB6Cf1",
-      "name": "Gnosis Token",
-      "symbol": "GNO",
-      "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png",
-      "extensions": {
-        "l1Address": "0x6810e776880C02933D47DB1b9fc05908e5386b96",
-        "l2TokenType": "standard"
-      }
-    },
-    {
-      "chainId": 42161,
-      "address": "0xf4D48Ce3ee1Ac3651998971541bAdbb9A14D7234",
-      "name": "Cream",
-      "symbol": "CREAM",
-      "decimals": 18,
-      "logoURI": "https://zapper.fi/images/CREAM-icon.png",
-      "extensions": {
-        "l1Address": "0x2ba592f78db6436527729929aaf6c908497cb200",
         "l2TokenType": "standard"
       }
     }

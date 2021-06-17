@@ -12,8 +12,8 @@ import { writeFileSync } from 'fs'
   const { bridge, l1Network, l2Network } = await instantiateBridge()
 
   const tokens: TokenInfo[] = []
-  const arbDefaultList =
-    arbDefaultLists[l1Network.chainID] || ([] as TokenInfo[])
+  const l1NetworkID = +l1Network.chainID
+  const arbDefaultList = arbDefaultLists[l1NetworkID] || ([] as TokenInfo[])
   for (const l1Token of uniswapDefaultList.concat(arbDefaultList)) {
     const l1Address = l1Token.address
     let l1GatewayAddress: string
@@ -95,9 +95,10 @@ import { writeFileSync } from 'fs'
       )
     }
   }
+  tokens.sort((a, b) => (a.symbol < b.symbol ? -1 : 1))
   const tokenList: TokenList = {
     name: l2Network.name,
-    timestamp: Date.now().toString(),
+    timestamp: new Date().toISOString(),
     version: {
       major: 0,
       minor: 1,
@@ -105,6 +106,7 @@ import { writeFileSync } from 'fs'
     },
     tokens,
   }
+  console.log(`Generating JSON with ${tokens.length} tokens`)
 
   const listData = JSON.stringify(tokenList)
   writeFileSync(
