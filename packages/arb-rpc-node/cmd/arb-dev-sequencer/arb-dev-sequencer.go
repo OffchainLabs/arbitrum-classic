@@ -229,7 +229,7 @@ func startup() error {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, bridgeUtilsAddress, nil, dummySequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, 0, bridgeUtilsAddress, nil, dummySequencerFeed)
 		if err == nil {
 			break
 		}

@@ -188,7 +188,7 @@ func TestSequencerBatcher(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, client)
+	rollup, err := ethbridge.NewRollupWatcher(rollupAddr, 0, client)
 	test.FailIfError(t, err)
 
 	transactAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, "")
@@ -211,10 +211,10 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = seqMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), 0, common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
+	_, err = otherMon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), 0, common.NewAddressFromEth(bridgeUtilsAddr), nil, dummySequencerFeed)
 	test.FailIfError(t, err)
 
 	batcher, err := NewSequencerBatcher(

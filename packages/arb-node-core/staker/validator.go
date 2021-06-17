@@ -37,13 +37,14 @@ func NewValidator(
 	lookup core.ArbCoreLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
+	fromBlock int64,
 	validatorUtilsAddress common.Address,
 ) (*Validator, error) {
 	builder, err := ethbridge.NewBuilderBackend(wallet)
 	if err != nil {
 		return nil, err
 	}
-	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), client, builder)
+	rollup, err := ethbridge.NewRollup(wallet.RollupAddress().ToEthAddress(), fromBlock, client, builder)
 	_ = rollup
 	if err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func NewValidator(
 	if err != nil {
 		return nil, err
 	}
-	delayedBridge, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), client)
+	delayedBridge, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), fromBlock, client)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (v *Validator) resolveTimedOutChallenges(ctx context.Context) (*types.Trans
 	return v.wallet.TimeoutChallenges(ctx, challengesToEliminate)
 }
 
-func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerInfo) error {
+func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerInfo, fromBlock int64) error {
 	confirmType, err := v.validatorUtils.CheckDecidableNextNode(ctx)
 	if err != nil {
 		return err
@@ -180,7 +181,7 @@ type OurStakerInfo struct {
 	*ethbridge.StakerInfo
 }
 
-func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy Strategy) (nodeAction, bool, error) {
+func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy Strategy, fromBlock int64) (nodeAction, bool, error) {
 	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, stakerInfo.LatestStakedNode, stakerInfo.LatestStakedNodeHash)
 	if err != nil {
 		return nil, false, err

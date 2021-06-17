@@ -43,12 +43,12 @@ func executeChallenge(
 	challengerBackend, err := ethbridge.NewBuilderBackend(challengerWallet)
 	test.FailIfError(t, err)
 
-	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, asserterBackend)
+	asserterChallengeCon, err := ethbridge.NewChallenge(challengeAddress, 0, client, asserterBackend)
 	test.FailIfError(t, err)
-	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, client, challengerBackend)
+	challengerChallengeCon, err := ethbridge.NewChallenge(challengeAddress, 0, client, challengerBackend)
 	test.FailIfError(t, err)
 
-	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, client)
+	challenge, err := ethbridge.NewChallengeWatcher(challengeAddress, 0, client)
 	test.FailIfError(t, err)
 
 	seqInbox, err := ethbridge.NewSequencerInboxWatcher(seqInboxAddr, client)

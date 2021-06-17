@@ -63,24 +63,26 @@ type InboxMessageGetter interface {
 }
 
 type DelayedBridgeWatcher struct {
-	con     *ethbridgecontracts.Bridge
-	address ethcommon.Address
-	client  ethutils.EthClient
+	con       *ethbridgecontracts.Bridge
+	address   ethcommon.Address
+	fromBlock int64
+	client    ethutils.EthClient
 
 	inboxes map[ethcommon.Address]InboxMessageGetter
 }
 
-func NewDelayedBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*DelayedBridgeWatcher, error) {
+func NewDelayedBridgeWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient) (*DelayedBridgeWatcher, error) {
 	con, err := ethbridgecontracts.NewBridge(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &DelayedBridgeWatcher{
-		con:     con,
-		address: address,
-		client:  client,
-		inboxes: make(map[ethcommon.Address]InboxMessageGetter),
+		con:       con,
+		address:   address,
+		fromBlock: fromBlock,
+		client:    client,
+		inboxes:   make(map[ethcommon.Address]InboxMessageGetter),
 	}, nil
 }
 
@@ -116,8 +118,8 @@ func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNu
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
-		ToBlock:   nil,
+		FromBlock: big.NewInt(r.fromBlock),
+		ToBlock:   big.NewInt(r.fromBlock),
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{messageDeliveredID}, {msgNumBytes}},
 	}

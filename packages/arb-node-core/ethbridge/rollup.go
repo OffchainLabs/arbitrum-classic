@@ -42,12 +42,12 @@ type Rollup struct {
 	builderCon *ethbridgecontracts.RollupUserFacet
 }
 
-func NewRollup(address ethcommon.Address, client ethutils.EthClient, builder *BuilderBackend) (*Rollup, error) {
+func NewRollup(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, builder *BuilderBackend) (*Rollup, error) {
 	builderCon, err := ethbridgecontracts.NewRollupUserFacet(address, builder)
 	if err != nil {
 		return nil, err
 	}
-	watcher, err := NewRollupWatcher(address, client)
+	watcher, err := NewRollupWatcher(address, fromBlock, client)
 	if err != nil {
 		return nil, err
 	}

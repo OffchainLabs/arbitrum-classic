@@ -189,7 +189,7 @@ func startup() error {
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, valAuth, client)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, valAuth, client, config.Rollup.FromBlock)
 			if err == nil {
 				break
 			}
@@ -224,7 +224,7 @@ func startup() error {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, client, val, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}
@@ -242,7 +242,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
+	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}

@@ -48,6 +48,7 @@ type Staker struct {
 	*Validator
 	activeChallenge *challenge.Challenger
 	strategy        Strategy
+	fromBlock       int64
 }
 
 func NewStaker(
@@ -55,16 +56,18 @@ func NewStaker(
 	lookup core.ArbCoreLookup,
 	client ethutils.EthClient,
 	wallet *ethbridge.ValidatorWallet,
+	fromBlock int64,
 	validatorUtilsAddress common.Address,
 	strategy Strategy,
 ) (*Staker, *ethbridge.DelayedBridgeWatcher, error) {
-	val, err := NewValidator(ctx, lookup, client, wallet, validatorUtilsAddress)
+	val, err := NewValidator(ctx, lookup, client, wallet, fromBlock, validatorUtilsAddress)
 	if err != nil {
 		return nil, nil, err
 	}
 	return &Staker{
 		Validator: val,
 		strategy:  strategy,
+		fromBlock: fromBlock,
 	}, val.delayedBridge, nil
 }
 
@@ -155,7 +158,7 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 		if err != nil || tx != nil {
 			return tx, err
 		}
-		if err := s.resolveNextNode(ctx, rawInfo); err != nil {
+		if err := s.resolveNextNode(ctx, rawInfo, s.fromBlock); err != nil {
 			return nil, err
 		}
 	}
@@ -210,7 +213,7 @@ func (s *Staker) handleConflict(ctx context.Context, info *ethbridge.StakerInfo)
 	if s.activeChallenge == nil || s.activeChallenge.ChallengeAddress() != *info.CurrentChallenge {
 		logger.Warn().Str("challenge", info.CurrentChallenge.String()).Msg("Entered challenge")
 
-		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.client, s.builder)
+		challengeCon, err := ethbridge.NewChallenge(info.CurrentChallenge.ToEthAddress(), s.fromBlock, s.client, s.builder)
 		if err != nil {
 			return err
 		}
@@ -248,7 +251,7 @@ func (s *Staker) newStake(ctx context.Context) error {
 
 func (s *Staker) advanceStake(ctx context.Context, info *OurStakerInfo, effectiveStrategy Strategy) error {
 	active := effectiveStrategy > WatchtowerStrategy
-	action, _, err := s.generateNodeAction(ctx, info, effectiveStrategy)
+	action, _, err := s.generateNodeAction(ctx, info, effectiveStrategy, s.fromBlock)
 	if err != nil {
 		return err
 	}

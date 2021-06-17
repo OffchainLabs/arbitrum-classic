@@ -83,8 +83,9 @@ type Config struct {
 		URL string `koanf:"url"`
 	} `koanf:"l1"`
 	Rollup struct {
-		Address string `koanf:"address"`
-		Machine struct {
+		Address   string `koanf:"address"`
+		FromBlock int64  `koanf:"fromBlock"`
+		Machine   struct {
 			Filename string `koanf:"filename"`
 			//URL string `koanf:"url"`
 		} `koanf:"machine"`
@@ -176,12 +177,12 @@ func Parse() (*Config, *Wallet, error) {
 
 	if useArb1, _ := f.GetBool("mainnet.arb1"); useArb1 {
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":      "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-			"rollup.startblock":   "12640751",
-			"bridgeutils.address": "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-			"feed.url":            "wss://arb1.arbitrum.io/feed",
-			"forward.url":         "https://arb1.arbitrum.io/rpc",
-			"chainid":             "42161",
+			"rollup.address":       "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+			"rollup.fromBlock":     "12525700",
+			"bridge.utils.address": "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+			"feed.url":             "wss://arb1.arbitrum.io/feed",
+			"forward.url":          "https://arb1.arbitrum.io/rpc",
+			"chainid":              "42161",
 		}, "."), nil)
 
 		if err != nil {
@@ -191,12 +192,12 @@ func Parse() (*Config, *Wallet, error) {
 
 	if useRinkeby, _ := f.GetBool("testnet.rinkeby"); useRinkeby {
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":      "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-			"rollup.startblock":   "8700874",
-			"bridgeutils.address": "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-			"feed.url":            "wss://rinkeby.arbitrum.io/feed",
-			"forward.url":         "https://rinkeby.arbitrum.io/rpc",
-			"chainid":             "421611",
+			"rollup.address":       "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
+			"rollup.fromBlock":     "8700589",
+			"bridge.utils.address": "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
+			"feed.url":             "wss://rinkeby.arbitrum.io/feed",
+			"forward.url":          "https://rinkeby.arbitrum.io/rpc",
+			"chainid":              "421611",
 		}, "."), nil)
 
 		if err != nil {
