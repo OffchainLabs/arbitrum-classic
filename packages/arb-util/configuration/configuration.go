@@ -71,7 +71,7 @@ type Config struct {
 		Addr string `koanf:"addr"`
 		Port string `koanf:"port"`
 	} `koanf:"ws"`
-	Pprof struct {
+	PProf struct {
 		Enabled bool `koanf:"enabled"`
 	} `koanf:"pprof"`
 	LogLevel string `koanf:"loglevel"`

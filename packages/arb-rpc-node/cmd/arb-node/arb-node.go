@@ -105,7 +105,7 @@ func startup() error {
 		return err
 	}
 
-	if config.Pprof.Enabled {
+	if config.PProf.Enabled {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")

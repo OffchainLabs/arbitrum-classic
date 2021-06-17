@@ -155,7 +155,7 @@ func (v *ValidatorWallet) TimeoutChallenges(ctx context.Context, challenges []co
 	})
 }
 
-func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, auth *TransactAuth, client ethutils.EthClient, fromBlock int64) (ethcommon.Address, error) {
+func CreateValidatorWallet(ctx context.Context, validatorWalletFactoryAddr ethcommon.Address, fromBlock int64, auth *TransactAuth, client ethutils.EthClient) (ethcommon.Address, error) {
 	walletCreator, err := ethbridgecontracts.NewValidatorWalletCreator(validatorWalletFactoryAddr, client)
 	if err != nil {
 		return ethcommon.Address{}, errors.WithStack(err)

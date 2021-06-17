@@ -187,17 +187,17 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	val2Auth, err := ethbridge.NewTransactAuth(ctx, client, auth2, "")
 	test.FailIfError(t, err)
 
-	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, valAuth, client, 0)
+	validatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, valAuth, client)
 	test.FailIfError(t, err)
 
 	// Should lookup WalletCreated event
-	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, valAuth, client, 0)
+	checkValidatorAddress, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, valAuth, client)
 	test.FailIfError(t, err)
 	if validatorAddress != checkValidatorAddress {
 		t.Error("CreateValidatorWallet didn't reuse existing wallet")
 	}
 
-	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, val2Auth, client, 0)
+	validatorAddress2, err := ethbridge.CreateValidatorWallet(ctx, validatorWalletFactory, 0, val2Auth, client)
 	test.FailIfError(t, err)
 	if validatorAddress == validatorAddress2 {
 		t.Error("CreateValidatorWallet reused existing wallet for different address")

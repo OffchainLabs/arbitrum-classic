@@ -19,7 +19,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"io/ioutil"
 	golog "log"
 	"math/big"
@@ -46,6 +45,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var logger zerolog.Logger
@@ -94,7 +94,7 @@ func startup() error {
 		return errors.New("invalid arguments")
 	}
 
-	if config.Pprof.Enabled {
+	if config.PProf.Enabled {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
@@ -189,7 +189,7 @@ func startup() error {
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, valAuth, client, config.Rollup.FromBlock)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, client)
 			if err == nil {
 				break
 			}
