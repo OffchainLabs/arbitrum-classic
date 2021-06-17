@@ -1,3 +1,6 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 export interface Network {
   chainID: string
   name: string
@@ -63,7 +66,7 @@ export const networks: Networks = {
     partnerChainID: '42161',
     tokenBridge: mainnetBridge,
     blockTime: 15,
-    rpcURL: 'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY'],
+    rpcURL: process.env['MAINNET_RPC'] as string,
   },
   '42161': {
     chainID: '42161',
@@ -73,7 +76,7 @@ export const networks: Networks = {
     isArbitrum: true,
     tokenBridge: mainnetBridge,
     confirmPeriodBlocks: 45818,
-    rpcURL: 'https://arb1.arbitrum.io/rpc',
+    rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
   },
   '4': {
     chainID: '4',
@@ -84,7 +87,7 @@ export const networks: Networks = {
     tokenBridge: RinkebyBridge,
     confirmPeriodBlocks: 6545, // TODO
     blockTime: 15,
-    rpcURL: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
+    rpcURL: process.env['RINKEBY_RPC'] as string,
   },
   '421611': {
     chainID: '421611',
@@ -94,7 +97,7 @@ export const networks: Networks = {
     isArbitrum: true,
     tokenBridge: RinkebyBridge,
     confirmPeriodBlocks: 6545, // TODO
-    rpcURL: 'https://rinkeby.arbitrum.io/rpc',
+    rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
   },
 }
 

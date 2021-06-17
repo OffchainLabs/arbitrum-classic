@@ -2,10 +2,13 @@ import { Bridge, BridgeHelper, networks } from '../src'
 import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 
 import yargs from 'yargs/yargs'
+import dotenv from 'dotenv'
+dotenv.config()
 
 const pk = process.env['DEVNET_PRIVKEY'] as string
 const mnemonic = process.env['DEV_MNEMONIC'] as string
 const defaultNetworkId = 4
+
 if (!pk && !mnemonic)
   throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
 

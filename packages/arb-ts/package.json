@@ -52,6 +52,7 @@
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
     "chalk": "^4.1.0",
+    "dot-env": "^0.0.1",
     "ethereum-waffle": "^2.3.0",
     "install-peers-cli": "^2.2.0",
     "mocha": "^7.2.0",
