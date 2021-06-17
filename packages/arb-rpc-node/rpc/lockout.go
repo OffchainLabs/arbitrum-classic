@@ -32,8 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
@@ -47,8 +45,6 @@ type LockoutBatcher struct {
 	currentSeq       string
 	core             core.ArbOutputLookup
 	inboxReader      *monitor.InboxReader
-	inboxFeed        chan broadcaster.BroadcastFeedMessage
-	broadcastClient  *broadcastclient.BroadcastClient
 	redis            *lockoutRedis
 	hostname         string
 
@@ -62,7 +58,6 @@ func SetupLockout(
 	ctx context.Context,
 	seqBatcher batcher.TransactionBatcher,
 	redisURL string,
-	inboxFeed chan broadcaster.BroadcastFeedMessage,
 	hostname string,
 ) (*LockoutBatcher, error) {
 	newBatcher := &LockoutBatcher{
@@ -70,7 +65,6 @@ func SetupLockout(
 		currentBatcher: &errorBatcher{
 			err: errors.New("sequencer lockout manager starting up"),
 		},
-		inboxFeed:         inboxFeed,
 		livelinessTimeout: time.Second * 30,
 		lockoutTimeout:    time.Second * 30,
 		hostname:          hostname,
@@ -80,8 +74,6 @@ func SetupLockout(
 	return newBatcher, nil
 }
 
-const BROADCAST_FEED_PREFIX string = "ws://"
-const BROADCAST_FEED_POSTFIX string = ":9545/"
 const RPC_URL_PREFIX string = "http://"
 const RPC_URL_POSTFIX string = ":8545/rpc"
 
@@ -165,17 +157,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				var err error
 				b.currentBatcher, err = batcher.NewForwarder(ctx, RPC_URL_PREFIX+selectedSeq+RPC_URL_POSTFIX)
 				if err == nil {
-					if b.broadcastClient != nil {
-						b.broadcastClient.Close()
-					}
-					b.broadcastClient = broadcastclient.NewBroadcastClient(BROADCAST_FEED_PREFIX+selectedSeq+BROADCAST_FEED_POSTFIX, nil, 20*time.Second)
-					err = b.broadcastClient.ConnectWithChannel(ctx, b.inboxFeed)
-					if err == nil {
-						b.currentSeq = selectedSeq
-					} else {
-						logger.Warn().Err(err).
-							Msg("failed connect to sequencer broadcast")
-					}
+					b.currentSeq = selectedSeq
 				} else {
 					logger.Warn().Err(err).Msg("failed to connect to current sequencer")
 					b.currentBatcher = &errorBatcher{err: err}

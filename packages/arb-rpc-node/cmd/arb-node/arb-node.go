@@ -256,7 +256,7 @@ func startup() error {
 			config.GasPriceUrl,
 		)
 		if err == nil && config.Node.Sequencer.Lockout.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch, config.Node.Sequencer.Lockout.Redis, sequencerFeed)
+			batch, err = rpc.SetupLockout(ctx, batch, config.Node.Sequencer.Lockout.Redis, config.Node.Sequencer.Lockout.OwnRPCURL)
 		}
 		if err == nil {
 			go batch.Start(ctx)
