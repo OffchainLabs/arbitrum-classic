@@ -230,7 +230,7 @@ func (b *LockoutBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
 }
 
 func (b *LockoutBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.getBatcher().SubscribeNewTxsEvent(ch)
+	return b.sequencerBatcher.SubscribeNewTxsEvent(ch)
 }
 
 func (b *LockoutBatcher) Aggregator() *common.Address {
