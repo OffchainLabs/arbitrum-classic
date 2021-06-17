@@ -99,6 +99,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			err: errors.New("sequencer lockout manager shutting down"),
 		}
 		b.mutex.Unlock()
+		holdingMutex = false
 		backgroundContext := context.Background()
 		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
 		b.redis.releaseLiveliness(backgroundContext, b.hostname, &b.livelinessExpiresAt)
@@ -204,13 +205,13 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 func (b *LockoutBatcher) ShouldSequence() bool {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
-	return b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.Before(time.Now())
+	return b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.After(time.Now())
 }
 
 func (b *LockoutBatcher) getBatcher() batcher.TransactionBatcher {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
-	if b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.After(time.Now()) {
+	if b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.Before(time.Now()) {
 		return &errorBatcher{
 			err: errors.New("sequencer lockout expired"),
 		}
