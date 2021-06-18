@@ -1,6 +1,6 @@
 {
   "name": "Arb1",
-  "timestamp": "2021-06-18T19:26:43.172Z",
+  "timestamp": "2021-06-18T20:57:55.562Z",
   "version": {
     "major": 0,
     "minor": 1,
@@ -64,6 +64,18 @@
       "logoURI": "https://zapper.fi/images/CRV-icon.png",
       "extensions": {
         "l1Address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xC3Ae0333F0F34aa734D5493276223d95B8F9Cb37",
+      "name": "DXdao",
+      "symbol": "DXD",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/DXD-icon.png",
+      "extensions": {
+        "l1Address": "0xa1d65E8fB6e87b60FECCBc582F7f97804B725521",
         "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
@@ -141,13 +153,13 @@
     },
     {
       "chainId": 42161,
-      "address": "0x8174E86e2C8949ca96F171bf5E7e3CC9E68A9f30",
-      "name": "dQw4w9WgXcQ",
-      "symbol": "RKA",
+      "address": "0xef888bcA6AB6B1d26dbeC977C455388ecd794794",
+      "name": "Rari Governance Token",
+      "symbol": "RGT",
       "decimals": 18,
-      "logoURI": "",
+      "logoURI": "https://zapper.fi/images/RGT-icon.png",
       "extensions": {
-        "l1Address": "0x0CE51000d5244F1EAac0B313a792D5a5f96931BF",
+        "l1Address": "0xD291E7a03283640FDc51b121aC401383A46cC623",
         "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
