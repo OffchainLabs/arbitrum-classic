@@ -44,31 +44,23 @@ contract aeWETH is L2GatewayToken, IWETH9 {
     }
 
     function deposit() external payable override {
-        _deposit(msg.sender);
-    }
-
-    function depositTo(address account) external payable {
-        _deposit(account);
+        depositTo(msg.sender);
     }
 
     function withdraw(uint256 amount) external override {
-        _withdraw(msg.sender, amount);
+        withdrawTo(msg.sender, amount);
     }
 
-    function withdrawTo(address account, uint256 amount) external {
-        _withdraw(account, amount);
+    function depositTo(address account) public payable {
+        _mint(account, msg.value);
     }
 
-    function _withdraw(address account, uint256 amount) internal {
+    function withdrawTo(address account, uint256 amount) public {
         _burn(msg.sender, amount);
         payable(account).transfer(amount);
     }
 
-    function _deposit(address account) internal {
-        _mint(account, msg.value);
-    }
-
     receive() external payable {
-        _deposit(msg.sender);
+        depositTo(msg.sender);
     }
 }
