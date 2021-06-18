@@ -213,6 +213,11 @@ func Parse() (*Config, *Wallet, error) {
 		return nil, nil, err
 	}
 
+	if f.NArg() != 0 {
+		// Unexpected number of parameters
+		return nil, nil, errors.New("unexpected number of parameters")
+	}
+
 	var k = koanf.New(".")
 	// Load configuration file if provided
 
@@ -223,23 +228,11 @@ func Parse() (*Config, *Wallet, error) {
 		}
 	}
 
-	if useArb1, _ := f.GetBool("mainnet.arb1"); useArb1 {
-		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-			"rollup.chain-id":         "42161",
-			"rollup.from-block":       "12525700",
-			"rollup.machine.filename": "mainnet.arb1.mexe",
-			"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-			"feed.input.url":          "wss://arb1.arbitrum.io/feed",
-			"node.forward.url":        "https://arb1.arbitrum.io/rpc",
-		}, "."), nil)
+	useRinkeby, _ := f.GetBool("testnet.rinkeby")
+	useArb1, _ := f.GetBool("mainnet.arb1")
+	rollupAddress, _ := f.GetString("rollup.address")
 
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
-		}
-	}
-
-	if useRinkeby, _ := f.GetBool("testnet.rinkeby"); useRinkeby {
+	if useRinkeby {
 		err := k.Load(confmap.Provider(map[string]interface{}{
 			"rollup.address":          "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
 			"rollup.chain-id":         "421611",
@@ -253,49 +246,20 @@ func Parse() (*Config, *Wallet, error) {
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
 		}
-	}
-
-	if f.NArg() == 4 {
-		// Support legacy parameters
-		validatorFolder := f.Arg(0)
-		ethURL := f.Arg(1)
-		addressString := f.Arg(2)
-		bridgeUtilsAddressString := f.Arg(3)
-
+	} else if useArb1 || len(rollupAddress) == 0 {
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"persistent.storage.path": validatorFolder,
-			"l1.url":                  ethURL,
-			"rollup.address":          addressString,
-			"bridge.utils.address":    bridgeUtilsAddressString,
+			"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+			"rollup.chain-id":         "42161",
+			"rollup.from-block":       "12525700",
+			"rollup.machine.filename": "mainnet.arb1.mexe",
+			"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+			"feed.input.url":          "wss://arb1.arbitrum.io/feed",
+			"node.forward.url":        "https://arb1.arbitrum.io/rpc",
 		}, "."), nil)
 
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "error parsing rollup parameters")
+			return nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
 		}
-	} else if f.NArg() == 6 {
-		// Support legacy parameters
-		validatorFolder := f.Arg(0)
-		ethURL := f.Arg(1)
-		addressString := f.Arg(2)
-		bridgeUtilsAddressString := f.Arg(3)
-		validatorUtilsAddressString := f.Arg(4)
-		validatorWalletFactoryAddressString := f.Arg(5)
-
-		err := k.Load(confmap.Provider(map[string]interface{}{
-			"persistent.storage.path":              validatorFolder,
-			"l1.url":                               ethURL,
-			"rollup.address":                       addressString,
-			"bridge.utils.address":                 bridgeUtilsAddressString,
-			"node.validator.utils.address":         validatorUtilsAddressString,
-			"node.validator.walletfactory.address": validatorWalletFactoryAddressString,
-		}, "."), nil)
-
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error parsing rollup parameters")
-		}
-	} else if f.NArg() != 0 {
-		// Unexpected number of parameters
-		return nil, nil, errors.New("unexpected number of parameters")
 	}
 
 	// Any settings provided on command line override items in configuration file
