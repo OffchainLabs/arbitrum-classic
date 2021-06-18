@@ -112,7 +112,6 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         view
         virtual
         override
-        onlyRouter
         returns (address)
     {
         // will revert if not called by router

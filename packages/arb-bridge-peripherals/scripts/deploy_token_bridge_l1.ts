@@ -10,24 +10,27 @@ import { writeFileSync } from 'fs'
 // import { writeFileSync } from 'fs'
 // import { spawnSync } from 'child_process'
 
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+const MAINNET_INBOX = '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f'
+const MAINNET_WHITELIST = '0xD485e5c28AA4985b23f6DF13dA03caa766dcd459'
+
 const main = async () => {
   const accounts = await ethers.getSigners()
 
   // parse needed vars
-  const inboxAddress =
-    process.env.INBOX_ADDRESS || '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e'
+  const inboxAddress = MAINNET_INBOX
   if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
   // set whitelistAddress to address(0) to disable whitelist
-  const whitelistAddress = process.env.WHITELIST_ADDRESS
+  const whitelistAddress = MAINNET_WHITELIST
   if (!whitelistAddress)
     throw new Error('Please set whitelist address! WHITELIST_ADDRESS')
 
-  const l2PrivKey = process.env['DEVNET_PRIVKEY']
+  const l2PrivKey = process.env['L2_PRIVKEY']
   if (!l2PrivKey) throw new Error('Missing l2 priv key DEVNET_PRIVKEY')
 
   const l2ProviderRpc =
-    process.env['DEVNET_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
+    process.env['DEVNET_RPC'] || 'https://arb1.arbitrum.io/rpc'
   if (!l2ProviderRpc) throw new Error('Missing l2 rpc DEVNET_RPC')
 
   // deploy L1 logic contracts
@@ -69,7 +72,7 @@ const main = async () => {
 
   // deploy L2 logic contracts
   const l2Provider = new providers.JsonRpcProvider(l2ProviderRpc)
-  const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
+  const l2Signer = ethers.Wallet.fromMnemonic(l2PrivKey).connect(l2Provider)
 
   const StandardArbERC20 = (
     await ethers.getContractFactory('StandardArbERC20')
@@ -174,8 +177,10 @@ const main = async () => {
 
   // TODO: set default gateway to address(0) instead of standardERC20
 
-  const l1DefaultGateway = l1ERC20GatewayProxy.address
-  const l2DefaultGateway = l2ERC20GatewayProxy.address
+  const l1DefaultGateway = ZERO_ADDR
+  const l2DefaultGateway = ZERO_ADDR
+  // const l1DefaultGateway = l1ERC20GatewayProxy.address
+  // const l2DefaultGateway = l2ERC20GatewayProxy.address
 
   const l1GatewayRouterConnected = L1GatewayRouter__factory.connect(
     l1GatewayRouterProxy.address,

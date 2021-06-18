@@ -172,6 +172,19 @@ Uint256Result arbCoreGetMessageCount(CArbCore* arbcore_ptr) {
     }
 }
 
+Uint256Result arbCoreGetDelayedMessageCount(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    try {
+        auto count_result = arb_core->delayedMessageEntryInsertedCount();
+        if (!count_result.status.ok()) {
+            return {{}, false};
+        }
+        return {returnUint256(count_result.data), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}
+
 Uint256Result arbCoreGetTotalDelayedMessagesSequenced(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     try {

@@ -23,9 +23,6 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
-
 import { L1ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
 import "../../libraries/gateway/ArbitrumGateway.sol";
 import "../../libraries/IERC677.sol";
@@ -39,9 +36,10 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
 
     address public inbox;
 
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        IOutbox outbox = IOutbox(IInbox(inbox).bridge().activeOutbox());
-        return counterpartGateway == outbox.l2ToL1Sender();
+    modifier onlyCounterpartGateway() virtual override {
+        address l2ToL1Sender = getL2ToL1Sender(inbox);
+        require(isCounterpartGateway(l2ToL1Sender), "ONLY_COUNTERPART_GATEWAY");
+        _;
     }
 
     function _initialize(
@@ -53,7 +51,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
         require(_inbox != address(0), "BAD_INBOX");
-        router = _router;
         inbox = _inbox;
     }
 
@@ -74,7 +71,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
     ) external payable virtual override onlyCounterpartGateway returns (bytes memory) {
         (uint256 exitNum, bytes memory callHookData) = parseInboundData(_data);
 
-        _to = getCurrentDestination(exitNum, _to);
+        (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
         if (callHookData.length > 0) {
             bool success;
@@ -100,14 +97,14 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         return 30000;
     }
 
-    function getCurrentDestination(uint256 _exitNum, address _initialDestination)
-        public
-        view
-        virtual
-        returns (address)
-    {
+    function getExternalCall(
+        uint256 _exitNum,
+        address _initialDestination,
+        bytes memory _initialData
+    ) public view virtual returns (address target, bytes memory data) {
         // current destination can be changed for tradeable exits in a super class
-        return _initialDestination;
+        target = _initialDestination;
+        data = _initialData;
     }
 
     function parseInboundData(bytes calldata _data)
@@ -190,7 +187,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable virtual override onlyRouter returns (bytes memory res) {
+    ) external payable virtual override returns (bytes memory res) {
         address _from;
         uint256 seqNum;
         {
@@ -239,7 +236,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
             bytes memory _extraData
         )
     {
-        if (isSenderRouter()) {
+        if (isRouter(msg.sender)) {
             // router encoded
             (_from, _extraData) = abi.decode(_data, (address, bytes));
         } else {
@@ -248,10 +245,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         }
         // user encoded
         (_maxSubmissionCost, _extraData) = abi.decode(_extraData, (uint256, bytes));
-    }
-
-    function isSenderRouter() internal view virtual override returns (bool) {
-        return msg.sender == router;
     }
 
     function getOutboundCalldata(

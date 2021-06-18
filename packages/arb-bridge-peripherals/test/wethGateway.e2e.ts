@@ -206,4 +206,56 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       'Tokens not escrowed'
     )
   })
+
+  it('should withdraw tokens if no token is deployed', async function () {
+    const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+    // set L2 weth to address zero to test if force withdraw is triggered when
+    // no contract is deployed
+    await l2TestBridge.setL2WethAddress(ZERO_ADDR)
+
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await l1Weth.deposit({ value: tokenAmount })
+    await l1Weth.approve(l1TestBridge.address, tokenAmount)
+
+    const prevUserBalance = await l1Weth.balanceOf(accounts[0].address)
+    const prevAllowance = await l1Weth.allowance(
+      accounts[0].address,
+      l1TestBridge.address
+    )
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    await l1RouterTestBridge.outboundTransfer(
+      l1Weth.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
+
+    const postUserBalance = await l1Weth.balanceOf(accounts[0].address)
+    const postAllowance = await l1Weth.allowance(
+      accounts[0].address,
+      l1TestBridge.address
+    )
+
+    assert.equal(
+      prevUserBalance.toNumber(),
+      postUserBalance.toNumber(),
+      'Tokens not withdrawn'
+    )
+
+    assert.equal(
+      prevAllowance.toNumber() - tokenAmount,
+      postAllowance.toNumber(),
+      'Tokens not spent in allowance'
+    )
+    // unset the custom l2 address as to not affect other tests
+    await l2TestBridge.setL2WethAddress(l2Weth.address)
+  })
 })

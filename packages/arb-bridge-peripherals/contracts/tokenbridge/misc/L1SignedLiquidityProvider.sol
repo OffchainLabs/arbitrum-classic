@@ -51,11 +51,12 @@ contract L1SignedLiquidityProvider is Ownable, IExitLiquidityProvider {
         uint256 amount,
         uint256 exitNum,
         bytes calldata liquidityProof
-    ) external override {
+    ) external override returns (bytes memory) {
         require(msg.sender == tokenBridge, "NOT_BRIDGE");
         bytes32 withdrawData = keccak256(abi.encodePacked(exitNum, dest, erc20, amount));
         require(ECDSA.recover(withdrawData, liquidityProof) == signer, "BAD_SIG");
         uint256 fee = amount / fee_div;
         require(IERC20(erc20).transfer(dest, amount - fee), "INSUFFICIENT_LIQUIDITIY");
+        return "";
     }
 }
