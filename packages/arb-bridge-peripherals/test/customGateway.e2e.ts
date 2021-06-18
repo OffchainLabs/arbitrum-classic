@@ -129,6 +129,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
     assert.equal(l2Balance, tokenAmount, 'Tokens not minted')
   })
+
   it('should withdraw tokens', async function () {
     // custom token setup
     const L1CustomToken: ContractFactory = await ethers.getContractFactory(
@@ -175,6 +176,64 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       prevUserBalance.toNumber() + tokenAmount,
       postUserBalance.toNumber(),
       'Tokens not escrowed'
+    )
+  })
+  it('should withdraw tokens if no token is deployed', async function () {
+    // custom token setup
+    const L1CustomToken: ContractFactory = await ethers.getContractFactory(
+      'TestCustomTokenL1'
+    )
+    const l1CustomToken = await L1CustomToken.deploy(l1TestBridge.address)
+
+    // register a non-existent L2 token so we can test the force withdrawal
+    await l1CustomToken.registerTokenOnL2(
+      '0x0000000000000000000000000000000000000000',
+      0,
+      0,
+      0
+    )
+
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await l1CustomToken.mint()
+    await l1CustomToken.approve(l1TestBridge.address, tokenAmount)
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    const prevAllowance = await l1CustomToken.allowance(
+      accounts[0].address,
+      l1TestBridge.address
+    )
+
+    const prevUserBalance = await l1CustomToken.balanceOf(accounts[0].address)
+
+    const tx = await l1RouterTestBridge.outboundTransfer(
+      l1CustomToken.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
+
+    const postUserBalance = await l1CustomToken.balanceOf(accounts[0].address)
+    const postAllowance = await l1CustomToken.allowance(
+      accounts[0].address,
+      l1TestBridge.address
+    )
+
+    assert.equal(
+      prevUserBalance.toNumber(),
+      postUserBalance.toNumber(),
+      'Tokens not withdrawn'
+    )
+    assert.equal(
+      prevAllowance.toNumber() - tokenAmount,
+      postAllowance.toNumber(),
+      'Tokens not spent in allowance'
     )
   })
 })

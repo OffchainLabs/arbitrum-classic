@@ -53,10 +53,6 @@ contract L2GatewayRouter is GatewayRouter {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
-        return msg.sender == counterpartGateway;
-    }
-
     function setDefaultGateway(address newL2DefaultGateway)
         external
         virtual

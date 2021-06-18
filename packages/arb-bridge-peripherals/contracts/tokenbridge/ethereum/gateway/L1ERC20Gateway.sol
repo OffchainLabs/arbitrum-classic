@@ -48,16 +48,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
     }
 
-    function postUpgradeInit(bytes32 _cloneableProxyHash, address _l2BeaconProxyFactory) external {
-        // one time use method to initialize new fields from upgrade
-        require(_cloneableProxyHash != bytes32(0), "INVALID_PROXYHASH");
-        require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
-        require(cloneableProxyHash == bytes32(0), "ALREADY_INIT");
-        require(l2BeaconProxyFactory == address(0), "ALREADY_INIT");
-        cloneableProxyHash = _cloneableProxyHash;
-        l2BeaconProxyFactory = _l2BeaconProxyFactory;
-    }
-
     /**
      * @notice utility function used to perform external read-only calls.
      * @dev the result is returned even if the call failed, the L2 is expected to
@@ -99,25 +89,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         );
 
         return outboundCalldata;
-    }
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20)
-        external
-        view
-        virtual
-        override
-        onlyRouter
-        returns (address)
-    {
-        // will revert if not called by router
-        return _calculateL2TokenAddress(l1ERC20);
     }
 
     function _calculateL2TokenAddress(address l1ERC20)

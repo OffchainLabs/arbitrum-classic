@@ -201,11 +201,14 @@ describe('Bridge peripherals layer 1', () => {
         '0x',
       ]
     )
+    // doesn't make a difference since the passive fast exit manager transfers the exit again
+    const newData = '0x'
 
     await testBridge.transferExitAndCall(
       exitNum,
       accounts[0].address,
       passiveFastExitManager.address,
+      newData,
       tradeData
     )
 
@@ -227,13 +230,23 @@ describe('Bridge peripherals layer 1', () => {
       [exitNum, '0x']
     )
 
-    await testBridge.finalizeInboundTransfer(
+    const finalizeTx = await testBridge.finalizeInboundTransfer(
       token.address,
       accounts[0].address,
       accounts[0].address,
       tokenAmount,
       inboundData
     )
+    const finalizeTxReceipt = await finalizeTx.wait()
+
+    // event emitted when fast exit mock is triggered
+    const expectedTopic =
+      '0x2f0c0af451e6330658fba0c08f7d82acdb1feff8d2904044a765af1b27df3e1f'
+    const logs = finalizeTxReceipt.events
+      .filter((curr: any) => curr.topics[0] === expectedTopic)
+      .map((curr: any) => fastExitMock.interface.parseLog(curr))
+
+    assert.equal(logs.length, 1, 'Fast exit mock not called on withdrawal')
 
     const postLPBalance = await token.balanceOf(fastExitMock.address)
 
@@ -252,15 +265,9 @@ describe('Bridge peripherals layer 1', () => {
     await token.mint()
     await token.approve(testBridge.address, tokenAmount)
 
-    let data = ethers.utils.defaultAbiCoder.encode(
+    const data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
-    )
-
-    // router usually does this encoding part
-    data = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'bytes'],
-      [accounts[0].address, data]
     )
 
     const tx = await testBridge.outboundTransfer(
@@ -272,6 +279,7 @@ describe('Bridge peripherals layer 1', () => {
       data
     )
     const receipt = await tx.wait()
+    // TicketData(uint256)
     const expectedTopic =
       '0x7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9'
     const logs = receipt.events

@@ -37,35 +37,6 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         beaconProxyFactory = _beaconProxyFactory;
     }
 
-    function postUpgradeInit(address _beaconProxyFactory) external {
-        // This function is for one time use to update the storage value of beaconFactory
-        // after being upgraded
-        require(
-            beaconProxyFactory == address(0x86B4b312140B4117A7b0D252eC53Fa6D0753fE85),
-            "ALREADY_UPDATED"
-        );
-        beaconProxyFactory = _beaconProxyFactory;
-    }
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20)
-        external
-        view
-        virtual
-        override
-        onlyRouter
-        returns (address)
-    {
-        // will revert if not called by router
-        return _calculateL2TokenAddress(l1ERC20);
-    }
-
     /**
      * @notice Calculate the address used when bridging an ERC20 token
      * @dev this always returns the same as the L1 oracle, but may be out of date.
@@ -117,10 +88,11 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         StandardArbERC20(createdContract).bridgeInit(l1ERC20, deployData);
 
         if (createdContract == expectedL2Address) {
-            shouldHalt = false;
+            return false;
         } else {
-            // trigger withdrawal
+            // trigger withdrawal then halt
             createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+            return true;
         }
     }
 }
