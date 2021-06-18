@@ -79,14 +79,14 @@ func main() {
 
 func startup() error {
 	config, wallet, err := configuration.Parse()
-	if err != nil || len(config.Database.Path) == 0 || len(config.L1.URL) == 0 ||
+	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
 		len(config.Validator.Utils.Address) == 0 || len(config.Validator.WalletFactory.Address) == 0 ||
 		len(config.Validator.Strategy) != 0 {
 		fmt.Printf("\n")
 		fmt.Printf("usage arb-validator --conf=<filename> \n")
-		fmt.Printf("   or arb-validator --l1.url=<url> --database.path=<path> --mainnet.arb1 \n")
-		fmt.Printf("   or arb-validator --l1.url=<url> --database.path=<path> --testnet.rinkeby \n")
+		fmt.Printf("   or arb-validator --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
+		fmt.Printf("   or arb-validator --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n")
 		if err != nil {
 			return err
 		}
@@ -122,7 +122,6 @@ func startup() error {
 		}
 	}()
 
-	folder := os.Args[1]
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enabled}
 	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: config.Healthcheck.Sequencer.Enabled}
 	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: config.Healthcheck.L1Node.Enabled}
@@ -150,7 +149,7 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(os.Args[4])
 	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[5])
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[6])
-	auth, _, err := cmdhelp.GetKeystore(config.Database.Path, wallet, l1ChainId)
+	auth, _, err := cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
@@ -169,7 +168,7 @@ func startup() error {
 	}
 
 	chainState := ChainState{}
-	chainStatePath := path.Join(folder, "chainState.json")
+	chainStatePath := path.Join(config.Persistent.Storage.Path, "chainState.json")
 	chainStateFile, err := os.Open(chainStatePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -215,9 +214,7 @@ func startup() error {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
-	dbPath := path.Join(folder, "arbStorage")
-	arbosPath := path.Join(folder, "arbos.mexe")
-	mon, err := monitor.NewMonitor(dbPath, arbosPath)
+	mon, err := monitor.NewMonitor(config.Persistent.Database.Path, config.Rollup.Machine.Filename)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
