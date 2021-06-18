@@ -26,6 +26,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -84,10 +85,10 @@ func startup() error {
 		len(config.Validator.Utils.Address) == 0 || len(config.Validator.WalletFactory.Address) == 0 ||
 		len(config.Validator.Strategy) != 0 {
 		fmt.Printf("\n")
-		fmt.Printf("usage arb-validator --conf=<filename> \n")
-		fmt.Printf("   or arb-validator --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
-		fmt.Printf("   or arb-validator --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n")
-		if err != nil {
+		fmt.Printf("Sample usage: arb-validator --conf=<filename> \n")
+		fmt.Printf("          or: arb-validator --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
+		fmt.Printf("          or: arb-validator --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n")
+		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			return err
 		}
 

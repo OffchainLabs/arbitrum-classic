@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -83,13 +84,13 @@ func startup() error {
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
 		(config.Sequencer && config.Feed.URL != "") {
 		fmt.Printf("\n")
-		fmt.Printf("usage                  arb-node --conf=<filename> \n")
-		fmt.Printf("   or       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("   or aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("   or            node: arb-node --feed.url=<feed websocket> --forward.url=<sequencer RPC> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] \n")
-		fmt.Printf("   or            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
-		fmt.Printf("   or            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n\n")
-		if err != nil {
+		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
+		fmt.Printf("          or:       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or: aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or:            node: arb-node --feed.url=<feed websocket> --forward.url=<sequencer RPC> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] \n")
+		fmt.Printf("          or:            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
+		fmt.Printf("          or:            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n\n")
+		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			return err
 		}
 
