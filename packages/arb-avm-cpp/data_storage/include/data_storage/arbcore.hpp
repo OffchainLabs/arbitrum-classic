@@ -275,6 +275,7 @@ class ArbCore {
     ValueResult<uint256_t> logInsertedCount() const;
     ValueResult<uint256_t> sendInsertedCount() const;
     ValueResult<uint256_t> messageEntryInsertedCount() const;
+    ValueResult<uint256_t> delayedMessageEntryInsertedCount() const;
     ValueResult<uint256_t> totalDelayedMessagesSequenced() const;
     ValueResult<std::vector<value>> getLogs(uint256_t index,
                                             uint256_t count,

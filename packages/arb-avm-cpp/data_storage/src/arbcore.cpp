@@ -1842,6 +1842,12 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
     return messageEntryInsertedCountImpl(tx);
 }
 
+ValueResult<uint256_t> ArbCore::delayedMessageEntryInsertedCount() const {
+    ReadTransaction tx(data_storage);
+
+    return delayedMessageEntryInsertedCountImpl(tx);
+}
+
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     const ReadTransaction& tx) const {
     auto it = tx.sequencerBatchItemGetIterator();
