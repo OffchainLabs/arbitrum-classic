@@ -81,7 +81,7 @@ export interface OutBoxTransactionExecuted {
   transactionIndex: BigNumber
 }
 
-export interface L1GatewaySet {
+export interface GatewaySet {
   l1Token: string
   gateway: string
 }
@@ -266,28 +266,26 @@ export class BridgeHelper {
         (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
     )
   }
-  static getL1GatewaySetEventData = async (
-    l1GatewayRouterAddress: string,
-    l1Provider: providers.Provider
+  static getGatewaySetEventData = async (
+    gatewayRouterAddress: string,
+    provider: providers.Provider
   ) => {
     const contract = L1GatewayRouter__factory.connect(
-      l1GatewayRouterAddress,
-      l1Provider
+      gatewayRouterAddress,
+      provider
     ).interface
     const iface = contract
     const gatewaySetEvent = iface.getEvent('GatewaySet')
     const nodeCreatedEventTopic = iface.getEventTopic(gatewaySetEvent)
 
-    const logs = await l1Provider.getLogs({
-      address: l1GatewayRouterAddress,
+    const logs = await provider.getLogs({
+      address: gatewayRouterAddress,
       topics: [nodeCreatedEventTopic],
       fromBlock: 0,
       toBlock: 'latest',
     })
 
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L1GatewaySet
-    )
+    return logs.map(log => (iface.parseLog(log).args as unknown) as GatewaySet)
   }
 
   static getWithdrawalsInL2Transaction = async (

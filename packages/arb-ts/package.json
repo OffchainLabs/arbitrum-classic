@@ -49,6 +49,7 @@
     "@types/mocha": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^3.4.0",
     "@typescript-eslint/parser": "^3.4.0",
+    "axios": "^0.21.1",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
     "chalk": "^4.1.0",

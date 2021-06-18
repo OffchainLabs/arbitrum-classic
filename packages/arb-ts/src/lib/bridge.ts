@@ -667,14 +667,23 @@ export class Bridge {
       }
     )
   }
-
   public async getL1GatewaySetEventData() {
     const l1ChainId = await this.l1Bridge.l1Signer.getChainId()
     const l1GatewayRouterAddress =
       networks[l1ChainId].tokenBridge.l1GatewayRouter
-    return BridgeHelper.getL1GatewaySetEventData(
+    return BridgeHelper.getGatewaySetEventData(
       l1GatewayRouterAddress,
       this.l1Bridge.l1Provider
+    )
+  }
+
+  public async getL2GatewaySetEventData() {
+    const l1ChainId = await this.l1Bridge.l1Signer.getChainId()
+    const l2GatewayRouterAddress =
+      networks[l1ChainId].tokenBridge.l2GatewayRouter
+    return BridgeHelper.getGatewaySetEventData(
+      l2GatewayRouterAddress,
+      this.l2Bridge.l2Provider
     )
   }
 }

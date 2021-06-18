@@ -1,6 +1,6 @@
 {
   "name": "Arb1",
-  "timestamp": "2021-06-17T16:16:41.769Z",
+  "timestamp": "2021-06-18T19:26:43.172Z",
   "version": {
     "major": 0,
     "minor": 1,
@@ -9,14 +9,50 @@
   "tokens": [
     {
       "chainId": 42161,
+      "address": "0x0e15258734300290a651FdBAe8dEb039a8E7a2FA",
+      "name": "Alchemy",
+      "symbol": "ALCH",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/ALCH-icon.png",
+      "extensions": {
+        "l1Address": "0x0000A1c00009A619684135B824Ba02f7FbF3A572",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x35aa6789AA5d178c53fc0657b68AE684B37960Ff",
+      "name": "Capital.finance",
+      "symbol": "CAP",
+      "decimals": 18,
+      "logoURI": "",
+      "extensions": {
+        "l1Address": "0xEDA6eFE5556e134Ef52f2F858aa1e81c84CDA84b",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x3a8B787f78D775AECFEEa15706D4221B40F345AB",
+      "name": "CelerToken",
+      "symbol": "CELR",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/CELR-icon.png",
+      "extensions": {
+        "l1Address": "0x4F9254C83EB525f9FCf346490bbb3ed28a81C667",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
       "address": "0xf4D48Ce3ee1Ac3651998971541bAdbb9A14D7234",
       "name": "Cream",
       "symbol": "CREAM",
       "decimals": 18,
       "logoURI": "https://zapper.fi/images/CREAM-icon.png",
       "extensions": {
-        "l1Address": "0x2ba592f78db6436527729929aaf6c908497cb200",
-        "l2TokenType": "standard"
+        "l1Address": "0x2ba592F78dB6436527729929AAf6c908497cB200",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -25,10 +61,10 @@
       "name": "Curve DAO Token",
       "symbol": "CRV",
       "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xD533a949740bb3306d119CC777fa900bA034cd52/logo.png",
+      "logoURI": "https://zapper.fi/images/CRV-icon.png",
       "extensions": {
         "l1Address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
-        "l2TokenType": "standard"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -39,8 +75,20 @@
       "decimals": 18,
       "logoURI": "",
       "extensions": {
-        "l1Address": "0xb986f3a2d91d3704dc974a24fb735dcc5e3c1e70",
-        "l2TokenType": "standard"
+        "l1Address": "0xb986F3a2d91d3704Dc974A24FB735dCc5E3C1E70",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xBDeF0E9ef12E689F366fe494A7A7D0dad25D9286",
+      "name": "Fuse Token",
+      "symbol": "FUSE",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/FUSE-icon.png",
+      "extensions": {
+        "l1Address": "0x970B9bB2C0444F5E81e9d0eFb84C8ccdcdcAf84d",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -49,22 +97,22 @@
       "name": "Gnosis Token",
       "symbol": "GNO",
       "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x6810e776880C02933D47DB1b9fc05908e5386b96/logo.png",
+      "logoURI": "https://zapper.fi/images/GNO-icon.png",
       "extensions": {
         "l1Address": "0x6810e776880C02933D47DB1b9fc05908e5386b96",
-        "l2TokenType": "standard"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
       "chainId": 42161,
       "address": "0x23A941036Ae778Ac51Ab04CEa08Ed6e2FE103614",
-      "name": "The Graph",
+      "name": "Graph Token",
       "symbol": "GRT",
       "decimals": 18,
-      "logoURI": "https://assets.coingecko.com/coins/images/13397/thumb/Graph_Token.png?1608145566",
+      "logoURI": "https://zapper.fi/images/GRT-icon.png",
       "extensions": {
         "l1Address": "0xc944E90C64B2c07662A292be6244BDf05Cda44a7",
-        "l2TokenType": "standard"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -73,10 +121,10 @@
       "name": "ChainLink Token",
       "symbol": "LINK",
       "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x514910771AF9Ca656af840dff83E8264EcF986CA/logo.png",
+      "logoURI": "https://zapper.fi/images/LINK-icon.png",
       "extensions": {
         "l1Address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
-        "l2TokenType": "standard"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -85,22 +133,34 @@
       "name": "Maker",
       "symbol": "MKR",
       "decimals": 18,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2/logo.png",
+      "logoURI": "https://zapper.fi/images/MKR-icon.png",
       "extensions": {
         "l1Address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
-        "l2TokenType": "standard"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x8174E86e2C8949ca96F171bf5E7e3CC9E68A9f30",
+      "name": "dQw4w9WgXcQ",
+      "symbol": "RKA",
+      "decimals": 18,
+      "logoURI": "",
+      "extensions": {
+        "l1Address": "0x0CE51000d5244F1EAac0B313a792D5a5f96931BF",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
       "chainId": 42161,
       "address": "0xd4d42F0b6DEF4CE0383636770eF773390d85c61A",
-      "name": "Sushi",
+      "name": "SushiToken",
       "symbol": "SUSHI",
       "decimals": 18,
       "logoURI": "https://zapper.fi/images/SUSHI-icon.png",
       "extensions": {
-        "l1Address": "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
-        "l2TokenType": "standard"
+        "l1Address": "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -109,22 +169,10 @@
       "name": "Uniswap",
       "symbol": "UNI",
       "decimals": 18,
-      "logoURI": "ipfs://QmXttGpZrECX5qCyXbBQiqgQNytVGeZW5Anewvh2jc4psg",
+      "logoURI": "https://zapper.fi/images/UNI-icon.png",
       "extensions": {
         "l1Address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-        "l2TokenType": "standard"
-      }
-    },
-    {
-      "chainId": 42161,
-      "address": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
-      "name": "USDCoin",
-      "symbol": "USDC",
-      "decimals": 6,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
-      "extensions": {
-        "l1Address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-        "l2TokenType": "arbCustom"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -135,8 +183,8 @@
       "decimals": 18,
       "logoURI": "",
       "extensions": {
-        "l1Address": "0x0a5e677a6a24b2f1a2bf4f3bffc443231d2fdec8",
-        "l2TokenType": "standard"
+        "l1Address": "0x0a5E677a6A24b2F1A2Bf4F3bFfC443231d2fDEc8",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     },
     {
@@ -145,10 +193,34 @@
       "name": "Wrapped BTC",
       "symbol": "WBTC",
       "decimals": 8,
-      "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599/logo.png",
+      "logoURI": "https://zapper.fi/images/WBTC-icon.png",
       "extensions": {
         "l1Address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-        "l2TokenType": "standard"
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xcAFcD85D8ca7Ad1e1C6F82F651fA15E33AEfD07b",
+      "name": "Wootrade Network",
+      "symbol": "WOO",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/WOO-icon.png",
+      "extensions": {
+        "l1Address": "0x4691937a7508860F876c9c0a2a617E7d9E945D4B",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x82e3A8F066a6989666b031d916c43672085b1582",
+      "name": "yearn.finance",
+      "symbol": "YFI",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/YFI-icon.png",
+      "extensions": {
+        "l1Address": "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
       }
     }
   ]

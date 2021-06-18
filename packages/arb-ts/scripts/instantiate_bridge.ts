@@ -44,6 +44,9 @@ export const instantiateBridge = async () => {
     : new Wallet(pk, arbProvider)
 
   const bridge = await Bridge.init(l1Signer, l2Signer)
+  console.log('')
+  console.log('**** Bridge instantiated w/ address', l1Signer.address, '****')
+  console.log('')
 
   return { bridge, l1Network, l2Network }
 }
