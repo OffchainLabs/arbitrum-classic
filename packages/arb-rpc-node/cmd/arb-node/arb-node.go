@@ -82,7 +82,7 @@ func startup() error {
 	config, wallet, err := configuration.Parse()
 	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
-		(config.Sequencer && config.Feed.URL != "") {
+		(config.Node.Sequencer.Enabled && config.Feed.Input.URL != "") {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
 		fmt.Printf("          or:       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
@@ -106,7 +106,7 @@ func startup() error {
 		return nil
 	}
 
-	if err := cmdhelp.ParseLogFlags(&config.RPC.LogLevel, &config.LogLevel); err != nil {
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
 		return err
 	}
 
@@ -128,7 +128,7 @@ func startup() error {
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	l2ChainId := new(big.Int).SetUint64(config.ChainID)
+	l2ChainId := new(big.Int).SetUint64(config.Rollup.ChainID)
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Msg("Launching arbitrum node")
 
@@ -152,18 +152,18 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node.Enabled}
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 
-	if config.Forward.URL != "" {
-		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Forward.URL}
+	if config.Node.Forward.URL != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forward.URL}
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
-	if !config.Sequencer {
-		if config.Feed.URL == "" {
+	if !config.Node.Sequencer.Enabled {
+		if config.Feed.Input.URL == "" {
 			logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
 		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(config.Feed.URL, nil, 20*time.Second)
+			broadcastClient := broadcastclient.NewBroadcastClient(config.Feed.Input.URL, nil, 20*time.Second)
 			for {
 				sequencerFeed, err = broadcastClient.Connect(ctx)
 				if err == nil {
@@ -202,9 +202,9 @@ func startup() error {
 	var broadcasterSettings broadcaster.Settings
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
-	if config.Forward.URL != "" {
-		logger.Info().Str("forwardTxURL", config.Forward.URL).Msg("Arbitrum node starting in forwarder mode")
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Forward.URL}
+	if config.Node.Forward.URL != "" {
+		logger.Info().Str("forwardTxURL", config.Node.Forward.URL).Msg("Arbitrum node starting in forwarder mode")
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Node.Forward.URL}
 	} else {
 		var auth *bind.TransactOpts
 		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, l1ChainId)
@@ -213,11 +213,11 @@ func startup() error {
 		}
 
 		var inboxAddress common.Address
-		if !config.Sequencer {
-			if config.Inbox.Address == "" {
+		if !config.Node.Sequencer.Enabled {
+			if config.Node.Aggregator.Inbox.Address == "" {
 				return errors.New("must submit inbox address via --inbox if not running in forwarder or sequencer mode")
 			}
-			inboxAddress = common.HexToAddress(config.Inbox.Address)
+			inboxAddress = common.HexToAddress(config.Node.Aggregator.Inbox.Address)
 		}
 
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
@@ -231,13 +231,13 @@ func startup() error {
 			return errors.Wrap(err, "error waiting for balance")
 		}
 
-		if config.Sequencer {
+		if config.Node.Sequencer.Enabled {
 			batcherMode = rpc.SequencerBatcherMode{
 				Auth:                       auth,
 				Core:                       mon.Core,
 				InboxReader:                inboxReader,
-				DelayedMessagesTargetDelay: big.NewInt(config.DelayedMessagesTargetDelay),
-				CreateBatchBlockInterval:   big.NewInt(config.CreateBatchBlockInterval),
+				DelayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
+				CreateBatchBlockInterval:   big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
 			}
 
 			ping, err := time.ParseDuration(config.Feed.Output.Ping)
@@ -256,7 +256,7 @@ func startup() error {
 				ClientPingInterval:      ping,
 				ClientNoResponseTimeout: timeout,
 			}
-		} else if config.Pending {
+		} else if config.Node.Aggregator.Stateful {
 			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		} else {
 			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
@@ -283,7 +283,7 @@ func startup() error {
 			rollupAddress,
 			l2ChainId,
 			db,
-			time.Duration(config.MaxBatchTime)*time.Second,
+			time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
 			batcherMode,
 			dataSigner,
 			broadcasterSettings,
