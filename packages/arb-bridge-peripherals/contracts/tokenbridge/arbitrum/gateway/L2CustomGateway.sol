@@ -19,10 +19,11 @@
 pragma solidity ^0.6.11;
 
 import "./L2ArbitrumGateway.sol";
+import "../../libraries/gateway/ICustomGateway.sol";
 
-contract L2CustomGateway is L2ArbitrumGateway {
+contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     // stores addresses of L2 tokens to be used
-    mapping(address => address) public l1ToL2Token;
+    mapping(address => address) public override l1ToL2Token;
 
     function initialize(address _l1Counterpart, address _router) public virtual {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
@@ -75,6 +76,7 @@ contract L2CustomGateway is L2ArbitrumGateway {
             // here we don't check if l2Address is a contract and instead deal with that behaviour
             // in `handleNoContract` this way we keep the l1 and l2 address oracles in sync
             l1ToL2Token[l1Address[i]] = l2Address[i];
+            emit TokenSet(l1Address[i], l2Address[i]);
         }
     }
 }
