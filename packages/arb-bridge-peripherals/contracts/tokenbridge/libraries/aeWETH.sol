@@ -67,4 +67,8 @@ contract aeWETH is L2GatewayToken, IWETH9 {
     function _deposit(address account) internal {
         _mint(account, msg.value);
     }
+
+    receive() external payable {
+        _deposit(msg.sender);
+    }
 }
