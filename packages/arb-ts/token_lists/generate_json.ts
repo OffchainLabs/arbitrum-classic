@@ -6,6 +6,8 @@ import yargs from 'yargs/yargs'
 import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 import { networks } from '../src'
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
+import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+
 import { TokenInfo, TokenList } from './tokenListTypes'
 import { writeFileSync } from 'fs'
 ;(async () => {
@@ -15,6 +17,10 @@ import { writeFileSync } from 'fs'
   const l1NetworkID = +l1Network.chainID
   const arbDefaultList = arbDefaultLists[l1NetworkID] || ([] as TokenInfo[])
   for (const l1Token of uniswapDefaultList.concat(arbDefaultList)) {
+    const l1TokenContract = ERC20__factory.connect(
+      l1Token.address,
+      bridge.l1Bridge.l1Provider
+    )
     const l1Address = l1Token.address
     let l1GatewayAddress: string
 
@@ -36,19 +42,36 @@ import { writeFileSync } from 'fs'
       )
       continue
     }
-
-    if (l1GatewayAddress === l1Network.tokenBridge.l1ERC20Gateway) {
-      /* is registered as standard token
-      check that it looks right */
+    // skip check for MKR, known unorthodox
+    if (l1Token.address !== '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2') {
       try {
+        const l1Name = await l1TokenContract.name()
+        const l1Symbol = await l1TokenContract.symbol()
+        const l1Decimals = await l1TokenContract.decimals()
+
         const arbToken = await StandardArbERC20__factory.connect(
           l2Address,
           bridge.l2Bridge.l2Provider
         )
         const l2Symbol = await arbToken.symbol()
-        if (l2Symbol !== l1Token.symbol && l1Token.symbol !== 'MKR') {
+        const l2Decimals = await arbToken.decimals()
+        const l2Name = await arbToken.name()
+        if (l2Symbol !== l1Symbol) {
           console.warn(
-            `**** Warning! Symbols don't match for standard deployment of ${l1Token.address}: L1 symbol ${l1Token.symbol}. L2 symbol ${l2Symbol}`
+            `******* Warning! Symbols don't match for standard deployment of ${l1Token.address}: L1 symbol ${l1Symbol}. L2 symbol ${l2Symbol}`
+          )
+          continue
+        }
+        if (l2Decimals !== l1Decimals) {
+          console.warn(
+            `******* Warning! decimals don't match for standard deployment of ${l1Token.address}: L1 decimals ${l1Decimals}. L2 decimals: ${l2Decimals}`
+          )
+          continue
+        }
+
+        if (l2Name !== l1Name) {
+          console.warn(
+            `******* Warning! names don't match for standard deployment of ${l1Token.address}: L1 name ${l1Name}. L2 name: ${l2Name}`
           )
           continue
         }
@@ -59,6 +82,10 @@ import { writeFileSync } from 'fs'
         )
         continue
       }
+    }
+    if (l1GatewayAddress === l1Network.tokenBridge.l1ERC20Gateway) {
+      /* is registered as standard token
+      check that it looks right */
 
       const arbTokenInfo: TokenInfo = {
         chainId: +l2Network.chainID,
@@ -69,7 +96,7 @@ import { writeFileSync } from 'fs'
         logoURI: l1Token.logoURI,
         extensions: {
           l1Address,
-          l2TokenType: 'standard',
+          l1GatewayAddress,
         },
       }
       tokens.push(arbTokenInfo)
@@ -85,7 +112,7 @@ import { writeFileSync } from 'fs'
         logoURI: l1Token.logoURI,
         extensions: {
           l1Address,
-          l2TokenType: 'arbCustom',
+          l1GatewayAddress,
         },
       }
       tokens.push(arbTokenInfo)
