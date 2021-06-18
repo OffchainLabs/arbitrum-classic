@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"fmt"
 	"github.com/knadh/koanf/providers/posflag"
 	"os"
 	"time"
@@ -30,7 +31,10 @@ type Config struct {
 	CreateBatchBlockInterval   int64  `koanf:"create-batch-block-interval"`
 	GasPriceUrl                string `koanf:"gas-price-url"`
 	ChainID                    uint64 `koanf:"chainid"`
-	Healthcheck                struct {
+	Dump                       struct {
+		Conf bool `koanf:"conf"`
+	} `koanf:"dump"`
+	Healthcheck struct {
 		Enabled   bool `koanf:"enabled"`
 		Sequencer struct {
 			Enabled bool `koanf:"enabled"`
@@ -115,6 +119,7 @@ type Config struct {
 func Parse() (*Config, *Wallet, error) {
 	f := flag.NewFlagSet("config", flag.ContinueOnError)
 	f.String("conf", "", "name of configuration file")
+	f.Bool("dump.conf", false, "print out currently active configuration file")
 	f.String("wallet.password", "", "password for wallet")
 	f.Float64("wallet.gasprice", 4.5, "wallet.gasprice=FloatInGwei")
 	f.Bool("pending", false, "enable pending state tracking")
@@ -245,7 +250,7 @@ func Parse() (*Config, *Wallet, error) {
 		}
 	} else if f.NArg() != 0 {
 		// Unexpected number of parameters
-		return nil, nil, errors.Wrap(err, "unexpected number of parameters")
+		return nil, nil, errors.New("unexpected number of parameters")
 	}
 
 	// Any settings provided on command line override items in configuration file
@@ -257,6 +262,24 @@ func Parse() (*Config, *Wallet, error) {
 	err = k.Unmarshal("", &out)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error unmarshalling configuration")
+	}
+
+	if out.Dump.Conf {
+		// Print out current configuration
+
+		// Don't keep printing configuration file and don't print wallet password
+		err := k.Load(confmap.Provider(map[string]interface{}{
+			"dump.conf":       false,
+			"wallet.password": "",
+		}, "."), nil)
+
+		c, err := k.Marshal(json.Parser())
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
+		}
+
+		fmt.Println(string(c))
+		os.Exit(0)
 	}
 
 	var wallet Wallet

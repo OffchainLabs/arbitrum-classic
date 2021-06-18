@@ -78,10 +78,6 @@ func main() {
 }
 
 func startup() error {
-	defer logger.Log().Msg("Cleanly shutting down validator")
-	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
-	defer cancelFunc()
-
 	config, wallet, err := configuration.Parse()
 	if err != nil || len(config.Database.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
@@ -91,8 +87,16 @@ func startup() error {
 		fmt.Printf("usage arb-validator --conf=<filename> \n")
 		fmt.Printf("   or arb-validator --l1.url=<url> --database.path=<path> --mainnet.arb1 \n")
 		fmt.Printf("   or arb-validator --l1.url=<url> --database.path=<path> --testnet.rinkeby \n")
-		return errors.New("invalid arguments")
+		if err != nil {
+			return err
+		}
+
+		return nil
 	}
+
+	defer logger.Log().Msg("Cleanly shutting down validator")
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
 
 	if config.PProf.Enabled {
 		go func() {
