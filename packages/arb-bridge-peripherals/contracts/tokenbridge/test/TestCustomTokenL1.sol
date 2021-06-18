@@ -14,7 +14,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
 
     constructor(address _bridge) public {
         bridge = _bridge;
-        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
+        aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function mint() external {

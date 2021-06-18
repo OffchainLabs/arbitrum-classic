@@ -19,12 +19,13 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../libraries/IWETH9.sol";
 import "../../test/TestWETH9.sol";
 import "./L1ArbitrumExtendedGateway.sol";
 
 contract L1WethGateway is L1ArbitrumExtendedGateway {
-    using SafeERC20 for IWETH9;
+    using SafeERC20 for IERC20;
 
     address public l1Weth;
     address public l2Weth;
@@ -69,7 +70,7 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         address _from,
         uint256 _amount
     ) internal virtual override {
-        IWETH9(_l1Token).safeTransferFrom(_from, address(this), _amount);
+        IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
         IWETH9(_l1Token).withdraw(_amount);
     }
 
@@ -79,7 +80,7 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         uint256 _amount
     ) internal virtual override {
         IWETH9(_l1Token).deposit{ value: _amount }();
-        IWETH9(_l1Token).safeTransfer(_dest, _amount);
+        IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
     /**
@@ -98,24 +99,6 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
     {
         require(l1ERC20 == l1Weth, "WRONG_L1WETH");
         return l2Weth;
-    }
-
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20)
-        external
-        view
-        virtual
-        override
-        returns (address)
-    {
-        // will revert if not called by router
-        return _calculateL2TokenAddress(l1ERC20);
     }
 
     receive() external payable {}
