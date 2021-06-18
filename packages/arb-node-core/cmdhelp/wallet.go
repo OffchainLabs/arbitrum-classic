@@ -32,11 +32,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
-type WalletFlags struct {
-	passphrase *string
-	gasPrice   *float64
-}
-
 // GetKeystore returns a transaction authorization based on an existing ethereum
 // keystore located in validatorFolder/wallets or creates one if it does not
 // exist. It accepts a password using the "password" command line argument or
@@ -103,4 +98,4 @@ func GetKeystore(
 	return auth, signer, nil
 }
 
-const WalletArgsString = "[--password=pass] [--gasprice==FloatInGwei]"
+const WalletArgsString = "[--wallet.password=pass] [--wallet.gasprice==FloatInGwei]"

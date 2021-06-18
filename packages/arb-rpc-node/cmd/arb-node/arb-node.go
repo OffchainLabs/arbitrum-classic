@@ -22,7 +22,6 @@ import (
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
-	"path/filepath"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -80,16 +79,16 @@ func main() {
 
 func startup() error {
 	config, wallet, err := configuration.Parse()
-	if err != nil || len(config.Database.Path) == 0 || len(config.L1.URL) == 0 ||
+	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
 		(config.Sequencer && config.Feed.URL != "") {
 		fmt.Printf("\n")
 		fmt.Printf("usage                  arb-node --conf=<filename> \n")
-		fmt.Printf("   or       sequencer: arb-node --sequencer --database.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("   or aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --database.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("   or            node: arb-node --feed.url=<feed websocket> --forward.url=<sequencer RPC> --database.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n\n", cmdhelp.WalletArgsString)
-		fmt.Printf("   or            node: arb-node --l1.url=<url> --database.path=<path> --mainnet.arb1 \n")
-		fmt.Printf("   or            node: arb-node --l1.url=<url> --database.path=<path> --testnet.rinkeby \n")
+		fmt.Printf("   or       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("   or aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("   or            node: arb-node --feed.url=<feed websocket> --forward.url=<sequencer RPC> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] \n")
+		fmt.Printf("   or            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
+		fmt.Printf("   or            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n\n")
 		if err != nil {
 			return err
 		}
@@ -132,10 +131,7 @@ func startup() error {
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Msg("Launching arbitrum node")
 
-	contractFile := filepath.Join(config.Database.Path, "arbos.mexe")
-	dbPath := filepath.Join(config.Database.Path, "checkpoint_db")
-
-	mon, err := monitor.NewMonitor(dbPath, contractFile)
+	mon, err := monitor.NewMonitor(config.Persistent.Database.Path, config.Rollup.Machine.Filename)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
@@ -210,7 +206,7 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Forward.URL}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = cmdhelp.GetKeystore(config.Database.Path, wallet, l1ChainId)
+		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, l1ChainId)
 		if err != nil {
 			return errors.Wrap(err, "error running GetKeystore")
 		}

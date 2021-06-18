@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/knadh/koanf/providers/posflag"
 	"os"
+	"path"
 	"time"
 
 	"github.com/knadh/koanf"
@@ -80,9 +81,14 @@ type Config struct {
 	} `koanf:"pprof"`
 	LogLevel string `koanf:"loglevel"`
 
-	Database struct {
-		Path string `koanf:"path"`
-	} `koanf:"database"`
+	Persistent struct {
+		Storage struct {
+			Path string `koanf:"path"`
+		} `koanf:"storage"`
+		Database struct {
+			Path string `koanf:"path"`
+		} `koanf:"database"`
+	} `koanf:"persistent"`
 	L1 struct {
 		URL string `koanf:"url"`
 	} `koanf:"l1"`
@@ -158,9 +164,10 @@ func Parse() (*Config, *Wallet, error) {
 	f.String("rpc.loglevel", "info", "log level for rpc")
 	f.String("loglevel", "info", "log level for general arb node logging")
 
-	f.String("database.path", "state", "location database is located")
+	f.String("persistent.storage.path", "state", "location persistent storage is located")
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 	f.String("rollup.address", "", "layer 2 rollup contract address")
+	f.String("rollup.machine.filename", "", "file to load machine from")
 	f.String("bridge.utils.address", "", "bridgeutils contract address")
 
 	f.Bool("mainnet.arb1", false, "connect to arb1 mainnet")
@@ -182,12 +189,13 @@ func Parse() (*Config, *Wallet, error) {
 
 	if useArb1, _ := f.GetBool("mainnet.arb1"); useArb1 {
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":       "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-			"rollup.fromBlock":     "12525700",
-			"bridge.utils.address": "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-			"feed.url":             "wss://arb1.arbitrum.io/feed",
-			"forward.url":          "https://arb1.arbitrum.io/rpc",
-			"chainid":              "42161",
+			"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+			"rollup.fromBlock":        "12525700",
+			"rollup.machine.filename": "mainnet.arb1.mexe",
+			"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+			"feed.url":                "wss://arb1.arbitrum.io/feed",
+			"forward.url":             "https://arb1.arbitrum.io/rpc",
+			"chainid":                 "42161",
 		}, "."), nil)
 
 		if err != nil {
@@ -197,12 +205,13 @@ func Parse() (*Config, *Wallet, error) {
 
 	if useRinkeby, _ := f.GetBool("testnet.rinkeby"); useRinkeby {
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":       "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-			"rollup.fromBlock":     "8700589",
-			"bridge.utils.address": "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-			"feed.url":             "wss://rinkeby.arbitrum.io/feed",
-			"forward.url":          "https://rinkeby.arbitrum.io/rpc",
-			"chainid":              "421611",
+			"rollup.address":          "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
+			"rollup.fromBlock":        "8700589",
+			"rollup.machine.filename": "testnet.rinkeby.mexe",
+			"bridge.utils.address":    "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
+			"feed.url":                "wss://rinkeby.arbitrum.io/feed",
+			"forward.url":             "https://rinkeby.arbitrum.io/rpc",
+			"chainid":                 "421611",
 		}, "."), nil)
 
 		if err != nil {
@@ -218,7 +227,7 @@ func Parse() (*Config, *Wallet, error) {
 		bridgeUtilsAddressString := f.Arg(3)
 
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"database.path":        validatorFolder,
+			"storage.path":         validatorFolder,
 			"l1.url":               ethURL,
 			"rollup.address":       addressString,
 			"bridge.utils.address": bridgeUtilsAddressString,
@@ -237,7 +246,7 @@ func Parse() (*Config, *Wallet, error) {
 		validatorWalletFactoryAddressString := f.Arg(5)
 
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"database.path":                   validatorFolder,
+			"storage.path":                    validatorFolder,
 			"l1.url":                          ethURL,
 			"rollup.address":                  addressString,
 			"bridge.utils.address":            bridgeUtilsAddressString,
@@ -262,6 +271,18 @@ func Parse() (*Config, *Wallet, error) {
 	err = k.Unmarshal("", &out)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error unmarshalling configuration")
+	}
+
+	// Fixup directories
+	if len(out.Persistent.Storage.Path) == 0 {
+		// Error message will be output by caller
+		return &out, nil, nil
+	}
+
+	out.Persistent.Database.Path = path.Join(out.Persistent.Storage.Path, "arbStorage")
+	if len(out.Rollup.Machine.Filename) == 0 {
+		// Nothing provided, so use default
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Database.Path, "arbos.mexe")
 	}
 
 	if out.Dump.Conf {
