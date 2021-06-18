@@ -5,8 +5,11 @@ import { ProxyAdmin__factory } from 'arb-ts/src/lib/abi/factories/ProxyAdmin__fa
 
 import RinkebyAddresses from '../deployment-421611.json'
 
+const infuraKey = process.env['INFURA_KEY']
+if (!infuraKey) throw new Error('No INFURA_KEY')
+
 const l1Prov = new ethers.providers.JsonRpcProvider(
-  'https://rinkeby.infura.io/v3/c13a0d6955b14bf181c924bf4c7797fc'
+  'https://rinkeby.infura.io/v3/' + infuraKey
 )
 const l2Prov = new ethers.providers.JsonRpcProvider(
   'https://rinkeby.arbitrum.io/rpc'

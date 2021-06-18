@@ -20,10 +20,11 @@ pragma solidity ^0.6.11;
 
 import "./L2ArbitrumGateway.sol";
 import "../../libraries/IWETH9.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 contract L2WethGateway is L2ArbitrumGateway {
-    using SafeERC20 for IWETH9;
+    using SafeERC20 for IERC20;
 
     address public l1Weth;
     address public l2Weth;
@@ -56,9 +57,9 @@ contract L2WethGateway is L2ArbitrumGateway {
         bytes memory deployData
     ) internal virtual override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
-        shouldHalt = true;
         // trigger withdrawal
         createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+        return true;
     }
 
     /**
@@ -86,7 +87,7 @@ contract L2WethGateway is L2ArbitrumGateway {
     ) internal virtual override {
         // we always want both sides of weth to be fully collateralized
         // so we withdraw and send the ether to be deposited
-        IWETH9(_l2TokenAddress).safeTransferFrom(_from, address(this), _amount);
+        IERC20(_l2TokenAddress).safeTransferFrom(_from, address(this), _amount);
         IWETH9(_l2TokenAddress).withdraw(_amount);
     }
 
@@ -96,7 +97,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         uint256 _amount
     ) internal virtual override {
         IWETH9(_l2TokenAddress).deposit{ value: _amount }();
-        IWETH9(_l2TokenAddress).safeTransfer(_dest, _amount);
+        IERC20(_l2TokenAddress).safeTransfer(_dest, _amount);
     }
 
     function createOutboundTx(

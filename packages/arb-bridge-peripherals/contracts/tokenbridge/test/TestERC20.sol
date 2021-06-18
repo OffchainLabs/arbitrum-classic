@@ -22,7 +22,7 @@ import "../libraries/aeERC20.sol";
 
 contract TestERC20 is aeERC20 {
     constructor() public {
-        aeERC20.initialize("IntArbTestToken", "IARB", uint8(18));
+        aeERC20._initialize("IntArbTestToken", "IARB", uint8(18));
     }
 
     function mint() external {

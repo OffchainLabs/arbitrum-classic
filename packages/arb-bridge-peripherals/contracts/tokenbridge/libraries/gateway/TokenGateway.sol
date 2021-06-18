@@ -19,18 +19,16 @@
 pragma solidity ^0.6.11;
 
 import "./ITokenGateway.sol";
+import "./IGatewayRouter.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 abstract contract TokenGateway is ITokenGateway {
+    using Address for address;
     address public counterpartGateway;
-    address public router;
+    address public STORAGE_GAP;
 
-    modifier onlyCounterpartGateway {
-        require(isSenderCounterpartGateway(), "ONLY_COUNTERPART_GATEWAY");
-        _;
-    }
-
-    modifier onlyRouter {
-        require(isSenderRouter(), "ONLY_ROUTER");
+    modifier onlyCounterpartGateway() virtual {
+        require(isCounterpartGateway(msg.sender), "ONLY_COUNTERPART_GATEWAY");
         _;
     }
 
@@ -38,7 +36,27 @@ abstract contract TokenGateway is ITokenGateway {
         require(_counterpartGateway != address(0), "INVALID_COUNTERPART");
         require(counterpartGateway == address(0), "ALREADY_INIT");
         counterpartGateway = _counterpartGateway;
-        router = _router;
+        // TODO: remove _router parameter
+    }
+
+    function isRouter(address _target) internal view virtual returns (bool isTargetRouter) {
+        (bool success, bytes memory ret) =
+            _target.staticcall(abi.encodeWithSelector(IGatewayRouter.isRouter.selector));
+
+        // TODO: remove isContract check
+        if (!_target.isContract()) return false;
+        if (!success) return false;
+
+        // if calling an EOA the default value of this will be 0
+        assembly {
+            isTargetRouter := mload(ret)
+        }
+
+        return isTargetRouter;
+    }
+
+    function isCounterpartGateway(address _target) internal view virtual returns (bool) {
+        return _target == counterpartGateway;
     }
 
     /**
@@ -67,10 +85,6 @@ abstract contract TokenGateway is ITokenGateway {
      * @return L2 address of a bridged ERC20 token
      */
     function _calculateL2TokenAddress(address l1ERC20) internal view virtual returns (address);
-
-    function isSenderRouter() internal view virtual returns (bool);
-
-    function isSenderCounterpartGateway() internal view virtual returns (bool);
 
     function outboundTransfer(
         address _token,
