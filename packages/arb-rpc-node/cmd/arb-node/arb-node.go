@@ -82,16 +82,16 @@ func startup() error {
 	config, wallet, err := configuration.Parse()
 	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
-		(config.Node.Sequencer.Enabled && config.Feed.Input.URL != "") {
+		(config.Node.Sequencer.Enable && config.Feed.Input.URL != "") {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
-		fmt.Printf("          or:       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("          or: aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("          or:            node: arb-node --feed.url=<feed websocket> --forward.url=<sequencer RPC> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridgeutils.address=<address> [optional arguments] \n")
+		fmt.Printf("          or:       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridge.utils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or: aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridge.utils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or:            node: arb-node --feed.url=<feed websocket> --node.forward.url=<sequencer RPC> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridge.utils.address=<address> [optional arguments] \n")
 		fmt.Printf("          or:            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
 		fmt.Printf("          or:            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
-			return err
+			fmt.Printf("Error with configuration: %s", err.Error())
 		}
 
 		return nil
@@ -110,7 +110,7 @@ func startup() error {
 		return err
 	}
 
-	if config.PProf.Enabled {
+	if config.PProf.Enable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
@@ -147,9 +147,9 @@ func startup() error {
 		}
 	}()
 
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enabled}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer.Enabled}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node.Enabled}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enable}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer.Enable}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node.Enable}
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 
 	if config.Node.Forward.URL != "" {
@@ -159,7 +159,7 @@ func startup() error {
 	nodehealth.Init(healthChan)
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
-	if !config.Node.Sequencer.Enabled {
+	if !config.Node.Sequencer.Enable {
 		if config.Feed.Input.URL == "" {
 			logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
 		} else {
@@ -213,7 +213,7 @@ func startup() error {
 		}
 
 		var inboxAddress common.Address
-		if !config.Node.Sequencer.Enabled {
+		if !config.Node.Sequencer.Enable {
 			if config.Node.Aggregator.Inbox.Address == "" {
 				return errors.New("must submit inbox address via --inbox if not running in forwarder or sequencer mode")
 			}
@@ -231,7 +231,7 @@ func startup() error {
 			return errors.Wrap(err, "error waiting for balance")
 		}
 
-		if config.Node.Sequencer.Enabled {
+		if config.Node.Sequencer.Enable {
 			batcherMode = rpc.SequencerBatcherMode{
 				Auth:                       auth,
 				Core:                       mon.Core,

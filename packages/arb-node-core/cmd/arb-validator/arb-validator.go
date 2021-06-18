@@ -89,7 +89,7 @@ func startup() error {
 		fmt.Printf("          or: arb-validator --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
 		fmt.Printf("          or: arb-validator --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
-			return err
+			fmt.Printf("Error with configuration: %s", err.Error())
 		}
 
 		return nil
@@ -99,7 +99,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	if config.PProf.Enabled {
+	if config.PProf.Enable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
@@ -123,9 +123,9 @@ func startup() error {
 		}
 	}()
 
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enabled}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: config.Healthcheck.Sequencer.Enabled}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: config.Healthcheck.L1Node.Enabled}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enable}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: config.Healthcheck.Sequencer.Enable}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: config.Healthcheck.L1Node.Enable}
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)

@@ -7,6 +7,7 @@ import (
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
@@ -17,15 +18,15 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
 
-type BridgeStruct struct {
+type Bridge struct {
 	Utils struct {
 		Address string `koanf:"address"`
 	} `koanf:"utils"`
 }
 
-type FeedStruct struct {
+type Feed struct {
 	Input struct {
-		URL string `koanf:"addr"`
+		URL string `koanf:"url"`
 	} `koanf:"input"`
 	Output struct {
 		Addr    string `koanf:"addr"`
@@ -35,23 +36,23 @@ type FeedStruct struct {
 	} `koanf:"output"`
 }
 
-type HealthcheckStruct struct {
-	Addr    string `koanf:"addr"`
-	Enabled bool   `koanf:"enabled"`
-	L1Node  struct {
-		Enabled bool `koanf:"enabled"`
+type Healthcheck struct {
+	Addr   string `koanf:"addr"`
+	Enable bool   `koanf:"enable"`
+	L1Node struct {
+		Enable bool `koanf:"enable"`
 	} `koanf:"l1-node"`
 	Metrics struct {
-		Enabled bool   `koanf:"enabled"`
-		Prefix  string `koanf:"prefix"`
+		Enable bool   `koanf:"enable"`
+		Prefix string `koanf:"prefix"`
 	} `koanf:"metrics"`
 	Port      string `koanf:"port"`
 	Sequencer struct {
-		Enabled bool `koanf:"enabled"`
+		Enable bool `koanf:"enable"`
 	} `koanf:"sequencer"`
 }
 
-type NodeStruct struct {
+type Node struct {
 	Aggregator struct {
 		Inbox struct {
 			Address string `koanf:"address"`
@@ -65,11 +66,11 @@ type NodeStruct struct {
 	Sequencer struct {
 		CreateBatchBlockInterval   int64 `koanf:"create-batch-block-interval"`
 		DelayedMessagesTargetDelay int64 `koanf:"delayed-messages-target-delay"`
-		Enabled                    bool  `koanf:"enabled"`
+		Enable                     bool  `koanf:"enable"`
 	} `koanf:"sequencer"`
 }
 
-type PersistentStruct struct {
+type Persistent struct {
 	Database struct {
 		Path string `koanf:"path"`
 	} `koanf:"database"`
@@ -78,7 +79,7 @@ type PersistentStruct struct {
 	} `koanf:"storage"`
 }
 
-type RollupStruct struct {
+type Rollup struct {
 	Address   string `koanf:"address"`
 	ChainID   uint64 `koanf:"chain-id"`
 	FromBlock int64  `koanf:"from-block"`
@@ -88,7 +89,7 @@ type RollupStruct struct {
 	} `koanf:"machine"`
 }
 
-type ValidatorStruct struct {
+type Validator struct {
 	Strategy string `koanf:"strategy"`
 	Utils    struct {
 		Address string `koanf:"address"`
@@ -104,14 +105,14 @@ type Wallet struct {
 }
 
 type Config struct {
-	Bridge BridgeStruct `koanf:"bridge"`
-	Conf   string       `koanf:"conf"`
+	Bridge Bridge `koanf:"bridge"`
+	Conf   string `koanf:"conf"`
 	Dump   struct {
 		Conf bool `koanf:"conf"`
 	} `koanf:"dump"`
-	Feed        FeedStruct        `koanf:"feed"`
-	GasPriceUrl string            `koanf:"gas-price-url"`
-	Healthcheck HealthcheckStruct `koanf:"healthcheck"`
+	Feed        Feed        `koanf:"feed"`
+	GasPriceUrl string      `koanf:"gas-price-url"`
+	Healthcheck Healthcheck `koanf:"healthcheck"`
 	L1          struct {
 		URL string `koanf:"url"`
 	} `koanf:"l1"`
@@ -122,12 +123,12 @@ type Config struct {
 	Mainnet struct {
 		Arb1 bool `koanf:"arb1"`
 	} `koanf:"mainnet"`
-	Node       NodeStruct       `kaonf:"sequencer"`
-	Persistent PersistentStruct `koanf:"persistent"`
+	Node       Node       `kaonf:"sequencer"`
+	Persistent Persistent `koanf:"persistent"`
 	PProf      struct {
-		Enabled bool `koanf:"enabled"`
+		Enable bool `koanf:"enable"`
 	} `koanf:"pprof"`
-	Rollup RollupStruct `koanf:"rollup"`
+	Rollup Rollup `koanf:"rollup"`
 	RPC    struct {
 		Addr string `koanf:"addr"`
 		Port string `koanf:"port"`
@@ -135,8 +136,9 @@ type Config struct {
 	Testnet struct {
 		Rinkeby bool `koanf:"rinkeby"`
 	} `koanf:"testnet"`
-	Validator     ValidatorStruct `koanf:"validator"`
-	WaitToCatchUp bool            `koanf:"wait-to-catch-up"`
+	Validator     Validator `koanf:"validator"`
+	WaitToCatchUp bool      `koanf:"wait-to-catch-up"`
+	Wallet        Wallet    `koanf:"wallet"`
 	WS            struct {
 		Addr string `koanf:"addr"`
 		Port string `koanf:"port"`
@@ -146,8 +148,12 @@ type Config struct {
 func Parse() (*Config, *Wallet, error) {
 	f := flag.NewFlagSet("config", flag.ContinueOnError)
 
+	f.String("bridge.utils.address", "", "bridgeutils contract address")
+
 	f.String("conf", "", "name of configuration file")
+
 	f.Bool("dump.conf", false, "print out currently active configuration file")
+
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
 	f.String("node.aggregator.inbox.address", "", "address of the inbox contract")
@@ -168,10 +174,10 @@ func Parse() (*Config, *Wallet, error) {
 	f.Duration("feed.output.ping", 5*time.Second, "number of seconds for ping interval")
 	f.Duration("feed.output.timeout", 15*time.Second, "number of seconds for timeout")
 
-	f.Bool("healthcheck.enabled", false, "enable healthcheck endpoint")
-	f.Bool("healthcheck.sequencer.enabled", false, "enable checking the health of the sequencer")
-	f.Bool("healthcheck.l1-node.enabled", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics.enabled", false, "enable prometheus endpoint")
+	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
+	f.Bool("healthcheck.sequencer.enable", false, "enable checking the health of the sequencer")
+	f.Bool("healthcheck.l1-node.enable", false, "enable checking the health of the L1 node")
+	f.Bool("healthcheck.metrics.enable", false, "enable prometheus endpoint")
 	f.String("healthcheck.metrics.prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
 	f.String("healthcheck.port", "", "port to bind the healthcheck endpoint to")
@@ -183,10 +189,14 @@ func Parse() (*Config, *Wallet, error) {
 
 	f.Bool("mainnet.arb1", false, "connect to arb1 mainnet")
 
-	f.Bool("pprof.enabled", false, "enable profiling server")
+	f.Bool("pprof.enable", false, "enable profiling server")
+
+	f.String("persistent.storage.path", "state", "location persistent storage is located")
 
 	f.String("rpc.addr", "0.0.0.0", "RPC address")
 	f.String("rpc.port", "8547", "RPC port")
+
+	f.Bool("testnet.rinkeby", false, "connect to rinkeby testnet")
 
 	f.String("validator.strategy", "", "strategy for validator to use")
 
@@ -205,9 +215,6 @@ func Parse() (*Config, *Wallet, error) {
 
 	var k = koanf.New(".")
 	// Load configuration file if provided
-	f.String("persistent.storage.path", "state", "location persistent storage is located")
-	f.Bool("testnet.rinkeby", false, "connect to rinkeby testnet")
-	f.String("bridge.utils.address", "", "bridgeutils contract address")
 
 	configFile, _ := f.GetString("conf")
 	if len(configFile) > 0 {
@@ -220,10 +227,10 @@ func Parse() (*Config, *Wallet, error) {
 		err := k.Load(confmap.Provider(map[string]interface{}{
 			"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
 			"rollup.chain-id":         "42161",
-			"rollup.fromBlock":        "12525700",
+			"rollup.from-block":       "12525700",
 			"rollup.machine.filename": "mainnet.arb1.mexe",
 			"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-			"feed.url":                "wss://arb1.arbitrum.io/feed",
+			"feed.input.url":          "wss://arb1.arbitrum.io/feed",
 			"node.forward.url":        "https://arb1.arbitrum.io/rpc",
 		}, "."), nil)
 
@@ -236,10 +243,10 @@ func Parse() (*Config, *Wallet, error) {
 		err := k.Load(confmap.Provider(map[string]interface{}{
 			"rollup.address":          "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
 			"rollup.chain-id":         "421611",
-			"rollup.fromBlock":        "8700589",
+			"rollup.from-block":       "8700589",
 			"rollup.machine.filename": "testnet.rinkeby.mexe",
 			"bridge.utils.address":    "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-			"feed.url":                "wss://rinkeby.arbitrum.io/feed",
+			"feed.input.url":          "wss://rinkeby.arbitrum.io/feed",
 			"node.forward.url":        "https://rinkeby.arbitrum.io/rpc",
 		}, "."), nil)
 
@@ -297,9 +304,20 @@ func Parse() (*Config, *Wallet, error) {
 	}
 
 	var out Config
-	err = k.Unmarshal("", &out)
+	decoderConfig := mapstructure.DecoderConfig{
+		ErrorUnused: true,
+
+		// Default values
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc()),
+		Metadata:         nil,
+		Result:           &out,
+		WeaklyTypedInput: true,
+	}
+	err = k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error unmarshalling configuration")
+
+		return nil, nil, err
 	}
 
 	// Fixup directories
@@ -308,7 +326,10 @@ func Parse() (*Config, *Wallet, error) {
 		return &out, nil, nil
 	}
 
-	out.Persistent.Database.Path = path.Join(out.Persistent.Storage.Path, "arbStorage")
+	if len(out.Persistent.Database.Path) == 0 {
+		out.Persistent.Database.Path = path.Join(out.Persistent.Storage.Path, "arbStorage")
+	}
+
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Nothing provided, so use default
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Database.Path, "arbos.mexe")
@@ -332,11 +353,9 @@ func Parse() (*Config, *Wallet, error) {
 		os.Exit(1)
 	}
 
-	var wallet Wallet
-	err = k.Unmarshal("wallet", &wallet)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error unmarshalling configuration")
-	}
+	// Don't pass around password with normal configuration
+	wallet := out.Wallet
+	out.Wallet.Password = ""
 
 	return &out, &wallet, nil
 }
