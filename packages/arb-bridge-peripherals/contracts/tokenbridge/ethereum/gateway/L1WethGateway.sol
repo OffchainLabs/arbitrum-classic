@@ -19,12 +19,13 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../libraries/IWETH9.sol";
 import "../../test/TestWETH9.sol";
 import "./L1ArbitrumExtendedGateway.sol";
 
 contract L1WethGateway is L1ArbitrumExtendedGateway {
-    using SafeERC20 for IWETH9;
+    using SafeERC20 for IERC20;
 
     address public l1Weth;
     address public l2Weth;
@@ -69,7 +70,7 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         address _from,
         uint256 _amount
     ) internal virtual override {
-        IWETH9(_l1Token).safeTransferFrom(_from, address(this), _amount);
+        IERC20(_l1Token).safeTransferFrom(_from, address(this), _amount);
         IWETH9(_l1Token).withdraw(_amount);
     }
 
@@ -79,7 +80,7 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         uint256 _amount
     ) internal virtual override {
         IWETH9(_l1Token).deposit{ value: _amount }();
-        IWETH9(_l1Token).safeTransfer(_dest, _amount);
+        IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
     /**

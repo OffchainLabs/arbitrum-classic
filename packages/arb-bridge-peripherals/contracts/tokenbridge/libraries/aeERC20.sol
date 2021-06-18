@@ -27,11 +27,11 @@ import "./ERC677Token.sol";
 contract aeERC20 is ERC20PermitUpgradeable, ERC677Token {
     using AddressUpgradeable for address;
 
-    function initialize(
+    function _initialize(
         string memory name,
         string memory symbol,
         uint8 decimals
-    ) public initializer {
+    ) internal initializer {
         __ERC20Permit_init(name);
         __ERC20_init(name, symbol);
         _setupDecimals(decimals);
