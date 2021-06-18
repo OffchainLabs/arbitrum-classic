@@ -79,10 +79,6 @@ func main() {
 }
 
 func startup() error {
-	defer logger.Log().Msg("Cleanly shutting down node")
-	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
-	defer cancelFunc()
-
 	config, wallet, err := configuration.Parse()
 	if err != nil || len(config.Database.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
@@ -98,7 +94,16 @@ func startup() error {
 			return err
 		}
 
-		return errors.New("invalid arguments")
+		return nil
+	}
+
+	defer logger.Log().Msg("Cleanly shutting down node")
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
+
+	if config == nil {
+		// Nothing left to do
+		return nil
 	}
 
 	if err := cmdhelp.ParseLogFlags(&config.RPC.LogLevel, &config.LogLevel); err != nil {
