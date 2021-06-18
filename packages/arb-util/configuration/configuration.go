@@ -175,7 +175,7 @@ func Parse() (*Config, *Wallet, error) {
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error parsing arguments")
+		return nil, nil, err
 	}
 
 	var k = koanf.New(".")
