@@ -35,7 +35,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
@@ -79,7 +78,10 @@ func main() {
 }
 
 func startup() error {
-	config, wallet, err := configuration.Parse()
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
+
+	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
 	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
 		(config.Node.Sequencer.Enable && config.Feed.Input.URL != "") {
@@ -98,13 +100,6 @@ func startup() error {
 	}
 
 	defer logger.Log().Msg("Cleanly shutting down node")
-	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
-	defer cancelFunc()
-
-	if config == nil {
-		// Nothing left to do
-		return nil
-	}
 
 	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
 		return err
@@ -116,17 +111,6 @@ func startup() error {
 			log.Error().Err(err).Msg("profiling server failed")
 		}()
 	}
-
-	ethclint, err := ethutils.NewRPCEthClient(config.L1.URL)
-	if err != nil {
-		return errors.Wrap(err, "error running NewRPcEthClient")
-	}
-
-	l1ChainId, err := ethclint.ChainID(ctx)
-	if err != nil {
-		return errors.Wrap(err, "error getting chain ID")
-	}
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	l2ChainId := new(big.Int).SetUint64(config.Rollup.ChainID)
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
@@ -182,7 +166,7 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.Bridge.Utils.Address), healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.Bridge.Utils.Address), healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}
@@ -224,7 +208,7 @@ func startup() error {
 
 		if err := ethbridge.WaitForBalance(
 			ctx,
-			ethclint,
+			l1Client,
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
 		); err != nil {
@@ -279,7 +263,7 @@ func startup() error {
 	for {
 		batch, err = rpc.SetupBatcher(
 			ctx,
-			ethclint,
+			l1Client,
 			rollupAddress,
 			l2ChainId,
 			db,

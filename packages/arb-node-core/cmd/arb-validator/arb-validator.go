@@ -39,7 +39,6 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
@@ -79,7 +78,10 @@ func main() {
 }
 
 func startup() error {
-	config, wallet, err := configuration.Parse()
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
+
+	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
 	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
 		len(config.Validator.Utils.Address) == 0 || len(config.Validator.WalletFactory.Address) == 0 ||
@@ -96,8 +98,6 @@ func startup() error {
 	}
 
 	defer logger.Log().Msg("Cleanly shutting down validator")
-	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
-	defer cancelFunc()
 
 	if config.PProf.Enable {
 		go func() {
@@ -129,20 +129,6 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
-
-	client, err := ethutils.NewRPCEthClient(os.Args[2])
-	if err != nil {
-		return errors.Wrap(err, "error creating Ethereum RPC client")
-	}
-	var l1ChainId *big.Int
-	for {
-		l1ChainId, err = client.ChainID(ctx)
-		if err == nil {
-			break
-		}
-		logger.Warn().Err(err).Msg("Error getting chain ID")
-		time.Sleep(time.Second * 5)
-	}
 
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
@@ -186,14 +172,14 @@ func startup() error {
 		}
 	}
 
-	valAuth, err := ethbridge.NewTransactAuth(ctx, client, auth, config.GasPriceUrl)
+	valAuth, err := ethbridge.NewTransactAuth(ctx, l1Client, auth, config.GasPriceUrl)
 	if err != nil {
 		return errors.Wrap(err, "error creating connecting to chain")
 	}
 	validatorAddress := ethcommon.Address{}
 	if chainState.ValidatorWallet == "" {
 		for {
-			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, client)
+			validatorAddress, err = ethbridge.CreateValidatorWallet(ctx, validatorWalletFactoryAddr, config.Rollup.FromBlock, valAuth, l1Client)
 			if err == nil {
 				break
 			}
@@ -221,12 +207,12 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, client, valAuth)
+	val, err := ethbridge.NewValidator(validatorAddress, rollupAddr, l1Client, valAuth)
 	if err != nil {
 		return errors.Wrap(err, "error creating validator wallet")
 	}
 
-	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
+	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
 	}
@@ -244,7 +230,7 @@ func startup() error {
 		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
-	_, err = mon.StartInboxReader(ctx, client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
+	_, err = mon.StartInboxReader(ctx, l1Client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
 	if err != nil {
 		return errors.Wrap(err, "failed to create inbox reader")
 	}
