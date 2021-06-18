@@ -135,7 +135,7 @@ export const checkRetryableStatus = async (l1Hash: string) => {
   console.log('*** retryableTicketHash', retryableTicketHash)
   console.log(
     '*** retryableTicket status',
-    retryableTicketRec ? retryableTicketRec : retryableTicketRec
+    retryableTicketRec ? retryableTicketRec.status : retryableTicketRec
   )
   if (retryableTicketRec && retryableTicketRec.status !== 1) {
     console.log('**** retryableTicket receipt', retryableTicketHash)
