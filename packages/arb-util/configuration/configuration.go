@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"context"
 	"fmt"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
@@ -8,9 +9,11 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/mitchellh/mapstructure"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
+	"math/big"
 	"os"
 	"path"
 	"time"
@@ -120,9 +123,6 @@ type Config struct {
 		RPC  string `koanf:"rpc"`
 		Core string `koanf:"core"`
 	} `koanf:"log"`
-	Mainnet struct {
-		Arb1 bool `koanf:"arb1"`
-	} `koanf:"mainnet"`
 	Node       Node       `kaonf:"sequencer"`
 	Persistent Persistent `koanf:"persistent"`
 	PProf      struct {
@@ -133,9 +133,6 @@ type Config struct {
 		Addr string `koanf:"addr"`
 		Port string `koanf:"port"`
 	} `koanf:"rpc"`
-	Testnet struct {
-		Rinkeby bool `koanf:"rinkeby"`
-	} `koanf:"testnet"`
 	Validator     Validator `koanf:"validator"`
 	WaitToCatchUp bool      `koanf:"wait-to-catch-up"`
 	Wallet        Wallet    `koanf:"wallet"`
@@ -145,7 +142,7 @@ type Config struct {
 	} `koanf:"ws"`
 }
 
-func Parse() (*Config, *Wallet, error) {
+func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("config", flag.ContinueOnError)
 
 	f.String("bridge.utils.address", "", "bridgeutils contract address")
@@ -187,16 +184,12 @@ func Parse() (*Config, *Wallet, error) {
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 
-	f.Bool("mainnet.arb1", false, "connect to arb1 mainnet")
-
 	f.Bool("pprof.enable", false, "enable profiling server")
 
 	f.String("persistent.storage.path", "state", "location persistent storage is located")
 
 	f.String("rpc.addr", "0.0.0.0", "RPC address")
 	f.String("rpc.port", "8547", "RPC port")
-
-	f.Bool("testnet.rinkeby", false, "connect to rinkeby testnet")
 
 	f.String("validator.strategy", "", "strategy for validator to use")
 
@@ -210,12 +203,12 @@ func Parse() (*Config, *Wallet, error) {
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	if f.NArg() != 0 {
 		// Unexpected number of parameters
-		return nil, nil, errors.New("unexpected number of parameters")
+		return nil, nil, nil, nil, errors.New("unexpected number of parameters")
 	}
 
 	var k = koanf.New(".")
@@ -224,47 +217,75 @@ func Parse() (*Config, *Wallet, error) {
 	configFile, _ := f.GetString("conf")
 	if len(configFile) > 0 {
 		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
-			return nil, nil, errors.Wrap(err, "error loading config file")
+			return nil, nil, nil, nil, errors.Wrap(err, "error loading config file")
 		}
 	}
 
-	useRinkeby, _ := f.GetBool("testnet.rinkeby")
-	useArb1, _ := f.GetBool("mainnet.arb1")
 	rollupAddress, _ := f.GetString("rollup.address")
 
-	if useRinkeby {
-		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":          "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-			"rollup.chain-id":         "421611",
-			"rollup.from-block":       "8700589",
-			"rollup.machine.filename": "testnet.rinkeby.mexe",
-			"bridge.utils.address":    "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-			"feed.input.url":          "wss://rinkeby.arbitrum.io/feed",
-			"node.forward.url":        "https://rinkeby.arbitrum.io/rpc",
-		}, "."), nil)
+	l1URL, err := f.GetString("l1.url")
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "error getting --l1.url")
+	}
 
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
+	l1Client, err := ethutils.NewRPCEthClient(l1URL)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "error running NewRPcEthClient")
+	}
+
+	var l1ChainId *big.Int
+	for {
+		l1ChainId, err = l1Client.ChainID(ctx)
+		if err == nil {
+			break
 		}
-	} else if useArb1 || len(rollupAddress) == 0 {
-		err := k.Load(confmap.Provider(map[string]interface{}{
-			"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-			"rollup.chain-id":         "42161",
-			"rollup.from-block":       "12525700",
-			"rollup.machine.filename": "mainnet.arb1.mexe",
-			"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-			"feed.input.url":          "wss://arb1.arbitrum.io/feed",
-			"node.forward.url":        "https://arb1.arbitrum.io/rpc",
-		}, "."), nil)
+		logger.Warn().Err(err).Msg("Error getting chain ID")
 
-		if err != nil {
-			return nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
+		select {
+		case <-ctx.Done():
+			return nil, nil, nil, nil, errors.New("ctx cancelled getting chain ID")
+		case <-time.After(5 * time.Second):
+		}
+	}
+	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+
+	if len(rollupAddress) == 0 {
+		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
+			err := k.Load(confmap.Provider(map[string]interface{}{
+				"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+				"rollup.chain-id":         "42161",
+				"rollup.from-block":       "12525700",
+				"rollup.machine.filename": "mainnet.arb1.mexe",
+				"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+				"feed.input.url":          "wss://arb1.arbitrum.io/feed",
+				"node.forward.url":        "https://arb1.arbitrum.io/rpc",
+			}, "."), nil)
+
+			if err != nil {
+				return nil, nil, nil, nil, errors.Wrap(err, "error setting mainnet.arb1 rollup parameters")
+			}
+		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
+			err := k.Load(confmap.Provider(map[string]interface{}{
+				"rollup.address":          "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
+				"rollup.chain-id":         "421611",
+				"rollup.from-block":       "8700589",
+				"rollup.machine.filename": "testnet.rinkeby.mexe",
+				"bridge.utils.address":    "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
+				"feed.input.url":          "wss://rinkeby.arbitrum.io/feed",
+				"node.forward.url":        "https://rinkeby.arbitrum.io/rpc",
+			}, "."), nil)
+
+			if err != nil {
+				return nil, nil, nil, nil, errors.Wrap(err, "error setting testnet.rinkeby rollup parameters")
+			}
+		} else {
+			return nil, nil, nil, nil, fmt.Errorf("connected to unrecognized ethereum network with chain ID: %v", l1ChainId)
 		}
 	}
 
 	// Any settings provided on command line override items in configuration file
 	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, nil, errors.Wrap(err, "error loading config")
+		return nil, nil, nil, nil, errors.Wrap(err, "error loading config")
 	}
 
 	var out Config
@@ -281,13 +302,13 @@ func Parse() (*Config, *Wallet, error) {
 	err = k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
 
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// Fixup directories
 	if len(out.Persistent.Storage.Path) == 0 {
 		// Error message will be output by caller
-		return &out, nil, nil
+		return &out, nil, nil, nil, nil
 	}
 
 	if len(out.Persistent.Database.Path) == 0 {
@@ -310,7 +331,7 @@ func Parse() (*Config, *Wallet, error) {
 
 		c, err := k.Marshal(json.Parser())
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
+			return nil, nil, nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
 		}
 
 		fmt.Println(string(c))
@@ -321,5 +342,5 @@ func Parse() (*Config, *Wallet, error) {
 	wallet := out.Wallet
 	out.Wallet.Password = ""
 
-	return &out, &wallet, nil
+	return &out, &wallet, l1Client, l1ChainId, nil
 }
