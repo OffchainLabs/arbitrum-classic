@@ -145,7 +145,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				if len(res.Messages) > 0 {
 					logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
 				} else if res.ConfirmedAccumulator.IsConfirmed {
-					logger.Debug().Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("confirmed accumulator")
+					logger.Debug().Hex("acc", res.ConfirmedAccumulator.Accumulator.Bytes()).Msg("confirmed accumulator")
 				} else {
 					logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages or confirmations")
 				}
