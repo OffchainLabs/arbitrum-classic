@@ -25,19 +25,14 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
-
-type ClientManagerSettings struct {
-	ClientPingInterval      time.Duration
-	ClientNoResponseTimeout time.Duration
-}
 
 // ClientManager manages client connections
 type ClientManager struct {
@@ -50,7 +45,7 @@ type ClientManager struct {
 	poller            netpoll.Poller
 	broadcastChan     chan BroadcastMessage
 	clientAction      chan ClientConnectionAction
-	settings          ClientManagerSettings
+	settings          configuration.FeedOutput
 }
 
 type ClientConnectionAction struct {
@@ -58,7 +53,7 @@ type ClientConnectionAction struct {
 	create bool
 }
 
-func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings ClientManagerSettings) *ClientManager {
+func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings configuration.FeedOutput) *ClientManager {
 	return &ClientManager{
 		poller:        poller,
 		pool:          pool,
@@ -152,6 +147,8 @@ func (cm *ClientManager) ClientCount() int32 {
 }
 
 func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
+	logger.Debug().Hex("acc", accumulator.Bytes()).Msg("confirming accumulator")
+
 	bm := BroadcastMessage{
 		Version: 1,
 		ConfirmedAccumulator: ConfirmedAccumulator{
@@ -166,6 +163,8 @@ func (cm *ClientManager) confirmedAccumulator(accumulator common.Hash) {
 // Broadcast sends batch item to all clients.
 func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	var broadcastMessages []*BroadcastFeedMessage
+
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
 
 	msg := BroadcastFeedMessage{
 		FeedItem: SequencerFeedItem{
@@ -264,7 +263,7 @@ func (cm *ClientManager) verifyClients() {
 	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
 	for client := range cm.clientPtrMap {
 		diff := time.Since(client.GetLastHeard())
-		if diff > cm.settings.ClientNoResponseTimeout {
+		if diff > cm.settings.Timeout {
 			deadClientList = append(deadClientList, client)
 		}
 	}
@@ -296,7 +295,7 @@ func (cm *ClientManager) Start(parentCtx context.Context) {
 		defer cancelFunc()
 		defer cm.removeAll()
 
-		pingInterval := time.NewTicker(cm.settings.ClientPingInterval)
+		pingInterval := time.NewTicker(cm.settings.Ping)
 		defer pingInterval.Stop()
 		for {
 			select {

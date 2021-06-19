@@ -9,7 +9,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/mitchellh/mapstructure"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
@@ -27,16 +27,26 @@ type Bridge struct {
 	} `koanf:"utils"`
 }
 
+type FeedInput struct {
+	Timeout time.Duration `koanf:"timeout"`
+	URL     string        `koanf:"url"`
+}
+
+type FeedOutput struct {
+	Addr string `koanf:"addr"`
+	HTTP struct {
+		Timeout time.Duration `koanf:"timeout"`
+	} `koanf:"http"`
+	Port    string        `koanf:"port"`
+	Ping    time.Duration `koanf:"ping"`
+	Timeout time.Duration `koanf:"timeout"`
+	Queue   int           `koanf:"queue"`
+	Workers int           `koanf:"workers"`
+}
+
 type Feed struct {
-	Input struct {
-		URL string `koanf:"url"`
-	} `koanf:"input"`
-	Output struct {
-		Addr    string `koanf:"addr"`
-		Port    string `koanf:"port"`
-		Ping    string `koanf:"ping"`
-		Timeout string `koanf:"timeout"`
-	} `koanf:"output"`
+	Input  FeedInput  `koanf:"input"`
+	Output FeedOutput `koanf:"output"`
 }
 
 type Healthcheck struct {
@@ -147,10 +157,6 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 
 	f.String("bridge.utils.address", "", "bridgeutils contract address")
 
-	f.String("conf", "", "name of configuration file")
-
-	f.Bool("dump.conf", false, "print out currently active configuration file")
-
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
 	f.String("node.aggregator.inbox.address", "", "address of the inbox contract")
@@ -165,26 +171,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	f.Uint64("rollup.chain-id", 42161, "chain id of the arbitrum chain")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
-	f.String("feed.input.url", "", "URL of sequencer feed source")
-	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
-	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
-	f.Duration("feed.output.ping", 5*time.Second, "number of seconds for ping interval")
-	f.Duration("feed.output.timeout", 15*time.Second, "number of seconds for timeout")
-
-	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
-	f.Bool("healthcheck.sequencer.enable", false, "enable checking the health of the sequencer")
-	f.Bool("healthcheck.l1-node.enable", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics.enable", false, "enable prometheus endpoint")
-	f.String("healthcheck.metrics.prefix", "", "prepend the specified prefix to the exported metrics names")
-	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
-	f.String("healthcheck.port", "", "port to bind the healthcheck endpoint to")
-
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
-
-	f.String("log.rpc", "info", "log level for rpc")
-	f.String("log.core", "info", "log level for general arb node logging")
-
-	f.Bool("pprof.enable", false, "enable profiling server")
 
 	f.String("persistent.storage.path", "state", "location persistent storage is located")
 
@@ -201,24 +188,9 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	f.String("ws.addr", "0.0.0.0", "websocket address")
 	f.String("ws.port", "8548", "websocket port")
 
-	err := f.Parse(os.Args[1:])
+	k, err := beginCommonParse(f)
 	if err != nil {
 		return nil, nil, nil, nil, err
-	}
-
-	if f.NArg() != 0 {
-		// Unexpected number of parameters
-		return nil, nil, nil, nil, errors.New("unexpected number of parameters")
-	}
-
-	var k = koanf.New(".")
-	// Load configuration file if provided
-
-	configFile, _ := f.GetString("conf")
-	if len(configFile) > 0 {
-		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "error loading config file")
-		}
 	}
 
 	rollupAddress, _ := f.GetString("rollup.address")
@@ -283,9 +255,99 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		}
 	}
 
+	out, wallet, err := endCommonParse(f, k)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	// Fixup directories
+	if len(out.Persistent.Storage.Path) == 0 {
+		// Error message will be output by caller
+		return out, nil, nil, nil, nil
+	}
+
+	if len(out.Persistent.Database.Path) == 0 {
+		out.Persistent.Database.Path = path.Join(out.Persistent.Storage.Path, "arbStorage")
+	}
+
+	if len(out.Rollup.Machine.Filename) == 0 {
+		// Nothing provided, so use default
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Database.Path, "arbos.mexe")
+	}
+
+	return out, wallet, l1Client, l1ChainId, nil
+}
+
+func ParseFeed(ctx context.Context) (*Config, error) {
+	f := flag.NewFlagSet("config", flag.ContinueOnError)
+
+	k, err := beginCommonParse(f)
+	if err != nil {
+		return nil, err
+	}
+
+	out, _, err := endCommonParse(f, k)
+	if err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
+	f.String("conf", "", "name of configuration file")
+
+	f.Bool("dump.conf", false, "print out currently active configuration file")
+
+	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
+	f.String("feed.input.url", "", "URL of sequencer feed source")
+	f.Duration("feed.input.http.timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
+	f.Int("feed.input.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
+	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
+	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
+	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
+	f.Duration("feed.output.timeout", 15*time.Second, "duraction to wait before timing out connections to client")
+
+	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
+	f.Bool("healthcheck.sequencer.enable", false, "enable checking the health of the sequencer")
+	f.Bool("healthcheck.l1-node.enable", false, "enable checking the health of the L1 node")
+	f.Bool("healthcheck.metrics.enable", false, "enable prometheus endpoint")
+	f.String("healthcheck.metrics.prefix", "", "prepend the specified prefix to the exported metrics names")
+	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
+	f.String("healthcheck.port", "", "port to bind the healthcheck endpoint to")
+
+	f.String("log.rpc", "info", "log level for rpc")
+	f.String("log.core", "info", "log level for general arb node logging")
+
+	f.Bool("pprof.enable", false, "enable profiling server")
+
+	err := f.Parse(os.Args[1:])
+	if err != nil {
+		return nil, err
+	}
+
+	if f.NArg() != 0 {
+		// Unexpected number of parameters
+		return nil, errors.New("unexpected number of parameters")
+	}
+
+	var k = koanf.New(".")
+	// Load configuration file if provided
+
+	configFile, _ := f.GetString("conf")
+	if len(configFile) > 0 {
+		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
+			return nil, errors.Wrap(err, "error loading config file")
+		}
+	}
+
+	return k, nil
+}
+
+func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
 	// Any settings provided on command line override items in configuration file
 	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error loading config")
+		return nil, nil, errors.Wrap(err, "error loading config")
 	}
 
 	var out Config
@@ -299,25 +361,10 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		Result:           &out,
 		WeaklyTypedInput: true,
 	}
-	err = k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
+	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
 
-		return nil, nil, nil, nil, err
-	}
-
-	// Fixup directories
-	if len(out.Persistent.Storage.Path) == 0 {
-		// Error message will be output by caller
-		return &out, nil, nil, nil, nil
-	}
-
-	if len(out.Persistent.Database.Path) == 0 {
-		out.Persistent.Database.Path = path.Join(out.Persistent.Storage.Path, "arbStorage")
-	}
-
-	if len(out.Rollup.Machine.Filename) == 0 {
-		// Nothing provided, so use default
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.Database.Path, "arbos.mexe")
+		return nil, nil, err
 	}
 
 	if out.Dump.Conf {
@@ -331,7 +378,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 
 		c, err := k.Marshal(json.Parser())
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
+			return nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")
 		}
 
 		fmt.Println(string(c))
@@ -342,5 +389,5 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	wallet := out.Wallet
 	out.Wallet.Password = ""
 
-	return &out, &wallet, l1Client, l1ChainId, nil
+	return &out, &wallet, nil
 }

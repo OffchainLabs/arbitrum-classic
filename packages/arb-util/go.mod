@@ -19,8 +19,8 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
 
-replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-core
+replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
 
 replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
 
-replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
+replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-core

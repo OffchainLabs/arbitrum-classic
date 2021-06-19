@@ -88,10 +88,9 @@ func startup() error {
 		len(config.Validator.Strategy) != 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-validator --conf=<filename> \n")
-		fmt.Printf("          or: arb-validator --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
-		fmt.Printf("          or: arb-validator --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n")
+		fmt.Printf("          or: arb-validator --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket>\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
-			fmt.Printf("Error with configuration: %s", err.Error())
+			fmt.Printf("%s\n", err.Error())
 		}
 
 		return nil
