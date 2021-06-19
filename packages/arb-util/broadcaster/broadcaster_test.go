@@ -29,18 +29,22 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := Settings{
-		Addr:                    ":9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	broadcasterSettings := configuration.FeedOutput{
+		Addr: "0.0.0.0",
+		HTTP: struct {
+			Timeout time.Duration `koanf:"timeout"`
+		}{2 * time.Second},
+		Port:    "9642",
+		Ping:    5 * time.Second,
+		Timeout: 20 * time.Second,
+		Queue:   1,
+		Workers: 128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)
@@ -153,14 +157,18 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	t.Skip("Server is not responding to ping anymore")
 	ctx := context.Background()
 
-	broadcasterSettings := Settings{
-		Addr:                    ":9643",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	broadcasterSettings := configuration.FeedOutput{
+		Addr: "0.0.0.0",
+		HTTP: struct {
+			Timeout time.Duration `koanf:"timeout"`
+		}{2 * time.Second},
+		Port:    "9643",
+		Ping:    5 * time.Second,
+		Timeout: 20 * time.Second,
+		Queue:   1,
+		Workers: 128,
 	}
+
 	b := NewBroadcaster(broadcasterSettings)
 
 	err := b.Start(ctx)
@@ -209,13 +217,16 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	ctx, cancelFunc, _ := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	broadcasterSettings := Settings{
-		Addr:                    ":9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	broadcasterSettings := configuration.FeedOutput{
+		Addr: "0.0.0.0",
+		HTTP: struct {
+			Timeout time.Duration `koanf:"timeout"`
+		}{2 * time.Second},
+		Port:    "9642",
+		Ping:    5 * time.Second,
+		Timeout: 30 * time.Second,
+		Queue:   1,
+		Workers: 128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)

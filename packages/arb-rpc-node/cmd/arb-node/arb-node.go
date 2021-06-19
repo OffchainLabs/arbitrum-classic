@@ -87,13 +87,12 @@ func startup() error {
 		(config.Node.Sequencer.Enable && config.Feed.Input.URL != "") {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
-		fmt.Printf("          or:       sequencer: arb-node --sequencer --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridge.utils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("          or: aggregator node: arb-node --feed.url=<feed websocket> --inbox=<inbox address> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridge.utils.address=<address> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("          or:            node: arb-node --feed.url=<feed websocket> --node.forward.url=<sequencer RPC> --persistent.storage.path=<path> --l1.url=<url> --rollup.address=<address> --bridge.utils.address=<address> [optional arguments] \n")
-		fmt.Printf("          or:            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --mainnet.arb1 \n")
-		fmt.Printf("          or:            node: arb-node --l1.url=<url> --persistent.storage.path=<path> --testnet.rinkeby \n\n")
+		fmt.Printf("          or:       sequencer: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC> --node.sequencer.enable [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or: aggregator node: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or:            node: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket> --node.forward.url=<sequencer RPC> [optional arguments] \n")
+		fmt.Printf("          or:            node: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC>\n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
-			fmt.Printf("Error with configuration: %s", err.Error())
+			fmt.Printf("%s\n", err.Error())
 		}
 
 		return nil
@@ -147,7 +146,7 @@ func startup() error {
 		if config.Feed.Input.URL == "" {
 			logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
 		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(config.Feed.Input.URL, nil, 20*time.Second)
+			broadcastClient := broadcastclient.NewBroadcastClient(config.Feed.Input.URL, nil, config.Feed.Input.Timeout)
 			for {
 				sequencerFeed, err = broadcastClient.Connect(ctx)
 				if err == nil {
@@ -183,7 +182,6 @@ func startup() error {
 		}
 	}
 
-	var broadcasterSettings broadcaster.Settings
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
 	if config.Node.Forward.URL != "" {
@@ -223,23 +221,6 @@ func startup() error {
 				DelayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
 				CreateBatchBlockInterval:   big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
 			}
-
-			ping, err := time.ParseDuration(config.Feed.Output.Ping)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("error parsing feedoutput ping duration")
-			}
-			timeout, err := time.ParseDuration(config.Feed.Output.Timeout)
-			if err != nil {
-				logger.Fatal().Err(err).Msg("error parsing feedoutput timeout")
-			}
-			broadcasterSettings = broadcaster.Settings{
-				Addr:                    config.Feed.Output.Addr + ":" + config.Feed.Output.Port,
-				Workers:                 128,
-				Queue:                   1,
-				IoReadWriteTimeout:      2 * time.Second,
-				ClientPingInterval:      ping,
-				ClientNoResponseTimeout: timeout,
-			}
 		} else if config.Node.Aggregator.Stateful {
 			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
 		} else {
@@ -270,7 +251,7 @@ func startup() error {
 			time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
 			batcherMode,
 			dataSigner,
-			broadcasterSettings,
+			config.Feed.Output,
 			config.GasPriceUrl,
 		)
 		if err == nil {
