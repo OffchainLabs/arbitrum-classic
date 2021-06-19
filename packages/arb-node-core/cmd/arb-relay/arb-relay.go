@@ -84,7 +84,11 @@ func startup() error {
 		return nil
 	}
 
-	defer logger.Log().Msg("Cleanly shutting down relay")
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
+		return err
+	}
+
+	defer logger.Info().Msg("Cleanly shutting down relay")
 
 	if config.Feed.Input.URL == "" {
 		return errors.New("Missing --feed.input.url")
