@@ -301,12 +301,12 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.String("feed.input.url", "", "URL of sequencer feed source")
-	f.Duration("feed.input.http.timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
-	f.Int("feed.input.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
+	f.Duration("feed.output.http.timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
 	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
 	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
 	f.Duration("feed.output.timeout", 15*time.Second, "duraction to wait before timing out connections to client")
+	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
 	f.Bool("healthcheck.sequencer.enable", false, "enable checking the health of the sequencer")
