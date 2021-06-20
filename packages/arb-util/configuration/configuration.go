@@ -84,6 +84,9 @@ type Node struct {
 }
 
 type Persistent struct {
+	Chain struct {
+		Path string `koanf:"path"`
+	} `koanf:"chain"`
 	Database struct {
 		Path string `koanf:"path"`
 	} `koanf:"database"`
@@ -153,7 +156,7 @@ type Config struct {
 }
 
 func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
-	f := flag.NewFlagSet("config", flag.ContinueOnError)
+	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	f.String("bridge.utils.address", "", "bridgeutils contract address")
 
@@ -173,7 +176,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 
-	f.String("persistent.storage.path", "state", "location persistent storage is located")
+	f.String("persistent.storage.path", ".arbitrum", "location persistent storage is located")
 
 	f.String("rpc.addr", "0.0.0.0", "RPC address")
 	f.String("rpc.port", "8547", "RPC port")
@@ -200,9 +203,13 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		return nil, nil, nil, nil, errors.Wrap(err, "error getting --l1.url")
 	}
 
+	if len(l1URL) == 0 {
+		return nil, nil, nil, nil, errors.New("required parameter --l1.url is missing")
+	}
+
 	l1Client, err := ethutils.NewRPCEthClient(l1URL)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error running NewRPcEthClient")
+		return nil, nil, nil, nil, errors.Wrap(err, "error running NewRPCEthClient")
 	}
 
 	var l1ChainId *big.Int
@@ -224,13 +231,15 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	if len(rollupAddress) == 0 {
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
-				"rollup.address":          "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-				"rollup.chain-id":         "42161",
-				"rollup.from-block":       "12525700",
-				"rollup.machine.filename": "mainnet.arb1.mexe",
-				"bridge.utils.address":    "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-				"feed.input.url":          "wss://arb1.arbitrum.io/feed",
-				"node.forward.url":        "https://arb1.arbitrum.io/rpc",
+				"bridge.utils.address":     "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+				"feed.input.url":           "wss://arb1.arbitrum.io/feed",
+				"node.forward.url":         "https://arb1.arbitrum.io/rpc",
+				"persistent.chain.path":    "mainnet",
+				"persistent.database.path": "db",
+				"rollup.address":           "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+				"rollup.chain-id":          "42161",
+				"rollup.from-block":        "12525700",
+				"rollup.machine.filename":  "mainnet.arb1.mexe",
 			}, "."), nil)
 
 			if err != nil {
@@ -238,13 +247,15 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 			}
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
-				"rollup.address":          "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-				"rollup.chain-id":         "421611",
-				"rollup.from-block":       "8700589",
-				"rollup.machine.filename": "testnet.rinkeby.mexe",
-				"bridge.utils.address":    "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-				"feed.input.url":          "wss://rinkeby.arbitrum.io/feed",
-				"node.forward.url":        "https://rinkeby.arbitrum.io/rpc",
+				"bridge.utils.address":     "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
+				"feed.input.url":           "wss://rinkeby.arbitrum.io/feed",
+				"node.forward.url":         "https://rinkeby.arbitrum.io/rpc",
+				"persistent.chain.path":    "rinkeby",
+				"persistent.database.path": "db",
+				"rollup.address":           "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
+				"rollup.chain-id":          "421611",
+				"rollup.from-block":        "8700589",
+				"rollup.machine.filename":  "testnet.rinkeby.mexe",
 			}, "."), nil)
 
 			if err != nil {
@@ -261,25 +272,35 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	}
 
 	// Fixup directories
-	if len(out.Persistent.Storage.Path) == 0 {
-		// Error message will be output by caller
-		return out, nil, nil, nil, nil
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "Unable to read users home directory")
 	}
 
-	if len(out.Persistent.Database.Path) == 0 {
-		out.Persistent.Database.Path = path.Join(out.Persistent.Storage.Path, "arbStorage")
+	// Make persistent storage directory relative to home directory if not already absolute
+	out.Persistent.Storage.Path = path.Join(homeDir, out.Persistent.Storage.Path)
+
+	// Make chain directory relative to persistent storage directory if not already absolute
+	out.Persistent.Chain.Path = path.Join(out.Persistent.Storage.Path, out.Persistent.Chain.Path)
+
+	// Make db directory relative to chain directory if not already absolute
+	out.Persistent.Database.Path = path.Join(out.Persistent.Chain.Path, out.Persistent.Database.Path)
+
+	err = os.MkdirAll(out.Persistent.Database.Path, os.ModePerm)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create database directory")
 	}
 
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Nothing provided, so use default
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.Database.Path, "arbos.mexe")
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Storage.Path, "arbos.mexe")
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil
 }
 
 func ParseFeed(ctx context.Context) (*Config, error) {
-	f := flag.NewFlagSet("config", flag.ContinueOnError)
+	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	k, err := beginCommonParse(f)
 	if err != nil {
