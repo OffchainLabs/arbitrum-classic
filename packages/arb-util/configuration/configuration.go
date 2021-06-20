@@ -296,6 +296,9 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Storage.Path, "arbos.mexe")
 	}
 
+	// Make machine relative to home directory if not already absolute
+	out.Rollup.Machine.Filename = path.Join(homeDir, out.Rollup.Machine.Filename)
+
 	return out, wallet, l1Client, l1ChainId, nil
 }
 
