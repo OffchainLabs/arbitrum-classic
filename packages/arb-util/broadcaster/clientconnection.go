@@ -38,20 +38,20 @@ const MaxSendQueue = 1000
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
-	ioMutex sync.Mutex
-	conn    io.ReadWriteCloser
-
+	clientVersion string
+	ioMutex       sync.Mutex
+	conn          io.ReadWriteCloser
 	desc          *netpoll.Desc
 	name          string
 	clientManager *ClientManager
-
 	lastHeardUnix int64
 	cancelFunc    context.CancelFunc
 	out           chan []byte
 }
 
-func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager, clientVersion string) *ClientConnection {
 	return &ClientConnection{
+		clientVersion: clientVersion,
 		conn:          conn,
 		desc:          desc,
 		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
@@ -135,7 +135,7 @@ func (cc *ClientConnection) readRequest() error {
 	return nil
 }
 
-func (cc *ClientConnection) write(x interface{}) error {
+func (cc *ClientConnection) writeV1(x interface{}) error {
 	writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(writer)
 
@@ -147,6 +147,14 @@ func (cc *ClientConnection) write(x interface{}) error {
 	}
 
 	return writer.Flush()
+}
+
+func (cc *ClientConnection) write(x interface{}) error {
+	if cc.clientVersion == "1.0" {
+		return cc.writeV1(x)
+	} else { // If there's no version specified, assume version 1.
+		return cc.writeV1(x)
+	}
 }
 
 func (cc *ClientConnection) writeRaw(p []byte) error {

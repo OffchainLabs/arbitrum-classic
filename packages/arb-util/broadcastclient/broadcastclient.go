@@ -19,13 +19,15 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"math/big"
 	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
@@ -91,8 +93,14 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
+	header := ws.HandshakeHeaderHTTP(http.Header{
+		"Accept":                  []string{"1.0"},                       // API Version
+		"LastInboxSequenceNumber": []string{bc.lastInboxSeqNum.String()}, // TODO: We probably want to use the last Accumulator here.
+	})
+
 	timeoutDialer := ws.Dialer{
 		Timeout: 10 * time.Second,
+		Header:  header,
 	}
 
 	conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)

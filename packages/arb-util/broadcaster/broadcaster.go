@@ -18,11 +18,14 @@ package broadcaster
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"encoding/binary"
+	"math/big"
 	"net"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 
@@ -89,9 +92,27 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	handle := func(conn net.Conn) {
 
 		safeConn := deadliner{conn, b.settings.HTTP.Timeout}
+		clientVersion := "1.0"
+		lastSequenceNumber := big.NewInt(0)
+		u := ws.Upgrader{
+			OnHeader: func(key, value []byte) (err error) {
+				logger.
+					Info().
+					Msgf("non-websocket header: %q=%q", key, value)
+				headerKey := string(key)
+				if headerKey == "Accept" {
+					clientVersion = string(value)
+				} else if headerKey == "LastSequenceNumber" {
+					lastSequenceNumber = big.NewInt(int64(binary.BigEndian.Uint64(value)))
+				}
+				return
+			},
+		}
 
-		// Zero-copy upgrade to WebSocket connection.
-		hs, err := ws.Upgrade(safeConn)
+		logger.Info().Msgf("Client Version: %v", clientVersion)
+		logger.Info().Msgf("lastSequenceNumber: %v", lastSequenceNumber)
+
+		hs, err := u.Upgrade(safeConn)
 		if err != nil {
 			logger.Warn().Err(err).Str("connection_name", nameConn(safeConn)).Msg("upgrade error")
 			_ = safeConn.Close()
@@ -112,7 +133,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		}
 
 		// Register incoming client in clientManager.
-		client := clientManager.Register(safeConn, desc)
+		client := clientManager.Register(safeConn, desc, clientVersion)
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {
