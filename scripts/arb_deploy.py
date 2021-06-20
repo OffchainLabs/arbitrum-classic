@@ -23,7 +23,7 @@ import os
 import sys
 import json
 
-import build_validator_docker
+import build_node_docker
 from support.run import run
 
 # package configuration
@@ -164,7 +164,7 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
 
     # Build
     if not up_flag or build_flag:
-        if build_validator_docker.build_validator(sudo_flag) != 0:
+        if build_node_docker.build_node(sudo_flag) != 0:
             exit(1)
 
     # Run
