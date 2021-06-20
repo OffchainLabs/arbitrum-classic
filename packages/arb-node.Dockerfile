@@ -72,10 +72,10 @@ FROM offchainlabs/cpp-base:0.3.2 as arb-validator
 
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
 COPY --chown=user arb-os/arb_os/arbos.mexe /home/user/arb-os/arb_os/
-RUN curl https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe --output /home/user/mainnet.arb1.mexe && \
-    curl https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/testnet.rinkeby.mexe && \
-    mkdir /home/user/state && \
-    chown 1000:1000 /home/user/state
+RUN mkdir -p /home/user/.arbitrum && \
+    chown 1000:1000 /home/user/.arbitrum && \
+    curl https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe --output /home/user/.arbitrum/mainnet.arb1.mexe && \
+    curl https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/.arbitrum/testnet.rinkeby.mexe
 
 ENTRYPOINT ["/home/user/go/bin/arb-node"]
 EXPOSE 8547 8548
