@@ -257,7 +257,6 @@ func (cm *ClientManager) doBroadcast(bm *BroadcastMessage) error {
 // verifyClients should be called every cm.settings.ClientPingInterval
 func (cm *ClientManager) verifyClients() {
 	clientConnectionCount := len(cm.clientPtrMap)
-	logger.Debug().Int("feed_client_count", clientConnectionCount).Send()
 
 	// Create list of clients to clients to remove
 	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
