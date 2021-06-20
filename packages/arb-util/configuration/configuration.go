@@ -13,7 +13,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
+	"io"
 	"math/big"
+	"net/http"
 	"os"
 	"path"
 	"time"
@@ -101,7 +103,7 @@ type Rollup struct {
 	FromBlock int64  `koanf:"from-block"`
 	Machine   struct {
 		Filename string `koanf:"filename"`
-		//URL string `koanf:"url"`
+		URL      string `koanf:"url"`
 	} `koanf:"machine"`
 }
 
@@ -240,6 +242,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 				"rollup.chain-id":          "42161",
 				"rollup.from-block":        "12525700",
 				"rollup.machine.filename":  "mainnet.arb1.mexe",
+				"rollup.machine.url":       "https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe",
 			}, "."), nil)
 
 			if err != nil {
@@ -256,6 +259,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 				"rollup.chain-id":          "421611",
 				"rollup.from-block":        "8700589",
 				"rollup.machine.filename":  "testnet.rinkeby.mexe",
+				"rollup.machine.url":       "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/state/arbos.mexe",
 			}, "."), nil)
 
 			if err != nil {
@@ -292,12 +296,33 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	}
 
 	if len(out.Rollup.Machine.Filename) == 0 {
-		// Nothing provided, so use default
+		// Machine not provided, so use default
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.Storage.Path, "arbos.mexe")
 	}
 
-	// Make machine relative to home directory if not already absolute
-	out.Rollup.Machine.Filename = path.Join(homeDir, out.Rollup.Machine.Filename)
+	// Make machine relative to storage directory if not already absolute
+	out.Rollup.Machine.Filename = path.Join(out.Persistent.Storage.Path, out.Rollup.Machine.Filename)
+
+	_, err = os.Stat(out.Rollup.Machine.Filename)
+	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
+		// Machine does not exist, so load it from provided URL
+		logger.Debug().Str("URL", out.Rollup.Machine.URL).Msg("downloading machine")
+
+		resp, err := http.Get(out.Rollup.Machine.URL)
+		if err != nil {
+			return nil, nil, nil, nil, errors.Wrapf(err, "unable to get machine from: %s", out.Rollup.Machine.URL)
+		}
+
+		fileOut, err := os.Create(out.Rollup.Machine.Filename)
+		if err != nil {
+			return nil, nil, nil, nil, errors.Wrapf(err, "unable to open file '%s' for machine", out.Rollup.Machine.Filename)
+		}
+
+		_, err = io.Copy(fileOut, resp.Body)
+		if err != nil {
+			return nil, nil, nil, nil, errors.Wrapf(err, "unable to output machine to: %s", out.Rollup.Machine.Filename)
+		}
+	}
 
 	return out, wallet, l1Client, l1ChainId, nil
 }
