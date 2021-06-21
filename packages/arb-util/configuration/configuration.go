@@ -45,32 +45,24 @@ type Feed struct {
 }
 
 type Healthcheck struct {
-	Addr   string `koanf:"addr"`
-	Enable bool   `koanf:"enable"`
-	L1Node struct {
-		Enable bool `koanf:"enable"`
-	} `koanf:"l1-node"`
-	Metrics struct {
-		Enable bool   `koanf:"enable"`
-		Prefix string `koanf:"prefix"`
-	} `koanf:"metrics"`
-	Port      string `koanf:"port"`
-	Sequencer struct {
-		Enable bool `koanf:"enable"`
-	} `koanf:"sequencer"`
+	Addr          string `koanf:"addr"`
+	Enable        bool   `koanf:"enable"`
+	L1Node        bool   `koanf:"l1-node"`
+	Metrics       bool   `koanf:"metrics"`
+	MetricsPrefix string `koanf:"metrics-prefix"`
+	Port          string `koanf:"port"`
+	Sequencer     bool   `koanf:"sequencer"`
 }
 
 type Node struct {
 	Aggregator struct {
-		Inbox struct {
-			Address string `koanf:"address"`
-		} `koanf:"inbox"`
-		MaxBatchTime int64 `koanf:"max-batch-time"`
-		Stateful     bool  `koanf:"stateful"`
+		InboxAddress string `koanf:"inbox-address"`
+		MaxBatchTime int64  `koanf:"max-batch-time"`
+		Stateful     bool   `koanf:"stateful"`
 	} `koanf:"aggregator"`
-	Forward struct {
-		URL string `koanf:"url"`
-	} `koanf:"forward"`
+	Forwarder struct {
+		Target string `koanf:"target"`
+	} `koanf:"forwarder"`
 	RPC struct {
 		Addr string `koanf:"addr"`
 		Port string `koanf:"port"`
@@ -87,15 +79,8 @@ type Node struct {
 }
 
 type Persistent struct {
-	Chain struct {
-		Path string `koanf:"path"`
-	} `koanf:"chain"`
-	Database struct {
-		Path string `koanf:"path"`
-	} `koanf:"database"`
-	Storage struct {
-		Path string `koanf:"path"`
-	} `koanf:"storage"`
+	Chain        string `koanf:"chain"`
+	GlobalConfig string `koanf:"global-config"`
 }
 
 type Rollup struct {
@@ -142,6 +127,10 @@ type Config struct {
 	Wallet        Wallet     `koanf:"wallet"`
 }
 
+func (c *Config) GetDatabasePath() string {
+	return path.Join(c.Persistent.Chain, "db")
+}
+
 func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
@@ -150,10 +139,10 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
-	f.String("node.aggregator.inbox.address", "", "address of the inbox contract")
+	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int64("node.aggregator.max-batch-time", 10, "maxBatchTime=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
-	f.String("node.forward.url", "", "url of another node to send transactions through")
+	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.String("node.rpc.port", "8547", "RPC port")
 	f.Int64("node.sequencer.create-batch-block-interval", 1, "block interval at which to create new batches")
@@ -168,7 +157,8 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 
-	f.String("persistent.storage.path", ".arbitrum", "location persistent storage is located")
+	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
+	f.String("persistent.chain", "", "location chain specific state is located")
 
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 
@@ -212,9 +202,8 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
 				"feed.input.url":                   "wss://arb1.arbitrum.io/feed",
-				"node.forward.url":                 "https://arb1.arbitrum.io/rpc",
-				"persistent.chain.path":            "mainnet",
-				"persistent.database.path":         "db",
+				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
+				"persistent.chain":                 "mainnet",
 				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
 				"rollup.chain-id":                  "42161",
 				"rollup.from-block":                "12525700",
@@ -231,14 +220,13 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
 				"feed.input.url":                   "wss://rinkeby.arbitrum.io/feed",
-				"node.forward.url":                 "https://rinkeby.arbitrum.io/rpc",
-				"persistent.chain.path":            "rinkeby",
-				"persistent.database.path":         "db",
+				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
+				"persistent.chain":                 "rinkeby",
 				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
 				"rollup.chain-id":                  "421611",
 				"rollup.from-block":                "8700589",
 				"rollup.machine.filename":          "testnet.rinkeby.mexe",
-				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/state/arbos.mexe",
+				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe",
 				"validator.utils-address":          "0xbb14D9837f6E596167638Ba0963B9Ba8351F68CD",
 				"validator.wallet-factory-address": "0x5533D1578a39690B6aC692673F771b3fc668f0a3",
 			}, "."), nil)
@@ -263,39 +251,30 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	}
 
 	// Make persistent storage directory relative to home directory if not already absolute
-	if !filepath.IsAbs(out.Persistent.Storage.Path) {
-		out.Persistent.Storage.Path = path.Join(homeDir, out.Persistent.Storage.Path)
+	if !filepath.IsAbs(out.Persistent.GlobalConfig) {
+		out.Persistent.GlobalConfig = path.Join(homeDir, out.Persistent.GlobalConfig)
 	}
-	err = os.MkdirAll(out.Persistent.Storage.Path, os.ModePerm)
+	err = os.MkdirAll(out.Persistent.GlobalConfig, os.ModePerm)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create storage directory")
+		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create global configuration directory")
 	}
 
 	// Make chain directory relative to persistent storage directory if not already absolute
-	if !filepath.IsAbs(out.Persistent.Chain.Path) {
-		out.Persistent.Chain.Path = path.Join(out.Persistent.Storage.Path, out.Persistent.Chain.Path)
+	if !filepath.IsAbs(out.Persistent.Chain) {
+		out.Persistent.Chain = path.Join(out.Persistent.GlobalConfig, out.Persistent.Chain)
 	}
-	err = os.MkdirAll(out.Persistent.Chain.Path, os.ModePerm)
+	err = os.MkdirAll(out.Persistent.Chain, os.ModePerm)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create chain directory")
 	}
 
-	// Make db directory relative to chain directory if not already absolute
-	if !filepath.IsAbs(out.Persistent.Database.Path) {
-		out.Persistent.Database.Path = path.Join(out.Persistent.Chain.Path, out.Persistent.Database.Path)
-	}
-	err = os.MkdirAll(out.Persistent.Database.Path, os.ModePerm)
-	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create database directory")
-	}
-
 	if len(out.Rollup.Machine.Filename) == 0 {
 		// Machine not provided, so use default
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.Storage.Path, "arbos.mexe")
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
 	}
 
 	// Make machine relative to storage directory if not already absolute
-	out.Rollup.Machine.Filename = path.Join(out.Persistent.Storage.Path, out.Rollup.Machine.Filename)
+	out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
 
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
@@ -305,6 +284,9 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		resp, err := http.Get(out.Rollup.Machine.URL)
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrapf(err, "unable to get machine from: %s", out.Rollup.Machine.URL)
+		}
+		if resp.StatusCode != 200 {
+			return nil, nil, nil, nil, fmt.Errorf("HTTP status '%v' when trying to get machine from: %s", resp.Status, out.Rollup.Machine.URL)
 		}
 
 		fileOut, err := os.Create(out.Rollup.Machine.Filename)
@@ -352,10 +334,10 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
-	f.Bool("healthcheck.sequencer.enable", false, "enable checking the health of the sequencer")
-	f.Bool("healthcheck.l1-node.enable", false, "enable checking the health of the L1 node")
-	f.Bool("healthcheck.metrics.enable", false, "enable prometheus endpoint")
-	f.String("healthcheck.metrics.prefix", "", "prepend the specified prefix to the exported metrics names")
+	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
+	f.Bool("healthcheck.l1-node", false, "enable checking the health of the L1 node")
+	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
+	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
 	f.String("healthcheck.port", "", "port to bind the healthcheck endpoint to")
 

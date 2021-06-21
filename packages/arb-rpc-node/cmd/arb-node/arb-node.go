@@ -82,15 +82,15 @@ func startup() error {
 	defer cancelFunc()
 
 	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
-	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
+	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		(config.Node.Sequencer.Enable && config.Feed.Input.URL != "") {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
-		fmt.Printf("          or:       sequencer: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC> --node.sequencer.enable [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("          or: aggregator node: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket> [optional arguments] %s\n", cmdhelp.WalletArgsString)
-		fmt.Printf("          or:            node: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket> --node.forward.url=<sequencer RPC> [optional arguments] \n")
-		fmt.Printf("          or:            node: arb-node --persistent.storage.path=<path> --l1.url=<L1 RPC>\n\n")
+		fmt.Printf("          or:       sequencer: arb-node --persistent.chain=<path> --l1.url=<L1 RPC> --node.sequencer.enable [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or: aggregator node: arb-node --persistent.chain=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket> [optional arguments] %s\n", cmdhelp.WalletArgsString)
+		fmt.Printf("          or:            node: arb-node --persistent.chain=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket> --node.forwarder.target=<sequencer RPC> [optional arguments] \n")
+		fmt.Printf("          or:            node: arb-node --persistent.chain=<path> --l1.url=<L1 RPC>\n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
@@ -115,13 +115,13 @@ func startup() error {
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Msg("Launching arbitrum node")
 
-	mon, err := monitor.NewMonitor(config.Persistent.Database.Path, config.Rollup.Machine.Filename)
+	mon, err := monitor.NewMonitor(config.GetDatabasePath(), config.Rollup.Machine.Filename)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
 	defer mon.Close()
 
-	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.Metrics.Prefix)
+	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
 	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
 	go func() {
 		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
@@ -130,13 +130,13 @@ func startup() error {
 		}
 	}()
 
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enable}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer.Enable}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node.Enable}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 
-	if config.Node.Forward.URL != "" {
-		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forward.URL}
+	if config.Node.Forwarder.Target != "" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forwarder.Target}
 	}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
@@ -184,22 +184,22 @@ func startup() error {
 
 	var dataSigner func([]byte) ([]byte, error)
 	var batcherMode rpc.BatcherMode
-	if config.Node.Forward.URL != "" {
-		logger.Info().Str("forwardTxURL", config.Node.Forward.URL).Msg("Arbitrum node starting in forwarder mode")
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Node.Forward.URL}
+	if config.Node.Forwarder.Target != "" {
+		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Node.Forwarder.Target}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, config.GasPrice, l1ChainId)
+		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Chain, wallet, config.GasPrice, l1ChainId)
 		if err != nil {
 			return errors.Wrap(err, "error running GetKeystore")
 		}
 
 		var inboxAddress common.Address
 		if !config.Node.Sequencer.Enable {
-			if config.Node.Aggregator.Inbox.Address == "" {
+			if config.Node.Aggregator.InboxAddress == "" {
 				return errors.New("must submit inbox address via --inbox if not running in forwarder or sequencer mode")
 			}
-			inboxAddress = common.HexToAddress(config.Node.Aggregator.Inbox.Address)
+			inboxAddress = common.HexToAddress(config.Node.Aggregator.InboxAddress)
 		}
 
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
