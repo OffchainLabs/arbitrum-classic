@@ -72,7 +72,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, err := configuration.ParseFeed(ctx)
+	config, err := configuration.ParseFeed()
 	if err != nil || len(config.Feed.Input.URL) == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")
