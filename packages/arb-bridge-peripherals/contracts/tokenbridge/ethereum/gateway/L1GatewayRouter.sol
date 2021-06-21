@@ -112,7 +112,9 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             l1TokenToGateway[_token[i]] = _gateway[i];
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
-            _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
+            if (_gateway[i] != address(0)) {
+                _gateway[i] = TokenGateway(_gateway[i]).counterpartGateway();
+            }
         }
 
         bytes memory data =
@@ -163,7 +165,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
-    function isSenderCounterpartGateway() internal view virtual override returns (bool) {
+    function isCounterpartGateway(address _target) internal view virtual override returns (bool) {
         // don't expect messages from L2 router
         return false;
     }

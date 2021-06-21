@@ -38,7 +38,7 @@ contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {
             abi.decode(_data, (bytes, bytes, bytes));
         // what if decode reverts? shouldn't as this is encoded by L1 contract
 
-        L2GatewayToken.initialize(
+        L2GatewayToken._initialize(
             BytesParserWithDefault.toString(name, ""),
             BytesParserWithDefault.toString(symbol, ""),
             BytesParserWithDefault.toUint8(decimals, 18),

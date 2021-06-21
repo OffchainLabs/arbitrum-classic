@@ -19,10 +19,11 @@
 pragma solidity ^0.6.11;
 
 import "./L2ArbitrumGateway.sol";
+import "../../libraries/gateway/ICustomGateway.sol";
 
-contract L2CustomGateway is L2ArbitrumGateway {
+contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     // stores addresses of L2 tokens to be used
-    mapping(address => address) public l1ToL2Token;
+    mapping(address => address) public override l1ToL2Token;
 
     function initialize(address _l1Counterpart, address _router) public virtual {
         L2ArbitrumGateway._initialize(_l1Counterpart, _router);
@@ -43,9 +44,9 @@ contract L2CustomGateway is L2ArbitrumGateway {
         bytes memory gatewayData
     ) internal virtual override returns (bool shouldHalt) {
         // it is assumed that the custom token is deployed in the L2 before deposits are made
-        shouldHalt = true;
         // trigger withdrawal
         createOutboundTx(_l1Token, address(this), _from, _amount, "");
+        return true;
     }
 
     /**
@@ -65,25 +66,6 @@ contract L2CustomGateway is L2ArbitrumGateway {
         return l1ToL2Token[l1ERC20];
     }
 
-    /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20)
-        external
-        view
-        virtual
-        override
-        onlyRouter
-        returns (address)
-    {
-        // will revert if not called by router
-        return _calculateL2TokenAddress(l1ERC20);
-    }
-
     function registerTokenFromL1(address[] calldata l1Address, address[] calldata l2Address)
         external
         virtual
@@ -94,6 +76,7 @@ contract L2CustomGateway is L2ArbitrumGateway {
             // here we don't check if l2Address is a contract and instead deal with that behaviour
             // in `handleNoContract` this way we keep the l1 and l2 address oracles in sync
             l1ToL2Token[l1Address[i]] = l2Address[i];
+            emit TokenSet(l1Address[i], l2Address[i]);
         }
     }
 }

@@ -61,7 +61,7 @@ contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
         uint256 amount,
         uint256 exitNum,
         bytes calldata liquidityProof
-    ) external override {
+    ) external override returns (bytes memory) {
         require(msg.sender == tokenBridge, "NOT_BRIDGE");
         (
             uint256 nodeNum,
@@ -71,13 +71,21 @@ contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
             uint256 l2Timestamp
         ) = abi.decode(liquidityProof, (uint256, bytes32[], uint256, uint256, uint256));
 
-        bytes32 userTx = userTxHash(exitNum, dest, erc20, amount, l2Block, l2Timestamp);
-        bytes32 confirmRoot =
-            MerkleLib.calculateRoot(withdrawProof, merklePath, keccak256(abi.encodePacked(userTx)));
-        require(confirmRoots.confirmRoots(confirmRoot, nodeNum), "INVALID_ROOT");
-        require(rollup.getNode(nodeNum).stakers(trustedStaker), "NOT_TRUSTED");
+        {
+            bytes32 userTx = userTxHash(exitNum, dest, erc20, amount, l2Block, l2Timestamp);
+            bytes32 confirmRoot =
+                MerkleLib.calculateRoot(
+                    withdrawProof,
+                    merklePath,
+                    keccak256(abi.encodePacked(userTx))
+                );
+            require(confirmRoots.confirmRoots(confirmRoot, nodeNum), "INVALID_ROOT");
+            require(rollup.getNode(nodeNum).stakers(trustedStaker), "NOT_TRUSTED");
+        }
+
         uint256 fee = amount / fee_div;
         require(IERC20(erc20).transfer(dest, amount - fee), "INSUFFICIENT_LIQUIDITIY");
+        return "";
     }
 
     function userTxHash(

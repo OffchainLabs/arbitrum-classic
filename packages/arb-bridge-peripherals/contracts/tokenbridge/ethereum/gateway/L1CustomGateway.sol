@@ -20,20 +20,19 @@ pragma solidity ^0.6.11;
 
 import "./L1ArbitrumExtendedGateway.sol";
 import "../../arbitrum/gateway/L2CustomGateway.sol";
+import "../../libraries/gateway/ICustomGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 /**
  * @title Gatway for "custom" bridging functionality
  * @notice Handles some (but not all!) custom Gateway needs.
  */
-contract L1CustomGateway is L1ArbitrumExtendedGateway {
+contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     using Address for address;
     // stores addresses of L2 tokens to be used
-    mapping(address => address) public l1ToL2Token;
+    mapping(address => address) public override l1ToL2Token;
     // owner is able to force add custom mappings
     address public owner;
-
-    event TokenSet(address indexed l1Address, address indexed l2Address);
 
     function initialize(
         address _l1Counterpart,
@@ -63,25 +62,6 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
     }
 
     /**
-     * @notice Calculate the address used when bridging an ERC20 token
-     * @dev this always returns the same as the L1 oracle, but may be out of date.
-     * For example, a custom token may have been registered but not deploy or the contract self destructed.
-     * @param l1ERC20 address of L1 token
-     * @return L2 address of a bridged ERC20 token
-     */
-    function calculateL2TokenAddress(address l1ERC20)
-        external
-        view
-        virtual
-        override
-        onlyRouter
-        returns (address)
-    {
-        // will revert if not called by router
-        return _calculateL2TokenAddress(l1ERC20);
-    }
-
-    /**
      * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart.
 
      * @param _l2Address counterpart address of L1 token
@@ -95,7 +75,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external virtual returns (uint256) {
+    ) external payable virtual returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
 
@@ -103,6 +83,8 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         address[] memory l2Addresses = new address[](1);
         l1Addresses[0] = msg.sender;
         l2Addresses[0] = _l2Address;
+
+        emit TokenSet(l1Addresses[0], l2Addresses[0]);
 
         bytes memory _data =
             abi.encodeWithSelector(
@@ -130,7 +112,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external virtual returns (uint256) {
+    ) external payable virtual returns (uint256) {
         require(msg.sender == owner, "ONLY_OWNER");
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 
@@ -138,6 +120,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway {
             // here we assume the owner checked both addresses offchain before force registering
             // require(address(_l1Addresses[i]).isContract(), "MUST_BE_CONTRACT");
             l1ToL2Token[_l1Addresses[i]] = _l2Addresses[i];
+            emit TokenSet(_l1Addresses[i], _l2Addresses[i]);
         }
 
         bytes memory _data =
