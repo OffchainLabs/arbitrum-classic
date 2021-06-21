@@ -45,6 +45,6 @@ struct RunWasm : WasmRunner {
 
 };
 
-std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len);
+// std::pair<Buffer, uint64_t> run_wasm(Buffer buf, uint64_t len);
 
 #endif /* runwasm_hpp */

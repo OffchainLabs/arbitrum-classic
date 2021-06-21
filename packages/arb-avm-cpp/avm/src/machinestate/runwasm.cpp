@@ -93,7 +93,7 @@ wasm_trap_t* cb_special_immed(void* env,
 
     Tuple t(Buffer(), 0);
 
-    std::cerr << "special immed\n";
+    // std::cerr << "special immed\n";
     dta->immed = std::make_shared<value>(t);
     return NULL;
 }
@@ -103,9 +103,9 @@ wasm_trap_t* cb_global_immed(void* env,
                            wasm_val_vec_t*) {
     WasmEnvData* dta = (WasmEnvData*)env;
 
-    Tuple t(Buffer(), 0, Buffer(), 0, 1000000, 0, 0, simple_table());
+    Tuple t(Buffer(), 0, Buffer(), 0, 1000000000, 0, 0, simple_table());
 
-    std::cerr << "global immed\n";
+    // std::cerr << "global immed\n";
     dta->immed = std::make_shared<value>(t);
     return NULL;
 }

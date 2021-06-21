@@ -401,9 +401,10 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
 const int LEVEL = 5;
 
 value table_to_tuple2(std::vector<value> tab, int prefix, int shift, int level, int limit) {
+    /*
     if (limit < prefix) {
         return 0;
-    }
+    }*/
     if (level == 0) {
         std::vector<value> v;
         for (int i = 0; i < 8; i++) {

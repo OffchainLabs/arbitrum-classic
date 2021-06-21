@@ -1026,6 +1026,7 @@ BlockReason sideload(MachineState& m) {
 }
 
 void wasm_test(MachineState& m) {
+    /*
     m.stack.prepForMod(2);
     auto len = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
@@ -1036,6 +1037,7 @@ void wasm_test(MachineState& m) {
     m.stack.push(res.first);
     m.stack.push(res.second);
     ++m.pc;
+    */
 }
 
 void wasm_compile(MachineState& m) {
