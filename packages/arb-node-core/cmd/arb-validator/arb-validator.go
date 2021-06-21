@@ -82,7 +82,7 @@ func startup() error {
 	defer cancelFunc()
 
 	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
-	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
+	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
 		len(config.Validator.Strategy) == 0 {
@@ -108,7 +108,7 @@ func startup() error {
 	// Dummy sequencerFeed since validator doesn't use it
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 
-	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.Metrics.Prefix)
+	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
 	metricsConfig.RegisterSystemMetrics()
 	metricsConfig.RegisterStaticMetrics()
 
@@ -122,9 +122,9 @@ func startup() error {
 		}
 	}()
 
-	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics.Enable}
-	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: config.Healthcheck.Sequencer.Enable}
-	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: config.Healthcheck.L1Node.Enable}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
 	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
@@ -135,7 +135,7 @@ func startup() error {
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
 	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
-	auth, _, err := cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, config.GasPrice, l1ChainId)
+	auth, _, err := cmdhelp.GetKeystore(config.Persistent.Chain, wallet, config.GasPrice, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
@@ -154,7 +154,7 @@ func startup() error {
 	}
 
 	chainState := ChainState{}
-	chainStatePath := path.Join(config.Persistent.Storage.Path, "chainState.json")
+	chainStatePath := path.Join(config.Persistent.Chain, "chainState.json")
 	chainStateFile, err := os.Open(chainStatePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -200,7 +200,7 @@ func startup() error {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
-	mon, err := monitor.NewMonitor(config.Persistent.Database.Path, config.Rollup.Machine.Filename)
+	mon, err := monitor.NewMonitor(config.GetDatabasePath(), config.Rollup.Machine.Filename)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
