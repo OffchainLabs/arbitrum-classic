@@ -83,7 +83,7 @@ func startup() error {
 
 	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
 	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
-		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
+		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		(config.Node.Sequencer.Enable && config.Feed.Input.URL != "") {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
@@ -104,7 +104,7 @@ func startup() error {
 		return err
 	}
 
-	if config.PProf.Enable {
+	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
@@ -165,14 +165,14 @@ func startup() error {
 	}
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.Bridge.Utils.Address), healthChan, sequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed)
 		if err == nil {
 			break
 		}
 		logger.Warn().Err(err).
 			Str("url", config.L1.URL).
 			Str("rollup", config.Rollup.Address).
-			Str("bridgeUtils", config.Bridge.Utils.Address).
+			Str("bridgeUtils", config.BridgeUtilsAddress).
 			Msg("failed to start inbox reader, waiting and retrying")
 
 		select {
@@ -189,7 +189,7 @@ func startup() error {
 		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Node.Forward.URL}
 	} else {
 		var auth *bind.TransactOpts
-		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, l1ChainId)
+		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, config.GasPrice, l1ChainId)
 		if err != nil {
 			return errors.Wrap(err, "error running GetKeystore")
 		}
@@ -276,7 +276,7 @@ func startup() error {
 	}
 	errChan := make(chan error, 1)
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, config.RPC.Addr, config.RPC.Port, config.WS.Addr, config.WS.Port)
+		err := rpc.LaunchPublicServer(ctx, web3Server, config.Node.RPC.Addr, config.Node.RPC.Port, config.Node.WS.Addr, config.Node.WS.Port)
 		if err != nil {
 			errChan <- err
 		}
