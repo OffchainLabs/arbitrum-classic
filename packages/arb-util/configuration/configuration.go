@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -282,14 +283,27 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	}
 
 	// Make persistent storage directory relative to home directory if not already absolute
-	out.Persistent.Storage.Path = path.Join(homeDir, out.Persistent.Storage.Path)
+	if !filepath.IsAbs(out.Persistent.Storage.Path) {
+		out.Persistent.Storage.Path = path.Join(homeDir, out.Persistent.Storage.Path)
+	}
+	err = os.MkdirAll(out.Persistent.Storage.Path, os.ModePerm)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create storage directory")
+	}
 
 	// Make chain directory relative to persistent storage directory if not already absolute
-	out.Persistent.Chain.Path = path.Join(out.Persistent.Storage.Path, out.Persistent.Chain.Path)
+	if !filepath.IsAbs(out.Persistent.Chain.Path) {
+		out.Persistent.Chain.Path = path.Join(out.Persistent.Storage.Path, out.Persistent.Chain.Path)
+	}
+	err = os.MkdirAll(out.Persistent.Chain.Path, os.ModePerm)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create chain directory")
+	}
 
 	// Make db directory relative to chain directory if not already absolute
-	out.Persistent.Database.Path = path.Join(out.Persistent.Chain.Path, out.Persistent.Database.Path)
-
+	if !filepath.IsAbs(out.Persistent.Database.Path) {
+		out.Persistent.Database.Path = path.Join(out.Persistent.Chain.Path, out.Persistent.Database.Path)
+	}
 	err = os.MkdirAll(out.Persistent.Database.Path, os.ModePerm)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrap(err, "Unable to create database directory")
