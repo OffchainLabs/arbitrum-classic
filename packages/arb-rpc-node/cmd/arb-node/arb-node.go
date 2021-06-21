@@ -242,6 +242,7 @@ func startup() error {
 	}
 
 	var batch batcher.TransactionBatcher
+	errChan := make(chan error, 1)
 	for {
 		batch, err = rpc.SetupBatcher(
 			ctx,
@@ -256,7 +257,7 @@ func startup() error {
 			config.GasPriceUrl,
 		)
 		if err == nil && config.Node.Sequencer.Lockout.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch, mon.Core, inboxReader, config.Node.Sequencer.Lockout.Redis, config.Node.Sequencer.Lockout.OwnRPCURL)
+			batch, err = rpc.SetupLockout(ctx, batch, mon.Core, inboxReader, config.Node.Sequencer.Lockout.Redis, config.Node.Sequencer.Lockout.OwnRPCURL, errChan)
 		}
 		if err == nil {
 			go batch.Start(ctx)
@@ -279,7 +280,6 @@ func startup() error {
 	if err != nil {
 		return err
 	}
-	errChan := make(chan error, 1)
 	go func() {
 		err := rpc.LaunchPublicServer(ctx, web3Server, config.Node.RPC.Addr, config.Node.RPC.Port, config.Node.WS.Addr, config.Node.WS.Port)
 		if err != nil {

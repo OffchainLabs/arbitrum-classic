@@ -36,6 +36,7 @@ const LIVELINESS_KEY_PREFIX string = "lockout.liveliness."
 const SEQUENCE_NUMBER_KEY string = "lockout.sequenceNumber"
 
 const LOCKOUT_MARGIN time.Duration = time.Second * 10
+const SEQUENCE_NUMBER_TIMEOUT time.Duration = time.Minute * 5
 
 func newLockoutRedis(ctx context.Context, url string) (*lockoutRedis, error) {
 	opts, err := redis.ParseURL(url)
@@ -200,6 +201,6 @@ func (r *lockoutRedis) getLatestSeqNum(ctx context.Context) (seqNum *big.Int) {
 
 func (r *lockoutRedis) updateLatestSeqNum(parentCtx context.Context, seqNum *big.Int, hasLockUntil time.Time) {
 	r.withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
-		return r.client.Set(timedCtx, SEQUENCE_NUMBER_KEY, seqNum.String(), 0).Err()
+		return r.client.Set(timedCtx, SEQUENCE_NUMBER_KEY, seqNum.String(), SEQUENCE_NUMBER_TIMEOUT).Err()
 	})
 }

@@ -19,7 +19,6 @@ package rpc
 import (
 	"context"
 	"math/big"
-	"os"
 	"sync"
 	"time"
 
@@ -46,6 +45,7 @@ type LockoutBatcher struct {
 	inboxReader      *monitor.InboxReader
 	redis            *lockoutRedis
 	hostname         string
+	errChan          chan error
 
 	livelinessTimeout time.Duration
 	lockoutTimeout    time.Duration
@@ -64,6 +64,7 @@ func SetupLockout(
 	inboxReader *monitor.InboxReader,
 	redisURL string,
 	hostname string,
+	errChan chan error,
 ) (*LockoutBatcher, error) {
 	redis, err := newLockoutRedis(ctx, redisURL)
 	if err != nil {
@@ -80,6 +81,7 @@ func SetupLockout(
 		lockoutTimeout:    time.Second * 30,
 		hostname:          hostname,
 		redis:             redis,
+		errChan:           errChan,
 	}
 	newBatcher.sequencerBatcher.LockoutManager = newBatcher
 	go newBatcher.lockoutManager(ctx)
@@ -87,7 +89,8 @@ func SetupLockout(
 }
 
 const RPC_URL_PREFIX string = "http://"
-const RPC_URL_POSTFIX string = ":8545/rpc"
+const RPC_URL_POSTFIX string = ":8547/"
+const ACCEPTABLE_SEQ_NUM_GAP int64 = 0
 
 func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 	holdingMutex := false
@@ -109,12 +112,36 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			break
 		default:
 			// We aren't shutting down but the lockout manager died
-			logger.Error().Msg("lockout manager died but context isn't shutting down")
-			os.Exit(1)
+			logger.Error().Msg("sequencer lockout manager died but context isn't shutting down")
+			go (func() {
+				// We need this goroutine to die so the panic is printed out,
+				// but we also want to exit the process as a whole afterwards.
+				time.Sleep(time.Second)
+				b.errChan <- errors.New("sequencer lockout manager died")
+			})()
 		}
 	})()
 	for {
-		b.redis.acquireOrUpdateLiveliness(ctx, b.hostname, b.livelinessTimeout, &b.livelinessExpiresAt)
+		alive := true
+		if b.lockoutExpiresAt.Before(time.Now()) {
+			currentSeqNum, err := b.core.GetMessageCount()
+			if err != nil {
+				logger.Warn().Err(err).Msg("error getting sequence number")
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			if b.lastLockedSeqNum == nil || new(big.Int).Add(currentSeqNum, big.NewInt(ACCEPTABLE_SEQ_NUM_GAP)).Cmp(b.lastLockedSeqNum) < 0 {
+				alive = false
+				if b.livelinessExpiresAt.After(time.Now()) {
+					logger.Warn().Str("ourSeqNum", currentSeqNum.String()).Str("targetSeqNum", b.lastLockedSeqNum.String()).Msg("fell behind sequencer position")
+					b.redis.releaseLiveliness(ctx, b.hostname, &b.livelinessExpiresAt)
+				}
+			}
+			b.lastLockedSeqNum = b.redis.getLatestSeqNum(ctx)
+		}
+		if alive {
+			b.redis.acquireOrUpdateLiveliness(ctx, b.hostname, b.livelinessTimeout, &b.livelinessExpiresAt)
+		}
 		selectedSeq := b.redis.selectSequencer(ctx)
 		if selectedSeq == b.hostname {
 			if !holdingMutex {
@@ -126,6 +153,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				if b.currentBatcher != b.sequencerBatcher {
 					logger.Info().Str("hostname", b.hostname).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
+					b.lastLockedSeqNum = targetSeqNum
 					attemptCatchupUntil := b.lockoutExpiresAt.Add(time.Second * -10)
 					for {
 						currentSeqNum, err := b.core.GetMessageCount()
@@ -135,7 +163,6 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							continue
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
-							b.lastLockedSeqNum = targetSeqNum
 							logger.
 								Info().
 								Str("targetSeqNum", targetSeqNum.String()).
@@ -149,6 +176,8 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 								Str("targetSeqNum", targetSeqNum.String()).
 								Str("currentSeqNum", currentSeqNum.String()).
 								Msg("failed to catch up to previous sequencer position")
+							// There's a limited gap possible here as we checked it previously for liveliness
+							// Therefore, we continue as the sequencer regardless, as such a gap is acceptable
 							break
 						}
 						time.Sleep(500 * time.Millisecond)
@@ -160,10 +189,8 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				holdingMutex = false
 				seqNum, err := b.core.GetMessageCount()
 				if err == nil {
-					if b.lastLockedSeqNum == nil || seqNum.Cmp(b.lastLockedSeqNum) != 0 {
-						b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
-						b.lastLockedSeqNum = seqNum
-					}
+					b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
+					b.lastLockedSeqNum = seqNum
 				} else {
 					logger.Warn().Err(err).Msg("error getting sequence number")
 				}
