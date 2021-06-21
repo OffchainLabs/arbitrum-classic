@@ -321,7 +321,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	return out, wallet, l1Client, l1ChainId, nil
 }
 
-func ParseFeed(ctx context.Context) (*Config, error) {
+func ParseFeed() (*Config, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	k, err := beginCommonParse(f)
