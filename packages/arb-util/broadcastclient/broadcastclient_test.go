@@ -14,15 +14,13 @@ func TestReceiveMessages(t *testing.T) {
 	ctx := context.Background()
 
 	settings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9742",
-		Ping:    5 * time.Second,
-		Timeout: 20 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9742",
+		Ping:          5 * time.Second,
+		ClientTimeout: 20 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	messageCount := 1000
@@ -93,15 +91,13 @@ func TestServerClientDisconnect(t *testing.T) {
 	ctx := context.Background()
 
 	settings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9743",
-		Ping:    1 * time.Second,
-		Timeout: 2 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9743",
+		Ping:          1 * time.Second,
+		ClientTimeout: 2 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := broadcaster.NewBroadcaster(settings)
@@ -151,15 +147,13 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	ctx := context.Background()
 
 	settings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9743",
-		Ping:    50 * time.Second,
-		Timeout: 150 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9743",
+		Ping:          50 * time.Second,
+		ClientTimeout: 150 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b1 := broadcaster.NewBroadcaster(settings)
@@ -191,15 +185,13 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	ctx := context.Background()
 
 	settings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9842",
-		Ping:    5 * time.Second,
-		Timeout: 15 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9842",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := broadcaster.NewBroadcaster(settings)

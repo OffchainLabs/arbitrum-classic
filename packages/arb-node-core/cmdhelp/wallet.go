@@ -40,6 +40,7 @@ import (
 func GetKeystore(
 	validatorFolder string,
 	wallet *configuration.Wallet,
+	gasPrice float64,
 	chainId *big.Int,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
 	ks := keystore.NewKeyStore(
@@ -86,7 +87,7 @@ func GetKeystore(
 		return nil, nil, err
 	}
 
-	gasPriceAsFloat := 1e9 * wallet.GasPrice
+	gasPriceAsFloat := 1e9 * gasPrice
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}

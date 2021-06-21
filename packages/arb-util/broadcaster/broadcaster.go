@@ -88,7 +88,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	// Called below in accept() loop.
 	handle := func(conn net.Conn) {
 
-		safeConn := deadliner{conn, b.settings.HTTP.Timeout}
+		safeConn := deadliner{conn, b.settings.IOTimeout}
 
 		// Zero-copy upgrade to WebSocket connection.
 		hs, err := ws.Upgrade(safeConn)

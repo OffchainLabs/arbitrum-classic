@@ -83,9 +83,9 @@ func startup() error {
 
 	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
 	if err != nil || len(config.Persistent.Storage.Path) == 0 || len(config.L1.URL) == 0 ||
-		len(config.Rollup.Address) == 0 || len(config.Bridge.Utils.Address) == 0 ||
-		len(config.Validator.Utils.Address) == 0 || len(config.Validator.WalletFactory.Address) == 0 ||
-		len(config.Validator.Strategy) != 0 {
+		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
+		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
+		len(config.Validator.Strategy) == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-validator --conf=<filename> \n")
 		fmt.Printf("          or: arb-validator --persistent.storage.path=<path> --l1.url=<L1 RPC> --feed.input.url=<feed websocket>\n")
@@ -98,7 +98,7 @@ func startup() error {
 
 	defer logger.Log().Msg("Cleanly shutting down validator")
 
-	if config.PProf.Enable {
+	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
@@ -131,17 +131,17 @@ func startup() error {
 
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	rollupAddr := ethcommon.HexToAddress(os.Args[3])
-	bridgeUtilsAddr := ethcommon.HexToAddress(os.Args[4])
-	validatorUtilsAddr := ethcommon.HexToAddress(os.Args[5])
-	validatorWalletFactoryAddr := ethcommon.HexToAddress(os.Args[6])
-	auth, _, err := cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, l1ChainId)
+	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
+	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
+	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)
+	validatorWalletFactoryAddr := ethcommon.HexToAddress(config.Validator.WalletFactoryAddress)
+	auth, _, err := cmdhelp.GetKeystore(config.Persistent.Storage.Path, wallet, config.GasPrice, l1ChainId)
 	if err != nil {
 		return errors.Wrap(err, "error loading wallet keystore")
 	}
 	logger.Info().Str("address", auth.From.String()).Msg("Loaded wallet")
 
-	strategyString := os.Args[7]
+	strategyString := config.Validator.Strategy
 	var strategy staker.Strategy
 	if strategyString == "MakeNodes" {
 		strategy = staker.MakeNodesStrategy

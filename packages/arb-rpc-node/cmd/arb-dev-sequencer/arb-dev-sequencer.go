@@ -285,15 +285,13 @@ func startup() error {
 		CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
 	}
 	settings := configuration.FeedOutput{
-		Addr: "127.0.0.1",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9642",
-		Ping:    5 * time.Second,
-		Timeout: 15 * time.Second,
-		Queue:   1,
-		Workers: 2,
+		Addr:          "127.0.0.1",
+		IOTimeout:     2 * time.Second,
+		Port:          "9642",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       2,
 	}
 
 	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
