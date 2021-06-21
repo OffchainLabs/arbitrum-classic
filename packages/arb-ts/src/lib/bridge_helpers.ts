@@ -125,10 +125,10 @@ export class BridgeHelper {
       // todo: I think this is still the right filter?
       utils.hexZeroPad(destinationAddress, 32),
     ]
-    // @ts-ignore
     const logs = await BridgeHelper.getEventLogs(
       'OutboundTransferInitiated',
       contract,
+      // @ts-ignore
       topics
     )
 
@@ -715,10 +715,10 @@ export class BridgeHelper {
       ethers.utils.hexZeroPad(batchNumber.toHexString(), 32),
     ]
 
-    // @ts-ignore
     const logs = await BridgeHelper.getEventLogs(
       'L2ToL1Transaction',
       contract,
+      // @ts-ignore
       topics
     )
 
@@ -756,10 +756,10 @@ export class BridgeHelper {
       null,
       ethers.utils.hexZeroPad(outboxIndex.toHexString(), 32),
     ]
-    // @ts-ignore
     const logs = await BridgeHelper.getEventLogs(
       'OutBoxTransactionExecuted',
       contract,
+      // @ts-ignore
       topics
     )
     const parsedData = logs.map(
