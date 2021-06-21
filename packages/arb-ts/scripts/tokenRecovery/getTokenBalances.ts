@@ -1,6 +1,6 @@
-import { BridgeHelper } from '../src/lib/bridge_helpers'
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
-import { instantiateBridge } from './instantiate_bridge'
+import { BridgeHelper } from '../../src/lib/bridge_helpers'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 import { writeFileSync } from 'fs'
 
@@ -30,6 +30,8 @@ export interface balancesMap {
     candidateAddresses.add(transferLog.to)
   }
 
+  console.log(`Found ${candidateAddresses.size} addresses`)
+
   const balancesMap: balancesMap = {}
   let totalBalance: BigNumber = BigNumber.from(0)
   for (const address of candidateAddresses) {
@@ -44,7 +46,9 @@ export interface balancesMap {
   }
   const supply = await token.totalSupply()
   if (supply.eq(totalBalance)) {
-    console.log('Full token supply properly accounted for, generating JSON')
+    console.log(
+      `Full token supply ${supply} properly accounted for, generating JSON`
+    )
 
     const listData = JSON.stringify(balancesMap)
     writeFileSync(`./tokenBalances.json`, listData)

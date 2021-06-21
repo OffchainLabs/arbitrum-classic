@@ -1,6 +1,6 @@
-import { BridgeHelper } from '../src/lib/bridge_helpers'
-import { WETH9__factory } from '../src/lib/abi/factories/WETH9__factory'
-import { instantiateBridge } from './instantiate_bridge'
+import { BridgeHelper } from '../../src/lib/bridge_helpers'
+import { WETH9__factory } from '../../src/lib/abi/factories/WETH9__factory'
+import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 import { writeFileSync } from 'fs'
 
@@ -59,7 +59,9 @@ export interface balancesMap {
   }
   const supply = await WETH9.totalSupply()
   if (supply.eq(totalBalance)) {
-    console.log('Full WETH supply properly accounted for, generating JSON')
+    console.log(
+      `Full WETH supply ${supply} properly accounted for, generating JSON`
+    )
 
     const listData = JSON.stringify(balancesMap)
     writeFileSync(`./wethBalances.json`, listData)
