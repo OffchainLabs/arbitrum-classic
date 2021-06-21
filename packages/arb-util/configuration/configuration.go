@@ -199,13 +199,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		return nil, nil, nil, nil, err
 	}
 
-	rollupAddress, _ := f.GetString("rollup.address")
-
-	l1URL, err := f.GetString("l1.url")
-	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error getting --l1.url")
-	}
-
+	l1URL := k.String("l1.url")
 	if len(l1URL) == 0 {
 		return nil, nil, nil, nil, errors.New("required parameter --l1.url is missing")
 	}
@@ -231,7 +225,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	if len(rollupAddress) == 0 {
+	if len(k.String("rollup.address")) == 0 {
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge.utils.address":     "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
