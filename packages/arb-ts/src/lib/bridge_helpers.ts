@@ -263,7 +263,7 @@ export class BridgeHelper {
     )
   }
 
-  private static getEventLogs = (
+  public static getEventLogs = (
     eventName: string,
     connectedContract: Contract,
     topics: string | string[] = [],

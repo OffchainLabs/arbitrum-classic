@@ -203,13 +203,20 @@ const config = {
     apiKey: process.env['ETHERSCAN_API_KEY'],
   },
   solidity: {
-    version: '0.6.11',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 100,
+    compilers: [
+      {
+        version: '0.5.5',
       },
-    },
+      {
+        version: '0.6.11',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 100,
+          },
+        },
+      },
+    ],
   },
 }
 
