@@ -67,8 +67,18 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
     )
     l2RouterTestBridge = await L2RouterTestBridge.deploy()
 
-    l2Weth = await TestWETH9.deploy('wethl2', 'wl2')
+    const L2Weth: ContractFactory = await ethers.getContractFactory('aeWETH')
+    l2Weth = await L2Weth.deploy()
+    await l2Weth.deployed()
     // initialize contracts
+
+    await l2Weth.initialize(
+      'l2weth',
+      'l2w',
+      18,
+      l2TestBridge.address,
+      l1Weth.address
+    )
 
     await l1TestBridge.functions.initialize(
       l2TestBridge.address,

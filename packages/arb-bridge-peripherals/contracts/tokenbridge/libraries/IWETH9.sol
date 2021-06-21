@@ -2,9 +2,7 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-interface IWETH9 is IERC20 {
+interface IWETH9 {
     function deposit() external payable;
 
     function withdraw(uint256 _amount) external;

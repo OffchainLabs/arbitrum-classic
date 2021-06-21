@@ -33,7 +33,7 @@ contract TestArbCustomToken is aeERC20, IArbToken {
     constructor(address _bridge, address _l1Address) public {
         bridge = _bridge;
         l1Address = _l1Address;
-        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
+        aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function someWackyCustomStuff() public {}

@@ -43,7 +43,7 @@ abstract contract L2GatewayToken is aeERC20, IArbToken {
      * @param _l2Gateway L2 gateway this token communicates with
      * @param _l1Counterpart L1 address of ERC20
      */
-    function initialize(
+    function _initialize(
         string memory _name,
         string memory _symbol,
         uint8 _decimals,
@@ -55,7 +55,7 @@ abstract contract L2GatewayToken is aeERC20, IArbToken {
         l2Gateway = _l2Gateway;
         l1Address = _l1Counterpart;
 
-        aeERC20.initialize(_name, _symbol, _decimals);
+        aeERC20._initialize(_name, _symbol, _decimals);
     }
 
     /**
