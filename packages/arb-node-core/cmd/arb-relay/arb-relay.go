@@ -94,7 +94,7 @@ func startup() error {
 		return errors.New("Missing --feed.input.url")
 	}
 
-	if config.PProf.Enable {
+	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")

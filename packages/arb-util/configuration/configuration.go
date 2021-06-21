@@ -24,27 +24,19 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
 
-type Bridge struct {
-	Utils struct {
-		Address string `koanf:"address"`
-	} `koanf:"utils"`
-}
-
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
 	URL     string        `koanf:"url"`
 }
 
 type FeedOutput struct {
-	Addr string `koanf:"addr"`
-	HTTP struct {
-		Timeout time.Duration `koanf:"timeout"`
-	} `koanf:"http"`
-	Port    string        `koanf:"port"`
-	Ping    time.Duration `koanf:"ping"`
-	Timeout time.Duration `koanf:"timeout"`
-	Queue   int           `koanf:"queue"`
-	Workers int           `koanf:"workers"`
+	Addr          string        `koanf:"addr"`
+	IOTimeout     time.Duration `koanf:"io-timeout"`
+	Port          string        `koanf:"port"`
+	Ping          time.Duration `koanf:"ping"`
+	ClientTimeout time.Duration `koanf:"client-timeout"`
+	Queue         int           `koanf:"queue"`
+	Workers       int           `koanf:"workers"`
 }
 
 type Feed struct {
@@ -79,11 +71,19 @@ type Node struct {
 	Forward struct {
 		URL string `koanf:"url"`
 	} `koanf:"forward"`
+	RPC struct {
+		Addr string `koanf:"addr"`
+		Port string `koanf:"port"`
+	} `koanf:"rpc"`
 	Sequencer struct {
 		CreateBatchBlockInterval   int64 `koanf:"create-batch-block-interval"`
 		DelayedMessagesTargetDelay int64 `koanf:"delayed-messages-target-delay"`
 		Enable                     bool  `koanf:"enable"`
 	} `koanf:"sequencer"`
+	WS struct {
+		Addr string `koanf:"addr"`
+		Port string `koanf:"port"`
+	} `koanf:"ws"`
 }
 
 type Persistent struct {
@@ -109,69 +109,58 @@ type Rollup struct {
 }
 
 type Validator struct {
-	Strategy string `koanf:"strategy"`
-	Utils    struct {
-		Address string `koanf:"address"`
-	} `koanf:"utils"`
-	WalletFactory struct {
-		Address string `koanf:"address"`
-	} `koanf:"wallet-factory"`
+	Strategy             string `koanf:"strategy"`
+	UtilsAddress         string `koanf:"utils-address"`
+	WalletFactoryAddress string `koanf:"wallet-factory-address"`
 }
 
 type Wallet struct {
-	Password string  `koanf:"password"`
-	GasPrice float64 `koanf:"gas-price"`
+	Password string `koanf:"password"`
 }
 
 type Config struct {
-	Bridge Bridge `koanf:"bridge"`
-	Conf   string `koanf:"conf"`
-	Dump   struct {
-		Conf bool `koanf:"conf"`
-	} `koanf:"dump"`
-	Feed        Feed        `koanf:"feed"`
-	GasPriceUrl string      `koanf:"gas-price-url"`
-	Healthcheck Healthcheck `koanf:"healthcheck"`
-	L1          struct {
+	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
+	Conf               string      `koanf:"conf"`
+	DumpConf           bool        `koanf:"dump-conf"`
+	Feed               Feed        `koanf:"feed"`
+	GasPrice           float64     `koanf:"gas-price"`
+	GasPriceUrl        string      `koanf:"gas-price-url"`
+	Healthcheck        Healthcheck `koanf:"healthcheck"`
+	L1                 struct {
 		URL string `koanf:"url"`
 	} `koanf:"l1"`
 	Log struct {
 		RPC  string `koanf:"rpc"`
 		Core string `koanf:"core"`
 	} `koanf:"log"`
-	Node       Node       `kaonf:"sequencer"`
-	Persistent Persistent `koanf:"persistent"`
-	PProf      struct {
-		Enable bool `koanf:"enable"`
-	} `koanf:"pprof"`
-	Rollup Rollup `koanf:"rollup"`
-	RPC    struct {
-		Addr string `koanf:"addr"`
-		Port string `koanf:"port"`
-	} `koanf:"rpc"`
-	Validator     Validator `koanf:"validator"`
-	WaitToCatchUp bool      `koanf:"wait-to-catch-up"`
-	Wallet        Wallet    `koanf:"wallet"`
-	WS            struct {
-		Addr string `koanf:"addr"`
-		Port string `koanf:"port"`
-	} `koanf:"ws"`
+	Node          Node       `kaonf:"sequencer"`
+	Persistent    Persistent `koanf:"persistent"`
+	PProfEnable   bool       `koanf:"pprof-enable"`
+	Rollup        Rollup     `koanf:"rollup"`
+	Validator     Validator  `koanf:"validator"`
+	WaitToCatchUp bool       `koanf:"wait-to-catch-up"`
+	Wallet        Wallet     `koanf:"wallet"`
 }
 
 func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
-	f.String("bridge.utils.address", "", "bridgeutils contract address")
+	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
+	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
 	f.String("node.aggregator.inbox.address", "", "address of the inbox contract")
 	f.Int64("node.aggregator.max-batch-time", 10, "maxBatchTime=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forward.url", "", "url of another node to send transactions through")
+	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
+	f.String("node.rpc.port", "8547", "RPC port")
 	f.Int64("node.sequencer.create-batch-block-interval", 1, "block interval at which to create new batches")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.Bool("node.sequencer.enable", false, "act as sequencer")
+	f.String("node.ws.addr", "0.0.0.0", "websocket address")
+	f.String("node.ws.port", "8548", "websocket port")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.Uint64("rollup.chain-id", 42161, "chain id of the arbitrum chain")
@@ -181,18 +170,11 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 
 	f.String("persistent.storage.path", ".arbitrum", "location persistent storage is located")
 
-	f.String("rpc.addr", "0.0.0.0", "RPC address")
-	f.String("rpc.port", "8547", "RPC port")
-
-	f.String("validator.strategy", "", "strategy for validator to use")
+	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
 	f.String("wallet.password", "", "password for wallet")
-	f.Float64("wallet.gas-price", 4.5, "wallet.gasprice=FloatInGwei")
-
-	f.String("ws.addr", "0.0.0.0", "websocket address")
-	f.String("ws.port", "8548", "websocket port")
 
 	k, err := beginCommonParse(f)
 	if err != nil {
@@ -228,16 +210,18 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	if len(k.String("rollup.address")) == 0 {
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
-				"bridge.utils.address":     "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-				"feed.input.url":           "wss://arb1.arbitrum.io/feed",
-				"node.forward.url":         "https://arb1.arbitrum.io/rpc",
-				"persistent.chain.path":    "mainnet",
-				"persistent.database.path": "db",
-				"rollup.address":           "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-				"rollup.chain-id":          "42161",
-				"rollup.from-block":        "12525700",
-				"rollup.machine.filename":  "mainnet.arb1.mexe",
-				"rollup.machine.url":       "https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe",
+				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+				"feed.input.url":                   "wss://arb1.arbitrum.io/feed",
+				"node.forward.url":                 "https://arb1.arbitrum.io/rpc",
+				"persistent.chain.path":            "mainnet",
+				"persistent.database.path":         "db",
+				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
+				"rollup.chain-id":                  "42161",
+				"rollup.from-block":                "12525700",
+				"rollup.machine.filename":          "mainnet.arb1.mexe",
+				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe",
+				"validator.utils-address":          "0x2B36F23ce0bAbD57553b26Da4C7a0585bac65DC1",
+				"validator.wallet-factory-address": "0xe17d8Fa6BC62590f840C5Dd35f300F77D55CC178",
 			}, "."), nil)
 
 			if err != nil {
@@ -245,16 +229,18 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 			}
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
-				"bridge.utils.address":     "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-				"feed.input.url":           "wss://rinkeby.arbitrum.io/feed",
-				"node.forward.url":         "https://rinkeby.arbitrum.io/rpc",
-				"persistent.chain.path":    "rinkeby",
-				"persistent.database.path": "db",
-				"rollup.address":           "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-				"rollup.chain-id":          "421611",
-				"rollup.from-block":        "8700589",
-				"rollup.machine.filename":  "testnet.rinkeby.mexe",
-				"rollup.machine.url":       "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/state/arbos.mexe",
+				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
+				"feed.input.url":                   "wss://rinkeby.arbitrum.io/feed",
+				"node.forward.url":                 "https://rinkeby.arbitrum.io/rpc",
+				"persistent.chain.path":            "rinkeby",
+				"persistent.database.path":         "db",
+				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
+				"rollup.chain-id":                  "421611",
+				"rollup.from-block":                "8700589",
+				"rollup.machine.filename":          "testnet.rinkeby.mexe",
+				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe --output /home/user/state/arbos.mexe",
+				"validator.utils-address":          "0xbb14D9837f6E596167638Ba0963B9Ba8351F68CD",
+				"validator.wallet-factory-address": "0x5533D1578a39690B6aC692673F771b3fc668f0a3",
 			}, "."), nil)
 
 			if err != nil {
@@ -354,15 +340,15 @@ func ParseFeed(ctx context.Context) (*Config, error) {
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("conf", "", "name of configuration file")
 
-	f.Bool("dump.conf", false, "print out currently active configuration file")
+	f.Bool("dump-conf", false, "print out currently active configuration file")
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.String("feed.input.url", "", "URL of sequencer feed source")
 	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
-	f.Duration("feed.output.http.timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
+	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
 	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
 	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
-	f.Duration("feed.output.timeout", 15*time.Second, "duraction to wait before timing out connections to client")
+	f.Duration("feed.output.client-timeout", 15*time.Second, "duraction to wait before timing out connections to client")
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
@@ -376,7 +362,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 
-	f.Bool("pprof.enable", false, "enable profiling server")
+	f.Bool("pprof-enable", false, "enable profiling server")
 
 	err := f.Parse(os.Args[1:])
 	if err != nil {
@@ -398,11 +384,18 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		}
 	}
 
+	// Any settings provided on command line override items in configuration file
+	// Command line parameters will be applied again later
+	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		return nil, errors.Wrap(err, "error loading config")
+	}
+
 	return k, nil
 }
 
 func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
-	// Any settings provided on command line override items in configuration file
+	// Any settings provided on command line override any custom parameters
+	// Second time command line parameters are applied
 	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
 		return nil, nil, errors.Wrap(err, "error loading config")
 	}
@@ -424,7 +417,7 @@ func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
 		return nil, nil, err
 	}
 
-	if out.Dump.Conf {
+	if out.DumpConf {
 		// Print out current configuration
 
 		// Don't keep printing configuration file and don't print wallet password

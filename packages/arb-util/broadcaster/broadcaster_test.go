@@ -36,15 +36,13 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9642",
-		Ping:    5 * time.Second,
-		Timeout: 20 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9642",
+		Ping:          5 * time.Second,
+		ClientTimeout: 20 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)
@@ -158,15 +156,13 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9643",
-		Ping:    5 * time.Second,
-		Timeout: 20 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9643",
+		Ping:          5 * time.Second,
+		ClientTimeout: 20 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)
@@ -218,15 +214,13 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	defer cancelFunc()
 
 	broadcasterSettings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9642",
-		Ping:    5 * time.Second,
-		Timeout: 30 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9642",
+		Ping:          5 * time.Second,
+		ClientTimeout: 30 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)

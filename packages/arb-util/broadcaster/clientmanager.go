@@ -262,7 +262,7 @@ func (cm *ClientManager) verifyClients() {
 	deadClientList := make([]*ClientConnection, 0, clientConnectionCount)
 	for client := range cm.clientPtrMap {
 		diff := time.Since(client.GetLastHeard())
-		if diff > cm.settings.Timeout {
+		if diff > cm.settings.ClientTimeout {
 			deadClientList = append(deadClientList, client)
 		}
 	}

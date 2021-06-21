@@ -33,15 +33,13 @@ func TestRelayRebroadcasts(t *testing.T) {
 
 	// Start up an Arbitrum sequencer broadcaster
 	broadcasterSettings := configuration.FeedOutput{
-		Addr: "0.0.0.0",
-		HTTP: struct {
-			Timeout time.Duration `koanf:"timeout"`
-		}{2 * time.Second},
-		Port:    "9742",
-		Ping:    5 * time.Second,
-		Timeout: 15 * time.Second,
-		Queue:   1,
-		Workers: 128,
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9742",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	bc := broadcaster.NewBroadcaster(broadcasterSettings)
@@ -58,15 +56,13 @@ func TestRelayRebroadcasts(t *testing.T) {
 			URL:     "ws://127.0.0.1:9742",
 		},
 		Output: configuration.FeedOutput{
-			Addr: "0.0.0.0",
-			HTTP: struct {
-				Timeout time.Duration `koanf:"timeout"`
-			}{2 * time.Second},
-			Port:    "7429",
-			Ping:    5 * time.Second,
-			Timeout: 15 * time.Second,
-			Queue:   1,
-			Workers: 128,
+			Addr:          "0.0.0.0",
+			IOTimeout:     2 * time.Second,
+			Port:          "7429",
+			Ping:          5 * time.Second,
+			ClientTimeout: 15 * time.Second,
+			Queue:         1,
+			Workers:       128,
 		},
 	}
 
