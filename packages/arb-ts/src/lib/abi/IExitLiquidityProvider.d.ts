@@ -97,7 +97,7 @@ export class IExitLiquidityProvider extends Contract {
       exitNum: BigNumberish,
       liquidityProof: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<string>
 
     'requestLiquidity(address,address,uint256,uint256,bytes)'(
       dest: string,
@@ -106,7 +106,7 @@ export class IExitLiquidityProvider extends Contract {
       exitNum: BigNumberish,
       liquidityProof: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<string>
   }
 
   filters: {}

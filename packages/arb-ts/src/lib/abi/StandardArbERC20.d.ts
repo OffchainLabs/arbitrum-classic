@@ -32,7 +32,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8)': FunctionFragment
     'isMaster()': FunctionFragment
     'l1Address()': FunctionFragment
     'l2Gateway()': FunctionFragment
@@ -79,10 +78,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
@@ -138,7 +133,6 @@ interface StandardArbERC20Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l2Gateway', data: BytesLike): Result
@@ -276,20 +270,6 @@ export class StandardArbERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -486,20 +466,6 @@ export class StandardArbERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  initialize(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(string,string,uint8)'(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   isMaster(overrides?: CallOverrides): Promise<boolean>
 
   'isMaster()'(overrides?: CallOverrides): Promise<boolean>
@@ -692,20 +658,6 @@ export class StandardArbERC20 extends Contract {
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     isMaster(overrides?: CallOverrides): Promise<boolean>
 
@@ -916,20 +868,6 @@ export class StandardArbERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     isMaster(overrides?: CallOverrides): Promise<BigNumber>
 
     'isMaster()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -1126,20 +1064,6 @@ export class StandardArbERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
