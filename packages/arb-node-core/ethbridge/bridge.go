@@ -18,7 +18,7 @@ package ethbridge
 
 import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
 )
 
@@ -27,8 +27,8 @@ type Bridge struct {
 	auth *TransactAuth
 }
 
-func NewBridge(address ethcommon.Address, client ethutils.EthClient, auth *TransactAuth) (*Bridge, error) {
-	watcher, err := NewDelayedBridgeWatcher(address, client)
+func NewBridge(address ethcommon.Address, fromBlock int64, client ethutils.EthClient, auth *TransactAuth) (*Bridge, error) {
+	watcher, err := NewDelayedBridgeWatcher(address, fromBlock, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

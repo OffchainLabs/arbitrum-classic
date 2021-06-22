@@ -1,5 +1,6 @@
 ---
 title: NodeInterface.sol Spec
+id: NodeInterface
 ---
 
 Interface for providing Outbox proof data
@@ -31,3 +32,29 @@ Returns the proof necessary to redeem a message
 **Returns**: amount: value in L1 message in wei
 
 **Returns**: calldataForL1: abi-encoded L1 message data
+
+### `estimateRetryableTicket(address sender, uint256 deposit, address destAddr, uint256 l2CallValue, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data) → uint256, uint256` (external)
+
+Estimate the cost of putting a message in the L2 inbox that is reexecuted
+
+- `sender`: sender of the L1 and L2 transaction
+
+- `deposit`: amount to deposit to sender in L2
+
+- `destAddr`: destination L2 contract address
+
+- `l2CallValue`: call value for retryable L2 message
+
+- `maxSubmissionCost`: Max gas deducted from user's L2 balance to cover base submission fee
+
+- `excessFeeRefundAddress`: maxgas x gasprice - execution cost gets credited here on L2 balance
+
+- `callValueRefundAddress`: l2Callvalue gets credited here on L2 if retryable txn times out or gets cancelled
+
+- `maxGas`: Max gas deducted from user's L2 balance to cover L2 execution
+
+- `gasPriceBid`: price bid for L2 execution
+
+- `data`: ABI encoded data of L2 message
+
+**Returns**: gas: used, and gas price to execute this transaction

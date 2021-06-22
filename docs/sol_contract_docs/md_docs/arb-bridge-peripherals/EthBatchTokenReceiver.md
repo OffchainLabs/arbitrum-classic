@@ -1,5 +1,6 @@
 ---
 title: EthBatchTokenReceiver.sol Spec
+id: EthBatchTokenReceiver
 ---
 
 ### `constructor(address _inbox, address _l2Deployer, uint256 _maxSubmissionCost, uint256 _maxGas, uint256 _gasPrice)` (public)

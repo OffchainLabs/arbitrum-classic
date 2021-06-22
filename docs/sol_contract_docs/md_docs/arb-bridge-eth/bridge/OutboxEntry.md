@@ -1,5 +1,6 @@
 ---
 title: OutboxEntry.sol Spec
+id: OutboxEntry
 ---
 
 ### `initialize(bytes32 _root, uint256 _numInBatch)` (external)

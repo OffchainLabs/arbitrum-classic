@@ -1,5 +1,6 @@
 ---
 title: ConfirmRoots.sol Spec
+id: ConfirmRoots
 ---
 
 ### `constructor(contract Rollup _rollup)` (public)

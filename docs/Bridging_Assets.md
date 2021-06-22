@@ -71,6 +71,8 @@ Our architecture consists of three types of contracts:
 2. **Gateways**: Pairs of contracts (one on L1, one on L2) that implement a particular type of cross chain asset bridging.
 3. **Routers**: Exactly two contracts - (one on L1, one on L2) that route each asset to its designated Gateway.
 
+![img](assets/gatewayUML.svg)
+
 All Ethereum to Arbitrum token transfers are initiated via the `L1GatewayRouter` contract. `L1GatewayRouter` forwards the token's deposit-call to it's appropriate `L1ArbitrumGateway` contract. `L1GatewayRouter` is responsible for mapping L1 token addresses to L1Gateway, thus acting as L1/L2 address oracle and ensuring that each token corresponds to only one gateway. The `L1ArbitrumGateway` communicates to an `L2ArbitrumGateway` (typically/expectedly via [retryable tickets](L1_L2_Messages.md)).
 
 Similarly, Arbitrum to Ethereum transfers are initiated via the `L2GatewayRouter` contract, which forwards calls the token's `L2ArbitrumGateway`, which in turn communicates to its corresponding `L1ArbitrumGateway` (typically/expectedly via sending messages to the Outbox.)
@@ -91,11 +93,15 @@ To help illustrate what this looks like in practice, let's go through the steps 
 
 Note that arbSomeERC20Token is an instance of StandardArbERC20, which includes `bridgeMint` and `bridgeBurn` methods only callable by the L2ERC20Gateway.
 
+![img](assets/bridge_deposits.png)
+
 #### Withdrawals
 
 1. On Arbitrum, a user calls `L2GatewayRouter.outBoundTransfer`, which in turn calls `outBoundTransfer` on arbSomeERC20Token's gateway (i.e., L2ERC20Gateway).
 1. This burns arbSomeERC20Token tokens, and calls ArbSys with an encoded message to `L1ERC20Gateway.finalizeInboundTransfer`, which will be eventually executed on L1.
 1. After the dispute window expires and the assertion with the user's transaction is confirmed, a user can call `Outbox.executeTransaction`, which in turn calls the encoded `L1ERC20Gateway.finalizeInboundTransfer` message, releasing the user's tokens from the L1ERC20Gateway contract's escrow.
+
+![img](assets/bridge_withdrawals.png)
 
 #### Other Flavors of Gateways
 
