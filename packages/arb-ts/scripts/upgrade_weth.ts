@@ -23,6 +23,23 @@ const main = async () => {
   console.log('successfully upgraded WETH logic', upgradeRec)
 }
 
+const initWETH = async () => {
+  const { bridge, l2Network } = await instantiateBridge()
+  const { l2Signer } = bridge.l2Bridge
+
+  const aeWeth = AeWETH__factory.connect(l2Network.tokenBridge.l2Weth, l2Signer)
+  const res = await aeWeth.initialize(
+    'Wrapped Ether',
+    'WETH',
+    18,
+    l2Network.tokenBridge.l2WethGateway,
+    l2Network.tokenBridge.l1Weth
+  )
+
+  const rec = await res.wait()
+  console.warn('initialized weth', rec)
+}
+
 main()
   .then(() => process.exit(0))
   .catch(error => {
