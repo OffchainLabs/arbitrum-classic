@@ -2,6 +2,7 @@ package broadcastclient
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"sync"
 	"testing"
 	"time"
@@ -12,20 +13,21 @@ import (
 func TestReceiveMessages(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9742",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 30 * time.Second,
+	settings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9742",
+		Ping:          5 * time.Second,
+		ClientTimeout: 20 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	messageCount := 1000
 	messageDelay := 0 * time.Millisecond
 	clientCount := 2
 
-	b := broadcaster.NewBroadcaster(broadcasterSettings)
+	b := broadcaster.NewBroadcaster(settings)
 
 	err := b.Start(ctx)
 	if err != nil {
@@ -88,16 +90,17 @@ func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expe
 func TestServerClientDisconnect(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9743",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      1 * time.Second,
-		ClientNoResponseTimeout: 2 * time.Second,
+	settings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9743",
+		Ping:          1 * time.Second,
+		ClientTimeout: 2 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
-	b := broadcaster.NewBroadcaster(broadcasterSettings)
+	b := broadcaster.NewBroadcaster(settings)
 
 	err := b.Start(ctx)
 	if err != nil {
@@ -143,16 +146,17 @@ func TestServerClientDisconnect(t *testing.T) {
 func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9743",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      50 * time.Second,
-		ClientNoResponseTimeout: 150 * time.Second,
+	settings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9743",
+		Ping:          50 * time.Second,
+		ClientTimeout: 150 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
-	b1 := broadcaster.NewBroadcaster(broadcasterSettings)
+	b1 := broadcaster.NewBroadcaster(settings)
 
 	err := b1.Start(ctx)
 	if err != nil {
@@ -180,16 +184,17 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9842",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	settings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9842",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
-	b := broadcaster.NewBroadcaster(broadcasterSettings)
+	b := broadcaster.NewBroadcaster(settings)
 
 	err := b.Start(ctx)
 	if err != nil {

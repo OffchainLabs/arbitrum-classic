@@ -1,5 +1,6 @@
 ---
 title: Outbox.sol Spec
+id: Outbox
 ---
 
 ### `initialize(address _rollup, contract IBridge _bridge)` (external)

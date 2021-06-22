@@ -41,7 +41,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
@@ -51,6 +50,8 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 var logger zerolog.Logger
@@ -229,7 +230,7 @@ func startup() error {
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
 	for {
-		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, bridgeUtilsAddress, nil, dummySequencerFeed)
+		inboxReader, err = mon.StartInboxReader(ctx, ethclint, rollupAddress, 0, bridgeUtilsAddress, nil, dummySequencerFeed)
 		if err == nil {
 			break
 		}
@@ -283,13 +284,14 @@ func startup() error {
 		DelayedMessagesTargetDelay: big.NewInt(*delayedMessagesTargetDelay),
 		CreateBatchBlockInterval:   big.NewInt(*createBatchBlockInterval),
 	}
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    "127.0.0.1:9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	settings := configuration.FeedOutput{
+		Addr:          "127.0.0.1",
+		IOTimeout:     2 * time.Second,
+		Port:          "9642",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       2,
 	}
 
 	db, txDBErrChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 100*time.Millisecond)
@@ -311,7 +313,7 @@ func startup() error {
 		time.Duration(5)*time.Second,
 		batcherMode,
 		signer,
-		broadcasterSettings,
+		settings,
 		"",
 	)
 	if err != nil {

@@ -1,5 +1,6 @@
 ---
 title: Validator.sol Spec
+id: Validator
 ---
 
 ### `initialize()` (external)
@@ -8,6 +9,6 @@ title: Validator.sol Spec
 
 ### `executeTransaction(bytes data, address destination, uint256 amount)` (external)
 
-### `returnOldDeposits(contract IRollup rollup, address payable[] stakers)` (external)
+### `returnOldDeposits(contract IRollupUser rollup, address payable[] stakers)` (external)
 
 ### `timeoutChallenges(contract IChallenge[] challenges)` (external)

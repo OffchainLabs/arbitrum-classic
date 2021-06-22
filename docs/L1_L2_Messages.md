@@ -62,8 +62,6 @@ A convenience method for creating retryable tickets is exposed in `Inbox.createR
     ) external payable override returns (uint256)
 ```
 
-See [EthErc20Bridge.depositToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/EthERC20Bridge.md) for example usage.
-
 Additionally, a precompiled `ArbRetryableTx` contract exists in every Arbitrum chain at address `0x000000000000000000000000000000000000006E`, which exposes methods relevant to retryable transactions:
 
 ```sol
@@ -164,7 +162,7 @@ The lifecycle of sending a message from layer 2 to layer 1 can be broken down in
 
 **1. Publish L2 to L1 transaction (Arbitrum transaction)**
 
-A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1` (see [ArbSys](Arbsys.md), and see [ArbTokenBridge.withdraw](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/ArbTokenBridge.md) for example usage.
+A client initiates the process by publishing a message on L2 via `ArbSys.sendTxToL1`.
 
 **2. Outbox entry gets created**
 

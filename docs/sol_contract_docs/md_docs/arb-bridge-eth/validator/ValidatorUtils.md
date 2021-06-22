@@ -1,5 +1,6 @@
 ---
 title: ValidatorUtils.sol Spec
+id: ValidatorUtils
 ---
 
 ### `getConfig(contract Rollup rollup) → uint256 confirmPeriodBlocks, uint256 extraChallengeTimeBlocks, uint256 arbGasSpeedLimitPerBlock, uint256 baseStake` (external)

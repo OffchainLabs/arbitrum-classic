@@ -1,5 +1,6 @@
 ---
 title: Node.sol Spec
+id: Node
 ---
 
 ### `onlyRollup()`

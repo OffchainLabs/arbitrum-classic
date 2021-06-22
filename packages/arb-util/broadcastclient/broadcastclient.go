@@ -124,7 +124,11 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				if bc.shuttingDown {
 					return
 				}
-				logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling readData")
+				if strings.Contains(err.Error(), "i/o timeout") {
+					logger.Error().Str("feed", bc.websocketUrl).Msg("Server connection timed out without receiving data")
+				} else {
+					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
+				}
 				_ = bc.conn.Close()
 				bc.RetryConnect(ctx, messageReceiver)
 				continue
@@ -136,6 +140,14 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				if err != nil {
 					logger.Error().Err(err).Str("message", string(msg)).Msg("error unmarshalling message")
 					continue
+				}
+
+				if len(res.Messages) > 0 {
+					logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
+				} else if res.ConfirmedAccumulator.IsConfirmed {
+					logger.Debug().Hex("acc", res.ConfirmedAccumulator.Accumulator.Bytes()).Msg("confirmed accumulator")
+				} else {
+					logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages or confirmations")
 				}
 
 				if res.Version == 1 {
