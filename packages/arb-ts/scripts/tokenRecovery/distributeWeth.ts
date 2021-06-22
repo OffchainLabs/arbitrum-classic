@@ -2,11 +2,12 @@ import wethBalances from '../../wethBalances.json'
 import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 
-import { WETH9__factory } from '../../src/lib/abi/factories/WETH9__factory'
+import { IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L2__factory'
 const wethAddress = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
+
 ;async () => {
   const { bridge } = await instantiateBridge()
-  const WETH9 = WETH9__factory.connect(wethAddress, bridge.l2Bridge.l2Signer)
+  const WETH9 = IWETH9L2__factory.connect(wethAddress, bridge.l2Bridge.l2Signer)
   console.log('Wrapping some weth:')
 
   const res = await WETH9.deposit({

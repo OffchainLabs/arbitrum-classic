@@ -1,8 +1,10 @@
 import { BridgeHelper } from '../../src/lib/bridge_helpers'
-import { WETH9__factory } from '../../src/lib/abi/factories/WETH9__factory'
+import { IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L2__factory'
 import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 import { writeFileSync } from 'fs'
+
+const WETH_ADDRESS = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
 
 export interface WethDepositEvent {
   dst: string
@@ -17,8 +19,8 @@ export interface balancesMap {
 }
 ;(async () => {
   const { bridge } = await instantiateBridge()
-  const WETH9 = WETH9__factory.connect(
-    '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+  const WETH9 = IWETH9L2__factory.connect(
+    WETH_ADDRESS,
     bridge.l2Bridge.l2Provider
   )
 

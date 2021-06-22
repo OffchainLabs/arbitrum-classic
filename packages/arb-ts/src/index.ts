@@ -35,4 +35,3 @@ export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__fac
 export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
 export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'
-export { WETH9__factory } from './lib/abi/factories/WETH9__factory'
