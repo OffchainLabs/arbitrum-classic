@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
+import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 
 import "../IArbToken.sol";
 
@@ -187,6 +188,30 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
             if (shouldHalt) return bytes("");
         }
         // ignores gatewayData if token already deployed
+
+        {
+            // validate if L1 address supplied matches that of the expected L2 address
+            (bool success, bytes memory _l1AddressData) =
+                expectedAddress.staticcall(abi.encodeWithSelector(IArbToken.l1Address.selector));
+
+            bool shouldWithdraw;
+            if (!success || _l1AddressData.length < 32) {
+                shouldWithdraw = true;
+            } else {
+                // we do this in the else branch since we want to avoid reverts
+                // and `toAddress` reverts if _l1AddressData has a short length
+                // `_l1AddressData` should be 12 bytes of padding then 20 bytes for the address
+                address expectedL1Address = BytesLib.toAddress(_l1AddressData, 12);
+                if (expectedL1Address != _token) {
+                    shouldWithdraw = true;
+                }
+            }
+
+            if (shouldWithdraw) {
+                createOutboundTx(_token, address(this), _from, _amount, "");
+                return bytes("");
+            }
+        }
 
         if (callHookData.length > 0) {
             bool success;
