@@ -3,7 +3,7 @@ import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
-import { TokenInfo, TokenList } from './tokenListTypes'
+import { TokenInfo, TokenList } from '@uniswap/token-lists'
 import { writeFileSync } from 'fs'
 import axios from 'axios'
 
