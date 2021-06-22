@@ -44,7 +44,7 @@ type LockoutBatcher struct {
 	core             core.ArbOutputLookup
 	inboxReader      *monitor.InboxReader
 	redis            *lockoutRedis
-	hostname         string
+	rpcURL           string
 	errChan          chan error
 
 	livelinessTimeout time.Duration
@@ -63,7 +63,7 @@ func SetupLockout(
 	core core.ArbOutputLookup,
 	inboxReader *monitor.InboxReader,
 	redisURL string,
-	hostname string,
+	rpcURL string,
 	errChan chan error,
 ) (*LockoutBatcher, error) {
 	redis, err := newLockoutRedis(ctx, redisURL)
@@ -75,11 +75,12 @@ func SetupLockout(
 		currentBatcher: &errorBatcher{
 			err: errors.New("sequencer lockout manager starting up"),
 		},
+		currentSeq:        "[starting up]",
 		core:              core,
 		inboxReader:       inboxReader,
 		livelinessTimeout: time.Second * 30,
 		lockoutTimeout:    time.Second * 30,
-		hostname:          hostname,
+		rpcURL:            rpcURL,
 		redis:             redis,
 		errChan:           errChan,
 	}
@@ -88,8 +89,6 @@ func SetupLockout(
 	return newBatcher, nil
 }
 
-const RPC_URL_PREFIX string = "http://"
-const RPC_URL_POSTFIX string = ":8547/"
 const ACCEPTABLE_SEQ_NUM_GAP int64 = 0
 
 func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
@@ -105,7 +104,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 		holdingMutex = false
 		backgroundContext := context.Background()
 		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
-		b.redis.releaseLiveliness(backgroundContext, b.hostname, &b.livelinessExpiresAt)
+		b.redis.releaseLiveliness(backgroundContext, b.rpcURL, &b.livelinessExpiresAt)
 		logger.Debug().Msg("shut down sequencer lockout manager and released locks")
 		select {
 		case <-ctx.Done():
@@ -134,24 +133,24 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				alive = false
 				if b.livelinessExpiresAt.After(time.Now()) {
 					logger.Warn().Str("ourSeqNum", currentSeqNum.String()).Str("targetSeqNum", b.lastLockedSeqNum.String()).Msg("fell behind sequencer position")
-					b.redis.releaseLiveliness(ctx, b.hostname, &b.livelinessExpiresAt)
+					b.redis.releaseLiveliness(ctx, b.rpcURL, &b.livelinessExpiresAt)
 				}
 			}
 			b.lastLockedSeqNum = b.redis.getLatestSeqNum(ctx)
 		}
 		if alive {
-			b.redis.acquireOrUpdateLiveliness(ctx, b.hostname, b.livelinessTimeout, &b.livelinessExpiresAt)
+			b.redis.acquireOrUpdateLiveliness(ctx, b.rpcURL, b.livelinessTimeout, &b.livelinessExpiresAt)
 		}
 		selectedSeq := b.redis.selectSequencer(ctx)
-		if selectedSeq == b.hostname {
+		if selectedSeq == b.rpcURL {
 			if !holdingMutex {
 				b.mutex.Lock()
 				holdingMutex = true
 			}
-			b.redis.acquireOrUpdateLockout(ctx, b.hostname, b.lockoutTimeout, &b.lockoutExpiresAt)
+			b.redis.acquireOrUpdateLockout(ctx, b.rpcURL, b.lockoutTimeout, &b.lockoutExpiresAt)
 			if b.lockoutExpiresAt != (time.Time{}) {
 				if b.currentBatcher != b.sequencerBatcher {
-					logger.Info().Str("hostname", b.hostname).Msg("acquired sequencer lockout")
+					logger.Info().Str("rpc", b.rpcURL).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
 					b.lastLockedSeqNum = targetSeqNum
 					attemptCatchupUntil := b.lockoutExpiresAt.Add(time.Second * -10)
@@ -184,7 +183,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 					}
 				}
 				b.currentBatcher = b.sequencerBatcher
-				b.currentSeq = b.hostname
+				b.currentSeq = b.rpcURL
 				b.mutex.Unlock()
 				holdingMutex = false
 				seqNum, err := b.core.GetMessageCount()
@@ -227,9 +226,9 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				b.mutex.Unlock()
 				holdingMutex = false
 			} else if b.redis.getLockout(ctx) == selectedSeq {
-				logger.Info().Str("hostname", selectedSeq).Msg("forwarding to new sequencer")
+				logger.Info().Str("rpc", selectedSeq).Msg("forwarding to new sequencer")
 				var err error
-				b.currentBatcher, err = batcher.NewForwarder(ctx, RPC_URL_PREFIX+selectedSeq+RPC_URL_POSTFIX)
+				b.currentBatcher, err = batcher.NewForwarder(ctx, selectedSeq)
 				if err == nil {
 					b.currentSeq = selectedSeq
 				} else {

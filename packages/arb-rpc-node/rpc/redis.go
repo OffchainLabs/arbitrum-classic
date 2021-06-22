@@ -90,15 +90,15 @@ func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer str
 			return err
 		}
 		priorities := strings.Split(prioritiesString, ",")
-		for _, hostname := range priorities {
-			err := r.client.Get(ctx, LIVELINESS_KEY_PREFIX+hostname).Err()
+		for _, rpc := range priorities {
+			err := r.client.Get(ctx, LIVELINESS_KEY_PREFIX+rpc).Err()
 			if err == redis.Nil {
 				continue
 			}
 			if err != nil {
 				return err
 			}
-			targetSequencer = hostname
+			targetSequencer = rpc
 			return nil
 		}
 		targetSequencer = ""
@@ -150,28 +150,28 @@ func (r *lockoutRedis) releaseGenericLockout(parentCtx context.Context, key stri
 	})
 }
 
-func (r *lockoutRedis) acquireOrUpdateLockout(ctx context.Context, hostname string, timeout time.Duration, hasLockUntil *time.Time) {
-	r.acquireOrUpdateGenericLockout(ctx, LOCKOUT_KEY, hostname, timeout, hasLockUntil)
+func (r *lockoutRedis) acquireOrUpdateLockout(ctx context.Context, rpc string, timeout time.Duration, hasLockUntil *time.Time) {
+	r.acquireOrUpdateGenericLockout(ctx, LOCKOUT_KEY, rpc, timeout, hasLockUntil)
 }
 
 func (r *lockoutRedis) releaseLockout(ctx context.Context, hasLockUntil *time.Time) {
 	r.releaseGenericLockout(ctx, LOCKOUT_KEY, hasLockUntil)
 }
 
-func (r *lockoutRedis) acquireOrUpdateLiveliness(ctx context.Context, hostname string, timeout time.Duration, hasLockUntil *time.Time) {
-	r.acquireOrUpdateGenericLockout(ctx, LIVELINESS_KEY_PREFIX+hostname, "OK", timeout, hasLockUntil)
+func (r *lockoutRedis) acquireOrUpdateLiveliness(ctx context.Context, rpc string, timeout time.Duration, hasLockUntil *time.Time) {
+	r.acquireOrUpdateGenericLockout(ctx, LIVELINESS_KEY_PREFIX+rpc, "OK", timeout, hasLockUntil)
 }
 
-func (r *lockoutRedis) releaseLiveliness(ctx context.Context, hostname string, hasLockUntil *time.Time) {
-	r.releaseGenericLockout(ctx, LIVELINESS_KEY_PREFIX+hostname, hasLockUntil)
+func (r *lockoutRedis) releaseLiveliness(ctx context.Context, rpc string, hasLockUntil *time.Time) {
+	r.releaseGenericLockout(ctx, LIVELINESS_KEY_PREFIX+rpc, hasLockUntil)
 }
 
-func (r *lockoutRedis) getLockout(ctx context.Context) (hostname string) {
+func (r *lockoutRedis) getLockout(ctx context.Context) (rpc string) {
 	r.withRetry(ctx, func() error {
 		var err error
-		hostname, err = r.client.Get(ctx, LOCKOUT_KEY).Result()
+		rpc, err = r.client.Get(ctx, LOCKOUT_KEY).Result()
 		if err == redis.Nil {
-			hostname = ""
+			rpc = ""
 			err = nil
 		}
 		return err
