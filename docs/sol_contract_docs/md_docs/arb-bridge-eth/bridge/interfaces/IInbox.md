@@ -1,5 +1,6 @@
 ---
 title: IInbox.sol Spec
+id: IInbox
 ---
 
 ### `sendL2Message(bytes messageData) → uint256` (external)
@@ -14,8 +15,6 @@ title: IInbox.sol Spec
 
 ### `createRetryableTicket(address destAddr, uint256 arbTxCallValue, uint256 maxSubmissionCost, address submissionRefundAddress, address valueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data) → uint256` (external)
 
-### `depositEth(address destAddr) → uint256` (external)
-
-### `depositEthRetryable(address destAddr, uint256 maxSubmissionCost, uint256 maxGas, uint256 maxGasPrice) → uint256` (external)
+### `depositEth(uint256 maxSubmissionCost) → uint256` (external)
 
 ### `bridge() → contract IBridge` (external)

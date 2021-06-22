@@ -1,5 +1,6 @@
 ---
 title: ValidatorWalletCreator.sol Spec
+id: ValidatorWalletCreator
 ---
 
 ### `setTemplate(address _template)` (external)

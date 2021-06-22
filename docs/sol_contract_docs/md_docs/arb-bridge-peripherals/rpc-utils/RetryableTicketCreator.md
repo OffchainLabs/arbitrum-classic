@@ -1,5 +1,6 @@
 ---
 title: RetryableTicketCreator.sol Spec
+id: RetryableTicketCreator
 ---
 
 ### `createRetryableTicket(address destAddr, uint256 l2CallValue, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data)` (external)

@@ -84,12 +84,10 @@ For example usage, see our Arbiswap Demo:
 
 Arbitrum includes a number of pre-compiled contracts for Arbitrum-specific functionality:
 
-- ArbAddressTable (see above)
-- [ArbSys](Arbsys.md)
-- [ArbRetryableTx](L1_L2_Messages.md)
-- [ArbGasInfo](https://github.com/OffchainLabs/arb-os/blob/develop/contracts/arbos/builtin/ArbGasInfo.sol)
-- [NodeInterface](L1_L2_Messages.md)
-
-### BLS Signatures
-
-More info coming soon!
+| contract                                                                                                 | address                                    |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| [ArbSys](Arbsys.md)                                                                                      | 0x0000000000000000000000000000000000000064 |
+| [ArbRetryableTx](L1_L2_Messages.md)                                                                      | 0x000000000000000000000000000000000000006E |
+| [ArbGasInfo](https://github.com/OffchainLabs/arb-os/blob/develop/contracts/arbos/builtin/ArbGasInfo.sol) | 0x000000000000000000000000000000000000006C |
+| [NodeInterface](L1_L2_Messages.md)                                                                       | 0x00000000000000000000000000000000000000C8 |
+| [ArbStatistics](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbStatistics.md)                       | 0x000000000000000000000000000000000000006F |

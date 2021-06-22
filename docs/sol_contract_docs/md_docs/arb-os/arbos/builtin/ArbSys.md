@@ -1,5 +1,6 @@
 ---
 title: ArbSys.sol Spec
+id: ArbSys
 ---
 
 Precompiled contract that exists in every Arbitrum chain at address(100), 0x0000000000000000000000000000000000000064. Exposes a variety of system-level functionality.
