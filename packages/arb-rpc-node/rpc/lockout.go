@@ -122,7 +122,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 	})()
 	for {
 		alive := true
-		if b.lockoutExpiresAt.Before(time.Now()) {
+		if !b.hasSequencerLockout() {
 			currentSeqNum, err := b.core.GetMessageCount()
 			if err != nil {
 				logger.Warn().Err(err).Msg("error getting sequence number")
@@ -140,6 +140,9 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 		}
 		if alive {
 			b.redis.acquireOrUpdateLiveliness(ctx, b.rpcURL, b.livelinessTimeout, &b.livelinessExpiresAt)
+			if b.livelinessExpiresAt.Before(time.Now()) {
+				logger.Warn().Str("rpc", b.rpcURL).Msg("failed to acquire liveliness lockout, is another sequencer running with this RPC URL?")
+			}
 		}
 		selectedSeq := b.redis.selectSequencer(ctx)
 		if selectedSeq == b.rpcURL {
@@ -147,8 +150,10 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				b.mutex.Lock()
 				holdingMutex = true
 			}
-			b.redis.acquireOrUpdateLockout(ctx, b.rpcURL, b.lockoutTimeout, &b.lockoutExpiresAt)
-			if b.lockoutExpiresAt != (time.Time{}) {
+			if b.livelinessExpiresAt.After(time.Now()) {
+				b.redis.acquireOrUpdateLockout(ctx, b.rpcURL, b.lockoutTimeout, &b.lockoutExpiresAt)
+			}
+			if b.hasSequencerLockout() {
 				if b.currentBatcher != b.sequencerBatcher {
 					logger.Info().Str("rpc", b.rpcURL).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
@@ -204,7 +209,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			}
 			if b.currentBatcher == b.sequencerBatcher {
 				logger.Info().Str("newPriority", selectedSeq).Msg("releasing sequencer lockout to make way for new sequencer")
-				if b.lockoutExpiresAt.After(time.Now()) {
+				if b.hasSequencerLockout() {
 					seqNum, err := b.core.GetMessageCount()
 					if err == nil {
 						b.redis.updateLatestSeqNum(ctx, seqNum, b.lockoutExpiresAt)
@@ -241,8 +246,12 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			}
 		}
 		refreshDelay := time.Millisecond * 500
-		if b.currentBatcher == b.sequencerBatcher {
-			lockoutRefresh := time.Until(b.lockoutExpiresAt.Add(time.Second * -10))
+		if b.hasSequencerLockout() {
+			firstLockoutExpiresAt := b.lockoutExpiresAt
+			if b.livelinessExpiresAt.Before(firstLockoutExpiresAt) {
+				firstLockoutExpiresAt = b.livelinessExpiresAt
+			}
+			lockoutRefresh := time.Until(firstLockoutExpiresAt.Add(time.Second * -10))
 			if lockoutRefresh > refreshDelay {
 				refreshDelay = lockoutRefresh
 			}
@@ -255,6 +264,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 	}
 }
 
+// Does not acquire mutex
+func (b *LockoutBatcher) hasSequencerLockout() bool {
+	return b.lockoutExpiresAt.After(time.Now())
+}
+
 func (b *LockoutBatcher) ShouldSequence() bool {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
@@ -264,7 +278,7 @@ func (b *LockoutBatcher) ShouldSequence() bool {
 func (b *LockoutBatcher) getBatcher() batcher.TransactionBatcher {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
-	if b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.Before(time.Now()) {
+	if b.currentBatcher == b.sequencerBatcher && !b.hasSequencerLockout() {
 		return &errorBatcher{
 			err: errors.New("sequencer lockout expired"),
 		}
