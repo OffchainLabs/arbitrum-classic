@@ -26,9 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
 )
 
@@ -51,21 +51,23 @@ const (
 )
 
 type ChallengeWatcher struct {
-	con     *ethbridgecontracts.Challenge
-	address ethcommon.Address
-	client  ethutils.EthClient
+	con       *ethbridgecontracts.Challenge
+	address   ethcommon.Address
+	fromBlock int64
+	client    ethutils.EthClient
 }
 
-func NewChallengeWatcher(address ethcommon.Address, client ethutils.EthClient) (*ChallengeWatcher, error) {
+func NewChallengeWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient) (*ChallengeWatcher, error) {
 	con, err := ethbridgecontracts.NewChallenge(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &ChallengeWatcher{
-		con:     con,
-		address: address,
-		client:  client,
+		con:       con,
+		address:   address,
+		fromBlock: fromBlock,
+		client:    client,
 	}, nil
 }
 
@@ -116,7 +118,7 @@ func (c *ChallengeWatcher) ChallengeState(ctx context.Context) (common.Hash, err
 func (c *ChallengeWatcher) LookupBisection(ctx context.Context, challengeState common.Hash) (*core.Bisection, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(c.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{c.address},
 		Topics:    [][]ethcommon.Hash{{bisectedID}, {challengeState.ToEthHash()}},

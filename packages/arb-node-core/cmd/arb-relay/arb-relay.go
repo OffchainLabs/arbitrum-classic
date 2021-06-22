@@ -18,10 +18,10 @@ package main
 
 import (
 	"context"
-	"flag"
+	"fmt"
 	golog "log"
 	"net/http"
-	"os"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -34,6 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var logger zerolog.Logger
@@ -68,52 +69,41 @@ func main() {
 }
 
 func startup() error {
-	defer logger.Log().Msg("Cleanly shutting down relay")
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	flagSet := flag.NewFlagSet("arb-relay", flag.ExitOnError)
-	enablePProf := flagSet.Bool("pprof", false, "enable profiling server")
-	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(flagSet)
+	config, err := configuration.ParseFeed()
+	if err != nil || len(config.Feed.Input.URL) == 0 {
+		fmt.Printf("\n")
+		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")
+		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket>\n\n")
+		if err != nil && !strings.Contains(err.Error(), "help requested") {
+			fmt.Printf("%s\n", err.Error())
+		}
 
-	// Relay Config
-	enableDebug := flagSet.Bool("debug", false, "Enable debug logging")
-	sequencerURL := flagSet.String("sequencer-url", "", "URL of sequencer feed source")
-	feedOutputAddr := flagSet.String("feedoutput.addr", "0.0.0.0", "address to bind the relay feed output to")
-	feedOutputPort := flagSet.String("feedoutput.port", "9642", "port to bind the relay feed output to")
-	feedOutputPingInterval := flagSet.Duration("feedoutput.ping", 5*time.Second, "number of seconds for ping interval")
-	feedOutputTimeout := flagSet.Duration("feedoutput.timeout", 15*time.Second, "number of seconds for timeout")
-
-	if err := flagSet.Parse(os.Args[1:]); err != nil {
-		return errors.Wrap(err, "failed parsing command line arguments")
+		return nil
 	}
-	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel); err != nil {
+
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
 		return err
 	}
 
-	if *sequencerURL == "" {
-		return errors.New("Missing --sequencer-url")
+	defer logger.Info().Msg("Cleanly shutting down relay")
+
+	if config.Feed.Input.URL == "" {
+		return errors.New("Missing --feed.input.url")
 	}
 
-	if *enablePProf {
+	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
 		}()
 	}
 
-	relaySettings := broadcaster.Settings{
-		Addr:                    *feedOutputAddr + ":" + *feedOutputPort,
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      *feedOutputPingInterval,
-		ClientNoResponseTimeout: *feedOutputTimeout,
-	}
-
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay(*sequencerURL, relaySettings)
-	relayDone, err := arbRelay.Start(ctx, *enableDebug)
+	arbRelay := NewArbRelay(config.Feed)
+	relayDone, err := arbRelay.Start(ctx)
 	if err != nil {
 		return err
 	}
@@ -127,17 +117,17 @@ func startup() error {
 	}
 }
 
-func NewArbRelay(sequencerFeedAddress string, rebroadcastSettings broadcaster.Settings) *ArbRelay {
-	broadcastClient := broadcastclient.NewBroadcastClient(sequencerFeedAddress, nil, 20*time.Second)
+func NewArbRelay(settings configuration.Feed) *ArbRelay {
+	broadcastClient := broadcastclient.NewBroadcastClient(settings.Input.URL, nil, settings.Input.Timeout)
 	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	return &ArbRelay{
-		SequencerFeedAddress: sequencerFeedAddress,
-		broadcaster:          broadcaster.NewBroadcaster(rebroadcastSettings),
+		SequencerFeedAddress: settings.Input.URL,
+		broadcaster:          broadcaster.NewBroadcaster(settings.Output),
 		broadcastClient:      broadcastClient,
 	}
 }
 
-func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
+func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	done := make(chan bool)
 
 	err := ar.broadcaster.Start(ctx)
@@ -171,9 +161,6 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 			case <-ctx.Done():
 				return
 			case msg := <-messages:
-				if debug {
-					logger.Info().Hex("acc", msg.FeedItem.BatchItem.Accumulator.Bytes()).Msg("batch sent")
-				}
 				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
 				if err != nil {
 					logger.
@@ -184,9 +171,6 @@ func (ar *ArbRelay) Start(ctx context.Context, debug bool) (chan bool, error) {
 						Msg("unable to broadcast batch item")
 				}
 			case ca := <-ar.broadcastClient.ConfirmedAccumulatorListener:
-				if debug {
-					logger.Info().Hex("acc", ca.Bytes()).Msg("confirmed accumulator")
-				}
 				ar.broadcaster.ConfirmedAccumulator(ca)
 			}
 		}
