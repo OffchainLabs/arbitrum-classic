@@ -12,6 +12,11 @@ const defaultNetworkId = 4
 if (!pk && !mnemonic)
   throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
 
+if (pk && mnemonic)
+  throw new Error(
+    'You have both a DEVNET_PRIVKEY and DEV_MNEMONIC var set; pick one! '
+  )
+
 export const instantiateBridge = async () => {
   const argv = yargs(process.argv.slice(2)).argv
   let networkID = argv.networkID as number
