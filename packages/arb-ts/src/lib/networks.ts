@@ -24,6 +24,7 @@ export interface TokenBridge {
   l1WethGateway: string
   l2WethGateway: string
   l2Weth: string
+  l1Weth: string
   inbox: string
 }
 
@@ -44,6 +45,7 @@ const mainnetBridge: TokenBridge = {
   l1WethGateway: '',
   l2WethGateway: '',
   l2Weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
+  l1Weth: '',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
 }
 
@@ -57,6 +59,7 @@ const RinkebyBridge: TokenBridge = {
   l1WethGateway: '0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9',
   l2WethGateway: '0xF90EB31045d5b924900afF29344dEb42EAe0b087',
   l2Weth: '0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681',
+  l1Weth: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
 }
 
