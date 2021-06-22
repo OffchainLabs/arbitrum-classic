@@ -1,10 +1,12 @@
-import tokenBalances from '../../tokenBalances.json'
+import tokenBalancesData from '../../json_data/42161tokenBalances.json'
+
 import { instantiateBridge } from './../instantiate_bridge'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 const tokenAddress = '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8'
 ;async () => {
   const { bridge } = await instantiateBridge()
   const token = ERC20__factory.connect(tokenAddress, bridge.l2Bridge.l2Signer)
+  const tokenBalances = tokenBalancesData.balances
   const totalTargetBalance = Object.keys(tokenBalances).reduce(
     (acc, currentAddress) => {
       return acc + tokenBalances[currentAddress]

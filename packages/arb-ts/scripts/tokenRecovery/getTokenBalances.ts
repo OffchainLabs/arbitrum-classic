@@ -14,9 +14,10 @@ export interface balancesMap {
   [address: string]: string
 }
 ;(async () => {
-  const { bridge } = await instantiateBridge()
+  const { bridge, l2Network } = await instantiateBridge()
   const token = ERC20__factory.connect(tokenAddress, bridge.l2Bridge.l2Provider)
   const candidateAddresses: Set<string> = new Set([])
+  const blockNumber = await bridge.l2Bridge.l2Provider.getBlockNumber()
 
   const transfers = (
     await BridgeHelper.getEventLogs('Transfer', token, [])
@@ -35,7 +36,7 @@ export interface balancesMap {
   const balancesMap: balancesMap = {}
   let totalBalance: BigNumber = BigNumber.from(0)
   for (const address of candidateAddresses) {
-    const bal = await token.balanceOf(address)
+    const bal = await token.balanceOf(address, { blockTag: blockNumber })
     if (bal.isZero()) {
       console.log(`${address} has balance of 0`)
       continue
@@ -44,14 +45,21 @@ export interface balancesMap {
     balancesMap[address] = bal.toString()
     totalBalance = totalBalance.add(bal)
   }
-  const supply = await token.totalSupply()
+  const supply = await token.totalSupply({ blockTag: blockNumber })
   if (supply.eq(totalBalance)) {
     console.log(
       `Full token supply ${supply} properly accounted for, generating JSON`
     )
 
-    const listData = JSON.stringify(balancesMap)
-    writeFileSync(`./tokenBalances.json`, listData)
+    const listData = JSON.stringify({
+      blockNumber,
+      balances: balancesMap,
+      address: tokenAddress,
+    })
+    writeFileSync(
+      `./json_data/${l2Network.chainID}tokenBalances.json`,
+      listData
+    )
   } else {
     throw new Error(
       `Sanity check failed: total balance counted: ${totalBalance.toString()}; total supply: ${

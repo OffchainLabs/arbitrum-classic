@@ -1,22 +1,27 @@
-import wethBalances from '../../wethBalances.json'
 import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 
 import { IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L2__factory'
-const wethAddress = '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1'
-
+import wethBalancesMainnetData from '../../json_data/42161wethBalances.json'
+import wethBalancesRinkArbyData from '../../json_data/421611wethBalances.json'
 ;async () => {
-  const { bridge } = await instantiateBridge()
-  const WETH9 = IWETH9L2__factory.connect(wethAddress, bridge.l2Bridge.l2Signer)
-  console.log('Wrapping some weth:')
+  const { bridge, l2Network } = await instantiateBridge()
+
+  const WETH9 = IWETH9L2__factory.connect(
+    l2Network.tokenBridge.l2Weth,
+    bridge.l2Bridge.l2Signer
+  )
 
   const res = await WETH9.deposit({
     value: 200000000000000000,
   })
 
   const rec = await res.wait()
-  console.log('Done wrapping eth', rec)
-
+  const data =
+    l2Network.chainID === '42161'
+      ? wethBalancesMainnetData
+      : wethBalancesRinkArbyData
+  const wethBalances = data.balances
   const totalTargetBalance = Object.keys(wethBalances).reduce(
     (acc, currentAddress) => {
       return acc + wethBalances[currentAddress]
