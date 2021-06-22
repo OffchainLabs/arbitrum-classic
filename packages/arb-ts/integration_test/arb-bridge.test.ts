@@ -449,7 +449,7 @@ describe.skip('ERC20', () => {
   })
 })
 
-describe.skip('WETH', async () => {
+describe('WETH', async () => {
   const depositWETHAmount = '0.0005'
   const l1WethAddress = '0xc778417E063141139Fce010982780140Aa0cD5Ab'
   it('setup: wrap some ether', async () => {
