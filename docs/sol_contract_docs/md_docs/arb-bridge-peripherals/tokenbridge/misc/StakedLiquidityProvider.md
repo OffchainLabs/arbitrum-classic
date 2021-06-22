@@ -7,4 +7,4 @@ id: StakedLiquidityProvider
 
 ### `withdrawLiquidity(address dest, address erc20, uint256 amount)` (external)
 
-### `requestLiquidity(address dest, address erc20, uint256 amount, uint256 exitNum, bytes liquidityProof)` (external)
+### `requestLiquidity(address dest, address erc20, uint256 amount, uint256 exitNum, bytes liquidityProof) → bytes` (external)

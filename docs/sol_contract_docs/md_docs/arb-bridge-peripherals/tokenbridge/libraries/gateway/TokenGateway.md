@@ -5,8 +5,6 @@ id: TokenGateway
 
 ### `onlyCounterpartGateway()`
 
-### `onlyRouter()`
-
 ### `calculateL2TokenAddress(address l1ERC20) → address` (external)
 
 Calculate the address used when bridging an ERC20 token

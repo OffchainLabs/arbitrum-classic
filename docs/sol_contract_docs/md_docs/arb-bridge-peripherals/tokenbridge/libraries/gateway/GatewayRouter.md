@@ -5,6 +5,8 @@ id: GatewayRouter
 
 Common interface for L1 and L2 Gateway Routers
 
+### `isRouter() → bool` (external)
+
 ### `finalizeInboundTransfer(address _token, address _from, address _to, uint256 _amount, bytes _data) → bytes` (external)
 
 ### `outboundTransfer(address _token, address _to, uint256 _amount, uint256 _maxGas, uint256 _gasPriceBid, bytes _data) → bytes` (public)

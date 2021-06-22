@@ -5,6 +5,8 @@ id: L1ArbitrumGateway
 
 Common interface for gatways on L1 messaging to Arbitrum.
 
+### `onlyCounterpartGateway()`
+
 ### `finalizeInboundTransfer(address _token, address _from, address _to, uint256 _amount, bytes _data) → bytes` (external)
 
 Finalizes a withdrawal via Outbox message; callable only by L2Gateway.outboundTransfer
@@ -21,7 +23,7 @@ Finalizes a withdrawal via Outbox message; callable only by L2Gateway.outboundTr
 
 ### `gasReserveIfCallRevert() → uint256` (public)
 
-### `getCurrentDestination(uint256 _exitNum, address _initialDestination) → address` (public)
+### `getExternalCall(uint256 _exitNum, address _initialDestination, bytes _initialData) → address target, bytes data` (public)
 
 ### `parseInboundData(bytes _data) → uint256 _exitNum, bytes _extraData` (public)
 

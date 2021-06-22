@@ -3,7 +3,7 @@ title: L1ArbitrumExtendedGateway.sol Spec
 id: L1ArbitrumExtendedGateway
 ---
 
-### `transferExitAndCall(uint256 _exitNum, address _initialDestination, address _newDestination, bytes _data)` (external)
+### `transferExitAndCall(uint256 _exitNum, address _initialDestination, address _newDestination, bytes _newData, bytes _data)` (external)
 
 Allows a user to redirect their right to claim a withdrawal to another address.
 
@@ -17,10 +17,12 @@ The exit receiver is the one to
 
 - `_newDestination`: address the L1 will now call instead of the previously set destination
 
+- `_newData`: data to be used in inboundEscrowAndCall
+
 - `_data`: optional data for external call upon transfering the exit
 
-### `getCurrentDestination(uint256 _exitNum, address _initialDestination) → address` (public)
+### `getExternalCall(uint256 _exitNum, address _initialDestination, bytes _initialData) → address target, bytes data` (public)
 
 ### `encodeWithdrawal(uint256 _exitNum, address _initialDestination) → bytes32` (public)
 
-### `WithdrawRedirected(address from, address to, uint256 exitNum, bytes data, bool madeExternalCall)`
+### `WithdrawRedirected(address from, address to, uint256 exitNum, bytes newData, bytes data, bool madeExternalCall)`
