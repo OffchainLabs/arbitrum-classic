@@ -1,8 +1,9 @@
 ---
-title: ERC20Rollup.sol Spec
+title: ERC20RollupUserFacet.sol Spec
+id: ERC20RollupUserFacet
 ---
 
-### `initialize(bytes32 _machineHash, uint256 _confirmPeriodBlocks, uint256 _extraChallengeTimeBlocks, uint256 _arbGasSpeedLimitPerBlock, uint256 _baseStake, address _stakeToken, address _owner, bytes _extraConfig, address[6] connectedContracts)` (public)
+### `initialize(address _stakeToken)` (public)
 
 ### `newStake(uint256 tokenAmount)` (external)
 

@@ -1,5 +1,6 @@
 ---
 title: ArbGasInfo.sol Spec
+id: ArbGasInfo
 ---
 
 ### `getPricesInWei() → uint256, uint256, uint256, uint256, uint256, uint256` (external)

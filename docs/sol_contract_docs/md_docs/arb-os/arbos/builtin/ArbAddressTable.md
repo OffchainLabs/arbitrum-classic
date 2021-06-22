@@ -1,5 +1,6 @@
 ---
 title: ArbAddressTable.sol Spec
+id: ArbAddressTable
 ---
 
 Precompiled contract that exists in every Arbitrum chain at 0x0000000000000000000000000000000000000066.

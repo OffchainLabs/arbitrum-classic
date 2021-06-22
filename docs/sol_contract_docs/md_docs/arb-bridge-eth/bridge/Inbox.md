@@ -1,8 +1,9 @@
 ---
 title: Inbox.sol Spec
+id: Inbox
 ---
 
-### `initialize(contract IBridge _bridge)` (external)
+### `initialize(contract IBridge _bridge, address _whitelist)` (external)
 
 ### `sendL2MessageFromOrigin(bytes messageData) → uint256` (external)
 
@@ -28,9 +29,7 @@ This method can be used to send any type of message that doesn't require L1 vali
 
 ### `sendContractTransaction(uint256 maxGas, uint256 gasPriceBid, address destAddr, uint256 amount, bytes data) → uint256` (external)
 
-### `depositEth(address destAddr) → uint256` (external)
-
-### `depositEthRetryable(address destAddr, uint256 maxSubmissionCost, uint256 maxGas, uint256 maxGasPrice) → uint256` (external)
+### `depositEth(uint256 maxSubmissionCost) → uint256` (external)
 
 ### `createRetryableTicket(address destAddr, uint256 l2CallValue, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data) → uint256` (external)
 

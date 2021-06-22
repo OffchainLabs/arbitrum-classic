@@ -19,7 +19,6 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"net"
 	"sync"
 	"testing"
@@ -27,6 +26,8 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var MessageCount = 10
@@ -35,13 +36,14 @@ var ClientCount = 10
 func TestBroadcasterLoad(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := Settings{
-		Addr:                    ":9942",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	broadcasterSettings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9942",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)

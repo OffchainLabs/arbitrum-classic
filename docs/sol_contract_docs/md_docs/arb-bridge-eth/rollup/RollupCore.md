@@ -1,5 +1,6 @@
 ---
 title: RollupCore.sol Spec
+id: RollupCore
 ---
 
 ### `getNode(uint256 nodeNum) → contract INode` (public)

@@ -1,5 +1,6 @@
 ---
 title: ChallengeFactory.sol Spec
+id: ChallengeFactory
 ---
 
 ### `constructor(contract IOneStepProof[] _executors)` (public)
