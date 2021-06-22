@@ -128,6 +128,8 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 	}
 }
 
+const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
+
 func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	done := make(chan bool)
 
@@ -154,15 +156,24 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 		}
 	}
 
+	recentFeedItems := make(map[common.Hash]time.Time)
 	go func() {
 		defer func() {
 			done <- true
 		}()
+		recentFeedItemsCleanup := time.NewTicker(RECENT_FEED_ITEM_TTL)
 		for {
 			select {
 			case <-ctx.Done():
+				recentFeedItemsCleanup.Stop()
 				return
 			case msg := <-messages:
+				newAcc := msg.FeedItem.BatchItem.Accumulator
+				if recentFeedItems[newAcc] == (time.Time{}) {
+					recentFeedItems[newAcc] = time.Now()
+				} else {
+					continue
+				}
 				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
 				if err != nil {
 					logger.
@@ -174,6 +185,14 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 				}
 			case ca := <-ar.confirmedAccumulatorChan:
 				ar.broadcaster.ConfirmedAccumulator(ca)
+			case <-recentFeedItemsCleanup.C:
+				// Clear expired items from recentFeedItems
+				recentFeedItemExpiry := time.Now().Add(-RECENT_FEED_ITEM_TTL)
+				for acc, created := range recentFeedItems {
+					if created.Before(recentFeedItemExpiry) {
+						delete(recentFeedItems, acc)
+					}
+				}
 			}
 		}
 	}()
