@@ -651,9 +651,11 @@ export class Bridge {
     gatewayAddresses: string[]
   ) {
     const gasPriceBid = await this.l2Bridge.l2Provider.getGasPrice()
+
     const maxSubmissionPrice = (
       await this.l2Bridge.getTxnSubmissionPrice(
-        300 + 20 * (tokenAddresses.length + gatewayAddresses.length)
+        // 20 per address, 100 as buffer/ estimate for any additional calldata
+        100 + 20 * (tokenAddresses.length + gatewayAddresses.length)
       )
     )[0]
     return this.l1GatewayRouter.functions.setGateways(
