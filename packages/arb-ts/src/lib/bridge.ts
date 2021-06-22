@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, ethers, ContractReceipt } from 'ethers'
+import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 import { BridgeHelper } from './bridge_helpers'
@@ -191,6 +191,11 @@ export class Bridge {
     destinationAddress?: string,
     overrides?: PayableOverrides
   ) {
+    const l1ChainId = await this.l1Bridge.l1Signer.getChainId()
+    const { l1WethGateway: l1WethGatewayAddress } = networks[
+      l1ChainId
+    ].tokenBridge
+
     const gasPriceBid =
       retryableGasArgs.gasPriceBid ||
       (await this.l2Bridge.l2Provider.getGasPrice())
@@ -200,6 +205,14 @@ export class Bridge {
     const expectedL1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
     )
+
+    let estimateGasCallValue = constants.Zero
+
+    if (l1WethGatewayAddress === expectedL1GatewayAddress) {
+      // forwarded deposited eth as call value for weth deposit
+      estimateGasCallValue = amount
+    }
+
     const l1Gateway = L1ERC20Gateway__factory.connect(
       expectedL1GatewayAddress,
       this.l1Bridge.l1Provider
@@ -232,9 +245,9 @@ export class Bridge {
     const maxGas = (
       await nodeInterface.estimateRetryableTicket(
         expectedL1GatewayAddress,
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.05').add(estimateGasCallValue),
         l2Dest,
-        0,
+        estimateGasCallValue,
         maxSubmissionPrice,
         sender,
         sender,
