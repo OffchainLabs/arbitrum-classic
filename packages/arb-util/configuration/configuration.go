@@ -27,7 +27,7 @@ var logger = log.With().Caller().Stack().Str("component", "configuration").Logge
 
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
-	URL     string        `koanf:"url"`
+	URLs    string        `koanf:"urls"`
 }
 
 type FeedOutput struct {
