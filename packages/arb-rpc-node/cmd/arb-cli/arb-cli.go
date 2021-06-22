@@ -357,13 +357,7 @@ func disableL1Whitelist(inbox ethcommon.Address) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Waiting for receipt for", tx.Hash())
-	_, err = ethbridge.WaitForReceiptWithResults(context.Background(), config.client, config.auth.From, tx, "UpdateWhitelistConsumers")
-	if err != nil {
-		return err
-	}
-	fmt.Println("Transaction completed successfully")
-	return nil
+	return waitForTx(tx, "UpdateWhitelistConsumers")
 }
 
 func deposit(inboxAddress ethcommon.Address, value *big.Int, submissionPrice *big.Int) error {
