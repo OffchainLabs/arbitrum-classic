@@ -29,13 +29,14 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type BatcherMode interface {
@@ -81,7 +82,7 @@ func SetupBatcher(
 	maxBatchTime time.Duration,
 	batcherMode BatcherMode,
 	dataSigner func([]byte) ([]byte, error),
-	broadcasterSettings broadcaster.Settings,
+	broadcasterSettings configuration.FeedOutput,
 	gasPriceUrl string,
 ) (batcher.TransactionBatcher, error) {
 	switch batcherMode := batcherMode.(type) {

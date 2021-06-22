@@ -1,5 +1,6 @@
 ---
 title: Challenge.sol Spec
+id: Challenge
 ---
 
 ### `onlyOnTurn()`

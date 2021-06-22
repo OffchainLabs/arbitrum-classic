@@ -1,5 +1,6 @@
 ---
 title: ArbRetryableTx.sol Spec
+id: ArbRetryableTx
 ---
 
 precompiled contract in every Arbitrum chain for retryable transaction related data retrieval and interactions. Exists at 0x000000000000000000000000000000000000006E

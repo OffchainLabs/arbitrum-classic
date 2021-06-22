@@ -33,8 +33,8 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -80,28 +80,30 @@ func (d *DeliveredInboxMessage) Block() *common.BlockId {
 }
 
 type RollupWatcher struct {
-	con     *ethbridgecontracts.RollupUserFacet
-	address ethcommon.Address
-	client  ethutils.EthClient
+	con       *ethbridgecontracts.RollupUserFacet
+	address   ethcommon.Address
+	fromBlock int64
+	client    ethutils.EthClient
 }
 
-func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*RollupWatcher, error) {
+func NewRollupWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient) (*RollupWatcher, error) {
 	con, err := ethbridgecontracts.NewRollupUserFacet(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &RollupWatcher{
-		con:     con,
-		address: address,
-		client:  client,
+		con:       con,
+		address:   address,
+		fromBlock: fromBlock,
+		client:    client,
 	}, nil
 }
 
 func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupUserFacetRollupCreated, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
@@ -125,7 +127,7 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	copy(numberAsHash[:], math.U256Bytes(number))
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {numberAsHash}},
@@ -207,7 +209,7 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{challengeCreatedID}, {addressQuery}},

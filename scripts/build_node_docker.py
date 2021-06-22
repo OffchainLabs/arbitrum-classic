@@ -43,29 +43,29 @@ def bootstrap_build_cache(name, sudo_flag):
         run("rm -rf .tmp")
 
 
-def build_validator(sudo_flag=False):
-    validator_root = os.path.abspath(os.path.join(ROOT_DIR, "packages"))
+def build_node(sudo_flag=False):
+    node_root = os.path.abspath(os.path.join(ROOT_DIR, "packages"))
     bootstrap_build_cache("arb-avm-cpp", sudo_flag)
-    bootstrap_build_cache("arb-validator", sudo_flag)
+    bootstrap_build_cache("arb-node", sudo_flag)
 
     run("git -C %s submodule update --init --recursive" % ROOT_DIR)
 
     return run(
-        "docker build -t arb-validator -f %s/arb-validator.Dockerfile %s"
-        % (validator_root, validator_root),
+        "docker build -t arb-node -f %s/arb-node.Dockerfile %s"
+        % (node_root, node_root),
         sudo=sudo_flag,
     )
 
 
 def is_built(sudo_flag=False):
     layer = run(
-        "docker create arb-validator", capture_stdout=True, quiet=True, sudo=sudo_flag
+        "docker create arb-node", capture_stdout=True, quiet=True, sudo=sudo_flag
     ).strip()
     return layer != ""
 
 
 if __name__ == "__main__":
     try:
-        build_validator()
+        build_node()
     except KeyboardInterrupt:
         exit(1)

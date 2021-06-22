@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"sync"
 	"testing"
 	"time"
@@ -31,13 +32,14 @@ func TestRelayRebroadcasts(t *testing.T) {
 	ctx := context.Background()
 
 	// Start up an Arbitrum sequencer broadcaster
-	broadcasterSettings := broadcaster.Settings{
-		Addr:                    ":9742",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	broadcasterSettings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9742",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	bc := broadcaster.NewBroadcaster(broadcasterSettings)
@@ -48,18 +50,25 @@ func TestRelayRebroadcasts(t *testing.T) {
 	}
 	defer bc.Stop()
 
-	relaySettings := broadcaster.Settings{
-		Addr:                    ":7429",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	relaySettings := configuration.Feed{
+		Input: configuration.FeedInput{
+			Timeout: 20 * time.Second,
+			URL:     "ws://127.0.0.1:9742",
+		},
+		Output: configuration.FeedOutput{
+			Addr:          "0.0.0.0",
+			IOTimeout:     2 * time.Second,
+			Port:          "7429",
+			Ping:          5 * time.Second,
+			ClientTimeout: 15 * time.Second,
+			Queue:         1,
+			Workers:       128,
+		},
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay("ws://127.0.0.1:9742/", relaySettings)
-	_, err = arbRelay.Start(ctx, false)
+	arbRelay := NewArbRelay(relaySettings)
+	_, err = arbRelay.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
