@@ -143,13 +143,13 @@ func startup() error {
 	nodehealth.Init(healthChan)
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
-	if !config.Node.Sequencer.Enable {
-		if config.Feed.Input.URL == "" {
-			logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
-		} else {
-			broadcastClient := broadcastclient.NewBroadcastClient(config.Feed.Input.URL, nil, config.Feed.Input.Timeout)
+	if len(config.Feed.Input.URLs) == 0 {
+		logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
+	} else {
+		for _, url := range config.Feed.Input.URLs {
+			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
 			for {
-				sequencerFeed, err = broadcastClient.Connect(ctx)
+				err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
 				if err == nil {
 					break
 				}
@@ -256,8 +256,9 @@ func startup() error {
 			config.Feed.Output,
 			config.GasPriceUrl,
 		)
-		if err == nil && config.Node.Sequencer.Lockout.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch, mon.Core, inboxReader, config.Node.Sequencer.Lockout.Redis, config.Node.Sequencer.Lockout.OwnRPCURL, errChan)
+		lockoutConf := config.Node.Sequencer.Lockout
+		if err == nil && lockoutConf.Redis != "" {
+			batch, err = rpc.SetupLockout(ctx, batch, mon.Core, inboxReader, lockoutConf.Redis, lockoutConf.OwnRPCURL, errChan)
 		}
 		if err == nil {
 			go batch.Start(ctx)

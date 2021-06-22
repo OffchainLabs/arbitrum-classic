@@ -27,7 +27,7 @@ var logger = log.With().Caller().Stack().Str("component", "configuration").Logge
 
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
-	URLs    string        `koanf:"urls"`
+	URLs    []string      `koanf:"urls"`
 }
 
 type FeedOutput struct {
@@ -208,7 +208,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-				"feed.input.url":                   "wss://arb1.arbitrum.io/feed",
+				"feed.input.urls":                  []string{"wss://arb1.arbitrum.io/feed"},
 				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
 				"persistent.chain":                 "mainnet",
 				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
@@ -226,7 +226,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-				"feed.input.url":                   "wss://rinkeby.arbitrum.io/feed",
+				"feed.input.urls":                  []string{"wss://rinkeby.arbitrum.io/feed"},
 				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
 				"persistent.chain":                 "rinkeby",
 				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
@@ -332,7 +332,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("dump-conf", false, "print out currently active configuration file")
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
-	f.String("feed.input.url", "", "URL of sequencer feed source")
+	f.StringSlice("feed.input.urls", []string{}, "URL of sequencer feed source")
 	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
 	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
 	f.String("feed.output.port", "9642", "port to bind the relay feed output to")

@@ -90,10 +90,6 @@ func startup() error {
 
 	defer logger.Info().Msg("Cleanly shutting down relay")
 
-	if config.Feed.Input.URLs == "" {
-		return errors.New("Missing --feed.input.url")
-	}
-
 	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
@@ -118,10 +114,9 @@ func startup() error {
 }
 
 func NewArbRelay(settings configuration.Feed) *ArbRelay {
-	urls := strings.Split(settings.Input.URLs, ",")
-	broadcastClients := make([]*broadcastclient.BroadcastClient, 0, len(urls))
+	var broadcastClients []*broadcastclient.BroadcastClient
 	confirmedAccumulatorChan := make(chan common.Hash, 1)
-	for _, address := range urls {
+	for _, address := range settings.Input.URLs {
 		client := broadcastclient.NewBroadcastClient(address, nil, 20*time.Second)
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
