@@ -36,6 +36,7 @@
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
     "@types/promise-poller": "^1.7.0",
+    "@uniswap/token-lists": "^1.0.0-beta.24",
     "ethers": "^5.0.24"
   },
   "resolutions": {
