@@ -37,6 +37,7 @@ export const testRetryableTicket = async (
   prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
   const autoRedeemReceipt = await bridge.l2Bridge.l2Provider.waitForTransaction(
     autoRedeem,
+    undefined,
     1000 * 60
   )
   prettyLog('autoRedeem receipt found!')
