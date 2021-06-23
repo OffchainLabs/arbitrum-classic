@@ -55,6 +55,14 @@ type Healthcheck struct {
 	Sequencer     bool   `koanf:"sequencer"`
 }
 
+type Lockout struct {
+	Redis             string `koanf:"redis"`
+	SelfRPCURL        string `koanf:"self-rpc-url"`
+	TimeoutMillis     int64  `koanf:"timeout-millis"`
+	MaxLatencyMillis  int64  `koanf:"max-latency-millis"`
+	SeqNumTimeoutSecs int64  `koanf:"seq-num-timeout-secs"`
+}
+
 type Node struct {
 	Aggregator struct {
 		InboxAddress string `koanf:"inbox-address"`
@@ -69,13 +77,10 @@ type Node struct {
 		Port string `koanf:"port"`
 	} `koanf:"rpc"`
 	Sequencer struct {
-		CreateBatchBlockInterval   int64 `koanf:"create-batch-block-interval"`
-		DelayedMessagesTargetDelay int64 `koanf:"delayed-messages-target-delay"`
-		Enable                     bool  `koanf:"enable"`
-		Lockout                    struct {
-			Redis      string `koanf:"redis"`
-			SelfRPCURL string `koanf:"self-rpc-url"`
-		} `koanf:"lockout"`
+		CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
+		DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
+		Enable                     bool    `koanf:"enable"`
+		Lockout                    Lockout `koanf:"lockout"`
 	} `koanf:"sequencer"`
 	WS struct {
 		Addr string `koanf:"addr"`

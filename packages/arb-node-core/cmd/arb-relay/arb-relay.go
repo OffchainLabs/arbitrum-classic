@@ -169,11 +169,10 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 				return
 			case msg := <-messages:
 				newAcc := msg.FeedItem.BatchItem.Accumulator
-				if recentFeedItems[newAcc] == (time.Time{}) {
-					recentFeedItems[newAcc] = time.Now()
-				} else {
+				if recentFeedItems[newAcc] != (time.Time{}) {
 					continue
 				}
+				recentFeedItems[newAcc] = time.Now()
 				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
 				if err != nil {
 					logger.

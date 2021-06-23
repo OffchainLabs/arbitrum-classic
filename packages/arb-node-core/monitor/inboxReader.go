@@ -362,11 +362,10 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 				return nil
 			case broadcastItem := <-ir.BroadcastFeed:
 				newAcc := broadcastItem.FeedItem.BatchItem.Accumulator
-				if ir.recentFeedItems[newAcc] == (time.Time{}) {
-					ir.recentFeedItems[newAcc] = time.Now()
-				} else {
+				if ir.recentFeedItems[newAcc] != (time.Time{}) {
 					continue
 				}
+				ir.recentFeedItems[newAcc] = time.Now()
 				logger.Debug().Str("prevAcc", broadcastItem.FeedItem.PrevAcc.String()).Str("acc", newAcc.String()).Msg("received broadcast feed item")
 				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
 				feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc

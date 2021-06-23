@@ -33,6 +33,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
@@ -45,11 +46,8 @@ type LockoutBatcher struct {
 	core             core.ArbOutputLookup
 	inboxReader      *monitor.InboxReader
 	redis            *lockoutRedis
-	rpcURL           string
 	errChan          chan error
-
-	livelinessTimeout time.Duration
-	lockoutTimeout    time.Duration
+	config           configuration.Lockout
 
 	lockoutExpiresAt    time.Time
 	livelinessExpiresAt time.Time
@@ -63,11 +61,10 @@ func SetupLockout(
 	seqBatcher *batcher.SequencerBatcher,
 	core core.ArbOutputLookup,
 	inboxReader *monitor.InboxReader,
-	redisURL string,
-	rpcURL string,
+	config configuration.Lockout,
 	errChan chan error,
 ) (*LockoutBatcher, error) {
-	redis, err := newLockoutRedis(redisURL)
+	redis, err := newLockoutRedis(config)
 	if err != nil {
 		return nil, err
 	}
@@ -76,14 +73,12 @@ func SetupLockout(
 		currentBatcher: &errorBatcher{
 			err: errors.New("sequencer lockout manager starting up"),
 		},
-		currentSeq:        "[starting up]",
-		core:              core,
-		inboxReader:       inboxReader,
-		livelinessTimeout: time.Second * 30,
-		lockoutTimeout:    time.Second * 30,
-		rpcURL:            rpcURL,
-		redis:             redis,
-		errChan:           errChan,
+		currentSeq:  "[starting up]",
+		core:        core,
+		inboxReader: inboxReader,
+		config:      config,
+		redis:       redis,
+		errChan:     errChan,
 	}
 	newBatcher.sequencerBatcher.LockoutManager = newBatcher
 	go newBatcher.lockoutManager(ctx)
@@ -103,7 +98,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 		}
 		backgroundContext := context.Background()
 		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
-		b.redis.releaseLiveliness(backgroundContext, b.rpcURL, &b.livelinessExpiresAt)
+		b.redis.releaseLiveliness(backgroundContext, &b.livelinessExpiresAt)
 		b.mutex.Unlock()
 		holdingMutex = false
 		logger.Debug().Msg("shut down sequencer lockout manager and released locks")
@@ -121,6 +116,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			})()
 		}
 	})()
+	maxLatency := time.Millisecond * time.Duration(b.config.MaxLatencyMillis)
 	for {
 		alive := true
 		if !b.hasSequencerLockout() {
@@ -138,32 +134,32 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 				alive = false
 				if b.livelinessExpiresAt.After(time.Now()) {
 					logger.Warn().Str("ourSeqNum", currentSeqNum.String()).Str("targetSeqNum", b.lastLockedSeqNum.String()).Msg("fell behind sequencer position")
-					b.redis.releaseLiveliness(ctx, b.rpcURL, &b.livelinessExpiresAt)
+					b.redis.releaseLiveliness(ctx, &b.livelinessExpiresAt)
 				}
 			}
 			b.lastLockedSeqNum = b.redis.getLatestSeqNum(ctx)
 		}
 		if alive {
-			b.redis.acquireOrUpdateLiveliness(ctx, b.rpcURL, b.livelinessTimeout, &b.livelinessExpiresAt)
+			b.redis.acquireOrUpdateLiveliness(ctx, &b.livelinessExpiresAt)
 			if b.livelinessExpiresAt.Before(time.Now()) {
-				logger.Warn().Str("rpc", b.rpcURL).Msg("failed to acquire liveliness lockout, is another sequencer running with this RPC URL?")
+				logger.Warn().Str("rpc", b.config.SelfRPCURL).Msg("failed to acquire liveliness lockout, is another sequencer running with this RPC URL?")
 			}
 		}
 		selectedSeq := b.redis.selectSequencer(ctx)
-		if selectedSeq == b.rpcURL {
+		if selectedSeq == b.config.SelfRPCURL {
 			if !holdingMutex {
 				b.mutex.Lock()
 				holdingMutex = true
 			}
 			if b.livelinessExpiresAt.After(time.Now()) {
-				b.redis.acquireOrUpdateLockout(ctx, b.rpcURL, b.lockoutTimeout, &b.lockoutExpiresAt)
+				b.redis.acquireOrUpdateLockout(ctx, &b.lockoutExpiresAt)
 			}
 			if b.hasSequencerLockout() {
 				if b.currentBatcher != b.sequencerBatcher {
-					logger.Info().Str("rpc", b.rpcURL).Msg("acquired sequencer lockout")
+					logger.Info().Str("rpc", b.config.SelfRPCURL).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
 					b.lastLockedSeqNum = targetSeqNum
-					attemptCatchupUntil := b.lockoutExpiresAt.Add(time.Second * -10)
+					attemptCatchupUntil := b.lockoutExpiresAt.Add(-maxLatency)
 					for {
 						currentSeqNum, err := b.core.GetMessageCount()
 						if err != nil {
@@ -196,7 +192,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 					}
 				}
 				b.currentBatcher = b.sequencerBatcher
-				b.currentSeq = b.rpcURL
+				b.currentSeq = b.config.SelfRPCURL
 				b.mutex.Unlock()
 				holdingMutex = false
 				seqNum, err := b.core.GetMessageCount()
@@ -259,7 +255,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			if b.livelinessExpiresAt.Before(firstLockoutExpiresAt) {
 				firstLockoutExpiresAt = b.livelinessExpiresAt
 			}
-			lockoutRefresh := time.Until(firstLockoutExpiresAt.Add(time.Second * -10))
+			lockoutRefresh := time.Until(firstLockoutExpiresAt.Add(-maxLatency))
 			if lockoutRefresh > refreshDelay {
 				refreshDelay = lockoutRefresh
 			}

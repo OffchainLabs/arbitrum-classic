@@ -23,11 +23,16 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/pkg/errors"
 )
 
 type lockoutRedis struct {
-	client *redis.Client
+	client        *redis.Client
+	rpc           string
+	timeout       time.Duration
+	maxLatency    time.Duration
+	seqNumTimeout time.Duration
 }
 
 const LOCKOUT_KEY string = "lockout.lockout"
@@ -35,16 +40,17 @@ const PRIORITIES_KEY string = "lockout.priorities"
 const LIVELINESS_KEY_PREFIX string = "lockout.liveliness."
 const SEQUENCE_NUMBER_KEY string = "lockout.sequenceNumber"
 
-const LOCKOUT_MARGIN time.Duration = time.Second * 10
-const SEQUENCE_NUMBER_TIMEOUT time.Duration = time.Minute * 5
-
-func newLockoutRedis(url string) (*lockoutRedis, error) {
-	opts, err := redis.ParseURL(url)
+func newLockoutRedis(config configuration.Lockout) (*lockoutRedis, error) {
+	opts, err := redis.ParseURL(config.Redis)
 	if err != nil {
 		return nil, err
 	}
 	return &lockoutRedis{
-		client: redis.NewClient(opts),
+		client:        redis.NewClient(opts),
+		rpc:           config.SelfRPCURL,
+		timeout:       time.Millisecond * time.Duration(config.TimeoutMillis),
+		maxLatency:    time.Millisecond * time.Duration(config.MaxLatencyMillis),
+		seqNumTimeout: time.Second * time.Duration(config.SeqNumTimeoutSecs),
 	}, nil
 }
 
@@ -132,16 +138,16 @@ func (r *lockoutRedis) acquireGenericLockout(ctx context.Context, key string, va
 // This series of methods reads and then possibly modifies hasLockUntil via a pointer.
 // This ensures that the lockout isn't overrun when it is used, and that the new value is updated.
 
-func (r *lockoutRedis) acquireOrUpdateGenericLockout(ctx context.Context, key string, value string, timeout time.Duration, hasLockUntil *time.Time) {
+func (r *lockoutRedis) acquireOrUpdateGenericLockout(ctx context.Context, key string, value string, hasLockUntil *time.Time) {
 	if hasLockUntil.Before(time.Now()) {
-		*hasLockUntil = r.acquireGenericLockout(ctx, key, value, timeout, true)
+		*hasLockUntil = r.acquireGenericLockout(ctx, key, value, r.timeout, true)
 	} else {
 		timedCtx, cancelTimedCtx := context.WithDeadline(ctx, *hasLockUntil)
-		*hasLockUntil = r.acquireGenericLockout(timedCtx, key, value, timeout, false)
+		*hasLockUntil = r.acquireGenericLockout(timedCtx, key, value, r.timeout, false)
 		cancelTimedCtx()
 	}
 	if *hasLockUntil != (time.Time{}) {
-		*hasLockUntil = hasLockUntil.Add(-LOCKOUT_MARGIN)
+		*hasLockUntil = hasLockUntil.Add(-r.maxLatency)
 	}
 }
 
@@ -153,20 +159,20 @@ func (r *lockoutRedis) releaseGenericLockout(parentCtx context.Context, key stri
 	})
 }
 
-func (r *lockoutRedis) acquireOrUpdateLockout(ctx context.Context, rpc string, timeout time.Duration, hasLockUntil *time.Time) {
-	r.acquireOrUpdateGenericLockout(ctx, LOCKOUT_KEY, rpc, timeout, hasLockUntil)
+func (r *lockoutRedis) acquireOrUpdateLockout(ctx context.Context, hasLockUntil *time.Time) {
+	r.acquireOrUpdateGenericLockout(ctx, LOCKOUT_KEY, r.rpc, hasLockUntil)
 }
 
 func (r *lockoutRedis) releaseLockout(ctx context.Context, hasLockUntil *time.Time) {
 	r.releaseGenericLockout(ctx, LOCKOUT_KEY, hasLockUntil)
 }
 
-func (r *lockoutRedis) acquireOrUpdateLiveliness(ctx context.Context, rpc string, timeout time.Duration, hasLockUntil *time.Time) {
-	r.acquireOrUpdateGenericLockout(ctx, LIVELINESS_KEY_PREFIX+rpc, "OK", timeout, hasLockUntil)
+func (r *lockoutRedis) acquireOrUpdateLiveliness(ctx context.Context, hasLockUntil *time.Time) {
+	r.acquireOrUpdateGenericLockout(ctx, LIVELINESS_KEY_PREFIX+r.rpc, "OK", hasLockUntil)
 }
 
-func (r *lockoutRedis) releaseLiveliness(ctx context.Context, rpc string, hasLockUntil *time.Time) {
-	r.releaseGenericLockout(ctx, LIVELINESS_KEY_PREFIX+rpc, hasLockUntil)
+func (r *lockoutRedis) releaseLiveliness(ctx context.Context, hasLockUntil *time.Time) {
+	r.releaseGenericLockout(ctx, LIVELINESS_KEY_PREFIX+r.rpc, hasLockUntil)
 }
 
 func (r *lockoutRedis) getLockout(ctx context.Context) (rpc string) {
@@ -204,6 +210,6 @@ func (r *lockoutRedis) getLatestSeqNum(ctx context.Context) (seqNum *big.Int) {
 
 func (r *lockoutRedis) updateLatestSeqNum(parentCtx context.Context, seqNum *big.Int, hasLockUntil time.Time) {
 	withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
-		return r.client.Set(timedCtx, SEQUENCE_NUMBER_KEY, seqNum.String(), SEQUENCE_NUMBER_TIMEOUT).Err()
+		return r.client.Set(timedCtx, SEQUENCE_NUMBER_KEY, seqNum.String(), r.seqNumTimeout).Err()
 	})
 }

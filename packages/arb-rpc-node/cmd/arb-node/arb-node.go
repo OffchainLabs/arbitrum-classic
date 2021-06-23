@@ -259,7 +259,7 @@ func startup() error {
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
 		if err == nil && lockoutConf.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch.(*batcher.SequencerBatcher), mon.Core, inboxReader, lockoutConf.Redis, lockoutConf.SelfRPCURL, errChan)
+			batch, err = rpc.SetupLockout(ctx, batch.(*batcher.SequencerBatcher), mon.Core, inboxReader, lockoutConf, errChan)
 		}
 		if err == nil {
 			go batch.Start(ctx)
