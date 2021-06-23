@@ -18,6 +18,7 @@
 
 pragma solidity ^0.6.11;
 
+import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../libraries/IWETH9.sol";
@@ -63,6 +64,32 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
                 _gasPriceBid,
                 getOutboundCalldata(_l1Token, _from, _to, _amount, _extraData)
             );
+    }
+
+    function sendTxToL2(
+        address _inbox,
+        address _to,
+        address _user,
+        uint256 _l2CallValue,
+        uint256 _maxSubmissionCost,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes memory _data
+    ) internal virtual override returns (uint256) {
+        // msg.value does not include weth withdrawn from user, we need to add in that amount
+        uint256 seqNum =
+            IInbox(_inbox).createRetryableTicket{ value: msg.value + _l2CallValue }(
+                _to,
+                _l2CallValue,
+                _maxSubmissionCost,
+                _user,
+                _user,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
+        emit TxToL2(_user, _to, seqNum, _data);
+        return seqNum;
     }
 
     function outboundEscrowTransfer(
