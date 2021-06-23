@@ -217,7 +217,7 @@ contract L1WethGatewayTester is L1ArbitrumTestMessenger, L1WethGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes memory _data
-    ) internal virtual override(L1ArbitrumMessenger, L1ArbitrumTestMessenger) returns (uint256) {
+    ) internal virtual override(L1WethGateway, L1ArbitrumTestMessenger) returns (uint256) {
         return
             L1ArbitrumTestMessenger.sendTxToL2(
                 _inbox,

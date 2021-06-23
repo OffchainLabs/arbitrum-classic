@@ -56,6 +56,7 @@ func makeTxCountCall(account common.Address) message.L2Message {
 }
 
 func TestTransactionCount(t *testing.T) {
+	skipBelowVersion(t, 32)
 	randDest := common.RandAddress()
 
 	seqNum := big.NewInt(0)
@@ -103,7 +104,7 @@ func TestTransactionCount(t *testing.T) {
 		Payment:     big.NewInt(10),
 		Data:        []byte{},
 	}
-	resultCodes = append(resultCodes, evm.BadSequenceCode)
+	resultCodes = append(resultCodes, evm.SequenceNumberTooHigh)
 
 	// Insufficient balance
 	tx4 := message.Transaction{
@@ -131,12 +132,12 @@ func TestTransactionCount(t *testing.T) {
 	tx6 := message.Transaction{
 		MaxGas:      big.NewInt(10000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(10000000),
+		SequenceNum: big.NewInt(0),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(300),
 		Data:        generateFib(t, big.NewInt(20)),
 	}
-	resultCodes = append(resultCodes, evm.BadSequenceCode)
+	resultCodes = append(resultCodes, evm.SequenceNumberTooLow)
 
 	// Transaction to contract with insufficient balance
 	tx7 := message.Transaction{
