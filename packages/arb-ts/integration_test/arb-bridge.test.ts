@@ -451,7 +451,9 @@ describe.skip('ERC20', () => {
 
 describe('WETH', async () => {
   const depositWETHAmount = '0.0005'
+  const withdrawWETHAmount = '0.00005'
   const l1WethAddress = '0xc778417E063141139Fce010982780140Aa0cD5Ab'
+
   it('setup: wrap some ether', async () => {
     const l1WETH = AeWETH__factory.connect(
       l1WethAddress,
@@ -478,7 +480,10 @@ describe('WETH', async () => {
   it('deposits WETH', async () => {
     const res = await bridge.deposit(
       l1WethAddress,
-      utils.parseEther(depositWETHAmount)
+      utils.parseEther(depositWETHAmount),
+      {},
+      undefined,
+      { gasLimit: 230000 }
     )
     const rec = await res.wait()
     prettyLog(
@@ -486,6 +491,40 @@ describe('WETH', async () => {
     )
     expect(rec.status).to.equal(1)
     await testRetryableTicket(bridge, rec)
+
+    it('L2 wallet has expected balance after erc20 deposit', async () => {
+      const l2Data = await bridge.getAndUpdateL2TokenData(l1WethAddress)
+
+      const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
+
+      expect(testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount))
+        .to.be.true
+    })
+  })
+
+  it('withdraw WETH succeeds and emits event data', async () => {
+    const withdrawRes = await bridge.withdrawERC20(
+      l1WethAddress,
+      utils.parseEther(withdrawWETHAmount)
+    )
+    const withdrawRec = await withdrawRes.wait()
+    expect(withdrawRec.status).to.equal(1)
+    const withdrawEventData = (
+      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
+    )[0]
+
+    expect(withdrawEventData).to.exist
+    outGoingMessages.push(withdrawEventData)
+  })
+
+  it('balance properly deducted after weth withdraw', async () => {
+    await wait()
+    const l2Data = await bridge.getAndUpdateL2TokenData(l1WethAddress)
+    const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
+    expect(
+      testWalletL2Balance &&
+        testWalletL2Balance.add(withdrawWETHAmount).eq(depositWETHAmount)
+    ).to.be.true
   })
 })
 
