@@ -60,6 +60,11 @@ contract aeWETH is L2GatewayToken, IWETH9 {
         payable(account).transfer(amount);
     }
 
+    function transferToGateway(address _from, uint256 amount) external {
+        require(msg.sender == l2Gateway, "NOT_L2GATEWAY");
+        _transfer(_from, l2Gateway, amount);
+    }
+
     receive() external payable {
         depositTo(msg.sender);
     }

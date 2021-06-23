@@ -19,7 +19,7 @@
 pragma solidity ^0.6.11;
 
 import "./L2ArbitrumGateway.sol";
-import "../../libraries/IWETH9.sol";
+import "../../libraries/IaeWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
@@ -87,8 +87,8 @@ contract L2WethGateway is L2ArbitrumGateway {
     ) internal virtual override {
         // we always want both sides of weth to be fully collateralized
         // so we withdraw and send the ether to be deposited
-        IERC20(_l2TokenAddress).safeTransferFrom(_from, address(this), _amount);
-        IWETH9(_l2TokenAddress).withdraw(_amount);
+        IaeWETH(_l2TokenAddress).transferToGateway(_from, _amount);
+        IaeWETH(_l2TokenAddress).withdraw(_amount);
     }
 
     function inboundEscrowTransfer(
@@ -96,7 +96,7 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _dest,
         uint256 _amount
     ) internal virtual override {
-        IWETH9(_l2TokenAddress).deposit{ value: _amount }();
+        IaeWETH(_l2TokenAddress).deposit{ value: _amount }();
         IERC20(_l2TokenAddress).safeTransfer(_dest, _amount);
     }
 
