@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import (
 var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
 
 type LockoutBatcher struct {
+	// Mutex protects currentBatcher and lockoutExpiresAt
 	mutex            sync.RWMutex
 	sequencerBatcher *batcher.SequencerBatcher
 	core             core.ArbOutputLookup
@@ -59,19 +60,19 @@ type LockoutBatcher struct {
 
 func SetupLockout(
 	ctx context.Context,
-	seqBatcher batcher.TransactionBatcher,
+	seqBatcher *batcher.SequencerBatcher,
 	core core.ArbOutputLookup,
 	inboxReader *monitor.InboxReader,
 	redisURL string,
 	rpcURL string,
 	errChan chan error,
 ) (*LockoutBatcher, error) {
-	redis, err := newLockoutRedis(ctx, redisURL)
+	redis, err := newLockoutRedis(redisURL)
 	if err != nil {
 		return nil, err
 	}
 	newBatcher := &LockoutBatcher{
-		sequencerBatcher: seqBatcher.(*batcher.SequencerBatcher),
+		sequencerBatcher: seqBatcher,
 		currentBatcher: &errorBatcher{
 			err: errors.New("sequencer lockout manager starting up"),
 		},
@@ -100,11 +101,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 		b.currentBatcher = &errorBatcher{
 			err: errors.New("sequencer lockout manager shutting down"),
 		}
-		b.mutex.Unlock()
-		holdingMutex = false
 		backgroundContext := context.Background()
 		b.redis.releaseLockout(backgroundContext, &b.lockoutExpiresAt)
 		b.redis.releaseLiveliness(backgroundContext, b.rpcURL, &b.livelinessExpiresAt)
+		b.mutex.Unlock()
+		holdingMutex = false
 		logger.Debug().Msg("shut down sequencer lockout manager and released locks")
 		select {
 		case <-ctx.Done():
@@ -126,7 +127,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			currentSeqNum, err := b.core.GetMessageCount()
 			if err != nil {
 				logger.Warn().Err(err).Msg("error getting sequence number")
-				time.Sleep(5 * time.Second)
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
 				continue
 			}
 			if b.lastLockedSeqNum == nil || new(big.Int).Add(currentSeqNum, big.NewInt(ACCEPTABLE_SEQ_NUM_GAP)).Cmp(b.lastLockedSeqNum) < 0 {
@@ -163,8 +168,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 						currentSeqNum, err := b.core.GetMessageCount()
 						if err != nil {
 							logger.Warn().Err(err).Msg("error getting sequence number")
-							time.Sleep(5 * time.Second)
-							continue
+							select {
+							case <-ctx.Done():
+								return
+							case <-time.After(5 * time.Second):
+							}
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
 							logger.
@@ -272,7 +280,7 @@ func (b *LockoutBatcher) hasSequencerLockout() bool {
 func (b *LockoutBatcher) ShouldSequence() bool {
 	b.mutex.RLock()
 	defer b.mutex.RUnlock()
-	return b.currentBatcher == b.sequencerBatcher && b.lockoutExpiresAt.After(time.Now())
+	return b.currentBatcher == b.sequencerBatcher && b.hasSequencerLockout()
 }
 
 func (b *LockoutBatcher) getBatcher() batcher.TransactionBatcher {

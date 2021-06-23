@@ -38,7 +38,7 @@ const SEQUENCE_NUMBER_KEY string = "lockout.sequenceNumber"
 const LOCKOUT_MARGIN time.Duration = time.Second * 10
 const SEQUENCE_NUMBER_TIMEOUT time.Duration = time.Minute * 5
 
-func newLockoutRedis(ctx context.Context, url string) (*lockoutRedis, error) {
+func newLockoutRedis(url string) (*lockoutRedis, error) {
 	opts, err := redis.ParseURL(url)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func newLockoutRedis(ctx context.Context, url string) (*lockoutRedis, error) {
 	}, nil
 }
 
-func (r *lockoutRedis) withRetry(ctx context.Context, f func() error) {
+func withRetry(ctx context.Context, f func() error) {
 	backoff := time.Millisecond * 100
 	for {
 		select {
@@ -69,19 +69,19 @@ func (r *lockoutRedis) withRetry(ctx context.Context, f func() error) {
 	}
 }
 
-func (r *lockoutRedis) withTimeout(parentCtx context.Context, timeout time.Time, f func(context.Context) error) {
+func withTimeout(parentCtx context.Context, timeout time.Time, f func(context.Context) error) {
 	if timeout.Before(time.Now()) {
 		return
 	}
 	timedCtx, cancelTimedCtx := context.WithDeadline(parentCtx, timeout)
-	r.withRetry(timedCtx, func() error {
+	withRetry(timedCtx, func() error {
 		return f(timedCtx)
 	})
 	cancelTimedCtx()
 }
 
 func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer string) {
-	r.withRetry(ctx, func() error {
+	withRetry(ctx, func() error {
 		prioritiesString, err := r.client.Get(ctx, PRIORITIES_KEY).Result()
 		if err == redis.Nil {
 			return errors.New("sequencer priorities unset")
@@ -108,7 +108,7 @@ func (r *lockoutRedis) selectSequencer(ctx context.Context) (targetSequencer str
 }
 
 func (r *lockoutRedis) acquireGenericLockout(ctx context.Context, key string, value string, timeout time.Duration, new bool) (hasLockUntil time.Time) {
-	r.withRetry(ctx, func() error {
+	withRetry(ctx, func() error {
 		attemptingLockUntil := time.Now().Add(timeout)
 		var created bool
 		var err error
@@ -129,6 +129,9 @@ func (r *lockoutRedis) acquireGenericLockout(ctx context.Context, key string, va
 	return
 }
 
+// This series of methods reads and then possibly modifies hasLockUntil via a pointer.
+// This ensures that the lockout isn't overrun when it is used, and that the new value is updated.
+
 func (r *lockoutRedis) acquireOrUpdateGenericLockout(ctx context.Context, key string, value string, timeout time.Duration, hasLockUntil *time.Time) {
 	if hasLockUntil.Before(time.Now()) {
 		*hasLockUntil = r.acquireGenericLockout(ctx, key, value, timeout, true)
@@ -145,7 +148,7 @@ func (r *lockoutRedis) acquireOrUpdateGenericLockout(ctx context.Context, key st
 func (r *lockoutRedis) releaseGenericLockout(parentCtx context.Context, key string, hasLockUntil *time.Time) {
 	timeout := *hasLockUntil
 	*hasLockUntil = time.Time{}
-	r.withTimeout(parentCtx, timeout, func(timedCtx context.Context) error {
+	withTimeout(parentCtx, timeout, func(timedCtx context.Context) error {
 		return r.client.Del(timedCtx, key).Err()
 	})
 }
@@ -167,7 +170,7 @@ func (r *lockoutRedis) releaseLiveliness(ctx context.Context, rpc string, hasLoc
 }
 
 func (r *lockoutRedis) getLockout(ctx context.Context) (rpc string) {
-	r.withRetry(ctx, func() error {
+	withRetry(ctx, func() error {
 		var err error
 		rpc, err = r.client.Get(ctx, LOCKOUT_KEY).Result()
 		if err == redis.Nil {
@@ -180,7 +183,7 @@ func (r *lockoutRedis) getLockout(ctx context.Context) (rpc string) {
 }
 
 func (r *lockoutRedis) getLatestSeqNum(ctx context.Context) (seqNum *big.Int) {
-	r.withRetry(ctx, func() error {
+	withRetry(ctx, func() error {
 		seqNumString, err := r.client.Get(ctx, SEQUENCE_NUMBER_KEY).Result()
 		if err == redis.Nil {
 			seqNum = big.NewInt(0)
@@ -200,7 +203,7 @@ func (r *lockoutRedis) getLatestSeqNum(ctx context.Context) (seqNum *big.Int) {
 }
 
 func (r *lockoutRedis) updateLatestSeqNum(parentCtx context.Context, seqNum *big.Int, hasLockUntil time.Time) {
-	r.withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
+	withTimeout(parentCtx, hasLockUntil, func(timedCtx context.Context) error {
 		return r.client.Set(timedCtx, SEQUENCE_NUMBER_KEY, seqNum.String(), SEQUENCE_NUMBER_TIMEOUT).Err()
 	})
 }

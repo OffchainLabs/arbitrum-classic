@@ -85,7 +85,7 @@ func startup() error {
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		(!config.Node.Sequencer.Enable && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
-		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.OwnRPCURL) == 0)) {
+		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.SelfRPCURL) == 0)) {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
 		fmt.Printf("          or:       sequencer: arb-node --persistent.chain=<path> --l1.url=<L1 RPC> --node.sequencer.enable [optional arguments] %s\n", cmdhelp.WalletArgsString)
@@ -146,7 +146,7 @@ func startup() error {
 	if len(config.Feed.Input.URLs) == 0 {
 		logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
 	} else {
-		sequencerFeed := make(chan broadcaster.BroadcastFeedMessage, 1)
+		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 1)
 		for _, url := range config.Feed.Input.URLs {
 			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
 			for {
@@ -259,7 +259,7 @@ func startup() error {
 		)
 		lockoutConf := config.Node.Sequencer.Lockout
 		if err == nil && lockoutConf.Redis != "" {
-			batch, err = rpc.SetupLockout(ctx, batch, mon.Core, inboxReader, lockoutConf.Redis, lockoutConf.OwnRPCURL, errChan)
+			batch, err = rpc.SetupLockout(ctx, batch.(*batcher.SequencerBatcher), mon.Core, inboxReader, lockoutConf.Redis, lockoutConf.SelfRPCURL, errChan)
 		}
 		if err == nil {
 			go batch.Start(ctx)

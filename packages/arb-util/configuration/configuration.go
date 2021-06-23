@@ -73,8 +73,8 @@ type Node struct {
 		DelayedMessagesTargetDelay int64 `koanf:"delayed-messages-target-delay"`
 		Enable                     bool  `koanf:"enable"`
 		Lockout                    struct {
-			Redis     string `koanf:"redis"`
-			OwnRPCURL string `koanf:"own-rpc-url"`
+			Redis      string `koanf:"redis"`
+			SelfRPCURL string `koanf:"self-rpc-url"`
 		} `koanf:"lockout"`
 	} `koanf:"sequencer"`
 	WS struct {
@@ -154,7 +154,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.Bool("node.sequencer.enable", false, "act as sequencer")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
-	f.String("node.sequencer.lockout.own-rpc-url", "", "own RPC URL for other sequencers to failover to")
+	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.String("node.ws.port", "8548", "websocket port")
 

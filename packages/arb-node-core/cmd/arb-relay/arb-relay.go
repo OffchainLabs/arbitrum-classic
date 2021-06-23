@@ -117,7 +117,7 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 	var broadcastClients []*broadcastclient.BroadcastClient
 	confirmedAccumulatorChan := make(chan common.Hash, 1)
 	for _, address := range settings.Input.URLs {
-		client := broadcastclient.NewBroadcastClient(address, nil, 20*time.Second)
+		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout)
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
 	}
@@ -162,10 +162,10 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 			done <- true
 		}()
 		recentFeedItemsCleanup := time.NewTicker(RECENT_FEED_ITEM_TTL)
+		defer recentFeedItemsCleanup.Stop()
 		for {
 			select {
 			case <-ctx.Done():
-				recentFeedItemsCleanup.Stop()
 				return
 			case msg := <-messages:
 				newAcc := msg.FeedItem.BatchItem.Accumulator
