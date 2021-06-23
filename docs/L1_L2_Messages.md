@@ -26,17 +26,17 @@ Retryable tickets are the Arbitrum protocol’s canonical method for passing gen
 
 Retryable tickets are designed to gracefully handle various potentially tricky aspects of cross-chain messaging:
 
-- **Overpaying for L2 Gas**: An L1 contract has to supply gas for the L2 transaction’s execution; if the L1 side overpays, this begets the questions of what to do with this excess Ether.
+- **Overpaying for L2 Gas:** An L1 contract has to supply gas for the L2 transaction’s execution; if the L1 side overpays, this begets the questions of what to do with this excess Ether.
 
-- **L2 transaction reversion** — breaking atomicity: It is vital for many use-cases of L1 to L2 transactions that the state updates on both layers are atomic, i.e., if the L1 side succeeds, there is assurance that the L2 will eventually succeed as well. The canonical example here is a token deposit: on L1, tokens are escrowed in some contract, and a message is sent to L2 to mint some corresponding tokens. If the L1 side succeeds and the L2 reverts, the user has simply lost their tokens (i.e., donated them to the bridge contract).
+- **L2 transaction reversion — breaking atomicity:** It is vital for many use-cases of L1 to L2 transactions that the state updates on both layers are atomic, i.e., if the L1 side succeeds, there is assurance that the L2 will eventually succeed as well. The canonical example here is a token deposit: on L1, tokens are escrowed in some contract, and a message is sent to L2 to mint some corresponding tokens. If the L1 side succeeds and the L2 reverts, the user has simply lost their tokens (i.e., donated them to the bridge contract).
 
-- **L2 transaction reversion** — handling L2 callvalue: The L1 side must supply the Ether for the callvalue of the L2 transaction (by depositing it); if the L2 transaction reverts, this begets the questions of what to do with this in-limbo Ether.
+- **L2 transaction reversion — handling L2 callvalue:** The L1 side must supply the Ether for the callvalue of the L2 transaction (by depositing it); if the L2 transaction reverts, this begets the questions of what to do with this in-limbo Ether.
 
 Retryable tickets handle all these things (and handle them well!)
 
 ### Transaction Types / Terminology
 
-| Txn Type           | Description                                                                                                                                           | Lifecycle                                                                                                                      | Tx ID                                                                  |
+| Txn Type           | Description                                                                                                                                           | Appearance                                                                                                                     | Tx ID                                                                  |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- | --- | --- | --- |
 | Retryable Ticket   | Quasi-transaction that sits in the retry buffer and has a lifetime over which it can be executed, i.e., “redeemed.”                                   | Emitted when message is included; will succeed if user supplies sufficient ETH to cover base-fee + callvalue, otherwise fails. | _keccak256(zeroPad(l2ChainId), zeroPad(bitFlipedinboxSequenceNumber))_ |
 | Redemption Txn     | Transaction that results a retryable ticket being successfully redeemed; looks like a normal L2 transaction.                                          | Emitted after a retryable ticket is successfully redeemed, either user-initiated or via an auto-redeem.                        | _keccak256(zeroPad(retryable-ticket-id), 0)_                           |
@@ -46,9 +46,8 @@ Retryable tickets handle all these things (and handle them well!)
 
 There are a total of 10 parameters that the L1 must pass to the L2 when creating a retryable ticket.
 
-5 of them have to do with ETH/Gas; we’ll start with those:
+5 of them have to do with allocating ETH/Gas:
 
-Eth/Gas Related Parameters:
 **DepositValue:** Total ETH deposited from L1 to L2.
 **CallValue:** Call-value for L2 transaction.
 **GasPrice:** L2 Gas price bid for immediate L2 execution attempt (queryable via standard eth*gasPrice RPC)
@@ -75,8 +74,8 @@ When a retryable ticket is initiated from the L1, the following things take plac
 - Submission fee is collected: submission fee is deducted from the sender’s L2 account; MaxSubmissionCost - submission fee is credited to Credit-Back Address.
 
 - Callvalue is deducted from sender’s L2 account and a Retryable Ticket is successfully created.
-  If the sender has insufficient funds to cover the callvalue (even after the DepositValue has been credited), the Retryable Ticket fails.
-  If MaxGas and MaxPrice are both > 0, an immediate redemption will be attempted:
+  - If the sender has insufficient funds to cover the callvalue (even after the DepositValue has been credited), the Retryable Ticket fails.
+- If MaxGas and MaxPrice are both > 0, an immediate redemption will be attempted:
 
 - MaxGas x MaxPrice is credited to the Credit-Back Address.
 - The retryable ticket is automatically executed —i.e., the transaction encoded in Calldata with Callvalue — with gas provided by the Credit-Back Address.
@@ -313,5 +312,3 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
 Note that convenience methods for the steps outlined here are provided in the [arb-ts](https://arb-ts-docs.netlify.app/) client side library.
 
 For relevant example usage, see [integration tests](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-ts/integration_test/arb-bridge.test.ts.md) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
-
-TODO: execution market?
