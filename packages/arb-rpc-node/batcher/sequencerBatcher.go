@@ -741,49 +741,29 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			b.inboxReader.MessageDeliveryMutex.Unlock()
 		}
 		if creatingBatch || firstBoot {
-			// The outer loop starts from scratch and will only re-run if there's an error.
-		CreateBatchOuterLoop:
-			for {
-				prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
-				if err != nil {
-					logger.Error().Err(err).Msg("error getting on-chain message count")
-					continue
-				}
-				// Gets the nonce at the latest block's state, *not* the pending state
-				nonceInt, err := b.client.NonceAt(ctx, b.sequencer.ToEthAddress(), nil)
-				if err != nil {
-					logger.Error().Err(err).Msg("error getting latest sequencer nonce")
-					continue
-				}
-				nonce := new(big.Int).SetUint64(nonceInt)
-				// The inner loop continues from the previous state and will only re-run
-				// if there's no error but publishing is not yet complete.
-				for {
-					// Updates both prevMsgCount and nonce on success
-					complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
-					if err == nil {
-						if complete {
-							// We're done, exit entirely from the outer loop
-							time.Sleep(10 * b.chainTimeCheckInterval)
-							break CreateBatchOuterLoop
-						} else {
-							// This publishing was successful but incomplete,
-							// continue the inner loop from this new state
-							time.Sleep(time.Second)
-						}
-					} else {
-						// There was an error, go back to the start of the outer loop to retry with a fresh state
-						logger.Error().Err(err).Msg("Error creating batch")
-						time.Sleep(1 * time.Minute)
-						// Don't prevent the publishing of potential reorg'd messages with a new timestamp
-						dontPublishBlockNum = nil
-						continue CreateBatchOuterLoop
-					}
-				}
-				// Code here should never be executed, as we should've either
-				// continued or broken out of the outer loop.
+			prevMsgCount, err := b.sequencerInbox.MessageCount(&bind.CallOpts{Context: ctx})
+			if err != nil {
+				logger.Error().Err(err).Msg("error getting on-chain message count")
+				continue
 			}
-			b.lastCreatedBatchAt = blockNum
+			// Gets the nonce at the latest block's state, *not* the pending state
+			nonceInt, err := b.client.NonceAt(ctx, b.sequencer.ToEthAddress(), nil)
+			if err != nil {
+				logger.Error().Err(err).Msg("error getting latest sequencer nonce")
+				continue
+			}
+			nonce := new(big.Int).SetUint64(nonceInt)
+			// Updates both prevMsgCount and nonce on success
+			complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
+			if err != nil {
+				logger.Error().Err(err).Msg("Error creating batch")
+			} else if complete {
+				b.lastCreatedBatchAt = blockNum
+			} else {
+				// Schedule another run in 5 minutes
+				b.lastCreatedBatchAt = new(big.Int).Sub(blockNum, b.createBatchBlockInterval)
+				b.lastCreatedBatchAt.Add(b.lastCreatedBatchAt, big.NewInt(20))
+			}
 		}
 		firstBoot = false
 	}
