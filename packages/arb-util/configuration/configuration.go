@@ -6,6 +6,7 @@ import (
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/mitchellh/mapstructure"
@@ -19,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -365,6 +367,14 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 			return nil, errors.Wrap(err, "error loading config file")
 		}
 	}
+
+	// Env var settings override config file
+	k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
+		// FOO__BAR -> foo-bar to handle dash in config names
+		s = strings.Replace(strings.ToLower(
+			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
+		return strings.Replace(s, "_", ".", -1)
+	}), nil)
 
 	// Any settings provided on command line override items in configuration file
 	// Command line parameters will be applied again later
