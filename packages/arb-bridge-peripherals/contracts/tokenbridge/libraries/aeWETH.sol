@@ -40,7 +40,8 @@ contract aeWETH is L2GatewayToken, IWETH9 {
 
     function bridgeBurn(address account, uint256 amount) external virtual override onlyGateway {
         _burn(account, amount);
-        payable(msg.sender).transfer(amount);
+        (bool success, ) = msg.sender.call{ value: amount }("");
+        require(success, "FAIL_TRANSFER");
     }
 
     function deposit() external payable override {
@@ -57,7 +58,8 @@ contract aeWETH is L2GatewayToken, IWETH9 {
 
     function withdrawTo(address account, uint256 amount) public {
         _burn(msg.sender, amount);
-        payable(account).transfer(amount);
+        (bool success, ) = account.call{ value: amount }("");
+        require(success, "FAIL_TRANSFER");
     }
 
     receive() external payable {
