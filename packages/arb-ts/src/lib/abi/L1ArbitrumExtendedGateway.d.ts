@@ -23,22 +23,26 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'gasReserveIfCallRevert()': FunctionFragment
-    'getCurrentDestination(uint256,address)': FunctionFragment
+    'getExternalCall(uint256,address,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'inbox()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'parseInboundData(bytes)': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
-    'router()': FunctionFragment
-    'transferExitAndCall(uint256,address,address,bytes)': FunctionFragment
+    'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -60,8 +64,8 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'getCurrentDestination',
-    values: [BigNumberish, string]
+    functionFragment: 'getExternalCall',
+    values: [BigNumberish, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
@@ -91,12 +95,12 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'redirectedExits',
     values: [BytesLike]
   ): string
-  encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'transferExitAndCall',
-    values: [BigNumberish, string, string, BytesLike]
+    values: [BigNumberish, string, string, BytesLike, BytesLike]
   ): string
 
+  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -118,7 +122,7 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'getCurrentDestination',
+    functionFragment: 'getExternalCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -142,7 +146,6 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'transferExitAndCall',
     data: BytesLike
@@ -153,7 +156,7 @@ interface L1ArbitrumExtendedGatewayInterface extends ethers.utils.Interface {
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
-    'WithdrawRedirected(address,address,uint256,bytes,bool)': EventFragment
+    'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
@@ -177,6 +180,10 @@ export class L1ArbitrumExtendedGateway extends Contract {
   interface: L1ArbitrumExtendedGatewayInterface
 
   functions: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -225,17 +232,19 @@ export class L1ArbitrumExtendedGateway extends Contract {
 
     'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { target: string; data: string }>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { target: string; data: string }>
 
     getOutboundCalldata(
       _l1Token: string,
@@ -314,33 +323,35 @@ export class L1ArbitrumExtendedGateway extends Contract {
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     'redirectedExits(bytes32)'(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
-
-    router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -390,17 +401,19 @@ export class L1ArbitrumExtendedGateway extends Contract {
 
   'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  getCurrentDestination(
+  getExternalCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
+    _initialData: BytesLike,
     overrides?: CallOverrides
-  ): Promise<string>
+  ): Promise<[string, string] & { target: string; data: string }>
 
-  'getCurrentDestination(uint256,address)'(
+  'getExternalCall(uint256,address,bytes)'(
     _exitNum: BigNumberish,
     _initialDestination: string,
+    _initialData: BytesLike,
     overrides?: CallOverrides
-  ): Promise<string>
+  ): Promise<[string, string] & { target: string; data: string }>
 
   getOutboundCalldata(
     _l1Token: string,
@@ -472,34 +485,39 @@ export class L1ArbitrumExtendedGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
 
-  redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
+  redirectedExits(
+    arg0: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
   'redirectedExits(bytes32)'(
     arg0: BytesLike,
     overrides?: CallOverrides
-  ): Promise<string>
-
-  router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
+  ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
   transferExitAndCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
     _newDestination: string,
+    _newData: BytesLike,
     _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'transferExitAndCall(uint256,address,address,bytes)'(
+  'transferExitAndCall(uint256,address,address,bytes,bytes)'(
     _exitNum: BigNumberish,
     _initialDestination: string,
     _newDestination: string,
+    _newData: BytesLike,
     _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   callStatic: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -548,17 +566,19 @@ export class L1ArbitrumExtendedGateway extends Contract {
 
     'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<[string, string] & { target: string; data: string }>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<[string, string] & { target: string; data: string }>
 
     getOutboundCalldata(
       _l1Token: string,
@@ -634,29 +654,30 @@ export class L1ArbitrumExtendedGateway extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
-    redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
+    redirectedExits(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     'redirectedExits(bytes32)'(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
-
-    router(overrides?: CallOverrides): Promise<string>
-
-    'router()'(overrides?: CallOverrides): Promise<string>
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
@@ -700,12 +721,17 @@ export class L1ArbitrumExtendedGateway extends Contract {
       from: string | null,
       to: string | null,
       exitNum: BigNumberish | null,
+      newData: null,
       data: null,
       madeExternalCall: null
     ): EventFilter
   }
 
   estimateGas: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -754,15 +780,17 @@ export class L1ArbitrumExtendedGateway extends Contract {
 
     'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -846,28 +874,30 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
-
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -922,15 +952,17 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1014,22 +1046,20 @@ export class L1ArbitrumExtendedGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>

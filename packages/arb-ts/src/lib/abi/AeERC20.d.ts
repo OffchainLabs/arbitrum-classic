@@ -29,7 +29,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8)': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
@@ -61,10 +60,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
   encodeFunctionData(functionFragment: 'nonces', values: [string]): string
@@ -114,7 +109,6 @@ interface AeERC20Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
@@ -213,20 +207,6 @@ export class AeERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -375,20 +355,6 @@ export class AeERC20 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  initialize(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(string,string,uint8)'(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   name(overrides?: CallOverrides): Promise<string>
 
   'name()'(overrides?: CallOverrides): Promise<string>
@@ -533,20 +499,6 @@ export class AeERC20 extends Contract {
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     name(overrides?: CallOverrides): Promise<string>
 
@@ -709,20 +661,6 @@ export class AeERC20 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     name(overrides?: CallOverrides): Promise<BigNumber>
 
     'name()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -871,20 +809,6 @@ export class AeERC20 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

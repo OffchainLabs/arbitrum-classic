@@ -22,11 +22,16 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ArbosTestInterface extends ethers.utils.Interface {
   functions: {
+    'burnArbGas(uint256)': FunctionFragment
     'getAccountInfo(address)': FunctionFragment
     'getMarshalledStorage(address)': FunctionFragment
     'installAccount(address,bool,uint256,uint256,bytes,bytes)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'burnArbGas',
+    values: [BigNumberish]
+  ): string
   encodeFunctionData(
     functionFragment: 'getAccountInfo',
     values: [string]
@@ -40,6 +45,7 @@ interface ArbosTestInterface extends ethers.utils.Interface {
     values: [string, boolean, BigNumberish, BigNumberish, BytesLike, BytesLike]
   ): string
 
+  decodeFunctionResult(functionFragment: 'burnArbGas', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'getAccountInfo',
     data: BytesLike
@@ -70,6 +76,16 @@ export class ArbosTest extends Contract {
   interface: ArbosTestInterface
 
   functions: {
+    burnArbGas(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[void]>
+
+    'burnArbGas(uint256)'(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<[void]>
+
     getAccountInfo(addr: string, overrides?: CallOverrides): Promise<[void]>
 
     'getAccountInfo(address)'(
@@ -108,6 +124,13 @@ export class ArbosTest extends Contract {
     ): Promise<ContractTransaction>
   }
 
+  burnArbGas(gasAmount: BigNumberish, overrides?: CallOverrides): Promise<void>
+
+  'burnArbGas(uint256)'(
+    gasAmount: BigNumberish,
+    overrides?: CallOverrides
+  ): Promise<void>
+
   getAccountInfo(addr: string, overrides?: CallOverrides): Promise<void>
 
   'getAccountInfo(address)'(
@@ -143,6 +166,16 @@ export class ArbosTest extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    burnArbGas(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'burnArbGas(uint256)'(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     getAccountInfo(addr: string, overrides?: CallOverrides): Promise<void>
 
     'getAccountInfo(address)'(
@@ -181,6 +214,16 @@ export class ArbosTest extends Contract {
   filters: {}
 
   estimateGas: {
+    burnArbGas(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'burnArbGas(uint256)'(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     getAccountInfo(addr: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'getAccountInfo(address)'(
@@ -220,6 +263,16 @@ export class ArbosTest extends Contract {
   }
 
   populateTransaction: {
+    burnArbGas(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'burnArbGas(uint256)'(
+      gasAmount: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getAccountInfo(
       addr: string,
       overrides?: CallOverrides

@@ -218,7 +218,7 @@ export class StakedLiquidityProvider extends Contract {
       exitNum: BigNumberish,
       liquidityProof: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<string>
 
     'requestLiquidity(address,address,uint256,uint256,bytes)'(
       dest: string,
@@ -227,7 +227,7 @@ export class StakedLiquidityProvider extends Contract {
       exitNum: BigNumberish,
       liquidityProof: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<string>
 
     transferOwnership(
       newOwner: string,

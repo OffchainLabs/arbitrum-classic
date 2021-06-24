@@ -23,13 +23,14 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'forceRegisterTokenToL2(address[],address[],uint256,uint256,uint256)': FunctionFragment
     'gasReserveIfCallRevert()': FunctionFragment
-    'getCurrentDestination(uint256,address)': FunctionFragment
+    'getExternalCall(uint256,address,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'inbox()': FunctionFragment
@@ -40,10 +41,14 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     'parseInboundData(bytes)': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
     'registerTokenToL2(address,uint256,uint256,uint256)': FunctionFragment
-    'router()': FunctionFragment
-    'transferExitAndCall(uint256,address,address,bytes)': FunctionFragment
+    'setInboxUse(bool)': FunctionFragment
+    'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -69,8 +74,8 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'getCurrentDestination',
-    values: [BigNumberish, string]
+    functionFragment: 'getExternalCall',
+    values: [BigNumberish, string, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'getOutboundCalldata',
@@ -110,12 +115,13 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenToL2',
     values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
-  encodeFunctionData(functionFragment: 'router', values?: undefined): string
+  encodeFunctionData(functionFragment: 'setInboxUse', values: [boolean]): string
   encodeFunctionData(
     functionFragment: 'transferExitAndCall',
-    values: [BigNumberish, string, string, BytesLike]
+    values: [BigNumberish, string, string, BytesLike, BytesLike]
   ): string
 
+  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -141,7 +147,7 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'getCurrentDestination',
+    functionFragment: 'getExternalCall',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -172,7 +178,7 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenToL2',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'setInboxUse', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'transferExitAndCall',
     data: BytesLike
@@ -184,7 +190,7 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
-    'WithdrawRedirected(address,address,uint256,bytes,bool)': EventFragment
+    'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
@@ -209,6 +215,10 @@ export class L1CustomGatewayTester extends Contract {
   interface: L1CustomGatewayTesterInterface
 
   functions: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -259,7 +269,7 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'forceRegisterTokenToL2(address[],address[],uint256,uint256,uint256)'(
@@ -268,24 +278,26 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { target: string; data: string }>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { target: string; data: string }>
 
     getOutboundCalldata(
       _l1Token: string,
@@ -391,19 +403,19 @@ export class L1CustomGatewayTester extends Contract {
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     'redirectedExits(bytes32)'(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string]>
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     registerTokenToL2(
       _l2Address: string,
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'registerTokenToL2(address,uint256,uint256,uint256)'(
@@ -411,29 +423,41 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    setInboxUse(
+      _shouldUseInbox: boolean,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -485,7 +509,7 @@ export class L1CustomGatewayTester extends Contract {
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _maxSubmissionCost: BigNumberish,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'forceRegisterTokenToL2(address[],address[],uint256,uint256,uint256)'(
@@ -494,24 +518,26 @@ export class L1CustomGatewayTester extends Contract {
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _maxSubmissionCost: BigNumberish,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
   'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  getCurrentDestination(
+  getExternalCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
+    _initialData: BytesLike,
     overrides?: CallOverrides
-  ): Promise<string>
+  ): Promise<[string, string] & { target: string; data: string }>
 
-  'getCurrentDestination(uint256,address)'(
+  'getExternalCall(uint256,address,bytes)'(
     _exitNum: BigNumberish,
     _initialDestination: string,
+    _initialData: BytesLike,
     overrides?: CallOverrides
-  ): Promise<string>
+  ): Promise<[string, string] & { target: string; data: string }>
 
   getOutboundCalldata(
     _l1Token: string,
@@ -610,19 +636,22 @@ export class L1CustomGatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
 
-  redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
+  redirectedExits(
+    arg0: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
   'redirectedExits(bytes32)'(
     arg0: BytesLike,
     overrides?: CallOverrides
-  ): Promise<string>
+  ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
   registerTokenToL2(
     _l2Address: string,
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _maxSubmissionCost: BigNumberish,
-    overrides?: Overrides
+    overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
   'registerTokenToL2(address,uint256,uint256,uint256)'(
@@ -630,30 +659,42 @@ export class L1CustomGatewayTester extends Contract {
     _maxGas: BigNumberish,
     _gasPriceBid: BigNumberish,
     _maxSubmissionCost: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  setInboxUse(
+    _shouldUseInbox: boolean,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
+  'setInboxUse(bool)'(
+    _shouldUseInbox: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   transferExitAndCall(
     _exitNum: BigNumberish,
     _initialDestination: string,
     _newDestination: string,
+    _newData: BytesLike,
     _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'transferExitAndCall(uint256,address,address,bytes)'(
+  'transferExitAndCall(uint256,address,address,bytes,bytes)'(
     _exitNum: BigNumberish,
     _initialDestination: string,
     _newDestination: string,
+    _newData: BytesLike,
     _data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   callStatic: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -720,17 +761,19 @@ export class L1CustomGatewayTester extends Contract {
 
     'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<[string, string] & { target: string; data: string }>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<[string, string] & { target: string; data: string }>
 
     getOutboundCalldata(
       _l1Token: string,
@@ -833,12 +876,15 @@ export class L1CustomGatewayTester extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
-    redirectedExits(arg0: BytesLike, overrides?: CallOverrides): Promise<string>
+    redirectedExits(
+      arg0: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     'redirectedExits(bytes32)'(
       arg0: BytesLike,
       overrides?: CallOverrides
-    ): Promise<string>
+    ): Promise<[string, string] & { _newTo: string; _newData: string }>
 
     registerTokenToL2(
       _l2Address: string,
@@ -856,22 +902,30 @@ export class L1CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    router(overrides?: CallOverrides): Promise<string>
+    setInboxUse(
+      _shouldUseInbox: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
 
-    'router()'(overrides?: CallOverrides): Promise<string>
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
@@ -917,12 +971,17 @@ export class L1CustomGatewayTester extends Contract {
       from: string | null,
       to: string | null,
       exitNum: BigNumberish | null,
+      newData: null,
       data: null,
       madeExternalCall: null
     ): EventFilter
   }
 
   estimateGas: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -973,7 +1032,7 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'forceRegisterTokenToL2(address[],address[],uint256,uint256,uint256)'(
@@ -982,22 +1041,24 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     gasReserveIfCallRevert(overrides?: CallOverrides): Promise<BigNumber>
 
     'gasReserveIfCallRevert()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
@@ -1113,7 +1174,7 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<BigNumber>
 
     'registerTokenToL2(address,uint256,uint256,uint256)'(
@@ -1121,31 +1182,43 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    setInboxUse(
+      _shouldUseInbox: boolean,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
   }
 
   populateTransaction: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -1198,7 +1271,7 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'forceRegisterTokenToL2(address[],address[],uint256,uint256,uint256)'(
@@ -1207,7 +1280,7 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     gasReserveIfCallRevert(
@@ -1218,15 +1291,17 @@ export class L1CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    getCurrentDestination(
+    getExternalCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'getCurrentDestination(uint256,address)'(
+    'getExternalCall(uint256,address,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
+      _initialData: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -1345,7 +1420,7 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
-      overrides?: Overrides
+      overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'registerTokenToL2(address,uint256,uint256,uint256)'(
@@ -1353,25 +1428,33 @@ export class L1CustomGatewayTester extends Contract {
       _maxGas: BigNumberish,
       _gasPriceBid: BigNumberish,
       _maxSubmissionCost: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    setInboxUse(
+      _shouldUseInbox: boolean,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'transferExitAndCall(uint256,address,address,bytes)'(
+    'transferExitAndCall(uint256,address,address,bytes,bytes)'(
       _exitNum: BigNumberish,
       _initialDestination: string,
       _newDestination: string,
+      _newData: BytesLike,
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>

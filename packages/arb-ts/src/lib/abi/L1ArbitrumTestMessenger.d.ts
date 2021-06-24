@@ -10,13 +10,24 @@ import {
   BigNumberish,
   PopulatedTransaction,
 } from 'ethers'
-import { Contract, ContractTransaction } from '@ethersproject/contracts'
+import {
+  Contract,
+  ContractTransaction,
+  Overrides,
+  CallOverrides,
+} from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
 import { Listener, Provider } from '@ethersproject/providers'
 import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1ArbitrumTestMessengerInterface extends ethers.utils.Interface {
-  functions: {}
+  functions: {
+    'setInboxUse(bool)': FunctionFragment
+  }
+
+  encodeFunctionData(functionFragment: 'setInboxUse', values: [boolean]): string
+
+  decodeFunctionResult(functionFragment: 'setInboxUse', data: BytesLike): Result
 
   events: {
     'TxToL2(address,address,uint256,bytes)': EventFragment
@@ -38,9 +49,39 @@ export class L1ArbitrumTestMessenger extends Contract {
 
   interface: L1ArbitrumTestMessengerInterface
 
-  functions: {}
+  functions: {
+    setInboxUse(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
 
-  callStatic: {}
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+  }
+
+  setInboxUse(
+    _shouldUseInbox: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setInboxUse(bool)'(
+    _shouldUseInbox: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  callStatic: {
+    setInboxUse(
+      _shouldUseInbox: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+  }
 
   filters: {
     TxToL2(
@@ -51,7 +92,27 @@ export class L1ArbitrumTestMessenger extends Contract {
     ): EventFilter
   }
 
-  estimateGas: {}
+  estimateGas: {
+    setInboxUse(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>
 
-  populateTransaction: {}
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+  }
+
+  populateTransaction: {
+    setInboxUse(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setInboxUse(bool)'(
+      _shouldUseInbox: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+  }
 }
