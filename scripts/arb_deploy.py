@@ -33,9 +33,9 @@ DESCRIPTION = "Manage Arbitrum dockerized deployments"
 # filename constants
 DOCKER_COMPOSE_FILENAME = "docker-compose.yml"
 
-### ----------------------------------------------------------------------------
-### docker-compose template
-### ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# docker-compose template
+# ----------------------------------------------------------------------------
 
 # Parameters: number of validators,
 # absolute path to state folder, absolute path to contract
@@ -97,9 +97,9 @@ def compose_validator(
     )
 
 
-### ----------------------------------------------------------------------------
-### Deploy
-### ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# Deploy
+# ----------------------------------------------------------------------------
 
 
 # Compile contracts to `contract.ao` and export to Docker and run validators
@@ -107,7 +107,8 @@ def deploy(sudo_flag, build_flag, up_flag, rollup, password):
     # Stop running Arbitrum containers
     halt_docker(sudo_flag)
 
-    states_path = os.path.abspath(os.path.join("rollups", rollup, "validator%s"))
+    states_path = os.path.abspath(
+        os.path.join("rollups", rollup, "validator%s"))
 
     n_validators = 1
     while True:
@@ -205,9 +206,9 @@ def halt_docker(sudo_flag):
         )
 
 
-### ----------------------------------------------------------------------------
-### Command line interface
-### ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# Command line interface
+# ----------------------------------------------------------------------------
 
 
 def main():
@@ -215,9 +216,11 @@ def main():
 
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
     # Required
-    parser.add_argument("rollup", type=str, help="The address of the rollup chain.")
+    parser.add_argument("rollup", type=str,
+                        help="The address of the rollup chain.")
 
-    parser.add_argument("-p", "--password", help="Password protecting validator keys.")
+    parser.add_argument("-p", "--password",
+                        help="Password protecting validator keys.")
     # Optional
 
     parser.add_argument(

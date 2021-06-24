@@ -26,11 +26,13 @@ async function setupRollup(
   const network = 'local_development'
 
   execSync(
-    `yarn workspace arb-bridge-eth hardhat create-chain --sequencer ${sequencerAddress} --network ${network}`
+    `yarn workspace arb-bridge-eth hardhat create-chain --sequencer ${sequencerAddress} --network ${network}`,
+    {stdio:[0,1,2]}
   )
 
   const fileName = `rollup-${network}.json`
   const file = fs.readFileSync(`../arb-bridge-eth/${fileName}`).toString()
+  console.log(file)
   const ev = JSON.parse(file)
 
   return {
@@ -53,6 +55,7 @@ async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
     waits.push(send.wait())
   }
   await Promise.all(waits)
+  console.log(wallets)
   return wallets
 }
 

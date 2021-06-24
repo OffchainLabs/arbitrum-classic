@@ -12,7 +12,7 @@ COPY --chown=user arb-avm-cpp/external /home/user/arb-avm-cpp/external
 COPY --chown=user arb-avm-cpp/cmake /home/user/arb-avm-cpp/cmake
 # Build arb-avm-cpp
 RUN mkdir -p arb-avm-cpp/build && cd arb-avm-cpp/build && \
-    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 -DENABLE_JEMALLOC=true && \
+    cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=0 -DENABLE_JEMALLOC=true && \
     cmake --build . -j $(nproc)
 
 COPY --chown=user arb-avm-cpp/avm_values /home/user/arb-avm-cpp/avm_values
@@ -36,6 +36,8 @@ RUN cd arb-avm-cpp/build && \
     cmake .. && \
     cmake --build . -j $(nproc)
 
+env GOPROXY https://goproxy.io,direct
+
 FROM offchainlabs/backend-base:0.3.3 as arb-validator-builder
 
 # Build dependencies
@@ -44,16 +46,16 @@ COPY --chown=user arb-util/go.* /home/user/arb-util/
 COPY --chown=user arb-node-core/go.* /home/user/arb-node-core/
 COPY --chown=user arb-rpc-node/go.* /home/user/arb-rpc-node/
 COPY --chown=user arb-evm/go.* /home/user/arb-evm/
-RUN cd arb-rpc-node && go mod download
+RUN cd arb-rpc-node && GOPROXY=https://goproxy.io,direct go mod download
 
 # Copy source code
 COPY --chown=user arb-util/ /home/user/arb-util/
-RUN cd arb-util && go build -v ./...
+RUN cd arb-util && GOPROXY=https://goproxy.io,direct go build -v ./...
 
 COPY --chown=user arb-evm/ /home/user/arb-evm/
-RUN cd arb-evm && go build -v ./...
+RUN cd arb-evm && GOPROXY=https://goproxy.io,direct go build -v ./...
 
-RUN cd arb-node-core && go build -v ./...
+RUN cd arb-node-core && GOPROXY=https://goproxy.io,direct go build -v ./...
 
 COPY --chown=user arb-avm-cpp/ /home/user/arb-avm-cpp/
 COPY --chown=user arb-node-core/ /home/user/arb-node-core/

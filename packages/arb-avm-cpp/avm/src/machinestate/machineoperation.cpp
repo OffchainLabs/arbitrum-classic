@@ -867,6 +867,14 @@ void log(MachineState& m) {
     ++m.pc;
 }
 
+void ecall(MachineState& m) {
+    m.stack.prepForMod(1);
+    // m.addProcessedLog(std::move(m.stack[0]));
+    std::cerr << "[INFO] ecall called: " << m.stack[0] << std::endl;
+    m.stack.popClear();
+    ++m.pc;
+}
+
 void debug(MachineState& m) {
     m.stack.prepForMod(1);
     m.context.debug_prints.push_back(m.stack.pop());

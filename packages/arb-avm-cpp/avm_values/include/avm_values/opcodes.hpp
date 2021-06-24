@@ -89,6 +89,7 @@ enum class OpCode : uint8_t {
 
     BREAKPOINT = 0x60,
     LOG,
+    ECALL,
 
     SEND = 0x70,
     // INBOX_PEEK,
@@ -183,6 +184,7 @@ const std::unordered_map<OpCode, std::string> InstructionNames = {
 
     {OpCode::BREAKPOINT, "breakpoint"},
     {OpCode::LOG, "log"},
+    {OpCode::ECALL, "ecall"},
 
     {OpCode::SEND, "send"},
     {OpCode::INBOX, "inbox"},
@@ -282,6 +284,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
         {OpCode::BREAKPOINT, {}},
         {OpCode::LOG, {MarshalLevel::STUB}},
+        {OpCode::ECALL, {MarshalLevel::STUB}},
 
         {OpCode::SEND, {MarshalLevel::SINGLE, MarshalLevel::SINGLE}},
         {OpCode::INBOX, {}},
@@ -381,6 +384,7 @@ const std::unordered_map<OpCode, std::vector<MarshalLevel>>
 
                                {OpCode::BREAKPOINT, {}},
                                {OpCode::LOG, {}},
+                               {OpCode::ECALL, {}},
 
                                {OpCode::SEND, {}},
                                {OpCode::INBOX, {}},
@@ -469,6 +473,7 @@ const std::unordered_map<OpCode, uint64_t> InstructionArbGasCost = {
 
     {OpCode::BREAKPOINT, 100},
     {OpCode::LOG, 100},
+    {OpCode::ECALL, 1},
 
     {OpCode::SEND, 100},
     {OpCode::INBOX, 40},
