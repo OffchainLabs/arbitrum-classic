@@ -55,6 +55,7 @@ export interface balancesMap {
       blockNumber,
       balances: balancesMap,
       address: tokenAddress,
+      totalSupply: supply,
     })
     writeFileSync(
       `./json_data/${l2Network.chainID}tokenBalances.json`,

@@ -70,6 +70,7 @@ export interface balancesMap {
       blockNumber,
       balances: balancesMap,
       address: WETH_ADDRESS,
+      totalSupply: supply,
     })
     writeFileSync(`./json_data/${l2Network.chainID}wethBalances.json`, listData)
   } else {
