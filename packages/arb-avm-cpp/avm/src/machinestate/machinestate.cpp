@@ -586,6 +586,7 @@ BlockReason MachineState::runOne() {
 }
 
 BlockReason MachineState::runOp(OpCode opcode) {
+    // std::cerr << "Run Op: " << opcode << std::endl;
     switch (opcode) {
             /**************************/
             /*  Arithmetic Operations */
@@ -776,6 +777,9 @@ BlockReason MachineState::runOp(OpCode opcode) {
             return machineoperation::breakpoint(*this);
         case OpCode::LOG:
             machineoperation::log(*this);
+            break;
+        case OpCode::ECALL:
+            machineoperation::ecall(*this);
             break;
         case OpCode::DEBUG_PRINT:
             machineoperation::debug(*this);

@@ -3,6 +3,7 @@
 rm -rf ./dist
 
 tsc
+set -x
 
 skip_list="index.d.ts|"
 for filepath in ./src/lib/abi/*.d.ts; do

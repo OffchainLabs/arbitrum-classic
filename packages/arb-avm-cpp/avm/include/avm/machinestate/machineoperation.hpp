@@ -87,6 +87,7 @@ void ec_pairing(MachineState& m);
 uint64_t ec_pairing_variable_gas_cost(const MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
+void ecall(MachineState& m);
 void debug(MachineState& m);
 void send(MachineState& m);
 BlockReason inboxOp(MachineState& m);

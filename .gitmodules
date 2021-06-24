@@ -18,4 +18,4 @@
 	url = https://github.com/okdshin/PicoSHA2
 [submodule "packages/arb-os"]
 	path = packages/arb-os
-	url = https://github.com/OffchainLabs/arb-os
+	url = https://github.com/ieigen/arb-os

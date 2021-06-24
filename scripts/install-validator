@@ -17,7 +17,7 @@ fi
 
 mkdir -p packages/arb-avm-cpp/${BUILD}
 cd packages/arb-avm-cpp/${BUILD}
-cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
+cmake -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ..
 
 if nproc >/dev/null 2>&1; then
     NPROC=$(nproc)
