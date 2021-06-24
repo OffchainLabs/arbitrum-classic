@@ -25,7 +25,7 @@ import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
   console.log('l2 weth balance', bal.toString())
 
   const withdrawRes = await bridge.withdrawERC20(
-    l1Network.tokenBridge.l2Weth,
+    l1Network.tokenBridge.l1Weth,
     bal
   )
   const withdrawRec = await withdrawRes.wait()
