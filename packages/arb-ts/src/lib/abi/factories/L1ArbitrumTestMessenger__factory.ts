@@ -52,4 +52,17 @@ const _abi = [
     name: 'TxToL2',
     type: 'event',
   },
+  {
+    inputs: [
+      {
+        internalType: 'bool',
+        name: '_shouldUseInbox',
+        type: 'bool',
+      },
+    ],
+    name: 'setInboxUse',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
 ]

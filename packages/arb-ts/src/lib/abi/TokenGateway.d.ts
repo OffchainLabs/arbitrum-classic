@@ -22,14 +22,18 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface TokenGatewayInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
-    'router()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -57,8 +61,8 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
-  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
+  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -79,7 +83,6 @@ interface TokenGatewayInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -104,6 +107,10 @@ export class TokenGateway extends Contract {
   interface: TokenGatewayInterface
 
   functions: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -173,11 +180,11 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
-
-    router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -249,11 +256,11 @@ export class TokenGateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
-
   callStatic: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -323,10 +330,6 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
-
-    router(overrides?: CallOverrides): Promise<string>
-
-    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -350,6 +353,10 @@ export class TokenGateway extends Contract {
   }
 
   estimateGas: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -419,13 +426,13 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
-
-    router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -497,9 +504,5 @@ export class TokenGateway extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
-
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

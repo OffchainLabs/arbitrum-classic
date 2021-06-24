@@ -23,6 +23,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'exitNum()': FunctionFragment
@@ -34,9 +35,12 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     'l1ToL2Token(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
     'registerTokenFromL1(address[],address[])': FunctionFragment
-    'router()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -75,8 +79,8 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenFromL1',
     values: [string[], string[]]
   ): string
-  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
+  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -112,17 +116,18 @@ interface L2CustomGatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenFromL1',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
     'OutboundTransferInitiated(address,address,address,uint256,uint256,bytes)': EventFragment
+    'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL1(address,address,uint256,bytes)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'InboundTransferFinalized'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'OutboundTransferInitiated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL1'): EventFragment
 }
@@ -141,6 +146,10 @@ export class L2CustomGatewayTester extends Contract {
   interface: L2CustomGatewayTesterInterface
 
   functions: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -265,11 +274,11 @@ export class L2CustomGatewayTester extends Contract {
       l2Address: string[],
       overrides?: Overrides
     ): Promise<ContractTransaction>
-
-    router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -396,11 +405,11 @@ export class L2CustomGatewayTester extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
-
   callStatic: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -525,10 +534,6 @@ export class L2CustomGatewayTester extends Contract {
       l2Address: string[],
       overrides?: CallOverrides
     ): Promise<void>
-
-    router(overrides?: CallOverrides): Promise<string>
-
-    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -550,6 +555,8 @@ export class L2CustomGatewayTester extends Contract {
       _data: null
     ): EventFilter
 
+    TokenSet(l1Address: string | null, l2Address: string | null): EventFilter
+
     TransferAndCallTriggered(
       success: null,
       _from: string | null,
@@ -567,6 +574,10 @@ export class L2CustomGatewayTester extends Contract {
   }
 
   estimateGas: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -691,13 +702,13 @@ export class L2CustomGatewayTester extends Contract {
       l2Address: string[],
       overrides?: Overrides
     ): Promise<BigNumber>
-
-    router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -831,9 +842,5 @@ export class L2CustomGatewayTester extends Contract {
       l2Address: string[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
-
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

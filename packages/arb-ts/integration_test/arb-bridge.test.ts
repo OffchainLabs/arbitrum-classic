@@ -1,5 +1,15 @@
-import { providers, utils, Wallet, BigNumber, constants, ethers } from 'ethers'
+import {
+  providers,
+  utils,
+  Wallet,
+  BigNumber,
+  constants,
+  ethers,
+  ContractReceipt,
+} from 'ethers'
 import { Bridge } from '../src/lib/bridge'
+import { Network } from '../src/lib/networks'
+
 import {
   OutboundTransferInitiatedResult,
   BridgeHelper,
@@ -12,26 +22,19 @@ import { Rollup__factory } from '../src/lib/abi/factories/Rollup__factory'
 import { StandardArbERC20__factory } from '../src/lib/abi/factories/StandardArbERC20__factory'
 import { Outbox__factory } from '../src/lib/abi/factories/Outbox__factory'
 import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
+import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { StandardArbERC20 } from '../src/lib/abi/StandardArbERC20'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
+import { instantiateBridge } from '../scripts/instantiate_bridge'
 import yargs from 'yargs/yargs'
 import chalk from 'chalk'
-
+import { testRetryableTicket, prettyLog, warn } from './testHelpers'
 const { Zero, AddressZero } = constants
 console.log(chalk.green(`Starting Token Bridge Integrations Tests!`))
 console.log()
 
-const prettyLog = (text: string) => {
-  console.log(chalk.blue(`    *** ${text}`))
-  console.log()
-}
-
-const warn = (text: string) => {
-  console.log(chalk.red(`WARNING: ${text}`))
-  console.log()
-}
 const argv = yargs(process.argv.slice(2)).argv
 
 const network = ((_network?: string | number) => {
@@ -66,22 +69,10 @@ const {
   l2GatewayRouterAddress,
   l1gasPrice,
   existentTestERC20,
-  existentCustomTokenL1,
-  existentCustomTokenL2,
   defaultWait,
   executeOutGoingMessages,
   outBoxUpdateTimeout,
 } = config[network]
-
-if (
-  [existentCustomTokenL1, existentCustomTokenL2].filter((x: any) => x)
-    .length === 1
-) {
-  warn(
-    'Include either both a pre-deployed / custom  token L1 and L2 or neither'
-  )
-  process.exit()
-}
 
 const ethProvider = new providers.JsonRpcProvider(ethRPC)
 const arbProvider = new providers.JsonRpcProvider(arbRPC)
@@ -132,7 +123,7 @@ before('setup', () => {
 const tokenDepositAmount = BigNumber.from(50)
 const tokenWithdrawAmount = BigNumber.from(2)
 
-describe('ERC20', () => {
+describe.skip('ERC20', () => {
   before('create/ensure l1 erc20 w initial supply', async () => {
     wait(10000)
     const testTokenFactory = await new TestERC20__factory(preFundedWallet)
@@ -293,13 +284,13 @@ describe('ERC20', () => {
     expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
 })
-describe('Ether', () => {
+describe.skip('Ether', () => {
   let testWalletL1EthBalance: BigNumber
   let testWalletL2EthBalance: BigNumber
   let initialTestWalletEth2Balance: BigNumber
   let preWithdrawalL2Balance: BigNumber
 
-  const ethToL2DepositAmount = parseEther('0.05')
+  const ethToL2DepositAmount = parseEther('0.0005')
   const ethFromL2WithdrawAmount = parseEther('0.00001')
 
   it('deposit ether transaction succeeds', async () => {
@@ -368,7 +359,7 @@ describe('Ether', () => {
   })
 })
 
-describe('ERC20', () => {
+describe.skip('ERC20', () => {
   it('2nd pass, prefunded: initial erc20 deposit txns — L1 and L2 — both succeed', async () => {
     const tokenContract = TestERC20__factory.connect(erc20Address, ethProvider)
     const defaultL1GatewayAddress = (await bridge.defaultL1Gateway()).address
@@ -454,6 +445,85 @@ describe('ERC20', () => {
     expect(
       testWalletL2Balance &&
         testWalletL2Balance.add(tokenWithdrawAmount).eq(tokenDepositAmount)
+    ).to.be.true
+  })
+})
+
+describe('WETH', async () => {
+  const depositWETHAmount = '0.0005'
+  const withdrawWETHAmount = '0.00005'
+  const l1WethAddress = '0xc778417E063141139Fce010982780140Aa0cD5Ab'
+
+  it('setup: wrap some ether', async () => {
+    const l1WETH = AeWETH__factory.connect(
+      l1WethAddress,
+      bridge.l1Bridge.l1Signer
+    )
+    const res = await l1WETH.deposit({
+      value: utils.parseEther('0.001'),
+    })
+    const rec = await res.wait()
+    prettyLog('wrapped some ether')
+    expect(rec.status).to.equal(1)
+  })
+
+  it('setup: approve WETH gateway', async () => {
+    const approveRes = await bridge.approveToken(l1WethAddress)
+    const approveRec = await approveRes.wait()
+    expect(approveRec.status).to.equal(1)
+
+    const data = await bridge.getAndUpdateL1TokenData(l1WethAddress)
+    const allowed = data.ERC20 && data.ERC20.allowed
+    expect(allowed).to.be.true
+  })
+
+  it('deposits WETH', async () => {
+    const res = await bridge.deposit(
+      l1WethAddress,
+      utils.parseEther(depositWETHAmount),
+      {},
+      undefined,
+      { gasLimit: 230000 }
+    )
+    const rec = await res.wait()
+    prettyLog(
+      `Deposit WETH: L1 tx succeeded ${rec.transactionHash}; now handling l2 retryable`
+    )
+    expect(rec.status).to.equal(1)
+    await testRetryableTicket(bridge, rec)
+
+    it('L2 wallet has expected balance after erc20 deposit', async () => {
+      const l2Data = await bridge.getAndUpdateL2TokenData(l1WethAddress)
+
+      const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
+
+      expect(testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount))
+        .to.be.true
+    })
+  })
+
+  it('withdraw WETH succeeds and emits event data', async () => {
+    const withdrawRes = await bridge.withdrawERC20(
+      l1WethAddress,
+      utils.parseEther(withdrawWETHAmount)
+    )
+    const withdrawRec = await withdrawRes.wait()
+    expect(withdrawRec.status).to.equal(1)
+    const withdrawEventData = (
+      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
+    )[0]
+
+    expect(withdrawEventData).to.exist
+    outGoingMessages.push(withdrawEventData)
+  })
+
+  it('balance properly deducted after weth withdraw', async () => {
+    await wait()
+    const l2Data = await bridge.getAndUpdateL2TokenData(l1WethAddress)
+    const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
+    expect(
+      testWalletL2Balance &&
+        testWalletL2Balance.add(withdrawWETHAmount).eq(depositWETHAmount)
     ).to.be.true
   })
 })

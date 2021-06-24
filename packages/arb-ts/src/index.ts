@@ -33,5 +33,5 @@ export { L1GatewayRouter__factory } from './lib/abi/factories/L1GatewayRouter__f
 export { L2GatewayRouter__factory } from './lib/abi/factories/L2GatewayRouter__factory'
 export { ArbRetryableTx__factory } from './lib/abi/factories/ArbRetryableTx__factory'
 export { ArbSys__factory } from './lib/abi/factories/ArbSys__factory'
-
+export { networks } from './lib/networks'
 export { argSerializerConstructor } from './lib/byte_serialize_params'
