@@ -23,6 +23,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface ArbSysInterface extends ethers.utils.Interface {
   functions: {
     'arbBlockNumber()': FunctionFragment
+    'arbChainID()': FunctionFragment
     'arbOSVersion()': FunctionFragment
     'getStorageAt(address,uint256)': FunctionFragment
     'getTransactionCount(address)': FunctionFragment
@@ -35,6 +36,7 @@ interface ArbSysInterface extends ethers.utils.Interface {
     functionFragment: 'arbBlockNumber',
     values?: undefined
   ): string
+  encodeFunctionData(functionFragment: 'arbChainID', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'arbOSVersion',
     values?: undefined
@@ -61,6 +63,7 @@ interface ArbSysInterface extends ethers.utils.Interface {
     functionFragment: 'arbBlockNumber',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'arbChainID', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'arbOSVersion',
     data: BytesLike
@@ -106,6 +109,10 @@ export class ArbSys extends Contract {
     arbBlockNumber(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'arbBlockNumber()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    arbChainID(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'arbChainID()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
     arbOSVersion(overrides?: CallOverrides): Promise<[BigNumber]>
 
@@ -164,6 +171,10 @@ export class ArbSys extends Contract {
 
   'arbBlockNumber()'(overrides?: CallOverrides): Promise<BigNumber>
 
+  arbChainID(overrides?: CallOverrides): Promise<BigNumber>
+
+  'arbChainID()'(overrides?: CallOverrides): Promise<BigNumber>
+
   arbOSVersion(overrides?: CallOverrides): Promise<BigNumber>
 
   'arbOSVersion()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -220,6 +231,10 @@ export class ArbSys extends Contract {
     arbBlockNumber(overrides?: CallOverrides): Promise<BigNumber>
 
     'arbBlockNumber()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    arbChainID(overrides?: CallOverrides): Promise<BigNumber>
+
+    'arbChainID()'(overrides?: CallOverrides): Promise<BigNumber>
 
     arbOSVersion(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -296,6 +311,10 @@ export class ArbSys extends Contract {
 
     'arbBlockNumber()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    arbChainID(overrides?: CallOverrides): Promise<BigNumber>
+
+    'arbChainID()'(overrides?: CallOverrides): Promise<BigNumber>
+
     arbOSVersion(overrides?: CallOverrides): Promise<BigNumber>
 
     'arbOSVersion()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -353,6 +372,10 @@ export class ArbSys extends Contract {
     arbBlockNumber(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'arbBlockNumber()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    arbChainID(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'arbChainID()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     arbOSVersion(overrides?: CallOverrides): Promise<PopulatedTransaction>
 

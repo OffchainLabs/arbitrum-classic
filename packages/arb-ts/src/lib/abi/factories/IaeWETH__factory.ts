@@ -5,14 +5,14 @@
 import { Contract, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 
-import type { ArbosTest } from '../ArbosTest'
+import type { IaeWETH } from '../IaeWETH'
 
-export class ArbosTest__factory {
+export class IaeWETH__factory {
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): ArbosTest {
-    return new Contract(address, _abi, signerOrProvider) as ArbosTest
+  ): IaeWETH {
+    return new Contract(address, _abi, signerOrProvider) as IaeWETH
   }
 }
 
@@ -20,13 +20,56 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
         internalType: 'uint256',
-        name: 'gasAmount',
+        name: 'amount',
         type: 'uint256',
       },
     ],
-    name: 'burnArbGas',
+    name: 'bridgeBurn',
     outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: 'account',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
+    ],
+    name: 'bridgeMint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'deposit',
+    outputs: [],
+    stateMutability: 'payable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'l1Address',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
     stateMutability: 'view',
     type: 'function',
   },
@@ -34,62 +77,29 @@ const _abi = [
     inputs: [
       {
         internalType: 'address',
-        name: 'addr',
+        name: '_from',
         type: 'address',
       },
+      {
+        internalType: 'uint256',
+        name: 'amount',
+        type: 'uint256',
+      },
     ],
-    name: 'getAccountInfo',
+    name: 'transferToGateway',
     outputs: [],
-    stateMutability: 'view',
+    stateMutability: 'nonpayable',
     type: 'function',
   },
   {
     inputs: [
       {
-        internalType: 'address',
-        name: 'addr',
-        type: 'address',
-      },
-    ],
-    name: 'getMarshalledStorage',
-    outputs: [],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'addr',
-        type: 'address',
-      },
-      {
-        internalType: 'bool',
-        name: 'isEOA',
-        type: 'bool',
-      },
-      {
         internalType: 'uint256',
-        name: 'balance',
+        name: '_amount',
         type: 'uint256',
       },
-      {
-        internalType: 'uint256',
-        name: 'nonce',
-        type: 'uint256',
-      },
-      {
-        internalType: 'bytes',
-        name: 'code',
-        type: 'bytes',
-      },
-      {
-        internalType: 'bytes',
-        name: 'initStorage',
-        type: 'bytes',
-      },
     ],
-    name: 'installAccount',
+    name: 'withdraw',
     outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
