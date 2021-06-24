@@ -4,7 +4,7 @@ pragma solidity ^0.6.11;
 
 import "../libraries/IWETH9.sol";
 
-interface IWETH9L2 is IWETH9 {
+interface IWETH9L1 is IWETH9 {
     event Approval(address indexed src, address indexed guy, uint256 wad);
     event Transfer(address indexed src, address indexed dst, uint256 wad);
     event Deposit(address indexed dst, uint256 wad);

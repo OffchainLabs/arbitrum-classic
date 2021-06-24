@@ -1,5 +1,5 @@
 import { BridgeHelper } from '../../src/lib/bridge_helpers'
-import { IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L2__factory'
+import { IWETH9L1__factory as IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L1__factory'
 import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 import { writeFileSync } from 'fs'

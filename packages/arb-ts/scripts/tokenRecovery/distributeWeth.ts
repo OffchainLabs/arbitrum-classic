@@ -1,7 +1,7 @@
 import { instantiateBridge } from './../instantiate_bridge'
 import { BigNumber } from 'ethers'
 
-import { IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L2__factory'
+import { IWETH9L1__factory as IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L1__factory'
 import wethBalancesMainnetData from '../../json_data/42161wethBalances.json'
 import wethBalancesRinkArbyData from '../../json_data/421611wethBalances.json'
 ;async () => {
