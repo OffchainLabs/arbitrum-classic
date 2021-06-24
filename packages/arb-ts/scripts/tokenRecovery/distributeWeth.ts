@@ -4,6 +4,9 @@ import { BigNumber } from 'ethers'
 import { IWETH9L1__factory as IWETH9L2__factory } from '../../src/lib/abi/factories/IWETH9L1__factory'
 import wethBalancesMainnetData from '../../json_data/42161wethBalances.json'
 import wethBalancesRinkArbyData from '../../json_data/421611wethBalances.json'
+
+const WETH_TO_DEPOSIT = 0
+
 ;async () => {
   const { bridge, l2Network } = await instantiateBridge()
 
@@ -13,7 +16,7 @@ import wethBalancesRinkArbyData from '../../json_data/421611wethBalances.json'
   )
 
   const res = await WETH9.deposit({
-    value: 200000000000000000,
+    value: WETH_TO_DEPOSIT,
   })
 
   const rec = await res.wait()
