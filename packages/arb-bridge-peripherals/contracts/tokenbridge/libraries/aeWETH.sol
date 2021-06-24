@@ -33,6 +33,11 @@ contract aeWETH is L2GatewayToken, IWETH9 {
         L2GatewayToken._initialize(_name, _symbol, _decimals, _l2Gateway, _l1Address);
     }
 
+    function postUpgradeInit() external {
+        require(l2Gateway == 0xF90EB31045d5b924900afF29344dEb42EAe0b087, "ALREADY_INIT");
+        l2Gateway = 0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9;
+    }
+
     function bridgeMint(address account, uint256 amount) external virtual override {
         // we want weth to always be fully collaterized
         revert("NO_BRIDGE_MINT");

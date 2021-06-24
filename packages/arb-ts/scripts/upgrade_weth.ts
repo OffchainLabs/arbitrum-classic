@@ -40,7 +40,18 @@ const initWETH = async () => {
   console.warn('initialized weth', rec)
 }
 
-main()
+const postInit = async () => {
+  const { bridge, l2Network } = await instantiateBridge()
+  const { l2Signer } = bridge.l2Bridge
+
+  const aeWeth = AeWETH__factory.connect(l2Network.tokenBridge.l2Weth, l2Signer)
+  const res = await aeWeth.postUpgradeInit()
+
+  const rec = await res.wait()
+  console.warn('postInit weth', rec)
+}
+
+postInit()
   .then(() => process.exit(0))
   .catch(error => {
     console.error(error)
