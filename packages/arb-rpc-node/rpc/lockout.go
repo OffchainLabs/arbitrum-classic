@@ -116,7 +116,6 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			})()
 		}
 	})()
-	maxLatency := time.Millisecond * time.Duration(b.config.MaxLatencyMillis)
 	for {
 		alive := true
 		if !b.hasSequencerLockout() {
@@ -159,7 +158,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 					logger.Info().Str("rpc", b.config.SelfRPCURL).Msg("acquired sequencer lockout")
 					targetSeqNum := b.redis.getLatestSeqNum(ctx)
 					b.lastLockedSeqNum = targetSeqNum
-					attemptCatchupUntil := b.lockoutExpiresAt.Add(-maxLatency)
+					attemptCatchupUntil := b.lockoutExpiresAt.Add(-b.config.MaxLatency)
 					for {
 						currentSeqNum, err := b.core.GetMessageCount()
 						if err != nil {
@@ -255,7 +254,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 			if b.livelinessExpiresAt.Before(firstLockoutExpiresAt) {
 				firstLockoutExpiresAt = b.livelinessExpiresAt
 			}
-			lockoutRefresh := time.Until(firstLockoutExpiresAt.Add(-maxLatency))
+			lockoutRefresh := time.Until(firstLockoutExpiresAt.Add(-b.config.MaxLatency))
 			if lockoutRefresh > refreshDelay {
 				refreshDelay = lockoutRefresh
 			}

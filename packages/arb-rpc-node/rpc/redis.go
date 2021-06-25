@@ -48,9 +48,9 @@ func newLockoutRedis(config configuration.Lockout) (*lockoutRedis, error) {
 	return &lockoutRedis{
 		client:        redis.NewClient(opts),
 		rpc:           config.SelfRPCURL,
-		timeout:       time.Millisecond * time.Duration(config.TimeoutMillis),
-		maxLatency:    time.Millisecond * time.Duration(config.MaxLatencyMillis),
-		seqNumTimeout: time.Second * time.Duration(config.SeqNumTimeoutSecs),
+		timeout:       config.Timeout,
+		maxLatency:    config.MaxLatency,
+		seqNumTimeout: config.SeqNumTimeout,
 	}, nil
 }
 
