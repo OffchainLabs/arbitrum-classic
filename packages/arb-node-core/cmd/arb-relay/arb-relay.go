@@ -41,9 +41,9 @@ var logger zerolog.Logger
 var pprofMux *http.ServeMux
 
 type ArbRelay struct {
-	SequencerFeedAddress string
-	broadcastClient      *broadcastclient.BroadcastClient
-	broadcaster          *broadcaster.Broadcaster
+	broadcastClients         []*broadcastclient.BroadcastClient
+	broadcaster              *broadcaster.Broadcaster
+	confirmedAccumulatorChan chan common.Hash
 }
 
 func init() {
@@ -72,8 +72,8 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, err := configuration.ParseFeed()
-	if err != nil || len(config.Feed.Input.URL) == 0 {
+	config, err := configuration.ParseRelay()
+	if err != nil || len(config.Feed.Input.URLs) == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")
 		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket>\n\n")
@@ -89,10 +89,6 @@ func startup() error {
 	}
 
 	defer logger.Info().Msg("Cleanly shutting down relay")
-
-	if config.Feed.Input.URL == "" {
-		return errors.New("Missing --feed.input.url")
-	}
 
 	if config.PProfEnable {
 		go func() {
@@ -118,14 +114,21 @@ func startup() error {
 }
 
 func NewArbRelay(settings configuration.Feed) *ArbRelay {
-	broadcastClient := broadcastclient.NewBroadcastClient(settings.Input.URL, nil, settings.Input.Timeout)
-	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
+	var broadcastClients []*broadcastclient.BroadcastClient
+	confirmedAccumulatorChan := make(chan common.Hash, 1)
+	for _, address := range settings.Input.URLs {
+		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout)
+		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
+		broadcastClients = append(broadcastClients, client)
+	}
 	return &ArbRelay{
-		SequencerFeedAddress: settings.Input.URL,
-		broadcaster:          broadcaster.NewBroadcaster(settings.Output),
-		broadcastClient:      broadcastClient,
+		broadcaster:              broadcaster.NewBroadcaster(settings.Output),
+		broadcastClients:         broadcastClients,
+		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
 }
+
+const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
 
 func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	done := make(chan bool)
@@ -136,31 +139,40 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	}
 
 	// connect returns
-	var messages chan broadcaster.BroadcastFeedMessage
-	for {
-		messages, err = ar.broadcastClient.Connect(ctx)
-		if err == nil {
-			break
-		}
-		logger.Warn().Err(err).
-			Msg("failed connect to sequencer broadcast, waiting and retrying")
-
-		select {
-		case <-ctx.Done():
-			return nil, errors.New("ctx cancelled broadcast client connect")
-		case <-time.After(5 * time.Second):
+	messages := make(chan broadcaster.BroadcastFeedMessage)
+	for _, client := range ar.broadcastClients {
+		for {
+			err = client.ConnectWithChannel(ctx, messages)
+			if err == nil {
+				break
+			}
+			logger.Warn().Err(err).
+				Msg("failed connect to sequencer broadcast, waiting and retrying")
+			select {
+			case <-ctx.Done():
+				return nil, errors.New("ctx cancelled broadcast client connect")
+			case <-time.After(5 * time.Second):
+			}
 		}
 	}
 
+	recentFeedItems := make(map[common.Hash]time.Time)
 	go func() {
 		defer func() {
 			done <- true
 		}()
+		recentFeedItemsCleanup := time.NewTicker(RECENT_FEED_ITEM_TTL)
+		defer recentFeedItemsCleanup.Stop()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case msg := <-messages:
+				newAcc := msg.FeedItem.BatchItem.Accumulator
+				if recentFeedItems[newAcc] != (time.Time{}) {
+					continue
+				}
+				recentFeedItems[newAcc] = time.Now()
 				err = ar.broadcaster.BroadcastSingle(msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem, msg.Signature)
 				if err != nil {
 					logger.
@@ -170,8 +182,16 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 						Hex("BatchItem", msg.FeedItem.BatchItem.ToBytesWithSeqNum()).
 						Msg("unable to broadcast batch item")
 				}
-			case ca := <-ar.broadcastClient.ConfirmedAccumulatorListener:
+			case ca := <-ar.confirmedAccumulatorChan:
 				ar.broadcaster.ConfirmedAccumulator(ca)
+			case <-recentFeedItemsCleanup.C:
+				// Clear expired items from recentFeedItems
+				recentFeedItemExpiry := time.Now().Add(-RECENT_FEED_ITEM_TTL)
+				for acc, created := range recentFeedItems {
+					if created.Before(recentFeedItemExpiry) {
+						delete(recentFeedItems, acc)
+					}
+				}
 			}
 		}
 	}()
@@ -180,6 +200,8 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 }
 
 func (ar *ArbRelay) Stop() {
-	ar.broadcastClient.Close()
+	for _, client := range ar.broadcastClients {
+		client.Close()
+	}
 	ar.broadcaster.Stop()
 }

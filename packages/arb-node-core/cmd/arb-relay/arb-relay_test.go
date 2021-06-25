@@ -18,10 +18,11 @@ package main
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
@@ -53,7 +54,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 	relaySettings := configuration.Feed{
 		Input: configuration.FeedInput{
 			Timeout: 20 * time.Second,
-			URL:     "ws://127.0.0.1:9742",
+			URLs:    []string{"ws://127.0.0.1:9742"},
 		},
 		Output: configuration.FeedOutput{
 			Addr:          "0.0.0.0",

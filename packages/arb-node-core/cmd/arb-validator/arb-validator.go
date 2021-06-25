@@ -81,7 +81,7 @@ func startup() error {
 	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, wallet, l1Client, l1ChainId, err := configuration.Parse(ctx)
+	config, wallet, l1Client, l1ChainId, err := configuration.ParseValidator(ctx)
 	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
 		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
 		len(config.Validator.UtilsAddress) == 0 || len(config.Validator.WalletFactoryAddress) == 0 ||
@@ -200,7 +200,7 @@ func startup() error {
 		validatorAddress = ethcommon.HexToAddress(chainState.ValidatorWallet)
 	}
 
-	mon, err := monitor.NewMonitor(config.GetDatabasePath(), config.Rollup.Machine.Filename)
+	mon, err := monitor.NewMonitor(config.GetValidatorDatabasePath(), config.Rollup.Machine.Filename)
 	if err != nil {
 		return errors.Wrap(err, "error opening monitor")
 	}
