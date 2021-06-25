@@ -2,7 +2,7 @@ package cmachine
 
 /*
 #cgo CFLAGS: ${CFLAGS}
-#cgo LDFLAGS: ${LDFLAGS} -lm -lkeccak -ldl
+#cgo LDFLAGS: ${LDFLAGS} -lm -lkeccak -ldl -lstdc++
 #cgo linux LDFLAGS: -latomic -static-libstdc++
 */
 import "C"
