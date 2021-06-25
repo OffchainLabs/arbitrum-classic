@@ -25,10 +25,13 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
-task('create-chain', 'Creates a rollup chain').setAction(
-  async (taskArguments, hre) => {
+task('create-chain', 'Creates a rollup chain')
+  .addParam('sequencer', "The sequencer's address")
+  .setAction(async (taskArguments, hre) => {
     const machineHash = fs.readFileSync('../MACHINEHASH').toString()
-    console.log(`Creating chain for machine with hash ${machineHash}`)
+    console.log(
+      `Creating chain for machine with hash ${machineHash} for sequencer ${taskArguments.sequencer}`
+    )
     const { deployments, ethers } = hre
     const [deployer] = await ethers.getSigners()
     const rollupCreatorDep = await deployments.get('RollupCreator')
@@ -44,6 +47,9 @@ task('create-chain', 'Creates a rollup chain').setAction(
       ethers.utils.parseEther('.1'),
       ethers.constants.AddressZero,
       await deployer.getAddress(),
+      taskArguments.sequencer,
+      300,
+      1500,
       '0x'
     )
     const receipt = await tx.wait()
@@ -51,8 +57,20 @@ task('create-chain', 'Creates a rollup chain').setAction(
       receipt.logs[receipt.logs.length - 1]
     )
     console.log(ev)
-  }
-)
+
+    // const path = `rollup-${hre.network.name}.json`
+    const path = `rollup-${hre.network.name}.json`
+    const output = JSON.stringify({
+      rollupAddress: ev.args[0],
+      inboxAddress: ev.args[1],
+    })
+
+    fs.writeFileSync(path, output)
+    console.log(
+      'New rollup chain created and output written to:',
+      `${process.cwd()}:${path}`
+    )
+  })
 
 task('deposit', 'Deposit coins into ethbridge')
   .addPositionalParam('inboxAddress', "The rollup chain's address")
@@ -99,10 +117,16 @@ const config = {
   },
   networks: {
     hardhat: {
+      chainId: 1337,
       allowUnlimitedContractSize: true,
       accounts: {
         accountsBalance: '10000000000000000000000000',
       },
+      blockGasLimit: 20000000,
+      // mining: {
+      //   auto: false,
+      //   interval: 1000,
+      // },
     },
     local_development: {
       url: 'http://127.0.0.1:7545',
@@ -113,9 +137,35 @@ const config = {
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
     },
+    // mainnet: {
+    //   url: process.env['MAINNET_URL'],
+    //   accounts: process.env['MAINNET_PRIVKEY']
+    //     ? [process.env['MAINNET_PRIVKEY']]
+    //     : [],
+    // },
+    rinkeby: {
+      url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbRinkeby: {
+      gasPrice: 0,
+      url: 'https://rinkeby.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
     arbkovan4: {
       gasPrice: 0,
       url: 'https://kovan4.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    kovan5: {
+      gasPrice: 0,
+      url: 'https://kovan5.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]
         : [],

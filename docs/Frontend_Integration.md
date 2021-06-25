@@ -6,17 +6,17 @@ sidebar_label: Frontend Integration
 
 Arbitrum comes with tools to make front-end integration as seamless as possible for Ethereum web developers.
 
-Arbitrum aggregators support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API); thus, popular Ethereum libraries for interacting with the Ethereum chain can be used for Arbitrum interactions with little to no modifications.
+Arbitrum nodes support the [Ethereum JSON-RPC API](https://eth.wiki/json-rpc/API); thus, popular Ethereum libraries for interacting with the Ethereum chain can be used for Arbitrum interactions with little-to-no modifications.
 
 For Ethereum/Arbitrum "bridge" functionality — methods that involve communicating between the L1 Ethereum chain and the L2 Arbitrum chain (i.e., depositing and withdrawing assets), we provide our own libraries for convenience.
 
 ## Arbitrum Integration
 
-#### Ethers.js (recommended)
+#### Ethers.js
 
-Ethers-js can be used to interact with an Arbitrum chain exactly as one would use it to interact with Ethereum ([see docs](https://docs.ethers.io/v5/)); simply instantiate a provider connected to an Arbitrum aggregator.
+Ethers-js can be used to interact with an Arbitrum chain exactly as one would use it to interact with Ethereum ([see docs](https://docs.ethers.io/v5/)); simply instantiate a provider connected to an Arbitrum node.
 
-I.e., with MetaMask already connected to an Arbitrum aggregator via a custom RPC url:
+I.e., with MetaMask already connected to an Arbitrum node via a custom RPC url:
 
 ```ts
 import * as ethers from 'ethers'
@@ -24,81 +24,69 @@ import * as ethers from 'ethers'
 const arbProvider = new ethers.providers.Web3Provider(window.ethereum)
 ```
 
-Or instantiate a provider directly via a aggregator's URL
+Or instantiate a provider directly via an Arbitrum node's URL
 
 ```ts
 import * as ethers from 'ethers'
 const arbProvider = new ethers.providers.JsonRpcProvider(
-  'http://ArbAggregatorUrl.com'
+  'http://ArbNodeUrl.com'
 )
 ```
 
 #### Web3.js
 
-Likewise, a Web3 provider can be instantiated directly via an Arbitrum aggregator url:
+Likewise, a Web3 provider can be instantiated directly via an Arbitrum node url:
 https://web3js.readthedocs.io/en/v1.2.11/index.html
 
 ```ts
-import * as Web3 from "web3";
-var arbWeb3Provider = new Web3('http://ArbAggregatorUrl.com);
-
+import * as Web3 from 'web3'
+var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 ```
 
 ## Arbitrum / Ethereum Bridge
 
-Arbitrum offers two options for accessing the Arbitrum/Ethereum bridge methods:
+Accessing bridging methods can be done via our `arb-ts` library, or by simply connecting to the relevant contracts directly.
 
-#### 1. React Hook Bridge SDK
-
-**Installation**:
-
-```
-yarn add token-bridge-sdk
-```
-
-**Usage**:
-
-```ts
-import { useArbTokenBridge } from 'arb-token-bridge'
-
-const App = () => {
-  const bridge = useArbTokenBridge(
-    ethProvider,
-    arbProvider,
-    rollupAddress,
-    ethSigner,
-    arbSigner
-  )
-}
-```
-
-See [token-bridge-sdk documentation](https://bridgedocs.offchainlabs.com) for full API.
-
-#### 2. Arb Provider Ethers Bridge (minimal)
+#### 1. arb-ts
 
 **Installation**:
 
 ```
-yarn add arb-provider-ethers
+yarn add arb-ts ethers-js
 ```
 
-**Usage**:
+**Usage (with Ethers-js wallets/providers)**:
 
 ```ts
-import { L1Bridge, withdrawEth } from 'arb-provider-ethers'
+import { providers, Wallet } from 'ethers'
+import { Bridge } from 'arb-ts'
 
-/* instatiate an ethers-js signer (https://docs.ethers.io/v5/api/signer/) for your ethereum provider*/
-const ethSigner = ethProvider.getSigner(0)
-/* instatiate an ethers-js signer for your arbitrum provider*/
-const arbSigner = arbProvider.getSigner(0)
+const l1Provider = new providers.JsonRpcProvider('http://EthNodeUrl.com')
+const l2Provider = new providers.JsonRpcProvider('http://ArbNodeUrl.com')
 
-const l1Bridge = new L1Bridge(ethSigner, '0xArbChainAddress')
+const l1Signer = new Wallet('0xmyprivatekey!!', l1Provider)
+const l2Signer = new Wallet('0xmyprivatekey!!', l2Provider)
 
-// deposit eth:
-const txnResponse = await l1Bridge.depositETH('0xwalletaddress', weiValue)
-
-//withdraw eth
-const txnResponse = await withdrawEth(arbSigner, weiValue)
+const bridge = new Bridge(
+  '0xL1EthErc20BridgeAddress',
+  '0xl2ArbTokenBridgeAddress',
+  l1Signer,
+  l2Signer
+)
 ```
 
-See [l1Bridge](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-provider-ethers/src/lib/l1bridge.ts) and [l2Bridge](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-provider-ethers/src/lib/l2bridge.ts) for available methods (documentation coming soon.)
+See [library documentation here](https://arb-ts-docs.netlify.app/), or [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.
+
+(Note that we've deprecated the old `arb-provider-ethers` library; arb-ts is the recommended replacement)
+
+#### 2. Alternative: Direct Contract Instantiation
+
+Typechain interfaces for all contracts listed above are made available via arb-ts. i.e.,
+
+```ts
+import { ArbSys__factory } from 'arb-ts'
+
+const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Signer)
+
+arbSys.withdrawEth('0xmyaddress')
+```

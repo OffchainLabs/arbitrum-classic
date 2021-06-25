@@ -17,20 +17,22 @@
 package challenge
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
-	"github.com/pkg/errors"
-	"math/big"
-	"testing"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
-	backend, pks := test.SimulatedBackend()
+	backend, pks := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 	auth := bind.NewKeyedTransactor(pks[0])
 	_, _, machineTester, err := ethbridgetestcontracts.DeployMachineTester(auth, client)
@@ -41,25 +43,17 @@ func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 
 func TestDeserializeMachine(t *testing.T) {
 	machineTester := getTester(t)
-	machine, err := cmachine.New(arbos.Path())
-	if err != nil {
-		t.Fatal(err)
-	}
+	arbosPath, err := arbos.Path()
+	test.FailIfError(t, err)
+	machine, err := cmachine.New(arbosPath)
+	test.FailIfError(t, err)
 
 	stateData, err := machine.MarshalState()
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FailIfError(t, err)
 
-	expectedHash, err := machine.Hash()
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	expectedHash := machine.Hash()
 	offset, bridgeHash, err := machineTester.DeserializeMachine(nil, stateData)
-	if err != nil {
-		t.Fatal(err)
-	}
+	test.FailIfError(t, err)
 
 	if offset.Cmp(big.NewInt(int64(len(stateData)))) != 0 {
 		t.Error("incorrect offset")

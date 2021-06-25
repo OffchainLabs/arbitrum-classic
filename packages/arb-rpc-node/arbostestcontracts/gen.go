@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,28 @@
  * limitations under the License.
  */
 
-//go:generate ./abigen.sh
-
 package arbostestcontracts
+
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/binding"
+)
+
+//go:generate go run createBindings.go
+
+func RunBindingGen() error {
+	return filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if filepath.Ext(path) != ".sol" {
+			return nil
+		}
+		code, err := binding.GenerateBindingFromSolidity(path, "arbostestcontracts")
+		if err != nil {
+			return err
+		}
+		return ioutil.WriteFile(strings.Split(path, ".")[0]+".go", []byte(code), 0777)
+	})
+}

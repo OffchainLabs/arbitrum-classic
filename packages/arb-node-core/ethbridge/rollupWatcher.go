@@ -23,16 +23,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
-	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
@@ -41,7 +43,7 @@ var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
 
 func init() {
-	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupABI))
+	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupUserFacetABI))
 	if err != nil {
 		panic(err)
 	}
@@ -78,28 +80,30 @@ func (d *DeliveredInboxMessage) Block() *common.BlockId {
 }
 
 type RollupWatcher struct {
-	con     *ethbridgecontracts.Rollup
-	address ethcommon.Address
-	client  ethutils.EthClient
+	con       *ethbridgecontracts.RollupUserFacet
+	address   ethcommon.Address
+	fromBlock int64
+	client    ethutils.EthClient
 }
 
-func NewRollupWatcher(address ethcommon.Address, client ethutils.EthClient) (*RollupWatcher, error) {
-	con, err := ethbridgecontracts.NewRollup(address, client)
+func NewRollupWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient) (*RollupWatcher, error) {
+	con, err := ethbridgecontracts.NewRollupUserFacet(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &RollupWatcher{
-		con:     con,
-		address: address,
-		client:  client,
+		con:       con,
+		address:   address,
+		fromBlock: fromBlock,
+		client:    client,
 	}, nil
 }
 
-func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupRollupCreated, error) {
+func (r *RollupWatcher) LookupCreation(ctx context.Context) (*ethbridgecontracts.RollupUserFacetRollupCreated, error) {
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{rollupCreatedID}},
@@ -123,7 +127,7 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 	copy(numberAsHash[:], math.U256Bytes(number))
 	var query = ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{nodeCreatedID}, {numberAsHash}},
@@ -148,12 +152,13 @@ func (r *RollupWatcher) LookupNode(ctx context.Context, number *big.Int) (*core.
 		HeaderHash: common.NewHashFromEth(ethLog.BlockHash),
 	}
 	return &core.NodeInfo{
-		NodeNum:       parsedLog.NodeNum,
-		BlockProposed: proposed,
-		Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
-		InboxMaxCount: parsedLog.InboxMaxCount,
-		AfterInboxAcc: parsedLog.AfterInboxAcc,
-		NodeHash:      parsedLog.NodeHash,
+		NodeNum:                 parsedLog.NodeNum,
+		BlockProposed:           proposed,
+		Assertion:               core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
+		InboxMaxCount:           parsedLog.InboxMaxCount,
+		AfterInboxBatchEndCount: parsedLog.AfterInboxBatchEndCount,
+		AfterInboxBatchAcc:      parsedLog.AfterInboxBatchAcc,
+		NodeHash:                parsedLog.NodeHash,
 	}, nil
 }
 
@@ -184,14 +189,15 @@ func (r *RollupWatcher) LookupNodeChildren(ctx context.Context, parentHash [32]b
 		if i > 0 {
 			lastHashIsSibling[0] = 1
 		}
-		lastHash = hashing.SoliditySHA3(lastHashIsSibling[:], lastHash[:], parsedLog.ExecutionHash[:], parsedLog.AfterInboxAcc[:])
+		lastHash = hashing.SoliditySHA3(lastHashIsSibling[:], lastHash[:], parsedLog.ExecutionHash[:], parsedLog.AfterInboxBatchAcc[:])
 		infos = append(infos, &core.NodeInfo{
-			NodeNum:       parsedLog.NodeNum,
-			BlockProposed: proposed,
-			Assertion:     core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
-			InboxMaxCount: parsedLog.InboxMaxCount,
-			AfterInboxAcc: parsedLog.AfterInboxAcc,
-			NodeHash:      lastHash,
+			NodeNum:                 parsedLog.NodeNum,
+			BlockProposed:           proposed,
+			Assertion:               core.NewAssertionFromFields(parsedLog.AssertionBytes32Fields, parsedLog.AssertionIntFields),
+			InboxMaxCount:           parsedLog.InboxMaxCount,
+			AfterInboxBatchEndCount: parsedLog.AfterInboxBatchEndCount,
+			AfterInboxBatchAcc:      parsedLog.AfterInboxBatchAcc,
+			NodeHash:                lastHash,
 		})
 	}
 	return infos, nil
@@ -203,7 +209,7 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{challengeCreatedID}, {addressQuery}},
@@ -255,13 +261,13 @@ func (r *RollupWatcher) MinimumAssertionPeriod(ctx context.Context) (*big.Int, e
 	return blocks, errors.WithStack(err)
 }
 
-func (r *RollupWatcher) Bridge(ctx context.Context) (common.Address, error) {
-	addr, err := r.con.Bridge(&bind.CallOpts{Context: ctx})
+func (r *RollupWatcher) SequencerBridge(ctx context.Context) (common.Address, error) {
+	addr, err := r.con.SequencerBridge(&bind.CallOpts{Context: ctx})
 	return common.NewAddressFromEth(addr), errors.WithStack(err)
 }
 
-func (r *RollupWatcher) StakeToken(ctx context.Context) (common.Address, error) {
-	addr, err := r.con.StakeToken(&bind.CallOpts{Context: ctx})
+func (r *RollupWatcher) DelayedBridge(ctx context.Context) (common.Address, error) {
+	addr, err := r.con.DelayedBridge(&bind.CallOpts{Context: ctx})
 	return common.NewAddressFromEth(addr), errors.WithStack(err)
 }
 

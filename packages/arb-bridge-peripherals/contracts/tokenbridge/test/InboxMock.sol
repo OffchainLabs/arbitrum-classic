@@ -18,7 +18,15 @@
 
 pragma solidity ^0.6.11;
 
+import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
+import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
+
 contract InboxMock {
+    address l2ToL1SenderMock = address(0);
+
+    event TicketData(uint256 maxSubmissionCost);
+
     function createRetryableTicket(
         address destAddr,
         uint256 l2CallValue,
@@ -29,6 +37,23 @@ contract InboxMock {
         uint256 gasPriceBid,
         bytes calldata data
     ) external payable returns (uint256) {
+        emit TicketData(maxSubmissionCost);
         return 0;
+    }
+
+    function bridge() external returns (IBridge) {
+        return IBridge(address(this));
+    }
+
+    function activeOutbox() external returns (address) {
+        return address(this);
+    }
+
+    function setL2ToL1Sender(address sender) external {
+        l2ToL1SenderMock = sender;
+    }
+
+    function l2ToL1Sender() external returns (address) {
+        return l2ToL1SenderMock;
     }
 }

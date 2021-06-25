@@ -18,12 +18,16 @@ package web3
 
 import (
 	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Net struct {
 	chainId uint64
+	counter *prometheus.CounterVec
 }
 
 func (net *Net) Version() string {
+	net.counter.WithLabelValues("net_version", "true").Inc()
 	return strconv.FormatUint(net.chainId, 10)
 }

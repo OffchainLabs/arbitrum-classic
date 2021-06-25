@@ -2,16 +2,21 @@ package web3
 
 import (
 	"context"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/filters"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/trie"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"math/big"
-	"time"
 )
 
 type EthClient struct {
@@ -20,21 +25,36 @@ type EthClient struct {
 	filter *filters.PublicFilterAPI
 }
 
-func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
+func NewEthClient(srv *aggregator.Server, ganacheMode bool, metricsConfig *metrics.MetricsConfig) *EthClient {
 	return &EthClient{
-		srv:    NewServer(srv, ganacheMode),
+		srv:    NewServer(srv, ganacheMode, metricsConfig),
 		events: filters.NewEventSystem(srv, false),
 		filter: filters.NewPublicFilterAPI(srv, false, 2*time.Minute),
 	}
 }
 
-func (c *EthClient) CodeAt(_ context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	var blockNum *int64
+func blockNum(blockNumber *big.Int) rpc.BlockNumberOrHash {
+	var blockNum *rpc.BlockNumber
 	if blockNumber != nil {
 		tmp := blockNumber.Int64()
-		blockNum = &tmp
+		blockNum = (*rpc.BlockNumber)(&tmp)
+	} else {
+		pending := rpc.PendingBlockNumber
+		blockNum = &pending
 	}
-	return c.srv.GetCode(&contract, (*rpc.BlockNumber)(blockNum))
+	return rpc.BlockNumberOrHash{BlockNumber: blockNum}
+}
+
+func (c *EthClient) BalanceAt(_ context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	bal, err := c.srv.GetBalance(&account, blockNum(blockNumber))
+	if err != nil {
+		return nil, err
+	}
+	return bal.ToInt(), nil
+}
+
+func (c *EthClient) CodeAt(_ context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
+	return c.srv.GetCode(&contract, blockNum(blockNumber))
 }
 
 func (c *EthClient) CallContract(_ context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
@@ -46,22 +66,19 @@ func (c *EthClient) CallContract(_ context.Context, call ethereum.CallMsg, block
 		Value:    (*hexutil.Big)(call.Value),
 		Data:     (*hexutil.Bytes)(&call.Data),
 	}
-	var blockNum *int64
-	if blockNumber != nil {
-		tmp := blockNumber.Int64()
-		blockNum = &tmp
-	}
-	return c.srv.Call(args, (*rpc.BlockNumber)(blockNum))
+	return c.srv.Call(args, blockNum(blockNumber))
 }
 
 func (c *EthClient) PendingCodeAt(_ context.Context, account common.Address) ([]byte, error) {
-	blockNum := rpc.PendingBlockNumber
-	return c.srv.GetCode(&account, &blockNum)
+	pending := rpc.PendingBlockNumber
+	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
+	return c.srv.GetCode(&account, block)
 }
 
 func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	blockNum := rpc.PendingBlockNumber
-	count, err := c.srv.GetTransactionCount(ctx, &account, &blockNum)
+	pending := rpc.PendingBlockNumber
+	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
+	count, err := c.srv.GetTransactionCount(ctx, &account, block)
 	if err != nil {
 		return 0, err
 	}
@@ -69,7 +86,12 @@ func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) 
 }
 
 func (c *EthClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
-	return (*big.Int)(c.srv.GasPrice()), nil
+	gasPriceRaw, err := c.srv.GasPrice()
+	return (*big.Int)(gasPriceRaw), err
+}
+
+func (c *EthClient) ChainID(_ context.Context) (*big.Int, error) {
+	return c.srv.srv.ChainId(), nil
 }
 
 func (c *EthClient) EstimateGas(_ context.Context, call ethereum.CallMsg) (uint64, error) {
@@ -127,4 +149,35 @@ func (c *EthClient) TransactionReceipt(_ context.Context, txHash common.Hash) (*
 		return nil, err
 	}
 	return res.ToEthReceipt(arbcommon.NewHashFromEth(block.Header.Hash())), nil
+}
+
+func (c *EthClient) TransactionByHash(_ context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
+	res, _, err := c.srv.getTransactionInfoByHash(txHash.Bytes())
+	if err != nil || res == nil {
+		return nil, false, err
+	}
+	tx, err := evm.GetTransaction(res)
+	if err != nil {
+		return nil, false, err
+	}
+	return tx.Tx, false, nil
+}
+
+func (c *EthClient) BlockByHash(_ context.Context, hash common.Hash) (*types.Block, error) {
+	info, err := c.srv.srv.BlockInfoByHash(arbcommon.NewHashFromEth(hash))
+	if err != nil || info == nil {
+		return nil, err
+	}
+	_, results, err := c.srv.srv.GetMachineBlockResults(info)
+	if err != nil || results == nil {
+		return nil, err
+	}
+	processedTxes := evm.FilterEthTxResults(results)
+	txes := make([]*types.Transaction, 0, len(processedTxes))
+	receipts := make([]*types.Receipt, 0, len(processedTxes))
+	for _, res := range processedTxes {
+		txes = append(txes, res.Tx)
+		receipts = append(receipts, res.Result.ToEthReceipt(arbcommon.NewHashFromEth(hash)))
+	}
+	return types.NewBlock(info.Header, txes, nil, receipts, new(trie.Trie)), nil
 }

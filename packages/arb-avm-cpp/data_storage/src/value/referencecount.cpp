@@ -26,16 +26,44 @@
 #include <iostream>
 
 namespace {
+struct RefCountResult {
+    uint32_t reference_count;
+    rocksdb::Status status;
+};
+
+RefCountResult getRefCountData(const ReadTransaction& tx,
+                               const rocksdb::Slice& hash_key) {
+    std::string return_value;
+    auto get_status = tx.refCountedGet(hash_key, &return_value);
+
+    if (!get_status.ok()) {
+        auto unsuccessful = rocksdb::Status::NotFound();
+        return {0, unsuccessful};
+    }
+    if (return_value.empty()) {
+        return {0, get_status};
+    }
+    const char* c_string = return_value.c_str();
+    uint32_t ref_count;
+    memcpy(&ref_count, c_string, sizeof(ref_count));
+    return {ref_count, get_status};
+}
+}  // namespace
+
 SaveResults saveValueWithRefCount(ReadWriteTransaction& tx,
                                   uint32_t updated_ref_count,
                                   const rocksdb::Slice& hash_key,
                                   const std::vector<unsigned char>& value) {
-    std::vector<unsigned char> updated_entry(sizeof(updated_ref_count));
-    memcpy(&updated_entry[0], &updated_ref_count, sizeof(updated_ref_count));
+    std::vector<unsigned char> updated_entry;
+    updated_entry.reserve(sizeof(updated_ref_count) + value.size());
+    auto count_data = reinterpret_cast<unsigned char*>(&updated_ref_count);
+    updated_entry.insert(updated_entry.end(), count_data,
+                         count_data + sizeof(updated_ref_count));
     updated_entry.insert(updated_entry.end(), value.begin(), value.end());
 
-    std::string value_str(updated_entry.begin(), updated_entry.end());
-    auto status = tx.refCountedPut(hash_key, value_str);
+    rocksdb::Slice value_slice(reinterpret_cast<char*>(updated_entry.data()),
+                               updated_entry.size());
+    auto status = tx.refCountedPut(hash_key, value_slice);
 
     if (status.ok()) {
         return SaveResults{updated_ref_count, status};
@@ -43,46 +71,43 @@ SaveResults saveValueWithRefCount(ReadWriteTransaction& tx,
         return SaveResults{0, status};
     }
 }
-}  // namespace
 
 SaveResults incrementReference(ReadWriteTransaction& tx,
                                const rocksdb::Slice& hash_key,
                                uint32_t new_references) {
-    auto results = getRefCountedData(tx, hash_key);
+    std::string return_value;
+    auto get_status = tx.refCountedGet(hash_key, &return_value);
 
-    if (results.status.ok()) {
-        auto updated_count = results.reference_count + new_references;
-        return saveValueWithRefCount(tx, updated_count, hash_key,
-                                     results.stored_value);
+    if (!get_status.ok()) {
+        return SaveResults{0, rocksdb::Status::NotFound()};
+    }
+    if (return_value.empty()) {
+        return SaveResults{0, rocksdb::Status::NotFound()};
+    }
+
+    const char* c_string = return_value.c_str();
+    uint32_t ref_count;
+    memcpy(&ref_count, c_string, sizeof(ref_count));
+    ref_count += new_references;
+    for (size_t i = 0; i < sizeof(ref_count); i++) {
+        return_value[i] = *(reinterpret_cast<char*>(&ref_count) + i);
+    }
+    auto status = tx.refCountedPut(hash_key, return_value);
+    if (status.ok()) {
+        return SaveResults{ref_count, status};
     } else {
-        return SaveResults{0, results.status};
+        return SaveResults{0, status};
     }
 }
 
-SaveResults saveRefCountedData(ReadWriteTransaction& tx,
-                               const rocksdb::Slice& hash_key,
-                               const std::vector<unsigned char>& value,
-                               uint32_t new_references,
-                               bool allow_replacement) {
-    auto results = getRefCountedData(tx, hash_key);
+SaveResults saveRefCountedDataReplaced(ReadWriteTransaction& tx,
+                                       const rocksdb::Slice& hash_key,
+                                       const std::vector<unsigned char>& value,
+                                       uint32_t new_references) {
+    auto results = getRefCountData(tx, hash_key);
     uint32_t ref_count;
 
     if (results.status.ok()) {
-        if (!allow_replacement && results.stored_value != value) {
-            std::cout << "Different value for key: ";
-            boost::algorithm::hex(hash_key.data(),
-                                  hash_key.data() + hash_key.size(),
-                                  std::ostream_iterator<char>{std::cout, ""});
-            std::cout << "\nPrevious value: ";
-            boost::algorithm::hex(results.stored_value.begin(),
-                                  results.stored_value.end(),
-                                  std::ostream_iterator<char>{std::cout, ""});
-            std::cout << "\nNew Value: ";
-            boost::algorithm::hex(value.begin(), value.end(),
-                                  std::ostream_iterator<char>{std::cout, ""});
-            std::cout << std::endl;
-            assert(false);
-        }
         ref_count = results.reference_count + new_references;
     } else {
         ref_count = new_references;

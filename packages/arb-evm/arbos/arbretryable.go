@@ -17,14 +17,26 @@
 package arbos
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"bytes"
+	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 var (
 	RetryCanceledEvent abi.Event
 	RetryRedeemedEvent abi.Event
+
+	createRetryableTicketABI abi.Method
+	redeemABI                abi.Method
 )
 
 func init() {
@@ -33,6 +45,92 @@ func init() {
 		panic(err)
 	}
 
+	creatorABI, err := abi.JSON(strings.NewReader(arboscontracts.RetryableTicketCreatorABI))
+	if err != nil {
+		panic(err)
+	}
+
 	RetryCanceledEvent = parsedABI.Events["Canceled"]
 	RetryRedeemedEvent = parsedABI.Events["Redeemed"]
+	redeemABI = parsedABI.Methods["redeem"]
+	createRetryableTicketABI = creatorABI.Methods["createRetryableTicket"]
+}
+
+func CreateRetryableTicketData(msg message.RetryableTx) []byte {
+	txData, err := createRetryableTicketABI.Inputs.Pack(
+		msg.Destination.ToEthAddress(),
+		msg.Value,
+		msg.MaxSubmissionCost,
+		msg.CreditBack.ToEthAddress(),
+		msg.Beneficiary.ToEthAddress(),
+		msg.MaxGas,
+		msg.GasPriceBid,
+		msg.Data,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return append(createRetryableTicketABI.ID, txData...)
+}
+
+func RedeemData(txId common.Hash) []byte {
+	return append(redeemABI.ID, txId[:]...)
+}
+
+func ParseCreateRetryableTicketTx(tx *types.Transaction) (*message.RetryableTx, error) {
+	if !bytes.Equal(tx.Data()[:4], createRetryableTicketABI.ID) {
+		return nil, errors.New("bad func id")
+	}
+	args, err := createRetryableTicketABI.Inputs.Unpack(tx.Data()[4:])
+	if err != nil {
+		return nil, err
+	}
+	if len(args) != 8 {
+		return nil, errors.New("unexpected arg count")
+	}
+
+	dest, ok := args[0].(ethcommon.Address)
+	if !ok {
+		return nil, errors.New("bad dest")
+	}
+	value, ok := args[1].(*big.Int)
+	if !ok {
+		return nil, errors.New("bad value")
+	}
+	cost, ok := args[2].(*big.Int)
+	if !ok {
+		return nil, errors.New("bad cost")
+	}
+	creditBack, ok := args[3].(ethcommon.Address)
+	if !ok {
+		return nil, errors.New("bad dest")
+	}
+	beneficiary, ok := args[4].(ethcommon.Address)
+	if !ok {
+		return nil, errors.New("bad beneficiary")
+	}
+	maxGas, ok := args[5].(*big.Int)
+	if !ok {
+		return nil, errors.New("bad max gas")
+	}
+	gasPrice, ok := args[6].(*big.Int)
+	if !ok {
+		return nil, errors.New("bad gas price")
+	}
+	calldata, ok := args[7].([]byte)
+	if !ok {
+		return nil, errors.New("bad data")
+	}
+
+	return &message.RetryableTx{
+		Destination:       common.NewAddressFromEth(dest),
+		Value:             value,
+		Deposit:           tx.Value(),
+		MaxSubmissionCost: cost,
+		CreditBack:        common.NewAddressFromEth(creditBack),
+		Beneficiary:       common.NewAddressFromEth(beneficiary),
+		MaxGas:            maxGas,
+		GasPriceBid:       gasPrice,
+		Data:              calldata,
+	}, nil
 }

@@ -25,279 +25,275 @@ describe('Bridge peripherals layer 1', () => {
   let TestBridge: ContractFactory
   let testBridge: Contract
 
-  let inbox: string;
-  let l2Deployer: string;
-  const maxSubmissionCost = 0
+  let inbox: Contract
+  const maxSubmissionCost = 1
   const maxGas = 1000000000
   const gasPrice = 0
-  const l2Template777 = '0x0000000000000000000000000000000000000777'
   const l2Template20 = '0x0000000000000000000000000000000000000020'
   const l2Address = '0x1100000000000000000000000000000000000011'
 
   before(async function () {
     accounts = await ethers.getSigners()
 
-    TestBridge = await ethers.getContractFactory('EthERC20Bridge')
+    TestBridge = await ethers.getContractFactory('L1ERC20Gateway')
     testBridge = await TestBridge.deploy()
-    
+
     const Inbox = await ethers.getContractFactory('InboxMock')
-    inbox = (await Inbox.deploy()).address
-    // inbox = accounts[0].address
-    l2Deployer = accounts[0].address
+    inbox = await Inbox.deploy()
 
     await testBridge.initialize(
-      inbox,
-      l2Deployer,
-      maxSubmissionCost,
+      l2Address,
+      accounts[0].address,
+      inbox.address,
+      '0x0000000000000000000000000000000000000000000000000000000000000001', // cloneable proxy hash
+      accounts[0].address // beaconProxyFactory
+    )
+  })
+
+  it('should escrow depositted tokens', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
+    const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(testBridge.address, tokenAmount)
+
+    let data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    // router usually does this encoding part
+    data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [accounts[0].address, data]
+    )
+
+    await testBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
       maxGas,
       gasPrice,
-      l2Template777,
-      l2Template20,
-      l2Address
+      data
     )
+
+    const escrowedTokens = await token.balanceOf(testBridge.address)
+    assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
 
-  it.skip('should withdraw from L2', async function () {
-    assert.equal(true, false, 'Not implemented')
-  })
-
-  it.skip('should deposit erc20 token to L2', async function () {
-    assert.equal(true, false, 'Not implemented')
-  })
-
-  it.skip('should not deposit erc777 token to L2', async function () {
-    assert.equal(true, false, 'Not implemented')
-  })
-
-  it('should updateTokenInfo 18 decimals', async function () {
-    // deploy erc20 with 18 decimals
-    const Token = await ethers.getContractFactory('StandardArbERC20')
+  it('should withdraw erc20 tokens from L2', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
 
-    const newDecimals = 18
-    const newName = "Test Token"
-    const newSymbol = "TT"
+    await token.mint()
+    await token.approve(testBridge.address, tokenAmount)
 
-    await token.initialize(
-      accounts[0].address,
-      accounts[0].address,
-      newDecimals
+    let data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
     )
 
-    await token.updateInfo(newName, newSymbol, newDecimals)
+    // router usually does this encoding part
+    data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [accounts[0].address, data]
+    )
 
-    const tokenType = 0;
-    const tx = await testBridge.updateTokenInfo(
+    await testBridge.outboundTransfer(
       token.address,
-      tokenType,
-      maxSubmissionCost,
+      accounts[0].address,
+      tokenAmount,
       maxGas,
-      gasPrice
+      gasPrice,
+      data
     )
-    const receipt = await tx.wait();
 
-    // event UpdateTokenInfo
-    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-    
-    assert.equal(events.length, 1, "Expected only one event to be emitted")
+    await inbox.setL2ToL1Sender(l2Address)
 
-    const event = events[0]
+    const prevUserBalance = await token.balanceOf(accounts[0].address)
 
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals
-    } = event.args
+    const exitNum = 0
+    const withdrawData = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [exitNum, '0x']
+    )
+
+    await testBridge.finalizeInboundTransfer(
+      token.address,
+      accounts[0].address,
+      accounts[0].address,
+      tokenAmount,
+      withdrawData
+    )
+
+    const postUserBalance = await token.balanceOf(accounts[0].address)
 
     assert.equal(
-      eventName,
-      '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e00000000000000000000000000000000000000000000',
-      'Incorrect encoded name'
-    )
-    assert.equal(
-      eventSymbol,
-      '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000025454000000000000000000000000000000000000000000000000000000000000',
-      'Incorrect encoded symbol'
-    )
-    
-    assert.equal(
-      eventDecimals,
-      '0x0000000000000000000000000000000000000000000000000000000000000012',
-      'Incorrect encoded symbol'
+      prevUserBalance.toNumber() + tokenAmount,
+      postUserBalance.toNumber(),
+      'Tokens not escrowed'
     )
   })
 
-  it('should updateTokenInfo 6 decimals as uint8', async function () {
-    // deploy erc20 with 18 decimals
-    const Token = await ethers.getContractFactory('StandardArbERC20')
+  it('should process fast withdrawal correctly', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
 
-    const newDecimals = 6
-    const newName = "Test Token"
-    const newSymbol = "TT"
-
-    await token.initialize(
-      accounts[0].address,
-      accounts[0].address,
-      newDecimals
+    let data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
     )
 
-    await token.updateInfo(newName, newSymbol, newDecimals)
+    // router usually does this encoding part
+    data = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'bytes'],
+      [accounts[0].address, data]
+    )
 
-    const tokenType = 0;
-    const tx = await testBridge.updateTokenInfo(
+    await token.mint()
+    await token.approve(testBridge.address, tokenAmount)
+    await testBridge.outboundTransfer(
       token.address,
-      tokenType,
-      maxSubmissionCost,
+      accounts[0].address,
+      tokenAmount,
       maxGas,
-      gasPrice
+      gasPrice,
+      data
     )
-    const receipt = await tx.wait();
 
-    // event UpdateTokenInfo
-    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-    
-    assert.equal(events.length, 1, "Expected only one event to be emitted")
+    // parameters used for exit
+    const exitNum = 0
+    const maxFee = 10
+    const liquidityProof = '0x'
 
-    const event = events[0]
+    const FastExitMock = await ethers.getContractFactory('FastExitMock')
+    const fastExitMock = await FastExitMock.deploy()
 
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals
-    } = event.args
+    await fastExitMock.setFee(maxFee)
+
+    // send tokens to liquidity provider
+    const liquidityProviderBalance = 10000
+    await token.transfer(fastExitMock.address, liquidityProviderBalance)
+
+    const prevUserBalance = await token.balanceOf(accounts[0].address)
+
+    // request liquidity from them
+    const PassiveFastExitManager = await ethers.getContractFactory(
+      'L1PassiveFastExitManager'
+    )
+    const passiveFastExitManager = await PassiveFastExitManager.deploy()
+    await passiveFastExitManager.setBridge(testBridge.address)
+
+    const tradeData = ethers.utils.defaultAbiCoder.encode(
+      ['address', 'uint256', 'address', 'uint256', 'address', 'bytes', 'bytes'],
+      [
+        accounts[0].address,
+        maxFee,
+        fastExitMock.address,
+        tokenAmount,
+        token.address,
+        liquidityProof,
+        '0x',
+      ]
+    )
+    // doesn't make a difference since the passive fast exit manager transfers the exit again
+    const newData = '0x'
+
+    await testBridge.transferExitAndCall(
+      exitNum,
+      accounts[0].address,
+      passiveFastExitManager.address,
+      newData,
+      tradeData
+    )
+
+    const postUserBalance = await token.balanceOf(accounts[0].address)
 
     assert.equal(
-      eventName,
-      '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000a5465737420546f6b656e00000000000000000000000000000000000000000000',
-      'Incorrect encoded name'
+      prevUserBalance.toNumber() + tokenAmount - maxFee,
+      postUserBalance.toNumber(),
+      'Tokens not escrowed'
     )
-    assert.equal(
-      eventSymbol,
-      '0x000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000025454000000000000000000000000000000000000000000000000000000000000',
-      'Incorrect encoded symbol'
+
+    await inbox.setL2ToL1Sender(l2Address)
+
+    // withdrawal should now be sent to liquidity provider
+    // const prevLPBalance = await token.balanceOf(expensiveFastExitMock[0].address)
+
+    const inboundData = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [exitNum, '0x']
     )
-    
+
+    const finalizeTx = await testBridge.finalizeInboundTransfer(
+      token.address,
+      accounts[0].address,
+      accounts[0].address,
+      tokenAmount,
+      inboundData
+    )
+    const finalizeTxReceipt = await finalizeTx.wait()
+
+    // event emitted when fast exit mock is triggered
+    const expectedTopic =
+      '0x2f0c0af451e6330658fba0c08f7d82acdb1feff8d2904044a765af1b27df3e1f'
+    const logs = finalizeTxReceipt.events
+      .filter((curr: any) => curr.topics[0] === expectedTopic)
+      .map((curr: any) => fastExitMock.interface.parseLog(curr))
+
+    assert.equal(logs.length, 1, 'Fast exit mock not called on withdrawal')
+
+    const postLPBalance = await token.balanceOf(fastExitMock.address)
+
     assert.equal(
-      eventDecimals,
-      '0x0000000000000000000000000000000000000000000000000000000000000006',
-      'Incorrect encoded symbol'
+      postLPBalance.toNumber(),
+      liquidityProviderBalance + maxFee,
+      'Liquidity provider balance not as expected'
     )
   })
 
-  it('should updateTokenInfo 6 decimals set as uint 256 and name as bytes32', async function () {
-    const Token = await ethers.getContractFactory('TesterERC20Token')
-    // this adds padding at the end, not the start!
-    const name = ethers.utils.formatBytes32String("0x617262697472756d")
-    const symbol = ethers.utils.formatBytes32String("0x617262")
-    const decimal = 6
-    
-    const token = await Token.deploy(
-      decimal,
-      name,
-      symbol
-    )
-
-    const tokenType = 0;
-    const tx = await testBridge.updateTokenInfo(
-      token.address,
-      tokenType,
-      maxSubmissionCost,
-      maxGas,
-      gasPrice
-    )
-    const receipt = await tx.wait();
-
-    // event UpdateTokenInfo
-    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-    
-    assert.equal(events.length, 1, "Expected only one event to be emitted")
-
-    const event = events[0]
-
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals
-    } = event.args
-
-    assert.equal(
-      eventName,
-      '0x3078363137323632363937343732373536640000000000000000000000000000',
-      'Incorrect encoded name'
-    )
-    assert.equal(
-      eventSymbol,
-      '0x3078363137323632000000000000000000000000000000000000000000000000',
-      'Incorrect encoded symbol'
-    )
-    
-    assert.equal(
-      eventDecimals,
-      '0x0000000000000000000000000000000000000000000000000000000000000006',
-      'Incorrect encoded symbol'
-    )
-  })
-
-  it('should updateTokenInfo even with token that has no metadata', async function () {
-    const Token = await ethers.getContractFactory('TesterERC20TokenNoMetadata')
+  it('should submit the correct submission cost to the inbox', async function () {
+    const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+    await token.mint()
+    await token.approve(testBridge.address, tokenAmount)
 
-    const tokenType = 0;
-    const tx = await testBridge.updateTokenInfo(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    const tx = await testBridge.outboundTransfer(
       token.address,
-      tokenType,
-      maxSubmissionCost,
+      accounts[0].address,
+      tokenAmount,
       maxGas,
-      gasPrice
+      gasPrice,
+      data
     )
-    const receipt = await tx.wait();
-
-    // event UpdateTokenInfo
-    const eventTopic = "0x0388926a40418e22c6e6e9024bedafa0f215f76f61b5c2a069dccfc5c4335d9c"
-    const events = receipt.events.filter((e: any) => e.topics[0] === eventTopic)
-    
-    assert.equal(events.length, 1, "Expected only one event to be emitted")
-
-    const event = events[0]
-
-    const {
-      // seqNum,
-      // l1Address,
-      name: eventName,
-      symbol: eventSymbol,
-      decimals: eventDecimals
-    } = event.args
+    const receipt = await tx.wait()
+    // TicketData(uint256)
+    const expectedTopic =
+      '0x7efacbad201ebbc50ec0ce4b474c54b735a31b1bac996acff50df7de0314e8f9'
+    const logs = receipt.events
+      .filter((curr: any) => curr.topics[0] === expectedTopic)
+      .map((curr: any) => inbox.interface.parseLog(curr))
 
     assert.equal(
-      eventName,
-      '0x',
-      'Incorrect encoded name'
+      logs[0].args.maxSubmissionCost.toNumber(),
+      maxSubmissionCost,
+      'Invalid submission cost'
     )
-    assert.equal(
-      eventSymbol,
-      '0x',
-      'Incorrect encoded symbol'
-    )
-    
-    assert.equal(
-      eventDecimals,
-      '0x',
-      'Incorrect encoded symbol'
-    )
+    // const vals = testBridge.interface.parseLog(logs[0])
+
+    const escrowedTokens = await token.balanceOf(testBridge.address)
+    assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
-
-  it.skip('should deposit custom token', async function () {})
-  it.skip('should registerCustomL2Token', async function () {})
-  it.skip('should notifyCustomToken', async function () {})
-  it.skip('should fastWithdrawalFromL2', async function () {})
 })

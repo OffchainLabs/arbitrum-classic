@@ -17,16 +17,15 @@
 package arbos
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
@@ -34,10 +33,8 @@ var (
 	txCountABI      abi.Method
 	withdrawEthABI  abi.Method
 	getStorageAtABI abi.Method
-
-	ethWithdrawal ethcommon.Hash
-
-	arbsysConn *bind.BoundContract
+	arbOSVersionABI abi.Method
+	chainIdABI      abi.Method
 
 	L2ToL1TransactionID ethcommon.Hash
 )
@@ -51,19 +48,18 @@ func init() {
 	txCountABI = arbsys.Methods["getTransactionCount"]
 	withdrawEthABI = arbsys.Methods["withdrawEth"]
 	getStorageAtABI = arbsys.Methods["getStorageAt"]
+	arbOSVersionABI = arbsys.Methods["arbOSVersion"]
+	chainIdABI = arbsys.Methods["arbChainID"]
 
-	ethWithdrawal = arbsys.Events["EthWithdrawal"].ID
 	L2ToL1TransactionID = arbsys.Events["L2ToL1Transaction"].ID
-
-	arbsysConn = bind.NewBoundContract(ARB_SYS_ADDRESS, arbsys, nil, nil, nil)
 }
 
 func TransactionCountData(address common.Address) []byte {
 	return makeFuncData(txCountABI, address)
 }
 
-func ParseTransactionCountResult(res *evm.TxResult) (*big.Int, error) {
-	vals, err := txCountABI.Outputs.UnpackValues(res.ReturnData)
+func ParseTransactionCountResult(data []byte) (*big.Int, error) {
+	vals, err := txCountABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}
@@ -78,31 +74,44 @@ func WithdrawEthData(address common.Address) []byte {
 	return makeFuncData(withdrawEthABI, address)
 }
 
-func encodeLog(log evm.Log) types.Log {
-	return types.Log{
-		Address: log.Address.ToEthAddress(),
-		Topics:  common.NewEthHashesFromHashes(log.Topics),
-		Data:    log.Data,
-	}
-}
-
-func ParseEthWithdrawalEvent(log evm.Log) (*arboscontracts.ArbSysEthWithdrawal, error) {
-	if log.Topics[0].ToEthHash() != ethWithdrawal {
-		return nil, errors.New("wrong event type")
-	}
-	event := new(arboscontracts.ArbSysEthWithdrawal)
-	if err := arbsysConn.UnpackLog(event, "EthWithdrawal", encodeLog(log)); err != nil {
-		return nil, err
-	}
-	return event, nil
-}
-
 func StorageAtData(address common.Address, index *big.Int) []byte {
 	return makeFuncData(getStorageAtABI, address, index)
 }
 
-func ParseGetStorageAtResult(res *evm.TxResult) (*big.Int, error) {
-	vals, err := getStorageAtABI.Outputs.UnpackValues(res.ReturnData)
+func ParseGetStorageAtResult(data []byte) (*big.Int, error) {
+	vals, err := getStorageAtABI.Outputs.UnpackValues(data)
+	if err != nil {
+		return nil, err
+	}
+	val, ok := vals[0].(*big.Int)
+	if !ok {
+		return nil, errors.New("unexpected tx result")
+	}
+	return val, nil
+}
+
+func ArbOSVersionData() []byte {
+	return makeFuncData(arbOSVersionABI)
+}
+
+func ParseArbOSVersionResult(data []byte) (*big.Int, error) {
+	vals, err := arbOSVersionABI.Outputs.UnpackValues(data)
+	if err != nil {
+		return nil, err
+	}
+	val, ok := vals[0].(*big.Int)
+	if !ok {
+		return nil, errors.New("unexpected tx result")
+	}
+	return val, nil
+}
+
+func ChainIdData() []byte {
+	return makeFuncData(chainIdABI)
+}
+
+func ParseChainIdResult(data []byte) (*big.Int, error) {
+	vals, err := chainIdABI.Outputs.UnpackValues(data)
 	if err != nil {
 		return nil, err
 	}

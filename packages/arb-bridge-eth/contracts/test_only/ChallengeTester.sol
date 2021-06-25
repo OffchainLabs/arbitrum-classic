@@ -26,6 +26,7 @@ contract ChallengeTester {
     address public winner;
     address public loser;
     ChallengeFactory public challengeFactory;
+    uint256 public challengeExecutionBisectionDegree = 400;
 
     constructor(IOneStepProof[] memory _executors) public {
         challengeFactory = new ChallengeFactory(_executors);
@@ -45,7 +46,8 @@ contract ChallengeTester {
         address payable challenger,
         uint256 asserterTimeLeft,
         uint256 challengerTimeLeft,
-        IBridge bridge
+        ISequencerInbox sequencerBridge,
+        IBridge delayedBridge
     ) public {
         challenge = challengeFactory.createChallenge(
             address(this),
@@ -55,7 +57,8 @@ contract ChallengeTester {
             challenger,
             asserterTimeLeft,
             challengerTimeLeft,
-            bridge
+            sequencerBridge,
+            delayedBridge
         );
     }
 }

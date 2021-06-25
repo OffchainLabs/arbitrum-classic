@@ -24,14 +24,19 @@ interface IChallengeInterface extends ethers.utils.Interface {
   functions: {
     'asserter()': FunctionFragment
     'challenger()': FunctionFragment
+    'clearChallenge()': FunctionFragment
     'currentResponderTimeLeft()': FunctionFragment
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)': FunctionFragment
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'lastMoveBlock()': FunctionFragment
     'timeout()': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'asserter', values?: undefined): string
   encodeFunctionData(functionFragment: 'challenger', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'clearChallenge',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'currentResponderTimeLeft',
     values?: undefined
@@ -47,6 +52,7 @@ interface IChallengeInterface extends ethers.utils.Interface {
       string,
       BigNumberish,
       BigNumberish,
+      string,
       string
     ]
   ): string
@@ -58,6 +64,10 @@ interface IChallengeInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(functionFragment: 'asserter', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'challenger', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'clearChallenge',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(
     functionFragment: 'currentResponderTimeLeft',
     data: BytesLike
@@ -97,6 +107,10 @@ export class IChallenge extends Contract {
 
     'challenger()'(overrides?: CallOverrides): Promise<[string]>
 
+    clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
+
     currentResponderTimeLeft(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'currentResponderTimeLeft()'(
@@ -112,11 +126,12 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -125,7 +140,8 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -146,6 +162,10 @@ export class IChallenge extends Contract {
 
   'challenger()'(overrides?: CallOverrides): Promise<string>
 
+  clearChallenge(overrides?: Overrides): Promise<ContractTransaction>
+
+  'clearChallenge()'(overrides?: Overrides): Promise<ContractTransaction>
+
   currentResponderTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
   'currentResponderTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -159,11 +179,12 @@ export class IChallenge extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+  'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
     _executors: string[],
     _resultReceiver: string,
     _executionHash: BytesLike,
@@ -172,7 +193,8 @@ export class IChallenge extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -193,6 +215,10 @@ export class IChallenge extends Contract {
 
     'challenger()'(overrides?: CallOverrides): Promise<string>
 
+    clearChallenge(overrides?: CallOverrides): Promise<void>
+
+    'clearChallenge()'(overrides?: CallOverrides): Promise<void>
+
     currentResponderTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
     'currentResponderTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -206,11 +232,12 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -219,7 +246,8 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -243,6 +271,10 @@ export class IChallenge extends Contract {
 
     'challenger()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    clearChallenge(overrides?: Overrides): Promise<BigNumber>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<BigNumber>
+
     currentResponderTimeLeft(overrides?: CallOverrides): Promise<BigNumber>
 
     'currentResponderTimeLeft()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -256,11 +288,12 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -269,7 +302,8 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -291,6 +325,10 @@ export class IChallenge extends Contract {
 
     'challenger()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
+    clearChallenge(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'clearChallenge()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
     currentResponderTimeLeft(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -308,11 +346,12 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'initializeChallenge(address[],address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _executors: string[],
       _resultReceiver: string,
       _executionHash: BytesLike,
@@ -321,7 +360,8 @@ export class IChallenge extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

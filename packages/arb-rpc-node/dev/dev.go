@@ -1,98 +1,115 @@
+/*
+* Copyright 2021, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package dev
 
 import (
 	"context"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	core2 "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "dev").Logger()
 
-func NewDevNode(dir string, config protocol.ChainParams) (*staker.Monitor, *Backend, *txdb.TxDB, common.Address) {
-	owner := common.RandAddress()
-	rollupAddress := common.RandAddress()
-	initMsg := message.Init{
-		ChainParams: config,
-		Owner:       owner,
-		ExtraConfig: nil,
-	}
-
-	monitor, err := staker.NewMonitor(dir, arbos.Path())
+func NewDevNode(ctx context.Context, dir string, arbosPath string, chainId *big.Int, agg common.Address, initialL1Height uint64) (*Backend, *txdb.TxDB, func(), <-chan error, error) {
+	mon, err := monitor.NewMonitor(dir, arbosPath)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
+		return nil, nil, nil, nil, errors.Wrap(err, "error opening monitor")
 	}
 
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupAddress, 10*time.Millisecond)
+	backendCore, err := NewBackendCore(ctx, mon.Core, chainId)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		mon.Close()
+		return nil, nil, nil, nil, err
 	}
 
-	signer := types.NewEIP155Signer(message.ChainAddressToID(rollupAddress))
-	l1 := NewL1Emulator()
-	backend, err := NewBackend(monitor.Core, db, l1, signer)
+	db, errChan, err := txdb.New(ctx, mon.Core, mon.Storage.GetNodeStore(), 10*time.Millisecond)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		mon.Close()
+		return nil, nil, nil, nil, errors.Wrap(err, "error opening txdb")
 	}
 
-	if _, err := backend.AddInboxMessage(initMsg, rollupAddress); err != nil {
-		logger.Fatal().Err(err).Send()
+	cancel := func() {
+		db.Close()
+		mon.Close()
 	}
+	signer := types.NewEIP155Signer(chainId)
+	l1 := NewL1Emulator(initialL1Height)
+	backend := NewBackend(ctx, backendCore, db, l1, signer, agg, big.NewInt(100000000000))
 
-	return monitor, backend, db, rollupAddress
+	return backend, db, cancel, errChan, nil
 }
 
 type EVM struct {
-	backend *Backend
+	backend   *Backend
+	snapshots map[uint64]uint64 // message count to block count
 }
 
 func NewEVM(backend *Backend) *EVM {
-	return &EVM{backend: backend}
+	return &EVM{
+		backend:   backend,
+		snapshots: make(map[uint64]uint64),
+	}
 }
 
 func (s *EVM) Snapshot() (hexutil.Uint64, error) {
-	logCount, err := s.backend.arbcore.GetLogCount()
+	messageCount, err := s.backend.arbcore.GetMessageCount()
 	if err != nil {
 		return 0, err
 	}
-	sendCount, err := s.backend.arbcore.GetSendCount()
-	if err != nil {
-		return 0, err
-	}
-	latestHeight := s.backend.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
-	logger.
-		Info().
-		Uint64("latest", latestHeight).
-		Uint64("logcount", logCount.Uint64()).
-		Uint64("sendCount", sendCount.Uint64()).
-		Msg("created snapshot")
-	return hexutil.Uint64(latestHeight), nil
+	latestHeight := s.backend.l1Emulator.LatestHeight()
+	s.snapshots[messageCount.Uint64()] = latestHeight
+	logger.Info().Uint64("count", messageCount.Uint64()).Msg("created snapshot")
+	return hexutil.Uint64(messageCount.Uint64()), nil
 }
 
 func (s *EVM) Revert(snapId hexutil.Uint64) error {
-	logger.Info().Uint64("snap", uint64(snapId)).Msg("revert")
-	err := s.backend.Reorg(uint64(snapId))
+	messageCount := uint64(snapId)
+	logger.Info().Uint64("snap", messageCount).Msg("revert")
+	blockCount, ok := s.snapshots[messageCount]
+	if !ok {
+		return errors.New("no such snapshot")
+	}
+	err := s.backend.Reorg(messageCount, blockCount)
 	if err != nil {
 		logger.Error().Err(err).Msg("can't revert")
 	}
@@ -113,75 +130,165 @@ func (s *EVM) IncreaseTime(amount int64) (string, error) {
 	return strconv.FormatInt(amount, 10), err
 }
 
+type BackendCore struct {
+	ctx          context.Context
+	arbcore      core.ArbCore
+	chainID      *big.Int
+	delayedCount *big.Int
+}
+
+func NewBackendCore(ctx context.Context, arbcore core.ArbCore, chainID *big.Int) (*BackendCore, error) {
+	delayedCount, err := arbcore.GetTotalDelayedMessagesSequenced()
+	if err != nil {
+		return nil, err
+	}
+	return &BackendCore{
+		ctx:          ctx,
+		arbcore:      arbcore,
+		chainID:      chainID,
+		delayedCount: delayedCount,
+	}, nil
+}
+
+func (b *BackendCore) addInboxMessage(msg message.Message, sender common.Address, gasPrice *big.Int, block L1BlockInfo) (common.Hash, error) {
+	chainTime := inbox.ChainTime{
+		BlockNum:  block.blockId.Height,
+		Timestamp: block.timestamp,
+	}
+	msgCount, err := b.arbcore.GetMessageCount()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), gasPrice, chainTime)
+
+	requestId := message.CalculateRequestId(b.chainID, msgCount)
+	var prevHash common.Hash
+	if msgCount.Cmp(big.NewInt(0)) > 0 {
+		prevHash, err = b.arbcore.GetInboxAcc(new(big.Int).Sub(msgCount, big.NewInt(1)))
+		if err != nil {
+			return common.Hash{}, err
+		}
+	}
+	seqBatchItem := inbox.NewSequencerItem(b.delayedCount, inboxMessage, prevHash)
+	nextBlockMessage := inbox.InboxMessage{
+		Kind:        6,
+		Sender:      common.Address{},
+		InboxSeqNum: new(big.Int).Add(msgCount, big.NewInt(1)),
+		GasPrice:    big.NewInt(0),
+		Data:        []byte{},
+		ChainTime: inbox.ChainTime{
+			BlockNum:  common.NewTimeBlocksInt(0),
+			Timestamp: big.NewInt(0),
+		},
+	}
+	nextBlockBatchItem := inbox.NewSequencerItem(b.delayedCount, nextBlockMessage, seqBatchItem.Accumulator)
+	err = core.DeliverMessagesAndWait(b.arbcore, msgCount, prevHash, []inbox.SequencerBatchItem{seqBatchItem, nextBlockBatchItem}, nil, nil)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	for {
+		if b.arbcore.MachineIdle() {
+			break
+		}
+		select {
+		case <-b.ctx.Done():
+			return [32]byte{}, errors.New("dev node canceled")
+		case <-time.After(time.Millisecond * 200):
+		}
+
+	}
+	for {
+		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
+		if err != nil {
+			return common.Hash{}, err
+		}
+		coreLogs, err := b.arbcore.GetLogCount()
+		if err != nil {
+			return common.Hash{}, err
+		}
+		if cursorPos.Cmp(coreLogs) == 0 {
+			break
+		}
+		select {
+		case <-b.ctx.Done():
+			return [32]byte{}, errors.New("dev node canceled")
+		case <-time.After(time.Millisecond * 200):
+		}
+	}
+
+	return requestId, nil
+}
+
 type Backend struct {
 	sync.Mutex
-	arbcore    core.ArbCore
-	db         *txdb.TxDB
-	l1Emulator *L1Emulator
-	signer     types.Signer
+	*BackendCore
+	ctx               context.Context
+	db                *txdb.TxDB
+	l1Emulator        *L1Emulator
+	signer            types.Signer
+	currentAggregator common.Address
+	chainAggregator   common.Address
+	l1GasPrice        *big.Int
 
 	newTxFeed event.Feed
 }
 
-func NewBackend(arbcore core.ArbCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer) (*Backend, error) {
+func NewBackend(ctx context.Context, core *BackendCore, db *txdb.TxDB, l1 *L1Emulator, signer types.Signer, aggregator common.Address, l1GasPrice *big.Int) *Backend {
 	return &Backend{
-		arbcore:    arbcore,
-		db:         db,
-		l1Emulator: l1,
-		signer:     signer,
-	}, nil
+		BackendCore:       core,
+		ctx:               ctx,
+		db:                db,
+		l1Emulator:        l1,
+		signer:            signer,
+		currentAggregator: aggregator,
+		chainAggregator:   aggregator,
+		l1GasPrice:        l1GasPrice,
+	}
 }
 
 func (b *Backend) ExportData() ([]byte, error) {
 	b.Lock()
 	messageCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, err
 	}
 	messages, err := b.arbcore.GetMessages(big.NewInt(0), messageCount)
 	if err != nil {
-		logger.Fatal().Err(err).Send()
+		return nil, err
 	}
 	b.Unlock()
 	return inbox.TestVectorJSON(messages, nil, nil)
 }
 
-func (b *Backend) Reorg(height uint64) error {
+func (b *Backend) Reorg(messageCount, blockCount uint64) error {
 	b.Lock()
 	defer b.Unlock()
-	return b.reorg(height)
+	return b.reorg(messageCount, blockCount)
 }
 
-func (b *Backend) reorg(height uint64) error {
-	startHeight, err := b.db.BlockCount()
-	if err != nil {
+func (b *Backend) reorg(messageCount, blockCount uint64) error {
+	b.l1Emulator.Reorg(blockCount)
+	logger.Info().Uint64("message", messageCount).Uint64("block", blockCount).Msg("Reorged chain")
+	if err := core.ReorgAndWait(b.arbcore, new(big.Int).SetUint64(messageCount)); err != nil {
 		return err
 	}
-	b.l1Emulator.Reorg(height)
-	newLatest, err := b.db.BlockCount()
-	if err != nil {
-		return err
-	}
-	logger.
-		Info().
-		Uint64("start", startHeight).
-		Uint64("end", newLatest).
-		Uint64("height", height).
-		Msg("Reorged chain")
-	if err := core.ReorgAndWait(b.arbcore, new(big.Int).SetUint64(height)); err != nil {
-		return err
-	}
-	afterCount, err := b.arbcore.GetMessageCount()
-	if err != nil {
-		return err
-	}
-	if afterCount.Uint64() != height {
-		panic("wrong after count")
+	return b.waitForBlockCount(blockCount)
+}
+
+func (b *Backend) waitForBlockCount(blockCount uint64) error {
+	for {
+		blocks, err := b.db.BlockCount()
+		if err != nil {
+			return err
+		}
+		if blocks == blockCount {
+			break
+		}
+		time.Sleep(time.Millisecond * 500)
 	}
 	return nil
 }
 
-// Return nil if no pending transaction count is available
 func (b *Backend) PendingTransactionCount(_ context.Context, _ common.Address) *uint64 {
 	b.Lock()
 	defer b.Unlock()
@@ -196,7 +303,8 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	if err != nil {
 		return err
 	}
-	arbMsg, err := message.NewL2Message(arbTx)
+
+	arbMsg, err := message.NewTransactionBatchFromMessages([]message.AbstractL2Message{arbTx})
 	if err != nil {
 		return err
 	}
@@ -210,9 +318,18 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 		Str("value", tx.Value().String()).
 		Hex("hash", tx.Hash().Bytes()).
 		Msg("sent transaction")
-	startHeight := b.l1Emulator.Latest().blockId.Height.AsInt().Uint64()
+
+	startHeight := b.l1Emulator.LatestHeight()
+	startCount, err := b.arbcore.GetMessageCount()
+	if err != nil {
+		return err
+	}
+
 	block := b.l1Emulator.GenerateBlock()
-	if _, err := b.addInboxMessage(arbMsg, common.NewAddressFromEth(sender), block); err != nil {
+	if _, err := b.addInboxMessage(message.NewSafeL2Message(arbMsg), b.currentAggregator, b.l1GasPrice, block); err != nil {
+		return err
+	}
+	if err := b.waitForBlockCount(block.blockId.Height.AsInt().Uint64()); err != nil {
 		return err
 	}
 	txHash := common.NewHashFromEth(tx.Hash())
@@ -227,76 +344,30 @@ func (b *Backend) SendTransaction(_ context.Context, tx *types.Transaction) erro
 	if res.ResultCode != evm.ReturnCode {
 		logger.Warn().Int("code", int(res.ResultCode)).Msg("transaction failed")
 		// If transaction failed, rollback the block
-		if err := b.reorg(startHeight); err != nil {
+		if err := b.reorg(startCount.Uint64(), startHeight); err != nil {
 			return err
 		}
 
 		// Insert an empty block instead
 		block := b.l1Emulator.GenerateBlock()
-		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.Address{}, block); err != nil {
+		if _, err := b.addInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), b.currentAggregator, b.l1GasPrice, block); err != nil {
 			return err
 		}
 
-		return web3.HandleCallError(res, true)
+		return evm.HandleCallError(res, true)
 	}
 
 	return nil
 }
 
+func (b *Backend) Aggregator() *common.Address {
+	return &b.chainAggregator
+}
+
 func (b *Backend) AddInboxMessage(msg message.Message, sender common.Address) (common.Hash, error) {
 	b.Lock()
 	defer b.Unlock()
-	return b.addInboxMessage(msg, sender, b.l1Emulator.GenerateBlock())
-}
-
-func (b *Backend) addInboxMessage(msg message.Message, sender common.Address, block L1BlockInfo) (common.Hash, error) {
-	chainTime := inbox.ChainTime{
-		BlockNum:  block.blockId.Height,
-		Timestamp: block.timestamp,
-	}
-	msgCount, err := b.arbcore.GetMessageCount()
-	if err != nil {
-		return common.Hash{}, err
-	}
-	inboxMessage := message.NewInboxMessage(msg, sender, new(big.Int).Set(msgCount), big.NewInt(0), chainTime)
-
-	requestId := message.CalculateRequestId(b.signer.ChainID(), msgCount)
-	var prevHash common.Hash
-	if msgCount.Cmp(big.NewInt(0)) > 0 {
-		prevHash, err = b.arbcore.GetInboxAcc(msgCount.Sub(msgCount, big.NewInt(1)))
-		if err != nil {
-			return common.Hash{}, err
-		}
-	}
-	successful, err := core.DeliverMessagesAndWait(b.arbcore, []inbox.InboxMessage{inboxMessage}, prevHash, true)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	if !successful {
-		return common.Hash{}, errors.New("failed to deliver message")
-	}
-	for {
-		if b.arbcore.MachineIdle() {
-			break
-		}
-		<-time.After(time.Millisecond * 1000)
-	}
-	for {
-		cursorPos, err := b.arbcore.LogsCursorPosition(big.NewInt(0))
-		if err != nil {
-			return common.Hash{}, err
-		}
-		coreLogs, err := b.arbcore.GetLogCount()
-		if err != nil {
-			return common.Hash{}, err
-		}
-		if cursorPos.Cmp(coreLogs) == 0 {
-			break
-		}
-		<-time.After(time.Millisecond * 200)
-	}
-
-	return requestId, nil
+	return b.addInboxMessage(msg, sender, big.NewInt(0), b.l1Emulator.GenerateBlock())
 }
 
 func (b *Backend) SubscribeNewTxsEvent(ch chan<- core2.NewTxsEvent) event.Subscription {
@@ -305,11 +376,13 @@ func (b *Backend) SubscribeNewTxsEvent(ch chan<- core2.NewTxsEvent) event.Subscr
 	return b.newTxFeed.Subscribe(ch)
 }
 
-// Return nil if no pending snapshot is available
 func (b *Backend) PendingSnapshot() (*snapshot.Snapshot, error) {
 	b.Lock()
 	defer b.Unlock()
 	return nil, nil
+}
+
+func (b *Backend) Start(ctx context.Context) {
 }
 
 type L1BlockInfo struct {
@@ -319,67 +392,37 @@ type L1BlockInfo struct {
 
 type L1Emulator struct {
 	sync.Mutex
-	l1Blocks       []L1BlockInfo
-	l1BlocksByHash map[common.Hash]L1BlockInfo
-	timeIncrease   int64
+	timeIncrease int64
+	latestHeight uint64
 }
 
-func NewL1Emulator() *L1Emulator {
+func NewL1Emulator(initialHeight uint64) *L1Emulator {
 	b := &L1Emulator{
-		l1BlocksByHash: make(map[common.Hash]L1BlockInfo),
+		latestHeight: initialHeight,
 	}
 	b.addBlock()
 	return b
 }
 
-func (b *L1Emulator) Latest() L1BlockInfo {
-	return b.l1Blocks[uint64(len(b.l1Blocks))-1]
+func (b *L1Emulator) LatestHeight() uint64 {
+	return b.latestHeight
 }
 
 func (b *L1Emulator) Reorg(height uint64) {
 	b.Lock()
 	defer b.Unlock()
-	for i := uint64(len(b.l1Blocks)) - 1; i > height; i-- {
-		delete(b.l1BlocksByHash, b.l1Blocks[i].blockId.HeaderHash)
-	}
-	b.l1Blocks = b.l1Blocks[:height+1]
-
-	latestHeight := b.Latest().blockId.Height.AsInt().Uint64()
-	if latestHeight != height {
-		panic("wrong height")
-	}
-}
-
-func (b *L1Emulator) BlockIdForHeight(_ context.Context, height *common.TimeBlocks) (*common.BlockId, error) {
-	b.Lock()
-	defer b.Unlock()
-	h := height.AsInt().Uint64()
-	if h >= uint64(len(b.l1Blocks)) {
-		return nil, ethereum.NotFound
-	}
-	return b.l1Blocks[h].blockId, nil
-}
-
-func (b *L1Emulator) TimestampForBlockHash(_ context.Context, hash common.Hash) (*big.Int, error) {
-	b.Lock()
-	defer b.Unlock()
-	info, ok := b.l1BlocksByHash[hash]
-	if !ok {
-		return nil, ethereum.NotFound
-	}
-	return info.timestamp, nil
+	b.latestHeight = height
 }
 
 func (b *L1Emulator) addBlock() L1BlockInfo {
 	info := L1BlockInfo{
 		blockId: &common.BlockId{
-			Height:     common.NewTimeBlocksInt(int64(len(b.l1Blocks))),
+			Height:     common.NewTimeBlocksInt(int64(b.latestHeight + 1)),
 			HeaderHash: common.RandHash(),
 		},
 		timestamp: big.NewInt(time.Now().Unix() + b.timeIncrease),
 	}
-	b.l1Blocks = append(b.l1Blocks, info)
-	b.l1BlocksByHash[info.blockId.HeaderHash] = info
+	b.latestHeight += 1
 	return info
 }
 
@@ -402,4 +445,27 @@ func (b *L1Emulator) IncreaseTime(amount int64) {
 		amount = 0
 	}
 	b.timeIncrease += amount
+}
+
+func EnableFees(srv *aggregator.Server, ownerAuth *bind.TransactOpts, aggregator ethcommon.Address) error {
+
+	client := web3.NewEthClient(srv, true, metrics.NewMetricsConfig(nil))
+	arbOwner, err := arboscontracts.NewArbOwner(arbos.ARB_OWNER_ADDRESS, client)
+	if err != nil {
+		return errors.Wrap(err, "error connecting to arb owner")
+	}
+
+	tx, err := arbOwner.SetFairGasPriceSender(ownerAuth, aggregator, true)
+	if err != nil {
+		return errors.Wrap(err, "error calling SetFairGasPriceSender")
+	}
+	_, err = ethbridge.WaitForReceiptWithResultsSimple(context.Background(), client, tx.Hash())
+	if err != nil {
+		return errors.Wrap(err, "error getting SetFairGasPriceSender receipt")
+	}
+	_, err = arbOwner.SetFeesEnabled(ownerAuth, true)
+	if err != nil {
+		return errors.Wrap(err, "error calling SetFeesEnabled")
+	}
+	return nil
 }

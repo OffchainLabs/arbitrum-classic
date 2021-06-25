@@ -64,16 +64,15 @@ CMachine* machineClone(CMachine* m);
 CStatus machineCurrentStatus(CMachine* m);
 CBlockReason machineIsBlocked(CMachine* m, int newMessages);
 
-RawAssertion executeAssertion(CMachine* m,
-                              const CMachineExecutionConfig* c,
-                              void* before_send_acc_data,
-                              void* before_log_acc_data);
+RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c);
 
 COneStepProof machineMarshallForProof(CMachine* m);
 
 ByteSlice machineMarshallState(CMachine* m);
 
 char* machineInfo(CMachine* m);
+
+void machineCodePointHash(CMachine* m, void*);
 
 CMachineExecutionConfig* machineExecutionConfigCreate();
 void machineExecutionConfigDestroy(CMachineExecutionConfig* m);
@@ -83,8 +82,6 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
                                      int go_over_gas);
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
                                             ByteSliceArray bytes);
-void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
-                                              void* next_block_height);
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
                                         ByteSliceArray bytes);
 void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,

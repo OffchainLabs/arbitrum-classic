@@ -23,7 +23,7 @@
 #include <iostream>
 
 Operation::Operation(OpCode opcode_, value immediate_)
-    : opcode(opcode_), immediate(std::move(immediate_)) {}
+    : opcode(opcode_), immediate(std::make_unique<value>(immediate_)) {}
 
 void Operation::marshalForProof(std::vector<unsigned char>& buf,
                                 MarshalLevel marshal_level,
@@ -119,8 +119,13 @@ std::ostream& operator<<(std::ostream& os, const CodePoint& val) {
     return os;
 }
 
+const Operation& getErrOperation() {
+    Operation static errop(static_cast<OpCode>(0));
+    return errop;
+}
+
 const CodePoint& getErrCodePoint() {
-    CodePoint static errcp(Operation(static_cast<OpCode>(0)), 0);
+    CodePoint static errcp({static_cast<OpCode>(0)}, 0);
     return errcp;
 }
 

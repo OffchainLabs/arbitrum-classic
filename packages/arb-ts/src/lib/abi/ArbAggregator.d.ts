@@ -23,8 +23,10 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface ArbAggregatorInterface extends ethers.utils.Interface {
   functions: {
     'getDefaultAggregator()': FunctionFragment
+    'getFeeCollector(address)': FunctionFragment
     'getPreferredAggregator(address)': FunctionFragment
     'setDefaultAggregator(address)': FunctionFragment
+    'setFeeCollector(address,address)': FunctionFragment
     'setPreferredAggregator(address)': FunctionFragment
   }
 
@@ -33,12 +35,20 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
+    functionFragment: 'getFeeCollector',
+    values: [string]
+  ): string
+  encodeFunctionData(
     functionFragment: 'getPreferredAggregator',
     values: [string]
   ): string
   encodeFunctionData(
     functionFragment: 'setDefaultAggregator',
     values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'setFeeCollector',
+    values: [string, string]
   ): string
   encodeFunctionData(
     functionFragment: 'setPreferredAggregator',
@@ -50,11 +60,19 @@ interface ArbAggregatorInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'getFeeCollector',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'getPreferredAggregator',
     data: BytesLike
   ): Result
   decodeFunctionResult(
     functionFragment: 'setDefaultAggregator',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'setFeeCollector',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -83,6 +101,16 @@ export class ArbAggregator extends Contract {
 
     'getDefaultAggregator()'(overrides?: CallOverrides): Promise<[string]>
 
+    getFeeCollector(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
+    'getFeeCollector(address)'(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>
+
     getPreferredAggregator(
       addr: string,
       overrides?: CallOverrides
@@ -103,6 +131,18 @@ export class ArbAggregator extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    setFeeCollector(
+      aggregator: string,
+      newFeeCollector: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setFeeCollector(address,address)'(
+      aggregator: string,
+      newFeeCollector: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     setPreferredAggregator(
       prefAgg: string,
       overrides?: Overrides
@@ -117,6 +157,16 @@ export class ArbAggregator extends Contract {
   getDefaultAggregator(overrides?: CallOverrides): Promise<string>
 
   'getDefaultAggregator()'(overrides?: CallOverrides): Promise<string>
+
+  getFeeCollector(
+    aggregator: string,
+    overrides?: CallOverrides
+  ): Promise<string>
+
+  'getFeeCollector(address)'(
+    aggregator: string,
+    overrides?: CallOverrides
+  ): Promise<string>
 
   getPreferredAggregator(
     addr: string,
@@ -138,6 +188,18 @@ export class ArbAggregator extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  setFeeCollector(
+    aggregator: string,
+    newFeeCollector: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setFeeCollector(address,address)'(
+    aggregator: string,
+    newFeeCollector: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   setPreferredAggregator(
     prefAgg: string,
     overrides?: Overrides
@@ -152,6 +214,16 @@ export class ArbAggregator extends Contract {
     getDefaultAggregator(overrides?: CallOverrides): Promise<string>
 
     'getDefaultAggregator()'(overrides?: CallOverrides): Promise<string>
+
+    getFeeCollector(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    'getFeeCollector(address)'(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<string>
 
     getPreferredAggregator(
       addr: string,
@@ -170,6 +242,18 @@ export class ArbAggregator extends Contract {
 
     'setDefaultAggregator(address)'(
       newDefault: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    setFeeCollector(
+      aggregator: string,
+      newFeeCollector: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'setFeeCollector(address,address)'(
+      aggregator: string,
+      newFeeCollector: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -191,6 +275,16 @@ export class ArbAggregator extends Contract {
 
     'getDefaultAggregator()'(overrides?: CallOverrides): Promise<BigNumber>
 
+    getFeeCollector(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'getFeeCollector(address)'(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
     getPreferredAggregator(
       addr: string,
       overrides?: CallOverrides
@@ -208,6 +302,18 @@ export class ArbAggregator extends Contract {
 
     'setDefaultAggregator(address)'(
       newDefault: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    setFeeCollector(
+      aggregator: string,
+      newFeeCollector: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'setFeeCollector(address,address)'(
+      aggregator: string,
+      newFeeCollector: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -231,6 +337,16 @@ export class ArbAggregator extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    getFeeCollector(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getFeeCollector(address)'(
+      aggregator: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getPreferredAggregator(
       addr: string,
       overrides?: CallOverrides
@@ -248,6 +364,18 @@ export class ArbAggregator extends Contract {
 
     'setDefaultAggregator(address)'(
       newDefault: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    setFeeCollector(
+      aggregator: string,
+      newFeeCollector: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setFeeCollector(address,address)'(
+      aggregator: string,
+      newFeeCollector: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

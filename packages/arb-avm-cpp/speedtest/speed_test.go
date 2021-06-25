@@ -17,12 +17,13 @@
 package speedtest
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"io/ioutil"
 	"math/big"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 )
 
 func getInsnMultiplier(b *testing.B, filePath string) uint64 {
@@ -47,12 +48,7 @@ func getInsnMultiplier(b *testing.B, filePath string) uint64 {
 
 func runExecutableFile(b *testing.B, filePath string) {
 	insnMultiplier := getInsnMultiplier(b, filePath)
-	ckpDir, err := ioutil.TempDir("/tmp", "speedtest-dummy-ckp")
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	ckp, err := cmachine.NewArbStorage(ckpDir)
+	ckp, err := cmachine.NewArbStorage(b.TempDir())
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -70,8 +66,12 @@ func runExecutableFile(b *testing.B, filePath string) {
 	}
 
 	b.ResetTimer()
+
 	// Last parameter returned is number of steps executed
-	_, _, _ = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil, true)
+	_, _, _, err = mach.ExecuteAssertion(uint64(b.N)*insnMultiplier, true, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
 }
 
 func nameFromFn(b *testing.B, fn string) string {

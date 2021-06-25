@@ -4,25 +4,29 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 )
 
 func main() {
-	mach, err := cmachine.New(arbos.Path())
+	if err := run(); err != nil {
+		log.Error().Err(err).Msg("error generating MACHINEHASH file")
+	}
+}
+
+func run() error {
+	arbosPath, err := arbos.Path()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	hash, err := mach.Hash()
+	mach, err := cmachine.New(arbosPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	err = ioutil.WriteFile("../../MACHINEHASH", []byte(hash.String()), 777)
-	if err != nil {
-		log.Fatal(err)
-	}
+	return ioutil.WriteFile("../../MACHINEHASH", []byte(mach.Hash().String()), 777)
 }

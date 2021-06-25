@@ -1,23 +1,27 @@
-import { BigNumberish, ContractReceipt, ethers } from 'ethers'
-import { ArbTokenBridge__factory } from './abi/factories/ArbTokenBridge__factory'
-import { EthERC20Bridge__factory } from './abi/factories/EthERC20Bridge__factory'
+import { ContractReceipt, ethers } from 'ethers'
+import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
+import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
+import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
+
 import { Outbox__factory } from './abi/factories/Outbox__factory'
+import { OutboxEntry__factory } from './abi/factories/OutboxEntry__factory'
+
 import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
-import { providers, utils } from 'ethers'
+import { Rollup__factory } from './abi/factories/Rollup__factory'
+
+import { OutboxEntry } from './abi/OutboxEntry'
+
+import { providers, utils, constants } from 'ethers'
 import { BigNumber, Contract, Signer } from 'ethers'
+
+import { NODE_INTERFACE_ADDRESS, ARB_SYS_ADDRESS } from './precompile_addresses'
+
+import { Whitelist__factory } from './abi/factories/Whitelist__factory'
 
 export const addressToSymbol = (erc20L1Address: string) => {
   return erc20L1Address.substr(erc20L1Address.length - 3).toUpperCase() + '?'
-}
-
-export class TransactionOverrides {
-  nonce?: BigNumberish | Promise<BigNumberish>
-  gasLimit?: BigNumberish | Promise<BigNumberish>
-  gasPrice?: BigNumberish | Promise<BigNumberish>
-  value?: BigNumberish | Promise<BigNumberish>
-  chainId?: number | Promise<number>
 }
 
 // TODO: can we import these interfaces directly from typechain?
@@ -34,31 +38,16 @@ export interface L2ToL1EventResult {
   data: string
 }
 
-export interface WithdrawTokenEventResult {
-  id: BigNumber
-  l1Address: string
-  amount: BigNumber
-  destination: string
-  exitNum: BigNumber
+export interface OutboundTransferInitiatedResult {
+  token: string
+  _from: string
+  _to: string
+  _transferId: BigNumber
+  _amount: BigNumber
+  bytes: string
   txHash: string
 }
 
-export interface DepositTokenEventResult {
-  destination: string
-  sender: string
-  seqNum: BigNumber
-  tokenType: 0 | 1 | 2
-  amount: BigNumber
-  tokenAddress: string
-}
-
-export interface UpdateTokenEventResult {
-  seqNum: BigNumber
-  l1Address: string
-  name: string
-  symbol: string
-  decimals: number
-}
 export interface BuddyDeployEventResult {
   _sender: string
   _contract: string
@@ -79,39 +68,76 @@ export interface OutboxProofData {
   calldataForL1: string
 }
 
+export interface ActivateCustomTokenResult {
+  seqNum: BigNumber
+  l1Addresss: string
+  l2Address: string
+}
+
+export interface OutBoxTransactionExecuted {
+  destAddr: string
+  l2Sender: string
+  outboxIndex: BigNumber
+  transactionIndex: BigNumber
+}
+
+export interface GatewaySet {
+  l1Token: string
+  gateway: string
+}
+
+export enum OutgoingMessageState {
+  /**
+   * No corresponding {@link L2ToL1EventResult} emitted
+   */
+  NOT_FOUND,
+  /**
+   * ArbSys.sendTxToL1 called, but assertion not yet confirmed
+   */
+  UNCONFIRMED,
+  /**
+   * Assertion for outgoing message confirmed, but message not yet executed
+   */
+  CONFIRMED,
+  /**
+   * Outgoing message executed (terminal state)
+   */
+  EXECUTED,
+}
+
 export type ChainIdOrProvider = BigNumber | providers.Provider
 
-const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
-
+/**
+ * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
+ */
 export class BridgeHelper {
   static getTokenWithdrawEventData = async (
     destinationAddress: string,
-    l2BridgeAddr: string,
+    l2GatewayAddress: string,
     l2Provider: providers.Provider
   ) => {
-    const contract = ArbTokenBridge__factory.connect(l2BridgeAddr, l2Provider)
-    const iface = contract.interface
-    const tokenWithdrawEvent = iface.getEvent('WithdrawToken')
-    const tokenWithdrawTopic = iface.getEventTopic(tokenWithdrawEvent)
-
+    const contract = L2ERC20Gateway__factory.connect(
+      l2GatewayAddress,
+      l2Provider
+    )
     const topics = [
-      tokenWithdrawTopic,
       null,
-      null,
+      // todo: I think this is still the right filter?
       utils.hexZeroPad(destinationAddress, 32),
     ]
-
-    const logs = await l2Provider.getLogs({
-      address: l2BridgeAddr,
+    const logs = await BridgeHelper.getEventLogs(
+      'OutboundTransferInitiated',
+      contract,
       // @ts-ignore
-      topics,
-      fromBlock: 0,
-      toBlock: 'latest',
-    })
+      topics
+    )
 
     return logs.map(log => {
-      const data = { ...iface.parseLog(log).args, txHash: log.transactionHash }
-      return (data as unknown) as WithdrawTokenEventResult
+      const data = {
+        ...contract.iface.parseLog(log).args,
+        txHash: log.transactionHash,
+      }
+      return (data as unknown) as OutboundTransferInitiatedResult
     })
   }
 
@@ -126,14 +152,22 @@ export class BridgeHelper {
     return utils.keccak256(
       utils.concat([
         utils.zeroPad(l2ChainId.toHexString(), 32),
-        utils.zeroPad(inboxSequenceNumber.toHexString(), 32),
+        utils.zeroPad(
+          BridgeHelper.bitFlipSeqNum(inboxSequenceNumber).toHexString(),
+          32
+        ),
       ])
     )
   }
 
-  static calculateL2RetryableTransactionHash = async (
+  static bitFlipSeqNum = (seqNum: BigNumber) => {
+    return seqNum.or(BigNumber.from(1).shl(255))
+  }
+
+  private static _calculateRetryableHashInternal = async (
     inboxSequenceNumber: BigNumber,
-    chainIdOrL2Provider: ChainIdOrProvider
+    chainIdOrL2Provider: ChainIdOrProvider,
+    txnType: 0 | 1
   ): Promise<string> => {
     const requestID = await BridgeHelper.calculateL2TransactionHash(
       inboxSequenceNumber,
@@ -142,20 +176,42 @@ export class BridgeHelper {
     return utils.keccak256(
       utils.concat([
         utils.zeroPad(requestID, 32),
-        utils.zeroPad(BigNumber.from(1).toHexString(), 32),
+        utils.zeroPad(BigNumber.from(txnType).toHexString(), 32),
       ])
     )
   }
 
-  static waitForRetriableReceipt = async (
+  static calculateL2RetryableTransactionHash = async (
+    inboxSequenceNumber: BigNumber,
+    chainIdOrL2Provider: ChainIdOrProvider
+  ): Promise<string> => {
+    return BridgeHelper._calculateRetryableHashInternal(
+      inboxSequenceNumber,
+      chainIdOrL2Provider,
+      0
+    )
+  }
+
+  static calculateRetryableAutoRedeemTxnHash = async (
+    inboxSequenceNumber: BigNumber,
+    chainIdOrL2Provider: ChainIdOrProvider
+  ): Promise<string> => {
+    return BridgeHelper._calculateRetryableHashInternal(
+      inboxSequenceNumber,
+      chainIdOrL2Provider,
+      1
+    )
+  }
+
+  static waitForRetryableReceipt = async (
     seqNum: BigNumber,
     l2Provider: providers.Provider
   ) => {
-    const l2RetriableHash = await BridgeHelper.calculateL2RetryableTransactionHash(
+    const l2RetryableHash = await BridgeHelper.calculateL2RetryableTransactionHash(
       seqNum,
       l2Provider
     )
-    return l2Provider.waitForTransaction(l2RetriableHash)
+    return l2Provider.waitForTransaction(l2RetryableHash)
   }
 
   static getL2Transaction = async (
@@ -192,62 +248,59 @@ export class BridgeHelper {
 
   static getDepositTokenEventData = async (
     l1Transaction: providers.TransactionReceipt,
-    tokenType: 'ERC20' | 'ERC777' = 'ERC20',
-    l2BridgeAddress?: string
-  ): Promise<Array<DepositTokenEventResult>> => {
-    const factory = new EthERC20Bridge__factory()
+    l1GatewayAddress: string
+  ): Promise<Array<OutboundTransferInitiatedResult>> => {
+    const factory = new L1ERC20Gateway__factory()
     // TODO: does this work?
-    const contract = factory.attach(l2BridgeAddress || 'l2BridgeAddr')
+    const contract = factory.attach(l1GatewayAddress)
     const iface = contract.interface
-    const event = iface.getEvent('DepositToken')
+    const event = iface.getEvent('OutboundTransferInitiated')
     const eventTopic = iface.getEventTopic(event)
-    // TODO: filter out if token type doesn't match
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as DepositTokenEventResult
+      log =>
+        (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
     )
   }
 
-  static getUpdateTokenInfoEventResult = async (
-    l1Transaction: providers.TransactionReceipt,
-    l2BridgeAddress: string
-  ): Promise<Array<UpdateTokenEventResult>> => {
-    const factory = new EthERC20Bridge__factory()
-    const contract = factory.attach(l2BridgeAddress)
-    const iface = contract.interface
-    const event = iface.getEvent('UpdateTokenInfo')
+  public static getEventLogs = (
+    eventName: string,
+    connectedContract: Contract,
+    topics: string | string[] = [],
+    filter: ethers.providers.Filter = {}
+  ) => {
+    const iface = connectedContract.interface
+    const event = iface.getEvent(eventName)
     const eventTopic = iface.getEventTopic(event)
-    // TODO: filter out if token type doesn't match
-    const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => (iface.parseLog(log).args as unknown) as UpdateTokenEventResult
-    )
+
+    return connectedContract.provider.getLogs({
+      address: connectedContract.address,
+      topics: [eventTopic, ...topics],
+      fromBlock: filter.fromBlock || 0,
+      toBlock: filter.toBlock || 'latest',
+    })
   }
 
-  static getUpdateTokenInfoEventResultL2 = async (
-    l2Transaction: providers.TransactionReceipt,
-    l2BridgeAddress: string
-  ): Promise<Array<any>> => {
-    const factory = new ArbTokenBridge__factory()
-    const contract = factory.attach(l2BridgeAddress)
-    const iface = contract.interface
-    const event = iface.getEvent('TokenDataUpdated')
-    const eventTopic = iface.getEventTopic(event)
-    // TODO: filter out if token type doesn't match
-    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(log => (iface.parseLog(log).args as unknown) as any)
+  static getGatewaySetEventData = async (
+    gatewayRouterAddress: string,
+    provider: providers.Provider
+  ) => {
+    const contract = L1GatewayRouter__factory.connect(
+      gatewayRouterAddress,
+      provider
+    )
+    const logs = await BridgeHelper.getEventLogs('GatewaySet', contract)
+    return logs.map(
+      log => (contract.interface.parseLog(log).args as unknown) as GatewaySet
+    )
   }
 
   static getWithdrawalsInL2Transaction = async (
     l2Transaction: providers.TransactionReceipt,
-    l2Provider: providers.Provider,
-    arbSysAddress?: string
+    l2Provider: providers.Provider
   ): Promise<Array<L2ToL1EventResult>> => {
     // TODO: can we use dummies to get interface?
-    const contract = ArbSys__factory.connect(
-      arbSysAddress || 'arbSysAddress',
-      l2Provider
-    )
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
@@ -264,15 +317,15 @@ export class BridgeHelper {
     l1Provider: providers.Provider
   ) => {
     const contract = Inbox__factory.connect(inboxAddress, l1Provider)
-    return contract.bridge()
+    return contract.functions.bridge().then(([res]) => res)
   }
 
   static getInboxSeqNumFromContractTransaction = async (
-    l2Transaction: providers.TransactionReceipt,
-    inboxAddress?: string
+    l1Transaction: providers.TransactionReceipt,
+    inboxAddress: string
   ) => {
     const factory = new Inbox__factory()
-    const contract = factory.attach(inboxAddress || 'inboxAddress')
+    const contract = factory.attach(inboxAddress)
     const iface = contract.interface
     const messageDelivered = iface.getEvent('InboxMessageDelivered')
     const messageDeliveredFromOrigin = iface.getEvent(
@@ -286,7 +339,7 @@ export class BridgeHelper {
       ),
     }
 
-    const logs = l2Transaction.logs.filter(
+    const logs = l1Transaction.logs.filter(
       log =>
         log.topics[0] === eventTopics.InboxMessageDelivered ||
         log.topics[0] === eventTopics.InboxMessageDeliveredFromOrigin
@@ -296,6 +349,9 @@ export class BridgeHelper {
     return logs.map(log => BigNumber.from(log.topics[1]))
   }
 
+  /**
+   * Attempt to retrieve data necessary to execute outbox message; available before outbox entry is created /confirmed
+   */
   static tryGetProof = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -437,8 +493,13 @@ export class BridgeHelper {
   ): Promise<string> => {
     const iface = new ethers.utils.Interface([
       'function outboxes(uint256) public view returns (address)',
+      'function outboxesLength() public view returns (uint256)',
     ])
     const outbox = new ethers.Contract(outboxAddress, iface).connect(l1Provider)
+    const len: BigNumber = await outbox.outboxesLength()
+    if (batchNumber.gte(len)) {
+      return constants.AddressZero
+    }
     return outbox.outboxes(batchNumber)
   }
 
@@ -485,10 +546,10 @@ export class BridgeHelper {
       l1Provider
     )
 
-    const activeOutboxAddress = await bridge.allowedOutboxList(0)
+    const [activeOutboxAddress] = await bridge.functions.allowedOutboxList(0)
     try {
       // index 1 should not exist
-      await bridge.allowedOutboxList(1)
+      await bridge.functions.allowedOutboxList(1)
       console.error('There is more than 1 outbox registered with the bridge?!')
     } catch (e) {
       // this should fail!
@@ -516,12 +577,11 @@ export class BridgeHelper {
     )
 
     const outbox = Outbox__factory.connect(activeOutboxAddress, l1Signer)
-
     try {
       // TODO: wait until assertion is confirmed before execute
       // We can predict and print number of missing blocks
       // if not challenged
-      const outboxExecute = await outbox.executeTransaction(
+      const outboxExecute = await outbox.functions.executeTransaction(
         outboxProofData.batchNumber,
         outboxProofData.proof,
         outboxProofData.path,
@@ -545,7 +605,6 @@ export class BridgeHelper {
       throw e
     }
   }
-
   static triggerL2ToL1Transaction = async (
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
@@ -605,31 +664,166 @@ export class BridgeHelper {
 
   static getL2ToL1EventData = async (
     destinationAddress: string,
-    l2Provider: providers.Provider,
-    arbSysAddress?: string
+    l2Provider: providers.Provider
   ) => {
-    const contract = ArbSys__factory.connect(
-      arbSysAddress || 'arbSysAddress',
-      l2Provider
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
+
+    const logs = await BridgeHelper.getEventLogs(
+      'L2ToL1Transaction',
+      contract,
+      [ethers.utils.hexZeroPad(destinationAddress, 32)]
     )
-    const iface = contract.interface
-    const l2ToL1TransactionEvent = iface.getEvent('L2ToL1Transaction')
-    const l2ToL1TransactionTopic = iface.getEventTopic(l2ToL1TransactionEvent)
-
-    const topics = [
-      l2ToL1TransactionTopic,
-      ethers.utils.hexZeroPad(destinationAddress, 32),
-    ]
-
-    const logs = await l2Provider.getLogs({
-      address: arbSysAddress,
-      topics,
-      fromBlock: 0,
-      toBlock: 'latest',
-    })
 
     return logs.map(
-      log => (iface.parseLog(log).args as unknown) as L2ToL1EventResult
+      log =>
+        (contract.interface.parseLog(log).args as unknown) as L2ToL1EventResult
     )
+  }
+
+  /**
+   * Check if given assertion has been confirmed
+   */
+  static assertionIsConfirmed = async (
+    nodeNum: BigNumber,
+    rollupAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const contract = Rollup__factory.connect(rollupAddress, l1Provider)
+    const logs = await BridgeHelper.getEventLogs('NodeConfirmed', contract, [
+      ethers.utils.hexZeroPad(nodeNum.toHexString(), 32),
+    ])
+    return logs.length === 1
+  }
+
+  static getNodeCreatedEvents = (
+    rollupAddress: string,
+    l1Provider: providers.Provider
+  ) => {
+    const contract = Rollup__factory.connect(rollupAddress, l1Provider)
+    return BridgeHelper.getEventLogs('NodeCreated', contract)
+  }
+  static getOutgoingMessage = async (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
+    l2Provider: providers.Provider
+  ) => {
+    const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
+
+    const topics = [
+      null,
+      null,
+      ethers.utils.hexZeroPad(batchNumber.toHexString(), 32),
+    ]
+
+    const logs = await BridgeHelper.getEventLogs(
+      'L2ToL1Transaction',
+      contract,
+      // @ts-ignore
+      topics
+    )
+
+    const parsedData = logs.map(
+      log =>
+        (contract.interface.parseLog(log).args as unknown) as L2ToL1EventResult
+    )
+
+    return parsedData.filter(log => log.indexInBatch.eq(indexInBatch))
+  }
+
+  /**
+   * Get outgoing message Id (key to in OutboxEntry.spentOutput)
+   */
+  static calculateOutgoingMessageId = (
+    path: BigNumber,
+    proofLength: BigNumber
+  ) => {
+    return utils.keccak256(
+      utils.defaultAbiCoder.encode(['uint256', 'uint256'], [path, proofLength])
+    )
+  }
+  /**
+   * Check if given outbox message has already been executed
+   */
+  static messageHasExecuted = async (
+    outboxIndex: BigNumber,
+    path: BigNumber,
+    outboxAddress: string,
+    l1Provider: providers.Provider
+  ): Promise<boolean> => {
+    const contract = Outbox__factory.connect(outboxAddress, l1Provider)
+    const topics = [
+      null,
+      null,
+      ethers.utils.hexZeroPad(outboxIndex.toHexString(), 32),
+    ]
+    const logs = await BridgeHelper.getEventLogs(
+      'OutBoxTransactionExecuted',
+      contract,
+      // @ts-ignore
+      topics
+    )
+    const parsedData = logs.map(
+      log =>
+        (contract.interface.parseLog(log)
+          .args as unknown) as OutBoxTransactionExecuted
+    )
+    return (
+      parsedData.filter(executedEvent =>
+        executedEvent.transactionIndex.eq(path)
+      ).length === 1
+    )
+  }
+
+  static getOutgoingMessageState = async (
+    batchNumber: BigNumber,
+    indexInBatch: BigNumber,
+    outBoxAddress: string,
+    l1Provider: providers.Provider,
+    l2Provider: providers.Provider
+  ): Promise<OutgoingMessageState> => {
+    try {
+      const proofData = await BridgeHelper.tryGetProofOnce(
+        batchNumber,
+        indexInBatch,
+        l2Provider
+      )
+
+      if (!proofData) {
+        return OutgoingMessageState.UNCONFIRMED
+      }
+
+      const messageExecuted = await BridgeHelper.messageHasExecuted(
+        batchNumber,
+        proofData.path,
+        outBoxAddress,
+        l1Provider
+      )
+      if (messageExecuted) {
+        return OutgoingMessageState.EXECUTED
+      }
+
+      const outboxEntry = await BridgeHelper.getOutboxEntry(
+        batchNumber,
+        outBoxAddress,
+        l1Provider
+      )
+
+      if (outboxEntry === constants.AddressZero) {
+        return OutgoingMessageState.UNCONFIRMED
+      } else {
+        return OutgoingMessageState.CONFIRMED
+      }
+    } catch (e) {
+      console.warn('666: error in getOutgoingMessageState:', e)
+      return OutgoingMessageState.NOT_FOUND
+    }
+  }
+  static isWhiteListed(
+    address: string,
+    whiteListAddress: string,
+    l1Provider: providers.Provider
+  ) {
+    const whiteList = Whitelist__factory.connect(whiteListAddress, l1Provider)
+    return whiteList.isAllowed(address)
   }
 }

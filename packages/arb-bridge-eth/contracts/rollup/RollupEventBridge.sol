@@ -19,12 +19,14 @@
 pragma solidity ^0.6.11;
 
 import "./Rollup.sol";
+import "./facets/IRollupFacets.sol";
 
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/IMessageProvider.sol";
 import "./INode.sol";
+import "../libraries/Cloneable.sol";
 
-contract RollupEventBridge is IMessageProvider {
+contract RollupEventBridge is IMessageProvider, Cloneable {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 4;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;
 
@@ -42,14 +44,14 @@ contract RollupEventBridge is IMessageProvider {
         _;
     }
 
-    constructor(address _bridge, address _rollup) public {
+    function initialize(address _bridge, address _rollup) external {
+        require(rollup == address(0), "ALREADY_INIT");
         bridge = IBridge(_bridge);
         rollup = _rollup;
     }
 
     function rollupInitialized(
         uint256 confirmPeriodBlocks,
-        uint256 extraChallengeTimeBlocks,
         uint256 arbGasSpeedLimitPerBlock,
         uint256 baseStake,
         address stakeToken,
@@ -59,8 +61,8 @@ contract RollupEventBridge is IMessageProvider {
         bytes memory initMsg =
             abi.encodePacked(
                 confirmPeriodBlocks,
-                extraChallengeTimeBlocks,
-                arbGasSpeedLimitPerBlock,
+                arbGasSpeedLimitPerBlock / 100, // convert avm gas to arbgas
+                uint256(0),
                 baseStake,
                 uint256(uint160(bytes20(stakeToken))),
                 uint256(uint160(bytes20(owner))),
@@ -109,10 +111,10 @@ contract RollupEventBridge is IMessageProvider {
     }
 
     function claimNode(uint256 nodeNum, address staker) external onlyRollup {
-        Rollup r = Rollup(rollup);
+        Rollup r = Rollup(payable(rollup));
         INode node = r.getNode(nodeNum);
         require(node.stakers(staker), "NOT_STAKED");
-        r.requireUnresolved(nodeNum);
+        IRollupUser(address(r)).requireUnresolved(nodeNum);
 
         deliverToBridge(
             abi.encodePacked(CLAIM_NODE_EVENT, nodeNum, uint256(uint160(bytes20(staker))))

@@ -29,30 +29,9 @@ bool MachineThread::runMachine(MachineExecutionConfig config) {
 
     machine_state.context = AssertionContext(std::move(config));
 
-    auto inbox_opt = machine_state.output.fully_processed_inbox.inboxWithStaged(
-        machine_state.staged_message);
-    if (!inbox_opt.has_value()) {
-        if (machine_state.context.inbox_messages.empty()) {
-            reorg_check_data =
-                ReorgState{machine_state.output.fully_processed_inbox,
-                           machine_state.staged_message};
-        } else {
-            std::cerr << "Tried to run machine adding messages without "
-                         "resolving staged message"
-                      << std::endl;
-            return false;
-        }
-    } else {
-        for (const auto& message : machine_state.context.inbox_messages) {
-            inbox_opt->addMessage(message);
-        }
-        if (machine_state.context.next_block_height) {
-            reorg_check_data = {
-                *inbox_opt,
-                staged_variant{*machine_state.context.next_block_height}};
-        } else {
-            reorg_check_data = {*inbox_opt, staged_variant{std::monostate{}}};
-        }
+    reorg_check_data = machine_state.output.fully_processed_inbox;
+    for (const auto& message : machine_state.context.inbox_messages) {
+        reorg_check_data.addMessage(message);
     }
 
     machine_status = MACHINE_RUNNING;

@@ -17,13 +17,15 @@
 package arbos
 
 import (
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arboscontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 

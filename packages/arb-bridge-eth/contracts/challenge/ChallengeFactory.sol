@@ -20,15 +20,18 @@ pragma solidity ^0.6.11;
 
 import "./Challenge.sol";
 import "./IChallengeFactory.sol";
-import "../libraries/CloneFactory.sol";
+import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
+import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
-contract ChallengeFactory is CloneFactory, IChallengeFactory {
-    ICloneable public challengeTemplate;
+contract ChallengeFactory is IChallengeFactory {
     IOneStepProof[] public executors;
+    UpgradeableBeacon public beacon;
 
     constructor(IOneStepProof[] memory _executors) public {
-        challengeTemplate = ICloneable(new Challenge());
         executors = _executors;
+        address challengeTemplate = address(new Challenge());
+        beacon = new UpgradeableBeacon(challengeTemplate);
+        beacon.transferOwnership(msg.sender);
     }
 
     function createChallenge(
@@ -39,9 +42,10 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
         address _challenger,
         uint256 _asserterTimeLeft,
         uint256 _challengerTimeLeft,
-        IBridge _bridge
+        ISequencerInbox _sequencerBridge,
+        IBridge _delayedBridge
     ) external override returns (address) {
-        address clone = createClone(challengeTemplate);
+        address clone = address(new BeaconProxy(address(beacon), ""));
         IChallenge(clone).initializeChallenge(
             executors,
             _resultReceiver,
@@ -51,7 +55,8 @@ contract ChallengeFactory is CloneFactory, IChallengeFactory {
             _challenger,
             _asserterTimeLeft,
             _challengerTimeLeft,
-            _bridge
+            _sequencerBridge,
+            _delayedBridge
         );
         return address(clone);
     }

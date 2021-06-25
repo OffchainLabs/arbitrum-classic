@@ -20,7 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./INode.sol";
 import "../libraries/Cloneable.sol";
-import "../libraries/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract Node is Cloneable, INode {
     using SafeMath for uint256;
@@ -52,7 +52,7 @@ contract Node is Cloneable, INode {
     /// @notice Address of the rollup contract to which this node belongs
     address public rollup;
 
-    /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed
+    /// @notice This value starts at zero and is set to a value when the first child is created. After that it is constant until the node is destroyed or the owner destroys pending nodes
     uint256 public override firstChildBlock;
 
     /// @notice The number of the latest child of this node to be created
@@ -95,7 +95,7 @@ contract Node is Cloneable, INode {
      * @notice Destroy this node
      */
     function destroy() external override onlyRollup {
-        selfdestruct(msg.sender);
+        safeSelfDestruct(msg.sender);
     }
 
     /**
@@ -125,6 +125,11 @@ contract Node is Cloneable, INode {
             firstChildBlock = block.number;
         }
         latestChildNumber = number;
+    }
+
+    function resetChildren() external override onlyRollup {
+        firstChildBlock = 0;
+        latestChildNumber = 0;
     }
 
     function newChildConfirmDeadline(uint256 deadline) external override onlyRollup {

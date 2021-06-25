@@ -19,11 +19,12 @@
 pragma solidity ^0.6.11;
 
 import "./INode.sol";
+import "./IRollupCore.sol";
 import "./RollupLib.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract RollupCore {
+contract RollupCore is IRollupCore {
     using SafeMath for uint256;
 
     struct Zombie {
@@ -48,7 +49,7 @@ contract RollupCore {
     mapping(uint256 => bytes32) private _nodeHashes;
 
     address payable[] private _stakerList;
-    mapping(address => Staker) public _stakerMap;
+    mapping(address => Staker) public override _stakerMap;
 
     Zombie[] private _zombies;
 
@@ -59,7 +60,7 @@ contract RollupCore {
      * @param nodeNum Index of the node
      * @return Address of the Node contract
      */
-    function getNode(uint256 nodeNum) public view returns (INode) {
+    function getNode(uint256 nodeNum) public view override returns (INode) {
         return _nodes[nodeNum];
     }
 
@@ -68,7 +69,7 @@ contract RollupCore {
      * @param stakerNum Index of the staker
      * @return Address of the staker
      */
-    function getStakerAddress(uint256 stakerNum) public view returns (address) {
+    function getStakerAddress(uint256 stakerNum) public view override returns (address) {
         return _stakerList[stakerNum];
     }
 
@@ -77,7 +78,7 @@ contract RollupCore {
      * @param staker Staker address to check
      * @return True or False for whether the staker was staked
      */
-    function isStaked(address staker) public view returns (bool) {
+    function isStaked(address staker) public view override returns (bool) {
         return _stakerMap[staker].isStaked;
     }
 
@@ -86,7 +87,7 @@ contract RollupCore {
      * @param staker Staker address to lookup
      * @return Latest node staked of the staker
      */
-    function latestStakedNode(address staker) public view returns (uint256) {
+    function latestStakedNode(address staker) public view override returns (uint256) {
         return _stakerMap[staker].latestStakedNode;
     }
 
@@ -95,7 +96,7 @@ contract RollupCore {
      * @param staker Staker address to lookup
      * @return Current challenge of the staker
      */
-    function currentChallenge(address staker) public view returns (address) {
+    function currentChallenge(address staker) public view override returns (address) {
         return _stakerMap[staker].currentChallenge;
     }
 
@@ -104,7 +105,7 @@ contract RollupCore {
      * @param staker Staker address to lookup
      * @return Amount staked of the staker
      */
-    function amountStaked(address staker) public view returns (uint256) {
+    function amountStaked(address staker) public view override returns (uint256) {
         return _stakerMap[staker].amountStaked;
     }
 
@@ -113,7 +114,7 @@ contract RollupCore {
      * @param zombieNum Index of the zombie to lookup
      * @return Original staker address of the zombie
      */
-    function zombieAddress(uint256 zombieNum) public view returns (address) {
+    function zombieAddress(uint256 zombieNum) public view override returns (address) {
         return _zombies[zombieNum].stakerAddress;
     }
 
@@ -122,13 +123,22 @@ contract RollupCore {
      * @param zombieNum Index of the zombie to lookup
      * @return Latest node that the given zombie is staked on
      */
-    function zombieLatestStakedNode(uint256 zombieNum) public view returns (uint256) {
+    function zombieLatestStakedNode(uint256 zombieNum) public view override returns (uint256) {
         return _zombies[zombieNum].latestStakedNode;
     }
 
     /// @return Current number of un-removed zombies
-    function zombieCount() public view returns (uint256) {
+    function zombieCount() public view override returns (uint256) {
         return _zombies.length;
+    }
+
+    function isZombie(address staker) public view override returns (bool) {
+        for (uint256 i = 0; i < _zombies.length; i++) {
+            if (staker == _zombies[i].stakerAddress) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -136,7 +146,7 @@ contract RollupCore {
      * @param owner Address to check the funds of
      * @return Amount of funds withdrawable by owner
      */
-    function withdrawableFunds(address owner) public view returns (uint256) {
+    function withdrawableFunds(address owner) public view override returns (uint256) {
         return _withdrawableFunds[owner];
     }
 
@@ -144,27 +154,27 @@ contract RollupCore {
      * @return Index of the first unresolved node
      * @dev If all nodes have been resolved, this will be latestNodeCreated + 1
      */
-    function firstUnresolvedNode() public view returns (uint256) {
+    function firstUnresolvedNode() public view override returns (uint256) {
         return _firstUnresolvedNode;
     }
 
     /// @return Index of the latest confirmed node
-    function latestConfirmed() public view returns (uint256) {
+    function latestConfirmed() public view override returns (uint256) {
         return _latestConfirmed;
     }
 
     /// @return Index of the latest rollup node created
-    function latestNodeCreated() public view returns (uint256) {
+    function latestNodeCreated() public view override returns (uint256) {
         return _latestNodeCreated;
     }
 
     /// @return Ethereum block that the most recent stake was created
-    function lastStakeBlock() public view returns (uint256) {
+    function lastStakeBlock() public view override returns (uint256) {
         return _lastStakeBlock;
     }
 
     /// @return Number of active stakers currently staked
-    function stakerCount() public view returns (uint256) {
+    function stakerCount() public view override returns (uint256) {
         return _stakerList.length;
     }
 
@@ -189,8 +199,12 @@ contract RollupCore {
     }
 
     /// @return Node hash as of this node number
-    function getNodeHash(uint256 index) public view returns (bytes32) {
+    function getNodeHash(uint256 index) public view override returns (bytes32) {
         return _nodeHashes[index];
+    }
+
+    function resetNodeHash(uint256 index) internal {
+        _nodeHashes[index] = 0;
     }
 
     /**
@@ -212,6 +226,14 @@ contract RollupCore {
         destroyNode(_latestConfirmed);
         _latestConfirmed = _firstUnresolvedNode;
         _firstUnresolvedNode++;
+    }
+
+    /// @notice Confirm the next unresolved node
+    function confirmLatestNode() internal {
+        destroyNode(_latestConfirmed);
+        uint256 latestNode = _latestNodeCreated;
+        _latestConfirmed = latestNode;
+        _firstUnresolvedNode = latestNode + 1;
     }
 
     /**
@@ -342,16 +364,6 @@ contract RollupCore {
     }
 
     /**
-     * @notice Update the latest staked node of the staker at the given addresss
-     * @param stakerAddress Address of the staker to move
-     * @param latest New latest node the staker is staked on
-     */
-    function stakerUpdateLatestStakedNode(address stakerAddress, uint256 latest) internal {
-        Staker storage staker = _stakerMap[stakerAddress];
-        staker.latestStakedNode = latest;
-    }
-
-    /**
      * @notice Advance the given staker to the given node
      * @param stakerAddress Address of the staker adding their stake
      * @param nodeNum Index of the node to stake on
@@ -360,7 +372,7 @@ contract RollupCore {
         address stakerAddress,
         uint256 nodeNum,
         uint256 confirmPeriodBlocks
-    ) internal returns (uint256) {
+    ) internal {
         Staker storage staker = _stakerMap[stakerAddress];
         INode node = _nodes[nodeNum];
         uint256 newStakerCount = node.addStaker(stakerAddress);
@@ -383,6 +395,14 @@ contract RollupCore {
     }
 
     /**
+     * @notice Increase the withdrawable funds for the given address
+     * @param owner Address of the account to add withdrawable funds to
+     */
+    function increaseWithdrawableFunds(address owner, uint256 amount) internal {
+        _withdrawableFunds[owner] = _withdrawableFunds[owner].add(amount);
+    }
+
+    /**
      * @notice Remove the given staker
      * @param stakerAddress Address of the staker to remove
      */
@@ -399,7 +419,7 @@ contract RollupCore {
      * @notice Destroy the given node and clear out its address
      * @param nodeNum Index of the node to remove
      */
-    function destroyNode(uint256 nodeNum) private {
+    function destroyNode(uint256 nodeNum) internal {
         _nodes[nodeNum].destroy();
         _nodes[nodeNum] = INode(0);
     }

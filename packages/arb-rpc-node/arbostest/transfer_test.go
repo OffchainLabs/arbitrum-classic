@@ -17,14 +17,16 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestTransfer(t *testing.T) {
@@ -59,22 +61,20 @@ func TestTransfer(t *testing.T) {
 		Data:        makeFuncData(t, transferABI.Methods["send2"], connAddress2),
 	}
 
-	inboxMessages := makeSimpleInbox([]message.Message{
-		message.Eth{Dest: sender, Value: big.NewInt(10000)},
+	messages := []message.Message{
+		makeEthDeposit(sender, big.NewInt(10000)),
 		message.NewSafeL2Message(constructorTx1),
 		message.NewSafeL2Message(constructorTx2),
 		message.NewSafeL2Message(connCallTx),
-	})
+	}
 
-	logs, _, snap, _ := runAssertion(t, inboxMessages, 3, 0)
-	results := processTxResults(t, logs)
-
+	results, snap := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 
-	checkConstructorResult(t, results[0], connAddress1)
-	checkConstructorResult(t, results[1], connAddress2)
+	checkConstructorResult(t, results[1], connAddress1)
+	checkConstructorResult(t, results[2], connAddress2)
 
-	res := results[2]
+	res := results[3]
 	t.Log("GasUsed", res.GasUsed)
 	t.Log("GasLimit", connCallTx.MaxGas)
 

@@ -26,20 +26,560 @@ var (
 	_ = event.NewSubscription
 )
 
-// SimpleABI is the input ABI used to generate the binding from.
-const SimpleABI = "[{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
+// ComplexConstructorConABI is the input ABI used to generate the binding from.
+const ComplexConstructorConABI = "[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getVal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
 
-// SimpleFuncSigs maps the 4-byte function signature to its string representation.
-var SimpleFuncSigs = map[string]string{
-	"ae0aba8c": "acceptPayment()",
-	"267c4ae4": "exists()",
-	"9b7c9da3": "nestedCall(uint256)",
-	"9436bc1f": "rejectPayment()",
-	"3bccbbc9": "reverts()",
+// ComplexConstructorConBin is the compiled bytecode used for deploying new contracts.
+var ComplexConstructorConBin = "0x60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea264697066735822122096d01db1eaf2fcca2f322001b7e0378474ebcbd622e0c12c994aea40fbe49a4764736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea26469706673582212200c54ae33017a5541bd9eb84b2914a17f3ac34d606a266f33497a603b9ce30e7964736f6c634300060c0033"
+
+// DeployComplexConstructorCon deploys a new Ethereum contract, binding an instance of ComplexConstructorCon to it.
+func DeployComplexConstructorCon(auth *bind.TransactOpts, backend bind.ContractBackend, salt [32]byte) (common.Address, *types.Transaction, *ComplexConstructorCon, error) {
+	parsed, err := abi.JSON(strings.NewReader(ComplexConstructorConABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ComplexConstructorConBin), backend, salt)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ComplexConstructorCon{ComplexConstructorConCaller: ComplexConstructorConCaller{contract: contract}, ComplexConstructorConTransactor: ComplexConstructorConTransactor{contract: contract}, ComplexConstructorConFilterer: ComplexConstructorConFilterer{contract: contract}}, nil
 }
 
+// ComplexConstructorCon is an auto generated Go binding around an Ethereum contract.
+type ComplexConstructorCon struct {
+	ComplexConstructorConCaller     // Read-only binding to the contract
+	ComplexConstructorConTransactor // Write-only binding to the contract
+	ComplexConstructorConFilterer   // Log filterer for contract events
+}
+
+// ComplexConstructorConCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ComplexConstructorConCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ComplexConstructorConTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ComplexConstructorConTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ComplexConstructorConFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ComplexConstructorConFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ComplexConstructorConSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ComplexConstructorConSession struct {
+	Contract     *ComplexConstructorCon // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts          // Call options to use throughout this session
+	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+}
+
+// ComplexConstructorConCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ComplexConstructorConCallerSession struct {
+	Contract *ComplexConstructorConCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts                // Call options to use throughout this session
+}
+
+// ComplexConstructorConTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ComplexConstructorConTransactorSession struct {
+	Contract     *ComplexConstructorConTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts                // Transaction auth options to use throughout this session
+}
+
+// ComplexConstructorConRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ComplexConstructorConRaw struct {
+	Contract *ComplexConstructorCon // Generic contract binding to access the raw methods on
+}
+
+// ComplexConstructorConCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ComplexConstructorConCallerRaw struct {
+	Contract *ComplexConstructorConCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ComplexConstructorConTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ComplexConstructorConTransactorRaw struct {
+	Contract *ComplexConstructorConTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewComplexConstructorCon creates a new instance of ComplexConstructorCon, bound to a specific deployed contract.
+func NewComplexConstructorCon(address common.Address, backend bind.ContractBackend) (*ComplexConstructorCon, error) {
+	contract, err := bindComplexConstructorCon(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorCon{ComplexConstructorConCaller: ComplexConstructorConCaller{contract: contract}, ComplexConstructorConTransactor: ComplexConstructorConTransactor{contract: contract}, ComplexConstructorConFilterer: ComplexConstructorConFilterer{contract: contract}}, nil
+}
+
+// NewComplexConstructorConCaller creates a new read-only instance of ComplexConstructorCon, bound to a specific deployed contract.
+func NewComplexConstructorConCaller(address common.Address, caller bind.ContractCaller) (*ComplexConstructorConCaller, error) {
+	contract, err := bindComplexConstructorCon(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorConCaller{contract: contract}, nil
+}
+
+// NewComplexConstructorConTransactor creates a new write-only instance of ComplexConstructorCon, bound to a specific deployed contract.
+func NewComplexConstructorConTransactor(address common.Address, transactor bind.ContractTransactor) (*ComplexConstructorConTransactor, error) {
+	contract, err := bindComplexConstructorCon(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorConTransactor{contract: contract}, nil
+}
+
+// NewComplexConstructorConFilterer creates a new log filterer instance of ComplexConstructorCon, bound to a specific deployed contract.
+func NewComplexConstructorConFilterer(address common.Address, filterer bind.ContractFilterer) (*ComplexConstructorConFilterer, error) {
+	contract, err := bindComplexConstructorCon(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorConFilterer{contract: contract}, nil
+}
+
+// bindComplexConstructorCon binds a generic wrapper to an already deployed contract.
+func bindComplexConstructorCon(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ComplexConstructorConABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ComplexConstructorCon *ComplexConstructorConRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ComplexConstructorCon.Contract.ComplexConstructorConCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ComplexConstructorCon *ComplexConstructorConRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.ComplexConstructorConTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ComplexConstructorCon *ComplexConstructorConRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.ComplexConstructorConTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ComplexConstructorCon *ComplexConstructorConCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ComplexConstructorCon.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ComplexConstructorCon *ComplexConstructorConTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ComplexConstructorCon *ComplexConstructorConTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetVal is a paid mutator transaction binding the contract method 0xe1cb0e52.
+//
+// Solidity: function getVal() returns(uint256)
+func (_ComplexConstructorCon *ComplexConstructorConTransactor) GetVal(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon.contract.Transact(opts, "getVal")
+}
+
+// GetVal is a paid mutator transaction binding the contract method 0xe1cb0e52.
+//
+// Solidity: function getVal() returns(uint256)
+func (_ComplexConstructorCon *ComplexConstructorConSession) GetVal() (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.GetVal(&_ComplexConstructorCon.TransactOpts)
+}
+
+// GetVal is a paid mutator transaction binding the contract method 0xe1cb0e52.
+//
+// Solidity: function getVal() returns(uint256)
+func (_ComplexConstructorCon *ComplexConstructorConTransactorSession) GetVal() (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.GetVal(&_ComplexConstructorCon.TransactOpts)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_ComplexConstructorCon *ComplexConstructorConTransactor) Receive(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon.contract.RawTransact(opts, nil) // calldata is disallowed for receive function
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_ComplexConstructorCon *ComplexConstructorConSession) Receive() (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.Receive(&_ComplexConstructorCon.TransactOpts)
+}
+
+// Receive is a paid mutator transaction binding the contract receive function.
+//
+// Solidity: receive() payable returns()
+func (_ComplexConstructorCon *ComplexConstructorConTransactorSession) Receive() (*types.Transaction, error) {
+	return _ComplexConstructorCon.Contract.Receive(&_ComplexConstructorCon.TransactOpts)
+}
+
+// ComplexConstructorCon2ABI is the input ABI used to generate the binding from.
+const ComplexConstructorCon2ABI = "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"val\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"getVal\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+
+// ComplexConstructorCon2Bin is the compiled bytecode used for deploying new contracts.
+var ComplexConstructorCon2Bin = "0x60806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea26469706673582212200c54ae33017a5541bd9eb84b2914a17f3ac34d606a266f33497a603b9ce30e7964736f6c634300060c0033"
+
+// DeployComplexConstructorCon2 deploys a new Ethereum contract, binding an instance of ComplexConstructorCon2 to it.
+func DeployComplexConstructorCon2(auth *bind.TransactOpts, backend bind.ContractBackend, val *big.Int) (common.Address, *types.Transaction, *ComplexConstructorCon2, error) {
+	parsed, err := abi.JSON(strings.NewReader(ComplexConstructorCon2ABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ComplexConstructorCon2Bin), backend, val)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &ComplexConstructorCon2{ComplexConstructorCon2Caller: ComplexConstructorCon2Caller{contract: contract}, ComplexConstructorCon2Transactor: ComplexConstructorCon2Transactor{contract: contract}, ComplexConstructorCon2Filterer: ComplexConstructorCon2Filterer{contract: contract}}, nil
+}
+
+// ComplexConstructorCon2 is an auto generated Go binding around an Ethereum contract.
+type ComplexConstructorCon2 struct {
+	ComplexConstructorCon2Caller     // Read-only binding to the contract
+	ComplexConstructorCon2Transactor // Write-only binding to the contract
+	ComplexConstructorCon2Filterer   // Log filterer for contract events
+}
+
+// ComplexConstructorCon2Caller is an auto generated read-only Go binding around an Ethereum contract.
+type ComplexConstructorCon2Caller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ComplexConstructorCon2Transactor is an auto generated write-only Go binding around an Ethereum contract.
+type ComplexConstructorCon2Transactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ComplexConstructorCon2Filterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ComplexConstructorCon2Filterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ComplexConstructorCon2Session is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ComplexConstructorCon2Session struct {
+	Contract     *ComplexConstructorCon2 // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts           // Call options to use throughout this session
+	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
+}
+
+// ComplexConstructorCon2CallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ComplexConstructorCon2CallerSession struct {
+	Contract *ComplexConstructorCon2Caller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts                 // Call options to use throughout this session
+}
+
+// ComplexConstructorCon2TransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ComplexConstructorCon2TransactorSession struct {
+	Contract     *ComplexConstructorCon2Transactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts                 // Transaction auth options to use throughout this session
+}
+
+// ComplexConstructorCon2Raw is an auto generated low-level Go binding around an Ethereum contract.
+type ComplexConstructorCon2Raw struct {
+	Contract *ComplexConstructorCon2 // Generic contract binding to access the raw methods on
+}
+
+// ComplexConstructorCon2CallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ComplexConstructorCon2CallerRaw struct {
+	Contract *ComplexConstructorCon2Caller // Generic read-only contract binding to access the raw methods on
+}
+
+// ComplexConstructorCon2TransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ComplexConstructorCon2TransactorRaw struct {
+	Contract *ComplexConstructorCon2Transactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewComplexConstructorCon2 creates a new instance of ComplexConstructorCon2, bound to a specific deployed contract.
+func NewComplexConstructorCon2(address common.Address, backend bind.ContractBackend) (*ComplexConstructorCon2, error) {
+	contract, err := bindComplexConstructorCon2(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorCon2{ComplexConstructorCon2Caller: ComplexConstructorCon2Caller{contract: contract}, ComplexConstructorCon2Transactor: ComplexConstructorCon2Transactor{contract: contract}, ComplexConstructorCon2Filterer: ComplexConstructorCon2Filterer{contract: contract}}, nil
+}
+
+// NewComplexConstructorCon2Caller creates a new read-only instance of ComplexConstructorCon2, bound to a specific deployed contract.
+func NewComplexConstructorCon2Caller(address common.Address, caller bind.ContractCaller) (*ComplexConstructorCon2Caller, error) {
+	contract, err := bindComplexConstructorCon2(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorCon2Caller{contract: contract}, nil
+}
+
+// NewComplexConstructorCon2Transactor creates a new write-only instance of ComplexConstructorCon2, bound to a specific deployed contract.
+func NewComplexConstructorCon2Transactor(address common.Address, transactor bind.ContractTransactor) (*ComplexConstructorCon2Transactor, error) {
+	contract, err := bindComplexConstructorCon2(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorCon2Transactor{contract: contract}, nil
+}
+
+// NewComplexConstructorCon2Filterer creates a new log filterer instance of ComplexConstructorCon2, bound to a specific deployed contract.
+func NewComplexConstructorCon2Filterer(address common.Address, filterer bind.ContractFilterer) (*ComplexConstructorCon2Filterer, error) {
+	contract, err := bindComplexConstructorCon2(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ComplexConstructorCon2Filterer{contract: contract}, nil
+}
+
+// bindComplexConstructorCon2 binds a generic wrapper to an already deployed contract.
+func bindComplexConstructorCon2(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ComplexConstructorCon2ABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ComplexConstructorCon2 *ComplexConstructorCon2Raw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ComplexConstructorCon2.Contract.ComplexConstructorCon2Caller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ComplexConstructorCon2 *ComplexConstructorCon2Raw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon2.Contract.ComplexConstructorCon2Transactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ComplexConstructorCon2 *ComplexConstructorCon2Raw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ComplexConstructorCon2.Contract.ComplexConstructorCon2Transactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_ComplexConstructorCon2 *ComplexConstructorCon2CallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ComplexConstructorCon2.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_ComplexConstructorCon2 *ComplexConstructorCon2TransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon2.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_ComplexConstructorCon2 *ComplexConstructorCon2TransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ComplexConstructorCon2.Contract.contract.Transact(opts, method, params...)
+}
+
+// GetVal is a paid mutator transaction binding the contract method 0xe1cb0e52.
+//
+// Solidity: function getVal() returns(uint256)
+func (_ComplexConstructorCon2 *ComplexConstructorCon2Transactor) GetVal(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ComplexConstructorCon2.contract.Transact(opts, "getVal")
+}
+
+// GetVal is a paid mutator transaction binding the contract method 0xe1cb0e52.
+//
+// Solidity: function getVal() returns(uint256)
+func (_ComplexConstructorCon2 *ComplexConstructorCon2Session) GetVal() (*types.Transaction, error) {
+	return _ComplexConstructorCon2.Contract.GetVal(&_ComplexConstructorCon2.TransactOpts)
+}
+
+// GetVal is a paid mutator transaction binding the contract method 0xe1cb0e52.
+//
+// Solidity: function getVal() returns(uint256)
+func (_ComplexConstructorCon2 *ComplexConstructorCon2TransactorSession) GetVal() (*types.Transaction, error) {
+	return _ComplexConstructorCon2.Contract.GetVal(&_ComplexConstructorCon2.TransactOpts)
+}
+
+// ReverterABI is the input ABI used to generate the binding from.
+const ReverterABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"}]"
+
+// ReverterBin is the compiled bytecode used for deploying new contracts.
+var ReverterBin = "0x6080604052348015600f57600080fd5b506040805162461bcd60e51b8152602060048201526012602482015271125b9d195b9d1a5bdb985b081c995d995c9d60721b604482015290519081900360640190fdfe"
+
+// DeployReverter deploys a new Ethereum contract, binding an instance of Reverter to it.
+func DeployReverter(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Reverter, error) {
+	parsed, err := abi.JSON(strings.NewReader(ReverterABI))
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+
+	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ReverterBin), backend)
+	if err != nil {
+		return common.Address{}, nil, nil, err
+	}
+	return address, tx, &Reverter{ReverterCaller: ReverterCaller{contract: contract}, ReverterTransactor: ReverterTransactor{contract: contract}, ReverterFilterer: ReverterFilterer{contract: contract}}, nil
+}
+
+// Reverter is an auto generated Go binding around an Ethereum contract.
+type Reverter struct {
+	ReverterCaller     // Read-only binding to the contract
+	ReverterTransactor // Write-only binding to the contract
+	ReverterFilterer   // Log filterer for contract events
+}
+
+// ReverterCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ReverterCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ReverterTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ReverterTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ReverterFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ReverterFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// ReverterSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type ReverterSession struct {
+	Contract     *Reverter         // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// ReverterCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type ReverterCallerSession struct {
+	Contract *ReverterCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts   // Call options to use throughout this session
+}
+
+// ReverterTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type ReverterTransactorSession struct {
+	Contract     *ReverterTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
+}
+
+// ReverterRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ReverterRaw struct {
+	Contract *Reverter // Generic contract binding to access the raw methods on
+}
+
+// ReverterCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ReverterCallerRaw struct {
+	Contract *ReverterCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// ReverterTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ReverterTransactorRaw struct {
+	Contract *ReverterTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewReverter creates a new instance of Reverter, bound to a specific deployed contract.
+func NewReverter(address common.Address, backend bind.ContractBackend) (*Reverter, error) {
+	contract, err := bindReverter(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &Reverter{ReverterCaller: ReverterCaller{contract: contract}, ReverterTransactor: ReverterTransactor{contract: contract}, ReverterFilterer: ReverterFilterer{contract: contract}}, nil
+}
+
+// NewReverterCaller creates a new read-only instance of Reverter, bound to a specific deployed contract.
+func NewReverterCaller(address common.Address, caller bind.ContractCaller) (*ReverterCaller, error) {
+	contract, err := bindReverter(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ReverterCaller{contract: contract}, nil
+}
+
+// NewReverterTransactor creates a new write-only instance of Reverter, bound to a specific deployed contract.
+func NewReverterTransactor(address common.Address, transactor bind.ContractTransactor) (*ReverterTransactor, error) {
+	contract, err := bindReverter(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &ReverterTransactor{contract: contract}, nil
+}
+
+// NewReverterFilterer creates a new log filterer instance of Reverter, bound to a specific deployed contract.
+func NewReverterFilterer(address common.Address, filterer bind.ContractFilterer) (*ReverterFilterer, error) {
+	contract, err := bindReverter(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &ReverterFilterer{contract: contract}, nil
+}
+
+// bindReverter binds a generic wrapper to an already deployed contract.
+func bindReverter(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ReverterABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Reverter *ReverterRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Reverter.Contract.ReverterCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Reverter *ReverterRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Reverter.Contract.ReverterTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Reverter *ReverterRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Reverter.Contract.ReverterTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_Reverter *ReverterCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _Reverter.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_Reverter *ReverterTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Reverter.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_Reverter *ReverterTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _Reverter.Contract.contract.Transact(opts, method, params...)
+}
+
+// SimpleABI is the input ABI used to generate the binding from.
+const SimpleABI = "[{\"inputs\":[],\"stateMutability\":\"payable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"TestEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool[10]\",\"name\":\"_variable\",\"type\":\"bool[10]\"}],\"name\":\"Variable\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"acceptPayment\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractSimple\",\"name\":\"con\",\"type\":\"address\"}],\"name\":\"crossCall\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"debug\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"exists\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"nestedCall\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"dest\",\"type\":\"address\"}],\"name\":\"nestedCall2\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rejectPayment\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"reverts\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"arg\",\"type\":\"uint256\"}],\"name\":\"trace\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"y\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
+
 // SimpleBin is the compiled bytecode used for deploying new contracts.
-var SimpleBin = "0x608060405234801561001057600080fd5b506101de806100206000396000f3fe60806040526004361061004e5760003560e01c8063267c4ae4146100955780633bccbbc9146100bc5780639436bc1f146100d15780639b7c9da3146100e6578063ae0aba8c1461011057610090565b36610090576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100a157600080fd5b506100aa610118565b60408051918252519081900360200190f35b3480156100c857600080fd5b5061008e61011d565b3480156100dd57600080fd5b5061008e61015b565b3480156100f257600080fd5b5061008e6004803603602081101561010957600080fd5b503561015d565b61008e61015b565b600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b60405130908290600081818185875af1925050503d806000811461019d576040519150601f19603f3d011682016040523d82523d6000602084013e6101a2565b606091505b5050505056fea26469706673582212203fd4cf537d89fe44d609541d3dbe6ab55cb6cf4366dbdd2c259902863f9d8c0d64736f6c634300060c0033"
+var SimpleBin = "0x6080604081905234600181905581527f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d241490602090a1610929806100436000396000f3fe6080604052600436106100955760003560e01c80639b7c9da3116100595780639b7c9da31461015b578063a4ab282d14610185578063a56dfe4a14610233578063a68a4fed14610248578063ae0aba8c14610265576100d7565b80630324332e146100dc578063267c4ae4146101215780633bccbbc914610129578063588ee29b146101315780639436bc1f14610146576100d7565b366100d7576040805162461bcd60e51b815260206004820152600b60248201526a6e6f206465706f7369747360a81b604482015290519081900360640190fd5b005b600080fd5b3480156100e857600080fd5b5061010f600480360360208110156100ff57600080fd5b50356001600160a01b031661026d565b60408051918252519081900360200190f35b61010f6102df565b6100d561031f565b34801561013d57600080fd5b506100d561035f565b34801561015257600080fd5b506100d561035d565b34801561016757600080fd5b506100d56004803603602081101561017e57600080fd5b50356103c6565b34801561019157600080fd5b506101be600480360360408110156101a857600080fd5b50803590602001356001600160a01b0316610411565b6040805160208082528351818301528351919283929083019185019080838360005b838110156101f85781810151838201526020016101e0565b50505050905090810190601f1680156102255780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b34801561023f57600080fd5b5061010f6104d5565b61010f6004803603602081101561025e57600080fd5b50356104db565b6100d561035d565b6000816001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b1580156102aa57600080fd5b505af11580156102be573d6000803e3d6000fd5b505050506040513d60208110156102d457600080fd5b505160010192915050565b600560009081556040805134815290517f1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d24149181900360200190a150600a90565b6040805162461bcd60e51b815260206004820152600e60248201526d1d1a1a5cc81a5cc818481d195cdd60921b604482015290519081900360640190fd5b565b6103676105b7565b7fd09ca446fa2fa15b4f798d40263d8fb2d571205ba080eba1839db8b1efd5f676816040518082600a60200280838360005b838110156103b1578181015183820152602001610399565b5050505090500191505060405180910390a150565b60405130908290600081818185875af1925050503d8060008114610406576040519150601f19603f3d011682016040523d82523d6000602084013e61040b565b606091505b50505050565b6060306001600160a01b031663267c4ae46040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561044e57600080fd5b505af1158015610462573d6000803e3d6000fd5b505050506040513d602081101561047857600080fd5b50506040516060906001600160a01b038416908590600081818185875af1925050503d80600081146104c6576040519150601f19603f3d011682016040523d82523d6000602084013e6104cb565b606091505b5095945050505050565b60015481565b600080600234046040516104ee906105d6565b660c1e0d0ccc8d4d60ca1b8152604051908190036020019082f090508015801561051c573d6000803e3d6000fd5b50905060405161052b906105e3565b604051809103906000f0801561053e5760015b61054757610549565b505b806001600160a01b031663e1cb0e526040518163ffffffff1660e01b8152600401602060405180830381600087803b15801561058457600080fd5b505af1158015610598573d6000803e3d6000fd5b505050506040513d60208110156105ae57600080fd5b50519392505050565b604051806101400160405280600a906020820280368337509192915050565b6102b1806105f083390190565b6053806108a18339019056fe60806040526040516102b13803806102b18339818101604052602081101561002657600080fd5b50516040805163099f12b960e21b81529051339163267c4ae49160048083019260209291908290030181600087803b15801561006157600080fd5b505af1158015610075573d6000803e3d6000fd5b505050506040513d602081101561008b57600080fd5b508190506002340461028e6040516100a290610127565b90815260405183918190036020019083f5915050801580156100c8573d6000803e3d6000fd5b505060408051639b7c9da360e01b81526036600482015290513391639b7c9da391602480830192600092919082900301818387803b15801561010957600080fd5b505af115801561011d573d6000803e3d6000fd5b5050505050610133565b60e7806101ca83390190565b6089806101416000396000f3fe608060405260043610601f5760003560e01c8063e1cb0e5214602a576025565b36602557005b600080fd5b348015603557600080fd5b50603c604e565b60408051918252519081900360200190f35b60149056fea264697066735822122096d01db1eaf2fcca2f322001b7e0378474ebcbd622e0c12c994aea40fbe49a4764736f6c634300060c003360806040526040516100e73803806100e78339818101604052602081101561002657600080fd5b505160405133906002340480156108fc02916000818181858888f19350505050158015610057573d6000803e3d6000fd5b50506080806100676000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e1cb0e5214602d575b600080fd5b60336045565b60408051918252519081900360200190f35b60149056fea26469706673582212200c54ae33017a5541bd9eb84b2914a17f3ac34d606a266f33497a603b9ce30e7964736f6c634300060c00336080604052348015600f57600080fd5b506040805162461bcd60e51b8152602060048201526012602482015271125b9d195b9d1a5bdb985b081c995d995c9d60721b604482015290519081900360640190fdfea2646970667358221220b485a32ac6e6702ca29d69a306e1986bc257e5c5349a586c9266e68c430db06b64736f6c634300060c0033"
 
 // DeploySimple deploys a new Ethereum contract, binding an instance of Simple to it.
 func DeploySimple(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Simple, error) {
@@ -197,6 +737,37 @@ func (_Simple *SimpleTransactorRaw) Transact(opts *bind.TransactOpts, method str
 	return _Simple.Contract.contract.Transact(opts, method, params...)
 }
 
+// Y is a free data retrieval call binding the contract method 0xa56dfe4a.
+//
+// Solidity: function y() view returns(uint256)
+func (_Simple *SimpleCaller) Y(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Simple.contract.Call(opts, &out, "y")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// Y is a free data retrieval call binding the contract method 0xa56dfe4a.
+//
+// Solidity: function y() view returns(uint256)
+func (_Simple *SimpleSession) Y() (*big.Int, error) {
+	return _Simple.Contract.Y(&_Simple.CallOpts)
+}
+
+// Y is a free data retrieval call binding the contract method 0xa56dfe4a.
+//
+// Solidity: function y() view returns(uint256)
+func (_Simple *SimpleCallerSession) Y() (*big.Int, error) {
+	return _Simple.Contract.Y(&_Simple.CallOpts)
+}
+
 // AcceptPayment is a paid mutator transaction binding the contract method 0xae0aba8c.
 //
 // Solidity: function acceptPayment() payable returns()
@@ -218,23 +789,65 @@ func (_Simple *SimpleTransactorSession) AcceptPayment() (*types.Transaction, err
 	return _Simple.Contract.AcceptPayment(&_Simple.TransactOpts)
 }
 
+// CrossCall is a paid mutator transaction binding the contract method 0x0324332e.
+//
+// Solidity: function crossCall(address con) returns(uint256)
+func (_Simple *SimpleTransactor) CrossCall(opts *bind.TransactOpts, con common.Address) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "crossCall", con)
+}
+
+// CrossCall is a paid mutator transaction binding the contract method 0x0324332e.
+//
+// Solidity: function crossCall(address con) returns(uint256)
+func (_Simple *SimpleSession) CrossCall(con common.Address) (*types.Transaction, error) {
+	return _Simple.Contract.CrossCall(&_Simple.TransactOpts, con)
+}
+
+// CrossCall is a paid mutator transaction binding the contract method 0x0324332e.
+//
+// Solidity: function crossCall(address con) returns(uint256)
+func (_Simple *SimpleTransactorSession) CrossCall(con common.Address) (*types.Transaction, error) {
+	return _Simple.Contract.CrossCall(&_Simple.TransactOpts, con)
+}
+
+// Debug is a paid mutator transaction binding the contract method 0x588ee29b.
+//
+// Solidity: function debug() returns()
+func (_Simple *SimpleTransactor) Debug(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "debug")
+}
+
+// Debug is a paid mutator transaction binding the contract method 0x588ee29b.
+//
+// Solidity: function debug() returns()
+func (_Simple *SimpleSession) Debug() (*types.Transaction, error) {
+	return _Simple.Contract.Debug(&_Simple.TransactOpts)
+}
+
+// Debug is a paid mutator transaction binding the contract method 0x588ee29b.
+//
+// Solidity: function debug() returns()
+func (_Simple *SimpleTransactorSession) Debug() (*types.Transaction, error) {
+	return _Simple.Contract.Debug(&_Simple.TransactOpts)
+}
+
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
-// Solidity: function exists() returns(uint256)
+// Solidity: function exists() payable returns(uint256)
 func (_Simple *SimpleTransactor) Exists(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _Simple.contract.Transact(opts, "exists")
 }
 
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
-// Solidity: function exists() returns(uint256)
+// Solidity: function exists() payable returns(uint256)
 func (_Simple *SimpleSession) Exists() (*types.Transaction, error) {
 	return _Simple.Contract.Exists(&_Simple.TransactOpts)
 }
 
 // Exists is a paid mutator transaction binding the contract method 0x267c4ae4.
 //
-// Solidity: function exists() returns(uint256)
+// Solidity: function exists() payable returns(uint256)
 func (_Simple *SimpleTransactorSession) Exists() (*types.Transaction, error) {
 	return _Simple.Contract.Exists(&_Simple.TransactOpts)
 }
@@ -260,6 +873,27 @@ func (_Simple *SimpleTransactorSession) NestedCall(value *big.Int) (*types.Trans
 	return _Simple.Contract.NestedCall(&_Simple.TransactOpts, value)
 }
 
+// NestedCall2 is a paid mutator transaction binding the contract method 0xa4ab282d.
+//
+// Solidity: function nestedCall2(uint256 value, address dest) returns(bytes)
+func (_Simple *SimpleTransactor) NestedCall2(opts *bind.TransactOpts, value *big.Int, dest common.Address) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "nestedCall2", value, dest)
+}
+
+// NestedCall2 is a paid mutator transaction binding the contract method 0xa4ab282d.
+//
+// Solidity: function nestedCall2(uint256 value, address dest) returns(bytes)
+func (_Simple *SimpleSession) NestedCall2(value *big.Int, dest common.Address) (*types.Transaction, error) {
+	return _Simple.Contract.NestedCall2(&_Simple.TransactOpts, value, dest)
+}
+
+// NestedCall2 is a paid mutator transaction binding the contract method 0xa4ab282d.
+//
+// Solidity: function nestedCall2(uint256 value, address dest) returns(bytes)
+func (_Simple *SimpleTransactorSession) NestedCall2(value *big.Int, dest common.Address) (*types.Transaction, error) {
+	return _Simple.Contract.NestedCall2(&_Simple.TransactOpts, value, dest)
+}
+
 // RejectPayment is a paid mutator transaction binding the contract method 0x9436bc1f.
 //
 // Solidity: function rejectPayment() returns()
@@ -283,23 +917,44 @@ func (_Simple *SimpleTransactorSession) RejectPayment() (*types.Transaction, err
 
 // Reverts is a paid mutator transaction binding the contract method 0x3bccbbc9.
 //
-// Solidity: function reverts() returns()
+// Solidity: function reverts() payable returns()
 func (_Simple *SimpleTransactor) Reverts(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _Simple.contract.Transact(opts, "reverts")
 }
 
 // Reverts is a paid mutator transaction binding the contract method 0x3bccbbc9.
 //
-// Solidity: function reverts() returns()
+// Solidity: function reverts() payable returns()
 func (_Simple *SimpleSession) Reverts() (*types.Transaction, error) {
 	return _Simple.Contract.Reverts(&_Simple.TransactOpts)
 }
 
 // Reverts is a paid mutator transaction binding the contract method 0x3bccbbc9.
 //
-// Solidity: function reverts() returns()
+// Solidity: function reverts() payable returns()
 func (_Simple *SimpleTransactorSession) Reverts() (*types.Transaction, error) {
 	return _Simple.Contract.Reverts(&_Simple.TransactOpts)
+}
+
+// Trace is a paid mutator transaction binding the contract method 0xa68a4fed.
+//
+// Solidity: function trace(uint256 arg) payable returns(uint256)
+func (_Simple *SimpleTransactor) Trace(opts *bind.TransactOpts, arg *big.Int) (*types.Transaction, error) {
+	return _Simple.contract.Transact(opts, "trace", arg)
+}
+
+// Trace is a paid mutator transaction binding the contract method 0xa68a4fed.
+//
+// Solidity: function trace(uint256 arg) payable returns(uint256)
+func (_Simple *SimpleSession) Trace(arg *big.Int) (*types.Transaction, error) {
+	return _Simple.Contract.Trace(&_Simple.TransactOpts, arg)
+}
+
+// Trace is a paid mutator transaction binding the contract method 0xa68a4fed.
+//
+// Solidity: function trace(uint256 arg) payable returns(uint256)
+func (_Simple *SimpleTransactorSession) Trace(arg *big.Int) (*types.Transaction, error) {
+	return _Simple.Contract.Trace(&_Simple.TransactOpts, arg)
 }
 
 // Receive is a paid mutator transaction binding the contract receive function.
@@ -321,4 +976,272 @@ func (_Simple *SimpleSession) Receive() (*types.Transaction, error) {
 // Solidity: receive() payable returns()
 func (_Simple *SimpleTransactorSession) Receive() (*types.Transaction, error) {
 	return _Simple.Contract.Receive(&_Simple.TransactOpts)
+}
+
+// SimpleTestEventIterator is returned from FilterTestEvent and is used to iterate over the raw logs and unpacked data for TestEvent events raised by the Simple contract.
+type SimpleTestEventIterator struct {
+	Event *SimpleTestEvent // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *SimpleTestEventIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(SimpleTestEvent)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(SimpleTestEvent)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *SimpleTestEventIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *SimpleTestEventIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// SimpleTestEvent represents a TestEvent event raised by the Simple contract.
+type SimpleTestEvent struct {
+	Value *big.Int
+	Raw   types.Log // Blockchain specific contextual infos
+}
+
+// FilterTestEvent is a free log retrieval operation binding the contract event 0x1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414.
+//
+// Solidity: event TestEvent(uint256 value)
+func (_Simple *SimpleFilterer) FilterTestEvent(opts *bind.FilterOpts) (*SimpleTestEventIterator, error) {
+
+	logs, sub, err := _Simple.contract.FilterLogs(opts, "TestEvent")
+	if err != nil {
+		return nil, err
+	}
+	return &SimpleTestEventIterator{contract: _Simple.contract, event: "TestEvent", logs: logs, sub: sub}, nil
+}
+
+// WatchTestEvent is a free log subscription operation binding the contract event 0x1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414.
+//
+// Solidity: event TestEvent(uint256 value)
+func (_Simple *SimpleFilterer) WatchTestEvent(opts *bind.WatchOpts, sink chan<- *SimpleTestEvent) (event.Subscription, error) {
+
+	logs, sub, err := _Simple.contract.WatchLogs(opts, "TestEvent")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(SimpleTestEvent)
+				if err := _Simple.contract.UnpackLog(event, "TestEvent", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseTestEvent is a log parse operation binding the contract event 0x1440c4dd67b4344ea1905ec0318995133b550f168b4ee959a0da6b503d7d2414.
+//
+// Solidity: event TestEvent(uint256 value)
+func (_Simple *SimpleFilterer) ParseTestEvent(log types.Log) (*SimpleTestEvent, error) {
+	event := new(SimpleTestEvent)
+	if err := _Simple.contract.UnpackLog(event, "TestEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// SimpleVariableIterator is returned from FilterVariable and is used to iterate over the raw logs and unpacked data for Variable events raised by the Simple contract.
+type SimpleVariableIterator struct {
+	Event *SimpleVariable // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *SimpleVariableIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(SimpleVariable)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(SimpleVariable)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *SimpleVariableIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *SimpleVariableIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// SimpleVariable represents a Variable event raised by the Simple contract.
+type SimpleVariable struct {
+	Variable [10]bool
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterVariable is a free log retrieval operation binding the contract event 0xd09ca446fa2fa15b4f798d40263d8fb2d571205ba080eba1839db8b1efd5f676.
+//
+// Solidity: event Variable(bool[10] _variable)
+func (_Simple *SimpleFilterer) FilterVariable(opts *bind.FilterOpts) (*SimpleVariableIterator, error) {
+
+	logs, sub, err := _Simple.contract.FilterLogs(opts, "Variable")
+	if err != nil {
+		return nil, err
+	}
+	return &SimpleVariableIterator{contract: _Simple.contract, event: "Variable", logs: logs, sub: sub}, nil
+}
+
+// WatchVariable is a free log subscription operation binding the contract event 0xd09ca446fa2fa15b4f798d40263d8fb2d571205ba080eba1839db8b1efd5f676.
+//
+// Solidity: event Variable(bool[10] _variable)
+func (_Simple *SimpleFilterer) WatchVariable(opts *bind.WatchOpts, sink chan<- *SimpleVariable) (event.Subscription, error) {
+
+	logs, sub, err := _Simple.contract.WatchLogs(opts, "Variable")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(SimpleVariable)
+				if err := _Simple.contract.UnpackLog(event, "Variable", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseVariable is a log parse operation binding the contract event 0xd09ca446fa2fa15b4f798d40263d8fb2d571205ba080eba1839db8b1efd5f676.
+//
+// Solidity: event Variable(bool[10] _variable)
+func (_Simple *SimpleFilterer) ParseVariable(log types.Log) (*SimpleVariable, error) {
+	event := new(SimpleVariable)
+	if err := _Simple.contract.UnpackLog(event, "Variable", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }

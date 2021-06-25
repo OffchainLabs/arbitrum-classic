@@ -54,13 +54,9 @@ void machineDestroy(CMachine* m) {
 int machineHash(CMachine* m, void* ret) {
     assert(m);
     auto optionalHash = static_cast<Machine*>(m)->hash();
-    if (!optionalHash) {
-        return 0;
-    }
     std::array<unsigned char, 32> val{};
-    to_big_endian(*optionalHash, val.begin());
+    to_big_endian(optionalHash, val.begin());
     std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
-
     return 1;
 }
 
@@ -77,6 +73,14 @@ char* machineInfo(CMachine* m) {
     std::stringstream ss;
     ss << *mach;
     return strdup(ss.str().c_str());
+}
+
+void machineCodePointHash(CMachine* m, void* ret) {
+    auto cp_hash =
+        hash(static_cast<Machine*>(m)->machine_state.loadCurrentInstruction());
+    std::array<unsigned char, 32> val{};
+    to_big_endian(cp_hash, val.begin());
+    std::copy(val.begin(), val.end(), reinterpret_cast<char*>(ret));
 }
 
 CStatus machineCurrentStatus(CMachine* m) {
@@ -176,13 +180,6 @@ void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
     config->setInboxMessagesFromBytes(receiveByteSliceArray(bytes));
 }
 
-void machineExecutionConfigSetNextBlockHeight(CMachineExecutionConfig* c,
-                                              void* next_block_height) {
-    assert(c);
-    auto config = static_cast<MachineExecutionConfig*>(c);
-    config->next_block_height = receiveUint256(next_block_height);
-}
-
 void machineExecutionConfigSetSideloads(CMachineExecutionConfig* c,
                                         ByteSliceArray bytes) {
     assert(c);
@@ -197,23 +194,47 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
     config->stop_on_sideload = stop_on_sideload;
 }
 
-RawAssertion executeAssertion(CMachine* m,
-                              const CMachineExecutionConfig* c,
-                              void* before_send_acc_data,
-                              void* before_log_acc_data) {
+RawAssertion executeAssertion(CMachine* m, const CMachineExecutionConfig* c) {
     assert(m);
     assert(c);
     auto mach = static_cast<Machine*>(m);
     auto config = static_cast<const MachineExecutionConfig*>(c);
-    auto before_send_acc = receiveUint256(before_send_acc_data);
-    auto before_log_acc = receiveUint256(before_log_acc_data);
 
     try {
         mach->machine_state.context = AssertionContext{*config};
         mach->machine_state.context.max_gas +=
             mach->machine_state.output.arb_gas_used;
         Assertion assertion = mach->run();
-        return makeRawAssertion(assertion, before_send_acc, before_log_acc);
+        std::vector<unsigned char> sendData;
+        for (const auto& send : assertion.sends) {
+            auto big_size = boost::endian::native_to_big(
+                static_cast<uint64_t>(send.size()));
+            auto big_size_ptr = reinterpret_cast<const char*>(&big_size);
+            sendData.insert(sendData.end(), big_size_ptr,
+                            big_size_ptr + sizeof(big_size));
+            sendData.insert(sendData.end(), send.begin(), send.end());
+        }
+
+        std::vector<unsigned char> logData;
+        for (const auto& log : assertion.logs) {
+            marshal_value(log, logData);
+        }
+
+        std::vector<unsigned char> debugPrintData;
+        for (const auto& debugPrint : assertion.debugPrints) {
+            marshal_value(debugPrint, debugPrintData);
+        }
+
+        // TODO extend usage of uint256
+        return {intx::narrow_cast<uint64_t>(assertion.inbox_messages_consumed),
+                returnCharVector(sendData),
+                static_cast<int>(assertion.sends.size()),
+                returnCharVector(logData),
+                static_cast<int>(assertion.logs.size()),
+                returnCharVector(debugPrintData),
+                static_cast<int>(assertion.debugPrints.size()),
+                intx::narrow_cast<uint64_t>(assertion.stepCount),
+                intx::narrow_cast<uint64_t>(assertion.gasCount)};
     } catch (const std::exception& e) {
         std::cerr << "Failed to make assertion " << e.what() << "\n";
         return makeEmptyAssertion();

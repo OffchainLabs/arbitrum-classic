@@ -43,10 +43,12 @@ TEST_CASE("ARBOS test vectors") {
             nlohmann::json j;
             i >> j;
 
-            std::vector<InboxMessage> messages;
+            std::vector<MachineMessage> messages;
             for (auto& json_message : j.at("inbox")) {
-                messages.push_back(InboxMessage::fromTuple(
-                    std::get<Tuple>(simple_value_from_json(json_message))));
+                messages.emplace_back(
+                    InboxMessage::fromTuple(
+                        std::get<Tuple>(simple_value_from_json(json_message))),
+                    0);
             }
 
             auto logs_json = j.at("logs");
@@ -69,38 +71,53 @@ TEST_CASE("ARBOS test vectors") {
             config.inbox_messages = messages;
             mach->machine_state.context = AssertionContext(config);
             auto assertion = mach->run();
-            INFO("Machine ran for " << assertion.stepCount << " steps");
+            INFO("Machine ran for " << assertion.gasCount << " gas with target "
+                                    << total_gas_target);
             REQUIRE(assertion.logs.size() == logs.size());
+            uint64_t block_log_count = 0;
+            uint64_t tx_log_count = 0;
             for (size_t k = 0; k < assertion.logs.size(); ++k) {
-                REQUIRE(assertion.logs[k] == logs[k]);
+                auto typecode = std::get<Tuple>(logs[k]).get_element(0);
+                if (typecode == value{uint256_t{0}}) {
+                    tx_log_count++;
+                } else if (typecode == value{uint256_t{1}}) {
+                    block_log_count++;
+                }
             }
+            INFO("Machine had " << tx_log_count << " tx logs and "
+                                << block_log_count << " block logs");
+            for (size_t k = 0; k < assertion.logs.size(); ++k) {
+                INFO("Checking log " << k);
+                CHECK(assertion.logs[k] == logs[k]);
+                if (std::get<Tuple>(logs[k]).get_element(0) ==
+                    value{uint256_t{1}}) {
+                    block_log_count++;
+                }
+            }
+
             REQUIRE(assertion.sends.size() == sends.size());
             for (size_t k = 0; k < assertion.sends.size(); ++k) {
-                REQUIRE(assertion.sends[k] == sends[k]);
+                INFO("Checking send " << k);
+                CHECK(assertion.sends[k] == sends[k]);
             }
-            REQUIRE(assertion.gasCount == total_gas_target);
+            CHECK(assertion.gasCount == total_gas_target);
             {
                 auto tx = storage.makeReadWriteTransaction();
                 saveMachine(*tx, *mach);
                 tx->commit();
             }
-            auto mach_hash = mach->hash();
-            REQUIRE(mach_hash);
-            auto mach2 = storage.getMachine(*mach_hash, value_cache);
-            auto mach2_hash = mach2->hash();
-            REQUIRE(mach2_hash);
-            REQUIRE(*mach_hash == *mach2_hash);
+
+            auto mach2 = storage.getMachine(mach->hash(), value_cache);
+            REQUIRE(mach->hash() == mach2->hash());
             storage.closeArbStorage();
 
             ArbStorage storage2(dbpath);
-            auto mach3 = storage2.getMachine(*mach_hash, value_cache);
-            auto mach3_hash = mach3->hash();
-            REQUIRE(mach3_hash);
-            REQUIRE(*mach_hash == *mach3_hash);
+            auto mach3 = storage2.getMachine(mach->hash(), value_cache);
+            REQUIRE(mach->hash() == mach3->hash());
 
             {
                 auto tx = storage2.makeReadWriteTransaction();
-                deleteMachine(*tx, *mach_hash);
+                deleteMachine(*tx, mach->hash());
                 tx->commit();
             }
         }

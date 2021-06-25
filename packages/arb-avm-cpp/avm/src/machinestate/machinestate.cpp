@@ -32,7 +32,6 @@ uint256_t max_arb_gas_remaining = std::numeric_limits<uint256_t>::max();
 
 AssertionContext::AssertionContext(MachineExecutionConfig config)
     : inbox_messages(std::move(config.inbox_messages)),
-      next_block_height(config.next_block_height),
       sideloads(std::move(config.sideloads)),
       stop_on_sideload(config.stop_on_sideload),
       max_gas(config.max_gas),
@@ -47,31 +46,16 @@ MachineStateKeys::MachineStateKeys(const MachineState& machine)
       arb_gas_remaining(machine.arb_gas_remaining),
       pc(machine.pc, machine.loadCurrentInstruction()),
       err_pc(machine.errpc),
-      staged_message(machine.staged_message),
       status(machine.state),
       output(machine.output) {}
 
-std::optional<Tuple> MachineStateKeys::getStagedMessageTuple() const {
-    if (std::holds_alternative<uint256_t>(staged_message)) {
-        // Staged message is unresolved
-        return std::nullopt;
-    }
-
-    if (!std::holds_alternative<InboxMessage>(staged_message)) {
-        // Staged message is empty
-        return Tuple{};
-    }
-
-    return std::get<InboxMessage>(staged_message).toTuple();
-}
-
-std::optional<uint256_t> MachineStateKeys::machineHash() const {
+uint256_t MachineStateKeys::machineHash() const {
     if (status == Status::Halted)
         return 0;
     if (status == Status::Error)
         return 1;
 
-    std::array<unsigned char, 32 * 8> data{};
+    std::array<unsigned char, 32 * 7> data{};
     auto oit = data.begin();
     {
         auto val = ::hash(pc);
@@ -86,23 +70,13 @@ std::optional<uint256_t> MachineStateKeys::machineHash() const {
         auto val = ::hash_value(err_pc);
         oit = to_big_endian(val, oit);
     }
-    {
-        auto message = getStagedMessageTuple();
-        if (!message) {
-            std::cerr
-                << "Can't get hash of machine with incomplete staged_message"
-                << std::endl;
-            return std::nullopt;
-        }
-        auto val = ::hash_value(*message);
-        oit = to_big_endian(val, oit);
-    }
+    assert(oit == data.end());
 
     auto hash_val = ethash::keccak256(data.data(), data.size());
     return intx::be::load<uint256_t>(hash_val);
 }
 
-void MachineState::addProcessedMessage(const InboxMessage& message) {
+void MachineState::addProcessedMessage(const MachineMessage& message) {
     output.fully_processed_inbox.addMessage(message);
 }
 
@@ -135,7 +109,6 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
                            Status state_,
                            CodePointRef pc_,
                            CodePointStub errpc_,
-                           staged_variant staged_message_,
                            MachineOutput output_)
     : code(std::move(code_)),
       registerVal(std::move(register_val_)),
@@ -146,7 +119,6 @@ MachineState::MachineState(std::shared_ptr<Code> code_,
       state(state_),
       pc(pc_),
       errpc(errpc_),
-      staged_message(std::move(staged_message_)),
       output(std::move(output_)) {}
 
 MachineState MachineState::loadFromFile(
@@ -177,8 +149,7 @@ void marshalState(std::vector<unsigned char>& buf,
                   const value& registerVal,
                   const value& staticVal,
                   uint256_t arb_gas_remaining,
-                  CodePointStub errpc,
-                  const value& staged_message_value) {
+                  CodePointStub errpc) {
     marshal_uint256_t(next_codepoint_hash, buf);
 
     stackPreImage.marshal(buf);
@@ -188,23 +159,17 @@ void marshalState(std::vector<unsigned char>& buf,
     ::marshalForProof(staticVal, MarshalLevel::STUB, buf, code);
     marshal_uint256_t(arb_gas_remaining, buf);
     marshal_uint256_t(::hash(errpc), buf);
-    ::marshalForProof(staged_message_value, MarshalLevel::SINGLE, buf, code);
 }
 }  // namespace
 
 std::vector<unsigned char> MachineState::marshalState() const {
-    auto staged_message_tuple = getStagedMessageTuple();
-    if (!staged_message_tuple) {
-        throw std::runtime_error(
-            "Can't marshal machine with incomplete staged_message");
-    }
     auto stackPreImage = stack.getHashPreImage();
     auto auxStackPreImage = auxstack.getHashPreImage();
     std::vector<unsigned char> buf;
 
     ::marshalState(buf, *code, ::hash(loadCurrentInstruction()), stackPreImage,
                    auxStackPreImage, registerVal, static_val, arb_gas_remaining,
-                   errpc, *staged_message_tuple);
+                   errpc);
     return buf;
 }
 
@@ -265,7 +230,7 @@ void makeSetBufferProof(std::vector<unsigned char>& buf,
 }
 
 void MachineState::marshalBufferProof(OneStepProof& proof) const {
-    auto op = loadCurrentInstruction().op;
+    auto& op = loadCurrentOperation();
     auto opcode = op.opcode;
     if ((opcode < OpCode::GET_BUFFER8 || opcode > OpCode::SET_BUFFER256) &&
         opcode != OpCode::SEND) {
@@ -390,11 +355,6 @@ void MachineState::marshalBufferProof(OneStepProof& proof) const {
 }
 
 OneStepProof MachineState::marshalForProof() const {
-    auto staged_message_tuple = getStagedMessageTuple();
-    if (!staged_message_tuple) {
-        throw std::runtime_error(
-            "Can't marshal machine with incomplete staged_message");
-    }
     auto currentInstruction = loadCurrentInstruction();
     auto& current_op = currentInstruction.op;
     auto opcode = current_op.opcode;
@@ -432,8 +392,9 @@ OneStepProof MachineState::marshalForProof() const {
                        auxStackProof.count < auxStackPops.size();
 
     proof.standard_proof.push_back(static_cast<uint8_t>(current_op.opcode));
-    proof.standard_proof.push_back(stackProof.count +
-                                   current_op.immediate.has_value());
+    proof.standard_proof.push_back(
+        stackProof.count +
+        static_cast<uint8_t>(static_cast<bool>(current_op.immediate)));
     proof.standard_proof.push_back(auxStackProof.count);
 
     proof.standard_proof.insert(proof.standard_proof.cend(),
@@ -447,24 +408,13 @@ OneStepProof MachineState::marshalForProof() const {
                                 auxStackProof.data.end());
     ::marshalState(proof.standard_proof, *code, currentInstruction.nextHash,
                    stackProof.bottom, auxStackProof.bottom, registerVal,
-                   static_val, arb_gas_remaining, errpc, *staged_message_tuple);
+                   static_val, arb_gas_remaining, errpc);
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
     if (!underflowed) {
         // Don't need a buffer proof if we're underflowing
         marshalBufferProof(proof);
-    }
-    // Inbox or inbox peek with no staged message
-    if ((current_op.opcode == OpCode::INBOX ||
-         current_op.opcode == OpCode::INBOX_PEEK) &&
-        stagedMessageEmpty()) {
-        if (context.inboxEmpty()) {
-            throw std::runtime_error("Can't generate proof with empty inbox");
-        }
-        auto message_data = context.peekInbox().serializeForProof();
-        proof.standard_proof.insert(proof.standard_proof.end(),
-                                    message_data.begin(), message_data.end());
     }
     return proof;
 }
@@ -475,9 +425,8 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
     } else if (state == Status::Halted) {
         return HaltBlocked();
     }
-    auto& instruction = loadCurrentInstruction();
-    if (instruction.op.opcode == OpCode::INBOX ||
-        instruction.op.opcode == OpCode::INBOX_PEEK) {
+    auto& op = loadCurrentOperation();
+    if (op.opcode == OpCode::INBOX) {
         if (newMessages) {
             return NotBlocked();
         }
@@ -487,18 +436,28 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
     }
 }
 
-const CodePoint& MachineState::loadCurrentInstruction() const {
+CodePoint MachineState::loadCurrentInstruction() const {
     if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return (*loaded_segment->segment)[pc.pc];
+    return loaded_segment->segment->loadCodePoint(pc.pc);
+}
+
+const Operation& MachineState::loadCurrentOperation() const {
+    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+        loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
+    }
+    return loaded_segment->segment->loadOperation(pc.pc);
 }
 
 uint256_t MachineState::nextGasCost() const {
-    auto& instruction = loadCurrentInstruction();
-    auto base_gas =
-        instructionGasCosts()[static_cast<size_t>(instruction.op.opcode)];
-    if (instruction.op.opcode == OpCode::ECPAIRING) {
+    auto& op = loadCurrentOperation();
+    return gasCost(op);
+}
+
+uint256_t MachineState::gasCost(const Operation& op) const {
+    auto base_gas = instructionGasCosts()[static_cast<size_t>(op.opcode)];
+    if (op.opcode == OpCode::ECPAIRING) {
         base_gas += machineoperation::ec_pairing_variable_gas_cost(*this);
     }
     return base_gas;
@@ -513,14 +472,14 @@ BlockReason MachineState::runOne() {
         return HaltBlocked();
     }
 
-    auto& instruction = loadCurrentInstruction();
+    auto& op = loadCurrentOperation();
 
     static const auto error_gas_cost =
         instructionGasCosts()[static_cast<size_t>(OpCode::ERROR)];
 
     // Always push the immediate to the stack if we're not blocked
-    if (instruction.op.immediate) {
-        auto imm = *instruction.op.immediate;
+    if (op.immediate) {
+        auto imm = *op.immediate;
         stack.push(std::move(imm));
     }
 
@@ -529,16 +488,12 @@ BlockReason MachineState::runOne() {
     uint64_t start_auxstack_size = auxstack.stacksize();
 
     bool is_valid_instruction =
-        instructionValidity()[static_cast<size_t>(instruction.op.opcode)];
+        instructionValidity()[static_cast<size_t>(op.opcode)];
 
     uint64_t stack_arg_count =
-        is_valid_instruction
-            ? InstructionStackPops.at(instruction.op.opcode).size()
-            : 0;
+        is_valid_instruction ? InstructionStackPops.at(op.opcode).size() : 0;
     uint64_t auxstack_arg_count =
-        is_valid_instruction
-            ? InstructionAuxStackPops.at(instruction.op.opcode).size()
-            : 0;
+        is_valid_instruction ? InstructionAuxStackPops.at(op.opcode).size() : 0;
 
     // We're only blocked if we can't execute at all
     BlockReason blockReason = [&]() -> BlockReason {
@@ -556,7 +511,7 @@ BlockReason MachineState::runOne() {
         }
 
         uint256_t gas_cost =
-            is_valid_instruction ? nextGasCost() : error_gas_cost;
+            is_valid_instruction ? gasCost(op) : error_gas_cost;
 
         if (arb_gas_remaining < gas_cost) {
             // If there's insufficient gas remaining, execute by transitioning
@@ -578,7 +533,7 @@ BlockReason MachineState::runOne() {
 
         BlockReason blockReason = NotBlocked();
         try {
-            blockReason = runOp(instruction.op.opcode);
+            blockReason = runOp(op.opcode);
         } catch (const stack_too_small&) {
             // Charge an error instruction instead
             arb_gas_remaining += gas_cost;
@@ -592,7 +547,7 @@ BlockReason MachineState::runOne() {
             // actually blocked
             arb_gas_remaining += gas_cost;
             output.arb_gas_used -= gas_cost;
-            if (instruction.op.immediate) {
+            if (op.immediate) {
                 stack.popClear();
             }
             return blockReason;
@@ -832,8 +787,6 @@ BlockReason MachineState::runOp(OpCode opcode) {
             machineoperation::send(*this);
             break;
         }
-        case OpCode::INBOX_PEEK:
-            return machineoperation::inboxPeekOp(*this);
         case OpCode::INBOX:
             return machineoperation::inboxOp(*this);
         case OpCode::ERROR:
@@ -906,17 +859,11 @@ BlockReason MachineState::runOp(OpCode opcode) {
 }
 
 std::ostream& operator<<(std::ostream& os, const MachineState& val) {
-    auto state_hash = val.hash();
-    if (state_hash) {
-        os << "hash " << intx::to_string(*state_hash, 16) << "\n";
-    } else {
-        os << "hash not available because staged value unresolved"
-           << "\n";
-    }
+    os << "hash " << intx::to_string(val.hash(), 16) << "\n";
     os << "status " << static_cast<int>(val.state) << "\n";
     os << "pc " << val.pc << "\n";
     os << "data stack: " << val.stack << "\n";
-    auto& current_code_point = val.code->loadCodePoint(val.pc);
+    auto current_code_point = val.code->loadCodePoint(val.pc);
     os << "operation " << current_code_point.op << "\n";
     os << "codePointHash " << intx::to_string(hash(current_code_point), 16)
        << "\n";
@@ -928,48 +875,12 @@ std::ostream& operator<<(std::ostream& os, const MachineState& val) {
        << "\n";
     os << "arb_gas_remaining " << val.arb_gas_remaining << "\n";
     os << "err handler " << val.errpc.pc << "\n";
-    auto& err_code_point = val.code->loadCodePoint(val.errpc.pc);
+    auto err_code_point = val.code->loadCodePoint(val.errpc.pc);
     os << "errHandlerHash " << intx::to_string(hash(err_code_point), 16)
        << "\n";
     return os;
 }
 
-std::optional<Tuple> MachineState::getStagedMessageTuple() const {
-    if (std::holds_alternative<uint256_t>(staged_message)) {
-        // Staged message is unresolved
-        return std::nullopt;
-    }
-
-    if (!std::holds_alternative<InboxMessage>(staged_message)) {
-        // Staged message is empty
-        return Tuple{};
-    }
-
-    return std::get<InboxMessage>(staged_message).toTuple();
-}
-
-bool MachineState::stagedMessageEmpty() const {
-    return std::holds_alternative<std::monostate>(staged_message);
-}
-
-bool MachineState::stagedMessageUnresolved() const {
-    return std::holds_alternative<uint256_t>(staged_message);
-}
-
-std::optional<uint256_t> MachineState::getStagedMessageBlockHeight() const {
-    if (std::holds_alternative<uint256_t>(staged_message)) {
-        // Staged message is unresolved
-        return std::get<uint256_t>(staged_message);
-    }
-
-    if (!std::holds_alternative<InboxMessage>(staged_message)) {
-        // Staged message is empty
-        return std::nullopt;
-    }
-
-    return std::get<InboxMessage>(staged_message).block_number;
-}
-
 uint256_t MachineState::getTotalMessagesRead() const {
-    return output.fully_processed_inbox.countWithStaged(staged_message);
+    return output.fully_processed_inbox.count;
 }

@@ -56,11 +56,20 @@ set(AVM_VERSION_STRING ${AVM_VERSION_MAJOR}.${AVM_VERSION_MINOR}.${AVM_VERSION_P
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
+option(ENABLE_JEMALLOC "Enable jemalloc" OFF)
 option(AVM_BUILD_TESTING "Build tests" ON)
 
 find_package(Threads REQUIRED)
 find_package(GMP REQUIRED)
 find_package(GMPXX REQUIRED)
+
+if (ENABLE_JEMALLOC)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules (JEMALLOC REQUIRED jemalloc)
+    message(STATUS "Building with jemalloc")
+    include_directories(${JEMALLOC_INCLUDE_DIRS})
+    link_directories(${JEMALLOC_LIBRARY_DIRS})
+endif (ENABLE_JEMALLOC)
 
 # On macOS, search Homebrew for keg-only versions of OpenSSL
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
@@ -129,7 +138,8 @@ hunter_add_package(intx)
 find_package(intx CONFIG REQUIRED)
 
 get_target_property(ETHASH_LIB ethash::keccak "LOCATION_Release")
-file(COPY ${ETHASH_LIB} DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/cmachine)
+get_filename_component(ETHASH_LIB_FOLDER "${ETHASH_LIB}" DIRECTORY)
+
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 
@@ -145,6 +155,29 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm")
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
     add_subdirectory(cavm)
+    
+    get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if (NOT _isMultiConfig)
+        set(INFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go.in)
+        set(MIDDLEFILE ${PROJECT_BINARY_DIR}/cmachine/flags.go.tmp)
+        set(OUTFILE ${PROJECT_SOURCE_DIR}/cmachine/flags.go)
+
+        set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/lib)
+        set(CFLAGS "-I.")
+        string(CONCAT LDFLAGS
+            " -L${C_LIBRARY_PATH}"
+            " -L${ETHASH_LIB_FOLDER}"
+            " $<TARGET_LINKER_FILE:cavm>"
+            " $<TARGET_LINKER_FILE:data_storage>"
+            " $<TARGET_LINKER_FILE:avm>"
+            " $<TARGET_LINKER_FILE:avm_values>"
+            " $<TARGET_LINKER_FILE:ff>"
+            " ${JEMALLOC_LINK_LIBRARIES}"
+        )
+        configure_file( ${INFILE} ${MIDDLEFILE} )
+        file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
+    endif()
+
 endif()
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/app")
     add_subdirectory(app)

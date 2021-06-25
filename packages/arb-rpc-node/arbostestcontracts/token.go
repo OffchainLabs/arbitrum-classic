@@ -29,11 +29,6 @@ var (
 // FailedERC20ABI is the input ABI used to generate the binding from.
 const FailedERC20ABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"adminMint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// FailedERC20FuncSigs maps the 4-byte function signature to its string representation.
-var FailedERC20FuncSigs = map[string]string{
-	"e58306f9": "adminMint(address,uint256)",
-}
-
 // FailedERC20Bin is the compiled bytecode used for deploying new contracts.
 var FailedERC20Bin = "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e58306f914602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b6040805162461bcd60e51b81526020600482015260116024820152706d696e7420616c77617973206661696c7360781b604482015290519081900360640190fdfea2646970667358221220ca64146f5426ebd333e3caf063afc082cee815732ed7b575cb1f3fc4220a97d564736f6c634300060c0033"
 
@@ -216,11 +211,6 @@ func (_FailedERC20 *FailedERC20TransactorSession) AdminMint(account common.Addre
 
 // FailedERC721ABI is the input ABI used to generate the binding from.
 const FailedERC721ABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"tokenId\",\"type\":\"uint256\"}],\"name\":\"adminMint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
-
-// FailedERC721FuncSigs maps the 4-byte function signature to its string representation.
-var FailedERC721FuncSigs = map[string]string{
-	"e58306f9": "adminMint(address,uint256)",
-}
 
 // FailedERC721Bin is the compiled bytecode used for deploying new contracts.
 var FailedERC721Bin = "0x6080604052348015600f57600080fd5b5060cf8061001e6000396000f3fe6080604052348015600f57600080fd5b506004361060285760003560e01c8063e58306f914602d575b600080fd5b605660048036036040811015604157600080fd5b506001600160a01b0381351690602001356058565b005b6040805162461bcd60e51b81526020600482015260116024820152706d696e7420616c77617973206661696c7360781b604482015290519081900360640190fdfea26469706673582212200788e51560c6e4e15b8b7bfedf9586081b78b6989428ef7b1d4f06a380e3223464736f6c634300060c0033"

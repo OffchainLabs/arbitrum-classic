@@ -19,11 +19,13 @@ package txdb
 import (
 	"context"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
-	"sync"
 	"time"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	lru "github.com/hashicorp/golang-lru"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -35,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
@@ -46,15 +47,9 @@ import (
 
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
-type ChainTimeGetter interface {
-	BlockIdForHeight(ctx context.Context, height *common.TimeBlocks) (*common.BlockId, error)
-	TimestampForBlockHash(ctx context.Context, hash common.Hash) (*big.Int, error)
-}
-
 type TxDB struct {
 	Lookup    core.ArbOutputLookup
 	as        machine.NodeStore
-	chain     common.Address
 	logReader *core.LogReader
 
 	rmLogsFeed      event.Feed
@@ -65,37 +60,28 @@ type TxDB struct {
 	pendingLogsFeed event.Feed
 	blockProcFeed   event.Feed
 
-	callMut sync.Mutex
+	snapshotCache *lru.Cache
 }
 
 func New(
 	ctx context.Context,
 	arbCore core.ArbCore,
 	as machine.NodeStore,
-	chain common.Address,
 	updateFrequency time.Duration,
-) (*TxDB, error) {
+) (*TxDB, <-chan error, error) {
+	snapshotCache, err := lru.New(100)
+	if err != nil {
+		return nil, nil, err
+	}
 	db := &TxDB{
-		Lookup: arbCore,
-		as:     as,
-		chain:  chain,
+		Lookup:        arbCore,
+		as:            as,
+		snapshotCache: snapshotCache,
 	}
 	logReader := core.NewLogReader(db, arbCore, big.NewInt(0), big.NewInt(10), updateFrequency)
 	errChan := logReader.Start(ctx)
-	go func() {
-		err := <-errChan
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			if err == nil {
-				return
-			}
-			log.Fatal().Err(err).Msg("error reading logs")
-		}
-	}()
 	db.logReader = logReader
-	return db, nil
+	return db, errChan, nil
 }
 
 func (db *TxDB) Close() {
@@ -171,9 +157,13 @@ func (db *TxDB) AddLogs(initialLogIndex *big.Int, avmLogs []value.Value) error {
 
 func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 	logger.Info().Int("count", len(avmLogs)).Msg("deleting logs")
+	oldHeight, err := db.BlockCount()
+	if err != nil {
+		return err
+	}
 	// Collect all logs that will be removed so they can be sent to rmLogs subscription
-	var currentBlockHeight uint64
-	blocksFound := false
+	var reorgBlockHeight uint64
+	blockReceiptFound := false
 	for _, avmLog := range avmLogs {
 		// L2 transaction receipts already provided in reverse
 		res, err := evm.NewResultFromValue(avmLog)
@@ -182,21 +172,20 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 		}
 		txRes, ok := res.(*evm.TxResult)
 		if !ok {
+			blockRes, ok := res.(*evm.BlockInfo)
+			if ok {
+				blockReceiptFound = true
+				reorgBlockHeight = blockRes.BlockNum.Uint64()
+			}
 			continue
 		}
 
-		blocksFound = true
-
-		currentBlockHeight = txRes.IncomingRequest.L2BlockNumber.Uint64()
+		currentBlockHeight := txRes.IncomingRequest.L2BlockNumber.Uint64()
 		logBlockInfo, err := db.GetBlock(currentBlockHeight)
 		if err != nil {
 			return err
 		}
 		if logBlockInfo == nil {
-			logger.Warn().
-				Str("tx", txRes.IncomingRequest.MessageID.String()).
-				Uint64("block", currentBlockHeight).
-				Msg("tried to delete tx from non-existent block")
 			continue
 		}
 		logs := txRes.EthLogs(common.NewHashFromEth(logBlockInfo.Header.Hash()))
@@ -211,18 +200,18 @@ func (db *TxDB) DeleteLogs(avmLogs []value.Value) error {
 			db.rmLogsFeed.Send(ethcore.RemovedLogsEvent{Logs: oldEthLogs})
 		}
 	}
-	if !blocksFound {
-		return nil
-	}
 
-	if currentBlockHeight > 0 {
-		currentBlockHeight--
-	}
+	if blockReceiptFound {
+		// Reset block height
+		err := db.as.Reorg(reorgBlockHeight)
+		if err != nil {
+			return err
+		}
 
-	// Reset block height
-	err := db.as.Reorg(currentBlockHeight)
-	if err != nil {
-		return err
+		for i := oldHeight; i > reorgBlockHeight; i-- {
+			db.snapshotCache.Remove(i)
+		}
+		db.snapshotCache.Remove(reorgBlockHeight)
 	}
 
 	return nil
@@ -336,7 +325,11 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) error {
 		// && txRes.ResultCode != evm.RevertCode
 		if txRes.ResultCode != evm.ReturnCode {
 			// If this log was for an invalid transaction, only save the request if it hasn't been saved before
-			if db.as.GetPossibleRequestInfo(txRes.IncomingRequest.MessageID) != nil {
+			orig, err := db.GetRequest(txRes.IncomingRequest.MessageID)
+			if err != nil {
+				return err
+			}
+			if orig != nil {
 				continue
 			}
 		}
@@ -406,14 +399,18 @@ func (db *TxDB) GetRequest(requestId common.Hash) (*evm.TxResult, error) {
 	if err != nil || logVal == nil {
 		return nil, err
 	}
-	res, err := evm.NewTxResultFromValue(logVal)
+	res, err := evm.NewResultFromValue(logVal)
 	if err != nil {
 		return nil, err
 	}
-	if res.IncomingRequest.MessageID != requestId {
+	txRes, ok := res.(*evm.TxResult)
+	if !ok {
 		return nil, nil
 	}
-	return res, nil
+	if txRes.IncomingRequest.MessageID != requestId {
+		return nil, nil
+	}
+	return txRes, nil
 }
 
 func (db *TxDB) GetL2Block(block *machine.BlockInfo) (*evm.BlockInfo, error) {
@@ -463,6 +460,10 @@ func (db *TxDB) LatestBlock() (*machine.BlockInfo, error) {
 }
 
 func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot, error) {
+	cachedSnap, found := db.snapshotCache.Get(info.Header.Number.Uint64())
+	if found {
+		return cachedSnap.(*snapshot.Snapshot), nil
+	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
@@ -471,7 +472,11 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 		BlockNum:  common.NewTimeBlocks(new(big.Int).Set(info.Header.Number)),
 		Timestamp: new(big.Int).SetUint64(info.Header.Time),
 	}
-	snap := snapshot.NewSnapshot(mach, currentTime, message.ChainAddressToID(db.chain), big.NewInt(1<<60))
+	snap, err := snapshot.NewSnapshot(mach, currentTime, big.NewInt(1<<60))
+	if err != nil {
+		return nil, err
+	}
+	db.snapshotCache.Add(info.Header.Number.Uint64(), snap)
 	return snap, nil
 }
 

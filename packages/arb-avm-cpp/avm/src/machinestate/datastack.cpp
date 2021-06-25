@@ -112,7 +112,7 @@ void Datastack::addHash() const {
     }();
 
     auto newVal = values[hashes.size()];
-    auto tup = Tuple(newVal, prev);
+    auto tup = Tuple(newVal, std::make_shared<HashPreImage>(prev));
     hashes.emplace_back(tup.getHashPreImage());
 }
 

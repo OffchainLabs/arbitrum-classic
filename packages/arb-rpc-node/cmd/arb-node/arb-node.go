@@ -17,35 +17,43 @@
 package main
 
 import (
-	"context"
-	"flag"
+	"fmt"
 	golog "log"
+	"math/big"
 	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
-	gethlog "github.com/ethereum/go-ethereum/log"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/metrics"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	utils2 "github.com/offchainlabs/arbitrum/packages/arb-rpc-node/utils"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var logger zerolog.Logger
+
 var pprofMux *http.ServeMux
+
+const largeChannelBuffer = 200
 
 func init() {
 	pprofMux = http.DefaultServeMux
@@ -61,140 +69,271 @@ func main() {
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	gethlog.Root().SetHandler(gethlog.LvlFilterHandler(gethlog.LvlInfo, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))))
-
 	// Print line number that log was created on
 	logger = log.With().Caller().Stack().Str("component", "arb-node").Logger()
 
-	ctx := context.Background()
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	walletArgs := cmdhelp.AddWalletFlags(fs)
-	rpcVars := utils2.AddRPCFlags(fs)
-	keepPendingState := fs.Bool("pending", false, "enable pending state tracking")
-	waitToCatchUp := fs.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
+	if err := startup(); err != nil {
+		logger.Error().Err(err).Msg("Error running node")
+	}
+}
 
-	maxBatchTime := fs.Int64(
-		"maxBatchTime",
-		10,
-		"maxBatchTime=NumSeconds",
-	)
-	inboxAddressStr := fs.String("inbox", "", "address of the inbox contract")
-	forwardTxURL := fs.String("forward-url", "", "url of another node to send transactions through")
+func printSampleUsage() {
+	fmt.Printf("\n")
+	fmt.Printf("Sample usage:                  arb-node --conf=<filename> \n")
+	fmt.Printf("          or:  forwarder node: arb-node --l1.url=<L1 RPC> [optional arguments]\n\n")
+	fmt.Printf("          or: aggregator node: arb-node --l1.url=<L1 RPC> --node.type=aggregator [optional arguments] %s\n", cmdhelp.WalletArgsString)
+	fmt.Printf("          or:       sequencer: arb-node --l1.url=<L1 RPC> --node.type=sequencer [optional arguments] %s\n", cmdhelp.WalletArgsString)
+}
 
-	enablePProf := fs.Bool("pprof", false, "enable profiling server")
+func startup() error {
+	ctx, cancelFunc, cancelChan := cmdhelp.CreateLaunchContext()
+	defer cancelFunc()
 
-	//go http.ListenAndServe("localhost:6060", nil)
+	config, wallet, l1Client, l1ChainId, err := configuration.ParseNode(ctx)
+	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
+		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
+		((config.Node.Type != "sequencer") && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
+		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.SelfRPCURL) == 0)) {
+		printSampleUsage()
+		if err != nil && !strings.Contains(err.Error(), "help requested") {
+			fmt.Printf("%s\n", err.Error())
+		}
 
-	err := fs.Parse(os.Args[1:])
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Error parsing arguments")
+		return nil
 	}
 
-	if fs.NArg() != 3 {
-		logger.Fatal().Msgf(
-			"usage: arb-node [--maxBatchTime=NumSeconds] %s %s",
-			cmdhelp.WalletArgsString,
-			utils.RollupArgsString,
-		)
+	badConfig := false
+	if config.BridgeUtilsAddress == "" {
+		badConfig = true
+		fmt.Println("Missing --bridge-utils-address")
+	}
+	if config.Persistent.Chain == "" {
+		badConfig = true
+		fmt.Println("Missing --persistent.chain")
+	}
+	if config.Rollup.Address == "" {
+		badConfig = true
+		fmt.Println("Missing --rollup.address")
+	}
+	if config.Rollup.ChainID == 0 {
+		badConfig = true
+		fmt.Println("Missing --rollup.chain-id")
+	}
+	if config.Rollup.Machine.Filename == "" {
+		badConfig = true
+		fmt.Println("Missing --rollup.machine.filename")
 	}
 
-	if *enablePProf {
+	if config.Node.Type == "forwarder" {
+		if config.Node.Forwarder.Target == "" {
+			badConfig = true
+			fmt.Println("Forwarder node needs --node.forwarder.target")
+		}
+	} else if config.Node.Type == "aggregator" {
+		if config.Node.Aggregator.InboxAddress == "" {
+			badConfig = true
+			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
+		}
+	} else if config.Node.Type != "sequencer" {
+		badConfig = true
+		fmt.Printf("Unrecognized node type %s", config.Node.Type)
+	}
+
+	if badConfig {
+		return nil
+	}
+
+	defer logger.Log().Msg("Cleanly shutting down node")
+
+	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core); err != nil {
+		return err
+	}
+
+	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
 			log.Error().Err(err).Msg("profiling server failed")
 		}()
 	}
 
-	rollupArgs := utils.ParseRollupCommand(fs, 0)
+	l2ChainId := new(big.Int).SetUint64(config.Rollup.ChainID)
+	rollupAddress := common.HexToAddress(config.Rollup.Address)
+	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Str("type", config.Node.Type).Msg("Launching arbitrum node")
 
-	ethclint, err := ethutils.NewRPCEthClient(rollupArgs.EthURL)
+	mon, err := monitor.NewMonitor(config.GetNodeDatabasePath(), config.Rollup.Machine.Filename)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Error running NewRPcEthClient")
+		return errors.Wrap(err, "error opening monitor")
 	}
+	defer mon.Close()
 
-	l1ChainId, err := ethclint.ChainID(context.Background())
-	if err != nil {
-		logger.Fatal().Err(err).Msg("Error getting chain ID")
-	}
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
-
-	logger.Info().Hex("chainaddress", rollupArgs.Address.Bytes()).Hex("chainid", message.ChainAddressToID(rollupArgs.Address).Bytes()).Msg("Launching arbitrum node")
-
-	var batcherMode rpc.BatcherMode
-	if *forwardTxURL != "" {
-		logger.Info().Str("forwardTxURL", *forwardTxURL).Msg("Arbitrum node starting in forwarder mode")
-		batcherMode = rpc.ForwarderBatcherMode{NodeURL: *forwardTxURL}
-	} else {
-		auth, err := cmdhelp.GetKeystore(rollupArgs.ValidatorFolder, walletArgs, fs, l1ChainId)
+	metricsConfig := metrics.NewMetricsConfig(&config.Healthcheck.MetricsPrefix)
+	healthChan := make(chan nodehealth.Log, largeChannelBuffer)
+	go func() {
+		err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry, metricsConfig.Registerer)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Error running GetKeystore")
+			log.Error().Err(err).Msg("healthcheck server failed")
 		}
+	}()
 
-		if *inboxAddressStr == "" {
-			logger.Fatal().Msg("must submit inbox addres via --inbox if not running in forwarder mode")
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckMetrics", ValBool: config.Healthcheck.Metrics}
+	healthChan <- nodehealth.Log{Config: true, Var: "disablePrimaryCheck", ValBool: !config.Healthcheck.Sequencer}
+	healthChan <- nodehealth.Log{Config: true, Var: "disableOpenEthereumCheck", ValBool: !config.Healthcheck.L1Node}
+	healthChan <- nodehealth.Log{Config: true, Var: "healthcheckRPC", ValStr: config.Healthcheck.Addr + ":" + config.Healthcheck.Port}
+
+	if config.Node.Type == "forwarder" {
+		healthChan <- nodehealth.Log{Config: true, Var: "primaryHealthcheckRPC", ValStr: config.Node.Forwarder.Target}
+	}
+	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
+	nodehealth.Init(healthChan)
+
+	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+	if len(config.Feed.Input.URLs) == 0 {
+		logger.Warn().Msg("Missing --feed.url so not subscribing to feed")
+	} else {
+		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 1)
+		for _, url := range config.Feed.Input.URLs {
+			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
+			for {
+				err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
+				if err == nil {
+					break
+				}
+				logger.Warn().Err(err).
+					Msg("failed connect to sequencer broadcast, waiting and retrying")
+
+				select {
+				case <-ctx.Done():
+					return errors.New("ctx cancelled broadcast client connect")
+				case <-time.After(5 * time.Second):
+				}
+			}
 		}
-		inboxAddress := common.HexToAddress(*inboxAddressStr)
+	}
+	var inboxReader *monitor.InboxReader
+	for {
+		inboxReader, err = mon.StartInboxReader(ctx, l1Client, common.HexToAddress(config.Rollup.Address), config.Rollup.FromBlock, common.HexToAddress(config.BridgeUtilsAddress), healthChan, sequencerFeed)
+		if err == nil {
+			break
+		}
+		logger.Warn().Err(err).
+			Str("url", config.L1.URL).
+			Str("rollup", config.Rollup.Address).
+			Str("bridgeUtils", config.BridgeUtilsAddress).
+			Msg("failed to start inbox reader, waiting and retrying")
+
+		select {
+		case <-ctx.Done():
+			return errors.New("ctx cancelled StartInboxReader retry loop")
+		case <-time.After(5 * time.Second):
+		}
+	}
+
+	var dataSigner func([]byte) ([]byte, error)
+	var batcherMode rpc.BatcherMode
+	if config.Node.Type == "forwarder" {
+		logger.Info().Str("forwardTxURL", config.Node.Forwarder.Target).Msg("Arbitrum node starting in forwarder mode")
+		batcherMode = rpc.ForwarderBatcherMode{NodeURL: config.Node.Forwarder.Target}
+	} else {
+		var auth *bind.TransactOpts
+		auth, dataSigner, err = cmdhelp.GetKeystore(config.Persistent.Chain, wallet, config.GasPrice, l1ChainId)
+		if err != nil {
+			return errors.Wrap(err, "error running GetKeystore")
+		}
 
 		logger.Info().Hex("from", auth.From.Bytes()).Msg("Arbitrum node submitting batches")
 
 		if err := ethbridge.WaitForBalance(
 			ctx,
-			ethclint,
+			l1Client,
 			common.Address{},
 			common.NewAddressFromEth(auth.From),
 		); err != nil {
-			logger.Fatal().Err(err).Msg("error waiting for balance")
+			return errors.Wrap(err, "error waiting for balance")
 		}
 
-		if *keepPendingState {
-			batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+		if config.Node.Type == "sequencer" {
+			batcherMode = rpc.SequencerBatcherMode{
+				Auth:                       auth,
+				Core:                       mon.Core,
+				InboxReader:                inboxReader,
+				DelayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
+				CreateBatchBlockInterval:   big.NewInt(config.Node.Sequencer.CreateBatchBlockInterval),
+			}
 		} else {
-			batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+			inboxAddress := common.HexToAddress(config.Node.Aggregator.InboxAddress)
+			if config.Node.Aggregator.Stateful {
+				batcherMode = rpc.StatefulBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+			} else {
+				batcherMode = rpc.StatelessBatcherMode{Auth: auth, InboxAddress: inboxAddress}
+			}
 		}
 	}
 
-	contractFile := filepath.Join(rollupArgs.ValidatorFolder, "arbos.mexe")
-	dbPath := filepath.Join(rollupArgs.ValidatorFolder, "checkpoint_db")
-
-	monitor, err := staker.NewMonitor(dbPath, contractFile)
+	nodeStore := mon.Storage.GetNodeStore()
+	metrics.RegisterNodeStoreMetrics(nodeStore, metricsConfig)
+	db, txDBErrChan, err := txdb.New(ctx, mon.Core, nodeStore, 100*time.Millisecond)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("error opening monitor")
+		return errors.Wrap(err, "error opening txdb")
 	}
-	defer monitor.Close()
+	defer db.Close()
 
-	db, err := txdb.New(context.Background(), monitor.Core, monitor.Storage.GetNodeStore(), rollupArgs.Address, 100*time.Millisecond)
-	if err != nil {
-		logger.Fatal().Err(err).Send()
+	if config.WaitToCatchUp {
+		inboxReader.WaitToCatchUp(ctx)
 	}
 
-	var inboxReader *staker.InboxReader
+	var batch batcher.TransactionBatcher
+	errChan := make(chan error, 1)
 	for {
-		inboxReader, err = monitor.StartInboxReader(context.Background(), rollupArgs.EthURL, rollupArgs.Address)
+		batch, err = rpc.SetupBatcher(
+			ctx,
+			l1Client,
+			rollupAddress,
+			l2ChainId,
+			db,
+			time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
+			batcherMode,
+			dataSigner,
+			config.Feed.Output,
+			config.GasPriceUrl,
+		)
+		lockoutConf := config.Node.Sequencer.Lockout
+		if err == nil && lockoutConf.Redis != "" {
+			batch, err = rpc.SetupLockout(ctx, batch.(*batcher.SequencerBatcher), mon.Core, inboxReader, lockoutConf, errChan)
+		}
 		if err == nil {
+			go batch.Start(ctx)
 			break
 		}
-		logger.Warn().Err(err).
-			Str("url", rollupArgs.EthURL).
-			Str("rollup", rollupArgs.Address.Hex()).
-			Msg("failed to start inbox reader, waiting and retrying")
-		time.Sleep(time.Second * 5)
+		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
+
+		select {
+		case <-ctx.Done():
+			return errors.New("ctx cancelled setup batcher")
+		case <-time.After(5 * time.Second):
+		}
 	}
 
-	if *waitToCatchUp {
-		inboxReader.WaitToCatchUp()
-	}
+	metricsConfig.RegisterSystemMetrics()
+	metricsConfig.RegisterStaticMetrics()
 
-	if err := rpc.LaunchNode(
-		ctx,
-		ethclint,
-		rollupArgs.Address,
-		db,
-		"8547",
-		"8548",
-		rpcVars,
-		time.Duration(*maxBatchTime)*time.Second,
-		batcherMode,
-	); err != nil {
-		logger.Fatal().Err(err).Msg("Error running LaunchNode")
+	srv := aggregator.NewServer(batch, rollupAddress, l2ChainId, db)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, false, nil, metricsConfig)
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := rpc.LaunchPublicServer(ctx, web3Server, config.Node.RPC.Addr, config.Node.RPC.Port, config.Node.WS.Addr, config.Node.WS.Port)
+		if err != nil {
+			errChan <- err
+		}
+	}()
+
+	select {
+	case err := <-txDBErrChan:
+		return err
+	case err := <-errChan:
+		return err
+	case <-cancelChan:
+		return nil
 	}
 }

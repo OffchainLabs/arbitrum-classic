@@ -17,44 +17,8 @@
 package message
 
 import (
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"math/big"
 )
-
-type Eth struct {
-	Dest  common.Address
-	Value *big.Int
-}
-
-func NewEthFromData(data []byte) Eth {
-	destAddress, data := extractAddress(data)
-	// Last value returned is not an error type
-	payment, _ := extractUInt256(data)
-	return Eth{
-		Dest:  destAddress,
-		Value: payment,
-	}
-}
-
-func NewRandomEth() Eth {
-	return Eth{
-		Dest:  common.RandAddress(),
-		Value: common.RandBigInt(),
-	}
-}
-
-func (e Eth) AsData() []byte {
-	data := make([]byte, 0)
-	data = append(data, addressData(e.Dest)...)
-	data = append(data, math.U256Bytes(e.Value)...)
-	return data
-}
-
-func (e Eth) Type() inbox.Type {
-	return EthType
-}
 
 type EthDepositTx struct {
 	L2Message

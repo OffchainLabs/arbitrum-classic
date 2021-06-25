@@ -19,7 +19,7 @@
 
 #include <data_storage/readtransaction.hpp>
 
-class ReadWriteTransaction : public ReadTransaction {
+class ReadWriteTransaction : public ReadConsistentTransaction {
    private:
     rocksdb::WriteOptions write_options{};
 
@@ -35,8 +35,6 @@ class ReadWriteTransaction : public ReadTransaction {
                              const rocksdb::Slice& value);
     rocksdb::Status checkpointPut(const rocksdb::Slice& key,
                                   const rocksdb::Slice& value);
-    rocksdb::Status messageEntryPut(const rocksdb::Slice& key,
-                                    const rocksdb::Slice& value);
     rocksdb::Status logPut(const rocksdb::Slice& key,
                            const rocksdb::Slice& value);
     rocksdb::Status sendPut(const rocksdb::Slice& key,
@@ -45,11 +43,14 @@ class ReadWriteTransaction : public ReadTransaction {
                                 const rocksdb::Slice& value);
     rocksdb::Status refCountedPut(const rocksdb::Slice& key,
                                   const rocksdb::Slice& value);
+    rocksdb::Status sequencerBatchItemPut(const rocksdb::Slice& key,
+                                          const rocksdb::Slice& value);
+    rocksdb::Status delayedMessagePut(const rocksdb::Slice& key,
+                                      const rocksdb::Slice& value);
 
     rocksdb::Status defaultDelete(const rocksdb::Slice& key);
     rocksdb::Status stateDelete(const rocksdb::Slice& key);
     rocksdb::Status checkpointDelete(const rocksdb::Slice& key);
-    rocksdb::Status messageEntryDelete(const rocksdb::Slice& key);
     rocksdb::Status logDelete(const rocksdb::Slice& key);
     rocksdb::Status sendDelete(const rocksdb::Slice& key);
     rocksdb::Status sideloadDelete(const rocksdb::Slice& key);
@@ -57,6 +58,8 @@ class ReadWriteTransaction : public ReadTransaction {
                                   const rocksdb::Slice& value);
     rocksdb::Status aggregatorDelete(const rocksdb::Slice& key);
     rocksdb::Status refCountedDelete(const rocksdb::Slice& key);
+    rocksdb::Status sequencerBatchItemDelete(const rocksdb::Slice& key);
+    rocksdb::Status delayedMessageDelete(const rocksdb::Slice& key);
 };
 
 #endif  // data_storage_readwritetransaction_hpp

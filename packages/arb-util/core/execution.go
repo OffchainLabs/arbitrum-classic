@@ -24,8 +24,9 @@ func (l BigIntList) Swap(i, j int) {
 }
 
 type ExecutionTracker struct {
-	lookup    ArbCoreLookup
-	goOverGas bool
+	lookup         ArbCoreLookup
+	goOverGas      bool
+	keepOldCursors bool
 
 	sortedStopPoints []*big.Int
 	stopPointIndex   map[string]int
@@ -34,7 +35,7 @@ type ExecutionTracker struct {
 	cursors       []ExecutionCursor
 }
 
-func NewExecutionTracker(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int) *ExecutionTracker {
+func NewExecutionTracker(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int, keepOldCursors bool) *ExecutionTracker {
 	sort.Sort(BigIntList(stopPointsArg))
 	// Deduplicate stop points
 	stopPoints := make([]*big.Int, 0, len(stopPointsArg))
@@ -58,11 +59,12 @@ func NewExecutionTracker(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*
 		sortedStopPoints: stopPoints,
 		stopPointIndex:   stopPointIndex,
 		cursors:          cursors,
+		keepOldCursors:   keepOldCursors,
 	}
 }
 
-func NewExecutionTrackerWithInitialCursor(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int, initialCursor ExecutionCursor) *ExecutionTracker {
-	cursor := NewExecutionTracker(lookup, goOverGas, stopPointsArg)
+func NewExecutionTrackerWithInitialCursor(lookup ArbCoreLookup, goOverGas bool, stopPointsArg []*big.Int, initialCursor ExecutionCursor, keepOldCursors bool) *ExecutionTracker {
+	cursor := NewExecutionTracker(lookup, goOverGas, stopPointsArg, keepOldCursors)
 	cursor.initialCursor = initialCursor
 	return cursor
 }
@@ -72,9 +74,19 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 		var nextCursor ExecutionCursor
 		var err error
 		if i > 0 {
-			nextCursor = e.cursors[i-1].Clone()
+			if e.keepOldCursors {
+				nextCursor = e.cursors[i-1].Clone()
+			} else {
+				nextCursor = e.cursors[i-1]
+				e.cursors[i-1] = nil
+			}
 		} else if e.initialCursor != nil {
-			nextCursor = e.initialCursor.Clone()
+			if e.keepOldCursors {
+				nextCursor = e.initialCursor.Clone()
+			} else {
+				nextCursor = e.initialCursor
+				e.initialCursor = nil
+			}
 		} else {
 			nextCursor, err = e.lookup.GetExecutionCursor(e.sortedStopPoints[i])
 			// Note: we still might need to advance since we can't set goOverGas here
@@ -95,6 +107,9 @@ func (e *ExecutionTracker) fillInCursors(max int) error {
 	return nil
 }
 
+// Note: do not mutate this cursor if you plan on using the execution tracker in the future!
+// If you need to do both, clone the result of this function.
+// This function may also return nil if keepOldCursors is false and we've executed past it.
 func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int) (ExecutionCursor, error) {
 	index, ok := e.stopPointIndex[string(gasUsed.Bytes())]
 	if !ok {
@@ -104,7 +119,7 @@ func (e *ExecutionTracker) GetExecutionCursor(gasUsed *big.Int) (ExecutionCursor
 		return nil, err
 	}
 
-	return e.cursors[index].Clone(), nil
+	return e.cursors[index], nil
 }
 
 func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState, *big.Int, error) {
@@ -112,7 +127,11 @@ func (e *ExecutionTracker) GetExecutionState(gasUsed *big.Int) (*ExecutionState,
 	if err != nil {
 		return nil, nil, err
 	}
-	return NewExecutionState(cursor), cursor.TotalSteps(), nil
+	execState, err := NewExecutionState(cursor)
+	if err != nil {
+		return nil, nil, err
+	}
+	return execState, cursor.TotalSteps(), nil
 }
 
 func (e *ExecutionTracker) GetMachine(gasUsed *big.Int) (machine.Machine, error) {

@@ -19,10 +19,11 @@ package batcher
 import (
 	"container/list"
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"math/big"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog/log"
 
@@ -33,10 +34,11 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "batcher").Logger()
@@ -44,6 +46,8 @@ var logger = log.With().Caller().Stack().Str("component", "batcher").Logger()
 const maxBatchSize ethcommon.StorageSize = 120000
 
 type txResponse int
+
+var errFailedBatch = errors.New("submitted of batch failed with revert")
 
 const (
 	SKIP = iota
@@ -54,6 +58,7 @@ const (
 
 type l2TxSender interface {
 	SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error)
+	Sender() common.Address
 }
 
 type batch interface {
@@ -76,6 +81,10 @@ type TransactionBatcher interface {
 
 	// Return nil if no pending snapshot is available
 	PendingSnapshot() (*snapshot.Snapshot, error)
+
+	Aggregator() *common.Address
+
+	Start(context.Context)
 }
 
 type pendingSentBatch struct {
@@ -85,9 +94,9 @@ type pendingSentBatch struct {
 
 type Batcher struct {
 	signer types.Signer
+	sender common.Address
 
 	sync.Mutex
-
 	queuedTxes         *txQueues
 	pendingBatch       batch
 	pendingSentBatches *list.List
@@ -146,6 +155,7 @@ func newBatcher(
 ) *Batcher {
 	server := &Batcher{
 		signer:             types.NewEIP155Signer(chainId),
+		sender:             globalInbox.Sender(),
 		queuedTxes:         newTxQueues(),
 		pendingBatch:       pendingBatch,
 		pendingSentBatches: list.New(),
@@ -153,37 +163,33 @@ func newBatcher(
 
 	go func() {
 		lastBatch := time.Now()
-		ticker := time.NewTicker(time.Millisecond * 500)
-		defer ticker.Stop()
+		checkForFinish := true
 		for {
-			select {
-			case <-ctx.Done():
-				return
-
-			case <-ticker.C:
-				server.Lock()
-				for {
-					tx, accountIndex, cont := popRandomTx(server.pendingBatch, server.queuedTxes)
-					if tx != nil {
-						err := server.pendingBatch.addIncludedTx(tx)
-						server.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
-						if err != nil {
-							logger.Error().Err(err).Msg("Aggregator ignored invalid tx")
-							continue
-						}
-					}
-					if server.pendingBatch.isFull() || (!cont && time.Since(lastBatch) > maxBatchTime) {
-						lastBatch = time.Now()
-						server.sendBatch(ctx, globalInbox)
-					}
-
-					if !cont {
-						// If we didn't fill the last batch, pause for more transactions
-						server.Unlock()
-						break
-					}
+			if checkForFinish {
+				select {
+				case <-ctx.Done():
+					return
+				default:
 				}
+				checkForFinish = false
+			}
+			server.Lock()
+			moreTxesWaiting := server.handleNextTx()
+			submittedBatch, err := server.maybeSubmitBatch(ctx, maxBatchTime, lastBatch, globalInbox, moreTxesWaiting)
+			if err != nil {
+				logger.Error().Err(err).Msg("failed submitting batch")
+				time.Sleep(2 * time.Second)
+				continue
+			}
 
+			if submittedBatch {
+				lastBatch = time.Now()
+				checkForFinish = true
+			}
+			if !moreTxesWaiting {
+				// If we didn't fill the last batch, pause for more transactions
+				time.Sleep(time.Millisecond * 500)
+				checkForFinish = true
 			}
 		}
 	}()
@@ -198,32 +204,10 @@ func newBatcher(
 
 			case <-ticker.C:
 				server.Lock()
-				// Note: this loop is the only place where items can be removed
-				// from pendingSentBatches, so pendingSentBatches.Front() is
-				// guaranteed not to change when the server lock is released
-				for server.pendingSentBatches.Len() > 0 {
-					batch := server.pendingSentBatches.Front().Value.(*pendingSentBatch)
-					txHash := batch.txHash.ToEthHash()
-					server.Unlock()
-					receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
-					if err != nil || receipt.Status != 1 {
-						// batch failed
-						logger.Fatal().Err(err).Msg("Error submitted batch")
+				if server.pendingSentBatches.Len() > 0 {
+					if err := server.checkForNextBatch(ctx, receiptFetcher); err != nil {
+						log.Error().Err(err).Msg("error checking for submitted batch")
 					}
-
-					monitor.GlobalMonitor.BatchAccepted(common.NewHashFromEth(receipt.TxHash))
-
-					logger.Info().
-						Str("hash", receipt.TxHash.Hex()).
-						Uint64("status", receipt.Status).
-						Uint64("gasUsed", receipt.GasUsed).
-						Str("blockHash", receipt.BlockHash.Hex()).
-						Uint64("blockNumber", receipt.BlockNumber.Uint64()).
-						Msg("batch receipt")
-
-					// batch succeeded
-					server.Lock()
-					server.pendingSentBatches.Remove(server.pendingSentBatches.Front())
 				}
 				server.Unlock()
 			}
@@ -232,46 +216,95 @@ func newBatcher(
 	return server
 }
 
-func (m *Batcher) sendBatch(ctx context.Context, inbox l2TxSender) {
-	txes := m.pendingBatch.getAppliedTxes()
-	if len(txes) == 0 {
-		return
+func (m *Batcher) handleNextTx() bool {
+	tx, accountIndex, cont := popRandomTx(m.pendingBatch, m.queuedTxes)
+	if tx != nil {
+		err := m.pendingBatch.addIncludedTx(tx)
+		m.queuedTxes.maybeRemoveAccountAtIndex(accountIndex)
+		if err != nil {
+			logger.Error().Err(err).Msg("Aggregator ignored invalid tx")
+		}
 	}
+	return cont
+}
+
+func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Duration, lastBatch time.Time, globalInbox l2TxSender, moreTxesWaiting bool) (bool, error) {
+	txes := m.pendingBatch.getAppliedTxes()
+	full := m.pendingBatch.isFull()
+	m.Unlock()
+
+	if !full && !(len(txes) > 0 && !moreTxesWaiting && time.Since(lastBatch) > maxBatchTime) {
+		return false, nil
+	}
+	lastBatch = time.Now()
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))
 	}
 	batchTx, err := message.NewTransactionBatchFromMessages(batchTxes)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("transaction aggregator failed")
+		return false, errors.Wrap(err, "invalid transaction in batch")
 	}
-	for {
-		logger.Info().Int("txcount", len(batchTxes)).Msg("Submitting batch")
-		txHash, err := inbox.SendL2MessageFromOrigin(
-			ctx,
-			message.NewSafeL2Message(batchTx).AsData(),
-		)
 
-		if err != nil {
-			time.Sleep(5 * time.Second)
-			logger.Error().Err(err).Msg("error calling SendL2MessageFromOrigin, retrying")
-			continue
-		}
-
-		for _, tx := range txes {
-			monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(tx.Hash()), txHash)
-		}
-
-		monitor.GlobalMonitor.SubmittedBatch(txHash)
-
-		m.pendingBatch = m.pendingBatch.newFromExisting()
-		m.pendingSentBatches.PushBack(&pendingSentBatch{
-			txHash: txHash,
-			txes:   txes,
-		})
-
-		return
+	logger.Info().Int("txcount", len(txes)).Msg("Submitting batch")
+	batchData := message.NewSafeL2Message(batchTx).AsData()
+	txHash, err := globalInbox.SendL2MessageFromOrigin(ctx, batchData)
+	if err != nil {
+		return false, errors.Wrap(err, "error calling SendL2MessageFromOrigin")
 	}
+
+	for _, tx := range txes {
+		monitor.GlobalMonitor.IncludedInBatch(common.NewHashFromEth(tx.Hash()), txHash)
+	}
+	monitor.GlobalMonitor.SubmittedBatch(txHash)
+
+	m.Lock()
+	m.pendingBatch = m.pendingBatch.newFromExisting()
+	m.pendingSentBatches.PushBack(&pendingSentBatch{
+		txHash: txHash,
+		txes:   txes,
+	})
+	m.Unlock()
+	return true, nil
+}
+
+// checkForNextBatch expects the mutex to be held on entry and leaves it unlocked on return
+func (m *Batcher) checkForNextBatch(ctx context.Context, receiptFetcher ethutils.ReceiptFetcher) error {
+	// Note: this is the only place where items can be removed
+	// from pendingSentBatches, so pendingSentBatches.Front() is
+	// guaranteed not to change when the server lock is released
+	if m.pendingSentBatches.Len() == 0 {
+		return nil
+	}
+
+	batch := m.pendingSentBatches.Front().Value.(*pendingSentBatch)
+	txHash := batch.txHash.ToEthHash()
+	m.Unlock()
+	receipt, err := ethbridge.WaitForReceiptWithResultsSimple(ctx, receiptFetcher, txHash)
+	if err != nil {
+		m.Lock()
+		return err
+	}
+	if receipt.Status != 1 {
+		// batch failed unexpectedly
+		m.Lock()
+		return errFailedBatch
+	}
+
+	monitor.GlobalMonitor.BatchAccepted(common.NewHashFromEth(receipt.TxHash))
+
+	logger.Info().
+		Str("hash", receipt.TxHash.Hex()).
+		Uint64("status", receipt.Status).
+		Uint64("gasUsed", receipt.GasUsed).
+		Str("blockHash", receipt.BlockHash.Hex()).
+		Uint64("blockNumber", receipt.BlockNumber.Uint64()).
+		Msg("batch receipt")
+
+	// batch succeeded
+	m.Lock()
+	m.pendingSentBatches.Remove(m.pendingSentBatches.Front())
+	return nil
 }
 
 func (m *Batcher) PendingSnapshot() (*snapshot.Snapshot, error) {
@@ -299,7 +332,7 @@ func (m *Batcher) PendingTransactionCount(_ context.Context, account common.Addr
 func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	sender, err := types.Sender(m.signer, tx)
 	if err != nil {
-		logger.Error().Err(err).Msg("error processing user transaction")
+		logger.Warn().Err(err).Msg("error processing user transaction")
 		return err
 	}
 
@@ -342,4 +375,11 @@ func (m *Batcher) SendTransaction(_ context.Context, tx *types.Transaction) erro
 
 func (m *Batcher) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription {
 	return m.newTxFeed.Subscribe(ch)
+}
+
+func (m *Batcher) Aggregator() *common.Address {
+	return &m.sender
+}
+
+func (m *Batcher) Start(ctx context.Context) {
 }

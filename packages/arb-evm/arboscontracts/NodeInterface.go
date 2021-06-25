@@ -1,0 +1,284 @@
+// Code generated - DO NOT EDIT.
+// This file is a generated binding and any manual changes will be lost.
+
+package arboscontracts
+
+import (
+	"math/big"
+	"strings"
+
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var (
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = ethereum.NotFound
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
+)
+
+// NodeInterfaceABI is the input ABI used to generate the binding from.
+const NodeInterfaceABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deposit\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"destAddr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2CallValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxSubmissionCost\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"excessFeeRefundAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"callValueRefundAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"gasPriceBid\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"estimateRetryableTicket\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"batchNum\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"index\",\"type\":\"uint64\"}],\"name\":\"lookupMessageBatchProof\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256\",\"name\":\"path\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"l2Sender\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"l1Dest\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"l2Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"l1Block\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"timestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"calldataForL1\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+
+// NodeInterface is an auto generated Go binding around an Ethereum contract.
+type NodeInterface struct {
+	NodeInterfaceCaller     // Read-only binding to the contract
+	NodeInterfaceTransactor // Write-only binding to the contract
+	NodeInterfaceFilterer   // Log filterer for contract events
+}
+
+// NodeInterfaceCaller is an auto generated read-only Go binding around an Ethereum contract.
+type NodeInterfaceCaller struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// NodeInterfaceTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type NodeInterfaceTransactor struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// NodeInterfaceFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type NodeInterfaceFilterer struct {
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+}
+
+// NodeInterfaceSession is an auto generated Go binding around an Ethereum contract,
+// with pre-set call and transact options.
+type NodeInterfaceSession struct {
+	Contract     *NodeInterface    // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+}
+
+// NodeInterfaceCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// with pre-set call options.
+type NodeInterfaceCallerSession struct {
+	Contract *NodeInterfaceCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts        // Call options to use throughout this session
+}
+
+// NodeInterfaceTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// with pre-set transact options.
+type NodeInterfaceTransactorSession struct {
+	Contract     *NodeInterfaceTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts        // Transaction auth options to use throughout this session
+}
+
+// NodeInterfaceRaw is an auto generated low-level Go binding around an Ethereum contract.
+type NodeInterfaceRaw struct {
+	Contract *NodeInterface // Generic contract binding to access the raw methods on
+}
+
+// NodeInterfaceCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type NodeInterfaceCallerRaw struct {
+	Contract *NodeInterfaceCaller // Generic read-only contract binding to access the raw methods on
+}
+
+// NodeInterfaceTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type NodeInterfaceTransactorRaw struct {
+	Contract *NodeInterfaceTransactor // Generic write-only contract binding to access the raw methods on
+}
+
+// NewNodeInterface creates a new instance of NodeInterface, bound to a specific deployed contract.
+func NewNodeInterface(address common.Address, backend bind.ContractBackend) (*NodeInterface, error) {
+	contract, err := bindNodeInterface(address, backend, backend, backend)
+	if err != nil {
+		return nil, err
+	}
+	return &NodeInterface{NodeInterfaceCaller: NodeInterfaceCaller{contract: contract}, NodeInterfaceTransactor: NodeInterfaceTransactor{contract: contract}, NodeInterfaceFilterer: NodeInterfaceFilterer{contract: contract}}, nil
+}
+
+// NewNodeInterfaceCaller creates a new read-only instance of NodeInterface, bound to a specific deployed contract.
+func NewNodeInterfaceCaller(address common.Address, caller bind.ContractCaller) (*NodeInterfaceCaller, error) {
+	contract, err := bindNodeInterface(address, caller, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &NodeInterfaceCaller{contract: contract}, nil
+}
+
+// NewNodeInterfaceTransactor creates a new write-only instance of NodeInterface, bound to a specific deployed contract.
+func NewNodeInterfaceTransactor(address common.Address, transactor bind.ContractTransactor) (*NodeInterfaceTransactor, error) {
+	contract, err := bindNodeInterface(address, nil, transactor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &NodeInterfaceTransactor{contract: contract}, nil
+}
+
+// NewNodeInterfaceFilterer creates a new log filterer instance of NodeInterface, bound to a specific deployed contract.
+func NewNodeInterfaceFilterer(address common.Address, filterer bind.ContractFilterer) (*NodeInterfaceFilterer, error) {
+	contract, err := bindNodeInterface(address, nil, nil, filterer)
+	if err != nil {
+		return nil, err
+	}
+	return &NodeInterfaceFilterer{contract: contract}, nil
+}
+
+// bindNodeInterface binds a generic wrapper to an already deployed contract.
+func bindNodeInterface(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(NodeInterfaceABI))
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_NodeInterface *NodeInterfaceRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _NodeInterface.Contract.NodeInterfaceCaller.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_NodeInterface *NodeInterfaceRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _NodeInterface.Contract.NodeInterfaceTransactor.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_NodeInterface *NodeInterfaceRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _NodeInterface.Contract.NodeInterfaceTransactor.contract.Transact(opts, method, params...)
+}
+
+// Call invokes the (constant) contract method with params as input values and
+// sets the output to result. The result type might be a single field for simple
+// returns, a slice of interfaces for anonymous returns and a struct for named
+// returns.
+func (_NodeInterface *NodeInterfaceCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _NodeInterface.Contract.contract.Call(opts, result, method, params...)
+}
+
+// Transfer initiates a plain transaction to move funds to the contract, calling
+// its default method if one is available.
+func (_NodeInterface *NodeInterfaceTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _NodeInterface.Contract.contract.Transfer(opts)
+}
+
+// Transact invokes the (paid) contract method with params as input values.
+func (_NodeInterface *NodeInterfaceTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _NodeInterface.Contract.contract.Transact(opts, method, params...)
+}
+
+// EstimateRetryableTicket is a free data retrieval call binding the contract method 0x0b77bdb2.
+//
+// Solidity: function estimateRetryableTicket(address sender, uint256 deposit, address destAddr, uint256 l2CallValue, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data) pure returns(uint256, uint256)
+func (_NodeInterface *NodeInterfaceCaller) EstimateRetryableTicket(opts *bind.CallOpts, sender common.Address, deposit *big.Int, destAddr common.Address, l2CallValue *big.Int, maxSubmissionCost *big.Int, excessFeeRefundAddress common.Address, callValueRefundAddress common.Address, maxGas *big.Int, gasPriceBid *big.Int, data []byte) (*big.Int, *big.Int, error) {
+	var out []interface{}
+	err := _NodeInterface.contract.Call(opts, &out, "estimateRetryableTicket", sender, deposit, destAddr, l2CallValue, maxSubmissionCost, excessFeeRefundAddress, callValueRefundAddress, maxGas, gasPriceBid, data)
+
+	if err != nil {
+		return *new(*big.Int), *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	out1 := *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return out0, out1, err
+
+}
+
+// EstimateRetryableTicket is a free data retrieval call binding the contract method 0x0b77bdb2.
+//
+// Solidity: function estimateRetryableTicket(address sender, uint256 deposit, address destAddr, uint256 l2CallValue, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data) pure returns(uint256, uint256)
+func (_NodeInterface *NodeInterfaceSession) EstimateRetryableTicket(sender common.Address, deposit *big.Int, destAddr common.Address, l2CallValue *big.Int, maxSubmissionCost *big.Int, excessFeeRefundAddress common.Address, callValueRefundAddress common.Address, maxGas *big.Int, gasPriceBid *big.Int, data []byte) (*big.Int, *big.Int, error) {
+	return _NodeInterface.Contract.EstimateRetryableTicket(&_NodeInterface.CallOpts, sender, deposit, destAddr, l2CallValue, maxSubmissionCost, excessFeeRefundAddress, callValueRefundAddress, maxGas, gasPriceBid, data)
+}
+
+// EstimateRetryableTicket is a free data retrieval call binding the contract method 0x0b77bdb2.
+//
+// Solidity: function estimateRetryableTicket(address sender, uint256 deposit, address destAddr, uint256 l2CallValue, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 maxGas, uint256 gasPriceBid, bytes data) pure returns(uint256, uint256)
+func (_NodeInterface *NodeInterfaceCallerSession) EstimateRetryableTicket(sender common.Address, deposit *big.Int, destAddr common.Address, l2CallValue *big.Int, maxSubmissionCost *big.Int, excessFeeRefundAddress common.Address, callValueRefundAddress common.Address, maxGas *big.Int, gasPriceBid *big.Int, data []byte) (*big.Int, *big.Int, error) {
+	return _NodeInterface.Contract.EstimateRetryableTicket(&_NodeInterface.CallOpts, sender, deposit, destAddr, l2CallValue, maxSubmissionCost, excessFeeRefundAddress, callValueRefundAddress, maxGas, gasPriceBid, data)
+}
+
+// LookupMessageBatchProof is a free data retrieval call binding the contract method 0x52d388b8.
+//
+// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) view returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
+func (_NodeInterface *NodeInterfaceCaller) LookupMessageBatchProof(opts *bind.CallOpts, batchNum *big.Int, index uint64) (struct {
+	Proof         [][32]byte
+	Path          *big.Int
+	L2Sender      common.Address
+	L1Dest        common.Address
+	L2Block       *big.Int
+	L1Block       *big.Int
+	Timestamp     *big.Int
+	Amount        *big.Int
+	CalldataForL1 []byte
+}, error) {
+	var out []interface{}
+	err := _NodeInterface.contract.Call(opts, &out, "lookupMessageBatchProof", batchNum, index)
+
+	outstruct := new(struct {
+		Proof         [][32]byte
+		Path          *big.Int
+		L2Sender      common.Address
+		L1Dest        common.Address
+		L2Block       *big.Int
+		L1Block       *big.Int
+		Timestamp     *big.Int
+		Amount        *big.Int
+		CalldataForL1 []byte
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Proof = *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
+	outstruct.Path = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+	outstruct.L2Sender = *abi.ConvertType(out[2], new(common.Address)).(*common.Address)
+	outstruct.L1Dest = *abi.ConvertType(out[3], new(common.Address)).(*common.Address)
+	outstruct.L2Block = *abi.ConvertType(out[4], new(*big.Int)).(**big.Int)
+	outstruct.L1Block = *abi.ConvertType(out[5], new(*big.Int)).(**big.Int)
+	outstruct.Timestamp = *abi.ConvertType(out[6], new(*big.Int)).(**big.Int)
+	outstruct.Amount = *abi.ConvertType(out[7], new(*big.Int)).(**big.Int)
+	outstruct.CalldataForL1 = *abi.ConvertType(out[8], new([]byte)).(*[]byte)
+
+	return *outstruct, err
+
+}
+
+// LookupMessageBatchProof is a free data retrieval call binding the contract method 0x52d388b8.
+//
+// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) view returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
+func (_NodeInterface *NodeInterfaceSession) LookupMessageBatchProof(batchNum *big.Int, index uint64) (struct {
+	Proof         [][32]byte
+	Path          *big.Int
+	L2Sender      common.Address
+	L1Dest        common.Address
+	L2Block       *big.Int
+	L1Block       *big.Int
+	Timestamp     *big.Int
+	Amount        *big.Int
+	CalldataForL1 []byte
+}, error) {
+	return _NodeInterface.Contract.LookupMessageBatchProof(&_NodeInterface.CallOpts, batchNum, index)
+}
+
+// LookupMessageBatchProof is a free data retrieval call binding the contract method 0x52d388b8.
+//
+// Solidity: function lookupMessageBatchProof(uint256 batchNum, uint64 index) view returns(bytes32[] proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes calldataForL1)
+func (_NodeInterface *NodeInterfaceCallerSession) LookupMessageBatchProof(batchNum *big.Int, index uint64) (struct {
+	Proof         [][32]byte
+	Path          *big.Int
+	L2Sender      common.Address
+	L1Dest        common.Address
+	L2Block       *big.Int
+	L1Block       *big.Int
+	Timestamp     *big.Int
+	Amount        *big.Int
+	CalldataForL1 []byte
+}, error) {
+	return _NodeInterface.Contract.LookupMessageBatchProof(&_NodeInterface.CallOpts, batchNum, index)
+}

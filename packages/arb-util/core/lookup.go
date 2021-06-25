@@ -36,13 +36,12 @@ const (
 	MessagesEmpty MessageStatus = iota
 	MessagesReady
 	MessagesSuccess
-	MessagesNeedOlder
 	MessagesError
 )
 
 type ExecutionCursor interface {
 	Clone() ExecutionCursor
-	MachineHash() (common.Hash, error)
+	MachineHash() common.Hash
 	TotalMessagesRead() *big.Int
 	InboxAcc() common.Hash
 	SendAcc() common.Hash
@@ -57,9 +56,19 @@ type ArbCoreLookup interface {
 	ArbOutputLookup
 
 	GetInboxAcc(index *big.Int) (common.Hash, error)
+	GetDelayedInboxAcc(index *big.Int) (common.Hash, error)
 	GetInboxAccPair(index1 *big.Int, index2 *big.Int) (common.Hash, common.Hash, error)
+	CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error)
+	GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error)
+	GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error)
+	GenInboxProof(seqNum *big.Int, batchIndex *big.Int, batchEndCount *big.Int) ([]byte, error)
 
 	MachineMessagesRead() *big.Int
+
+	// GetLastMachine gets a copy of the machine from the last time machinethread stopped or the last reorg
+	GetLastMachine() (machine.Machine, error)
+
+	GetLastMachineTotalGas() (*big.Int, error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
@@ -75,29 +84,26 @@ type ArbCoreLookup interface {
 }
 
 type ArbCoreInbox interface {
-	DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgHeight *big.Int) bool
+	DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool
 	MessagesStatus() (MessageStatus, error)
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool) (bool, error) {
-	if !db.DeliverMessages(messages, previousInboxAcc, lastBlockComplete, nil) {
-		return false, errors.New("unable to deliver messages")
+func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
+	if !db.DeliverMessages(previousMessageCount, previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
+		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)
 	if err != nil {
-		return false, err
+		return err
 	}
-	if status == MessagesSuccess {
-		return true, nil
+	if status != MessagesSuccess {
+		return errors.New("Unexpected status")
 	}
-	if status == MessagesNeedOlder {
-		return false, nil
-	}
-	return false, errors.New("Unexpected status")
+	return nil
 }
 
 func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
-	if !db.DeliverMessages(nil, common.Hash{}, false, reorgMessageCount) {
+	if !db.DeliverMessages(big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount) {
 		return errors.New("unable to deliver messages")
 	}
 	status, err := waitForMessages(db)
@@ -108,6 +114,16 @@ func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
 		return nil
 	}
 	return errors.New("Unexpected status")
+}
+
+func WaitForMachineIdle(db ArbCore) {
+	for {
+		idle := db.MachineIdle()
+		if idle {
+			break
+		}
+		time.Sleep(time.Millisecond * 20)
+	}
 }
 
 func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
@@ -198,13 +214,9 @@ type ExecutionState struct {
 	LogAcc            common.Hash
 }
 
-func NewExecutionState(c ExecutionCursor) *ExecutionState {
-	hash, err := c.MachineHash()
-	if err != nil {
-		panic("Unable to compute hash for execution state")
-	}
+func NewExecutionState(c ExecutionCursor) (*ExecutionState, error) {
 	return &ExecutionState{
-		MachineHash:       hash,
+		MachineHash:       c.MachineHash(),
 		InboxAcc:          c.InboxAcc(),
 		TotalMessagesRead: c.TotalMessagesRead(),
 		TotalGasConsumed:  c.TotalGasConsumed(),
@@ -212,7 +224,7 @@ func NewExecutionState(c ExecutionCursor) *ExecutionState {
 		TotalLogCount:     c.TotalLogCount(),
 		SendAcc:           c.SendAcc(),
 		LogAcc:            c.LogAcc(),
-	}
+	}, nil
 }
 
 func (e *ExecutionState) IsPermanentlyBlocked() bool {

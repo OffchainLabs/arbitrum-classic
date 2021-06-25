@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgetestcontracts"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress common.Address, userAddress common.Address) error {
@@ -56,7 +56,7 @@ func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress
 			}
 		}
 	} else {
-		erc20, err := ethbridgetestcontracts.NewIERC20(tokenAddress.ToEthAddress(), client)
+		erc20, err := ethbridgecontracts.NewIERC20(tokenAddress.ToEthAddress(), client)
 		if err != nil {
 			return errors.WithStack(err)
 		}

@@ -19,11 +19,12 @@ package inbox
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+	"math/rand"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
-	"math/big"
-	"math/rand"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -44,6 +45,13 @@ func NewRandomChainTime() ChainTime {
 	}
 }
 
+func (c ChainTime) Clone() ChainTime {
+	return ChainTime{
+		BlockNum:  c.BlockNum.Clone(),
+		Timestamp: new(big.Int).Set(c.Timestamp),
+	}
+}
+
 type InboxMessage struct {
 	Kind        Type
 	Sender      common.Address
@@ -51,6 +59,12 @@ type InboxMessage struct {
 	GasPrice    *big.Int
 	Data        []byte
 	ChainTime   ChainTime
+}
+
+func GetSequenceNumber(data []byte) *big.Int {
+	seqNumOffset := 85
+	sequenceNum := new(big.Int).SetBytes(data[seqNumOffset : seqNumOffset+32])
+	return sequenceNum
 }
 
 func NewInboxMessageFromData(data []byte) (InboxMessage, error) {
@@ -194,7 +208,8 @@ func (im InboxMessage) AsValue() value.Value {
 		NewIntFromAddress(im.Sender),
 		value.NewIntValue(im.InboxSeqNum),
 		value.NewIntValue(im.GasPrice),
-		BytesToByteStack(im.Data),
+		value.NewInt64Value(int64(len(im.Data))),
+		value.NewBuffer(im.Data),
 	})
 	return tup
 }
@@ -245,5 +260,17 @@ func (im InboxMessage) ToBytes() []byte {
 	data = append(data, math.U256Bytes(im.InboxSeqNum)...)
 	data = append(data, math.U256Bytes(im.GasPrice)...)
 	data = append(data, im.Data...)
+	return data
+}
+
+type MachineMessage struct {
+	Accumulator common.Hash
+	Message     InboxMessage
+}
+
+func (m MachineMessage) ToBytes() []byte {
+	var data []byte
+	data = append(data, m.Accumulator[:]...)
+	data = append(data, m.Message.ToBytes()...)
 	return data
 }

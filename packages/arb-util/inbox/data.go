@@ -17,32 +17,12 @@
 package inbox
 
 import (
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
-
-func bytesToValues(val []byte) []value.Value {
-	var ints []value.Value
-	for i := 0; i < len(val); i += 32 {
-		remaining := len(val) - i
-		if remaining < 32 {
-			data := [32]byte{}
-			copy(data[:], val[i:])
-			ints = append(
-				ints,
-				value.NewIntValue(new(big.Int).SetBytes(data[:])),
-			)
-		} else {
-			ints = append(
-				ints,
-				value.NewIntValue(new(big.Int).SetBytes(val[i:i+32])),
-			)
-		}
-	}
-	return ints
-}
 
 var errTupleSize2 = errors.New("expected 2-tuple value")
 
@@ -56,7 +36,7 @@ func ByteArrayToBytes(val value.Value) ([]byte, error) {
 
 	sizeInt, ok := sizeVal.(value.IntValue)
 	if !ok {
-		return nil, errors.New("size must be an int")
+		return nil, errors.New("byte array size must be an int")
 	}
 	contentsBuffer, ok := contents.(*value.Buffer)
 	if !ok {
@@ -74,6 +54,21 @@ func BufAndLengthToBytes(sizeInt *big.Int, contents *value.Buffer) ([]byte, erro
 	data := make([]byte, size)
 	copy(data[:], contents.Data())
 	return data, nil
+}
+
+func BufOffsetAndLengthToBytes(sizeInt, offsetInt *big.Int, contents *value.Buffer) []byte {
+	size := sizeInt.Uint64()
+	offset := offsetInt.Uint64()
+	data := make([]byte, size)
+	if offset > uint64(len(contents.Data())) {
+		return data
+	}
+	max := offset + size
+	if max > uint64(len(contents.Data())) {
+		max = uint64(len(contents.Data()))
+	}
+	copy(data[:], contents.Data()[offset:max])
+	return data
 }
 
 func StackValueToList(val value.Value) ([]value.Value, error) {
@@ -112,10 +107,4 @@ func ListToStackValue(vals []value.Value) *value.TupleValue {
 		ret = value.NewTuple2(val, ret)
 	}
 	return ret
-}
-
-func BytesToByteStack(val []byte) *value.TupleValue {
-	chunks := bytesToValues(val)
-	ret := ListToStackValue(chunks)
-	return value.NewTuple2(value.NewInt64Value(int64(len(val))), ret)
 }

@@ -18,35 +18,9 @@
 
 pragma solidity ^0.6.11;
 
-import "../arbitrum/ArbTokenBridge.sol";
-import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+import "../libraries/IERC677.sol";
 
-// import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
-
-// contract TestPostDepositCall {
-//     EthERC20Bridge tokenBridge;
-//     IInbox inbox;
-
-//     constructor(address _tokenBridge, address erc20Template, address erc777Template, address _inbox) {
-//         tokenBridge = EthErc20Bridge(_tokenBridge, erc20Template, erc777Template);
-//         inbox = IInbox(_inbox);
-//     }
-
-//     function depositAndCall(
-//         address erc20,
-//         address destination,
-//         uint256 amount,
-//         uint256 maxGas,
-//         uint256 gasPriceBid,
-//         address l2CallDestination,
-//         bytes memory data
-//     ) external payable {
-//         tokenBridge.depositAsERC20(erc20, destination, amount, maxGas, gasPriceBid);
-//         inbox.sendContractTransaction(maxGas, gasPriceBid, l2CallDestination, 0, data);
-//     }
-// }
-
-contract L2Called is ITransferReceiver {
+contract L2Called is IERC677Receiver {
     event Called(uint256 num);
 
     constructor() public {}
@@ -57,19 +31,21 @@ contract L2Called is ITransferReceiver {
     }
 
     function onTokenTransfer(
-        address user,
+        address sender,
         uint256 amount,
         bytes calldata data
-    ) external override returns (bool) {
+    ) external override {
         uint256 num = abi.decode(data, (uint256));
 
         if (num == 5) {
             postDepositHook(num);
-            return true;
         } else if (num == 7) {
-            revert();
+            revert("should fail because 7");
+        } else if (num == 9) {
+            // this should use all gas
+            while (gasleft() > 0) {}
         } else {
-            return false;
+            revert("should fail");
         }
     }
 }

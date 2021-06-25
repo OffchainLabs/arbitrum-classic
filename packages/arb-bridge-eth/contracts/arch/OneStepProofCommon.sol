@@ -22,6 +22,7 @@ import "./IOneStepProof.sol";
 import "./Value.sol";
 import "./Machine.sol";
 import "../bridge/interfaces/IBridge.sol";
+import "../bridge/interfaces/ISequencerInbox.sol";
 
 abstract contract OneStepProofCommon is IOneStepProof {
     using Machine for Machine.Data;
@@ -112,7 +113,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     // System operations
     uint8 internal constant OP_SEND = 0x70;
-    uint8 internal constant OP_INBOX_PEEK = 0x71;
+    // OP_INBOX_PEEK has been removed
     uint8 internal constant OP_INBOX = 0x72;
     uint8 internal constant OP_ERROR = 0x73;
     uint8 internal constant OP_STOP = 0x74;
@@ -148,7 +149,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
 
     // accs is [sendAcc, logAcc]
     function executeStep(
-        IBridge bridge,
+        address[2] calldata bridges,
         uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
@@ -159,12 +160,12 @@ abstract contract OneStepProofCommon is IOneStepProof {
         override
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256 afterMessagesRead,
             bytes32[4] memory fields
         )
     {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
 
         executeOp(context);
 
@@ -172,14 +173,14 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     function executeStepDebug(
-        IBridge bridge,
+        address[2] calldata bridges,
         uint256 initialMessagesRead,
         bytes32[2] calldata accs,
         bytes calldata proof,
         bytes calldata bproof
     ) external view override returns (string memory startMachine, string memory afterMachine) {
         AssertionContext memory context =
-            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridge);
+            initializeExecutionContext(initialMessagesRead, accs, proof, bproof, bridges);
 
         executeOp(context);
         startMachine = Machine.toString(context.startMachine);
@@ -198,7 +199,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         pure
         returns (
             uint64 gas,
-            uint256 totalMessagesRead,
+            uint256 afterMessagesRead,
             bytes32[4] memory fields
         )
     {
@@ -231,7 +232,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
     }
 
     struct AssertionContext {
-        IBridge bridge;
+        ISequencerInbox sequencerBridge;
+        IBridge delayedBridge;
         Machine.Data startMachine;
         Machine.Data afterMachine;
         uint256 totalMessagesRead;
@@ -279,7 +281,7 @@ abstract contract OneStepProofCommon is IOneStepProof {
         bytes32[2] calldata accs,
         bytes memory proof,
         bytes memory bproof,
-        IBridge bridge
+        address[2] calldata bridges
     ) internal pure returns (AssertionContext memory) {
         uint8 opCode = uint8(proof[0]);
         uint8 stackCount = uint8(proof[1]);
@@ -302,7 +304,8 @@ abstract contract OneStepProofCommon is IOneStepProof {
         offset += 1;
 
         AssertionContext memory context;
-        context.bridge = bridge;
+        context.sequencerBridge = ISequencerInbox(bridges[0]);
+        context.delayedBridge = IBridge(bridges[1]);
         context.startMachine = mach;
         context.afterMachine = mach.clone();
         context.totalMessagesRead = initialMessagesRead;

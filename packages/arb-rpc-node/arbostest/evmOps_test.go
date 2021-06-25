@@ -18,10 +18,11 @@ package arbostest
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
@@ -35,7 +36,7 @@ func TestEVMOps(t *testing.T) {
 	failIfError(t, err)
 
 	tx := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.Address{},
@@ -44,7 +45,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx2 := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.Address{},
@@ -53,7 +54,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx3 := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(2),
 		DestAddress: connAddress1,
@@ -62,7 +63,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx4 := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(3),
 		DestAddress: connAddress1,
@@ -71,7 +72,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx5 := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(4),
 		DestAddress: connAddress1,
@@ -80,7 +81,7 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx6 := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(5),
 		DestAddress: connAddress1,
@@ -89,12 +90,21 @@ func TestEVMOps(t *testing.T) {
 	}
 
 	tx7 := message.Transaction{
-		MaxGas:      big.NewInt(10000000),
+		MaxGas:      big.NewInt(8000000),
 		GasPriceBid: big.NewInt(0),
 		SequenceNum: big.NewInt(6),
 		DestAddress: connAddress1,
 		Payment:     big.NewInt(0),
 		Data:        makeFuncData(t, opcodesABI.Methods["getNestedSend"], connAddress2),
+	}
+
+	tx8 := message.Transaction{
+		MaxGas:      big.NewInt(8000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(7),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(0),
+		Data:        makeFuncData(t, opcodesABI.Methods["getGasLeft"]),
 	}
 
 	messages := []message.Message{
@@ -105,10 +115,10 @@ func TestEVMOps(t *testing.T) {
 		message.NewSafeL2Message(tx5),
 		message.NewSafeL2Message(tx6),
 		message.NewSafeL2Message(tx7),
+		message.NewSafeL2Message(tx8),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 	allResultsSucceeded(t, results)
 	checkConstructorResult(t, results[0], connAddress1)
 	checkConstructorResult(t, results[1], connAddress2)
@@ -137,5 +147,16 @@ func TestEVMOps(t *testing.T) {
 
 	if !bytes.Equal(results[6].ReturnData, correctSender.Bytes()) {
 		t.Error("Unexpected sender")
+	}
+
+	if arbosVersion >= 21 {
+		gasLeft := new(big.Int).SetBytes(results[7].ReturnData)
+		if gasLeft.Cmp(tx8.MaxGas) > 0 {
+			t.Error("must be less gas left than max gas")
+		} else if new(big.Int).Sub(tx8.MaxGas, gasLeft).Cmp(big.NewInt(1000)) > 0 {
+			t.Log("tx8.MaxGas", tx8.MaxGas)
+			t.Log("gasLeft", gasLeft)
+			t.Error("gasleft must be within 1000 of max gas")
+		}
 	}
 }

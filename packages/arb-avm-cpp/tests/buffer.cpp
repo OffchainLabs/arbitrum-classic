@@ -32,7 +32,7 @@ uint256_t hash_buffer_aux(uint8_t* buf,
     if (sz == 32) {
         auto hash_val = ethash::keccak256(buf + offset, 32);
         auto res = intx::be::load<uint256_t>(hash_val);
-        zero = (res == hash(0));
+        zero = (res == hash(uint256_t(0)));
         return res;
     }
     bool zero1 = false;
@@ -59,7 +59,7 @@ uint256_t hash_acc(uint8_t* buf, int sz) {
 TEST_CASE("Buffer") {
     SECTION("empty buffer") {
         Buffer buf;
-        REQUIRE(buf.hash() == hash(0));
+        REQUIRE(buf.hash() == hash(uint256_t(0)));
     }
 
     SECTION("setting") {
@@ -118,7 +118,7 @@ TEST_CASE("Buffer") {
         std::random_device rd;
         std::mt19937 gen(rd());
         const int SIZE = 1024 * 32;
-        std::uniform_int_distribution<uint64_t> distrib(0, SIZE);
+        std::uniform_int_distribution<uint64_t> distrib(0, SIZE - 1);
         for (int i = 0; i < 100; i++) {
             Buffer buf;
             uint8_t arr[SIZE] = {};
@@ -239,7 +239,7 @@ std::vector<uint256_t> splitProof(std::vector<unsigned char> data) {
 uint256_t getProof(uint256_t buf, uint64_t loc, std::vector<uint256_t> proof) {
     // empty tree is full of zeros
     if (proof.size() == 0) {
-        REQUIRE(buf == hash(0));
+        REQUIRE(buf == hash(uint256_t(0)));
         return 0;
     }
     uint256_t acc = hash(proof[0]);
@@ -342,7 +342,7 @@ TEST_CASE("Buffer get proofs") {
 std::vector<uint256_t> makeZeros() {
     std::vector<uint256_t> zeros;
     zeros.resize(64);
-    zeros[0] = hash(0);
+    zeros[0] = hash(uint256_t(0));
     for (size_t i = 1; i < 64; i++) {
         zeros[i] = hash(zeros[i - 1], zeros[i - 1]);
     }

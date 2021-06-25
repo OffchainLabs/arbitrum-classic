@@ -66,14 +66,14 @@ export class L2Called extends Contract {
 
   functions: {
     onTokenTransfer(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
     'onTokenTransfer(address,uint256,bytes)'(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
@@ -91,14 +91,14 @@ export class L2Called extends Contract {
   }
 
   onTokenTransfer(
-    user: string,
+    sender: string,
     amount: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
   'onTokenTransfer(address,uint256,bytes)'(
-    user: string,
+    sender: string,
     amount: BigNumberish,
     data: BytesLike,
     overrides?: Overrides
@@ -116,18 +116,18 @@ export class L2Called extends Contract {
 
   callStatic: {
     onTokenTransfer(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<boolean>
+    ): Promise<void>
 
     'onTokenTransfer(address,uint256,bytes)'(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: CallOverrides
-    ): Promise<boolean>
+    ): Promise<void>
 
     postDepositHook(num: BigNumberish, overrides?: CallOverrides): Promise<void>
 
@@ -143,14 +143,14 @@ export class L2Called extends Contract {
 
   estimateGas: {
     onTokenTransfer(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
     'onTokenTransfer(address,uint256,bytes)'(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
@@ -169,14 +169,14 @@ export class L2Called extends Contract {
 
   populateTransaction: {
     onTokenTransfer(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     'onTokenTransfer(address,uint256,bytes)'(
-      user: string,
+      sender: string,
       amount: BigNumberish,
       data: BytesLike,
       overrides?: Overrides

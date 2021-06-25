@@ -18,10 +18,10 @@
 #include <utility>
 
 #include "referencecount.hpp"
-#include "utils.hpp"
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
+#include <data_storage/value/utils.hpp>
 
 #include <avm_values/tuple.hpp>
 #include <cstdint>
@@ -55,14 +55,14 @@ T parseBuffer(const char* buf, int& len) {
     len++;
     buf += 1;
     if (depth == 0) {
-        len += Buffer::leaf_size;
+        len += RawBuffer::leaf_size;
         const unsigned char* data = reinterpret_cast<const unsigned char*>(buf);
-        Buffer::LeafData leaf;
-        std::copy(data, data + Buffer::leaf_size, leaf.begin());
+        RawBuffer::LeafData leaf;
+        std::copy(data, data + RawBuffer::leaf_size, leaf.begin());
         return Buffer{leaf};
     }
     auto res = std::vector<uint256_t>();
-    for (uint64_t i = 0; i < Buffer::children_size; i++) {
+    for (uint64_t i = 0; i < RawBuffer::children_size; i++) {
         uint256_t hash = deserializeUint256t(buf);
         res.push_back(hash);
         len += 32;
@@ -156,7 +156,7 @@ std::vector<value> serializeValue(
     }
     return ret;
 }
-std::vector<value> serializeValue(const HashPreImage&,
+std::vector<value> serializeValue(const std::shared_ptr<HashPreImage>&,
                                   std::vector<unsigned char>&,
                                   std::map<uint64_t, uint64_t>&) {
     throw std::runtime_error("Can't serialize hash preimage in db");
@@ -339,11 +339,10 @@ GetResults processFirstVal(const ReadTransaction&,
 Buffer processBuffer(const ReadTransaction& tx,
                      const ParsedBuffer& val,
                      ValueCache& val_cache) {
-    std::vector<std::shared_ptr<Buffer>> vec;
+    std::vector<Buffer> vec;
     for (const auto& node_hash : val.nodes) {
         if (auto cached_val = val_cache.loadIfExists(node_hash)) {
-            vec.push_back(
-                std::make_shared<Buffer>(std::get<Buffer>(cached_val.value())));
+            vec.push_back(std::get<Buffer>(cached_val.value()));
             continue;
         }
         auto val_hash = ValueHash{node_hash};
@@ -361,12 +360,12 @@ Buffer processBuffer(const ReadTransaction& tx,
             Buffer buf = std::get<Buffer>(record);
             // Check that it has correct height
             val_cache.maybeSave(buf);
-            vec.push_back(std::make_shared<Buffer>(buf));
+            vec.push_back(buf);
         } else if (std::holds_alternative<ParsedBuffer>(record)) {
             Buffer buf =
                 processBuffer(tx, std::get<ParsedBuffer>(record), val_cache);
             val_cache.maybeSave(buf);
-            vec.push_back(std::make_shared<Buffer>(buf));
+            vec.push_back(buf);
         } else {
             std::cerr << "Error loading buffer from record" << std::endl;
             return Buffer();
@@ -614,17 +613,14 @@ SaveResults saveValueImpl(ReadWriteTransaction& tx,
         std::vector<unsigned char> hash_key;
         marshal_uint256_t(hash, hash_key);
         auto key = vecToSlice(hash_key);
-        auto results = getRefCountedData(tx, key);
-        SaveResults save_ret;
-        if (results.status.ok() && results.reference_count > 0) {
-            save_ret = incrementReference(tx, key);
-        } else {
+        SaveResults save_ret = incrementReference(tx, key);
+        if (save_ret.status.IsNotFound()) {
             std::vector<unsigned char> value_vector{};
             auto new_items_to_save =
                 serializeValue(next_item, value_vector, segment_counts);
             items_to_save.insert(items_to_save.end(), new_items_to_save.begin(),
                                  new_items_to_save.end());
-            save_ret = saveRefCountedData(tx, key, value_vector);
+            save_ret = saveValueWithRefCount(tx, 1, key, value_vector);
         }
         if (!save_ret.status.ok()) {
             return save_ret;

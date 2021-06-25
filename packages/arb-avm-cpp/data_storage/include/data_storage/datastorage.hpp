@@ -39,7 +39,9 @@ class DataStorage {
         DEFAULT_COLUMN = 0,
         STATE_COLUMN,
         CHECKPOINT_COLUMN,
-        MESSAGEENTRY_COLUMN,
+        DELAYEDMESSAGE_COLUMN,
+        SEQUENCERBATCHITEM_COLUMN,
+        SEQUENCERBATCH_COLUMN,
         LOG_COLUMN,
         SEND_COLUMN,
         SIDELOAD_COLUMN,
@@ -57,6 +59,7 @@ class DataStorage {
 
     rocksdb::Status flushNextColumn();
     rocksdb::Status closeDb();
+    rocksdb::Status clearDBExceptInbox();
 
    private:
     [[nodiscard]] std::unique_ptr<rocksdb::Transaction> beginTransaction()

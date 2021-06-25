@@ -14,7 +14,6 @@ import {
   Contract,
   ContractTransaction,
   Overrides,
-  PayableOverrides,
   CallOverrides,
 } from '@ethersproject/contracts'
 import { BytesLike } from '@ethersproject/bytes'
@@ -24,60 +23,41 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 interface RollupInterface extends ethers.utils.Interface {
   functions: {
     '_stakerMap(address)': FunctionFragment
-    'addToDeposit(address,uint256)': FunctionFragment
-    'admin()': FunctionFragment
     'amountStaked(address)': FunctionFragment
     'arbGasSpeedLimitPerBlock()': FunctionFragment
     'baseStake()': FunctionFragment
-    'beginTruncatingNodes(uint256,uint256)': FunctionFragment
-    'bridge()': FunctionFragment
+    'challengeExecutionBisectionDegree()': FunctionFragment
     'challengeFactory()': FunctionFragment
-    'completeChallenge(address,address)': FunctionFragment
-    'confirmNextNode(bytes32,bytes,uint256[],uint256,bytes32,uint256)': FunctionFragment
     'confirmPeriodBlocks()': FunctionFragment
-    'continueTruncatingNodes(uint256)': FunctionFragment
-    'countStakedZombies(address)': FunctionFragment
-    'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])': FunctionFragment
     'currentChallenge(address)': FunctionFragment
-    'currentRequiredStake()': FunctionFragment
+    'delayedBridge()': FunctionFragment
     'extraChallengeTimeBlocks()': FunctionFragment
     'firstUnresolvedNode()': FunctionFragment
+    'getAdminFacet()': FunctionFragment
+    'getFacets()': FunctionFragment
     'getNode(uint256)': FunctionFragment
     'getNodeHash(uint256)': FunctionFragment
     'getStakerAddress(uint256)': FunctionFragment
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])': FunctionFragment
+    'getUserFacet()': FunctionFragment
+    'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])': FunctionFragment
     'isMaster()': FunctionFragment
     'isStaked(address)': FunctionFragment
+    'isZombie(address)': FunctionFragment
     'lastStakeBlock()': FunctionFragment
     'latestConfirmed()': FunctionFragment
     'latestNodeCreated()': FunctionFragment
     'latestStakedNode(address)': FunctionFragment
     'minimumAssertionPeriod()': FunctionFragment
-    'newStake(uint256)': FunctionFragment
     'nodeFactory()': FunctionFragment
     'outbox()': FunctionFragment
     'owner()': FunctionFragment
-    'pause()': FunctionFragment
     'paused()': FunctionFragment
-    'reduceDeposit(uint256)': FunctionFragment
-    'rejectNextNode(address)': FunctionFragment
-    'removeOldOutbox(address)': FunctionFragment
-    'removeOldZombies(uint256)': FunctionFragment
-    'removeZombie(uint256,uint256)': FunctionFragment
-    'requireUnresolved(uint256)': FunctionFragment
-    'requireUnresolvedExists()': FunctionFragment
-    'resume()': FunctionFragment
-    'returnOldDeposit(address)': FunctionFragment
     'rollupEventBridge()': FunctionFragment
-    'setInbox(address,bool)': FunctionFragment
-    'setOutbox(address)': FunctionFragment
-    'stakeOnExistingNode(uint256,bytes32)': FunctionFragment
-    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)': FunctionFragment
+    'sequencerBridge()': FunctionFragment
+    'sequencerInboxMaxDelayBlocks()': FunctionFragment
+    'sequencerInboxMaxDelaySeconds()': FunctionFragment
     'stakeToken()': FunctionFragment
     'stakerCount()': FunctionFragment
-    'upgradeImplementation(address)': FunctionFragment
-    'upgradeImplementationAndCall(address,bytes)': FunctionFragment
-    'withdrawStakerFunds(address)': FunctionFragment
     'withdrawableFunds(address)': FunctionFragment
     'zombieAddress(uint256)': FunctionFragment
     'zombieCount()': FunctionFragment
@@ -85,11 +65,6 @@ interface RollupInterface extends ethers.utils.Interface {
   }
 
   encodeFunctionData(functionFragment: '_stakerMap', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'addToDeposit',
-    values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(functionFragment: 'admin', values?: undefined): string
   encodeFunctionData(functionFragment: 'amountStaked', values: [string]): string
   encodeFunctionData(
     functionFragment: 'arbGasSpeedLimitPerBlock',
@@ -97,57 +72,23 @@ interface RollupInterface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(functionFragment: 'baseStake', values?: undefined): string
   encodeFunctionData(
-    functionFragment: 'beginTruncatingNodes',
-    values: [BigNumberish, BigNumberish]
-  ): string
-  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'challengeFactory',
+    functionFragment: 'challengeExecutionBisectionDegree',
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'completeChallenge',
-    values: [string, string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'confirmNextNode',
-    values: [
-      BytesLike,
-      BytesLike,
-      BigNumberish[],
-      BigNumberish,
-      BytesLike,
-      BigNumberish
-    ]
+    functionFragment: 'challengeFactory',
+    values?: undefined
   ): string
   encodeFunctionData(
     functionFragment: 'confirmPeriodBlocks',
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'continueTruncatingNodes',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'countStakedZombies',
-    values: [string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'createChallenge',
-    values: [
-      [string, string],
-      [BigNumberish, BigNumberish],
-      [BytesLike, BytesLike],
-      [BigNumberish, BigNumberish],
-      [BigNumberish, BigNumberish]
-    ]
-  ): string
-  encodeFunctionData(
     functionFragment: 'currentChallenge',
     values: [string]
   ): string
   encodeFunctionData(
-    functionFragment: 'currentRequiredStake',
+    functionFragment: 'delayedBridge',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -158,6 +99,11 @@ interface RollupInterface extends ethers.utils.Interface {
     functionFragment: 'firstUnresolvedNode',
     values?: undefined
   ): string
+  encodeFunctionData(
+    functionFragment: 'getAdminFacet',
+    values?: undefined
+  ): string
+  encodeFunctionData(functionFragment: 'getFacets', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'getNode',
     values: [BigNumberish]
@@ -171,21 +117,25 @@ interface RollupInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'getUserFacet',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'initialize',
     values: [
       BytesLike,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
-      BigNumberish,
+      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       string,
       string,
       BytesLike,
-      [string, string, string, string, string, string]
+      [string, string, string, string, string, string],
+      [string, string],
+      [BigNumberish, BigNumberish]
     ]
   ): string
   encodeFunctionData(functionFragment: 'isMaster', values?: undefined): string
   encodeFunctionData(functionFragment: 'isStaked', values: [string]): string
+  encodeFunctionData(functionFragment: 'isZombie', values: [string]): string
   encodeFunctionData(
     functionFragment: 'lastStakeBlock',
     values?: undefined
@@ -207,92 +157,32 @@ interface RollupInterface extends ethers.utils.Interface {
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'newStake',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
     functionFragment: 'nodeFactory',
     values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'outbox', values?: undefined): string
   encodeFunctionData(functionFragment: 'owner', values?: undefined): string
-  encodeFunctionData(functionFragment: 'pause', values?: undefined): string
   encodeFunctionData(functionFragment: 'paused', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'reduceDeposit',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'rejectNextNode',
-    values: [string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'removeOldOutbox',
-    values: [string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'removeOldZombies',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'removeZombie',
-    values: [BigNumberish, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'requireUnresolved',
-    values: [BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'requireUnresolvedExists',
-    values?: undefined
-  ): string
-  encodeFunctionData(functionFragment: 'resume', values?: undefined): string
-  encodeFunctionData(
-    functionFragment: 'returnOldDeposit',
-    values: [string]
-  ): string
   encodeFunctionData(
     functionFragment: 'rollupEventBridge',
     values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'setInbox',
-    values: [string, boolean]
-  ): string
-  encodeFunctionData(functionFragment: 'setOutbox', values: [string]): string
-  encodeFunctionData(
-    functionFragment: 'stakeOnExistingNode',
-    values: [BigNumberish, BytesLike]
+    functionFragment: 'sequencerBridge',
+    values?: undefined
   ): string
   encodeFunctionData(
-    functionFragment: 'stakeOnNewNode',
-    values: [
-      BytesLike,
-      [[BytesLike, BytesLike, BytesLike], [BytesLike, BytesLike, BytesLike]],
-      [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      BigNumberish,
-      BigNumberish
-    ]
+    functionFragment: 'sequencerInboxMaxDelayBlocks',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'sequencerInboxMaxDelaySeconds',
+    values?: undefined
   ): string
   encodeFunctionData(functionFragment: 'stakeToken', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'stakerCount',
     values?: undefined
-  ): string
-  encodeFunctionData(
-    functionFragment: 'upgradeImplementation',
-    values: [string]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'upgradeImplementationAndCall',
-    values: [string, BytesLike]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'withdrawStakerFunds',
-    values: [string]
   ): string
   encodeFunctionData(
     functionFragment: 'withdrawableFunds',
@@ -313,11 +203,6 @@ interface RollupInterface extends ethers.utils.Interface {
 
   decodeFunctionResult(functionFragment: '_stakerMap', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'addToDeposit',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'admin', data: BytesLike): Result
-  decodeFunctionResult(
     functionFragment: 'amountStaked',
     data: BytesLike
   ): Result
@@ -327,20 +212,11 @@ interface RollupInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(functionFragment: 'baseStake', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'beginTruncatingNodes',
+    functionFragment: 'challengeExecutionBisectionDegree',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'challengeFactory',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'completeChallenge',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'confirmNextNode',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -348,23 +224,11 @@ interface RollupInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'continueTruncatingNodes',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'countStakedZombies',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'createChallenge',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
     functionFragment: 'currentChallenge',
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'currentRequiredStake',
+    functionFragment: 'delayedBridge',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -375,15 +239,25 @@ interface RollupInterface extends ethers.utils.Interface {
     functionFragment: 'firstUnresolvedNode',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'getAdminFacet',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'getFacets', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'getNode', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'getNodeHash', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'getStakerAddress',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'getUserFacet',
+    data: BytesLike
+  ): Result
   decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isMaster', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'isStaked', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'isZombie', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'lastStakeBlock',
     data: BytesLike
@@ -404,73 +278,28 @@ interface RollupInterface extends ethers.utils.Interface {
     functionFragment: 'minimumAssertionPeriod',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'newStake', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nodeFactory', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'outbox', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'paused', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'reduceDeposit',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'rejectNextNode',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'removeOldOutbox',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'removeOldZombies',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'removeZombie',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'requireUnresolved',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'requireUnresolvedExists',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(functionFragment: 'resume', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'returnOldDeposit',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(
     functionFragment: 'rollupEventBridge',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'setInbox', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'setOutbox', data: BytesLike): Result
   decodeFunctionResult(
-    functionFragment: 'stakeOnExistingNode',
+    functionFragment: 'sequencerBridge',
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'stakeOnNewNode',
+    functionFragment: 'sequencerInboxMaxDelayBlocks',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'sequencerInboxMaxDelaySeconds',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'stakeToken', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'stakerCount', data: BytesLike): Result
-  decodeFunctionResult(
-    functionFragment: 'upgradeImplementation',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'upgradeImplementationAndCall',
-    data: BytesLike
-  ): Result
-  decodeFunctionResult(
-    functionFragment: 'withdrawStakerFunds',
-    data: BytesLike
-  ): Result
   decodeFunctionResult(
     functionFragment: 'withdrawableFunds',
     data: BytesLike
@@ -487,20 +316,26 @@ interface RollupInterface extends ethers.utils.Interface {
 
   events: {
     'NodeConfirmed(uint256,bytes32,uint256,bytes32,uint256)': EventFragment
-    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
+    'NodeCreated(uint256,bytes32,bytes32,bytes32,uint256,uint256,bytes32,bytes32[3][2],uint256[4][2])': EventFragment
     'NodeRejected(uint256)': EventFragment
+    'NodesDestroyed(uint256,uint256)': EventFragment
+    'OwnerFunctionCalled(uint256)': EventFragment
     'Paused(address)': EventFragment
     'RollupChallengeStarted(address,address,address,uint256)': EventFragment
     'RollupCreated(bytes32)': EventFragment
+    'StakerReassigned(address,uint256)': EventFragment
     'Unpaused(address)': EventFragment
   }
 
   getEvent(nameOrSignatureOrTopic: 'NodeConfirmed'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeCreated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'NodeRejected'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'NodesDestroyed'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'OwnerFunctionCalled'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Paused'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupChallengeStarted'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'RollupCreated'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'StakerReassigned'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'Unpaused'): EventFragment
 }
 
@@ -544,22 +379,6 @@ export class Rollup extends Contract {
       }
     >
 
-    addToDeposit(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'addToDeposit(address,uint256)'(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    admin(overrides?: CallOverrides): Promise<[string]>
-
-    'admin()'(overrides?: CallOverrides): Promise<[string]>
-
     amountStaked(
       staker: string,
       overrides?: CallOverrides
@@ -580,99 +399,21 @@ export class Rollup extends Contract {
 
     'baseStake()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    beginTruncatingNodes(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
-    'beginTruncatingNodes(uint256,uint256)'(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    bridge(overrides?: CallOverrides): Promise<[string]>
-
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
+    'challengeExecutionBisectionDegree()'(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
     challengeFactory(overrides?: CallOverrides): Promise<[string]>
 
     'challengeFactory()'(overrides?: CallOverrides): Promise<[string]>
 
-    completeChallenge(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'completeChallenge(address,address)'(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    confirmNextNode(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'confirmNextNode(bytes32,bytes,uint256[],uint256,bytes32,uint256)'(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     confirmPeriodBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'confirmPeriodBlocks()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    continueTruncatingNodes(
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'continueTruncatingNodes(uint256)'(
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    countStakedZombies(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    'countStakedZombies(address)'(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>
-
-    createChallenge(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
 
     currentChallenge(
       staker: string,
@@ -684,9 +425,9 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
-    currentRequiredStake(overrides?: CallOverrides): Promise<[BigNumber]>
+    delayedBridge(overrides?: CallOverrides): Promise<[string]>
 
-    'currentRequiredStake()'(overrides?: CallOverrides): Promise<[BigNumber]>
+    'delayedBridge()'(overrides?: CallOverrides): Promise<[string]>
 
     extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<[BigNumber]>
 
@@ -697,6 +438,14 @@ export class Rollup extends Contract {
     firstUnresolvedNode(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<[string]>
+
+    'getAdminFacet()'(overrides?: CallOverrides): Promise<[string]>
+
+    getFacets(overrides?: CallOverrides): Promise<[string, string]>
+
+    'getFacets()'(overrides?: CallOverrides): Promise<[string, string]>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<[string]>
 
@@ -725,29 +474,31 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
+    getUserFacet(overrides?: CallOverrides): Promise<[string]>
+
+    'getUserFacet()'(overrides?: CallOverrides): Promise<[string]>
+
     initialize(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
+    'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])'(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -758,6 +509,13 @@ export class Rollup extends Contract {
     isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    isZombie(staker: string, overrides?: CallOverrides): Promise<[boolean]>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>
@@ -788,16 +546,6 @@ export class Rollup extends Contract {
 
     'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<[BigNumber]>
 
-    newStake(
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
-    'newStake(uint256)'(
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<ContractTransaction>
-
     nodeFactory(overrides?: CallOverrides): Promise<[string]>
 
     'nodeFactory()'(overrides?: CallOverrides): Promise<[string]>
@@ -810,161 +558,33 @@ export class Rollup extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<[string]>
 
-    pause(overrides?: Overrides): Promise<ContractTransaction>
-
-    'pause()'(overrides?: Overrides): Promise<ContractTransaction>
-
     paused(overrides?: CallOverrides): Promise<[boolean]>
 
     'paused()'(overrides?: CallOverrides): Promise<[boolean]>
-
-    reduceDeposit(
-      target: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'reduceDeposit(uint256)'(
-      target: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    rejectNextNode(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'rejectNextNode(address)'(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    removeOldOutbox(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    removeOldZombies(
-      startIndex: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'removeOldZombies(uint256)'(
-      startIndex: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    removeZombie(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'removeZombie(uint256,uint256)'(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    requireUnresolved(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[void]>
-
-    'requireUnresolved(uint256)'(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[void]>
-
-    requireUnresolvedExists(overrides?: CallOverrides): Promise<[void]>
-
-    'requireUnresolvedExists()'(overrides?: CallOverrides): Promise<[void]>
-
-    resume(overrides?: Overrides): Promise<ContractTransaction>
-
-    'resume()'(overrides?: Overrides): Promise<ContractTransaction>
-
-    returnOldDeposit(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'returnOldDeposit(address)'(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
 
     rollupEventBridge(overrides?: CallOverrides): Promise<[string]>
 
     'rollupEventBridge()'(overrides?: CallOverrides): Promise<[string]>
 
-    setInbox(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    sequencerBridge(overrides?: CallOverrides): Promise<[string]>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'sequencerBridge()'(overrides?: CallOverrides): Promise<[string]>
 
-    setOutbox(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    sequencerInboxMaxDelayBlocks(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
-    'setOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'sequencerInboxMaxDelayBlocks()'(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
-    stakeOnExistingNode(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    sequencerInboxMaxDelaySeconds(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
-    'stakeOnExistingNode(uint256,bytes32)'(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    stakeOnNewNode(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
+    'sequencerInboxMaxDelaySeconds()'(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
 
     stakeToken(overrides?: CallOverrides): Promise<[string]>
 
@@ -973,38 +593,6 @@ export class Rollup extends Contract {
     stakerCount(overrides?: CallOverrides): Promise<[BigNumber]>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<[BigNumber]>
-
-    upgradeImplementation(
-      _newRollup: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'upgradeImplementation(address)'(
-      _newRollup: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    upgradeImplementationAndCall(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'upgradeImplementationAndCall(address,bytes)'(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    withdrawStakerFunds(
-      destination: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'withdrawStakerFunds(address)'(
-      destination: string,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
 
     withdrawableFunds(
       owner: string,
@@ -1067,22 +655,6 @@ export class Rollup extends Contract {
     }
   >
 
-  addToDeposit(
-    stakerAddress: string,
-    tokenAmount: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'addToDeposit(address,uint256)'(
-    stakerAddress: string,
-    tokenAmount: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  admin(overrides?: CallOverrides): Promise<string>
-
-  'admin()'(overrides?: CallOverrides): Promise<string>
-
   amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
   'amountStaked(address)'(
@@ -1098,99 +670,21 @@ export class Rollup extends Contract {
 
   'baseStake()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  beginTruncatingNodes(
-    newLatestNodeCreated: BigNumberish,
-    maxItems: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  challengeExecutionBisectionDegree(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
-  'beginTruncatingNodes(uint256,uint256)'(
-    newLatestNodeCreated: BigNumberish,
-    maxItems: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  bridge(overrides?: CallOverrides): Promise<string>
-
-  'bridge()'(overrides?: CallOverrides): Promise<string>
+  'challengeExecutionBisectionDegree()'(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
   challengeFactory(overrides?: CallOverrides): Promise<string>
 
   'challengeFactory()'(overrides?: CallOverrides): Promise<string>
 
-  completeChallenge(
-    winningStaker: string,
-    losingStaker: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'completeChallenge(address,address)'(
-    winningStaker: string,
-    losingStaker: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  confirmNextNode(
-    beforeSendAcc: BytesLike,
-    sendsData: BytesLike,
-    sendLengths: BigNumberish[],
-    afterSendCount: BigNumberish,
-    afterLogAcc: BytesLike,
-    afterLogCount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'confirmNextNode(bytes32,bytes,uint256[],uint256,bytes32,uint256)'(
-    beforeSendAcc: BytesLike,
-    sendsData: BytesLike,
-    sendLengths: BigNumberish[],
-    afterSendCount: BigNumberish,
-    afterLogAcc: BytesLike,
-    afterLogCount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   confirmPeriodBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
   'confirmPeriodBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
-
-  continueTruncatingNodes(
-    maxItems: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'continueTruncatingNodes(uint256)'(
-    maxItems: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  countStakedZombies(
-    node: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
-  'countStakedZombies(address)'(
-    node: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>
-
-  createChallenge(
-    stakers: [string, string],
-    nodeNums: [BigNumberish, BigNumberish],
-    executionHashes: [BytesLike, BytesLike],
-    proposedTimes: [BigNumberish, BigNumberish],
-    maxMessageCounts: [BigNumberish, BigNumberish],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-    stakers: [string, string],
-    nodeNums: [BigNumberish, BigNumberish],
-    executionHashes: [BytesLike, BytesLike],
-    proposedTimes: [BigNumberish, BigNumberish],
-    maxMessageCounts: [BigNumberish, BigNumberish],
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
 
   currentChallenge(staker: string, overrides?: CallOverrides): Promise<string>
 
@@ -1199,9 +693,9 @@ export class Rollup extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
-  currentRequiredStake(overrides?: CallOverrides): Promise<BigNumber>
+  delayedBridge(overrides?: CallOverrides): Promise<string>
 
-  'currentRequiredStake()'(overrides?: CallOverrides): Promise<BigNumber>
+  'delayedBridge()'(overrides?: CallOverrides): Promise<string>
 
   extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -1210,6 +704,14 @@ export class Rollup extends Contract {
   firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
 
   'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<BigNumber>
+
+  getAdminFacet(overrides?: CallOverrides): Promise<string>
+
+  'getAdminFacet()'(overrides?: CallOverrides): Promise<string>
+
+  getFacets(overrides?: CallOverrides): Promise<[string, string]>
+
+  'getFacets()'(overrides?: CallOverrides): Promise<[string, string]>
 
   getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -1235,29 +737,31 @@ export class Rollup extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  getUserFacet(overrides?: CallOverrides): Promise<string>
+
+  'getUserFacet()'(overrides?: CallOverrides): Promise<string>
+
   initialize(
     _machineHash: BytesLike,
-    _confirmPeriodBlocks: BigNumberish,
-    _extraChallengeTimeBlocks: BigNumberish,
-    _arbGasSpeedLimitPerBlock: BigNumberish,
-    _baseStake: BigNumberish,
+    _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
     _stakeToken: string,
     _owner: string,
     _extraConfig: BytesLike,
     connectedContracts: [string, string, string, string, string, string],
+    _facets: [string, string],
+    sequencerInboxParams: [BigNumberish, BigNumberish],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
+  'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])'(
     _machineHash: BytesLike,
-    _confirmPeriodBlocks: BigNumberish,
-    _extraChallengeTimeBlocks: BigNumberish,
-    _arbGasSpeedLimitPerBlock: BigNumberish,
-    _baseStake: BigNumberish,
+    _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
     _stakeToken: string,
     _owner: string,
     _extraConfig: BytesLike,
     connectedContracts: [string, string, string, string, string, string],
+    _facets: [string, string],
+    sequencerInboxParams: [BigNumberish, BigNumberish],
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -1268,6 +772,13 @@ export class Rollup extends Contract {
   isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>
 
   'isStaked(address)'(
+    staker: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
+  isZombie(staker: string, overrides?: CallOverrides): Promise<boolean>
+
+  'isZombie(address)'(
     staker: string,
     overrides?: CallOverrides
   ): Promise<boolean>
@@ -1298,16 +809,6 @@ export class Rollup extends Contract {
 
   'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<BigNumber>
 
-  newStake(
-    tokenAmount: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
-  'newStake(uint256)'(
-    tokenAmount: BigNumberish,
-    overrides?: PayableOverrides
-  ): Promise<ContractTransaction>
-
   nodeFactory(overrides?: CallOverrides): Promise<string>
 
   'nodeFactory()'(overrides?: CallOverrides): Promise<string>
@@ -1320,161 +821,29 @@ export class Rollup extends Contract {
 
   'owner()'(overrides?: CallOverrides): Promise<string>
 
-  pause(overrides?: Overrides): Promise<ContractTransaction>
-
-  'pause()'(overrides?: Overrides): Promise<ContractTransaction>
-
   paused(overrides?: CallOverrides): Promise<boolean>
 
   'paused()'(overrides?: CallOverrides): Promise<boolean>
-
-  reduceDeposit(
-    target: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'reduceDeposit(uint256)'(
-    target: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  rejectNextNode(
-    stakerAddress: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'rejectNextNode(address)'(
-    stakerAddress: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  removeOldOutbox(
-    _outbox: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'removeOldOutbox(address)'(
-    _outbox: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  removeOldZombies(
-    startIndex: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'removeOldZombies(uint256)'(
-    startIndex: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  removeZombie(
-    zombieNum: BigNumberish,
-    maxNodes: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'removeZombie(uint256,uint256)'(
-    zombieNum: BigNumberish,
-    maxNodes: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  requireUnresolved(
-    nodeNum: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<void>
-
-  'requireUnresolved(uint256)'(
-    nodeNum: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<void>
-
-  requireUnresolvedExists(overrides?: CallOverrides): Promise<void>
-
-  'requireUnresolvedExists()'(overrides?: CallOverrides): Promise<void>
-
-  resume(overrides?: Overrides): Promise<ContractTransaction>
-
-  'resume()'(overrides?: Overrides): Promise<ContractTransaction>
-
-  returnOldDeposit(
-    stakerAddress: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'returnOldDeposit(address)'(
-    stakerAddress: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
 
   rollupEventBridge(overrides?: CallOverrides): Promise<string>
 
   'rollupEventBridge()'(overrides?: CallOverrides): Promise<string>
 
-  setInbox(
-    _inbox: string,
-    _enabled: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  sequencerBridge(overrides?: CallOverrides): Promise<string>
 
-  'setInbox(address,bool)'(
-    _inbox: string,
-    _enabled: boolean,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  'sequencerBridge()'(overrides?: CallOverrides): Promise<string>
 
-  setOutbox(
-    _outbox: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  sequencerInboxMaxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
-  'setOutbox(address)'(
-    _outbox: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  'sequencerInboxMaxDelayBlocks()'(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
-  stakeOnExistingNode(
-    nodeNum: BigNumberish,
-    nodeHash: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  sequencerInboxMaxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
-  'stakeOnExistingNode(uint256,bytes32)'(
-    nodeNum: BigNumberish,
-    nodeHash: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  stakeOnNewNode(
-    expectedNodeHash: BytesLike,
-    assertionBytes32Fields: [
-      [BytesLike, BytesLike, BytesLike],
-      [BytesLike, BytesLike, BytesLike]
-    ],
-    assertionIntFields: [
-      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-    ],
-    beforeProposedBlock: BigNumberish,
-    beforeInboxMaxCount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
-    expectedNodeHash: BytesLike,
-    assertionBytes32Fields: [
-      [BytesLike, BytesLike, BytesLike],
-      [BytesLike, BytesLike, BytesLike]
-    ],
-    assertionIntFields: [
-      [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-      [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-    ],
-    beforeProposedBlock: BigNumberish,
-    beforeInboxMaxCount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
+  'sequencerInboxMaxDelaySeconds()'(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
   stakeToken(overrides?: CallOverrides): Promise<string>
 
@@ -1483,38 +852,6 @@ export class Rollup extends Contract {
   stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
   'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
-  upgradeImplementation(
-    _newRollup: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'upgradeImplementation(address)'(
-    _newRollup: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  upgradeImplementationAndCall(
-    _newRollup: string,
-    _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'upgradeImplementationAndCall(address,bytes)'(
-    _newRollup: string,
-    _data: BytesLike,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  withdrawStakerFunds(
-    destination: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'withdrawStakerFunds(address)'(
-    destination: string,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
 
   withdrawableFunds(
     owner: string,
@@ -1577,22 +914,6 @@ export class Rollup extends Contract {
       }
     >
 
-    addToDeposit(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'addToDeposit(address,uint256)'(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    admin(overrides?: CallOverrides): Promise<string>
-
-    'admin()'(overrides?: CallOverrides): Promise<string>
-
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'amountStaked(address)'(
@@ -1608,99 +929,21 @@ export class Rollup extends Contract {
 
     'baseStake()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    beginTruncatingNodes(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
+    challengeExecutionBisectionDegree(
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
-    'beginTruncatingNodes(uint256,uint256)'(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
+    'challengeExecutionBisectionDegree()'(
       overrides?: CallOverrides
-    ): Promise<void>
-
-    bridge(overrides?: CallOverrides): Promise<string>
-
-    'bridge()'(overrides?: CallOverrides): Promise<string>
+    ): Promise<BigNumber>
 
     challengeFactory(overrides?: CallOverrides): Promise<string>
 
     'challengeFactory()'(overrides?: CallOverrides): Promise<string>
 
-    completeChallenge(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'completeChallenge(address,address)'(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    confirmNextNode(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'confirmNextNode(bytes32,bytes,uint256[],uint256,bytes32,uint256)'(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     confirmPeriodBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     'confirmPeriodBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    continueTruncatingNodes(
-      maxItems: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'continueTruncatingNodes(uint256)'(
-      maxItems: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    countStakedZombies(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'countStakedZombies(address)'(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    createChallenge(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: CallOverrides
-    ): Promise<void>
 
     currentChallenge(staker: string, overrides?: CallOverrides): Promise<string>
 
@@ -1709,9 +952,9 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    currentRequiredStake(overrides?: CallOverrides): Promise<BigNumber>
+    delayedBridge(overrides?: CallOverrides): Promise<string>
 
-    'currentRequiredStake()'(overrides?: CallOverrides): Promise<BigNumber>
+    'delayedBridge()'(overrides?: CallOverrides): Promise<string>
 
     extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -1720,6 +963,14 @@ export class Rollup extends Contract {
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
 
     'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<string>
+
+    'getAdminFacet()'(overrides?: CallOverrides): Promise<string>
+
+    getFacets(overrides?: CallOverrides): Promise<[string, string]>
+
+    'getFacets()'(overrides?: CallOverrides): Promise<[string, string]>
 
     getNode(nodeNum: BigNumberish, overrides?: CallOverrides): Promise<string>
 
@@ -1745,29 +996,31 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    getUserFacet(overrides?: CallOverrides): Promise<string>
+
+    'getUserFacet()'(overrides?: CallOverrides): Promise<string>
+
     initialize(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: CallOverrides
     ): Promise<void>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
+    'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])'(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -1778,6 +1031,13 @@ export class Rollup extends Contract {
     isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    isZombie(staker: string, overrides?: CallOverrides): Promise<boolean>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<boolean>
@@ -1808,16 +1068,6 @@ export class Rollup extends Contract {
 
     'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    newStake(
-      tokenAmount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'newStake(uint256)'(
-      tokenAmount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     nodeFactory(overrides?: CallOverrides): Promise<string>
 
     'nodeFactory()'(overrides?: CallOverrides): Promise<string>
@@ -1830,155 +1080,29 @@ export class Rollup extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<string>
 
-    pause(overrides?: CallOverrides): Promise<void>
-
-    'pause()'(overrides?: CallOverrides): Promise<void>
-
     paused(overrides?: CallOverrides): Promise<boolean>
 
     'paused()'(overrides?: CallOverrides): Promise<boolean>
-
-    reduceDeposit(
-      target: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'reduceDeposit(uint256)'(
-      target: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    rejectNextNode(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'rejectNextNode(address)'(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    removeOldOutbox(_outbox: string, overrides?: CallOverrides): Promise<void>
-
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    removeOldZombies(
-      startIndex: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'removeOldZombies(uint256)'(
-      startIndex: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    removeZombie(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'removeZombie(uint256,uint256)'(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    requireUnresolved(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'requireUnresolved(uint256)'(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    requireUnresolvedExists(overrides?: CallOverrides): Promise<void>
-
-    'requireUnresolvedExists()'(overrides?: CallOverrides): Promise<void>
-
-    resume(overrides?: CallOverrides): Promise<void>
-
-    'resume()'(overrides?: CallOverrides): Promise<void>
-
-    returnOldDeposit(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'returnOldDeposit(address)'(
-      stakerAddress: string,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     rollupEventBridge(overrides?: CallOverrides): Promise<string>
 
     'rollupEventBridge()'(overrides?: CallOverrides): Promise<string>
 
-    setInbox(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
+    sequencerBridge(overrides?: CallOverrides): Promise<string>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: CallOverrides
-    ): Promise<void>
+    'sequencerBridge()'(overrides?: CallOverrides): Promise<string>
 
-    setOutbox(_outbox: string, overrides?: CallOverrides): Promise<void>
+    sequencerInboxMaxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
-    'setOutbox(address)'(
-      _outbox: string,
+    'sequencerInboxMaxDelayBlocks()'(
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
-    stakeOnExistingNode(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
+    sequencerInboxMaxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
-    'stakeOnExistingNode(uint256,bytes32)'(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
+    'sequencerInboxMaxDelaySeconds()'(
       overrides?: CallOverrides
-    ): Promise<void>
-
-    stakeOnNewNode(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<BigNumber>
 
     stakeToken(overrides?: CallOverrides): Promise<string>
 
@@ -1987,38 +1111,6 @@ export class Rollup extends Contract {
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    upgradeImplementation(
-      _newRollup: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'upgradeImplementation(address)'(
-      _newRollup: string,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    upgradeImplementationAndCall(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'upgradeImplementationAndCall(address,bytes)'(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    withdrawStakerFunds(
-      destination: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'withdrawStakerFunds(address)'(
-      destination: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
 
     withdrawableFunds(
       owner: string,
@@ -2070,12 +1162,20 @@ export class Rollup extends Contract {
       nodeHash: null,
       executionHash: null,
       inboxMaxCount: null,
-      afterInboxAcc: null,
+      afterInboxBatchEndCount: null,
+      afterInboxBatchAcc: null,
       assertionBytes32Fields: null,
       assertionIntFields: null
     ): EventFilter
 
     NodeRejected(nodeNum: BigNumberish | null): EventFilter
+
+    NodesDestroyed(
+      startNode: BigNumberish | null,
+      endNode: BigNumberish | null
+    ): EventFilter
+
+    OwnerFunctionCalled(id: BigNumberish | null): EventFilter
 
     Paused(account: null): EventFilter
 
@@ -2088,6 +1188,8 @@ export class Rollup extends Contract {
 
     RollupCreated(machineHash: null): EventFilter
 
+    StakerReassigned(staker: string | null, newNode: null): EventFilter
+
     Unpaused(account: null): EventFilter
   }
 
@@ -2098,22 +1200,6 @@ export class Rollup extends Contract {
       arg0: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
-
-    addToDeposit(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'addToDeposit(address,uint256)'(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    admin(overrides?: CallOverrides): Promise<BigNumber>
-
-    'admin()'(overrides?: CallOverrides): Promise<BigNumber>
 
     amountStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
@@ -2130,99 +1216,21 @@ export class Rollup extends Contract {
 
     'baseStake()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    beginTruncatingNodes(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
-      overrides?: Overrides
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'beginTruncatingNodes(uint256,uint256)'(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
-      overrides?: Overrides
+    'challengeExecutionBisectionDegree()'(
+      overrides?: CallOverrides
     ): Promise<BigNumber>
-
-    bridge(overrides?: CallOverrides): Promise<BigNumber>
-
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
     challengeFactory(overrides?: CallOverrides): Promise<BigNumber>
 
     'challengeFactory()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    completeChallenge(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'completeChallenge(address,address)'(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    confirmNextNode(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'confirmNextNode(bytes32,bytes,uint256[],uint256,bytes32,uint256)'(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     confirmPeriodBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
     'confirmPeriodBlocks()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    continueTruncatingNodes(
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'continueTruncatingNodes(uint256)'(
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    countStakedZombies(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'countStakedZombies(address)'(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    createChallenge(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: Overrides
-    ): Promise<BigNumber>
 
     currentChallenge(
       staker: string,
@@ -2234,9 +1242,9 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    currentRequiredStake(overrides?: CallOverrides): Promise<BigNumber>
+    delayedBridge(overrides?: CallOverrides): Promise<BigNumber>
 
-    'currentRequiredStake()'(overrides?: CallOverrides): Promise<BigNumber>
+    'delayedBridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
     extraChallengeTimeBlocks(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -2245,6 +1253,14 @@ export class Rollup extends Contract {
     firstUnresolvedNode(overrides?: CallOverrides): Promise<BigNumber>
 
     'firstUnresolvedNode()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getAdminFacet()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getFacets(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getFacets()'(overrides?: CallOverrides): Promise<BigNumber>
 
     getNode(
       nodeNum: BigNumberish,
@@ -2276,29 +1292,31 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    getUserFacet(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getUserFacet()'(overrides?: CallOverrides): Promise<BigNumber>
+
     initialize(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
+    'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])'(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -2309,6 +1327,13 @@ export class Rollup extends Contract {
     isStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    isZombie(staker: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>
@@ -2339,16 +1364,6 @@ export class Rollup extends Contract {
 
     'minimumAssertionPeriod()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    newStake(
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
-    'newStake(uint256)'(
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<BigNumber>
-
     nodeFactory(overrides?: CallOverrides): Promise<BigNumber>
 
     'nodeFactory()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -2361,154 +1376,28 @@ export class Rollup extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    pause(overrides?: Overrides): Promise<BigNumber>
-
-    'pause()'(overrides?: Overrides): Promise<BigNumber>
-
     paused(overrides?: CallOverrides): Promise<BigNumber>
 
     'paused()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    reduceDeposit(
-      target: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'reduceDeposit(uint256)'(
-      target: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    rejectNextNode(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'rejectNextNode(address)'(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    removeOldOutbox(_outbox: string, overrides?: Overrides): Promise<BigNumber>
-
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    removeOldZombies(
-      startIndex: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'removeOldZombies(uint256)'(
-      startIndex: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    removeZombie(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'removeZombie(uint256,uint256)'(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    requireUnresolved(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    'requireUnresolved(uint256)'(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>
-
-    requireUnresolvedExists(overrides?: CallOverrides): Promise<BigNumber>
-
-    'requireUnresolvedExists()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    resume(overrides?: Overrides): Promise<BigNumber>
-
-    'resume()'(overrides?: Overrides): Promise<BigNumber>
-
-    returnOldDeposit(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'returnOldDeposit(address)'(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
 
     rollupEventBridge(overrides?: CallOverrides): Promise<BigNumber>
 
     'rollupEventBridge()'(overrides?: CallOverrides): Promise<BigNumber>
 
-    setInbox(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
+    sequencerBridge(overrides?: CallOverrides): Promise<BigNumber>
+
+    'sequencerBridge()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    sequencerInboxMaxDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>
+
+    'sequencerInboxMaxDelayBlocks()'(
+      overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
-    ): Promise<BigNumber>
+    sequencerInboxMaxDelaySeconds(overrides?: CallOverrides): Promise<BigNumber>
 
-    setOutbox(_outbox: string, overrides?: Overrides): Promise<BigNumber>
-
-    'setOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    stakeOnExistingNode(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'stakeOnExistingNode(uint256,bytes32)'(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    stakeOnNewNode(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: Overrides
+    'sequencerInboxMaxDelaySeconds()'(
+      overrides?: CallOverrides
     ): Promise<BigNumber>
 
     stakeToken(overrides?: CallOverrides): Promise<BigNumber>
@@ -2518,38 +1407,6 @@ export class Rollup extends Contract {
     stakerCount(overrides?: CallOverrides): Promise<BigNumber>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<BigNumber>
-
-    upgradeImplementation(
-      _newRollup: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'upgradeImplementation(address)'(
-      _newRollup: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    upgradeImplementationAndCall(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'upgradeImplementationAndCall(address,bytes)'(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    withdrawStakerFunds(
-      destination: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'withdrawStakerFunds(address)'(
-      destination: string,
-      overrides?: Overrides
-    ): Promise<BigNumber>
 
     withdrawableFunds(
       owner: string,
@@ -2597,22 +1454,6 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    addToDeposit(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'addToDeposit(address,uint256)'(
-      stakerAddress: string,
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    admin(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'admin()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     amountStaked(
       staker: string,
       overrides?: CallOverrides
@@ -2635,58 +1476,18 @@ export class Rollup extends Contract {
 
     'baseStake()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    beginTruncatingNodes(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
-      overrides?: Overrides
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'beginTruncatingNodes(uint256,uint256)'(
-      newLatestNodeCreated: BigNumberish,
-      maxItems: BigNumberish,
-      overrides?: Overrides
+    'challengeExecutionBisectionDegree()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
-
-    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     challengeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'challengeFactory()'(
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    completeChallenge(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'completeChallenge(address,address)'(
-      winningStaker: string,
-      losingStaker: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    confirmNextNode(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'confirmNextNode(bytes32,bytes,uint256[],uint256,bytes32,uint256)'(
-      beforeSendAcc: BytesLike,
-      sendsData: BytesLike,
-      sendLengths: BigNumberish[],
-      afterSendCount: BigNumberish,
-      afterLogAcc: BytesLike,
-      afterLogCount: BigNumberish,
-      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     confirmPeriodBlocks(
@@ -2695,44 +1496,6 @@ export class Rollup extends Contract {
 
     'confirmPeriodBlocks()'(
       overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    continueTruncatingNodes(
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'continueTruncatingNodes(uint256)'(
-      maxItems: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    countStakedZombies(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'countStakedZombies(address)'(
-      node: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    createChallenge(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'createChallenge(address[2],uint256[2],bytes32[2],uint256[2],uint256[2])'(
-      stakers: [string, string],
-      nodeNums: [BigNumberish, BigNumberish],
-      executionHashes: [BytesLike, BytesLike],
-      proposedTimes: [BigNumberish, BigNumberish],
-      maxMessageCounts: [BigNumberish, BigNumberish],
-      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     currentChallenge(
@@ -2745,13 +1508,9 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    currentRequiredStake(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
+    delayedBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'currentRequiredStake()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
+    'delayedBridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     extraChallengeTimeBlocks(
       overrides?: CallOverrides
@@ -2768,6 +1527,14 @@ export class Rollup extends Contract {
     'firstUnresolvedNode()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    getAdminFacet(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'getAdminFacet()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    getFacets(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'getFacets()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     getNode(
       nodeNum: BigNumberish,
@@ -2799,29 +1566,31 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    getUserFacet(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'getUserFacet()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     initialize(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'initialize(bytes32,uint256,uint256,uint256,uint256,address,address,bytes,address[6])'(
+    'initialize(bytes32,uint256[4],address,address,bytes,address[6],address[2],uint256[2])'(
       _machineHash: BytesLike,
-      _confirmPeriodBlocks: BigNumberish,
-      _extraChallengeTimeBlocks: BigNumberish,
-      _arbGasSpeedLimitPerBlock: BigNumberish,
-      _baseStake: BigNumberish,
+      _rollupParams: [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
       _stakeToken: string,
       _owner: string,
       _extraConfig: BytesLike,
       connectedContracts: [string, string, string, string, string, string],
+      _facets: [string, string],
+      sequencerInboxParams: [BigNumberish, BigNumberish],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -2835,6 +1604,16 @@ export class Rollup extends Contract {
     ): Promise<PopulatedTransaction>
 
     'isStaked(address)'(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    isZombie(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'isZombie(address)'(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
@@ -2873,16 +1652,6 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    newStake(
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
-    'newStake(uint256)'(
-      tokenAmount: BigNumberish,
-      overrides?: PayableOverrides
-    ): Promise<PopulatedTransaction>
-
     nodeFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'nodeFactory()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -2895,97 +1664,9 @@ export class Rollup extends Contract {
 
     'owner()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    pause(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'pause()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
     paused(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'paused()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    reduceDeposit(
-      target: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'reduceDeposit(uint256)'(
-      target: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    rejectNextNode(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'rejectNextNode(address)'(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    removeOldOutbox(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'removeOldOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    removeOldZombies(
-      startIndex: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'removeOldZombies(uint256)'(
-      startIndex: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    removeZombie(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'removeZombie(uint256,uint256)'(
-      zombieNum: BigNumberish,
-      maxNodes: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    requireUnresolved(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'requireUnresolved(uint256)'(
-      nodeNum: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    requireUnresolvedExists(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    'requireUnresolvedExists()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
-
-    resume(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    'resume()'(overrides?: Overrides): Promise<PopulatedTransaction>
-
-    returnOldDeposit(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'returnOldDeposit(address)'(
-      stakerAddress: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
 
     rollupEventBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
@@ -2993,68 +1674,26 @@ export class Rollup extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    setInbox(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
+    sequencerBridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'sequencerBridge()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'setInbox(address,bool)'(
-      _inbox: string,
-      _enabled: boolean,
-      overrides?: Overrides
+    sequencerInboxMaxDelayBlocks(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    setOutbox(
-      _outbox: string,
-      overrides?: Overrides
+    'sequencerInboxMaxDelayBlocks()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    'setOutbox(address)'(
-      _outbox: string,
-      overrides?: Overrides
+    sequencerInboxMaxDelaySeconds(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    stakeOnExistingNode(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'stakeOnExistingNode(uint256,bytes32)'(
-      nodeNum: BigNumberish,
-      nodeHash: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    stakeOnNewNode(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'stakeOnNewNode(bytes32,bytes32[3][2],uint256[4][2],uint256,uint256)'(
-      expectedNodeHash: BytesLike,
-      assertionBytes32Fields: [
-        [BytesLike, BytesLike, BytesLike],
-        [BytesLike, BytesLike, BytesLike]
-      ],
-      assertionIntFields: [
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish],
-        [BigNumberish, BigNumberish, BigNumberish, BigNumberish]
-      ],
-      beforeProposedBlock: BigNumberish,
-      beforeInboxMaxCount: BigNumberish,
-      overrides?: Overrides
+    'sequencerInboxMaxDelaySeconds()'(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
     stakeToken(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -3064,38 +1703,6 @@ export class Rollup extends Contract {
     stakerCount(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'stakerCount()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    upgradeImplementation(
-      _newRollup: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'upgradeImplementation(address)'(
-      _newRollup: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    upgradeImplementationAndCall(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'upgradeImplementationAndCall(address,bytes)'(
-      _newRollup: string,
-      _data: BytesLike,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    withdrawStakerFunds(
-      destination: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'withdrawStakerFunds(address)'(
-      destination: string,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
 
     withdrawableFunds(
       owner: string,

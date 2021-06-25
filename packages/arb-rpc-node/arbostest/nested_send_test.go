@@ -17,14 +17,17 @@
 package arbostest
 
 import (
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"math/big"
 	"strings"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/test"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 func TestFailedNestedSend(t *testing.T) {
@@ -51,15 +54,14 @@ func TestFailedNestedSend(t *testing.T) {
 	}
 
 	messages := []message.Message{
-		message.Eth{Dest: sender, Value: big.NewInt(1000)},
+		makeEthDeposit(sender, big.NewInt(1000)),
 		message.NewSafeL2Message(tx),
 		message.NewSafeL2Message(sendTx),
 	}
 
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), 2, 0)
-	results := processTxResults(t, logs)
-	checkConstructorResult(t, results[0], connAddress1)
-	revertedTxCheck(t, results[1])
+	results, _ := runSimpleTxAssertion(t, messages)
+	checkConstructorResult(t, results[1], connAddress1)
+	revertedTxCheck(t, results[2])
 }
 
 func TestRevertedNestedCall(t *testing.T) {
@@ -88,9 +90,37 @@ func TestRevertedNestedCall(t *testing.T) {
 		message.NewSafeL2Message(tx2),
 		message.NewSafeL2Message(tx3),
 	}
-	logs, _, _, _ := runAssertion(t, makeSimpleInbox(messages), len(messages), 0)
-	results := processTxResults(t, logs)
+	results, _ := runSimpleTxAssertion(t, messages)
 	checkConstructorResult(t, results[0], connAddress1)
 	succeededTxCheck(t, results[1])
 	succeededTxCheck(t, results[2])
+}
+
+func TestNestedToEOA(t *testing.T) {
+	skipBelowVersion(t, 20)
+	simpleABI, err := abi.JSON(strings.NewReader(arbostestcontracts.SimpleABI))
+	failIfError(t, err)
+
+	tx1 := makeSimpleConstructorTx(hexutil.MustDecode(arbostestcontracts.SimpleBin), big.NewInt(0))
+	tx2 := message.Transaction{
+		MaxGas:      big.NewInt(10000000),
+		GasPriceBid: big.NewInt(0),
+		SequenceNum: big.NewInt(1),
+		DestAddress: connAddress1,
+		Payment:     big.NewInt(0),
+		Data:        makeFuncData(t, simpleABI.Methods["nestedCall2"], big.NewInt(10), common.RandAddress().ToEthAddress()),
+	}
+	messages := []message.Message{
+		message.NewSafeL2Message(tx1),
+		message.NewSafeL2Message(tx2),
+	}
+	results, _ := runSimpleTxAssertion(t, messages)
+	checkConstructorResult(t, results[0], connAddress1)
+	succeededTxCheck(t, results[1])
+	ret, err := simpleABI.Methods["nestedCall2"].Outputs.Unpack(results[1].ReturnData)
+	test.FailIfError(t, err)
+	nestedCallRet := ret[0].([]byte)
+	if len(nestedCallRet) != 0 {
+		t.Error("expected nested call to EOA to return no data")
+	}
 }

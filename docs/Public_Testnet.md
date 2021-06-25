@@ -4,25 +4,47 @@ title: Public Testnet Guide
 sidebar_label: Public Testnet
 ---
 
-In order to make it easy for people to get started using Arbitrum Rollup, we've launched our own hosted Arbitrum Rollup chain hosted on the Kovan testnet.
+In order to make it easy for people to get started using Arbitrum Rollup, we've launched our own hosted Arbitrum Rollup chain hosted on the Rinkeby testnet.
 
 For a general introduction to the Arbitrum Testnet, see our [announcement](https://medium.com/offchainlabs/arbitrum-rollup-testnet-full-featured-and-open-to-all-da3255b562ea).
 
 For a convenient landing page for all your testnet needs, see our [website](https://arbitrum.io/testnet/).
 
-## Connection Information
+## Connecting to the chain
 
-Hosted Aggregator Node (JSON-RPC Endpoint): [https://kovan4.arbitrum.io/rpc](https://kovan4.arbitrum.io/rpc)
+If you're using Metamask, add a custom RPC network to connect to the Arbitrum testnet:
 
-Rollup Chain ID: 212984383488152
+- Network Name: Arbitrum Testnet
+- RPC URL: https://rinkeby.arbitrum.io/rpc
+- ChainID: 421611
+- Symbol: ETH
+- Block Explorer URL: https://rinkeby-explorer.arbitrum.io/#/
 
-Testnet Version: v4
+## Observing transactions
 
-Chain Launched on March 19, 2021
+If you'd like to see your transactions in action, check out our [block explorer](https://rinkeby-explorer.arbitrum.io/#/)!
+
+There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
+
+## Bridging Eth and ERC-20 Tokens
+
+In order to deposit and withdraw Eth or tokens, visit https://bridge.arbitrum.io.
+
+In order to start using the chain, you'll have deposit Eth from Rinkeby so that you can pay for fees in L2. In order to get Rinkeby Eth, use one of the standard faucets from https://faucet.rinkeby.io/
+
+## Interacting with the chain
+
+Once you've added the Arbitrum Rinkeby Testnet network to Metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
+
+The are a couple things to note on the Arbitrum chain.
+
+- Arbitrum uses an EIP-1559-like gas auction system so the gas price you list in your transaction is a bid, but the actual price may be lower
+- In order to do a ETH transfer through Metamask, you must manually enter a higher gas limit than the default 21,000 gas. 800,000 should work well
+- The majority of gas costs paid in the arbitrum chain go to pay for the cost of posting your transaction data to Ethereum
 
 ## Deploying your contracts
 
-Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://kovan4.arbitrum.io/rpc
+Deploying your contracts onto the Arbitrum testnet is as easy as changing your RPC endpoint to https://rinkeby.arbitrum.io/rpc
 
 For a deeper dive into deploying with truffle see [here](Contract_Deployment.md).
 
@@ -30,19 +52,23 @@ For a deeper dive into deploying with truffle see [here](Contract_Deployment.md)
 
 Porting your frontend is just as easy as deploying your contracts. Just take your existing frontend and point it at our RPC endpoint after deploying your contract. For more information and code samples see [here](Frontend_Integration.md)
 
-If you're using metamask, add a custom RPC network to connect to the Arbitrum testnet:
+## Rinkeby Deployment
 
-- Network Name: Arbitrum Testnet V4
-- New RPC URL: https://kovan4.arbitrum.io/rpc
-- ChainID: 212984383488152
+All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/69c58d6b33c4dfb7d8293ccfdcb1675798201b7e/packages/arb-bridge-eth/contracts
+
+#### Important Addresses
+
+- Main L1 Rollup Contract: [0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c](https://rinkeby.etherscan.io/address/0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c)
+- Ethereum Inbox Contract [0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e](https://rinkeby.etherscan.io/address/0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e)
+
+## V5 Arbitrum Chain
+
+For connecting to our older "v5" Arbitrum chain (running on Kovan), use the following:
+
+- Aggregator RPC Endpoint: https://kovan5.arbitrum.io/rpc
+- Chain ID: 144545313136048
 - Symbol: ETH
-- Block Explorer URL: https://explorer.arbitrum.io/#/
-
-## Observing transactions
-
-If you'd like to see your transactions in action, check out our [block explorer](https://explorer.arbitrum.io/#/)!
-
-There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
+- Block Explorer URL: https://explorer5.arbitrum.io/#/
 
 <!--
 ## Running your own node
@@ -66,7 +92,7 @@ yarn deploy:validators  0x2e8aF9f74046D3E55202Fcfb893348316B142230 --password=[p
 Upon deploying a validator, you'll be asked to deposit the staking requirement, 1 Kovan ETH.
 
 The password argument is used to secure the validator keystore. On the first deployment you set the password to any value, and on later deployments you must resubmit the same password.
--->
+
 ## Kovan Deployment
 
 All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0.7.2/packages/arb-bridge-eth/contracts
@@ -93,10 +119,4 @@ All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/v0
 - [ExecutionChallenge](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/challenge/ExecutionChallenge.sol) - [0x356e19929FCb4973c131d558300E3E353cb8e1C9](https://kovan.etherscan.io/address/0x356e19929FCb4973c131d558300E3E353cb8e1C9) (Template contract)
 - [OneStepProof](https://github.com/OffchainLabs/arbitrum/blob/v0.7.2/packages/arb-bridge-eth/contracts/arch/OneStepProof.sol) - [0x082D26eeAa348A7C02291cd1948c66a79fc80aAD](https://kovan.etherscan.io/address/0x082D26eeAa348A7C02291cd1948c66a79fc80aAD)
 
-## V2 Arbitrum Chain
-
-For connecting to our older, "v2" Arbitrum chain (also running on Kovan), use the following:
-
-- Aggregator RPC Endpoint: https://kovan2.arbitrum.io/rpc
-- Chain ID: 152709604825713
-- Rollup Contract Address: [0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71](https://kovan.etherscan.io/address/0xC34Fd04E698dB75f8381BFA7298e8Ae379bFDA71)
+-->

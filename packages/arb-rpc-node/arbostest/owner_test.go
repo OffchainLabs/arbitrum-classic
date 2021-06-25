@@ -17,12 +17,13 @@
 package arbostest
 
 import (
+	"math/big"
+	"testing"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"math/big"
-	"testing"
 )
 
 func TestOwner(t *testing.T) {
@@ -37,7 +38,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.GiveOwnershipData(common.RandAddress()),
+		Data:        arbos.GetTotalOfEthBalances(),
 	}
 
 	tx2 := message.Transaction{
@@ -46,7 +47,7 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.GiveOwnershipData(sender),
+		Data:        arbos.GiveOwnershipData(common.RandAddress()),
 	}
 
 	tx3 := message.Transaction{
@@ -55,42 +56,50 @@ func TestOwner(t *testing.T) {
 		SequenceNum: big.NewInt(1),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.StartArbOSUpgradeData(),
+		Data:        arbos.GiveOwnershipData(sender),
 	}
 
 	tx4 := message.Transaction{
 		MaxGas:      big.NewInt(1000000),
 		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(2),
+		SequenceNum: big.NewInt(1),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(0),
-		Data:        arbos.ContinueArbOSUpgradeData([]byte{}),
+		Data:        arbos.StartArbOSUpgradeData(),
 	}
 
-	tx5 := message.Transaction{
-		MaxGas:      big.NewInt(1000000),
-		GasPriceBid: big.NewInt(0),
-		SequenceNum: big.NewInt(3),
-		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
-		Payment:     big.NewInt(0),
-		Data:        arbos.FinishArbOSUpgradeData(),
+	// Actual upgrade tested in dev/upgrade_test.go
+	depositAmount := new(big.Int).Exp(big.NewInt(10), big.NewInt(16), nil)
+	deposit := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.RandAddress(),
+				Payment:     depositAmount,
+				Data:        nil,
+			},
+		}),
 	}
 
-	messages := []inbox.InboxMessage{
-		message.NewInboxMessage(initMsg(), chain, big.NewInt(0), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx1), sender, big.NewInt(0), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx2), owner, big.NewInt(1), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx3), sender, big.NewInt(2), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(3), big.NewInt(0), chainTime),
-		message.NewInboxMessage(message.NewSafeL2Message(tx5), sender, big.NewInt(4), big.NewInt(0), chainTime),
-	}
+	ib := InboxBuilder{}
+	ib.AddMessage(initMsg(t, nil), chain, big.NewInt(0), chainTime)
+	ib.AddMessage(deposit, chain, big.NewInt(0), chainTime)
+	ib.AddMessage(message.NewSafeL2Message(tx1), owner, big.NewInt(0), chainTime)
+	ib.AddMessage(message.NewSafeL2Message(tx2), sender, big.NewInt(0), chainTime)
+	ib.AddMessage(message.NewSafeL2Message(tx3), owner, big.NewInt(0), chainTime)
+	ib.AddMessage(message.NewSafeL2Message(tx4), sender, big.NewInt(0), chainTime)
 
-	logs, _, _, _ := runAssertion(t, messages, 5, 0)
-	results := processTxResults(t, logs)
-	// Transfer from non-owner fails
-	revertedTxCheck(t, results[0])
+	results, _ := runTxAssertion(t, ib.Messages)
+	succeededTxCheck(t, results[0])
 	succeededTxCheck(t, results[1])
-	succeededTxCheck(t, results[2])
+	// Transfer from non-owner fails
+	revertedTxCheck(t, results[2])
 	succeededTxCheck(t, results[3])
-	revertedTxCheck(t, results[4])
+	succeededTxCheck(t, results[4])
+
+	totalBalance := new(big.Int).SetBytes(results[1].ReturnData)
+	if totalBalance.Cmp(depositAmount) != 0 {
+		t.Error("wrong total balance")
+	}
 }

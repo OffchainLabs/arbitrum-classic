@@ -17,11 +17,11 @@
 #include <data_storage/value/machine.hpp>
 
 #include "referencecount.hpp"
-#include "utils.hpp"
 
 #include <data_storage/datastorage.hpp>
 #include <data_storage/storageresult.hpp>
 #include <data_storage/value/code.hpp>
+#include <data_storage/value/utils.hpp>
 #include <data_storage/value/value.hpp>
 
 #include <avm/machine.hpp>
@@ -43,43 +43,6 @@ CodePointStub extractCodePointStub(iterator& iter) {
     auto ref = extractCodePointRef(iter);
     auto next_hash = extractUint256(iter);
     return {ref, next_hash};
-}
-
-void serializeStagedVariant(staged_variant message,
-                            std::vector<unsigned char>& state_data_vector) {
-    uint256_t next_block_height = 0;
-    uint8_t inbox_message_present = 0;
-
-    if (std::holds_alternative<uint256_t>(message)) {
-        next_block_height = std::get<uint256_t>(message);
-    } else if (std::holds_alternative<InboxMessage>(message)) {
-        inbox_message_present = 1;
-    }
-
-    marshal_uint256_t(next_block_height, state_data_vector);
-    state_data_vector.push_back(inbox_message_present);
-    if (inbox_message_present == 1) {
-        std::get<InboxMessage>(message).serializeImpl(state_data_vector);
-    }
-}
-
-staged_variant extractStagedVariant(
-    std::vector<unsigned char>::const_iterator& iter,
-    const std::vector<unsigned char>::const_iterator& end) {
-    staged_variant message;
-
-    auto next_block_height = extractUint256(iter);
-    uint8_t inbox_message_present = iter[0];
-    iter++;
-    if (inbox_message_present == 1) {
-        message = extractInboxMessageImpl(iter, end);
-    } else if (next_block_height != 0) {
-        message = next_block_height;
-    } else {
-        message = std::monostate();
-    }
-
-    return message;
 }
 }  // namespace
 
@@ -110,13 +73,10 @@ void serializeMachineStateKeys(const MachineStateKeys& state_data,
         last_sideload_raw = *state_data.output.last_sideload;
     }
     marshal_uint256_t(last_sideload_raw, state_data_vector);
-
-    serializeStagedVariant(state_data.staged_message, state_data_vector);
 }
 
 MachineStateKeys extractMachineStateKeys(
-    std::vector<unsigned char>::const_iterator iter,
-    const std::vector<unsigned char>::const_iterator end) {
+    std::vector<unsigned char>::const_iterator iter) {
     auto status = static_cast<Status>(*iter);
     ++iter;
     auto static_hash = extractUint256(iter);
@@ -142,8 +102,6 @@ MachineStateKeys extractMachineStateKeys(
         last_sideload = last_sideload_raw;
     }
 
-    auto staged_message = extractStagedVariant(iter, end);
-
     return MachineStateKeys{
         static_hash,
         register_hash,
@@ -152,7 +110,6 @@ MachineStateKeys extractMachineStateKeys(
         arb_gas_remaining,
         pc,
         err_pc,
-        std::move(staged_message),
         status,
         {{fully_processed_messages, fully_processed_inbox_accumulator},
          total_steps,
@@ -203,27 +160,19 @@ DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash) {
     std::vector<unsigned char> checkpoint_name;
     marshal_uint256_t(machine_hash, checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
-    auto results = getRefCountedData(tx, key);
 
+    auto results = deleteRefCountedData(tx, key);
     if (!results.status.ok()) {
         return DeleteResults{0, results.status,
                              std::move(results.stored_value)};
     }
-
-    auto delete_results = deleteRefCountedData(tx, key);
-
-    if (delete_results.reference_count < 1) {
+    if (results.reference_count < 1) {
         auto iter = results.stored_value.cbegin();
-        auto parsed_state =
-            extractMachineStateKeys(iter, results.stored_value.cend());
+        auto parsed_state = extractMachineStateKeys(iter);
 
         deleteMachineState(tx, parsed_state);
     }
-    return delete_results;
-}
-
-bool MachineStateKeys::stagedMessageUnresolved() const {
-    return std::holds_alternative<uint256_t>(staged_message);
+    return results;
 }
 
 DbResult<MachineStateKeys> getMachineStateKeys(
@@ -238,8 +187,7 @@ DbResult<MachineStateKeys> getMachineStateKeys(
         return results.status;
     }
     auto iter = results.stored_value.cbegin();
-    auto parsed_state =
-        extractMachineStateKeys(iter, results.stored_value.cend());
+    auto parsed_state = extractMachineStateKeys(iter);
 
     return CountedData<MachineStateKeys>{results.reference_count, parsed_state};
 }
@@ -291,14 +239,12 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     if (!machine_hash) {
         return {0, rocksdb::Status::NotFound()};
     }
-    marshal_uint256_t(*machine.hash(), checkpoint_name);
+    marshal_uint256_t(machine.hash(), checkpoint_name);
     auto key = vecToSlice(checkpoint_name);
 
-    auto transactionResult = getRefCountedData(transaction, key);
-    if (transactionResult.status.ok()) {
-        // Already saved so just increment reference count
-        return saveRefCountedData(transaction, key,
-                                  transactionResult.stored_value);
+    auto save_res = incrementReference(transaction, key);
+    if (save_res.status.ok()) {
+        return save_res;
     }
 
     auto status = saveMachineState(transaction, machine);
@@ -308,13 +254,13 @@ SaveResults saveMachine(ReadWriteTransaction& transaction,
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
                               serialized_state);
-    return saveRefCountedData(transaction, key, serialized_state);
+    return saveValueWithRefCount(transaction, 1, key, serialized_state);
 }
 
-std::optional<uint256_t> MachineStateKeys::getInboxAcc() const {
-    return output.fully_processed_inbox.accWithStaged(staged_message);
+uint256_t MachineStateKeys::getInboxAcc() const {
+    return output.fully_processed_inbox.accumulator;
 }
 
 uint256_t MachineStateKeys::getTotalMessagesRead() const {
-    return output.fully_processed_inbox.countWithStaged(staged_message);
+    return output.fully_processed_inbox.count;
 }

@@ -24,16 +24,21 @@ interface ChallengeTesterInterface extends ethers.utils.Interface {
   functions: {
     'challenge()': FunctionFragment
     'challengeCompleted()': FunctionFragment
+    'challengeExecutionBisectionDegree()': FunctionFragment
     'challengeFactory()': FunctionFragment
     'completeChallenge(address,address)': FunctionFragment
     'loser()': FunctionFragment
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)': FunctionFragment
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'winner()': FunctionFragment
   }
 
   encodeFunctionData(functionFragment: 'challenge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'challengeCompleted',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'challengeExecutionBisectionDegree',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -54,6 +59,7 @@ interface ChallengeTesterInterface extends ethers.utils.Interface {
       string,
       BigNumberish,
       BigNumberish,
+      string,
       string
     ]
   ): string
@@ -62,6 +68,10 @@ interface ChallengeTesterInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'challenge', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'challengeCompleted',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'challengeExecutionBisectionDegree',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -104,6 +114,14 @@ export class ChallengeTester extends Contract {
 
     'challengeCompleted()'(overrides?: CallOverrides): Promise<[boolean]>
 
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
+
+    'challengeExecutionBisectionDegree()'(
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>
+
     challengeFactory(overrides?: CallOverrides): Promise<[string]>
 
     'challengeFactory()'(overrides?: CallOverrides): Promise<[string]>
@@ -131,18 +149,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -158,6 +178,14 @@ export class ChallengeTester extends Contract {
   challengeCompleted(overrides?: CallOverrides): Promise<boolean>
 
   'challengeCompleted()'(overrides?: CallOverrides): Promise<boolean>
+
+  challengeExecutionBisectionDegree(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
+
+  'challengeExecutionBisectionDegree()'(
+    overrides?: CallOverrides
+  ): Promise<BigNumber>
 
   challengeFactory(overrides?: CallOverrides): Promise<string>
 
@@ -186,18 +214,20 @@ export class ChallengeTester extends Contract {
     challenger: string,
     asserterTimeLeft: BigNumberish,
     challengerTimeLeft: BigNumberish,
-    bridge: string,
+    sequencerBridge: string,
+    delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+  'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
     executionHash: BytesLike,
     maxMessageCount: BigNumberish,
     asserter: string,
     challenger: string,
     asserterTimeLeft: BigNumberish,
     challengerTimeLeft: BigNumberish,
-    bridge: string,
+    sequencerBridge: string,
+    delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -213,6 +243,14 @@ export class ChallengeTester extends Contract {
     challengeCompleted(overrides?: CallOverrides): Promise<boolean>
 
     'challengeCompleted()'(overrides?: CallOverrides): Promise<boolean>
+
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'challengeExecutionBisectionDegree()'(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     challengeFactory(overrides?: CallOverrides): Promise<string>
 
@@ -241,18 +279,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -271,6 +311,14 @@ export class ChallengeTester extends Contract {
     challengeCompleted(overrides?: CallOverrides): Promise<BigNumber>
 
     'challengeCompleted()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'challengeExecutionBisectionDegree()'(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
 
     challengeFactory(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -299,18 +347,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -327,6 +377,14 @@ export class ChallengeTester extends Contract {
     challengeCompleted(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'challengeCompleted()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    challengeExecutionBisectionDegree(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'challengeExecutionBisectionDegree()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -359,18 +417,20 @@ export class ChallengeTester extends Contract {
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address)'(
+    'startChallenge(bytes32,uint256,address,address,uint256,uint256,address,address)'(
       executionHash: BytesLike,
       maxMessageCount: BigNumberish,
       asserter: string,
       challenger: string,
       asserterTimeLeft: BigNumberish,
       challengerTimeLeft: BigNumberish,
-      bridge: string,
+      sequencerBridge: string,
+      delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

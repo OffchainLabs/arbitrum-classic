@@ -32,11 +32,15 @@ library Hashing {
         return keccak256(abi.encodePacked(a, b));
     }
 
-    function bytes32FromArray(bytes memory arr, uint256 offset) internal pure returns (uint256) {
+    function bytes32FromArray(
+        bytes memory arr,
+        uint256 offset,
+        uint256 arrLength
+    ) internal pure returns (uint256) {
         uint256 res = 0;
         for (uint256 i = 0; i < 32; i++) {
             res = res << 8;
-            bytes1 b = arr.length > offset + i ? arr[offset + i] : bytes1(0);
+            bytes1 b = arrLength > offset + i ? arr[offset + i] : bytes1(0);
             res = res | uint256(uint8(b));
         }
         return res;
@@ -53,23 +57,25 @@ library Hashing {
      */
     function merkleRoot(
         bytes memory data,
+        uint256 rawDataLength,
         uint256 startOffset,
         uint256 dataLength,
         bool pack
     ) internal pure returns (bytes32, bool) {
         if (dataLength <= 32) {
-            if (startOffset >= data.length) {
+            if (startOffset >= rawDataLength) {
                 return (keccak1(bytes32(0)), true);
             }
-            bytes32 res = keccak1(bytes32(bytes32FromArray(data, startOffset)));
+            bytes32 res = keccak1(bytes32(bytes32FromArray(data, startOffset, rawDataLength)));
             return (res, res == keccak1(bytes32(0)));
         }
         (bytes32 h2, bool zero2) =
-            merkleRoot(data, startOffset + dataLength / 2, dataLength / 2, false);
+            merkleRoot(data, rawDataLength, startOffset + dataLength / 2, dataLength / 2, false);
         if (zero2 && pack) {
-            return merkleRoot(data, startOffset, dataLength / 2, pack);
+            return merkleRoot(data, rawDataLength, startOffset, dataLength / 2, pack);
         }
-        (bytes32 h1, bool zero1) = merkleRoot(data, startOffset, dataLength / 2, false);
+        (bytes32 h1, bool zero1) =
+            merkleRoot(data, rawDataLength, startOffset, dataLength / 2, false);
         return (keccak2(h1, h2), zero1 && zero2);
     }
 
@@ -83,8 +89,9 @@ library Hashing {
         uint256 startOffset,
         uint256 length
     ) internal pure returns (bytes32) {
-        (bytes32 mhash, ) = merkleRoot(buf, startOffset, roundUpToPow2(length), true);
-        return keccak2(bytes32(buf.length), keccak2(bytes32(uint256(123)), mhash));
+        (bytes32 mhash, ) =
+            merkleRoot(buf, startOffset + length, startOffset, roundUpToPow2(length), true);
+        return keccak2(bytes32(uint256(123)), mhash);
     }
 
     function hashInt(uint256 val) internal pure returns (bytes32) {

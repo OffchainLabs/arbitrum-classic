@@ -22,15 +22,12 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ChallengeFactoryInterface extends ethers.utils.Interface {
   functions: {
-    'challengeTemplate()': FunctionFragment
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)': FunctionFragment
+    'beacon()': FunctionFragment
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)': FunctionFragment
     'executors(uint256)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'challengeTemplate',
-    values?: undefined
-  ): string
+  encodeFunctionData(functionFragment: 'beacon', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'createChallenge',
     values: [
@@ -41,6 +38,7 @@ interface ChallengeFactoryInterface extends ethers.utils.Interface {
       string,
       BigNumberish,
       BigNumberish,
+      string,
       string
     ]
   ): string
@@ -49,10 +47,7 @@ interface ChallengeFactoryInterface extends ethers.utils.Interface {
     values: [BigNumberish]
   ): string
 
-  decodeFunctionResult(
-    functionFragment: 'challengeTemplate',
-    data: BytesLike
-  ): Result
+  decodeFunctionResult(functionFragment: 'beacon', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'createChallenge',
     data: BytesLike
@@ -76,9 +71,9 @@ export class ChallengeFactory extends Contract {
   interface: ChallengeFactoryInterface
 
   functions: {
-    challengeTemplate(overrides?: CallOverrides): Promise<[string]>
+    beacon(overrides?: CallOverrides): Promise<[string]>
 
-    'challengeTemplate()'(overrides?: CallOverrides): Promise<[string]>
+    'beacon()'(overrides?: CallOverrides): Promise<[string]>
 
     createChallenge(
       _resultReceiver: string,
@@ -88,11 +83,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -100,7 +96,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -112,9 +109,9 @@ export class ChallengeFactory extends Contract {
     ): Promise<[string]>
   }
 
-  challengeTemplate(overrides?: CallOverrides): Promise<string>
+  beacon(overrides?: CallOverrides): Promise<string>
 
-  'challengeTemplate()'(overrides?: CallOverrides): Promise<string>
+  'beacon()'(overrides?: CallOverrides): Promise<string>
 
   createChallenge(
     _resultReceiver: string,
@@ -124,11 +121,12 @@ export class ChallengeFactory extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+  'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
     _resultReceiver: string,
     _executionHash: BytesLike,
     _maxMessageCount: BigNumberish,
@@ -136,7 +134,8 @@ export class ChallengeFactory extends Contract {
     _challenger: string,
     _asserterTimeLeft: BigNumberish,
     _challengerTimeLeft: BigNumberish,
-    _bridge: string,
+    _sequencerBridge: string,
+    _delayedBridge: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -148,9 +147,9 @@ export class ChallengeFactory extends Contract {
   ): Promise<string>
 
   callStatic: {
-    challengeTemplate(overrides?: CallOverrides): Promise<string>
+    beacon(overrides?: CallOverrides): Promise<string>
 
-    'challengeTemplate()'(overrides?: CallOverrides): Promise<string>
+    'beacon()'(overrides?: CallOverrides): Promise<string>
 
     createChallenge(
       _resultReceiver: string,
@@ -160,11 +159,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<string>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -172,7 +172,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: CallOverrides
     ): Promise<string>
 
@@ -187,9 +188,9 @@ export class ChallengeFactory extends Contract {
   filters: {}
 
   estimateGas: {
-    challengeTemplate(overrides?: CallOverrides): Promise<BigNumber>
+    beacon(overrides?: CallOverrides): Promise<BigNumber>
 
-    'challengeTemplate()'(overrides?: CallOverrides): Promise<BigNumber>
+    'beacon()'(overrides?: CallOverrides): Promise<BigNumber>
 
     createChallenge(
       _resultReceiver: string,
@@ -199,11 +200,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -211,7 +213,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -224,11 +227,9 @@ export class ChallengeFactory extends Contract {
   }
 
   populateTransaction: {
-    challengeTemplate(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    beacon(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
-    'challengeTemplate()'(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>
+    'beacon()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     createChallenge(
       _resultReceiver: string,
@@ -238,11 +239,12 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address)'(
+    'createChallenge(address,bytes32,uint256,address,address,uint256,uint256,address,address)'(
       _resultReceiver: string,
       _executionHash: BytesLike,
       _maxMessageCount: BigNumberish,
@@ -250,7 +252,8 @@ export class ChallengeFactory extends Contract {
       _challenger: string,
       _asserterTimeLeft: BigNumberish,
       _challengerTimeLeft: BigNumberish,
-      _bridge: string,
+      _sequencerBridge: string,
+      _delayedBridge: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

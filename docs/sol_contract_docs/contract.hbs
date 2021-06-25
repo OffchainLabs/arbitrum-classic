@@ -1,0 +1,46 @@
+---
+title: {{name}}.sol Spec
+id: {{name}}
+---
+
+{{{natspec.title}}}
+{{{natspec.userdoc}}}
+{{{natspec.devdoc}}}
+
+{{#each ownModifiers}}
+### `{{name}}({{args}})`
+
+{{{natspec.userdoc}}}
+
+{{{natspec.devdoc}}}
+
+{{/each}}
+
+{{#each ownFunctions}}
+{{#unless (eq visibility "internal")}}
+{{#unless (eq visibility "private")}}
+### `{{name}}({{args}}){{#if outputs}} → {{outputs}}{{/if}}` ({{visibility}})
+
+{{{natspec.userdoc}}}
+
+{{{natspec.devdoc}}}
+
+{{#each natspec.params}}
+- `{{param}}`: {{description}}
+{{/each}}
+{{#each natspec.returns}}
+**Returns**: {{param}}: {{description}}
+{{/each}}
+{{/unless}}
+{{/unless}}
+
+{{/each}}
+
+{{#each ownEvents}}
+### `{{name}}({{args}})`
+
+{{{natspec.userdoc}}}
+
+{{{natspec.devdoc}}}
+
+{{/each}}

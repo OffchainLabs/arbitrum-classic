@@ -17,9 +17,6 @@
 package cmachine
 
 /*
-#cgo CFLAGS: -I.
-#cgo LDFLAGS: -L. -lcavm -lavm -ldata_storage -lavm_values -lstdc++ -lm -lrocksdb -ldl
-#cgo linux LDFLAGS: -latomic
 #include "../cavm/carbcore.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +29,7 @@ import (
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/math"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
@@ -82,29 +80,35 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	return status, nil
 }
 
-func (ac *ArbCore) DeliverMessages(messages []inbox.InboxMessage, previousInboxAcc common.Hash, lastBlockComplete bool, reorgMessageCount *big.Int) bool {
-	rawInboxData := encodeInboxMessages(messages)
-	byteSlices := encodeByteSliceList(rawInboxData)
+func sequencerBatchItemsToByteSliceArray(batchItems []inbox.SequencerBatchItem) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeSequencerBatchItems(batchItems))
+}
 
-	var cReorgMessageCount unsafe.Pointer
-	if reorgMessageCount != nil {
-		reorgMessageCount := math.U256Bytes(reorgMessageCount)
-		cReorgMessageCount = unsafeDataPointer(reorgMessageCount)
+func delayedMessagesToByteSliceArray(delayedMessages []inbox.DelayedMessage) C.struct_ByteSliceArrayStruct {
+	return bytesArrayToByteSliceArray(encodeDelayedMessages(delayedMessages))
+}
+
+func u256ArrayToByteSliceArray(nums []*big.Int) C.struct_ByteSliceArrayStruct {
+	var bytes [][]byte
+	for _, num := range nums {
+		bytes = append(bytes, math.U256Bytes(num))
+	}
+	return bytesArrayToByteSliceArray(bytes)
+}
+
+func (ac *ArbCore) DeliverMessages(previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) bool {
+	previousMessageCountPtr := unsafeDataPointer(math.U256Bytes(previousMessageCount))
+	previousSeqBatchAccPtr := unsafeDataPointer(previousSeqBatchAcc.Bytes())
+	seqBatchItemsSlice := sequencerBatchItemsToByteSliceArray(seqBatchItems)
+	delayedMessagesSlice := delayedMessagesToByteSliceArray(delayedMessages)
+
+	var cReorgSeqBatchItemCount unsafe.Pointer
+	if reorgSeqBatchItemCount != nil {
+		reorgSeqBatchItemCount := math.U256Bytes(reorgSeqBatchItemCount)
+		cReorgSeqBatchItemCount = unsafeDataPointer(reorgSeqBatchItemCount)
 	}
 
-	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
-	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
-	for i, data := range byteSlices {
-		sliceArray[i] = data
-	}
-	defer C.free(sliceArrayData)
-	msgData := C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
-	cLastBlockComplete := 0
-	if lastBlockComplete {
-		cLastBlockComplete = 1
-	}
-
-	status := C.arbCoreDeliverMessages(ac.c, msgData, unsafeDataPointer(previousInboxAcc.Bytes()), C.int(cLastBlockComplete), cReorgMessageCount)
+	status := C.arbCoreDeliverMessages(ac.c, previousMessageCountPtr, previousSeqBatchAccPtr, seqBatchItemsSlice, delayedMessagesSlice, cReorgSeqBatchItemCount)
 	return status == 1
 }
 
@@ -130,6 +134,34 @@ func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
 	result := C.arbCoreGetMessageCount(ac.c)
 	if result.found == 0 {
 		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetDelayedMessageCount() (*big.Int, error) {
+	result := C.arbCoreGetDelayedMessageCount(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
+	result := C.arbCoreGetTotalDelayedMessagesSequenced(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to load send count")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
+func (ac *ArbCore) GetDelayedMessagesToSequence(maxBlock *big.Int) (*big.Int, error) {
+	maxBlockData := math.U256Bytes(maxBlock)
+	result := C.arbCoreGetDelayedMessagesToSequence(ac.c, unsafeDataPointer(maxBlockData))
+	if result.found == 0 {
+		return nil, errors.New("failed to load delayed messages to sequence")
 	}
 
 	return receiveBigInt(result.value), nil
@@ -191,12 +223,68 @@ func (ac *ArbCore) GetMessages(startIndex *big.Int, count *big.Int) ([]inbox.Inb
 	return messages, nil
 }
 
+func (ac *ArbCore) GetSequencerBatchItems(startIndex *big.Int) ([]inbox.SequencerBatchItem, error) {
+	startIndexData := math.U256Bytes(startIndex)
+
+	result := C.arbCoreGetSequencerBatchItems(ac.c, unsafeDataPointer(startIndexData))
+	if result.found == 0 {
+		return nil, errors.New("failed to get messages")
+	}
+
+	data := receiveByteSliceArray(result.array)
+	items := make([]inbox.SequencerBatchItem, len(data))
+	for i, slice := range data {
+		var err error
+		items[i], err = inbox.NewSequencerBatchItemFromData(slice)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return items, nil
+}
+
+func (ac *ArbCore) GetSequencerBlockNumberAt(index *big.Int) (*big.Int, error) {
+	indexData := math.U256Bytes(index)
+
+	res := C.arbCoreGetSequencerBlockNumberAt(ac.c, unsafeDataPointer(indexData))
+	if res.found == 0 {
+		return nil, errors.Errorf("failed to get sequencer block number for %v", index)
+	}
+
+	return receiveBigInt(res.value), nil
+}
+
+func (ac *ArbCore) GenInboxProof(seqNum *big.Int, batchIndex *big.Int, batchEndCount *big.Int) ([]byte, error) {
+	seqNumData := math.U256Bytes(seqNum)
+	batchEndCountData := math.U256Bytes(batchEndCount)
+	batchIndexData := math.U256Bytes(batchIndex)
+
+	res := C.arbCoreGenInboxProof(ac.c, unsafeDataPointer(seqNumData), unsafeDataPointer(batchIndexData), unsafeDataPointer(batchEndCountData))
+	if res.found == 0 {
+		return nil, errors.Errorf("failed to generate inbox proof for %v", seqNum)
+	}
+
+	return receiveByteSlice(res.slice), nil
+}
+
 func (ac *ArbCore) GetInboxAcc(index *big.Int) (ret common.Hash, err error) {
 	startIndexData := math.U256Bytes(index)
 
 	status := C.arbCoreGetInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
 	if status == 0 {
 		err = errors.Errorf("failed to get inbox acc for %v", index)
+	}
+
+	return
+}
+
+func (ac *ArbCore) GetDelayedInboxAcc(index *big.Int) (ret common.Hash, err error) {
+	startIndexData := math.U256Bytes(index)
+
+	status := C.arbCoreGetDelayedInboxAcc(ac.c, unsafeDataPointer(startIndexData), unsafe.Pointer(&ret[0]))
+	if status == 0 {
+		err = errors.Errorf("failed to get delayed inbox acc for %v", index)
 	}
 
 	return
@@ -209,6 +297,23 @@ func (ac *ArbCore) GetInboxAccPair(index1 *big.Int, index2 *big.Int) (ret1 commo
 	status := C.arbCoreGetInboxAccPair(ac.c, unsafeDataPointer(startIndex1Data), unsafeDataPointer(startIndex2Data), unsafe.Pointer(&ret1[0]), unsafe.Pointer(&ret2[0]))
 	if status == 0 {
 		err = errors.New("failed to get inbox acc")
+	}
+
+	return
+}
+
+func (ac *ArbCore) CountMatchingBatchAccs(lastSeqNums []*big.Int, accs []common.Hash) (ret int, err error) {
+	if len(lastSeqNums) != len(accs) {
+		return -1, errors.New("mismatching lengths when counting matching batches")
+	}
+	bytes := make([]byte, 0, len(lastSeqNums)*64)
+	for i := 0; i < len(lastSeqNums); i++ {
+		bytes = append(bytes, math.U256Bytes(lastSeqNums[i])...)
+		bytes = append(bytes, accs[i].Bytes()...)
+	}
+	ret = int(C.arbCoreCountMatchingBatchAccs(ac.c, toByteSliceView(bytes)))
+	if ret < 0 {
+		err = errors.New("failed to get matching batch accs")
 	}
 
 	return
@@ -243,6 +348,26 @@ func (ac *ArbCore) AdvanceExecutionCursor(executionCursor core.ExecutionCursor, 
 	}
 
 	return cursor.updateValues()
+}
+
+func (ac *ArbCore) GetLastMachine() (machine.Machine, error) {
+	cMachine := C.arbCoreGetLastMachine(ac.c)
+	if cMachine == nil {
+		return nil, errors.Errorf("error getting last machine")
+	}
+	ret := &Machine{cMachine}
+
+	runtime.SetFinalizer(ret, cdestroyVM)
+	return ret, nil
+}
+
+func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
+	result := C.arbCoreGetLastMachineTotalGas(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to get last machine total gas")
+	}
+
+	return receiveBigInt(result.value), nil
 }
 
 func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Machine, error) {

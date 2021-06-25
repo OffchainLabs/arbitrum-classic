@@ -18,10 +18,11 @@ package ethbridge
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/pkg/errors"
 	"math/big"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -30,8 +31,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 var l2MessageFromOriginCallABI abi.Method
@@ -141,6 +142,10 @@ func NewStandardInbox(address ethcommon.Address, client ethutils.EthClient, auth
 	}, nil
 }
 
+func (s *StandardInbox) Sender() common.Address {
+	return common.NewAddressFromEth(s.auth.auth.From)
+}
+
 func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte) (common.Hash, error) {
 	tx, err := s.auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
 		return s.con.SendL2MessageFromOrigin(auth, data)
@@ -149,4 +154,32 @@ func (s *StandardInbox) SendL2MessageFromOrigin(ctx context.Context, data []byte
 		return common.Hash{}, err
 	}
 	return common.NewHashFromEth(tx.Hash()), nil
+}
+
+func AddSequencerL2BatchFromOrigin(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
+	tx, err := auth.makeTx(ctx, func(auth *bind.TransactOpts) (*types.Transaction, error) {
+		return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+// Like AddSequencerL2BatchFromOrigin but with a custom nonce that will be incremented on success
+func AddSequencerL2BatchFromOriginCustomNonce(ctx context.Context, inbox *ethbridgecontracts.SequencerInbox, auth *TransactAuth, nonce *big.Int, transactions []byte, lengths []*big.Int, sectionsMetadata []*big.Int, afterAcc [32]byte) (*types.Transaction, error) {
+	rawAuth, err := auth.getAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rawAuth.Nonce = nonce
+	tx, err := inbox.AddSequencerL2BatchFromOrigin(rawAuth, transactions, lengths, sectionsMetadata, afterAcc)
+	if err != nil {
+		return nil, err
+	}
+	nonce.Add(nonce, big.NewInt(1))
+	if auth.auth.Nonce.Cmp(nonce) < 0 {
+		auth.auth.Nonce.Set(nonce)
+	}
+	return tx, nil
 }

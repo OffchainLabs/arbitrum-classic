@@ -23,23 +23,47 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface ArbOwnerInterface extends ethers.utils.Interface {
   functions: {
+    'addAllowedSender(address)': FunctionFragment
     'addToReserveFunds()': FunctionFragment
+    'allowAllSenders()': FunctionFragment
+    'allowOnlyOwnerToSend()': FunctionFragment
     'bindAddressToPluggable(address,uint256)': FunctionFragment
     'continueCodeUpload(bytes)': FunctionFragment
-    'finishCodeUploadAsArbosUpgrade()': FunctionFragment
+    'deployContract(bytes,address,uint256)': FunctionFragment
+    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)': FunctionFragment
     'finishCodeUploadAsPluggable(uint256,bool)': FunctionFragment
+    'getAllAllowedSenders()': FunctionFragment
+    'getAllFairGasPriceSenders()': FunctionFragment
     'getFeeRecipients()': FunctionFragment
+    'getTotalOfEthBalances()': FunctionFragment
+    'getUploadedCodeHash()': FunctionFragment
     'giveOwnership(address)': FunctionFragment
-    'setFairGasPriceSender(address)': FunctionFragment
+    'isAllowedSender(address)': FunctionFragment
+    'isFairGasPriceSender(address)': FunctionFragment
+    'removeAllowedSender(address)': FunctionFragment
+    'setFairGasPriceSender(address,bool)': FunctionFragment
     'setFeeRecipients(address,address)': FunctionFragment
     'setFeesEnabled(bool)': FunctionFragment
     'setGasAccountingParams(uint256,uint256,uint256)': FunctionFragment
+    'setL1GasPriceEstimate(uint256)': FunctionFragment
     'setSecondsPerSend(uint256)': FunctionFragment
     'startCodeUpload()': FunctionFragment
   }
 
   encodeFunctionData(
+    functionFragment: 'addAllowedSender',
+    values: [string]
+  ): string
+  encodeFunctionData(
     functionFragment: 'addToReserveFunds',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'allowAllSenders',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'allowOnlyOwnerToSend',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -51,15 +75,35 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'deployContract',
+    values: [BytesLike, string, BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'finishCodeUploadAsArbosUpgrade',
-    values?: undefined
+    values: [BytesLike, BytesLike]
   ): string
   encodeFunctionData(
     functionFragment: 'finishCodeUploadAsPluggable',
     values: [BigNumberish, boolean]
   ): string
   encodeFunctionData(
+    functionFragment: 'getAllAllowedSenders',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getAllFairGasPriceSenders',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'getFeeRecipients',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getTotalOfEthBalances',
+    values?: undefined
+  ): string
+  encodeFunctionData(
+    functionFragment: 'getUploadedCodeHash',
     values?: undefined
   ): string
   encodeFunctionData(
@@ -67,8 +111,20 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values: [string]
   ): string
   encodeFunctionData(
-    functionFragment: 'setFairGasPriceSender',
+    functionFragment: 'isAllowedSender',
     values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'isFairGasPriceSender',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'removeAllowedSender',
+    values: [string]
+  ): string
+  encodeFunctionData(
+    functionFragment: 'setFairGasPriceSender',
+    values: [string, boolean]
   ): string
   encodeFunctionData(
     functionFragment: 'setFeeRecipients',
@@ -83,6 +139,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     values: [BigNumberish, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(
+    functionFragment: 'setL1GasPriceEstimate',
+    values: [BigNumberish]
+  ): string
+  encodeFunctionData(
     functionFragment: 'setSecondsPerSend',
     values: [BigNumberish]
   ): string
@@ -92,7 +152,19 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): string
 
   decodeFunctionResult(
+    functionFragment: 'addAllowedSender',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'addToReserveFunds',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'allowAllSenders',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'allowOnlyOwnerToSend',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -104,6 +176,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'deployContract',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'finishCodeUploadAsArbosUpgrade',
     data: BytesLike
   ): Result
@@ -112,11 +188,39 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'getAllAllowedSenders',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getAllFairGasPriceSenders',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'getFeeRecipients',
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'getTotalOfEthBalances',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'getUploadedCodeHash',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'giveOwnership',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'isAllowedSender',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'isFairGasPriceSender',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'removeAllowedSender',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -133,6 +237,10 @@ interface ArbOwnerInterface extends ethers.utils.Interface {
   ): Result
   decodeFunctionResult(
     functionFragment: 'setGasAccountingParams',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
+    functionFragment: 'setL1GasPriceEstimate',
     data: BytesLike
   ): Result
   decodeFunctionResult(
@@ -161,12 +269,32 @@ export class ArbOwner extends Contract {
   interface: ArbOwnerInterface
 
   functions: {
+    addAllowedSender(
+      addr: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'addAllowedSender(address)'(
+      addr: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     addToReserveFunds(
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
     'addToReserveFunds()'(
       overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    allowAllSenders(overrides?: Overrides): Promise<ContractTransaction>
+
+    'allowAllSenders()'(overrides?: Overrides): Promise<ContractTransaction>
+
+    allowOnlyOwnerToSend(overrides?: Overrides): Promise<ContractTransaction>
+
+    'allowOnlyOwnerToSend()'(
+      overrides?: Overrides
     ): Promise<ContractTransaction>
 
     bindAddressToPluggable(
@@ -191,11 +319,29 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<ContractTransaction>
+
     finishCodeUploadAsArbosUpgrade(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -211,9 +357,25 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    getAllAllowedSenders(overrides?: CallOverrides): Promise<[string]>
+
+    'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<[string]>
+
+    getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<[string]>
+
+    'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<[string]>
+
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+    getTotalOfEthBalances(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<[BigNumber]>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<[string]>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<[string]>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -225,13 +387,42 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    setFairGasPriceSender(
+    isAllowedSender(addr: string, overrides?: CallOverrides): Promise<[boolean]>
+
+    'isAllowedSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    isFairGasPriceSender(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    'isFairGasPriceSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>
+
+    removeAllowedSender(
       addr: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'setFairGasPriceSender(address)'(
+    'removeAllowedSender(address)'(
       addr: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    setFairGasPriceSender(
+      addr: string,
+      isFairGasPriceSender: boolean,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setFairGasPriceSender(address,bool)'(
+      addr: string,
+      isFairGasPriceSender: boolean,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -271,6 +462,16 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
+    setL1GasPriceEstimate(
+      priceInGwei: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'setL1GasPriceEstimate(uint256)'(
+      priceInGwei: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
       overrides?: Overrides
@@ -286,11 +487,29 @@ export class ArbOwner extends Contract {
     'startCodeUpload()'(overrides?: Overrides): Promise<ContractTransaction>
   }
 
+  addAllowedSender(
+    addr: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'addAllowedSender(address)'(
+    addr: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   addToReserveFunds(overrides?: PayableOverrides): Promise<ContractTransaction>
 
   'addToReserveFunds()'(
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
+
+  allowAllSenders(overrides?: Overrides): Promise<ContractTransaction>
+
+  'allowAllSenders()'(overrides?: Overrides): Promise<ContractTransaction>
+
+  allowOnlyOwnerToSend(overrides?: Overrides): Promise<ContractTransaction>
+
+  'allowOnlyOwnerToSend()'(overrides?: Overrides): Promise<ContractTransaction>
 
   bindAddressToPluggable(
     addr: string,
@@ -314,11 +533,29 @@ export class ArbOwner extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  deployContract(
+    constructorData: BytesLike,
+    deemedSender: string,
+    deemedNonce: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
+  'deployContract(bytes,address,uint256)'(
+    constructorData: BytesLike,
+    deemedSender: string,
+    deemedNonce: BigNumberish,
+    overrides?: PayableOverrides
+  ): Promise<ContractTransaction>
+
   finishCodeUploadAsArbosUpgrade(
+    newCodeHash: BytesLike,
+    oldCodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'finishCodeUploadAsArbosUpgrade()'(
+  'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
+    newCodeHash: BytesLike,
+    oldCodeHash: BytesLike,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -334,9 +571,25 @@ export class ArbOwner extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  getAllAllowedSenders(overrides?: CallOverrides): Promise<string>
+
+  'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<string>
+
+  getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<string>
+
+  'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<string>
+
   getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
   'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+  getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
+
+  'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
+
+  getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
+
+  'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
   giveOwnership(
     newOwnerAddr: string,
@@ -348,13 +601,42 @@ export class ArbOwner extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  setFairGasPriceSender(
+  isAllowedSender(addr: string, overrides?: CallOverrides): Promise<boolean>
+
+  'isAllowedSender(address)'(
+    addr: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
+  isFairGasPriceSender(
+    addr: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
+  'isFairGasPriceSender(address)'(
+    addr: string,
+    overrides?: CallOverrides
+  ): Promise<boolean>
+
+  removeAllowedSender(
     addr: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'setFairGasPriceSender(address)'(
+  'removeAllowedSender(address)'(
     addr: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  setFairGasPriceSender(
+    addr: string,
+    isFairGasPriceSender: boolean,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setFairGasPriceSender(address,bool)'(
+    addr: string,
+    isFairGasPriceSender: boolean,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -394,6 +676,16 @@ export class ArbOwner extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  setL1GasPriceEstimate(
+    priceInGwei: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'setL1GasPriceEstimate(uint256)'(
+    priceInGwei: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
   setSecondsPerSend(
     blocksPerSend: BigNumberish,
     overrides?: Overrides
@@ -409,9 +701,24 @@ export class ArbOwner extends Contract {
   'startCodeUpload()'(overrides?: Overrides): Promise<ContractTransaction>
 
   callStatic: {
+    addAllowedSender(addr: string, overrides?: CallOverrides): Promise<void>
+
+    'addAllowedSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     addToReserveFunds(overrides?: CallOverrides): Promise<void>
 
     'addToReserveFunds()'(overrides?: CallOverrides): Promise<void>
+
+    allowAllSenders(overrides?: CallOverrides): Promise<void>
+
+    'allowAllSenders()'(overrides?: CallOverrides): Promise<void>
+
+    allowOnlyOwnerToSend(overrides?: CallOverrides): Promise<void>
+
+    'allowOnlyOwnerToSend()'(overrides?: CallOverrides): Promise<void>
 
     bindAddressToPluggable(
       addr: string,
@@ -435,9 +742,31 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    finishCodeUploadAsArbosUpgrade(overrides?: CallOverrides): Promise<void>
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
 
-    'finishCodeUploadAsArbosUpgrade()'(overrides?: CallOverrides): Promise<void>
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<string>
+
+    finishCodeUploadAsArbosUpgrade(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
 
     finishCodeUploadAsPluggable(
       id: BigNumberish,
@@ -451,9 +780,25 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    getAllAllowedSenders(overrides?: CallOverrides): Promise<string>
+
+    'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<string>
+
+    getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<string>
+
+    'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<string>
+
     getFeeRecipients(overrides?: CallOverrides): Promise<[string, string]>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<[string, string]>
+
+    getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<string>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<string>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -465,13 +810,39 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
-    setFairGasPriceSender(
+    isAllowedSender(addr: string, overrides?: CallOverrides): Promise<boolean>
+
+    'isAllowedSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    isFairGasPriceSender(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    'isFairGasPriceSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<boolean>
+
+    removeAllowedSender(addr: string, overrides?: CallOverrides): Promise<void>
+
+    'removeAllowedSender(address)'(
       addr: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'setFairGasPriceSender(address)'(
+    setFairGasPriceSender(
       addr: string,
+      isFairGasPriceSender: boolean,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'setFairGasPriceSender(address,bool)'(
+      addr: string,
+      isFairGasPriceSender: boolean,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -508,6 +879,16 @@ export class ArbOwner extends Contract {
       overrides?: CallOverrides
     ): Promise<void>
 
+    setL1GasPriceEstimate(
+      priceInGwei: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'setL1GasPriceEstimate(uint256)'(
+      priceInGwei: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
       overrides?: CallOverrides
@@ -526,9 +907,24 @@ export class ArbOwner extends Contract {
   filters: {}
 
   estimateGas: {
+    addAllowedSender(addr: string, overrides?: Overrides): Promise<BigNumber>
+
+    'addAllowedSender(address)'(
+      addr: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     addToReserveFunds(overrides?: PayableOverrides): Promise<BigNumber>
 
     'addToReserveFunds()'(overrides?: PayableOverrides): Promise<BigNumber>
+
+    allowAllSenders(overrides?: Overrides): Promise<BigNumber>
+
+    'allowAllSenders()'(overrides?: Overrides): Promise<BigNumber>
+
+    allowOnlyOwnerToSend(overrides?: Overrides): Promise<BigNumber>
+
+    'allowOnlyOwnerToSend()'(overrides?: Overrides): Promise<BigNumber>
 
     bindAddressToPluggable(
       addr: string,
@@ -552,9 +948,29 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    finishCodeUploadAsArbosUpgrade(overrides?: Overrides): Promise<BigNumber>
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<BigNumber>
+
+    finishCodeUploadAsArbosUpgrade(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -570,9 +986,25 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    getAllAllowedSenders(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getAllAllowedSenders()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getAllFairGasPriceSenders(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getAllFairGasPriceSenders()'(overrides?: CallOverrides): Promise<BigNumber>
+
     getFeeRecipients(overrides?: CallOverrides): Promise<BigNumber>
 
     'getFeeRecipients()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getTotalOfEthBalances(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getTotalOfEthBalances()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    getUploadedCodeHash(overrides?: CallOverrides): Promise<BigNumber>
+
+    'getUploadedCodeHash()'(overrides?: CallOverrides): Promise<BigNumber>
 
     giveOwnership(
       newOwnerAddr: string,
@@ -584,13 +1016,39 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    setFairGasPriceSender(
+    isAllowedSender(addr: string, overrides?: CallOverrides): Promise<BigNumber>
+
+    'isAllowedSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    isFairGasPriceSender(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    'isFairGasPriceSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>
+
+    removeAllowedSender(addr: string, overrides?: Overrides): Promise<BigNumber>
+
+    'removeAllowedSender(address)'(
       addr: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'setFairGasPriceSender(address)'(
+    setFairGasPriceSender(
       addr: string,
+      isFairGasPriceSender: boolean,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'setFairGasPriceSender(address,bool)'(
+      addr: string,
+      isFairGasPriceSender: boolean,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -627,6 +1085,16 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
+    setL1GasPriceEstimate(
+      priceInGwei: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'setL1GasPriceEstimate(uint256)'(
+      priceInGwei: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     setSecondsPerSend(
       blocksPerSend: BigNumberish,
       overrides?: Overrides
@@ -643,12 +1111,32 @@ export class ArbOwner extends Contract {
   }
 
   populateTransaction: {
+    addAllowedSender(
+      addr: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'addAllowedSender(address)'(
+      addr: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     addToReserveFunds(
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
     'addToReserveFunds()'(
       overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    allowAllSenders(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'allowAllSenders()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    allowOnlyOwnerToSend(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'allowOnlyOwnerToSend()'(
+      overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
     bindAddressToPluggable(
@@ -673,11 +1161,29 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    deployContract(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
+    'deployContract(bytes,address,uint256)'(
+      constructorData: BytesLike,
+      deemedSender: string,
+      deemedNonce: BigNumberish,
+      overrides?: PayableOverrides
+    ): Promise<PopulatedTransaction>
+
     finishCodeUploadAsArbosUpgrade(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'finishCodeUploadAsArbosUpgrade()'(
+    'finishCodeUploadAsArbosUpgrade(bytes32,bytes32)'(
+      newCodeHash: BytesLike,
+      oldCodeHash: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -693,9 +1199,41 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
+    getAllAllowedSenders(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getAllAllowedSenders()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getAllFairGasPriceSenders(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getAllFairGasPriceSenders()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
     getFeeRecipients(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'getFeeRecipients()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getTotalOfEthBalances(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getTotalOfEthBalances()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    getUploadedCodeHash(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'getUploadedCodeHash()'(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
@@ -709,13 +1247,45 @@ export class ArbOwner extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    setFairGasPriceSender(
+    isAllowedSender(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'isAllowedSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    isFairGasPriceSender(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    'isFairGasPriceSender(address)'(
+      addr: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
+
+    removeAllowedSender(
       addr: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'setFairGasPriceSender(address)'(
+    'removeAllowedSender(address)'(
       addr: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    setFairGasPriceSender(
+      addr: string,
+      isFairGasPriceSender: boolean,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setFairGasPriceSender(address,bool)'(
+      addr: string,
+      isFairGasPriceSender: boolean,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
@@ -752,6 +1322,16 @@ export class ArbOwner extends Contract {
       speedLimitPerBlock: BigNumberish,
       gasPoolMax: BigNumberish,
       maxTxGasLimit: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    setL1GasPriceEstimate(
+      priceInGwei: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'setL1GasPriceEstimate(uint256)'(
+      priceInGwei: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

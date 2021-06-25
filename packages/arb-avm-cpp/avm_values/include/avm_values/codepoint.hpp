@@ -26,10 +26,18 @@
 
 struct Operation {
     OpCode opcode;
-    std::optional<value> immediate;
+    std::unique_ptr<value> immediate;
 
     Operation(OpCode opcode_) : opcode(opcode_) {}
     Operation(OpCode opcode_, value val);
+
+    Operation(const Operation& op) : opcode(op.opcode) {
+        if (op.immediate) {
+            immediate = std::make_unique<value>(*op.immediate);
+        }
+    }
+
+    Operation(Operation&& op) = default;
 
     void marshalForProof(std::vector<unsigned char>& buf,
                          MarshalLevel marshal_level,
@@ -48,7 +56,7 @@ struct CodePoint {
     uint256_t nextHash;
 
     CodePoint(Operation op_, uint256_t nextHash_)
-        : op(op_), nextHash(nextHash_) {}
+        : op(std::move(op_)), nextHash(nextHash_) {}
 
     bool isError() const {
         return nextHash == 0 && op == Operation{static_cast<OpCode>(0)};
@@ -61,6 +69,7 @@ bool operator==(const CodePoint& val1, const CodePoint& val2);
 
 uint256_t hash(const CodePoint& cp);
 
+const Operation& getErrOperation();
 const CodePoint& getErrCodePoint();
 const uint256_t& getErrCodePointHash();
 

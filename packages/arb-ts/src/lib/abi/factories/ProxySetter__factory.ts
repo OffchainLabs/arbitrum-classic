@@ -19,7 +19,7 @@ export class ProxySetter__factory {
 const _abi = [
   {
     inputs: [],
-    name: 'getBeacon',
+    name: 'beacon',
     outputs: [
       {
         internalType: 'address',

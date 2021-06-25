@@ -1,17 +1,12 @@
 import * as ethers from 'ethers'
 import { EventFragment } from '@ethersproject/abi'
-import { ArbConversion, L1Bridge, RollupCreator__factory, Inbox__factory  } from 'arb-ts'
+import { L1Bridge, RollupCreator__factory, Inbox__factory } from 'arb-ts'
 import * as yargs from 'yargs'
 import * as fs from 'fs-extra'
 import { setupValidatorStates } from './setup_validators'
 
 import * as addresses from '../../arb-bridge-eth/bridge_eth_addresses.json'
-
-const arbConversion = new ArbConversion()
-
-interface RollupCreatedParams {
-  rollupAddress: string
-}
+import { execSync } from 'child_process'
 
 const provider = new ethers.providers.JsonRpcProvider('http://localhost:7545')
 
@@ -24,36 +19,24 @@ export interface RollupCreatedEvent {
   inboxAddress: string
 }
 
-async function setupRollup(): Promise<RollupCreatedEvent> {
-  const machineHash = fs.readFileSync('../MACHINEHASH').toString()
-  console.log(`Creating chain for machine with hash ${machineHash}`)
+async function setupRollup(
+  sequencerAddress: string
+): Promise<RollupCreatedEvent> {
+  // TODO: is the L2 sequencer the 1st unlocked account in the L1 node?
+  const network = 'local_development'
 
-  const factoryAddress = addresses['contracts']['RollupCreator'].address
-  const rollupCreator = RollupCreator__factory.connect(factoryAddress, wallet)
-
-  const tx = await rollupCreator.createRollup(
-    machineHash,
-    900,
-    0,
-    2000000000,
-    ethers.utils.parseEther('.1'),
-    ethers.constants.AddressZero,
-    await wallet.getAddress(),
-    '0x'
-  )
-  const receipt = await tx.wait()
-  const ev = rollupCreator.interface.parseLog(
-    receipt.logs[receipt.logs.length - 1]
+  execSync(
+    `yarn workspace arb-bridge-eth hardhat create-chain --sequencer ${sequencerAddress} --network ${network}`
   )
 
-  if (ev.name != 'RollupCreated') {
-    throw 'expected RollupCreated event'
-  }
+  const fileName = `rollup-${network}.json`
+  const file = fs.readFileSync(`../arb-bridge-eth/${fileName}`).toString()
+  const ev = JSON.parse(file)
 
-  const parsedEv = (ev as any) as {
-    args: RollupCreatedEvent
+  return {
+    rollupAddress: ev.rollupAddress,
+    inboxAddress: ev.inboxAddress,
   }
-  return parsedEv.args
 }
 
 async function initializeWallets(count: number): Promise<ethers.Wallet[]> {
@@ -95,7 +78,10 @@ async function setupValidators(
   blocktime: number,
   force: boolean
 ): Promise<void> {
-  const { rollupAddress, inboxAddress } = await setupRollup()
+  const wallets = await initializeWallets(count)
+  const { rollupAddress, inboxAddress } = await setupRollup(
+    await wallets[0].getAddress()
+  )
   console.log('Created rollup', rollupAddress)
 
   const validatorsPath = rollupsPath + 'local/'
@@ -122,6 +108,8 @@ async function setupValidators(
     rollup_address: rollupAddress,
     inbox_address: inboxAddress,
     validator_utils_address: addresses['contracts']['ValidatorUtils'].address,
+    validator_wallet_factory_address:
+      addresses['contracts']['ValidatorWalletCreator'].address,
     eth_url: 'http://localhost:7545',
     password: 'pass',
     blocktime: blocktime,
@@ -129,7 +117,6 @@ async function setupValidators(
 
   await setupValidatorStates(count, 'local', config)
 
-  const wallets = await initializeWallets(count)
   let i = 0
   for (const wallet of wallets) {
     const valPath = validatorsPath + 'validator' + i + '/'

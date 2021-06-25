@@ -17,23 +17,26 @@
 package gotest
 
 import (
-	"github.com/pkg/errors"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 	"runtime"
+
+	"github.com/pkg/errors"
 )
 
-func OpCodeTestFiles() []string {
+func OpCodeTestDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		err := errors.New("failed to get filename")
-		panic(err)
+		return "", errors.New("failed to get filename")
 	}
-	testCaseDir := filepath.Join(filepath.Dir(filename), "../tests/machine-cases")
+	return filepath.Join(filepath.Dir(filename), "../tests/machine-cases"), nil
+}
+
+func OpCodeTestFiles() ([]string, error) {
+	testCaseDir, err := OpCodeTestDir()
 	files, err := ioutil.ReadDir(testCaseDir)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	filenames := make([]string, 0, len(files))
 	for _, file := range files {
@@ -42,19 +45,18 @@ func OpCodeTestFiles() []string {
 		}
 	}
 
-	return filenames
+	return filenames, nil
 }
 
-func ArbOSTestFiles() []string {
+func ArbOSTestFiles() ([]string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		err := errors.New("failed to get filename")
-		panic(err)
+		return nil, errors.New("failed to get filename")
 	}
 	testCaseDir := filepath.Join(filepath.Dir(filename), "../../arb-os/replayTests")
 	files, err := ioutil.ReadDir(testCaseDir)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	filenames := make([]string, 0, len(files))
 	extensions := []string{".aoslog", ".json"}
@@ -68,5 +70,5 @@ func ArbOSTestFiles() []string {
 		}
 	}
 
-	return filenames
+	return filenames, nil
 }
