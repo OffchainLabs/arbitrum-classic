@@ -69,9 +69,9 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
 
 
     function postUpgradeInit() external {
-        // require(whitelist == address(0), "ALREADY_INIT");
-        // router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
-        // whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
+        require(whitelist == address(0), "ALREADY_INIT");
+        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
+        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
     }
 
      /**

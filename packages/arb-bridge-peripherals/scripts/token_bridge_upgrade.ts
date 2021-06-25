@@ -4,36 +4,39 @@ import { ethers } from 'hardhat'
 // import { ProxyAdmin__factory } from 'arb-ts/src/lib/abi/factories/ProxyAdmin__factory'
 import { networks } from 'arb-ts/src/lib/networks'
 
-// import MainnetAddresses from '../deployment-42161.json'
-import RinkebyAddresses from '../deployment-421611.json'
+import MainnetAddresses from '../deployment-42161.json'
+// import RinkebyAddresses from '../deployment-421611.json'
 
 const POST_UPGRADE_INIT = "0x95fcea78"
 
 const infuraKey = process.env['INFURA_KEY']
 if (!infuraKey) throw new Error('No INFURA_KEY')
 
-// const l1Prov = new ethers.providers.JsonRpcProvider('https://mainnet.infura.io/v3/' + infuraKey)
-// const l2Prov = new ethers.providers.JsonRpcProvider('https://arb1.arbitrum.io/rpc')
-const l1Prov = new ethers.providers.JsonRpcProvider('https://rinkeby.infura.io/v3/' + infuraKey)
-const l2Prov = new ethers.providers.JsonRpcProvider('https://rinkeby.arbitrum.io/rpc')
+const l1Prov = new ethers.providers.JsonRpcProvider('https://mainnet.infura.io/v3/' + infuraKey)
+const l2Prov = new ethers.providers.JsonRpcProvider('https://arb1.arbitrum.io/rpc')
 
-// const l1PrivKey = process.env['L1_PRIVKEY']
-// if (!l1PrivKey) throw new Error('No L1_PRIVKEY')
-// const l2PrivKey = process.env['L2_PRIVKEY']
-// if (!l2PrivKey) throw new Error('No L2_PRIVKEY')
+const l1PrivKey = process.env['L1_PRIVKEY']
+if (!l1PrivKey) throw new Error('No L1_PRIVKEY')
+const l2PrivKey = process.env['L2_PRIVKEY']
+if (!l2PrivKey) throw new Error('No L2_PRIVKEY')
 
-const l1ProxyAdminAddr = RinkebyAddresses.l1ProxyAdmin
-const l2ProxyAdminAddr = RinkebyAddresses.l2ProxyAdmin
-// const l1ProxyAdminAddr = MainnetAddresses.l1ProxyAdmin
-// const l2ProxyAdminAddr = MainnetAddresses.l2ProxyAdmin
+const l1Wallet = ethers.Wallet.fromMnemonic(l1PrivKey)
+const l2Wallet = ethers.Wallet.fromMnemonic(l2PrivKey)
 
-const privKey = process.env['DEVNET_PRIVKEY']
-if (!privKey) throw new Error('No DEVNET_PRIVKEY')
+const l1ProxyAdminAddr = MainnetAddresses.l1ProxyAdmin
+const l2ProxyAdminAddr = MainnetAddresses.l2ProxyAdmin
 
-const l1Wallet = new ethers.Wallet(privKey)
-const l2Wallet = new ethers.Wallet(privKey)
-// const l1Wallet = ethers.Wallet.fromMnemonic(l1PrivKey)
-// const l2Wallet = ethers.Wallet.fromMnemonic(l2PrivKey)
+// const l1Prov = new ethers.providers.JsonRpcProvider('https://rinkeby.infura.io/v3/' + infuraKey)
+// const l2Prov = new ethers.providers.JsonRpcProvider('https://rinkeby.arbitrum.io/rpc')
+
+// const l1ProxyAdminAddr = RinkebyAddresses.l1ProxyAdmin
+// const l2ProxyAdminAddr = RinkebyAddresses.l2ProxyAdmin
+
+// const privKey = process.env['DEVNET_PRIVKEY']
+// if (!privKey) throw new Error('No DEVNET_PRIVKEY')
+
+// const l1Wallet = new ethers.Wallet(privKey)
+// const l2Wallet = new ethers.Wallet(privKey)
 
 const l1Signer = l1Wallet.connect(l1Prov)
 const l2Signer = l2Wallet.connect(l2Prov)
@@ -47,8 +50,6 @@ const main = async () => {
   const l2ERC20GatewayProxy = tokenbridge.l2ERC20Gateway
   const l1CustomGatewayProxy = tokenbridge.l1CustomGateway
   const l2CustomGatewayProxy = tokenbridge.l2CustomGateway
-  const l1WethGatewayProxy = tokenbridge.l1WethGateway
-  const l2WethGatewayProxy = tokenbridge.l2WethGateway
 
   //   upgrade contracts
   // l1 validation
@@ -88,12 +89,6 @@ const main = async () => {
   const newl1Custom = await l1CustomFactory.deploy()
   await newl1Custom.deployed()
 
-  console.log('deploying new L1 logic weth')
-  const l1WethFactory = await (
-    await ethers.getContractFactory('L1WethGateway')
-  ).connect(l1Signer)
-  const newl1Weth = await l1WethFactory.deploy()
-  await newl1Weth.deployed()
 
   console.log('deploying new L2 logic std')
   const l2Erc20Factory = await (
@@ -139,16 +134,6 @@ const main = async () => {
   const l1receiptcustom = await l1txcustom.wait()
   console.log({ l1receiptcustom })
 
-  console.log('upgrading L1 weth')
-  const l1txweth = await l1ProxyAdmin.upgradeAndCall(
-    l1WethGatewayProxy,
-    newl1Weth.address,
-    POST_UPGRADE_INIT
-  )
-  console.log({ l1txweth })
-  const l1receiptweth = await l1txweth.wait()
-  console.log({ l1receiptweth })
-
   console.log('upgrading L2 std')
   const l2tx = await l2ProxyAdmin.upgradeAndCall(
     l2ERC20GatewayProxy,
@@ -168,16 +153,6 @@ const main = async () => {
   console.log({ l2txcustom })
   const l2receiptcustom = await l2txcustom.wait()
   console.log({ l2receiptcustom })
-
-  console.log('upgrading L2 weth')
-  const l2txweth = await l2ProxyAdmin.upgradeAndCall(
-    l2WethGatewayProxy,
-    newl2Weth.address,
-    POST_UPGRADE_INIT
-  )
-  console.log({ l2txweth })
-  const l2receiptweth = await l2txweth.wait()
-  console.log({ l2receiptweth })
 }
 
 main()
