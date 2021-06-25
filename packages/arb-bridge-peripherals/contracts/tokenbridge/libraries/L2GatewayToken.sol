@@ -66,4 +66,14 @@ abstract contract L2GatewayToken is aeERC20, IArbToken {
     function bridgeMint(address account, uint256 amount) external virtual override onlyGateway {
         _mint(account, amount);
     }
+
+    /**
+     * @notice Burn tokens on L2.
+     * @dev only the token bridge can call this
+     * @param account owner of tokens
+     * @param amount amount of tokens burnt
+     */
+    function bridgeBurn(address account, uint256 amount) external virtual override onlyGateway {
+        _burn(account, amount);
+    }
 }

@@ -166,8 +166,6 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
     const prevUserBalance = await l1CustomToken.balanceOf(accounts[0].address)
 
-    await l2Token.approve(l2TestBridge.address, tokenAmount)
-
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](l1CustomToken.address, accounts[0].address, tokenAmount, '0x')

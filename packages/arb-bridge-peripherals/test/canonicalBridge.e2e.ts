@@ -181,10 +181,6 @@ describe('Bridge peripherals end-to-end', () => {
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
 
-    const l2TokenAddress = await l1RouterTestBridge.calculateL2TokenAddress(token.address)
-    const l2Token = await Token.attach(l2TokenAddress)
-    await l2Token.approve(l2TestBridge.address, tokenAmount)
-
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
@@ -221,10 +217,6 @@ describe('Bridge peripherals end-to-end', () => {
     )
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
-
-    const l2TokenAddress = await l1RouterTestBridge.calculateL2TokenAddress(token.address)
-    const l2Token = await Token.attach(l2TokenAddress)
-    await l2Token.approve(l2TestBridge.address, tokenAmount)
 
     await l2RouterTestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
@@ -266,10 +258,6 @@ describe('Bridge peripherals end-to-end', () => {
 
     const prevUserBalance = await token.balanceOf(accounts[0].address)
 
-    const l2TokenAddress = await l1RouterTestBridge.calculateL2TokenAddress(token.address)
-    const l2Token = await Token.attach(l2TokenAddress)
-    await l2Token.approve(l2TestBridge.address, tokenAmount)
-
     await l2TestBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](token.address, accounts[0].address, tokenAmount, '0x')
@@ -304,10 +292,6 @@ describe('Bridge peripherals end-to-end', () => {
       l1TestBridge.address
     )
 
-    const l2TokenAddress = await l1RouterTestBridge.calculateL2TokenAddress(token.address)
-    const l2Token = await Token.attach(l2TokenAddress)
-    await l2Token.approve(l2TestBridge.address, tokenAmount)
-
     // here we set the L2 router to recover in case of a bad BeaconProxyFactory deploy
     await l2TestBridge.setStubAddressOracleReturn(accounts[0].address)
 
@@ -337,6 +321,11 @@ describe('Bridge peripherals end-to-end', () => {
       'Tokens not spent in allowance'
     )
 
+    const l2TokenAddress = await l1RouterTestBridge.calculateL2TokenAddress(
+      token.address
+    )
+
+    const l2Token = await Token.attach(l2TokenAddress)
     const l2Balance = await l2Token.balanceOf(accounts[0].address)
 
     assert.equal(l2Balance.toNumber(), 0, 'User has tokens in L2')

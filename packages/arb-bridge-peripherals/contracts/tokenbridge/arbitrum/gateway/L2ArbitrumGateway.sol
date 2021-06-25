@@ -21,9 +21,6 @@ pragma solidity ^0.6.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-
 import "../IArbToken.sol";
 
 import { L2ArbitrumMessenger } from "../../libraries/gateway/ArbitrumMessenger.sol";
@@ -33,7 +30,6 @@ import "../../libraries/gateway/ArbitrumGateway.sol";
  * @title Common interface for gatways on Arbitrum messaging to L1.
  */
 abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
-    using SafeERC20 for IERC20;
     using Address for address;
 
     uint256 public exitNum;
@@ -143,7 +139,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         address _from,
         uint256 _amount
     ) internal virtual {
-        IERC20(_l2Token).safeTransferFrom(_from, address(this), _amount);
+        // burns L2 tokens in order to release escrowed L1 tokens
+        IArbToken(_l2Token).bridgeBurn(_from, _amount);
     }
 
     function parseOutboundData(bytes memory _data)
