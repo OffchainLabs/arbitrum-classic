@@ -405,6 +405,16 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	var k = koanf.New(".")
 
+	// Load defaults that are not specified on command line
+	err = k.Load(confmap.Provider(map[string]interface{}{
+		"node.sequencer.lockout.timeout":       30 * time.Second,
+		"node.sequencer.lockout.MaxLatency":    10 * time.Millisecond,
+		"node.sequencer.lockout.SeqNumTimeout": 5 * time.Minute,
+	}, "."), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "error applying default values")
+	}
+
 	// Load configuration file if provided
 	configFile, _ := f.GetString("conf")
 	if len(configFile) > 0 {
