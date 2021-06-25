@@ -3,7 +3,6 @@ package configuration
 import (
 	"context"
 	"fmt"
-	"github.com/knadh/koanf/providers/structs"
 	"io"
 	"math/big"
 	"net/http"
@@ -161,7 +160,6 @@ func (c *Config) GetValidatorDatabasePath() string {
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
-	// Any default values need to be set in defaultConfig
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "maxBatchTime=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
@@ -184,7 +182,6 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 
 	AddFeedOutputOptions(f)
 
-	// Any default values need to be set in defaultConfig
 	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
 	f.String("validator.utils-address", "", "strategy for validator to use")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
@@ -193,7 +190,6 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 }
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
-	// Any default values need to be set in defaultConfig
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
@@ -368,7 +364,6 @@ func ParseRelay() (*Config, error) {
 }
 
 func AddFeedOutputOptions(f *flag.FlagSet) {
-	// Any default values need to be set in defaultConfig
 	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
 	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
 	f.Int("feed.output.port", 9642, "port to bind the relay feed output to")
@@ -378,7 +373,6 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 }
 
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
-	// Any default values need to be set in defaultConfig
 	f.String("conf", "", "name of configuration file")
 
 	f.Bool("dump-conf", false, "print out currently active configuration file")
@@ -411,63 +405,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	var k = koanf.New(".")
 
-	// Populate default configuration so all environment variables will be retrieved
-	defaultConfig := Config{
-		Feed: Feed{
-			Input: FeedInput{
-				Timeout: 20 * time.Second,
-			},
-			Output: FeedOutput{
-				Addr:          "0.0.0.0",
-				Port:          "9642",
-				Ping:          5 * time.Second,
-				ClientTimeout: 15 * time.Second,
-				Workers:       128,
-			},
-		},
-		GasPrice: 4.5,
-		Log: Log{
-			Core: "info",
-			RPC:  "info",
-		},
-		Node: Node{
-			Aggregator: Aggregator{
-				MaxBatchTime: 10,
-			},
-			RPC: RPC{
-				Addr: "0.0.0.0",
-				Port: "8547",
-			},
-			Sequencer: Sequencer{
-				CreateBatchBlockInterval:   1,
-				DelayedMessagesTargetDelay: 12,
-				Lockout: Lockout{
-					Timeout:       30 * time.Second,
-					MaxLatency:    10 * time.Millisecond,
-					SeqNumTimeout: 5 * time.Minute,
-				},
-			},
-			Type: "forwarder",
-			WS: WS{
-				Addr: "0.0.0.0",
-				Port: "8548",
-			},
-		},
-		Persistent: Persistent{
-			GlobalConfig: ".arbitrum",
-		},
-		Rollup: Rollup{
-			ChainID: 42161,
-		},
-		Validator: Validator{
-			Strategy: "StakeLatest",
-		},
-	}
-	err = k.Load(structs.Provider(defaultConfig, "koanf"), nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "error loading empty config struct")
-	}
-
 	// Load configuration file if provided
 	configFile, _ := f.GetString("conf")
 	if len(configFile) > 0 {
@@ -493,9 +430,11 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func loadEnvironmentVariables(k *koanf.Koanf) error {
-	return k.Load(env.Provider("ARB_NODE_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "ARB_NODE_")), "_", ".", -1)
+	return k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
+		// FOO__BAR -> foo-bar to handle dash in config names
+		s = strings.Replace(strings.ToLower(
+			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
+		return strings.Replace(s, "_", ".", -1)
 	}), nil)
 }
 
