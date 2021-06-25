@@ -160,6 +160,8 @@ func (c *Config) GetValidatorDatabasePath() string {
 func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
+	AddFeedOutputOptions(f)
+
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
 	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
@@ -493,7 +495,7 @@ func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
 
 		// Don't keep printing configuration file and don't print wallet password
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"dump.conf":       false,
+			"dump-conf":       false,
 			"wallet.password": "",
 		}, "."), nil)
 
