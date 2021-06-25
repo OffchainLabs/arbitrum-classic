@@ -89,6 +89,15 @@ contract L2WethGateway is L2ArbitrumGateway {
         IERC20(_l2TokenAddress).safeTransfer(_dest, _amount);
     }
 
+    function outboundEscrowTransfer(
+        address _l2TokenAddress,
+        address _from,
+        uint256 _amount
+    ) internal virtual override {
+        IERC20(_l2TokenAddress).safeTransferFrom(_from, address(this), _amount);
+        IWETH9(_l2TokenAddress).withdraw(_amount);
+    }
+
     function createOutboundTx(
         address _l1Token,
         address _from,

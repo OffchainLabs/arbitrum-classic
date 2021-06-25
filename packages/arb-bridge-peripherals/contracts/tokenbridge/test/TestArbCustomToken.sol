@@ -41,8 +41,4 @@ contract TestArbCustomToken is aeERC20, IArbToken {
     function bridgeMint(address account, uint256 amount) external override onlyBridge {
         _mint(account, amount);
     }
-
-    function bridgeBurn(address account, uint256 amount) external override onlyBridge {
-        _burn(account, amount);
-    }
 }

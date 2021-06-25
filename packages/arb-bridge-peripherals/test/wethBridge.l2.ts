@@ -108,6 +108,8 @@ describe('Bridge peripherals weth layer 2', () => {
     const balance = await l2Weth.balanceOf(dest)
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
 
+    await l2Weth.approve(testBridge.address, amount)
+
     await testBridge.functions[
       'outboundTransfer(address,address,uint256,bytes)'
     ](l1WethAddr, accounts[1].address, balance, '0x')
