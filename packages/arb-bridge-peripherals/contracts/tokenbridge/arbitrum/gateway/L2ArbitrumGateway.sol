@@ -43,6 +43,11 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
         ArbitrumGateway._initialize(_l1Counterpart, _router);
     }
 
+    function postUpgradeInit() external {
+        require(router == address(0), "ALREADY_INIT");
+        router = address(0x5288c571Fd7aD117beA99bF60FE0846C4E84F933);
+    }
+
     function gasReserveIfCallRevert() public pure virtual override returns (uint256) {
         // amount of arbgas necessary to send user tokens in case
         // of the "onTokenTransfer" call consumes all available gas
