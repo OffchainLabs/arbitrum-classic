@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./L1ArbitrumExtendedGateway.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
+import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
 /**
  * @title Layer 1 Gateway contract for bridging standard ERC20s
@@ -27,7 +28,7 @@ import "@openzeppelin/contracts/utils/Create2.sol";
  * @dev Any ERC20 that requires non-standard functionality should use a separate gateway.
  * Messages to layer 2 use the inbox's createRetryableTicket method.
  */
-contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
+contract L1ERC20Gateway is WhitelistConsumer, L1ArbitrumExtendedGateway {
     // used for create2 address calculation
     bytes32 public cloneableProxyHash;
     // We don't use the solidity creationCode as it breaks when upgrading contracts
@@ -46,6 +47,14 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
         cloneableProxyHash = _cloneableProxyHash;
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
+    }
+
+    function postUpgradeInit() external {
+        require(router == address(0), "ALREADY_INIT");
+        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
+        cloneableProxyHash = bytes32(0x4b11cb57b978697e0aec0c18581326376d6463fd3f6699cbe78ee5935617082d);
+        l2BeaconProxyFactory = address(0x3fE38087A94903A9D946fa1915e1772fe611000f);
+        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
     }
 
     /**
