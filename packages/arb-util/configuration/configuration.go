@@ -168,7 +168,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
-	f.Int64("node.sequencer.create-batch-block-interval", 1, "block interval at which to create new batches")
+	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
 	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
