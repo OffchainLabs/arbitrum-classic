@@ -31,6 +31,9 @@ import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
  */
 contract L1CustomGateway is WhitelistConsumer, L1ArbitrumExtendedGateway, ICustomGateway {
     using Address for address;
+
+    // Upgrade was done to add whitelist consumer which shifted storage slots for l1ToL2Token which were re-set
+
     // stores addresses of L2 tokens to be used
     mapping(address => address) public override l1ToL2Token;
     // owner is able to force add custom mappings
