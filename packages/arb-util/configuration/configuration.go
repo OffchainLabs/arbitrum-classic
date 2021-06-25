@@ -161,7 +161,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
 	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
-	f.Int("node.aggregator.max-batch-time", 10, "maxBatchTime=NumSeconds")
+	f.Int("node.aggregator.max-batch-time", 10, "max-batch-time=NumSeconds")
 	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
