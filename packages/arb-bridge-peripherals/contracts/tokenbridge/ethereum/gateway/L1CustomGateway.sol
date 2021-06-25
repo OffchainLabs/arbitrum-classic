@@ -29,15 +29,31 @@ import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
  * @title Gatway for "custom" bridging functionality
  * @notice Handles some (but not all!) custom Gateway needs.
  */
-contract L1CustomGateway is WhitelistConsumer, L1ArbitrumExtendedGateway, ICustomGateway {
+contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     using Address for address;
-
-    // Upgrade was done to add whitelist consumer which shifted storage slots for l1ToL2Token which were re-set
-
     // stores addresses of L2 tokens to be used
     mapping(address => address) public override l1ToL2Token;
     // owner is able to force add custom mappings
     address public owner;
+
+    /// start whitelist consumer
+    address public whitelist;
+
+    event WhitelistSourceUpdated(address newSource);
+
+    modifier onlyWhitelisted {
+        if (whitelist != address(0)) {
+            require(Whitelist(whitelist).isAllowed(msg.sender), "NOT_WHITELISTED");
+        }
+        _;
+    }
+
+    function updateWhitelistSource(address newSource) external {
+        require(msg.sender == whitelist, "NOT_FROM_LIST");
+        whitelist = newSource;
+        emit WhitelistSourceUpdated(newSource);
+    }
+    // end whitelist consumer
 
     function initialize(
         address _l1Counterpart,
@@ -53,12 +69,9 @@ contract L1CustomGateway is WhitelistConsumer, L1ArbitrumExtendedGateway, ICusto
 
 
     function postUpgradeInit() external {
-        require(router == address(0), "ALREADY_INIT");
+        require(whitelist == address(0), "ALREADY_INIT");
         router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
-        owner = address(0x5B34380C518da5A8851f762D4fA29605ACc3c0e2);
         whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
-
-        l1ToL2Token[address(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48)] = address(0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8);
     }
 
      /**
