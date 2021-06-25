@@ -60,6 +60,28 @@ contract L1ERC20Gateway is WhitelistConsumer, L1ArbitrumExtendedGateway {
     }
 
     /**
+     * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
+     * @param _l1Token L1 address of ERC20
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
+    }
+
+    /**
      * @notice utility function used to perform external read-only calls.
      * @dev the result is returned even if the call failed, the L2 is expected to
      * identify and deal with this.
