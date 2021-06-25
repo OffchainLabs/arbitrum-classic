@@ -17,7 +17,7 @@ module.exports = {
   solidity: '0.7.3',
   networks: {
     arbitrum: {
-      url: 'https://kovan4.arbitrum.io/rpc',
+      url: 'https://rinkeby.arbitrum.io/rpc',
       gasPrice: 0,
     },
   },

@@ -50,7 +50,13 @@ const _abi = [
       },
     ],
     name: 'requestLiquidity',
-    outputs: [],
+    outputs: [
+      {
+        internalType: 'bytes',
+        name: '',
+        type: 'bytes',
+      },
+    ],
     stateMutability: 'nonpayable',
     type: 'function',
   },

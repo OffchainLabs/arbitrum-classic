@@ -436,7 +436,7 @@ func TestRetryableReverted(t *testing.T) {
 		t.Fatal("expected error from redeem")
 	}
 
-	if arbosVersion >= 9 && err.Error() != "failed to estimate gas needed: execution reverted: this is a test" {
+	if arbosVersion >= 9 && !strings.Contains(err.Error(), "this is a test") {
 		t.Error("wrong error message from redeem", err)
 	}
 	balanceCheck(t, srv, sender, retryableTx, big.NewInt(50), big.NewInt(0), big.NewInt(30), big.NewInt(0))

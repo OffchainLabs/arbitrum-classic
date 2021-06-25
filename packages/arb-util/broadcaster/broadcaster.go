@@ -18,6 +18,7 @@ package broadcaster
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"net"
 	"strings"
 	"sync"
@@ -36,60 +37,26 @@ import (
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
-type Settings struct {
-	Addr                    string
-	Workers                 int
-	Queue                   int
-	IoReadWriteTimeout      time.Duration
-	ClientPingInterval      time.Duration
-	ClientNoResponseTimeout time.Duration
-}
-
 type Broadcaster struct {
 	clientManager         *ClientManager
 	startBroadcasterMutex *sync.Mutex
 	broadcasterStarted    bool
-	settings              Settings
+	settings              configuration.FeedOutput
 	poller                netpoll.Poller
 	acceptDesc            *netpoll.Desc
 	listener              net.Listener
 }
 
-func validateSettings(settings Settings) Settings {
-	if len(settings.Addr) == 0 {
-		panic("Invalid settings for broadcaster, missing Addr")
-	}
-
-	if settings.Workers == 0 {
-		panic("Invalid settings for broadcaster, Workers is zero")
-	}
-
-	if settings.Queue == 0 {
-		panic("Invalid settings for broadcaster, Queue is zero")
-	}
-	if settings.IoReadWriteTimeout == 0 {
-		settings.IoReadWriteTimeout = 2
-		panic("Invalid settings for broadcaster, Queue is zero")
-	}
-	if settings.ClientPingInterval == 0 {
-		logger.Warn().Msg("broadcaster ClientPingInterval was not set. Using default value of 5 seconds")
-		settings.ClientPingInterval = 5
-	}
-
-	if settings.ClientNoResponseTimeout == 0 {
-		logger.Warn().Msg("broadcaster ClientNoResponseTimeout was not set. Using default value of 15 seconds")
-		settings.ClientNoResponseTimeout = 15
-	}
-
-	return settings
-}
-
-func NewBroadcaster(settings Settings) *Broadcaster {
+func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
 	return &Broadcaster{
 		startBroadcasterMutex: &sync.Mutex{},
-		settings:              validateSettings(settings),
+		settings:              settings,
 		broadcasterStarted:    false,
 	}
+}
+
+func (b *Broadcaster) ClientCount() int32 {
+	return b.clientManager.ClientCount()
 }
 
 func (b *Broadcaster) Start(ctx context.Context) error {
@@ -109,13 +76,8 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	// Make pool of X size, Y sized work queue and one pre-spawned
 	// goroutine.
 	var pool = gopool.NewPool(b.settings.Workers, b.settings.Queue, 1)
-	cmSettings := ClientManagerSettings{
-		ClientPingInterval:      b.settings.ClientPingInterval,
-		ClientNoResponseTimeout: b.settings.ClientNoResponseTimeout,
-	}
-	var clientManager = NewClientManager(pool, b.poller, cmSettings)
-	clientManager.startWriter(ctx)
-	clientManager.startVerifier(ctx)
+	var clientManager = NewClientManager(pool, b.poller, b.settings)
+	clientManager.Start(ctx)
 
 	b.clientManager = clientManager // maintain the pointer in this instance... used for testing
 
@@ -126,7 +88,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	// Called below in accept() loop.
 	handle := func(conn net.Conn) {
 
-		safeConn := deadliner{conn, b.settings.IoReadWriteTimeout}
+		safeConn := deadliner{conn, b.settings.IOTimeout}
 
 		// Zero-copy upgrade to WebSocket connection.
 		hs, err := ws.Upgrade(safeConn)
@@ -150,7 +112,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		}
 
 		// Register incoming client in clientManager.
-		client := clientManager.Register(ctx, safeConn, desc)
+		client := clientManager.Register(safeConn, desc)
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {
@@ -186,7 +148,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	}
 
 	// Create tcp server for relay connections
-	ln, err := net.Listen("tcp", b.settings.Addr)
+	ln, err := net.Listen("tcp", b.settings.Addr+":"+b.settings.Port)
 	if err != nil {
 		logger.Error().Err(err).Msg("error calling net.Listen")
 		return err
@@ -261,10 +223,6 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 	return nil
 }
 
-func (b *Broadcaster) ClientConnectionCount() int {
-	return b.clientManager.ClientConnectionCount()
-}
-
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	return b.clientManager.Broadcast(prevAcc, batchItem, signature)
 }
@@ -286,18 +244,12 @@ func (b *Broadcaster) Broadcast(prevAcc common.Hash, batchItems []inbox.Sequence
 	return nil
 }
 
-func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) error {
-	err := b.clientManager.confirmedAccumulator(accumulator)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (b *Broadcaster) ConfirmedAccumulator(accumulator common.Hash) {
+	b.clientManager.confirmedAccumulator(accumulator)
 }
 
-func (b *Broadcaster) messageCacheCount() int {
-	count := len(b.clientManager.broadcastMessages)
-	return count
+func (b *Broadcaster) MessageCacheCount() int {
+	return b.clientManager.MessageCacheCount()
 }
 
 func (b *Broadcaster) Stop() {
@@ -316,7 +268,7 @@ func (b *Broadcaster) Stop() {
 		logger.Warn().Err(err).Msg("error in acceptDesc.Close")
 	}
 
-	b.clientManager.RemoveAll()
+	b.clientManager.Stop()
 	b.broadcasterStarted = false
 }
 

@@ -864,8 +864,8 @@ void ArbCore::operator()() {
         }
 
         if (!machineIdle() || message_data_status != MESSAGES_READY) {
-            // Machine is already running or new messages, so sleep for a short
-            // while
+            // Machine is already running or no new messages, so sleep for a
+            // short while
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
@@ -1842,6 +1842,12 @@ ValueResult<uint256_t> ArbCore::messageEntryInsertedCount() const {
     return messageEntryInsertedCountImpl(tx);
 }
 
+ValueResult<uint256_t> ArbCore::delayedMessageEntryInsertedCount() const {
+    ReadTransaction tx(data_storage);
+
+    return delayedMessageEntryInsertedCountImpl(tx);
+}
+
 ValueResult<uint256_t> ArbCore::messageEntryInsertedCountImpl(
     const ReadTransaction& tx) const {
     auto it = tx.sequencerBatchItemGetIterator();
@@ -2284,7 +2290,13 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
     }
 
     if (current_count_result.data == log_inserted_count.data) {
-        // No new messages, so don't post any changes
+        // No new messages
+
+        if (!logs_cursors[cursor_index].deleted_data.empty()) {
+            // No new messages, but there are deleted messages to process
+            logs_cursors[cursor_index].status = DataCursor::READY;
+        }
+
         return;
     }
     if (current_count_result.data > log_inserted_count.data) {
@@ -2328,8 +2340,6 @@ void ArbCore::handleLogsCursorRequested(ReadTransaction& tx,
 }
 
 // handleLogsCursorReorg must be called before logs are deleted.
-// Note that this function should not update logs_cursors[cursor_index].status
-// because it is happening out of line.
 // Note that cursor reorg never adds new messages, but might add deleted
 // messages.
 rocksdb::Status ArbCore::handleLogsCursorReorg(size_t cursor_index,
@@ -2491,12 +2501,17 @@ bool ArbCore::logsCursorConfirmReceived(size_t cursor_index) {
         return false;
     }
 
-    if (logs_cursors[cursor_index].deleted_data.empty()) {
-        ReadWriteTransaction tx(data_storage);
-        auto status = logsCursorSaveCurrentTotalCount(
-            tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
-        tx.commit();
+    if (!logs_cursors[cursor_index].deleted_data.empty()) {
+        // Deleted logs were added since the last time logsCursorGetLogs was
+        // called, so need to call logsCursorGetLogs again
+        logs_cursors[cursor_index].status = DataCursor::READY;
+        return false;
     }
+
+    ReadWriteTransaction tx(data_storage);
+    auto status = logsCursorSaveCurrentTotalCount(
+        tx, cursor_index, logs_cursors[cursor_index].pending_total_count);
+    tx.commit();
 
     logs_cursors[cursor_index].status = DataCursor::EMPTY;
 
@@ -2534,7 +2549,7 @@ std::string ArbCore::logsCursorClearError(size_t cursor_index) {
     if (logs_cursors[cursor_index].status != DataCursor::ERROR) {
         std::cerr << "logsCursorClearError called when status not ERROR"
                   << std::endl;
-        return "logsCursorClearError called when sttaus not ERROR";
+        return "logsCursorClearError called when status not ERROR";
     }
 
     auto str = logs_cursors[cursor_index].error_string;

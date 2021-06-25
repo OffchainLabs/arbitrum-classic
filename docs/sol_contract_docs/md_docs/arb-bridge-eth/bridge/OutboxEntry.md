@@ -1,9 +1,10 @@
 ---
 title: OutboxEntry.sol Spec
+id: OutboxEntry
 ---
 
-### `initialize(contract IBridge _bridge, bytes32 _root, uint256 _numInBatch)` (external)
+### `initialize(bytes32 _root, uint256 _numInBatch)` (external)
 
-### `spendOutput(bytes32 _root, bytes32 _id)` (external)
+### `spendOutput(bytes32 _root, bytes32 _id) → uint256` (external)
 
 ### `destroy()` (external)

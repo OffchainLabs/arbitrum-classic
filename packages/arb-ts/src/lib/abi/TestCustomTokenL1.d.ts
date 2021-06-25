@@ -30,12 +30,11 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8)': FunctionFragment
     'mint()': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)': FunctionFragment
+    'registerTokenOnL2(address,uint256,uint256,uint256)': FunctionFragment
     'symbol()': FunctionFragment
     'totalSupply()': FunctionFragment
     'transfer(address,uint256)': FunctionFragment
@@ -66,10 +65,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
   ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
-  ): string
   encodeFunctionData(functionFragment: 'mint', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
   encodeFunctionData(functionFragment: 'nonces', values: [string]): string
@@ -87,7 +82,7 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   ): string
   encodeFunctionData(
     functionFragment: 'registerTokenOnL2',
-    values: [string, BigNumberish, BigNumberish, BigNumberish, string]
+    values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'symbol', values?: undefined): string
   encodeFunctionData(
@@ -124,7 +119,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
@@ -235,20 +229,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     mint(overrides?: Overrides): Promise<ContractTransaction>
 
     'mint()'(overrides?: Overrides): Promise<ContractTransaction>
@@ -291,16 +271,14 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -420,20 +398,6 @@ export class TestCustomTokenL1 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  initialize(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(string,string,uint8)'(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   mint(overrides?: Overrides): Promise<ContractTransaction>
 
   'mint()'(overrides?: Overrides): Promise<ContractTransaction>
@@ -476,16 +440,14 @@ export class TestCustomTokenL1 extends Contract {
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
-    refundAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+  'registerTokenOnL2(address,uint256,uint256,uint256)'(
     l2CustomTokenAddress: string,
     maxSubmissionCost: BigNumberish,
     maxGas: BigNumberish,
     gasPriceBid: BigNumberish,
-    refundAddress: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
@@ -605,20 +567,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     mint(overrides?: CallOverrides): Promise<void>
 
     'mint()'(overrides?: CallOverrides): Promise<void>
@@ -661,16 +609,14 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: CallOverrides
     ): Promise<void>
 
@@ -806,20 +752,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     mint(overrides?: Overrides): Promise<BigNumber>
 
     'mint()'(overrides?: Overrides): Promise<BigNumber>
@@ -862,16 +794,14 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
@@ -997,20 +927,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     mint(overrides?: Overrides): Promise<PopulatedTransaction>
 
     'mint()'(overrides?: Overrides): Promise<PopulatedTransaction>
@@ -1056,16 +972,14 @@ export class TestCustomTokenL1 extends Contract {
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'registerTokenOnL2(address,uint256,uint256,uint256,address)'(
+    'registerTokenOnL2(address,uint256,uint256,uint256)'(
       l2CustomTokenAddress: string,
       maxSubmissionCost: BigNumberish,
       maxGas: BigNumberish,
       gasPriceBid: BigNumberish,
-      refundAddress: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 

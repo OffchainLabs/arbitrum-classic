@@ -4,17 +4,17 @@ pragma solidity ^0.6.11;
 
 import "../libraries/aeERC20.sol";
 import "../ethereum/ICustomToken.sol";
-import "../ethereum/EthERC20Bridge.sol";
+import "../ethereum/gateway/L1CustomGateway.sol";
 import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract TestCustomTokenL1 is aeERC20, ICustomToken {
-    EthERC20Bridge public bridge;
+    address public bridge;
 
     constructor(address _bridge) public {
-        bridge = EthERC20Bridge(_bridge);
-        aeERC20.initialize("TestCustomToken", "CARB", uint8(18));
+        bridge = _bridge;
+        aeERC20._initialize("TestCustomToken", "CARB", uint8(18));
     }
 
     function mint() external {
@@ -42,15 +42,13 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         address l2CustomTokenAddress,
         uint256 maxSubmissionCost,
         uint256 maxGas,
-        uint256 gasPriceBid,
-        address refundAddress
+        uint256 gasPriceBid
     ) public override {
-        bridge.registerCustomL2Token(
+        L1CustomGateway(bridge).registerTokenToL2(
             l2CustomTokenAddress,
-            maxSubmissionCost,
             maxGas,
             gasPriceBid,
-            refundAddress
+            maxSubmissionCost
         );
     }
 }

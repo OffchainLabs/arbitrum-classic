@@ -1,187 +1,241 @@
 import { ethers } from 'hardhat'
-import deployments from '../deployment.json'
-import { BridgeHelper } from 'arb-ts/src/lib/bridge_helpers'
+// import deployments from '../deployment.json'
 import { providers, Signer } from 'ethers'
-import {
-  Bridge,
-  ArbTokenBridge__factory,
-  EthERC20Bridge__factory,
-} from 'arb-ts/src'
+import { L1ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L1ERC20Gateway__factory'
+import { L2ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L2ERC20Gateway__factory'
+import { L1GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L1GatewayRouter__factory'
+import { L2GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L2GatewayRouter__factory'
+
 import { writeFileSync } from 'fs'
-import { spawnSync } from 'child_process'
+// import { writeFileSync } from 'fs'
+// import { spawnSync } from 'child_process'
+
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
+const MAINNET_INBOX = '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f'
+const MAINNET_WHITELIST = '0xD485e5c28AA4985b23f6DF13dA03caa766dcd459'
 
 const main = async () => {
   const accounts = await ethers.getSigners()
 
-  const inboxAddress = process.env.INBOX_ADDRESS
-
+  // parse needed vars
+  const inboxAddress = MAINNET_INBOX
   if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
-  const whitelistAddress = process.env.WHITELIST_ADDRESS
+  // set whitelistAddress to address(0) to disable whitelist
+  const whitelistAddress = MAINNET_WHITELIST
   if (!whitelistAddress)
     throw new Error('Please set whitelist address! WHITELIST_ADDRESS')
 
-  const EthERC20Bridge = await ethers.getContractFactory('EthERC20Bridge')
+  const l2PrivKey = process.env['L2_PRIVKEY']
+  if (!l2PrivKey) throw new Error('Missing l2 priv key DEVNET_PRIVKEY')
 
-  if (deployments.buddyDeployer === '' || deployments.standardArbERC20 === '')
-    throw new Error("Deployments.json doesn't include the necessary addresses")
+  const l2ProviderRpc =
+    process.env['DEVNET_RPC'] || 'https://arb1.arbitrum.io/rpc'
+  if (!l2ProviderRpc) throw new Error('Missing l2 rpc DEVNET_RPC')
 
-  const maxSubmissionCost = 0
-  const gasPrice = 0
-  const maxGas = 100000000000
-  const ethERC20Bridge = await EthERC20Bridge.deploy()
+  // deploy L1 logic contracts
+  const L1GatewayRouter = await ethers.getContractFactory('L1GatewayRouter')
+  const l1GatewayRouter = await L1GatewayRouter.deploy()
+  await l1GatewayRouter.deployed()
+  console.log('L1 GatewayRouter logic deployed to:', l1GatewayRouter.address)
 
-  console.log('EthERC20Bridge logic deployed to:', ethERC20Bridge.address)
-  const l2Provider = new providers.JsonRpcProvider(
-    // 'https://kovan4.arbitrum.io/rpc'
-    // 'https://devnet-l2.arbitrum.io/rpc'
-    'https://kovan5.arbitrum.io/rpc'
-  )
-  const l2PrivKey = process.env['DEVNET_PRIVKEY']
-  if (!l2PrivKey) throw new Error('Missing l2 priv key')
-  const l2Signer = new ethers.Wallet(l2PrivKey, l2Provider)
+  const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
+  const l1ERC20Gateway = await L1ERC20Gateway.deploy()
+  await l1ERC20Gateway.deployed()
+  console.log('L1 ERC20Gateway logic deployed to:', l1ERC20Gateway.address)
 
-  const ArbTokenBridge = (
-    await ethers.getContractFactory('ArbTokenBridge')
-  ).connect(l2Signer)
-
-  const arbTokenBridge = await ArbTokenBridge.deploy()
-  console.log('L2 ArbBridge logic deployed to:', arbTokenBridge.address)
-  await arbTokenBridge.deployed()
+  // deploy L1 proxy contracts
+  const L1ProxyAdmin = await ethers.getContractFactory('ProxyAdmin')
+  const l1ProxyAdmin = await L1ProxyAdmin.deploy()
+  await l1ProxyAdmin.deployed()
+  console.log('L1 proxy admin at', l1ProxyAdmin.address)
 
   const L1TransparentUpgradeableProxy = await ethers.getContractFactory(
     'TransparentUpgradeableProxy'
   )
+
+  const l1GatewayRouterProxy = await L1TransparentUpgradeableProxy.deploy(
+    l1GatewayRouter.address,
+    l1ProxyAdmin.address,
+    '0x'
+  )
+  await l1GatewayRouterProxy.deployed()
+  console.log('L1 GatewayRouter Proxy at', l1GatewayRouterProxy.address)
+
+  const l1ERC20GatewayProxy = await L1TransparentUpgradeableProxy.deploy(
+    l1ERC20Gateway.address,
+    l1ProxyAdmin.address,
+    '0x'
+  )
+  await l1ERC20GatewayProxy.deployed()
+  console.log('L1 ERC20Gateway Proxy at', l1ERC20GatewayProxy.address)
+
+  // deploy L2 logic contracts
+  const l2Provider = new providers.JsonRpcProvider(l2ProviderRpc)
+  const l2Signer = ethers.Wallet.fromMnemonic(l2PrivKey).connect(l2Provider)
+
+  const StandardArbERC20 = (
+    await ethers.getContractFactory('StandardArbERC20')
+  ).connect(l2Signer)
+  const standardArbERC20 = await StandardArbERC20.deploy()
+  await standardArbERC20.deployed()
+  console.log(`erc20 logic at ${standardArbERC20.address}`)
+
+  const UpgradeableBeacon = (
+    await ethers.getContractFactory('UpgradeableBeacon')
+  ).connect(l2Signer)
+  const erc20Beacon = await UpgradeableBeacon.deploy(standardArbERC20.address)
+  await erc20Beacon.deployed()
+  console.log(`erc20 beacon at ${erc20Beacon.address}`)
+
+  const BeaconProxyFactory = (
+    await ethers.getContractFactory('BeaconProxyFactory')
+  ).connect(l2Signer)
+  const beaconProxyFactory = await BeaconProxyFactory.deploy()
+  await beaconProxyFactory.deployed()
+  console.log(`beacon proxyfactory at ${beaconProxyFactory.address}`)
+
+  const cloneableProxyHash = await beaconProxyFactory.cloneableProxyHash()
+
+  const L2ERC20Gateway = (
+    await ethers.getContractFactory('L2ERC20Gateway')
+  ).connect(l2Signer)
+  const l2ERC20Gateway = await L2ERC20Gateway.deploy()
+  await l2ERC20Gateway.deployed()
+  console.log('L2 ERC20 gateway logic deployed to:', l2ERC20Gateway.address)
+
+  const L2GatewayRouter = (
+    await ethers.getContractFactory('L2GatewayRouter')
+  ).connect(l2Signer)
+  const l2GatewayRouter = await L2GatewayRouter.deploy()
+  await l2GatewayRouter.deployed()
+  console.log('L2 gateway router logic deployed to:', l2GatewayRouter.address)
+
+  // deploy L2 proxy contracts
+  const L2ProxyAdmin = (await ethers.getContractFactory('ProxyAdmin')).connect(
+    l2Signer
+  )
+  const l2ProxyAdmin = await L2ProxyAdmin.deploy()
+  await l2ProxyAdmin.deployed()
+  console.log('L2 proxy admin at', l2ProxyAdmin.address)
+
   const L2TransparentUpgradeableProxy = (
     await ethers.getContractFactory('TransparentUpgradeableProxy')
   ).connect(l2Signer)
 
-  const L1ProxyAdmin = await ethers.getContractFactory('ProxyAdmin')
-  const L2ProxyAdmin = (await ethers.getContractFactory('ProxyAdmin')).connect(
-    l2Signer
-  )
-  console.log('Deploying l1ProxyAdmin:')
-
-  const l1ProxyAdmin = await L1ProxyAdmin.deploy()
-  console.log('L1 proxy admin at', l1ProxyAdmin.address)
-  await l1ProxyAdmin.deployed()
-
-  const ethERC20BridgeProxy = await L1TransparentUpgradeableProxy.deploy(
-    ethERC20Bridge.address,
-    l1ProxyAdmin.address,
-    '0x'
-  )
-  await ethERC20BridgeProxy.deployed()
-
-  console.log('L1 proxy bridge at', ethERC20BridgeProxy.address)
-
-  const l2ProxyAdmin = await L2ProxyAdmin.deploy()
-  await l2ProxyAdmin.deployed()
-
-  console.log('L2 proxy admin at', l2ProxyAdmin.address)
-  const arbTokenBridgeProxy = await L2TransparentUpgradeableProxy.deploy(
-    arbTokenBridge.address,
+  const l2ERC20GatewayProxy = await L2TransparentUpgradeableProxy.deploy(
+    l2ERC20Gateway.address,
     l2ProxyAdmin.address,
     '0x'
   )
-  await arbTokenBridgeProxy.deployed()
+  await l2ERC20GatewayProxy.deployed()
+  console.log('L2 ERC20Gateway Proxy at', l2ERC20GatewayProxy.address)
 
-  console.log('L2 proxy bridge at', arbTokenBridgeProxy.address)
-
-  console.log('Now initializing proxies')
-
-  const arbTokenBridgeConnectedAsProxy = ArbTokenBridge__factory.connect(
-    arbTokenBridgeProxy.address,
-    l2Signer
+  const l2GatewayRouterProxy = await L2TransparentUpgradeableProxy.deploy(
+    l2GatewayRouter.address,
+    l2ProxyAdmin.address,
+    '0x'
   )
+  await l2GatewayRouterProxy.deployed()
+  console.log('L2 Router Proxy at', l2GatewayRouterProxy.address)
 
-  const initL2Bridge = await arbTokenBridgeConnectedAsProxy.initialize(
-    ethERC20BridgeProxy.address,
-    deployments.standardArbERC20
-  )
+  // initialize proxies and setup txs
 
-  const ethERC20BridgeConnectedAsProxy = EthERC20Bridge__factory.connect(
-    ethERC20BridgeProxy.address,
+  const initBeacon = await beaconProxyFactory.initialize(erc20Beacon.address)
+  console.log('Init beacon factory', initBeacon.hash)
+  await initBeacon.wait()
+
+  const l1ERC20GatewayConnectedAsProxy = L1ERC20Gateway__factory.connect(
+    l1ERC20GatewayProxy.address,
     accounts[0]
   )
 
-  const initL1Bridge = await ethERC20BridgeConnectedAsProxy.initialize(
+  const initL1Bridge = await l1ERC20GatewayConnectedAsProxy.initialize(
+    l2ERC20GatewayProxy.address,
+    l1GatewayRouterProxy.address,
     inboxAddress,
-    deployments.standardArbERC20,
-    arbTokenBridgeProxy.address,
-    l2Signer.address,
-    whitelistAddress
+    cloneableProxyHash,
+    beaconProxyFactory.address
   )
   console.log('init L1 hash', initL1Bridge.hash)
-  console.log('init L2 hash', initL2Bridge.hash)
-  // wait for inits
   await initL1Bridge.wait()
-  console.warn('l1 bridge proxy initted')
+  console.log('l1 bridge proxy initted')
 
+  const l2ERC20GatewayConnectedAsProxy = L2ERC20Gateway__factory.connect(
+    l2ERC20GatewayProxy.address,
+    l2Signer
+  )
+
+  const initL2Bridge = await l2ERC20GatewayConnectedAsProxy.initialize(
+    l1ERC20GatewayProxy.address,
+    l2GatewayRouterProxy.address,
+    beaconProxyFactory.address
+  )
+  console.log('init L2 hash', initL2Bridge.hash)
   await initL2Bridge.wait()
-  console.warn('l2 bridge proxy initted')
+  console.log('l2 bridge proxy initted')
 
-  // console.log("inbox after init", await ethERC20BridgeConnectedAsProxy.inbox())
-  console.log('Proxies have been initted')
+  // TODO: set default gateway to address(0) instead of standardERC20
 
-  const contracts = JSON.stringify({
-    ...deployments,
-    ethERC20Bridge: ethERC20BridgeProxy.address,
-    arbTokenBridge: arbTokenBridgeProxy.address,
-    inbox: inboxAddress,
-  })
-  const deployFilePath = './deployment.json'
+  const l1DefaultGateway = ZERO_ADDR
+  const l2DefaultGateway = ZERO_ADDR
+  // const l1DefaultGateway = l1ERC20GatewayProxy.address
+  // const l2DefaultGateway = l2ERC20GatewayProxy.address
+
+  const l1GatewayRouterConnected = L1GatewayRouter__factory.connect(
+    l1GatewayRouterProxy.address,
+    accounts[0]
+  )
+  const initL1RouterTx = await l1GatewayRouterConnected.initialize(
+    accounts[0].address,
+    l1DefaultGateway,
+    whitelistAddress,
+    l2GatewayRouterProxy.address,
+    inboxAddress
+  )
+  console.log('init L1 Router hash', initL1RouterTx.hash)
+  await initL1RouterTx.wait()
+  console.log('l1 router proxy initted')
+
+  const l2GatewayRouterConnectedAtProxy = L2GatewayRouter__factory.connect(
+    l2GatewayRouterProxy.address,
+    l2Signer
+  )
+
+  const initL2Router = await l2GatewayRouterConnectedAtProxy.initialize(
+    l1GatewayRouterProxy.address,
+    l2DefaultGateway
+  )
+  console.log('init L2 Router hash', initL2Router.hash)
+  await initL2Router.wait()
+  console.log('l2 router proxy initted')
+
+  console.log('Done.')
+
+  const contracts = JSON.stringify(
+    {
+      l1GatewayRouter: l1GatewayRouterProxy.address,
+      l2GatewayRouter: l2GatewayRouterProxy.address,
+      l1ERC20GatewayProxy: l1ERC20GatewayProxy.address,
+      l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
+      l1ProxyAdmin: l1ProxyAdmin.address,
+      l2ProxyAdmin: l2ProxyAdmin.address,
+      l1Deployer: accounts[0].address,
+      l2Deployer: l2Signer.address,
+      inbox: inboxAddress,
+    },
+    null,
+    4
+  )
+
+  const chainId = l2Provider.network.chainId
+  const deployFilePath = `./deployment-${chainId}.json`
   console.log(`Writing to JSON at ${deployFilePath}`)
   writeFileSync(deployFilePath, contracts)
   console.log('Wrote to deployments.json')
 
-  // const bridge = new Bridge(
-  //   ethERC20BridgeProxy.address,
-  //   arbTokenBridgeProxy.address,
-  //   accounts[0],
-  //   l2Signer
-  // )
-
-  // const deployReceipt = await bridge.getL1Transaction(
-  //   ethERC20Bridge.deployTransaction.hash
-  // )
-
-  // const seqNums = await bridge.getInboxSeqNumFromContractTransaction(
-  //   deployReceipt
-  // )
-
-  // if (!seqNums) throw new Error("Transaction didn't trigger inbox")
-  // if (seqNums.length !== 1)
-  //   throw new Error('Transaction triggered inbox more than once')
-
-  // const inboxSequenceNumber = seqNums[0]
-
-  // const l2DeployTxHash = await bridge.calculateL2RetryableTransactionHash(
-  //   inboxSequenceNumber
-  // )
-  // const l2TransactionReceipt = await bridge.getL2Transaction(l2DeployTxHash)
-
-  // const buddyDeployEvents = await bridge.getBuddyDeployInL2Transaction(
-  //   l2TransactionReceipt
-  // )
-
-  // if (buddyDeployEvents.length !== 1)
-  //   throw new Error('Buddy deploy event was not triggered one time!')
-  // const withdrawalId = buddyDeployEvents[0].withdrawalId
-
-  // const logs = await bridge.getWithdrawalsInL2Transaction(l2TransactionReceipt)
-  // const filteredLogs = logs.filter(log => log.uniqueId.eq(withdrawalId))
-
-  // if (filteredLogs.length !== 1)
-  //   throw new Error('Should have exactly one matching unique id')
-  // const { batchNumber, indexInBatch } = filteredLogs[0]
-
-  // const l1TxReceipt = await bridge.triggerL2ToL1Transaction(
-  //   batchNumber,
-  //   indexInBatch
-  // )
-  // console.log('Transaction executed in L1')
-  // console.log(l1TxReceipt)
+  // TODO: transfer admin proxy ownership
+  // TODO: transfer gateways and router ownership
 }
 
 main()

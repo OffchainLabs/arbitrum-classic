@@ -17,7 +17,6 @@
 package cmdhelp
 
 import (
-	"flag"
 	"fmt"
 	"math"
 	"math/big"
@@ -29,30 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
-
-type WalletFlags struct {
-	passphrase *string
-	gasPrice   *float64
-}
-
-func AddWalletFlags(fs *flag.FlagSet) WalletFlags {
-	passphrase := fs.String(
-		"password",
-		"",
-		"password=pass",
-	)
-	gasPrice := fs.Float64(
-		"gasprice",
-		4.5,
-		"gasprice=FloatInGwei",
-	)
-
-	return WalletFlags{
-		passphrase: passphrase,
-		gasPrice:   gasPrice,
-	}
-}
 
 // GetKeystore returns a transaction authorization based on an existing ethereum
 // keystore located in validatorFolder/wallets or creates one if it does not
@@ -61,8 +39,8 @@ func AddWalletFlags(fs *flag.FlagSet) WalletFlags {
 // optional "gasprice" arguement.
 func GetKeystore(
 	validatorFolder string,
-	args WalletFlags,
-	flags *flag.FlagSet,
+	wallet *configuration.Wallet,
+	gasPrice float64,
 	chainId *big.Int,
 ) (*bind.TransactOpts, func([]byte) ([]byte, error), error) {
 	ks := keystore.NewKeyStore(
@@ -71,15 +49,12 @@ func GetKeystore(
 		keystore.StandardScryptP,
 	)
 
-	found := false
-	flags.Visit(func(f *flag.Flag) {
-		if f.Name == "password" {
-			found = true
-		}
-	})
+	var account accounts.Account
+	if len(ks.Accounts()) > 0 {
+		account = ks.Accounts()[0]
+	}
 
-	var passphrase string
-	if !found {
+	if ks.Unlock(account, wallet.Password) != nil {
 		if len(ks.Accounts()) == 0 {
 			fmt.Print("Enter new account password: ")
 		} else {
@@ -90,33 +65,29 @@ func GetKeystore(
 		if err != nil {
 			return nil, nil, err
 		}
-		passphrase = string(bytePassword)
+		passphrase := string(bytePassword)
 
 		passphrase = strings.TrimSpace(passphrase)
-	} else {
-		passphrase = *args.passphrase
-	}
 
-	var account accounts.Account
-	if len(ks.Accounts()) == 0 {
-		var err error
-		account, err = ks.NewAccount(passphrase)
+		if len(ks.Accounts()) == 0 {
+			var err error
+			account, err = ks.NewAccount(passphrase)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		err = ks.Unlock(account, passphrase)
 		if err != nil {
 			return nil, nil, err
 		}
-	} else {
-		account = ks.Accounts()[0]
 	}
-	err := ks.Unlock(account, passphrase)
-	if err != nil {
-		return nil, nil, err
-	}
+
 	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	gasPriceAsFloat := 1e9 * (*args.gasPrice)
+	gasPriceAsFloat := 1e9 * gasPrice
 	if gasPriceAsFloat < math.MaxInt64 {
 		auth.GasPrice = big.NewInt(int64(gasPriceAsFloat))
 	}
@@ -128,4 +99,4 @@ func GetKeystore(
 	return auth, signer, nil
 }
 
-const WalletArgsString = "[--password=pass] [--gasprice==FloatInGwei]"
+const WalletArgsString = "[--wallet.password=pass] [--wallet.gasprice==FloatInGwei]"

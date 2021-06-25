@@ -22,10 +22,15 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface FastExitMockInterface extends ethers.utils.Interface {
   functions: {
+    'onTokenTransfer(address,uint256,bytes)': FunctionFragment
     'requestLiquidity(address,address,uint256,uint256,bytes)': FunctionFragment
     'setFee(uint256)': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'onTokenTransfer',
+    values: [string, BigNumberish, BytesLike]
+  ): string
   encodeFunctionData(
     functionFragment: 'requestLiquidity',
     values: [string, string, BigNumberish, BigNumberish, BytesLike]
@@ -33,12 +38,20 @@ interface FastExitMockInterface extends ethers.utils.Interface {
   encodeFunctionData(functionFragment: 'setFee', values: [BigNumberish]): string
 
   decodeFunctionResult(
+    functionFragment: 'onTokenTransfer',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'requestLiquidity',
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'setFee', data: BytesLike): Result
 
-  events: {}
+  events: {
+    'Triggered()': EventFragment
+  }
+
+  getEvent(nameOrSignatureOrTopic: 'Triggered'): EventFragment
 }
 
 export class FastExitMock extends Contract {
@@ -55,6 +68,20 @@ export class FastExitMock extends Contract {
   interface: FastExitMockInterface
 
   functions: {
+    onTokenTransfer(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
     requestLiquidity(
       dest: string,
       erc20: string,
@@ -83,6 +110,20 @@ export class FastExitMock extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
+
+  onTokenTransfer(
+    _sender: string,
+    _value: BigNumberish,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'onTokenTransfer(address,uint256,bytes)'(
+    _sender: string,
+    _value: BigNumberish,
+    _data: BytesLike,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
 
   requestLiquidity(
     dest: string,
@@ -113,6 +154,20 @@ export class FastExitMock extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
+    onTokenTransfer(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<void>
+
     requestLiquidity(
       dest: string,
       erc20: string,
@@ -120,7 +175,7 @@ export class FastExitMock extends Contract {
       exitNum: BigNumberish,
       liquidityProof: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<string>
 
     'requestLiquidity(address,address,uint256,uint256,bytes)'(
       dest: string,
@@ -129,7 +184,7 @@ export class FastExitMock extends Contract {
       exitNum: BigNumberish,
       liquidityProof: BytesLike,
       overrides?: CallOverrides
-    ): Promise<void>
+    ): Promise<string>
 
     setFee(_fee: BigNumberish, overrides?: CallOverrides): Promise<void>
 
@@ -139,9 +194,25 @@ export class FastExitMock extends Contract {
     ): Promise<void>
   }
 
-  filters: {}
+  filters: {
+    Triggered(): EventFilter
+  }
 
   estimateGas: {
+    onTokenTransfer(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
     requestLiquidity(
       dest: string,
       erc20: string,
@@ -169,6 +240,20 @@ export class FastExitMock extends Contract {
   }
 
   populateTransaction: {
+    onTokenTransfer(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'onTokenTransfer(address,uint256,bytes)'(
+      _sender: string,
+      _value: BigNumberish,
+      _data: BytesLike,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
     requestLiquidity(
       dest: string,
       erc20: string,

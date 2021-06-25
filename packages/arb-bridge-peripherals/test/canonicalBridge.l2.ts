@@ -19,7 +19,6 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address'
 import { Contract, ContractFactory } from 'ethers'
-import { deploy1820Registry } from '../scripts/utils'
 
 const encodeTokenInitData = (
   name: string,
@@ -45,7 +44,7 @@ describe('Bridge peripherals layer 2', () => {
   before(async function () {
     // constructor(uint256 _gasPrice, uint256 _maxGas, address erc777Template, address erc20Template)
     accounts = await ethers.getSigners()
-    TestBridge = await ethers.getContractFactory('ArbTokenBridge')
+    TestBridge = await ethers.getContractFactory('L2ERC20Gateway')
     const StandardArbERC20 = await ethers.getContractFactory('StandardArbERC20')
     const standardArbERC20Logic = await StandardArbERC20.deploy()
 
@@ -53,42 +52,20 @@ describe('Bridge peripherals layer 2', () => {
       'UpgradeableBeacon'
     )
 
-    const standardArbERC20Proxy = await UpgradeableBeacon.deploy(
-      standardArbERC20Logic.address
-    )
+    const beacon = await UpgradeableBeacon.deploy(standardArbERC20Logic.address)
 
-    erc20Proxy = standardArbERC20Proxy.address
+    const BeaconProxyFactory = await ethers.getContractFactory(
+      'BeaconProxyFactory'
+    )
+    const beaconProxyFactory = await BeaconProxyFactory.deploy()
+
+    await beaconProxyFactory.initialize(beacon.address)
+
     testBridge = await TestBridge.deploy()
     await testBridge.initialize(
       accounts[0].address,
-      standardArbERC20Proxy.address
-    )
-
-    await deploy1820Registry(accounts[0])
-  })
-
-  it('should calculate proxy address correctly', async function () {
-    const address: string = (await testBridge.functions.templateERC20())[0]
-
-    const ClonableBeaconProxy = await ethers.getContractFactory(
-      'ClonableBeaconProxy'
-    )
-    const l1ERC20 = '0x0000000000000000000000000000000000000001'
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
-    const salt = ethers.utils.solidityKeccak256(
-      ['address', 'address'],
-      [l1ERC20, erc20Proxy]
-    )
-    const initCodeHash = ethers.utils.keccak256(ClonableBeaconProxy.bytecode)
-    const l2AddressExpected = ethers.utils.getCreate2Address(
-      testBridge.address,
-      salt,
-      initCodeHash
-    )
-    assert.equal(
-      l2ERC20Address,
-      l2AddressExpected,
-      'Address calculated incorrectly'
+      accounts[3].address,
+      beaconProxyFactory.address
     )
   })
 
@@ -103,18 +80,25 @@ describe('Bridge peripherals layer 2', () => {
     const decimals = '18'
     const deployData = encodeTokenInitData(name, symbol, decimals)
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    const tx = await testBridge.mintFromL1(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [deployData, '0x']
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      deployData,
-      '0x'
+      data
     )
 
     const postTokenCode = await ethers.provider.getCode(l2ERC20Address)
@@ -143,18 +127,25 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    const tx = await testBridge.mintFromL1(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, '0x']
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      initializeData,
-      '0x'
+      data
     )
 
     const postTokenCode = await ethers.provider.getCode(l2ERC20Address)
@@ -177,7 +168,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -188,13 +182,17 @@ describe('Bridge peripherals layer 2', () => {
     const num = 5
     const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
 
-    const tx = await testBridge.mintFromL1(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, callHookData]
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      initializeData,
-      callHookData
+      data
     )
     const receipt = await tx.wait()
 
@@ -237,7 +235,10 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -249,19 +250,23 @@ describe('Bridge peripherals layer 2', () => {
     const num = 7
     const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
 
-    const tx = await testBridge.mintFromL1(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, callHookData]
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      initializeData,
-      callHookData
+      data
     )
     const receipt = await tx.wait()
 
-    // MintAndCallTriggered(bool,address,address,uint256,bytes)
+    // TransferAndCallTriggered(bool,address,address,uint256,bytes)
     const eventTopic =
-      '0xe934ad33409d1a25da34f3e31354e20013f314d227c3d53952d3e130ece06011'
+      '0x11ff8525c5d96036231ee652c108808dee4c40728a6117830a75029298bb7de6'
 
     const filteredEvents: Array<any> = receipt.events.filter(
       (event: any) => event.topics[0] === eventTopic
@@ -292,13 +297,16 @@ describe('Bridge peripherals layer 2', () => {
     )
   })
 
-  it.only('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
+  it('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
     const l1ERC20 = '0x0000000000000000000000000000000000001325'
     const sender = '0x0000000000000000000000000000000000000015'
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
@@ -310,16 +318,20 @@ describe('Bridge peripherals layer 2', () => {
     const num = 9
     const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
 
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, callHookData]
+    )
+
     // we need to hardcode this value as you can only send 63/64 of your remaining
     // gas into a call a high gas limit makes the test pass artificially
     const gasLimit = ethers.BigNumber.from(900000)
-    const tx = await testBridge.mintFromL1(
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      initializeData,
-      callHookData,
+      data,
       {
         gasLimit,
       }
@@ -334,9 +346,9 @@ describe('Bridge peripherals layer 2', () => {
       'Did not reserve the correct amount of gas'
     )
 
-    // MintAndCallTriggered(bool,address,address,uint256,bytes)
+    // TransferAndCallTriggered(bool,address,address,uint256,bytes)
     const eventTopic =
-      '0xe934ad33409d1a25da34f3e31354e20013f314d227c3d53952d3e130ece06011'
+      '0x11ff8525c5d96036231ee652c108808dee4c40728a6117830a75029298bb7de6'
 
     const filteredEvents: Array<any> = receipt.events.filter(
       (event: any) => event.topics[0] === eventTopic
@@ -373,26 +385,33 @@ describe('Bridge peripherals layer 2', () => {
     const amount = '1'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
     const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
     assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
     const dest = accounts[1].address
 
-    const tx = await testBridge.mintFromL1(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, '0x01']
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      initializeData,
-      '0x01'
+      data
     )
     const receipt = await tx.wait()
 
-    // MintAndCallTriggered(bool,address,address,uint256,bytes)
+    // TransferAndCallTriggered(bool,address,address,uint256,bytes)
     const eventTopic =
-      '0xe934ad33409d1a25da34f3e31354e20013f314d227c3d53952d3e130ece06011'
+      '0x11ff8525c5d96036231ee652c108808dee4c40728a6117830a75029298bb7de6'
 
     const filteredEvents: Array<any> = receipt.events.filter(
       (event: any) => event.topics[0] === eventTopic
@@ -467,21 +486,28 @@ describe('Bridge peripherals layer 2', () => {
   */
 
   it('should burn on withdraw', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000001'
+    const l1ERC20 = '0x0000000000000003000000000000000000000001'
     const sender = accounts[0].address
     const dest = sender
     const amount = '10'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
-    const l2ERC20Address = await testBridge.calculateL2TokenAddress(l1ERC20)
+    // connect to account 3 to query as if gateway router
+    const l2ERC20Address = await testBridge
+      .connect(accounts[3])
+      .calculateL2TokenAddress(l1ERC20)
 
-    const tx = await testBridge.mintFromL1(
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, '0x']
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
       l1ERC20,
       sender,
       dest,
       amount,
-      initializeData,
-      '0x'
+      data
     )
 
     const Erc20 = await ethers.getContractFactory('StandardArbERC20')
@@ -490,7 +516,9 @@ describe('Bridge peripherals layer 2', () => {
     const balance = await erc20.balanceOf(dest)
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
 
-    await erc20.withdraw(accounts[1].address, balance)
+    await testBridge.functions[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](l1ERC20, accounts[1].address, balance, '0x')
 
     const newBalance = await erc20.balanceOf(dest)
     assert.equal(newBalance.toString(), '0', 'Tokens not minted correctly')

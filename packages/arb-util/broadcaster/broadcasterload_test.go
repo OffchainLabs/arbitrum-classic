@@ -19,7 +19,6 @@ package broadcaster
 import (
 	"context"
 	"encoding/json"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"net"
 	"sync"
 	"testing"
@@ -27,6 +26,8 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var MessageCount = 10
@@ -35,13 +36,14 @@ var ClientCount = 10
 func TestBroadcasterLoad(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := Settings{
-		Addr:                    ":9642",
-		Workers:                 128,
-		Queue:                   1,
-		IoReadWriteTimeout:      2 * time.Second,
-		ClientPingInterval:      5 * time.Second,
-		ClientNoResponseTimeout: 15 * time.Second,
+	broadcasterSettings := configuration.FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     2 * time.Second,
+		Port:          "9942",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
 	}
 
 	b := NewBroadcaster(broadcasterSettings)
@@ -55,46 +57,46 @@ func TestBroadcasterLoad(t *testing.T) {
 	var wg sync.WaitGroup
 	for i := 0; i < ClientCount; i++ {
 		wg.Add(1)
-		go receiveMessages(t, i, &wg)
+		startReceiveMessages(t, i, &wg)
 	}
 
 	// probably should wait on connections being established
 	time.Sleep(10 * time.Millisecond)
 
-	go broadcastTonsOfMessages(b, t)
+	startBroadcastTonsOfMessages(b, t)
 
 	wg.Wait()
 
 }
 
-func receiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
-	defer wg.Done()
+func startReceiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 	messagesReceived := 0
-	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9642/")
+	conn, _, _, err := ws.DefaultDialer.Dial(context.Background(), "ws://127.0.0.1:9942/")
 	if err != nil {
 		t.Errorf("%d can not connect: %v\n", i, err)
 		return
 	}
 
-	defer func(conn net.Conn) {
-		err := conn.Close()
-		if err != nil {
-			t.Errorf("%d can not close: %v\n", i, err)
-		} else {
-			//t.Logf("%d closed\n", i)
-		}
-	}(conn)
+	go func() {
+		defer wg.Done()
+		defer func(conn net.Conn) {
+			err := conn.Close()
+			if err != nil {
+				t.Errorf("%d can not close: %v\n", i, err)
+			} else {
+				//t.Logf("%d closed\n", i)
+			}
+		}(conn)
 
-	var prevAcc common.Hash
+		var prevAcc common.Hash
 
-	//t.Logf("%d connected\n", i)
+		for {
+			msg, _, err := wsutil.ReadServerData(conn)
+			if err != nil {
+				t.Errorf("%d can not receive: %v\n", i, err)
+				return
+			}
 
-	for {
-		msg, op, err := wsutil.ReadServerData(conn)
-		if err != nil {
-			t.Errorf("%d can not receive: %v\n", i, err)
-			return
-		} else {
 			res := BroadcastMessage{}
 			err = json.Unmarshal(msg, &res)
 			if err != nil {
@@ -113,29 +115,30 @@ func receiveMessages(t *testing.T, i int, wg *sync.WaitGroup) {
 					t.Errorf("Message received out of order: previous: %v, expected previous: %v, current: %v, client: %v\n", prevAcc, msg.FeedItem.PrevAcc, msg.FeedItem.BatchItem.Accumulator, conn.LocalAddr().String())
 				}
 			}
-			_ = op
-			//t.Logf("%d receive: %v，type: %v\n", i, res, op)
+
 			if messagesReceived == MessageCount {
 				break
 			}
 		}
-	}
 
-	if messagesReceived != MessageCount {
-		t.Errorf("%d Should have received %d cached messages: %s\n", i, MessageCount, err)
-	}
+		if messagesReceived != MessageCount {
+			t.Errorf("%d Should have received %d cached messages: %s\n", i, MessageCount, err)
+		}
+	}()
 }
 
-func broadcastTonsOfMessages(b *Broadcaster, t *testing.T) {
+func startBroadcastTonsOfMessages(b *Broadcaster, t *testing.T) {
 	newBroadcastMessage := SequencedMessages()
-	for i := 0; i < MessageCount; i++ {
-		hash1, feedItem1, signature1 := newBroadcastMessage()
-		t.Logf("sending accumulator: %s", feedItem1.BatchItem.Accumulator.String())
-		err := b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
-		if err != nil {
-			t.Error(err)
+	go func() {
+		for i := 0; i < MessageCount; i++ {
+			hash1, feedItem1, signature1 := newBroadcastMessage()
+			t.Logf("sending accumulator: %s", feedItem1.BatchItem.Accumulator.String())
+			err := b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
+			if err != nil {
+				t.Error(err)
+			}
+			//t.Logf("sent %d messages", i+1)
+			time.Sleep(10 * time.Millisecond)
 		}
-		//t.Logf("sent %d messages", i+1)
-		time.Sleep(10 * time.Millisecond)
-	}
+	}()
 }

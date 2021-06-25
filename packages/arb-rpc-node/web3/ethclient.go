@@ -33,13 +33,20 @@ func NewEthClient(srv *aggregator.Server, ganacheMode bool, metricsConfig *metri
 	}
 }
 
-func (c *EthClient) BalanceAt(_ context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	var blockNum *int64
+func blockNum(blockNumber *big.Int) rpc.BlockNumberOrHash {
+	var blockNum *rpc.BlockNumber
 	if blockNumber != nil {
 		tmp := blockNumber.Int64()
-		blockNum = &tmp
+		blockNum = (*rpc.BlockNumber)(&tmp)
+	} else {
+		pending := rpc.PendingBlockNumber
+		blockNum = &pending
 	}
-	bal, err := c.srv.GetBalance(&account, (*rpc.BlockNumber)(blockNum))
+	return rpc.BlockNumberOrHash{BlockNumber: blockNum}
+}
+
+func (c *EthClient) BalanceAt(_ context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
+	bal, err := c.srv.GetBalance(&account, blockNum(blockNumber))
 	if err != nil {
 		return nil, err
 	}
@@ -47,12 +54,7 @@ func (c *EthClient) BalanceAt(_ context.Context, account common.Address, blockNu
 }
 
 func (c *EthClient) CodeAt(_ context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
-	var blockNum *int64
-	if blockNumber != nil {
-		tmp := blockNumber.Int64()
-		blockNum = &tmp
-	}
-	return c.srv.GetCode(&contract, (*rpc.BlockNumber)(blockNum))
+	return c.srv.GetCode(&contract, blockNum(blockNumber))
 }
 
 func (c *EthClient) CallContract(_ context.Context, call ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
@@ -64,22 +66,19 @@ func (c *EthClient) CallContract(_ context.Context, call ethereum.CallMsg, block
 		Value:    (*hexutil.Big)(call.Value),
 		Data:     (*hexutil.Bytes)(&call.Data),
 	}
-	var blockNum *int64
-	if blockNumber != nil {
-		tmp := blockNumber.Int64()
-		blockNum = &tmp
-	}
-	return c.srv.Call(args, (*rpc.BlockNumber)(blockNum))
+	return c.srv.Call(args, blockNum(blockNumber))
 }
 
 func (c *EthClient) PendingCodeAt(_ context.Context, account common.Address) ([]byte, error) {
-	blockNum := rpc.PendingBlockNumber
-	return c.srv.GetCode(&account, &blockNum)
+	pending := rpc.PendingBlockNumber
+	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
+	return c.srv.GetCode(&account, block)
 }
 
 func (c *EthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	blockNum := rpc.PendingBlockNumber
-	count, err := c.srv.GetTransactionCount(ctx, &account, &blockNum)
+	pending := rpc.PendingBlockNumber
+	block := rpc.BlockNumberOrHash{BlockNumber: &pending}
+	count, err := c.srv.GetTransactionCount(ctx, &account, block)
 	if err != nil {
 		return 0, err
 	}

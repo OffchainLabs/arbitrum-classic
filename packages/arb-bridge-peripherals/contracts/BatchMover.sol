@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "./MMR.sol";
 import "./tokenbridge/arbitrum/StandardArbERC20.sol";
+import "./tokenbridge/arbitrum/gateway/L2ArbitrumGateway.sol";
 import "./buddybridge/ethereum/L1Buddy.sol";
 
 import "arbos-contracts/arbos/builtin/ArbSys.sol";
@@ -31,6 +32,7 @@ contract ArbBatchTokenMover {
     MMR.Tree withdrawalTree;
     uint256 exitBlock;
     StandardArbERC20 erc20;
+    L2ArbitrumGateway gateway;
 
     function withdrawInBatch(uint256 amount) external {
         require(erc20.transferFrom(msg.sender, address(this), amount), "TRANSFER_FAILED");
@@ -39,16 +41,17 @@ contract ArbBatchTokenMover {
 
     function exitToL1() external {
         require(block.number >= exitBlock, "TOO_SOON");
+        address l1Addr = erc20.l1Address();
         ArbSys(100).sendTxToL1(
             address(this),
             abi.encodeWithSignature(
                 "distributeBatch(bytes32,address)",
                 withdrawalTree.getRoot(),
-                erc20.l1Address()
+                l1Addr
             )
         );
 
-        erc20.withdraw(address(this), erc20.balanceOf(address(this)));
+        gateway.outboundTransfer(l1Addr, address(this), erc20.balanceOf(address(this)), 0, 0, "0x");
         selfdestruct(msg.sender);
     }
 }

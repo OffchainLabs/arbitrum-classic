@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 func WaitForBalance(ctx context.Context, client ethutils.EthClient, tokenAddress common.Address, userAddress common.Address) error {

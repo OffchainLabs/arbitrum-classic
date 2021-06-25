@@ -51,6 +51,8 @@ const (
 	GasPriceTooLow            ResultType = 11
 	NoGasForAutoRedeem        ResultType = 12
 	ForbiddenSender           ResultType = 13
+	SequenceNumberTooLow      ResultType = 14
+	SequenceNumberTooHigh     ResultType = 15
 )
 
 func (r ResultType) String() string {
@@ -81,6 +83,10 @@ func (r ResultType) String() string {
 		return "GasPriceTooLow"
 	case NoGasForAutoRedeem:
 		return "NoGasForAutoRedeem"
+	case SequenceNumberTooLow:
+		return "SequenceNumberTooLow"
+	case SequenceNumberTooHigh:
+		return "SequenceNumberTooHigh"
 	default:
 		return fmt.Sprintf("%v", int(r))
 	}
@@ -134,7 +140,11 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 		reason := ""
 		revertReason, unpackError := abi.UnpackRevert(res.ReturnData)
 		if unpackError == nil {
-			err = errors.Errorf("execution reverted: %v", revertReason)
+			if ganacheMode {
+				err = errors.Errorf("VM Exception while processing transaction: revert %v", revertReason)
+			} else {
+				err = errors.Errorf("execution reverted: %v", revertReason)
+			}
 			reason = revertReason
 		}
 
@@ -171,6 +181,12 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 		return errors.New("gas price too low")
 	} else if res.ResultCode == ForbiddenSender {
 		return errors.New("forbidden sender address")
+	} else if res.ResultCode == SequenceNumberTooLow {
+		// Maintain error message backwards compatibility
+		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == SequenceNumberTooHigh {
+		// Maintain error message backwards compatibility
+		return errors.New("invalid transaction nonce")
 	} else {
 		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
 	}

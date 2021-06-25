@@ -45,20 +45,6 @@ var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 
 ## Arbitrum / Ethereum Bridge
 
-The bridging-related contract addresses for our Kovan4 testnet:
-
-```json
-L1:
-EthErc20Bridge.sol:  0x2948ac43e4AfF448f6af0F7a11F18Bb6062dd271
-Inbox.sol:           0xD71d47AD1b63981E9dB8e4A78C0b30170da8a601
-
-L2:
-ArbTokenBridge.sol:  0x64b92d4f02cE1b4BDE2D16B6eAEe521E27f28e07
-ArbSys.sol:          0x0000000000000000000000000000000000000064
-ArbRetryableTx.sol:  0x000000000000000000000000000000000000006E
-
-```
-
 Accessing bridging methods can be done via our `arb-ts` library, or by simply connecting to the relevant contracts directly.
 
 #### 1. arb-ts
@@ -89,7 +75,7 @@ const bridge = new Bridge(
 )
 ```
 
-See [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage. Full arb-ts API documentation coming soon.
+See [library documentation here](https://arb-ts-docs.netlify.app/), or [tests](https://github.com/OffchainLabs/arbitrum/blob/develop/packages/arb-ts/integration_test/arb-bridge.test.ts) for sample usage.
 
 (Note that we've deprecated the old `arb-provider-ethers` library; arb-ts is the recommended replacement)
 

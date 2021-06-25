@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "license": "Apache-2.0",
   "scripts": {
+    "test:e2e": "hardhat test test/*.e2e.ts",
     "test:l1": "hardhat test test/*.l1.ts",
     "test:l2": "hardhat test test/*.l2.ts --network arbitrum",
     "typechain": "hardhat typechain",
-    "deploy:tokenbridge:l1": "hardhat run scripts/deploy_token_bridge_l1.ts --network kovan",
-    "deploy:tokenbridge:l2": "hardhat run scripts/deploy_token_bridge_l2.ts --network kovan5",
-    "deploy:tokenbridge": "yarn deploy:tokenbridge:l2 && yarn deploy:tokenbridge:l1",
+    "deploy:tokenbridge": "hardhat run scripts/deploy_token_bridge_l1.ts --network mainnet",
     "deploy:buddydeployer": "hardhat run scripts/deploy_buddy_deployer.ts --network kovan5",
-    "deploy": "yarn deploy:buddydeployer && yarn deploy:tokenbridge"
+    "deploy": "yarn deploy:tokenbridge",
+    "gen:uml": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/ethereum,./contracts/tokenbridge/libraries -o ./gatewayUML.svg",
+    "gen:uml:test": "sol2uml ./contracts/tokenbridge/arbitrum,./contracts/tokenbridge/test -o ./gatewayTestUML.svg"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
@@ -25,6 +26,7 @@
     "ethereum-waffle": "^3.0.0",
     "ethers": "^5.0.24",
     "hardhat": "^2.0.7",
+    "sol2uml": "^1.1.25",
     "ts-node": "^9.1.1",
     "typechain": "^4.0.0",
     "typescript": "^4.1.5"

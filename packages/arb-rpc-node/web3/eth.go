@@ -106,8 +106,8 @@ func (s *Server) BlockNumber() (hexutil.Uint64, error) {
 	return hexutil.Uint64(blockCount - 1), nil
 }
 
-func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	snap, err := s.getSnapshot(blockNum)
+func (s *Server) GetBalance(address *common.Address, blockNum rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getBalance", "false").Inc()
 		return nil, err
@@ -121,13 +121,14 @@ func (s *Server) GetBalance(address *common.Address, blockNum *rpc.BlockNumber) 
 	return (*hexutil.Big)(balance), nil
 }
 
-func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, blockNum *rpc.BlockNumber) (*hexutil.Big, error) {
-	snap, err := s.getSnapshot(blockNum)
+func (s *Server) GetStorageAt(address *common.Address, key hexutil.Bytes, blockNum rpc.BlockNumberOrHash) (*hexutil.Big, error) {
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getStorageAt", "false").Inc()
 		return nil, err
 	}
-	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), (*big.Int)(index))
+	index := new(big.Int).SetBytes(key)
+	storageVal, err := snap.GetStorageAt(arbcommon.NewAddressFromEth(*address), index)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getStorageAt", "false").Inc()
 		return nil, errors.Wrap(err, "error getting storage")
@@ -136,9 +137,9 @@ func (s *Server) GetStorageAt(address *common.Address, index *hexutil.Big, block
 	return (*hexutil.Big)(storageVal), nil
 }
 
-func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Uint64, error) {
+func (s *Server) GetTransactionCount(ctx context.Context, address *common.Address, blockNum rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
 	account := arbcommon.NewAddressFromEth(*address)
-	snap, err := s.getSnapshot(blockNum)
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getTransactionCount", "false").Inc()
 		return 0, err
@@ -150,7 +151,7 @@ func (s *Server) GetTransactionCount(ctx context.Context, address *common.Addres
 	}
 
 	count := txCount.Uint64()
-	if blockNum == nil || *blockNum == rpc.PendingBlockNumber {
+	if blockNum.BlockNumber != nil && *blockNum.BlockNumber == rpc.PendingBlockNumber {
 		pending := s.srv.PendingTransactionCount(ctx, account)
 		if pending != nil {
 			if *pending > count {
@@ -188,13 +189,13 @@ func (s *Server) GetBlockTransactionCountByNumber(blockNum *rpc.BlockNumber) (*h
 	return s.getBlockTransactionCount(info)
 }
 
-func (s *Server) GetCode(address *common.Address, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+func (s *Server) GetCode(address *common.Address, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	if *address == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		s.counter.WithLabelValues("eth_getCode", "true").Inc()
 		// Fake code to make the contract appear real
 		return hexutil.Bytes{1}, nil
 	}
-	snap, err := s.getSnapshot(blockNum)
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		s.counter.WithLabelValues("eth_getCode", "false").Inc()
 		return nil, err
@@ -223,7 +224,7 @@ func (s *Server) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (he
 	return tx.Hash().Bytes(), nil
 }
 
-func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.Bytes, error) {
+func (s *Server) Call(callArgs CallTxArgs, blockNum rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	if callArgs.To != nil && *callArgs.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		var data []byte
 		if callArgs.Data != nil {
@@ -238,7 +239,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 		return result, err
 	}
 
-	snap, err := s.getSnapshot(blockNum)
+	snap, err := s.getSnapshotForNumberOrHash(blockNum)
 	if err != nil {
 		s.counter.WithLabelValues("eth_call", "false").Inc()
 		return nil, err
@@ -246,7 +247,7 @@ func (s *Server) Call(callArgs CallTxArgs, blockNum *rpc.BlockNumber) (hexutil.B
 	from, msg := buildCallMsg(callArgs, s.maxCallGas)
 
 	res, _, err := snap.Call(msg, from)
-	res, err = handleCallResult(res, err, blockNum)
+	res, err = handleCallResult(res, err)
 	if err != nil {
 		s.counter.WithLabelValues("eth_call", "false").Inc()
 		return nil, err
@@ -280,7 +281,7 @@ func (s *Server) EstimateGas(args CallTxArgs) (hexutil.Uint64, error) {
 		agg = *s.aggregator
 	}
 	res, _, err := snap.EstimateGas(tx, agg, from, s.maxAVMGas)
-	res, err = handleCallResult(res, err, &blockNum)
+	res, err = handleCallResult(res, err)
 	if err != nil {
 		logging := log.Warn()
 		if args.Gas != nil {
@@ -658,15 +659,9 @@ func buildCallMsg(args CallTxArgs, maxGas uint64) (arbcommon.Address, message.Co
 	}
 }
 
-func handleCallResult(res *evm.TxResult, err error, blockNum *rpc.BlockNumber) (*evm.TxResult, error) {
+func handleCallResult(res *evm.TxResult, err error) (*evm.TxResult, error) {
 	if err != nil {
-		logMsg := logger.Warn().Err(err)
-		if blockNum != nil {
-			logMsg = logMsg.Int64("height", blockNum.Int64())
-		} else {
-			logMsg = logMsg.Str("height", "nil")
-		}
-		logMsg.Msg("error executing call")
+		logger.Warn().Err(err).Msg("error executing call")
 		return nil, err
 	}
 	log.Debug().
@@ -712,6 +707,33 @@ func (s *Server) getSnapshot(blockNum *rpc.BlockNumber) (*snapshot.Snapshot, err
 	}
 	if snap == nil {
 		return nil, errors.Errorf("unsupported block number %v", uint64(*blockNum))
+	}
+	return snap, nil
+}
+
+func (s *Server) getSnapshotForNumberOrHash(blockNum rpc.BlockNumberOrHash) (*snapshot.Snapshot, error) {
+	if blockNum.BlockNumber != nil {
+		return s.getSnapshot(blockNum.BlockNumber)
+	}
+	if blockNum.BlockHash == nil {
+		return nil, errors.New("must specify block number or hash")
+	}
+	var blockHash arbcommon.Hash
+	copy(blockHash[:], blockNum.BlockHash[:])
+	info, err := s.srv.BlockInfoByHash(blockHash)
+	if err != nil {
+		return nil, err
+	}
+	if info == nil {
+		return nil, errors.New("block with hash not found")
+	}
+
+	snap, err := s.srv.GetSnapshot(info.Header.Number.Uint64())
+	if err != nil {
+		return nil, err
+	}
+	if snap == nil {
+		return nil, errors.Errorf("unsupported block number %v", info.Header.Number.Uint64())
 	}
 	return snap, nil
 }

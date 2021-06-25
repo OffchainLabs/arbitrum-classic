@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -123,7 +124,11 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				if bc.shuttingDown {
 					return
 				}
-				logger.Error().Err(err).Int("opcode", int(op)).Msgf("error calling readData")
+				if strings.Contains(err.Error(), "i/o timeout") {
+					logger.Error().Str("feed", bc.websocketUrl).Msg("Server connection timed out without receiving data")
+				} else {
+					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
+				}
 				_ = bc.conn.Close()
 				bc.RetryConnect(ctx, messageReceiver)
 				continue
@@ -139,8 +144,10 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 
 				if len(res.Messages) > 0 {
 					logger.Debug().Int("count", len(res.Messages)).Hex("acc", res.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("received batch item")
+				} else if res.ConfirmedAccumulator.IsConfirmed {
+					logger.Debug().Hex("acc", res.ConfirmedAccumulator.Accumulator.Bytes()).Msg("confirmed accumulator")
 				} else {
-					logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages")
+					logger.Debug().Int("length", len(msg)).Msg("received broadcast without any messages or confirmations")
 				}
 
 				if res.Version == 1 {
@@ -170,7 +177,7 @@ func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte
 	// Remove timeout when leaving this function
 	defer func(conn net.Conn) {
 		err := conn.SetReadDeadline(time.Time{})
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 			logger.Error().Err(err).Msg("error removing read deadline")
 		}
 	}(bc.conn)
@@ -187,17 +194,19 @@ func (bc *BroadcastClient) readData(ctx context.Context, state ws.State) ([]byte
 			return nil, 0, err
 		}
 
+		// Control packet may be returned even if err set
 		header, err := reader.NextFrame()
+		if header.OpCode.IsControl() {
+			// Control packet may be returned even if err set
+			if err2 := controlHandler(header, &reader); err != nil {
+				return nil, 0, err2
+			}
+			continue
+		}
 		if err != nil {
 			return nil, 0, err
 		}
 
-		if header.OpCode.IsControl() {
-			if err := controlHandler(header, &reader); err != nil {
-				return nil, 0, err
-			}
-			continue
-		}
 		if header.OpCode != ws.OpText &&
 			header.OpCode != ws.OpBinary {
 			if err := reader.Discard(); err != nil {

@@ -30,8 +30,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/pkg/errors"
@@ -63,24 +63,26 @@ type InboxMessageGetter interface {
 }
 
 type DelayedBridgeWatcher struct {
-	con     *ethbridgecontracts.Bridge
-	address ethcommon.Address
-	client  ethutils.EthClient
+	con       *ethbridgecontracts.Bridge
+	address   ethcommon.Address
+	fromBlock int64
+	client    ethutils.EthClient
 
 	inboxes map[ethcommon.Address]InboxMessageGetter
 }
 
-func NewDelayedBridgeWatcher(address ethcommon.Address, client ethutils.EthClient) (*DelayedBridgeWatcher, error) {
+func NewDelayedBridgeWatcher(address ethcommon.Address, fromBlock int64, client ethutils.EthClient) (*DelayedBridgeWatcher, error) {
 	con, err := ethbridgecontracts.NewBridge(address, client)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return &DelayedBridgeWatcher{
-		con:     con,
-		address: address,
-		client:  client,
-		inboxes: make(map[ethcommon.Address]InboxMessageGetter),
+		con:       con,
+		address:   address,
+		fromBlock: fromBlock,
+		client:    client,
+		inboxes:   make(map[ethcommon.Address]InboxMessageGetter),
 	}, nil
 }
 
@@ -116,7 +118,7 @@ func (r *DelayedBridgeWatcher) LookupMessageBlock(ctx context.Context, messageNu
 
 	query := ethereum.FilterQuery{
 		BlockHash: nil,
-		FromBlock: big.NewInt(0),
+		FromBlock: big.NewInt(r.fromBlock),
 		ToBlock:   nil,
 		Addresses: []ethcommon.Address{r.address},
 		Topics:    [][]ethcommon.Hash{{messageDeliveredID}, {msgNumBytes}},

@@ -32,7 +32,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8)': FunctionFragment
     'l1Address()': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
@@ -43,7 +42,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     'transfer(address,uint256)': FunctionFragment
     'transferAndCall(address,uint256,bytes)': FunctionFragment
     'transferFrom(address,address,uint256)': FunctionFragment
-    'withdraw(address,uint256)': FunctionFragment
   }
 
   encodeFunctionData(
@@ -76,10 +74,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
@@ -117,10 +111,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     values: [string, string, BigNumberish]
   ): string
-  encodeFunctionData(
-    functionFragment: 'withdraw',
-    values: [string, BigNumberish]
-  ): string
 
   decodeFunctionResult(
     functionFragment: 'DOMAIN_SEPARATOR',
@@ -141,7 +131,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
@@ -161,7 +150,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     functionFragment: 'transferFrom',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result
 
   events: {
     'Approval(address,address,uint256)': EventFragment
@@ -277,20 +265,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
     l1Address(overrides?: CallOverrides): Promise<[string]>
 
     'l1Address()'(overrides?: CallOverrides): Promise<[string]>
@@ -378,18 +352,6 @@ export class TestArbCustomToken extends Contract {
     'transferFrom(address,address,uint256)'(
       sender: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
@@ -486,20 +448,6 @@ export class TestArbCustomToken extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  initialize(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(string,string,uint8)'(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   l1Address(overrides?: CallOverrides): Promise<string>
 
   'l1Address()'(overrides?: CallOverrides): Promise<string>
@@ -585,18 +533,6 @@ export class TestArbCustomToken extends Contract {
   'transferFrom(address,address,uint256)'(
     sender: string,
     recipient: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  withdraw(
-    destination: string,
-    amount: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'withdraw(address,uint256)'(
-    destination: string,
     amount: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>
@@ -693,20 +629,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<boolean>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
     l1Address(overrides?: CallOverrides): Promise<string>
 
     'l1Address()'(overrides?: CallOverrides): Promise<string>
@@ -795,18 +717,6 @@ export class TestArbCustomToken extends Contract {
       amount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'withdraw(address,uint256)'(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
   }
 
   filters: {
@@ -916,20 +826,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     l1Address(overrides?: CallOverrides): Promise<BigNumber>
 
     'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -1015,18 +911,6 @@ export class TestArbCustomToken extends Contract {
     'transferFrom(address,address,uint256)'(
       sender: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>
@@ -1129,20 +1013,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
     l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
@@ -1233,18 +1103,6 @@ export class TestArbCustomToken extends Contract {
     'transferFrom(address,address,uint256)'(
       sender: string,
       recipient: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    withdraw(
-      destination: string,
-      amount: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'withdraw(address,uint256)'(
-      destination: string,
       amount: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>

@@ -1,5 +1,6 @@
 ---
 title: IArbToken.sol Spec
+id: IArbToken
 ---
 
 ### `bridgeMint(address account, uint256 amount)` (external)
@@ -10,6 +11,6 @@ should increase token supply by amount, and should (probably) only be callable b
 
 should decrease token supply by amount, and should (probably) only be callable by the L1 bridge.
 
-### `withdraw(address account, uint256 amount)` (external)
+### `l1Address() → address` (external)
 
-withdraw user tokens from L2 to the L1
+**Returns**: address: of layer 1 token

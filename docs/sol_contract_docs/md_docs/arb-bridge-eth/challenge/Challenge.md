@@ -1,10 +1,11 @@
 ---
 title: Challenge.sol Spec
+id: Challenge
 ---
 
 ### `onlyOnTurn()`
 
-### `initializeChallenge(contract IOneStepProof[] _executors, address _resultReceiver, bytes32 _executionHash, uint256 _maxMessageCount, address _asserter, address _challenger, uint256 _asserterTimeLeft, uint256 _challengerTimeLeft, contract IBridge _bridge)` (external)
+### `initializeChallenge(contract IOneStepProof[] _executors, address _resultReceiver, bytes32 _executionHash, uint256 _maxMessageCount, address _asserter, address _challenger, uint256 _asserterTimeLeft, uint256 _challengerTimeLeft, contract ISequencerInbox _sequencerBridge, contract IBridge _delayedBridge)` (external)
 
 ### `bisectExecution(bytes32[] _merkleNodes, uint256 _merkleRoute, uint256 _challengedSegmentStart, uint256 _challengedSegmentLength, bytes32 _oldEndHash, uint256 _gasUsedBefore, bytes32 _assertionRest, bytes32[] _chainHashes)` (external)
 
@@ -30,13 +31,15 @@ or follows another execution objection
 
 ### `proveContinuedExecution(bytes32[] _merkleNodes, uint256 _merkleRoute, uint256 _challengedSegmentStart, uint256 _challengedSegmentLength, bytes32 _oldEndHash, uint256 _gasUsedBefore, bytes32 _assertionRest)` (external)
 
-### `oneStepProveExecution(bytes32[] _merkleNodes, uint256 _merkleRoute, uint256 _challengedSegmentStart, uint256 _challengedSegmentLength, bytes32 _oldEndHash, uint256 _initialMessagesRead, bytes32 _initialSendAcc, bytes32 _initialLogAcc, uint256[3] _initialState, bytes _executionProof, bytes _bufferProof, uint8 prover)` (public)
+### `oneStepProveExecution(bytes32[] _merkleNodes, uint256 _merkleRoute, uint256 _challengedSegmentStart, uint256 _challengedSegmentLength, bytes32 _oldEndHash, uint256 _initialMessagesRead, bytes32[2] _initialAccs, uint256[3] _initialState, bytes _executionProof, bytes _bufferProof, uint8 prover)` (public)
 
 ### `timeout()` (external)
 
 ### `currentResponder() → address` (public)
 
 ### `currentResponderTimeLeft() → uint256` (public)
+
+### `clearChallenge()` (external)
 
 ### `InitiatedChallenge()`
 
