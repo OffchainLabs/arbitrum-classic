@@ -107,14 +107,6 @@ func startup() error {
 		badConfig = true
 		fmt.Println("Missing --bridge-utils-address")
 	}
-	if len(config.Feed.Input.URLs) == 0 {
-		badConfig = true
-		fmt.Println("Missing --feed.input.url")
-	}
-	if config.Node.Forwarder.Target == "" {
-		badConfig = true
-		fmt.Println("Missing --node.forwarder.target")
-	}
 	if config.Persistent.Chain == "" {
 		badConfig = true
 		fmt.Println("Missing --persistent.chain")
@@ -142,8 +134,7 @@ func startup() error {
 			badConfig = true
 			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
 		}
-	} else if config.Node.Type == "sequencer" {
-	} else {
+	} else if config.Node.Type != "sequencer" {
 		badConfig = true
 		fmt.Printf("Unrecognized node type %s", config.Node.Type)
 	}
