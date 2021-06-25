@@ -23,7 +23,7 @@
 #include <sstream>
 
 template <class... Args>
-void fuzz_require(bool check, Args... message) {
+void fuzz_require(bool check, Args&&... message) {
     if (!check) {
         std::stringstream err_stream;
         err_stream << "fuzz_require failed: ";

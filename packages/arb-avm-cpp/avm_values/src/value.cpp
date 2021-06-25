@@ -279,6 +279,7 @@ struct ValuePrinter {
             }
             os.copyfmt(prev_flags);
         } else {
+            os << "hash ";
             os << b.hash();
         }
         os << ")";
