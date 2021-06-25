@@ -49,8 +49,12 @@ func GetKeystore(
 		keystore.StandardScryptP,
 	)
 
-	var passphrase string
-	if len(wallet.Password) == 0 {
+	var account accounts.Account
+	if len(ks.Accounts()) > 0 {
+		account = ks.Accounts()[0]
+	}
+
+	if ks.Unlock(account, wallet.Password) != nil {
 		if len(ks.Accounts()) == 0 {
 			fmt.Print("Enter new account password: ")
 		} else {
@@ -61,27 +65,23 @@ func GetKeystore(
 		if err != nil {
 			return nil, nil, err
 		}
-		passphrase = string(bytePassword)
+		passphrase := string(bytePassword)
 
 		passphrase = strings.TrimSpace(passphrase)
-	} else {
-		passphrase = wallet.Password
-	}
 
-	var account accounts.Account
-	if len(ks.Accounts()) == 0 {
-		var err error
-		account, err = ks.NewAccount(passphrase)
+		if len(ks.Accounts()) == 0 {
+			var err error
+			account, err = ks.NewAccount(passphrase)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		err = ks.Unlock(account, passphrase)
 		if err != nil {
 			return nil, nil, err
 		}
-	} else {
-		account = ks.Accounts()[0]
 	}
-	err := ks.Unlock(account, passphrase)
-	if err != nil {
-		return nil, nil, err
-	}
+
 	auth, err := bind.NewKeyStoreTransactorWithChainID(ks, account, chainId)
 	if err != nil {
 		return nil, nil, err

@@ -80,17 +80,6 @@ contract L2WethGateway is L2ArbitrumGateway {
         return l2Weth;
     }
 
-    function outboundEscrowTransfer(
-        address _l2TokenAddress,
-        address _from,
-        uint256 _amount
-    ) internal virtual override {
-        // we always want both sides of weth to be fully collateralized
-        // so we withdraw and send the ether to be deposited
-        IERC20(_l2TokenAddress).safeTransferFrom(_from, address(this), _amount);
-        IWETH9(_l2TokenAddress).withdraw(_amount);
-    }
-
     function inboundEscrowTransfer(
         address _l2TokenAddress,
         address _dest,

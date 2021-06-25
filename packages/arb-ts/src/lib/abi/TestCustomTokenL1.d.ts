@@ -30,7 +30,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
-    'initialize(string,string,uint8)': FunctionFragment
     'mint()': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
@@ -65,10 +64,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
   encodeFunctionData(
     functionFragment: 'increaseAllowance',
     values: [string, BigNumberish]
-  ): string
-  encodeFunctionData(
-    functionFragment: 'initialize',
-    values: [string, string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'mint', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
@@ -124,7 +119,6 @@ interface TestCustomTokenL1Interface extends ethers.utils.Interface {
     functionFragment: 'increaseAllowance',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'initialize', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
@@ -232,20 +226,6 @@ export class TestCustomTokenL1 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<ContractTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
@@ -418,20 +398,6 @@ export class TestCustomTokenL1 extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  initialize(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
-  'initialize(string,string,uint8)'(
-    name: string,
-    symbol: string,
-    decimals: BigNumberish,
-    overrides?: Overrides
-  ): Promise<ContractTransaction>
-
   mint(overrides?: Overrides): Promise<ContractTransaction>
 
   'mint()'(overrides?: Overrides): Promise<ContractTransaction>
@@ -600,20 +566,6 @@ export class TestCustomTokenL1 extends Contract {
       addedValue: BigNumberish,
       overrides?: CallOverrides
     ): Promise<boolean>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>
 
     mint(overrides?: CallOverrides): Promise<void>
 
@@ -800,20 +752,6 @@ export class TestCustomTokenL1 extends Contract {
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<BigNumber>
-
     mint(overrides?: Overrides): Promise<BigNumber>
 
     'mint()'(overrides?: Overrides): Promise<BigNumber>
@@ -986,20 +924,6 @@ export class TestCustomTokenL1 extends Contract {
     'increaseAllowance(address,uint256)'(
       spender: string,
       addedValue: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    initialize(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
-      overrides?: Overrides
-    ): Promise<PopulatedTransaction>
-
-    'initialize(string,string,uint8)'(
-      name: string,
-      symbol: string,
-      decimals: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
