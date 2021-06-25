@@ -60,7 +60,7 @@ type Healthcheck struct {
 type Lockout struct {
 	Redis         string        `koanf:"redis"`
 	SelfRPCURL    string        `koanf:"self-rpc-url"`
-	Timeout       time.Duration `koanf:"timeout-millis"`
+	Timeout       time.Duration `koanf:"timeout"`
 	MaxLatency    time.Duration `koanf:"max-latency"`
 	SeqNumTimeout time.Duration `koanf:"seq-num-timeout"`
 }
@@ -407,9 +407,9 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	// Load defaults that are not specified on command line
 	err = k.Load(confmap.Provider(map[string]interface{}{
-		"node.sequencer.lockout.timeout":       30 * time.Second,
-		"node.sequencer.lockout.MaxLatency":    10 * time.Millisecond,
-		"node.sequencer.lockout.SeqNumTimeout": 5 * time.Minute,
+		"node.sequencer.lockout.timeout":         30 * time.Second,
+		"node.sequencer.lockout.max-latency":     10 * time.Millisecond,
+		"node.sequencer.lockout.seq-num-timeout": 5 * time.Minute,
 	}, "."), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "error applying default values")
