@@ -99,3 +99,6 @@ func (b *Forwarder) SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subsc
 func (b *Forwarder) Aggregator() *common.Address {
 	return b.aggregator
 }
+
+func (m *Forwarder) Start(ctx context.Context) {
+}

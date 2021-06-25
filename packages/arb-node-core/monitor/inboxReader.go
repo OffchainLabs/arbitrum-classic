@@ -60,6 +60,8 @@ var (
 	})
 )
 
+const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
+
 type InboxReader struct {
 	// Only in run thread
 	delayedBridge      *ethbridge.DelayedBridgeWatcher
@@ -73,6 +75,7 @@ type InboxReader struct {
 	lastCount          *big.Int
 	lastAcc            common.Hash
 	sequencerFeedQueue []broadcaster.SequencerFeedItem
+	recentFeedItems    map[common.Hash]time.Time
 
 	// Only in main thread
 	running    bool
@@ -104,6 +107,7 @@ func NewInboxReader(
 		bridgeUtils:       bridgeUtils,
 		db:                db,
 		firstMessageBlock: firstMessageBlock.Height.AsInt(),
+		recentFeedItems:   make(map[common.Hash]time.Time),
 		completed:         make(chan bool, 1),
 		caughtUpChan:      make(chan bool, 1),
 		healthChan:        healthChan,
@@ -357,7 +361,12 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			case <-ctx.Done():
 				return nil
 			case broadcastItem := <-ir.BroadcastFeed:
-				logger.Debug().Str("prevAcc", broadcastItem.FeedItem.PrevAcc.String()).Str("acc", broadcastItem.FeedItem.BatchItem.Accumulator.String()).Msg("received broadcast feed item")
+				newAcc := broadcastItem.FeedItem.BatchItem.Accumulator
+				if ir.recentFeedItems[newAcc] != (time.Time{}) {
+					continue
+				}
+				ir.recentFeedItems[newAcc] = time.Now()
+				logger.Debug().Str("prevAcc", broadcastItem.FeedItem.PrevAcc.String()).Str("acc", newAcc.String()).Msg("received broadcast feed item")
 				feedReorg := len(ir.sequencerFeedQueue) != 0 && ir.sequencerFeedQueue[len(ir.sequencerFeedQueue)-1].BatchItem.Accumulator != broadcastItem.FeedItem.PrevAcc
 				feedCaughtUp := broadcastItem.FeedItem.PrevAcc == ir.lastAcc
 				if (feedReorg || feedCaughtUp) && len(ir.sequencerFeedQueue) > 0 {
@@ -379,6 +388,14 @@ func (ir *InboxReader) getMessages(ctx context.Context) error {
 			}
 		}
 		ir.deliverQueueItems()
+
+		// Clear expired items from ir.recentFeedItems
+		recentFeedItemExpiry := time.Now().Add(-RECENT_FEED_ITEM_TTL)
+		for acc, created := range ir.recentFeedItems {
+			if created.Before(recentFeedItemExpiry) {
+				delete(ir.recentFeedItems, acc)
+			}
+		}
 	}
 }
 

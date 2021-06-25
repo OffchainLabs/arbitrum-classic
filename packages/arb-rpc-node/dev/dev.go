@@ -382,6 +382,9 @@ func (b *Backend) PendingSnapshot() (*snapshot.Snapshot, error) {
 	return nil, nil
 }
 
+func (b *Backend) Start(ctx context.Context) {
+}
+
 type L1BlockInfo struct {
 	blockId   *common.BlockId
 	timestamp *big.Int

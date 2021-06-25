@@ -43,6 +43,10 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 )
 
+type SequencerLockoutManager interface {
+	ShouldSequence() bool
+}
+
 type txQueueItem struct {
 	tx         *types.Transaction
 	resultChan chan error
@@ -64,6 +68,7 @@ type SequencerBatcher struct {
 	updateTimestampInterval         *big.Int
 	sequenceDelayedMessagesInterval *big.Int
 	createBatchBlockInterval        *big.Int
+	LockoutManager                  SequencerLockoutManager
 
 	sequencer common.Address
 	signer    types.Signer
@@ -214,6 +219,10 @@ func (b *SequencerBatcher) SendTransaction(_ context.Context, startTx *types.Tra
 	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan}
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+
+	if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
+		return errors.New("sequencer missing lockout")
+	}
 
 	if len(startResultChan) > 0 {
 		// startTx was already picked up by another thread
@@ -425,6 +434,9 @@ func (b *SequencerBatcher) Aggregator() *common.Address {
 func (b *SequencerBatcher) deliverDelayedMessages(chainTime inbox.ChainTime) (bool, error) {
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+	if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
+		return false, errors.New("sequencer lockout missing")
+	}
 	msgCount, err := b.db.GetMessageCount()
 	if err != nil {
 		return false, err
@@ -713,6 +725,9 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		default:
 		}
 		time.Sleep(b.chainTimeCheckInterval)
+		if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
+			continue
+		}
 		chainTime, err := getChainTime(ctx, b.client)
 		if err != nil {
 			logger.Warn().Err(err).Msg("Error getting chain time")
@@ -756,7 +771,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// Updates both prevMsgCount and nonce on success
 			complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
 			if err != nil {
-				logger.Error().Err(err).Msg("Error creating batch")
+				logger.Error().Err(err).Msg("error creating batch")
 			} else if complete {
 				b.lastCreatedBatchAt = blockNum
 			} else {
