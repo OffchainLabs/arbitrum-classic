@@ -3,17 +3,20 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"github.com/knadh/koanf/providers/structs"
 	"io"
 	"math/big"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/confmap"
+	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/mitchellh/mapstructure"
@@ -56,36 +59,44 @@ type Healthcheck struct {
 }
 
 type Lockout struct {
-	Redis             string `koanf:"redis"`
-	SelfRPCURL        string `koanf:"self-rpc-url"`
-	TimeoutMillis     int64  `koanf:"timeout-millis"`
-	MaxLatencyMillis  int64  `koanf:"max-latency-millis"`
-	SeqNumTimeoutSecs int64  `koanf:"seq-num-timeout-secs"`
+	Redis         string        `koanf:"redis"`
+	SelfRPCURL    string        `koanf:"self-rpc-url"`
+	Timeout       time.Duration `koanf:"timeout-millis"`
+	MaxLatency    time.Duration `koanf:"max-latency"`
+	SeqNumTimeout time.Duration `koanf:"seq-num-timeout"`
+}
+
+type Aggregator struct {
+	InboxAddress string `koanf:"inbox-address"`
+	MaxBatchTime int64  `koanf:"max-batch-time"`
+	Stateful     bool   `koanf:"stateful"`
+}
+
+type RPC struct {
+	Addr string `koanf:"addr"`
+	Port string `koanf:"port"`
+}
+
+type Sequencer struct {
+	CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
+	DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
+	Lockout                    Lockout `koanf:"lockout"`
+}
+
+type WS struct {
+	Addr string `koanf:"addr"`
+	Port string `koanf:"port"`
 }
 
 type Node struct {
-	Aggregator struct {
-		InboxAddress string `koanf:"inbox-address"`
-		MaxBatchTime int64  `koanf:"max-batch-time"`
-		Stateful     bool   `koanf:"stateful"`
-	} `koanf:"aggregator"`
-	Forwarder struct {
+	Aggregator Aggregator `koanf:"aggregator"`
+	Forwarder  struct {
 		Target string `koanf:"target"`
 	} `koanf:"forwarder"`
-	RPC struct {
-		Addr string `koanf:"addr"`
-		Port string `koanf:"port"`
-	} `koanf:"rpc"`
-	Sequencer struct {
-		CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
-		DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
-		Enable                     bool    `koanf:"enable"`
-		Lockout                    Lockout `koanf:"lockout"`
-	} `koanf:"sequencer"`
-	WS struct {
-		Addr string `koanf:"addr"`
-		Port string `koanf:"port"`
-	} `koanf:"ws"`
+	RPC       RPC       `koanf:"rpc"`
+	Sequencer Sequencer `koanf:"sequencer"`
+	Type      string    `koanf:"type"`
+	WS        WS        `koanf:"ws"`
 }
 
 type Persistent struct {
@@ -113,6 +124,11 @@ type Wallet struct {
 	Password string `koanf:"password"`
 }
 
+type Log struct {
+	RPC  string `koanf:"rpc"`
+	Core string `koanf:"core"`
+}
+
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               string      `koanf:"conf"`
@@ -124,11 +140,8 @@ type Config struct {
 	L1                 struct {
 		URL string `koanf:"url"`
 	} `koanf:"l1"`
-	Log struct {
-		RPC  string `koanf:"rpc"`
-		Core string `koanf:"core"`
-	} `koanf:"log"`
-	Node          Node       `kaonf:"sequencer"`
+	Log           Log        `koanf:"log"`
+	Node          Node       `koanf:"node"`
 	Persistent    Persistent `koanf:"persistent"`
 	PProfEnable   bool       `koanf:"pprof-enable"`
 	Rollup        Rollup     `koanf:"rollup"`
@@ -137,31 +150,54 @@ type Config struct {
 	Wallet        Wallet     `koanf:"wallet"`
 }
 
-func (c *Config) GetDatabasePath() string {
+func (c *Config) GetNodeDatabasePath() string {
 	return path.Join(c.Persistent.Chain, "db")
 }
 
-func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+func (c *Config) GetValidatorDatabasePath() string {
+	return path.Join(c.Persistent.Chain, "validator_db")
+}
+
+func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f := flag.NewFlagSet("", flag.ContinueOnError)
 
+	// Any default values need to be set in defaultConfig
+	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
+	f.Int("node.aggregator.max-batch-time", 10, "maxBatchTime=NumSeconds")
+	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
+	f.String("node.forwarder.target", "", "url of another node to send transactions through")
+	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
+	f.Int("node.rpc.port", 8547, "RPC port")
+	f.Int64("node.sequencer.create-batch-block-interval", 1, "block interval at which to create new batches")
+	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
+	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
+	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
+	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
+	f.String("node.ws.addr", "0.0.0.0", "websocket address")
+	f.Int("node.ws.port", 8548, "websocket port")
+
+	return ParseNonRelay(ctx, f)
+}
+
+func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+	f := flag.NewFlagSet("", flag.ContinueOnError)
+
+	AddFeedOutputOptions(f)
+
+	// Any default values need to be set in defaultConfig
+	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
+	f.String("validator.utils-address", "", "strategy for validator to use")
+	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
+
+	return ParseNonRelay(ctx, f)
+}
+
+func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
+	// Any default values need to be set in defaultConfig
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
-
-	f.String("node.aggregator.inbox-address", "", "address of the inbox contract")
-	f.Int64("node.aggregator.max-batch-time", 10, "maxBatchTime=NumSeconds")
-	f.Bool("node.aggregator.stateful", false, "enable pending state tracking")
-	f.String("node.forwarder.target", "", "url of another node to send transactions through")
-	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
-	f.String("node.rpc.port", "8547", "RPC port")
-	f.Int64("node.sequencer.create-batch-block-interval", 1, "block interval at which to create new batches")
-	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
-	f.Bool("node.sequencer.enable", false, "act as sequencer")
-	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
-	f.String("node.sequencer.lockout.self-rpc-url", "", "own RPC URL for other sequencers to failover to")
-	f.String("node.ws.addr", "0.0.0.0", "websocket address")
-	f.String("node.ws.port", "8548", "websocket port")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.Uint64("rollup.chain-id", 42161, "chain id of the arbitrum chain")
@@ -170,9 +206,7 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 
 	f.String("persistent.global-config", ".arbitrum", "location global configuration is located")
-	f.String("persistent.chain", "", "location chain specific state is located")
-
-	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
+	f.String("persistent.chain", "", "path that chain specific state is located")
 
 	f.Bool("wait-to-catch-up", false, "wait to catch up to the chain before opening the RPC")
 
@@ -315,8 +349,10 @@ func Parse(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *big.
 	return out, wallet, l1Client, l1ChainId, nil
 }
 
-func ParseFeed() (*Config, error) {
+func ParseRelay() (*Config, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+
+	AddFeedOutputOptions(f)
 
 	k, err := beginCommonParse(f)
 	if err != nil {
@@ -331,19 +367,24 @@ func ParseFeed() (*Config, error) {
 	return out, nil
 }
 
+func AddFeedOutputOptions(f *flag.FlagSet) {
+	// Any default values need to be set in defaultConfig
+	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
+	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
+	f.Int("feed.output.port", 9642, "port to bind the relay feed output to")
+	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
+	f.Duration("feed.output.client-timeout", 15*time.Second, "duraction to wait before timing out connections to client")
+	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
+}
+
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
+	// Any default values need to be set in defaultConfig
 	f.String("conf", "", "name of configuration file")
 
 	f.Bool("dump-conf", false, "print out currently active configuration file")
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
-	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
-	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
-	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
-	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
-	f.Duration("feed.output.client-timeout", 15*time.Second, "duraction to wait before timing out connections to client")
-	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 
 	f.Bool("healthcheck.enable", false, "enable healthcheck endpoint")
 	f.Bool("healthcheck.sequencer", false, "enable checking the health of the sequencer")
@@ -351,7 +392,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.Bool("healthcheck.metrics", false, "enable prometheus endpoint")
 	f.String("healthcheck.metrics-prefix", "", "prepend the specified prefix to the exported metrics names")
 	f.String("healthcheck.addr", "", "address to bind the healthcheck endpoint to")
-	f.String("healthcheck.port", "", "port to bind the healthcheck endpoint to")
+	f.Int("healthcheck.port", 0, "port to bind the healthcheck endpoint to")
 
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
@@ -369,29 +410,107 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	}
 
 	var k = koanf.New(".")
-	// Load configuration file if provided
 
+	// Populate default configuration so all environment variables will be retrieved
+	defaultConfig := Config{
+		Feed: Feed{
+			Input: FeedInput{
+				Timeout: 20 * time.Second,
+			},
+			Output: FeedOutput{
+				Addr:          "0.0.0.0",
+				Port:          "9642",
+				Ping:          5 * time.Second,
+				ClientTimeout: 15 * time.Second,
+				Workers:       128,
+			},
+		},
+		GasPrice: 4.5,
+		Log: Log{
+			Core: "info",
+			RPC:  "info",
+		},
+		Node: Node{
+			Aggregator: Aggregator{
+				MaxBatchTime: 10,
+			},
+			RPC: RPC{
+				Addr: "0.0.0.0",
+				Port: "8547",
+			},
+			Sequencer: Sequencer{
+				CreateBatchBlockInterval:   1,
+				DelayedMessagesTargetDelay: 12,
+				Lockout: Lockout{
+					Timeout:       30 * time.Second,
+					MaxLatency:    10 * time.Millisecond,
+					SeqNumTimeout: 5 * time.Minute,
+				},
+			},
+			Type: "forwarder",
+			WS: WS{
+				Addr: "0.0.0.0",
+				Port: "8548",
+			},
+		},
+		Persistent: Persistent{
+			GlobalConfig: ".arbitrum",
+		},
+		Rollup: Rollup{
+			ChainID: 42161,
+		},
+		Validator: Validator{
+			Strategy: "StakeLatest",
+		},
+	}
+	err = k.Load(structs.Provider(defaultConfig, "koanf"), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading empty config struct")
+	}
+
+	// Load configuration file if provided
 	configFile, _ := f.GetString("conf")
 	if len(configFile) > 0 {
-		if err := k.Load(file.Provider(configFile), json.Parser()); err != nil {
+		if err = k.Load(file.Provider(configFile), json.Parser()); err != nil {
 			return nil, errors.Wrap(err, "error loading config file")
 		}
 	}
 
 	// Any settings provided on command line override items in configuration file
 	// Command line parameters will be applied again later
-	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
 		return nil, errors.Wrap(err, "error loading config")
+	}
+
+	// Any settings provided through environment variables override all other custom settings
+	// Environment variable parameters will be applied again later
+	err = loadEnvironmentVariables(k)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading environment variables")
 	}
 
 	return k, nil
 }
 
+func loadEnvironmentVariables(k *koanf.Koanf) error {
+	return k.Load(env.Provider("ARB_NODE_", ".", func(s string) string {
+		return strings.Replace(strings.ToLower(
+			strings.TrimPrefix(s, "ARB_NODE_")), "_", ".", -1)
+	}), nil)
+}
+
 func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
-	// Any settings provided on command line override any custom parameters
-	// Second time command line parameters are applied
+	// Any settings provided on command line override any custom settings
+	// Second time command line parameters are applied so auto chain parameters can be overridden
 	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
 		return nil, nil, errors.Wrap(err, "error loading config")
+	}
+
+	// Any settings provided through environment variables override all other custom settings
+	// Second time environment variables are applied so auto chain parameters can be overridden
+	err := loadEnvironmentVariables(k)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error loading environment variables")
 	}
 
 	var out Config
@@ -405,7 +524,7 @@ func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
 		Result:           &out,
 		WeaklyTypedInput: true,
 	}
-	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
+	err = k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
 
 		return nil, nil, err
