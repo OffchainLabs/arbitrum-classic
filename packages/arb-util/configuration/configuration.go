@@ -411,7 +411,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	err = k.Load(confmap.Provider(map[string]interface{}{
 		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,
-		"node.sequencer.lockout.max-latency":     10 * time.Millisecond,
+		"node.sequencer.lockout.max-latency":     10 * time.Second,
 		"node.sequencer.lockout.seq-num-timeout": 5 * time.Minute,
 	}, "."), nil)
 	if err != nil {

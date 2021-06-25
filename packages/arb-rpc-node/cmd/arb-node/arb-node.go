@@ -134,7 +134,10 @@ func startup() error {
 			badConfig = true
 			fmt.Println("Aggregator node needs --node.aggregator.inbox-address")
 		}
-	} else if config.Node.Type != "sequencer" {
+	} else if config.Node.Type == "sequencer" {
+		// Sequencer always waits
+		config.WaitToCatchUp = true
+	} else {
 		badConfig = true
 		fmt.Printf("Unrecognized node type %s", config.Node.Type)
 	}
