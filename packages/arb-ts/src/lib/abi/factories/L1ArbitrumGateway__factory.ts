@@ -172,6 +172,19 @@ const _abi = [
     type: 'event',
   },
   {
+    inputs: [],
+    name: 'STORAGE_GAP',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'address',
@@ -267,13 +280,23 @@ const _abi = [
         name: '_initialDestination',
         type: 'address',
       },
+      {
+        internalType: 'bytes',
+        name: '_initialData',
+        type: 'bytes',
+      },
     ],
-    name: 'getCurrentDestination',
+    name: 'getExternalCall',
     outputs: [
       {
         internalType: 'address',
-        name: '',
+        name: 'target',
         type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
       },
     ],
     stateMutability: 'view',
@@ -430,19 +453,6 @@ const _abi = [
       },
     ],
     stateMutability: 'pure',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'router',
-    outputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
     type: 'function',
   },
 ]

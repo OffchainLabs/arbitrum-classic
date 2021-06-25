@@ -423,6 +423,14 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		}
 	}
 
+	// Env var settings override config file
+	k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
+		// FOO__BAR -> foo-bar to handle dash in config names
+		s = strings.Replace(strings.ToLower(
+			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
+		return strings.Replace(s, "_", ".", -1)
+	}), nil)
+
 	// Any settings provided on command line override items in configuration file
 	// Command line parameters will be applied again later
 	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {

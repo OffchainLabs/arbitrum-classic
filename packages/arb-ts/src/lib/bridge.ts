@@ -15,7 +15,7 @@
  */
 /* eslint-env node */
 'use strict'
-import { Signer, BigNumber, ethers, ContractReceipt } from 'ethers'
+import { Signer, BigNumber, ethers, ContractReceipt, constants } from 'ethers'
 import { L1Bridge } from './l1Bridge'
 import { L2Bridge } from './l2Bridge'
 import { BridgeHelper } from './bridge_helpers'
@@ -191,6 +191,11 @@ export class Bridge {
     destinationAddress?: string,
     overrides?: PayableOverrides
   ) {
+    const l1ChainId = await this.l1Bridge.l1Signer.getChainId()
+    const { l1WethGateway: l1WethGatewayAddress } = networks[
+      l1ChainId
+    ].tokenBridge
+
     const gasPriceBid =
       retryableGasArgs.gasPriceBid ||
       (await this.l2Bridge.l2Provider.getGasPrice())
@@ -200,6 +205,14 @@ export class Bridge {
     const expectedL1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
     )
+
+    let estimateGasCallValue = constants.Zero
+
+    if (l1WethGatewayAddress === expectedL1GatewayAddress) {
+      // forwarded deposited eth as call value for weth deposit
+      estimateGasCallValue = amount
+    }
+
     const l1Gateway = L1ERC20Gateway__factory.connect(
       expectedL1GatewayAddress,
       this.l1Bridge.l1Provider
@@ -232,9 +245,9 @@ export class Bridge {
     const maxGas = (
       await nodeInterface.estimateRetryableTicket(
         expectedL1GatewayAddress,
-        ethers.utils.parseEther('0.05'),
+        ethers.utils.parseEther('0.05').add(estimateGasCallValue),
         l2Dest,
-        0,
+        estimateGasCallValue,
         maxSubmissionPrice,
         sender,
         sender,
@@ -356,6 +369,84 @@ export class Bridge {
 
     if (!inboxSeqNum) throw new Error('Inbox not triggered')
     return this.calculateL2RetryableTransactionHash(inboxSeqNum[0])
+  }
+
+  public async redeemRetryableTicket(
+    l1Transaction: string | ContractReceipt,
+    waitTimeForL2Receipt = 900000, // 15 minutes
+    overrides?: PayableOverrides
+  ) {
+    if (typeof l1Transaction == 'string') {
+      l1Transaction = await this.getL1Transaction(l1Transaction)
+    }
+    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+      l1Transaction
+    )
+    if (!inboxSeqNum) throw new Error('Inbox not triggered')
+
+    const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
+    console.log('waiting for retryable ticket...', l2TxnHash)
+
+    const l2Txn = await this.l2Bridge.l2Provider.waitForTransaction(
+      l2TxnHash,
+      undefined,
+      waitTimeForL2Receipt
+    )
+    if (!l2Txn) throw new Error('retryable ticket not found')
+    console.log('retryable ticket found!')
+    if (l2Txn.status === 0) {
+      console.warn('retryable ticket failed', l2Txn)
+      throw new Error('l2 txn failed')
+    }
+    const retryHash = await BridgeHelper.calculateL2RetryableTransactionHash(
+      inboxSeqNum[0],
+      this.l2Bridge.l2Provider
+    )
+    console.log('Redeeming retryable ticket:', retryHash)
+    return this.l2Bridge.arbRetryableTx.redeem(retryHash)
+  }
+
+  public async cancelRetryableTicket(
+    l1Transaction: string | ContractReceipt,
+    waitTimeForL2Receipt = 900000, // 15 minutes
+    overrides?: PayableOverrides
+  ) {
+    if (typeof l1Transaction == 'string') {
+      l1Transaction = await this.getL1Transaction(l1Transaction)
+    }
+    const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
+      l1Transaction
+    )
+    if (!inboxSeqNum) throw new Error('Inbox not triggered')
+
+    const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
+    console.log('waiting for retryable ticket...', l2TxnHash)
+
+    const l2Txn = await this.l2Bridge.l2Provider.waitForTransaction(
+      l2TxnHash,
+      undefined,
+      waitTimeForL2Receipt
+    )
+    if (!l2Txn) throw new Error('retryable ticket not found')
+    console.log('retryable ticket found!')
+    if (l2Txn.status === 0) {
+      console.warn('retryable ticket failed', l2Txn)
+      throw new Error('l2 txn failed')
+    }
+    const redemptionTxHash = await BridgeHelper.calculateL2RetryableTransactionHash(
+      inboxSeqNum[0],
+      this.l2Bridge.l2Provider
+    )
+    const redemptionRec = await this.l1Bridge.l1Provider.getTransactionReceipt(
+      redemptionTxHash
+    )
+    if (redemptionRec && redemptionRec.status === 1) {
+      throw new Error(
+        `Can't cancel retryable, it's already been redeemed: ${redemptionTxHash}`
+      )
+    }
+
+    return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash)
   }
 
   public getBuddyDeployInL2Transaction(
@@ -565,6 +656,49 @@ export class Bridge {
       address,
       whiteListAddress,
       this.l1Bridge.l1Provider
+    )
+  }
+
+  public async setGateways(
+    tokenAddresses: string[],
+    gatewayAddresses: string[]
+  ) {
+    const gasPriceBid = await this.l2Bridge.l2Provider.getGasPrice()
+
+    const maxSubmissionPrice = (
+      await this.l2Bridge.getTxnSubmissionPrice(
+        // 20 per address, 100 as buffer/ estimate for any additional calldata
+        100 + 20 * (tokenAddresses.length + gatewayAddresses.length)
+      )
+    )[0]
+    return this.l1GatewayRouter.functions.setGateways(
+      tokenAddresses,
+      gatewayAddresses,
+      0,
+      gasPriceBid,
+      maxSubmissionPrice,
+      {
+        value: maxSubmissionPrice,
+      }
+    )
+  }
+  public async getL1GatewaySetEventData() {
+    const l1ChainId = await this.l1Bridge.l1Signer.getChainId()
+    const l1GatewayRouterAddress =
+      networks[l1ChainId].tokenBridge.l1GatewayRouter
+    return BridgeHelper.getGatewaySetEventData(
+      l1GatewayRouterAddress,
+      this.l1Bridge.l1Provider
+    )
+  }
+
+  public async getL2GatewaySetEventData() {
+    const l1ChainId = await this.l1Bridge.l1Signer.getChainId()
+    const l2GatewayRouterAddress =
+      networks[l1ChainId].tokenBridge.l2GatewayRouter
+    return BridgeHelper.getGatewaySetEventData(
+      l2GatewayRouterAddress,
+      this.l2Bridge.l2Provider
     )
   }
 }

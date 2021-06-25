@@ -23,6 +23,7 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L2GatewayTesterInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP()': FunctionFragment
     'beaconProxyFactory()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'cloneableProxyHash()': FunctionFragment
@@ -35,10 +36,14 @@ interface L2GatewayTesterInterface extends ethers.utils.Interface {
     'inboundEscrowAndCall(address,uint256,address,address,bytes)': FunctionFragment
     'initialize(address,address,address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
-    'postUpgradeInit(address)': FunctionFragment
-    'router()': FunctionFragment
+    'setStubAddressOracleReturn(address)': FunctionFragment
+    'stubAddressOracleReturn()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'beaconProxyFactory',
     values?: undefined
@@ -82,11 +87,15 @@ interface L2GatewayTesterInterface extends ethers.utils.Interface {
     values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
-    functionFragment: 'postUpgradeInit',
+    functionFragment: 'setStubAddressOracleReturn',
     values: [string]
   ): string
-  encodeFunctionData(functionFragment: 'router', values?: undefined): string
+  encodeFunctionData(
+    functionFragment: 'stubAddressOracleReturn',
+    values?: undefined
+  ): string
 
+  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'beaconProxyFactory',
     data: BytesLike
@@ -127,10 +136,13 @@ interface L2GatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
-    functionFragment: 'postUpgradeInit',
+    functionFragment: 'setStubAddressOracleReturn',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
+  decodeFunctionResult(
+    functionFragment: 'stubAddressOracleReturn',
+    data: BytesLike
+  ): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -159,6 +171,10 @@ export class L2GatewayTester extends Contract {
   interface: L2GatewayTesterInterface
 
   functions: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
+
     beaconProxyFactory(overrides?: CallOverrides): Promise<[string]>
 
     'beaconProxyFactory()'(overrides?: CallOverrides): Promise<[string]>
@@ -282,20 +298,24 @@ export class L2GatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
-    postUpgradeInit(
-      _beaconProxyFactory: string,
+    setStubAddressOracleReturn(
+      _stubValue: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    'postUpgradeInit(address)'(
-      _beaconProxyFactory: string,
+    'setStubAddressOracleReturn(address)'(
+      _stubValue: string,
       overrides?: Overrides
     ): Promise<ContractTransaction>
 
-    router(overrides?: CallOverrides): Promise<[string]>
+    stubAddressOracleReturn(overrides?: CallOverrides): Promise<[string]>
 
-    'router()'(overrides?: CallOverrides): Promise<[string]>
+    'stubAddressOracleReturn()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   beaconProxyFactory(overrides?: CallOverrides): Promise<string>
 
@@ -420,21 +440,25 @@ export class L2GatewayTester extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  postUpgradeInit(
-    _beaconProxyFactory: string,
+  setStubAddressOracleReturn(
+    _stubValue: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  'postUpgradeInit(address)'(
-    _beaconProxyFactory: string,
+  'setStubAddressOracleReturn(address)'(
+    _stubValue: string,
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
-  router(overrides?: CallOverrides): Promise<string>
+  stubAddressOracleReturn(overrides?: CallOverrides): Promise<string>
 
-  'router()'(overrides?: CallOverrides): Promise<string>
+  'stubAddressOracleReturn()'(overrides?: CallOverrides): Promise<string>
 
   callStatic: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
+
     beaconProxyFactory(overrides?: CallOverrides): Promise<string>
 
     'beaconProxyFactory()'(overrides?: CallOverrides): Promise<string>
@@ -558,19 +582,19 @@ export class L2GatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
-    postUpgradeInit(
-      _beaconProxyFactory: string,
+    setStubAddressOracleReturn(
+      _stubValue: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    'postUpgradeInit(address)'(
-      _beaconProxyFactory: string,
+    'setStubAddressOracleReturn(address)'(
+      _stubValue: string,
       overrides?: CallOverrides
     ): Promise<void>
 
-    router(overrides?: CallOverrides): Promise<string>
+    stubAddressOracleReturn(overrides?: CallOverrides): Promise<string>
 
-    'router()'(overrides?: CallOverrides): Promise<string>
+    'stubAddressOracleReturn()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -609,6 +633,10 @@ export class L2GatewayTester extends Contract {
   }
 
   estimateGas: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
+
     beaconProxyFactory(overrides?: CallOverrides): Promise<BigNumber>
 
     'beaconProxyFactory()'(overrides?: CallOverrides): Promise<BigNumber>
@@ -732,22 +760,26 @@ export class L2GatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
-    postUpgradeInit(
-      _beaconProxyFactory: string,
+    setStubAddressOracleReturn(
+      _stubValue: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    'postUpgradeInit(address)'(
-      _beaconProxyFactory: string,
+    'setStubAddressOracleReturn(address)'(
+      _stubValue: string,
       overrides?: Overrides
     ): Promise<BigNumber>
 
-    router(overrides?: CallOverrides): Promise<BigNumber>
+    stubAddressOracleReturn(overrides?: CallOverrides): Promise<BigNumber>
 
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
+    'stubAddressOracleReturn()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     beaconProxyFactory(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'beaconProxyFactory()'(
@@ -884,18 +916,22 @@ export class L2GatewayTester extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
-    postUpgradeInit(
-      _beaconProxyFactory: string,
+    setStubAddressOracleReturn(
+      _stubValue: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    'postUpgradeInit(address)'(
-      _beaconProxyFactory: string,
+    'setStubAddressOracleReturn(address)'(
+      _stubValue: string,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
 
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    stubAddressOracleReturn(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
 
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+    'stubAddressOracleReturn()'(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>
   }
 }

@@ -199,6 +199,12 @@ const _abi = [
       {
         indexed: false,
         internalType: 'bytes',
+        name: 'newData',
+        type: 'bytes',
+      },
+      {
+        indexed: false,
+        internalType: 'bytes',
         name: 'data',
         type: 'bytes',
       },
@@ -211,6 +217,19 @@ const _abi = [
     ],
     name: 'WithdrawRedirected',
     type: 'event',
+  },
+  {
+    inputs: [],
+    name: 'STORAGE_GAP',
+    outputs: [
+      {
+        internalType: 'address',
+        name: '',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
   },
   {
     inputs: [
@@ -332,13 +351,23 @@ const _abi = [
         name: '_initialDestination',
         type: 'address',
       },
+      {
+        internalType: 'bytes',
+        name: '_initialData',
+        type: 'bytes',
+      },
     ],
-    name: 'getCurrentDestination',
+    name: 'getExternalCall',
     outputs: [
       {
         internalType: 'address',
-        name: '',
+        name: 'target',
         type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: 'data',
+        type: 'bytes',
       },
     ],
     stateMutability: 'view',
@@ -509,21 +538,13 @@ const _abi = [
     outputs: [
       {
         internalType: 'address',
-        name: '',
+        name: '_newTo',
         type: 'address',
       },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'router',
-    outputs: [
       {
-        internalType: 'address',
-        name: '',
-        type: 'address',
+        internalType: 'bytes',
+        name: '_newData',
+        type: 'bytes',
       },
     ],
     stateMutability: 'view',
@@ -545,6 +566,11 @@ const _abi = [
         internalType: 'address',
         name: '_newDestination',
         type: 'address',
+      },
+      {
+        internalType: 'bytes',
+        name: '_newData',
+        type: 'bytes',
       },
       {
         internalType: 'bytes',

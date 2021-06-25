@@ -22,17 +22,22 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface GatewayRouterInterface extends ethers.utils.Interface {
   functions: {
+    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'defaultGateway()': FunctionFragment
     'finalizeInboundTransfer(address,address,address,uint256,bytes)': FunctionFragment
     'getGateway(address)': FunctionFragment
     'getOutboundCalldata(address,address,address,uint256,bytes)': FunctionFragment
+    'isRouter()': FunctionFragment
     'l1TokenToGateway(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
-    'router()': FunctionFragment
   }
 
+  encodeFunctionData(
+    functionFragment: 'STORAGE_GAP',
+    values?: undefined
+  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -54,6 +59,7 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     values: [string, string, string, BigNumberish, BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'isRouter', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'l1TokenToGateway',
     values: [string]
@@ -69,8 +75,8 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
       BytesLike
     ]
   ): string
-  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
+  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -92,6 +98,7 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
     functionFragment: 'getOutboundCalldata',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'isRouter', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'l1TokenToGateway',
     data: BytesLike
@@ -100,7 +107,6 @@ interface GatewayRouterInterface extends ethers.utils.Interface {
     functionFragment: 'outboundTransfer',
     data: BytesLike
   ): Result
-  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'DefaultGatewayUpdated(address)': EventFragment
@@ -131,6 +137,10 @@ export class GatewayRouter extends Contract {
   interface: GatewayRouterInterface
 
   functions: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -195,6 +205,10 @@ export class GatewayRouter extends Contract {
       overrides?: CallOverrides
     ): Promise<[string]>
 
+    isRouter(overrides?: CallOverrides): Promise<[boolean]>
+
+    'isRouter()'(overrides?: CallOverrides): Promise<[boolean]>
+
     l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<[string]>
 
     'l1TokenToGateway(address)'(
@@ -221,11 +235,11 @@ export class GatewayRouter extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
-
-    router(overrides?: CallOverrides): Promise<[string]>
-
-    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
+
+  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -288,6 +302,10 @@ export class GatewayRouter extends Contract {
     overrides?: CallOverrides
   ): Promise<string>
 
+  isRouter(overrides?: CallOverrides): Promise<boolean>
+
+  'isRouter()'(overrides?: CallOverrides): Promise<boolean>
+
   l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<string>
 
   'l1TokenToGateway(address)'(
@@ -315,11 +333,11 @@ export class GatewayRouter extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
-  router(overrides?: CallOverrides): Promise<string>
-
-  'router()'(overrides?: CallOverrides): Promise<string>
-
   callStatic: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -381,6 +399,10 @@ export class GatewayRouter extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    isRouter(overrides?: CallOverrides): Promise<boolean>
+
+    'isRouter()'(overrides?: CallOverrides): Promise<boolean>
+
     l1TokenToGateway(arg0: string, overrides?: CallOverrides): Promise<string>
 
     'l1TokenToGateway(address)'(
@@ -407,10 +429,6 @@ export class GatewayRouter extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>
-
-    router(overrides?: CallOverrides): Promise<string>
-
-    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -445,6 +463,10 @@ export class GatewayRouter extends Contract {
   }
 
   estimateGas: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -506,6 +528,10 @@ export class GatewayRouter extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    isRouter(overrides?: CallOverrides): Promise<BigNumber>
+
+    'isRouter()'(overrides?: CallOverrides): Promise<BigNumber>
+
     l1TokenToGateway(
       arg0: string,
       overrides?: CallOverrides
@@ -535,13 +561,13 @@ export class GatewayRouter extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
-
-    router(overrides?: CallOverrides): Promise<BigNumber>
-
-    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
+    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -608,6 +634,10 @@ export class GatewayRouter extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    isRouter(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'isRouter()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
     l1TokenToGateway(
       arg0: string,
       overrides?: CallOverrides
@@ -637,9 +667,5 @@ export class GatewayRouter extends Contract {
       _data: BytesLike,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
-
-    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

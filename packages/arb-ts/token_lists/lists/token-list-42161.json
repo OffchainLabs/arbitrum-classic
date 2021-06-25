@@ -1,0 +1,239 @@
+{
+  "name": "Arb1",
+  "timestamp": "2021-06-18T20:57:55.562Z",
+  "version": {
+    "major": 0,
+    "minor": 1,
+    "patch": 0
+  },
+  "tokens": [
+    {
+      "chainId": 42161,
+      "address": "0x0e15258734300290a651FdBAe8dEb039a8E7a2FA",
+      "name": "Alchemy",
+      "symbol": "ALCH",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/ALCH-icon.png",
+      "extensions": {
+        "l1Address": "0x0000A1c00009A619684135B824Ba02f7FbF3A572",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x35aa6789AA5d178c53fc0657b68AE684B37960Ff",
+      "name": "Capital.finance",
+      "symbol": "CAP",
+      "decimals": 18,
+      "logoURI": "",
+      "extensions": {
+        "l1Address": "0xEDA6eFE5556e134Ef52f2F858aa1e81c84CDA84b",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x3a8B787f78D775AECFEEa15706D4221B40F345AB",
+      "name": "CelerToken",
+      "symbol": "CELR",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/CELR-icon.png",
+      "extensions": {
+        "l1Address": "0x4F9254C83EB525f9FCf346490bbb3ed28a81C667",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xf4D48Ce3ee1Ac3651998971541bAdbb9A14D7234",
+      "name": "Cream",
+      "symbol": "CREAM",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/CREAM-icon.png",
+      "extensions": {
+        "l1Address": "0x2ba592F78dB6436527729929AAf6c908497cB200",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978",
+      "name": "Curve DAO Token",
+      "symbol": "CRV",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/CRV-icon.png",
+      "extensions": {
+        "l1Address": "0xD533a949740bb3306d119CC777fa900bA034cd52",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xC3Ae0333F0F34aa734D5493276223d95B8F9Cb37",
+      "name": "DXdao",
+      "symbol": "DXD",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/DXD-icon.png",
+      "extensions": {
+        "l1Address": "0xa1d65E8fB6e87b60FECCBc582F7f97804B725521",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x969131D8ddC06C2Be11a13e6E7fACF22CF57d95e",
+      "name": "dForce EUR",
+      "symbol": "EUX",
+      "decimals": 18,
+      "logoURI": "",
+      "extensions": {
+        "l1Address": "0xb986F3a2d91d3704Dc974A24FB735dCc5E3C1E70",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xBDeF0E9ef12E689F366fe494A7A7D0dad25D9286",
+      "name": "Fuse Token",
+      "symbol": "FUSE",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/FUSE-icon.png",
+      "extensions": {
+        "l1Address": "0x970B9bB2C0444F5E81e9d0eFb84C8ccdcdcAf84d",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xa0b862F60edEf4452F25B4160F177db44DeB6Cf1",
+      "name": "Gnosis Token",
+      "symbol": "GNO",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/GNO-icon.png",
+      "extensions": {
+        "l1Address": "0x6810e776880C02933D47DB1b9fc05908e5386b96",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x23A941036Ae778Ac51Ab04CEa08Ed6e2FE103614",
+      "name": "Graph Token",
+      "symbol": "GRT",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/GRT-icon.png",
+      "extensions": {
+        "l1Address": "0xc944E90C64B2c07662A292be6244BDf05Cda44a7",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xf97f4df75117a78c1A5a0DBb814Af92458539FB4",
+      "name": "ChainLink Token",
+      "symbol": "LINK",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/LINK-icon.png",
+      "extensions": {
+        "l1Address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x2e9a6Df78E42a30712c10a9Dc4b1C8656f8F2879",
+      "name": "Maker",
+      "symbol": "MKR",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/MKR-icon.png",
+      "extensions": {
+        "l1Address": "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xef888bcA6AB6B1d26dbeC977C455388ecd794794",
+      "name": "Rari Governance Token",
+      "symbol": "RGT",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/RGT-icon.png",
+      "extensions": {
+        "l1Address": "0xD291E7a03283640FDc51b121aC401383A46cC623",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xd4d42F0b6DEF4CE0383636770eF773390d85c61A",
+      "name": "SushiToken",
+      "symbol": "SUSHI",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/SUSHI-icon.png",
+      "extensions": {
+        "l1Address": "0x6B3595068778DD592e39A122f4f5a5cF09C90fE2",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0",
+      "name": "Uniswap",
+      "symbol": "UNI",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/UNI-icon.png",
+      "extensions": {
+        "l1Address": "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xcd14C3A2ba27819B352aae73414A26e2b366dC50",
+      "name": "dForce USD",
+      "symbol": "USX",
+      "decimals": 18,
+      "logoURI": "",
+      "extensions": {
+        "l1Address": "0x0a5E677a6A24b2F1A2Bf4F3bFfC443231d2fDEc8",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
+      "name": "Wrapped BTC",
+      "symbol": "WBTC",
+      "decimals": 8,
+      "logoURI": "https://zapper.fi/images/WBTC-icon.png",
+      "extensions": {
+        "l1Address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0xcAFcD85D8ca7Ad1e1C6F82F651fA15E33AEfD07b",
+      "name": "Wootrade Network",
+      "symbol": "WOO",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/WOO-icon.png",
+      "extensions": {
+        "l1Address": "0x4691937a7508860F876c9c0a2a617E7d9E945D4B",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    },
+    {
+      "chainId": 42161,
+      "address": "0x82e3A8F066a6989666b031d916c43672085b1582",
+      "name": "yearn.finance",
+      "symbol": "YFI",
+      "decimals": 18,
+      "logoURI": "https://zapper.fi/images/YFI-icon.png",
+      "extensions": {
+        "l1Address": "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e",
+        "l1GatewayAddress": "0xa3A7B6F88361F48403514059F1F16C8E78d60EeC"
+      }
+    }
+  ]
+}
