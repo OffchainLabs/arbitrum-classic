@@ -47,6 +47,8 @@ contract L1ERC20Gateway is WhitelistConsumer, L1ArbitrumExtendedGateway {
         require(_l2BeaconProxyFactory != address(0), "INVALID_BEACON");
         cloneableProxyHash = _cloneableProxyHash;
         l2BeaconProxyFactory = _l2BeaconProxyFactory;
+        // disable whitelist by default
+        whitelist = address(0);
     }
 
     function postUpgradeInit() external {
