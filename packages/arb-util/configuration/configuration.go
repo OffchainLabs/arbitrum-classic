@@ -407,6 +407,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	// Load defaults that are not specified on command line
 	err = k.Load(confmap.Provider(map[string]interface{}{
+		"feed.output.queue":                      100,
 		"node.sequencer.lockout.timeout":         30 * time.Second,
 		"node.sequencer.lockout.max-latency":     10 * time.Millisecond,
 		"node.sequencer.lockout.seq-num-timeout": 5 * time.Minute,
