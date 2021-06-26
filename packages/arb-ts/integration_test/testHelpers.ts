@@ -82,6 +82,9 @@ export const warn = (text: string) => {
 
 export const instantiateRandomBridge = () => {
   const testPk = utils.formatBytes32String(Math.random().toString())
+  prettyLog(
+    `Generated wallet, pk: ${testPk} address: ${new Wallet(testPk).address} `
+  )
   return instantiateBridge(testPk)
 }
 
