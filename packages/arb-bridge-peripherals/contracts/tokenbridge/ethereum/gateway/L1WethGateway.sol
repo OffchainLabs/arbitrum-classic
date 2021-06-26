@@ -45,6 +45,8 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         l2Weth = _l2Weth;
     }
 
+    function postUpgradeInit() external {}
+
     function createOutboundTx(
         address _l1Token,
         address _from,
