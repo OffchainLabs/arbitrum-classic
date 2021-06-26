@@ -37,7 +37,6 @@ describe('Ether', async () => {
     const newBalance = await bridge.l2Provider.getBalance(randomAddress)
     expect(newBalance.eq(amountToSend)).to.be.true
   })
-
   it('deposits ether', async () => {
     const { bridge } = await instantiateRandomBridge()
     await fundL1(bridge)
@@ -94,6 +93,8 @@ describe('Ether', async () => {
     await fundL2(bridge)
     const ethToWithdraw = utils.parseEther('0.00002')
 
+    const initialBalance = await bridge.l2Bridge.getL2EthBalance()
+
     const withdrawEthRes = await bridge.withdrawETH(ethToWithdraw)
     const withdrawEthRec = await withdrawEthRes.wait()
 
@@ -101,9 +102,11 @@ describe('Ether', async () => {
       ARB_GAS_INFO,
       bridge.l2Provider
     )
-    const inWei = await arbGasInfo.getPricesInWei()
     expect(withdrawEthRec.status).to.equal(1)
 
+    const inWei = await arbGasInfo.getPricesInWei({
+      blockTag: withdrawEthRec.blockNumber,
+    })
     const withdrawEventData = (
       await bridge.getWithdrawalsInL2Transaction(withdrawEthRec)
     )[0]
@@ -116,7 +119,11 @@ describe('Ether', async () => {
       .add(withdrawEthRec.gasUsed.mul(inWei[5]))
 
     // TODO
-    console.log(`This number should have a lot of 9s: ${totalEth.toString()}`)
+    console.log(
+      `This number should be zero...? ${initialBalance
+        .sub(totalEth)
+        .toString()}`
+    )
 
     expect(true).to.be.true
   })
