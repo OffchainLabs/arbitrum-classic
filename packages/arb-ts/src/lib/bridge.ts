@@ -170,9 +170,10 @@ export class Bridge {
    */
   public async approveToken(
     erc20L1Address: string,
+    amount?: BigNumber,
     overrides?: PayableOverrides
   ) {
-    return this.l1Bridge.approveToken(erc20L1Address, overrides)
+    return this.l1Bridge.approveToken(erc20L1Address, amount, overrides)
   }
 
   /**

@@ -215,6 +215,7 @@ export class L1Bridge {
 
   public async approveToken(
     erc20L1Address: string,
+    amount?: BigNumber,
     overrides: PayableOverrides = {}
   ) {
     const tokenData = await this.getAndUpdateL1TokenData(erc20L1Address)
@@ -225,7 +226,7 @@ export class L1Bridge {
     const gatewayAddress = await this.getGatewayAddress(erc20L1Address)
     return tokenData.ERC20.contract.functions.approve(
       gatewayAddress,
-      MIN_APPROVAL,
+      amount || MIN_APPROVAL,
       overrides
     )
   }
