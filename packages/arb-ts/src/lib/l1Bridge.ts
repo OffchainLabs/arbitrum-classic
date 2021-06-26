@@ -64,7 +64,6 @@ export class L1Bridge {
   inboxCached?: Inbox
   l1Tokens: Tokens
   l1Provider: providers.Provider
-  l1EthBalance: BigNumber
   chainIdCache?: number
 
   constructor(l1GatewayRouterAddress: string, l1Signer: Signer) {
@@ -81,7 +80,6 @@ export class L1Bridge {
       l1GatewayRouterAddress,
       l1Signer
     )
-    this.l1EthBalance = BigNumber.from(0)
   }
 
   public async updateAllL1Tokens() {
@@ -287,10 +285,8 @@ export class L1Bridge {
     return this.inboxCached
   }
 
-  public async getAndUpdateL1EthBalance(): Promise<BigNumber> {
-    const bal = await this.l1Signer.getBalance()
-    this.l1EthBalance = bal
-    return bal
+  public getL1EthBalance(): Promise<BigNumber> {
+    return this.l1Signer.getBalance()
   }
 
   public async getChainId() {

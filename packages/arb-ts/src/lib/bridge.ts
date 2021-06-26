@@ -48,8 +48,8 @@ export class Bridge {
 
   public updateAllBalances() {
     this.updateAllTokens()
-    this.getAndUpdateL1EthBalance()
-    this.getAndUpdateL2EthBalance()
+    this.getL1EthBalance()
+    this.getL2EthBalance()
   }
 
   static async init(
@@ -139,10 +139,6 @@ export class Bridge {
 
   get l1Tokens() {
     return this.l1Bridge.l1Tokens
-  }
-
-  get l1EthBalance() {
-    return this.l1Bridge.l1EthBalance
   }
 
   get l1GatewayRouter() {
@@ -296,12 +292,12 @@ export class Bridge {
     return this.l2Bridge.getAndUpdateL2TokenData(erc20l1Address, l2TokenAddress)
   }
 
-  public async getAndUpdateL1EthBalance() {
-    return this.l1Bridge.getAndUpdateL1EthBalance()
+  public async getL1EthBalance() {
+    return this.l1Bridge.getL1EthBalance()
   }
 
-  public async getAndUpdateL2EthBalance() {
-    return this.l2Bridge.getAndUpdateL2EthBalance()
+  public async getL2EthBalance() {
+    return this.l2Bridge.getL2EthBalance()
   }
 
   public getL2Transaction(l2TransactionHash: string) {

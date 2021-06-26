@@ -73,7 +73,7 @@ describe('Ether', () => {
     for (let i = 0; i < 60; i++) {
       prettyLog('balance check attempt ' + (i + 1))
       await wait(5000)
-      const testWalletL2EthBalance = await bridge.getAndUpdateL2EthBalance()
+      const testWalletL2EthBalance = await bridge.getL2EthBalance()
       if (testWalletL2EthBalance.gt(constants.Zero)) {
         prettyLog(`balance updated!  ${testWalletL2EthBalance.toString()}`)
         expect(true).to.be.true
@@ -104,7 +104,7 @@ describe('Ether', () => {
     )[0]
     expect(withdrawEventData).to.exist
 
-    const etherBalance = await bridge.getAndUpdateL2EthBalance()
+    const etherBalance = await bridge.getL2EthBalance()
 
     const totalEth = etherBalance
       .add(ethToWithdraw)
