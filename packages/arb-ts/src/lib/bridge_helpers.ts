@@ -263,6 +263,22 @@ export class BridgeHelper {
     )
   }
 
+  static getOutboundTransferData = async (
+    gatewayAddress: string,
+    provider: providers.Provider,
+    filter: ethers.providers.Filter = {}
+  ) => {
+    // TODO: does this work?
+    const contract = L1ERC20Gateway__factory.connect(gatewayAddress, provider)
+    const logs = await BridgeHelper.getEventLogs(
+      'OutboundTransferInitiated',
+      contract,
+      [],
+      filter
+    )
+    return logs
+  }
+
   public static getEventLogs = (
     eventName: string,
     connectedContract: Contract,
