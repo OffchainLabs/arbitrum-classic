@@ -123,7 +123,6 @@ describe('sanity checks', async () => {
     const gateway = await bridge.l1Bridge.getGatewayAddress(
       l1Network.tokenBridge.l1Weth
     )
-    console.warn('gw', gateway)
 
     expect(gateway).to.equal(l1Network.tokenBridge.l1WethGateway)
   })
