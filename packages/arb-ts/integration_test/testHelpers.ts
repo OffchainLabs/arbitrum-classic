@@ -118,11 +118,10 @@ export const fundL2Token = async (bridge: Bridge) => {
     const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
     const l2Address = await bridge.getERC20L2Address(existentTestERC20)
     const testToken = TestERC20__factory.connect(l2Address, preFundedL2Wallet)
-    const x = await testToken.balanceOf(preFundedL2Wallet.address)
 
     const res = await testToken.transfer(testWalletAddress, tokenFundAmount)
-
     const rec = await res.wait()
+
     const result = rec.status === 1
     result && prettyLog('Funded L2 account w/ tokens')
 

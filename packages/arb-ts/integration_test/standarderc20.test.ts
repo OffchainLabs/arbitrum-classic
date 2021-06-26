@@ -126,8 +126,6 @@ const depositTokenTest = async (bridge: Bridge) => {
 
   const testWalletL2Balance = l2Data && l2Data.ERC20 && l2Data.ERC20.balance
 
-  console.warn('')
-
   expect(testWalletL2Balance && testWalletL2Balance.eq(tokenDepositAmount)).to
     .be.true
 }
