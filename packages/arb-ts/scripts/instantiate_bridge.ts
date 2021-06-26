@@ -7,7 +7,7 @@ dotenv.config()
 
 const pk = process.env['DEVNET_PRIVKEY'] as string
 const mnemonic = process.env['DEV_MNEMONIC'] as string
-const verbose = process.env['verbose'] as string
+const verbose = process.env['VERBOSE'] as string
 
 const defaultNetworkId = 4
 
