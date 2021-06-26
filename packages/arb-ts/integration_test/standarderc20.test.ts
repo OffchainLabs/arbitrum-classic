@@ -25,6 +25,7 @@ import {
   instantiateRandomBridge,
   fundL2Token,
   tokenFundAmount,
+  skipIfMainnet,
 } from './testHelpers'
 const { Zero, AddressZero } = constants
 import dotenv from 'dotenv'
@@ -40,6 +41,10 @@ if (!config[networkID]) {
 const { existentTestERC20 } = config[networkID]
 
 describe('ERC20', () => {
+  beforeEach('skipIfMainnet', function () {
+    skipIfMainnet(this)
+  })
+
   it('deposits erc20 (no L2 Eth funding)', async () => {
     const { bridge } = await instantiateRandomBridge()
     await fundL1(bridge)
@@ -52,14 +57,14 @@ describe('ERC20', () => {
     await depositTokenTest(bridge)
   })
 
-  it('withdraws erc20', async () => {
+  it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
     const { bridge } = await instantiateRandomBridge()
     await fundL2(bridge)
     const result = await fundL2Token(bridge)
     if (!result) {
       warn('Prefunded wallet not funded with tokens; skipping ERC20 withdraw')
-      return
+      this.skip()
     }
     const withdrawRes = await bridge.withdrawERC20(
       existentTestERC20,

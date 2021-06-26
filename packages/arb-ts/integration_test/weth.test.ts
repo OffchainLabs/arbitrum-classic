@@ -11,9 +11,14 @@ import {
   wait,
   fundL2,
   preFundAmount,
+  skipIfMainnet,
 } from './testHelpers'
 
 describe('WETH', async () => {
+  beforeEach('skipIfMainnet', function () {
+    skipIfMainnet(this)
+  })
+
   it('withdraws WETH', async () => {
     const wethToWrap = utils.parseEther('0.00001')
     const wethToWithdraw = utils.parseEther('0.00000001')

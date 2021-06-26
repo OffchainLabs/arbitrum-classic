@@ -10,13 +10,18 @@ import {
   wait,
   fundL2,
   preFundAmount,
+  skipIfMainnet,
 } from './testHelpers'
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { ARB_GAS_INFO } from '../src/lib/precompile_addresses'
 
 dotenv.config()
 
-describe('Ether', () => {
+describe('Ether', async () => {
+  beforeEach('skipIfMainnet', function () {
+    skipIfMainnet(this)
+  })
+
   it('transfers ether on l2', async () => {
     const { bridge } = await instantiateRandomBridge()
     await fundL2(bridge)

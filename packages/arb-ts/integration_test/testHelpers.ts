@@ -139,3 +139,17 @@ export const fundL2Token = async (bridge: Bridge) => {
 export const wait = (ms = 0) => {
   return new Promise(res => setTimeout(res, ms))
 }
+
+export const skipIfMainnet = (() => {
+  let chainId = ''
+  return async (testContext: Mocha.Context) => {
+    if (!chainId) {
+      const { l1Network } = await instantiateRandomBridge()
+      chainId = l1Network.chainID
+    }
+    if (chainId === '1') {
+      console.log("You're writing to the chain on mainnet lol stop")
+      testContext.skip()
+    }
+  }
+})()
