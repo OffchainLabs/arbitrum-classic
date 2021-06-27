@@ -82,12 +82,12 @@ jobs:
       - run: yarn install --cache-folder ~/.cache/yarn
       - save_cache: *save_yarn_cache
       - run:
-          name: test arb-provider-ethers
+          name: test arb-ts
           command: |
             yarn
-            yarn test:ci --reporter-options output=${TEST_RESULTS}/arb-provider-ethers.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-provider-ethers-lint.xml
-          working_directory: /home/user/project/packages/arb-provider-ethers
+            yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
+          working_directory: /home/user/project/packages/arb-ts
       - run:
           name: Upload Coverage to Codecov
           command: codecovbash
