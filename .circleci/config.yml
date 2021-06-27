@@ -39,7 +39,7 @@ workflows:
       - cpp-avm:
           requires:
             - cpp-avm-build
-      - frontend
+      - arb-ts
       - ethbridge
       # - ethbridge-coverage
       - backend:
