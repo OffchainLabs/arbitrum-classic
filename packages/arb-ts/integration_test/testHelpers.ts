@@ -16,9 +16,13 @@ if (!config[networkID]) {
   throw new Error('network not supported')
 }
 
-const { existentTestERC20: _existentTestERC20 } = config[networkID]
+const {
+  existentTestERC20: _existentTestERC20,
+  existentTestCustomToken: _existentTestCustomToken,
+} = config[networkID]
 
-export const existentTestERC20 = _existentTestERC20
+export const existentTestERC20 = _existentTestERC20 as string
+export const existentTestCustomToken = _existentTestCustomToken as string
 
 export const preFundAmount = utils.parseEther('0.001')
 
@@ -115,11 +119,11 @@ export const fundL2 = async (bridge: Bridge) => {
 }
 
 export const tokenFundAmount = BigNumber.from(2)
-export const fundL2Token = async (bridge: Bridge) => {
+export const fundL2Token = async (bridge: Bridge, tokenAddress: string) => {
   try {
     const testWalletAddress = await bridge.l2Bridge.getWalletAddress()
     const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
-    const l2Address = await bridge.getERC20L2Address(existentTestERC20)
+    const l2Address = await bridge.getERC20L2Address(tokenAddress)
     const testToken = TestERC20__factory.connect(l2Address, preFundedL2Wallet)
 
     const res = await testToken.transfer(testWalletAddress, tokenFundAmount)
