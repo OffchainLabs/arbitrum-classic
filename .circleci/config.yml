@@ -66,7 +66,7 @@ jobs:
             cd packages/arb-node-core
             go mod download
       - save_cache: *save_go_cache
-  frontend:
+  arb-ts:
     docker:
       - image: offchainlabs/frontend-base:0.1.0
     environment:
