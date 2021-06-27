@@ -118,7 +118,7 @@ func startup() error {
 }
 
 func NewArbRelay(settings configuration.Feed) *ArbRelay {
-	broadcastClient := broadcastclient.NewBroadcastClient(settings.Input.URL, nil, settings.Input.Timeout)
+	broadcastClient := broadcastclient.NewBroadcastClient(settings.Input.URL, nil, settings.Input.Timeout, "2.0")
 	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	return &ArbRelay{
 		SequencerFeedAddress: settings.Input.URL,

@@ -18,11 +18,13 @@ package broadcaster
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"io"
 	"math/rand"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -150,11 +152,26 @@ func (cc *ClientConnection) writeV1(x interface{}) error {
 }
 
 func (cc *ClientConnection) write(x interface{}) error {
-	if cc.clientVersion == "1.0" {
-		return cc.writeV1(x)
-	} else { // If there's no version specified, assume version 1.
-		return cc.writeV1(x)
+
+	cc.ioMutex.Lock()
+	defer cc.ioMutex.Unlock()
+
+	if strings.Compare(cc.clientVersion, "2.0") == 0 {
+		writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpBinary)
+		encoder := gob.NewEncoder(writer)
+		if err := encoder.Encode(x); err != nil {
+			return err
+		}
+		return writer.Flush()
+	} else {
+		writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
+		encoder := json.NewEncoder(writer)
+		if err := encoder.Encode(x); err != nil {
+			return err
+		}
+		return writer.Flush()
 	}
+
 }
 
 func (cc *ClientConnection) writeRaw(p []byte) error {

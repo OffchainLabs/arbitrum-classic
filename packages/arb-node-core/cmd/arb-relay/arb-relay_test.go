@@ -18,10 +18,11 @@ package main
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
@@ -99,7 +100,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 }
 
 func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
-	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:7429/", nil, 20*time.Second)
+	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:7429/", nil, 20*time.Second, "2.0")
 	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	defer wg.Done()
 	messageCount := 0

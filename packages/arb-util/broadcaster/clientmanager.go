@@ -19,8 +19,10 @@ package broadcaster
 import (
 	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"net"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -187,10 +189,10 @@ func (cm *ClientManager) Broadcast(prevAcc common.Hash, batchItem inbox.Sequence
 	return nil
 }
 
-func (cm *ClientManager) doBroadcast(bm *BroadcastMessage) error {
-	if bm.ConfirmedAccumulator.IsConfirmed {
+func (cm *ClientManager) doBroadcast(broadcastMessage *BroadcastMessage) error {
+	if broadcastMessage.ConfirmedAccumulator.IsConfirmed {
 		for i, msg := range cm.broadcastMessages {
-			if msg.FeedItem.BatchItem.Accumulator == bm.ConfirmedAccumulator.Accumulator {
+			if msg.FeedItem.BatchItem.Accumulator == broadcastMessage.ConfirmedAccumulator.Accumulator {
 				// This entry was confirmed, so this and all previous messages should be removed from cache
 				unconfirmedIndex := i + 1
 				if unconfirmedIndex >= len(cm.broadcastMessages) {
@@ -202,39 +204,46 @@ func (cm *ClientManager) doBroadcast(bm *BroadcastMessage) error {
 				break
 			}
 		}
-	} else if len(bm.Messages) > 0 {
+	} else if len(broadcastMessage.Messages) > 0 {
 		// Add to cache to send to new clients
 		if len(cm.broadcastMessages) == 0 {
 			// Current list is empty
-			cm.broadcastMessages = append(cm.broadcastMessages, bm.Messages...)
-		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == bm.Messages[0].FeedItem.PrevAcc {
-			cm.broadcastMessages = append(cm.broadcastMessages, bm.Messages...)
+			cm.broadcastMessages = append(cm.broadcastMessages, broadcastMessage.Messages...)
+		} else if cm.broadcastMessages[len(cm.broadcastMessages)-1].FeedItem.BatchItem.Accumulator == broadcastMessage.Messages[0].FeedItem.PrevAcc {
+			cm.broadcastMessages = append(cm.broadcastMessages, broadcastMessage.Messages...)
 		} else {
 			// We need to do a re-org
-			logger.Debug().Hex("acc", bm.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
+			logger.Debug().Hex("acc", broadcastMessage.Messages[0].FeedItem.BatchItem.Accumulator.Bytes()).Msg("broadcaster reorg")
 			i := len(cm.broadcastMessages) - 1
 			for ; i >= 0; i-- {
-				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == bm.Messages[0].FeedItem.PrevAcc {
-					cm.broadcastMessages = append(cm.broadcastMessages[:i+1], bm.Messages...)
+				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == broadcastMessage.Messages[0].FeedItem.PrevAcc {
+					cm.broadcastMessages = append(cm.broadcastMessages[:i+1], broadcastMessage.Messages...)
 					break
 				}
 			}
 
 			if i == -1 {
 				// All existing messages are out of date
-				cm.broadcastMessages = append(cm.broadcastMessages[:0], bm.Messages...)
+				cm.broadcastMessages = append(cm.broadcastMessages[:0], broadcastMessage.Messages...)
 			}
 		}
 	}
 
-	var buf bytes.Buffer
-	writer := wsutil.NewWriter(&buf, ws.StateServerSide, ws.OpText)
-	encoder := json.NewEncoder(writer)
-	if err := encoder.Encode(bm); err != nil {
-		return errors.Wrap(err, "unable to encode message")
+	var jsonBuffer bytes.Buffer
+	writer := wsutil.NewWriter(&jsonBuffer, ws.StateServerSide, ws.OpText)
+	jsonEncoder := json.NewEncoder(writer)
+	if err := jsonEncoder.Encode(broadcastMessage); err != nil {
+		return errors.Wrap(err, "unable to encode message for JSON")
 	}
 	if err := writer.Flush(); err != nil {
-		return errors.Wrap(err, "unable to flush message")
+		return errors.Wrap(err, "unable to flush message JSON")
+	}
+
+	var binaryBuffer bytes.Buffer
+	enc := gob.NewEncoder(&binaryBuffer)
+	err := enc.Encode(broadcastMessage)
+	if err != nil {
+		return errors.Wrap(err, "unable to encode message")
 	}
 
 	clientDeleteList := make([]*ClientConnection, 0, len(cm.clientPtrMap))
@@ -243,7 +252,11 @@ func (cm *ClientManager) doBroadcast(bm *BroadcastMessage) error {
 			// Queue for client too backed up, so delete after going through all other clients
 			clientDeleteList = append(clientDeleteList, client)
 		} else {
-			client.out <- buf.Bytes()
+			if strings.Compare(client.clientVersion, "2.0") == 0 {
+				client.out <- binaryBuffer.Bytes()
+			} else {
+				client.out <- jsonBuffer.Bytes()
+			}
 		}
 	}
 
