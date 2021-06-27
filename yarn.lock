@@ -15594,9 +15594,9 @@ solhint@^3.2.0:
     prettier "^1.14.3"
 
 solidity-ast@^0.4.15:
-  version "0.4.25"
-  resolved "https://registry.yarnpkg.com/solidity-ast/-/solidity-ast-0.4.25.tgz#1e0dc3d6024e69c29698c49d74e5ee9421fe426d"
-  integrity sha512-8IpweS/vgHEpKvY4l0sfr3EsHk+JFIzRWqq/0JefRjzP/Wyi2xZYfx8aHlJ9kcEn2M2RCQK9PexuZ+scaa83OQ==
+  version "0.4.26"
+  resolved "https://registry.yarnpkg.com/solidity-ast/-/solidity-ast-0.4.26.tgz#6e644bdb897c245dd07695a63ffa95edfe02c11f"
+  integrity sha512-UR9Ip3QoiEvNON5lOA28JNEzKT+1fLFA4xpIbZSEl4CEnYr/a4Pj0qMJh0652UQ51pKplI/nncZsDOMzdHdCcg==
 
 solidity-comments-extractor@^0.0.4:
   version "0.0.4"
