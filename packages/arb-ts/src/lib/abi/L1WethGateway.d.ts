@@ -23,7 +23,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1WethGatewayInterface extends ethers.utils.Interface {
   functions: {
-    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
@@ -38,14 +37,12 @@ interface L1WethGatewayInterface extends ethers.utils.Interface {
     'l2Weth()': FunctionFragment
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'parseInboundData(bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
+    'router()': FunctionFragment
     'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'STORAGE_GAP',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -101,15 +98,19 @@ interface L1WethGatewayInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'redirectedExits',
     values: [BytesLike]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'transferExitAndCall',
     values: [BigNumberish, string, string, BytesLike, BytesLike]
   ): string
 
-  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -155,9 +156,14 @@ interface L1WethGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'transferExitAndCall',
     data: BytesLike
@@ -192,10 +198,6 @@ export class L1WethGateway extends Contract {
   interface: L1WethGatewayInterface
 
   functions: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -358,6 +360,10 @@ export class L1WethGateway extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
+    postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -367,6 +373,10 @@ export class L1WethGateway extends Contract {
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string, string] & { _newTo: string; _newData: string }>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
@@ -386,10 +396,6 @@ export class L1WethGateway extends Contract {
       overrides?: Overrides
     ): Promise<ContractTransaction>
   }
-
-  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -549,6 +555,10 @@ export class L1WethGateway extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
 
+  postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+  'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
   redirectedExits(
     arg0: BytesLike,
     overrides?: CallOverrides
@@ -558,6 +568,10 @@ export class L1WethGateway extends Contract {
     arg0: BytesLike,
     overrides?: CallOverrides
   ): Promise<[string, string] & { _newTo: string; _newData: string }>
+
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
 
   transferExitAndCall(
     _exitNum: BigNumberish,
@@ -578,10 +592,6 @@ export class L1WethGateway extends Contract {
   ): Promise<ContractTransaction>
 
   callStatic: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -744,6 +754,10 @@ export class L1WethGateway extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
+    'postUpgradeInit()'(overrides?: CallOverrides): Promise<void>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -753,6 +767,10 @@ export class L1WethGateway extends Contract {
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string, string] & { _newTo: string; _newData: string }>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
@@ -818,10 +836,6 @@ export class L1WethGateway extends Contract {
   }
 
   estimateGas: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -980,6 +994,10 @@ export class L1WethGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    postUpgradeInit(overrides?: Overrides): Promise<BigNumber>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<BigNumber>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -989,6 +1007,10 @@ export class L1WethGateway extends Contract {
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
@@ -1010,10 +1032,6 @@ export class L1WethGateway extends Contract {
   }
 
   populateTransaction: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -1178,6 +1196,10 @@ export class L1WethGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    postUpgradeInit(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -1187,6 +1209,10 @@ export class L1WethGateway extends Contract {
       arg0: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     transferExitAndCall(
       _exitNum: BigNumberish,
