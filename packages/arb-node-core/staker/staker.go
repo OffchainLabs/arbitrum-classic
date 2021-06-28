@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
@@ -34,6 +35,12 @@ import (
 )
 
 var logger = log.With().Caller().Stack().Str("component", "staker").Logger()
+var UnresolvedForkGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+	Namespace: "arbitrum",
+	Subsystem: "ethereum",
+	Name:      "unresolved_forked",
+	Help:      "Are the unresolved nodes forked? (1 = yes, 0 = no, i.e. linear)",
+})
 
 type Strategy uint8
 
@@ -132,7 +139,10 @@ func (s *Staker) Act(ctx context.Context) (*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !nodesLinear {
+	if nodesLinear {
+		UnresolvedForkGauge.Set(0)
+	} else {
+		UnresolvedForkGauge.Set(1)
 		logger.Warn().Msg("Fork detected")
 		if effectiveStrategy == DefensiveStrategy {
 			effectiveStrategy = StakeLatestStrategy

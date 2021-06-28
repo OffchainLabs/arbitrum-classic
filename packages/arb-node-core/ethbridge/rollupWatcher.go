@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -41,6 +42,7 @@ import (
 var rollupCreatedID ethcommon.Hash
 var nodeCreatedID ethcommon.Hash
 var challengeCreatedID ethcommon.Hash
+var StakerTotalStakedGaugeVec *prometheus.GaugeVec
 
 func init() {
 	parsedRollup, err := abi.JSON(strings.NewReader(ethbridgecontracts.RollupUserFacetABI))
@@ -50,6 +52,12 @@ func init() {
 	rollupCreatedID = parsedRollup.Events["RollupCreated"].ID
 	nodeCreatedID = parsedRollup.Events["NodeCreated"].ID
 	challengeCreatedID = parsedRollup.Events["RollupChallengeStarted"].ID
+	StakerTotalStakedGaugeVec = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "arbitrum",
+		Subsystem: "rollupwatcher",
+		Name:      "staked_total",
+		Help:      "Total amount currently staked by an address",
+	}, []string{"account"})
 }
 
 type StakerInfo struct {
@@ -248,6 +256,8 @@ func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (
 		LatestStakedNode: info.LatestStakedNode,
 		AmountStaked:     info.AmountStaked,
 	}
+	f, _ := new(big.Float).SetInt(info.AmountStaked).Float64()
+	StakerTotalStakedGaugeVec.WithLabelValues(staker.String()).Set(f)
 	emptyAddress := ethcommon.Address{}
 	if info.CurrentChallenge != emptyAddress {
 		chal := common.NewAddressFromEth(info.CurrentChallenge)

@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	prompb "github.com/prometheus/client_model/go"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
@@ -223,6 +224,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	test.FailIfError(t, err)
 
 	staker.Validator.GasThreshold = big.NewInt(0)
+	stakerAddrString := staker.wallet.Address().String()
 
 	seqInboxAddr, err := staker.rollup.SequencerBridge(ctx)
 	test.FailIfError(t, err)
@@ -271,6 +273,7 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	test.FailIfError(t, err)
 
 	faultyStaker.Validator.GasThreshold = big.NewInt(0)
+	faultyStakerAddrStr := faultyStaker.wallet.Address().String()
 
 	registry := prometheus.NewRegistry()
 	const largeChannelBuffer = 200
@@ -322,6 +325,11 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	faultyStakerDead := false
 
 	stakerMadeFirstMove := false
+
+	seenLinearNodes := false
+	seenForkedNodes := false
+	seenStakerStake := false
+	seenFaultyStakerStake := false
 	for i := 400; i >= 0; i-- {
 		if (i % 2) == 0 {
 			fmt.Println("Honest staker acting")
@@ -343,8 +351,38 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 				}
 			}
 		}
+		metric := &prompb.Metric{}
+		_ = UnresolvedForkGauge.Write(metric)
+		if int(*metric.Gauge.Value) == 0 {
+			seenLinearNodes = true
+		} else {
+			seenForkedNodes = true
+		}
 		client.Commit()
 		client.Commit()
+
+		// check metrics for stake totals.  Only validate the two we expect are present.
+		mChan := make(chan prometheus.Metric)
+		done := make(chan struct{})
+		go func() {
+			for m := range mChan {
+				_ = m.Write(metric)
+				for _, l := range metric.Label {
+					if *l.Name == "account" {
+						addr := *l.Value
+						if addr == stakerAddrString {
+							seenStakerStake = true
+						} else if addr == faultyStakerAddrStr {
+							seenFaultyStakerStake = true
+						}
+					}
+				}
+			}
+			close(done)
+		}()
+		ethbridge.StakerTotalStakedGaugeVec.Collect(mChan)
+		close(mChan)
+		<-done
 
 		faultyStakerInfo, err := staker.rollup.StakerInfo(ctx, common.NewAddressFromEth(validatorAddress2))
 		test.FailIfError(t, err)
@@ -403,6 +441,25 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	} else {
 		if faultyStakerInfo == nil {
 			t.Fatal("Other staker lost stake")
+		}
+	}
+
+	if !seenLinearNodes {
+		t.Fatal("Did not see nodes in a linear state")
+	}
+	if !seenStakerStake {
+		t.Fatal("Did not see stake by valid staker")
+	}
+	if !seenFaultyStakerStake {
+		t.Fatal("Did not see stake by faulty staker")
+	}
+	if faultsExist {
+		if !seenForkedNodes {
+			t.Fatal("Expected and did not see nodes in a forked state")
+		}
+	} else {
+		if seenForkedNodes {
+			t.Fatal("Observed but did not expect to see nodes in a forked state")
 		}
 	}
 }

@@ -2,7 +2,9 @@ package metrics
 
 import (
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -57,7 +59,10 @@ func (m *MetricsConfig) RegisterStaticMetrics() {
 	m.Registerer.MustRegister(
 		m.MethodCallCounter,
 		cmachine.GasCounter, cmachine.StepsCounter,
-		monitor.BatchesCounter, monitor.EthHeightGauge, monitor.DelayedCounter, monitor.MessageGauge)
+		monitor.BatchesCounter, monitor.EthHeightGauge, monitor.DelayedCounter, monitor.MessageGauge,
+		ethbridge.StakerTotalStakedGaugeVec,
+		staker.UnresolvedForkGauge,
+	)
 }
 
 func RegisterNodeStoreMetrics(nodeStore machine.NodeStore, metrics *MetricsConfig) {
