@@ -568,18 +568,38 @@ export class Bridge {
     return BridgeHelper.waitForRetryableReceipt(seqNum, this.l2Provider)
   }
 
+  /**
+   * All withdrawals from given token
+   */
   public async getTokenWithdrawEventData(
     l1TokenAddress: string,
-    destinationAddress: string
+    destinationAddress?: string
   ) {
-    const l2ERC20Gateway = await this.l2Bridge.l2GatewayRouter.getGateway(
+    const gatewayAddress = await this.l2Bridge.l2GatewayRouter.getGateway(
       l1TokenAddress
     )
 
-    return BridgeHelper.getTokenWithdrawEventData(
-      destinationAddress,
-      l2ERC20Gateway,
-      this.l2Provider
+    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+      this.l2Provider,
+      gatewayAddress,
+      l1TokenAddress,
+      destinationAddress
+    )
+  }
+
+  /**
+   * All withdrawals from given gateway
+   */
+
+  public async getGatewayWithdrawEventData(
+    gatewayAddress: string,
+    destinationAddress?: string
+  ) {
+    return BridgeHelper.getOutBoundTransferInitiatedLogs(
+      this.l2Provider,
+      gatewayAddress,
+      '',
+      destinationAddress
     )
   }
 
