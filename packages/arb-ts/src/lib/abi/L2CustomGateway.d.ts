@@ -23,7 +23,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L2CustomGatewayInterface extends ethers.utils.Interface {
   functions: {
-    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'exitNum()': FunctionFragment
@@ -34,13 +33,11 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     'initialize(address,address)': FunctionFragment
     'l1ToL2Token(address)': FunctionFragment
     'outboundTransfer(address,address,uint256,bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'registerTokenFromL1(address[],address[])': FunctionFragment
+    'router()': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'STORAGE_GAP',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -76,11 +73,15 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     values: [string, string, BigNumberish, BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'registerTokenFromL1',
     values: [string[], string[]]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -113,9 +114,14 @@ interface L2CustomGatewayInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'registerTokenFromL1',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -146,10 +152,6 @@ export class L2CustomGateway extends Contract {
   interface: L2CustomGatewayInterface
 
   functions: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -263,6 +265,10 @@ export class L2CustomGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
 
+    postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -274,11 +280,11 @@ export class L2CustomGateway extends Contract {
       l2Address: string[],
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
   }
-
-  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -393,6 +399,10 @@ export class L2CustomGateway extends Contract {
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
 
+  postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+  'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
   registerTokenFromL1(
     l1Address: string[],
     l2Address: string[],
@@ -405,11 +415,11 @@ export class L2CustomGateway extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
+
   callStatic: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -523,6 +533,10 @@ export class L2CustomGateway extends Contract {
       overrides?: CallOverrides
     ): Promise<string>
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
+    'postUpgradeInit()'(overrides?: CallOverrides): Promise<void>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -534,6 +548,10 @@ export class L2CustomGateway extends Contract {
       l2Address: string[],
       overrides?: CallOverrides
     ): Promise<void>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -574,10 +592,6 @@ export class L2CustomGateway extends Contract {
   }
 
   estimateGas: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -691,6 +705,10 @@ export class L2CustomGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<BigNumber>
 
+    postUpgradeInit(overrides?: Overrides): Promise<BigNumber>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<BigNumber>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -702,13 +720,13 @@ export class L2CustomGateway extends Contract {
       l2Address: string[],
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -831,6 +849,10 @@ export class L2CustomGateway extends Contract {
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
 
+    postUpgradeInit(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
     registerTokenFromL1(
       l1Address: string[],
       l2Address: string[],
@@ -842,5 +864,9 @@ export class L2CustomGateway extends Contract {
       l2Address: string[],
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

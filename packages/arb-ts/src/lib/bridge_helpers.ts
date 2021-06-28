@@ -251,7 +251,6 @@ export class BridgeHelper {
     l1GatewayAddress: string
   ): Promise<Array<OutboundTransferInitiatedResult>> => {
     const factory = new L1ERC20Gateway__factory()
-    // TODO: does this work?
     const contract = factory.attach(l1GatewayAddress)
     const iface = contract.interface
     const event = iface.getEvent('OutboundTransferInitiated')
@@ -261,6 +260,21 @@ export class BridgeHelper {
       log =>
         (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
     )
+  }
+
+  static getOutboundTransferData = async (
+    gatewayAddress: string,
+    provider: providers.Provider,
+    filter: ethers.providers.Filter = {}
+  ) => {
+    const contract = L1ERC20Gateway__factory.connect(gatewayAddress, provider)
+    const logs = await BridgeHelper.getEventLogs(
+      'OutboundTransferInitiated',
+      contract,
+      [],
+      filter
+    )
+    return logs
   }
 
   public static getEventLogs = (
