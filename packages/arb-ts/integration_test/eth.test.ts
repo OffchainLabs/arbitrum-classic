@@ -5,7 +5,7 @@ import { prettyLog } from './testHelpers'
 const { Zero, AddressZero } = constants
 import dotenv from 'dotenv'
 import {
-  instantiateRandomBridge,
+  instantiateBridgeWithRandomWallet,
   fundL1,
   wait,
   fundL2,
@@ -23,7 +23,7 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { bridge } = await instantiateRandomBridge()
+    const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
     const randomAddress = Wallet.createRandom().address
     const amountToSend = utils.parseEther('0.000005')
@@ -38,7 +38,7 @@ describe('Ether', async () => {
     expect(newBalance.eq(amountToSend)).to.be.true
   })
   it('deposits ether', async () => {
-    const { bridge } = await instantiateRandomBridge()
+    const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL1(bridge)
 
     const inbox = await bridge.l1Bridge.getInbox()
@@ -89,7 +89,7 @@ describe('Ether', async () => {
   })
 
   it('withdraw Ether transaction succeeds', async () => {
-    const { bridge } = await instantiateRandomBridge()
+    const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
     const ethToWithdraw = utils.parseEther('0.00002')
 

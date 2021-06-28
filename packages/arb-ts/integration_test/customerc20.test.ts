@@ -22,7 +22,7 @@ import {
   testRetryableTicket,
   prettyLog,
   warn,
-  instantiateRandomBridge,
+  instantiateBridgeWithRandomWallet,
   fundL2Token,
   tokenFundAmount,
   skipIfMainnet,
@@ -36,12 +36,12 @@ describe('Custom ERC20', () => {
   })
 
   it('deposits erc20 (no L2 Eth funding)', async () => {
-    const { bridge } = await instantiateRandomBridge()
+    const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL1(bridge)
     await depositTokenTest(bridge)
   })
   it.skip('deposits erc20 (with L2 Eth funding)', async () => {
-    const { bridge } = await instantiateRandomBridge()
+    const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL1(bridge)
     await fundL2(bridge)
     await depositTokenTest(bridge)
@@ -49,7 +49,7 @@ describe('Custom ERC20', () => {
 
   it('withdraws erc20', async function () {
     const tokenWithdrawAmount = BigNumber.from(1)
-    const { bridge } = await instantiateRandomBridge()
+    const { bridge } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
     const result = await fundL2Token(bridge, existentTestCustomToken)
     if (!result) {

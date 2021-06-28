@@ -6,7 +6,7 @@ import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 import { testRetryableTicket, prettyLog, warn } from './testHelpers'
 const { Zero, AddressZero } = constants
 import {
-  instantiateRandomBridge,
+  instantiateBridgeWithRandomWallet,
   fundL1,
   wait,
   fundL2,
@@ -23,7 +23,11 @@ describe('WETH', async () => {
     const wethToWrap = utils.parseEther('0.00001')
     const wethToWithdraw = utils.parseEther('0.00000001')
 
-    const { bridge, l1Network, l2Network } = await instantiateRandomBridge()
+    const {
+      bridge,
+      l1Network,
+      l2Network,
+    } = await instantiateBridgeWithRandomWallet()
     await fundL2(bridge)
 
     const l2Weth = AeWETH__factory.connect(
@@ -58,7 +62,11 @@ describe('WETH', async () => {
   })
 
   it('deposits WETH', async () => {
-    const { bridge, l1Network, l2Network } = await instantiateRandomBridge()
+    const {
+      bridge,
+      l1Network,
+      l2Network,
+    } = await instantiateBridgeWithRandomWallet()
     const l1WethAddress = l1Network.tokenBridge.l1Weth
 
     const wethToWrap = utils.parseEther('0.0001')

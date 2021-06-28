@@ -84,7 +84,7 @@ export const warn = (text: string) => {
   console.log()
 }
 
-export const instantiateRandomBridge = () => {
+export const instantiateBridgeWithRandomWallet = () => {
   const testPk = utils.formatBytes32String(Math.random().toString())
   prettyLog(
     `Generated wallet, pk: ${testPk} address: ${new Wallet(testPk).address} `
@@ -148,7 +148,7 @@ export const skipIfMainnet = (() => {
   let chainId = ''
   return async (testContext: Mocha.Context) => {
     if (!chainId) {
-      const { l1Network } = await instantiateRandomBridge()
+      const { l1Network } = await instantiateBridgeWithRandomWallet()
       chainId = l1Network.chainID
     }
     if (chainId === '1') {
