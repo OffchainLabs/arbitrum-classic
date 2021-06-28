@@ -23,7 +23,6 @@ import { FunctionFragment, EventFragment, Result } from '@ethersproject/abi'
 
 interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   functions: {
-    'STORAGE_GAP()': FunctionFragment
     'calculateL2TokenAddress(address)': FunctionFragment
     'counterpartGateway()': FunctionFragment
     'encodeWithdrawal(uint256,address)': FunctionFragment
@@ -39,16 +38,16 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     'outboundTransfer(address,address,uint256,uint256,uint256,bytes)': FunctionFragment
     'owner()': FunctionFragment
     'parseInboundData(bytes)': FunctionFragment
+    'postUpgradeInit()': FunctionFragment
     'redirectedExits(bytes32)': FunctionFragment
     'registerTokenToL2(address,uint256,uint256,uint256)': FunctionFragment
+    'router()': FunctionFragment
     'setInboxUse(bool)': FunctionFragment
     'transferExitAndCall(uint256,address,address,bytes,bytes)': FunctionFragment
+    'updateWhitelistSource(address)': FunctionFragment
+    'whitelist()': FunctionFragment
   }
 
-  encodeFunctionData(
-    functionFragment: 'STORAGE_GAP',
-    values?: undefined
-  ): string
   encodeFunctionData(
     functionFragment: 'calculateL2TokenAddress',
     values: [string]
@@ -108,6 +107,10 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     values: [BytesLike]
   ): string
   encodeFunctionData(
+    functionFragment: 'postUpgradeInit',
+    values?: undefined
+  ): string
+  encodeFunctionData(
     functionFragment: 'redirectedExits',
     values: [BytesLike]
   ): string
@@ -115,13 +118,18 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenToL2',
     values: [string, BigNumberish, BigNumberish, BigNumberish]
   ): string
+  encodeFunctionData(functionFragment: 'router', values?: undefined): string
   encodeFunctionData(functionFragment: 'setInboxUse', values: [boolean]): string
   encodeFunctionData(
     functionFragment: 'transferExitAndCall',
     values: [BigNumberish, string, string, BytesLike, BytesLike]
   ): string
+  encodeFunctionData(
+    functionFragment: 'updateWhitelistSource',
+    values: [string]
+  ): string
+  encodeFunctionData(functionFragment: 'whitelist', values?: undefined): string
 
-  decodeFunctionResult(functionFragment: 'STORAGE_GAP', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'calculateL2TokenAddress',
     data: BytesLike
@@ -171,6 +179,10 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(
+    functionFragment: 'postUpgradeInit',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(
     functionFragment: 'redirectedExits',
     data: BytesLike
   ): Result
@@ -178,11 +190,17 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     functionFragment: 'registerTokenToL2',
     data: BytesLike
   ): Result
+  decodeFunctionResult(functionFragment: 'router', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'setInboxUse', data: BytesLike): Result
   decodeFunctionResult(
     functionFragment: 'transferExitAndCall',
     data: BytesLike
   ): Result
+  decodeFunctionResult(
+    functionFragment: 'updateWhitelistSource',
+    data: BytesLike
+  ): Result
+  decodeFunctionResult(functionFragment: 'whitelist', data: BytesLike): Result
 
   events: {
     'InboundTransferFinalized(address,address,address,uint256,uint256,bytes)': EventFragment
@@ -190,6 +208,7 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
     'TokenSet(address,address)': EventFragment
     'TransferAndCallTriggered(bool,address,address,uint256,bytes)': EventFragment
     'TxToL2(address,address,uint256,bytes)': EventFragment
+    'WhitelistSourceUpdated(address)': EventFragment
     'WithdrawRedirected(address,address,uint256,bytes,bytes,bool)': EventFragment
   }
 
@@ -198,6 +217,7 @@ interface L1CustomGatewayTesterInterface extends ethers.utils.Interface {
   getEvent(nameOrSignatureOrTopic: 'TokenSet'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TransferAndCallTriggered'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'TxToL2'): EventFragment
+  getEvent(nameOrSignatureOrTopic: 'WhitelistSourceUpdated'): EventFragment
   getEvent(nameOrSignatureOrTopic: 'WithdrawRedirected'): EventFragment
 }
 
@@ -215,10 +235,6 @@ export class L1CustomGatewayTester extends Contract {
   interface: L1CustomGatewayTesterInterface
 
   functions: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<[string]>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<[string]>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -400,6 +416,10 @@ export class L1CustomGatewayTester extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
+    postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -425,6 +445,10 @@ export class L1CustomGatewayTester extends Contract {
       _maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<ContractTransaction>
+
+    router(overrides?: CallOverrides): Promise<[string]>
+
+    'router()'(overrides?: CallOverrides): Promise<[string]>
 
     setInboxUse(
       _shouldUseInbox: boolean,
@@ -453,11 +477,21 @@ export class L1CustomGatewayTester extends Contract {
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<ContractTransaction>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>
+
+    whitelist(overrides?: CallOverrides): Promise<[string]>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<[string]>
   }
-
-  STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-  'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
 
   calculateL2TokenAddress(
     l1ERC20: string,
@@ -636,6 +670,10 @@ export class L1CustomGatewayTester extends Contract {
     overrides?: CallOverrides
   ): Promise<[BigNumber, string] & { _exitNum: BigNumber; _extraData: string }>
 
+  postUpgradeInit(overrides?: Overrides): Promise<ContractTransaction>
+
+  'postUpgradeInit()'(overrides?: Overrides): Promise<ContractTransaction>
+
   redirectedExits(
     arg0: BytesLike,
     overrides?: CallOverrides
@@ -661,6 +699,10 @@ export class L1CustomGatewayTester extends Contract {
     _maxSubmissionCost: BigNumberish,
     overrides?: PayableOverrides
   ): Promise<ContractTransaction>
+
+  router(overrides?: CallOverrides): Promise<string>
+
+  'router()'(overrides?: CallOverrides): Promise<string>
 
   setInboxUse(
     _shouldUseInbox: boolean,
@@ -690,11 +732,21 @@ export class L1CustomGatewayTester extends Contract {
     overrides?: Overrides
   ): Promise<ContractTransaction>
 
+  updateWhitelistSource(
+    newSource: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  'updateWhitelistSource(address)'(
+    newSource: string,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>
+
+  whitelist(overrides?: CallOverrides): Promise<string>
+
+  'whitelist()'(overrides?: CallOverrides): Promise<string>
+
   callStatic: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<string>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<string>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -876,6 +928,10 @@ export class L1CustomGatewayTester extends Contract {
       [BigNumber, string] & { _exitNum: BigNumber; _extraData: string }
     >
 
+    postUpgradeInit(overrides?: CallOverrides): Promise<void>
+
+    'postUpgradeInit()'(overrides?: CallOverrides): Promise<void>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -901,6 +957,10 @@ export class L1CustomGatewayTester extends Contract {
       _maxSubmissionCost: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<string>
+
+    'router()'(overrides?: CallOverrides): Promise<string>
 
     setInboxUse(
       _shouldUseInbox: boolean,
@@ -929,6 +989,20 @@ export class L1CustomGatewayTester extends Contract {
       _data: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: CallOverrides
+    ): Promise<void>
+
+    whitelist(overrides?: CallOverrides): Promise<string>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<string>
   }
 
   filters: {
@@ -967,6 +1041,8 @@ export class L1CustomGatewayTester extends Contract {
       _data: null
     ): EventFilter
 
+    WhitelistSourceUpdated(newSource: null): EventFilter
+
     WithdrawRedirected(
       from: string | null,
       to: string | null,
@@ -978,10 +1054,6 @@ export class L1CustomGatewayTester extends Contract {
   }
 
   estimateGas: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<BigNumber>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<BigNumber>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -1159,6 +1231,10 @@ export class L1CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
+    postUpgradeInit(overrides?: Overrides): Promise<BigNumber>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<BigNumber>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -1184,6 +1260,10 @@ export class L1CustomGatewayTester extends Contract {
       _maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<BigNumber>
+
+    router(overrides?: CallOverrides): Promise<BigNumber>
+
+    'router()'(overrides?: CallOverrides): Promise<BigNumber>
 
     setInboxUse(
       _shouldUseInbox: boolean,
@@ -1212,13 +1292,23 @@ export class L1CustomGatewayTester extends Contract {
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<BigNumber>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<BigNumber>
+
+    whitelist(overrides?: CallOverrides): Promise<BigNumber>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<BigNumber>
   }
 
   populateTransaction: {
-    STORAGE_GAP(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'STORAGE_GAP()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     calculateL2TokenAddress(
       l1ERC20: string,
       overrides?: CallOverrides
@@ -1405,6 +1495,10 @@ export class L1CustomGatewayTester extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
+    postUpgradeInit(overrides?: Overrides): Promise<PopulatedTransaction>
+
+    'postUpgradeInit()'(overrides?: Overrides): Promise<PopulatedTransaction>
+
     redirectedExits(
       arg0: BytesLike,
       overrides?: CallOverrides
@@ -1430,6 +1524,10 @@ export class L1CustomGatewayTester extends Contract {
       _maxSubmissionCost: BigNumberish,
       overrides?: PayableOverrides
     ): Promise<PopulatedTransaction>
+
+    router(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'router()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     setInboxUse(
       _shouldUseInbox: boolean,
@@ -1458,5 +1556,19 @@ export class L1CustomGatewayTester extends Contract {
       _data: BytesLike,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>
+
+    updateWhitelistSource(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    'updateWhitelistSource(address)'(
+      newSource: string,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>
+
+    whitelist(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'whitelist()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
   }
 }

@@ -74,6 +74,16 @@ export const networks: Networks = {
     blockTime: 15,
     rpcURL: process.env['MAINNET_RPC'] as string,
   },
+  '1337': {
+    chainID: '1337',
+    name: 'Hardhat_Mainnet_Fork',
+    explorerUrl: 'https://etherscan.io',
+    isArbitrum: false,
+    partnerChainID: '42161', // TODO: use sequencer fork ID
+    tokenBridge: mainnetBridge,
+    blockTime: 15,
+    rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
+  },
   '42161': {
     chainID: '42161',
     name: 'Arb1',
