@@ -71,7 +71,7 @@ Here are the important dependencies in case you are not running on a supported O
 Download the Arbitrum Monorepo from source:
 
 ```bash
-git clone -b sequencer2 https://github.com/offchainlabs/arbitrum.git
+git clone https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 git submodule update --init --recursive
 yarn
