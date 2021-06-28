@@ -23,6 +23,8 @@ import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "../../libraries/gateway/ICustomGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
+
 /**
  * @title Gatway for "custom" bridging functionality
  * @notice Handles some (but not all!) custom Gateway needs.
@@ -34,6 +36,25 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     // owner is able to force add custom mappings
     address public owner;
 
+    /// start whitelist consumer
+    address public whitelist;
+
+    event WhitelistSourceUpdated(address newSource);
+
+    modifier onlyWhitelisted {
+        if (whitelist != address(0)) {
+            require(Whitelist(whitelist).isAllowed(msg.sender), "NOT_WHITELISTED");
+        }
+        _;
+    }
+
+    function updateWhitelistSource(address newSource) external {
+        require(msg.sender == whitelist, "NOT_FROM_LIST");
+        whitelist = newSource;
+        emit WhitelistSourceUpdated(newSource);
+    }
+    // end whitelist consumer
+
     function initialize(
         address _l1Counterpart,
         address _l1Router,
@@ -42,6 +63,37 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     ) public virtual {
         L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         owner = _owner;
+        // disable whitelist by default
+        whitelist = address(0);
+    }
+
+
+    function postUpgradeInit() external {
+        require(whitelist == address(0), "ALREADY_INIT");
+        router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
+        whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
+    }
+
+     /**
+     * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
+     * @param _l1Token L1 address of ERC20
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override onlyWhitelisted returns (bytes memory) {
+        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     /**
