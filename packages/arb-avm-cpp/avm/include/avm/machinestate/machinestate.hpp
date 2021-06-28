@@ -237,6 +237,7 @@ struct MachineState {
     void addProcessedLog(value log_val);
 
     void marshalWasmProof(OneStepProof& proof) const;
+    void marshalWasmCompileProof(OneStepProof& proof) const;
 
     MachineState initialWasmMachine() const;
     MachineState finalWasmMachine() const;

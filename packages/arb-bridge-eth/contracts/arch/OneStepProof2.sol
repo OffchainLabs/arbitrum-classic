@@ -674,10 +674,10 @@ contract OneStepProof2 is OneStepProofCommon {
         init[0] = val1;
         init[1] = Value.newEmptyTuple();
         // Construct initial machine
+        Value.Data memory wasm_code = Value.newHashedValue(compilerProgramLink, compilerProgramLinkSize);
         Machine.Data memory initialMachine = Machine.Data(
             compilerProgram,
-            mkPair(Value.newHashedValue(compilerProgramLink, compilerProgramLinkSize),
-              mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
+            mkPair(wasm_code, mkPair(val1, mkPair(val2, Value.newEmptyTuple()))), //    machine.dataStack,
             Value.newEmptyTuple(), //    machine.auxStack,
             Value.newEmptyTuple(), //    machine.registerVal,
             Value.newInt(0), //    machine.staticVal,
@@ -691,16 +691,16 @@ contract OneStepProof2 is OneStepProofCommon {
          Value.Data[] memory stackVals,
          ,
          uint256 len,
-         uint256 offset) = decodeWasmData(context.bufProof);
-        // Wasm codepoint given as hint
-        (, Value.Data memory cp) = Marshaling.deserializeWasm(context.bufProof, offset);
+         /* uint256 offset*/ ) = decodeWasmData(context.bufProof);
+        require(stackVals.length >= 5, "Not enough wasm stack returns");
+        // Buffer, len
+        // require(stackVals[1].isInt(), "stack top not int");
+        // require(stackVals[0].isBuffer(), "stack next not buf");
+        // pushVal(context.stack, mkPair(stackVals[3], stackVals[4]));
+        // Value.Data memory codept = stackVals[3];
+        // Value.Data memory table = stackVals[4];
+        pushVal(context.stack, Value.newWasmCode(stackVals[3].hash(), stackVals[4].hash(), stackVals[4].sizeOf(), val1.hash(), val1.sizeOf()));
 
-        // Check that corresponds to what is given in the return buffer
-
-        require(stackVals.length >= 1, "Not enough wasm stack returns");
-        bytes32 cpHash = keccak2(cp.wasmVal.codept, cp.wasmVal.table);
-        require(keccak2(bytes32(uint256(123)), cpHash) == stackVals[0].hash());
-        pushVal(context.stack, cp);
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
         context.nextLength = len;

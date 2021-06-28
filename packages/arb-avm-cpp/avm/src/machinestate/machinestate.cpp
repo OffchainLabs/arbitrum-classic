@@ -650,6 +650,61 @@ void MachineState::marshalWasmProof(OneStepProof &proof) const {
 
 }
 
+void MachineState::marshalWasmCompileProof(OneStepProof &proof) const {
+    auto staged_message_tuple = getStagedMessageTuple();
+    if (!staged_message_tuple) {
+        throw std::runtime_error(
+            "Can't marshal machine with incomplete staged_message");
+    }
+    auto currentInstruction = loadCurrentInstruction();
+    auto& current_op = currentInstruction.op;
+
+    std::cerr << "Final machine opcode " << current_op << "\n";
+
+    std::vector<MarshalLevel> stackPops = {
+        MarshalLevel::SINGLE,
+        MarshalLevel::SINGLE,
+        MarshalLevel::SINGLE,
+        MarshalLevel::SINGLE,
+        MarshalLevel::SINGLE 
+    };
+
+    std::vector<MarshalLevel> auxStackPops;
+
+    MarshalLevel immediateMarshalLevel = MarshalLevel::STUB;
+    if (current_op.immediate && !stackPops.empty()) {
+        std::cerr << "??? here shouldn't be immeds\n";
+        immediateMarshalLevel = stackPops[0];
+        stackPops.erase(stackPops.cbegin());
+    }
+
+    std::cerr << "Got results " << stack[0] << " and " << stack[1] << "\n";
+
+    auto stackProof = stack.marshalForProof(stackPops, *code);
+    auto auxStackProof = auxstack.marshalForProof(auxStackPops, *code);
+
+    proof.buffer_proof.push_back(static_cast<uint8_t>(current_op.opcode));
+    proof.buffer_proof.push_back(stackProof.count +
+                                   current_op.immediate.has_value());
+    proof.buffer_proof.push_back(auxStackProof.count);
+
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                stackProof.data.begin(), stackProof.data.end());
+    if (current_op.immediate) {
+        ::marshalForProof(*current_op.immediate, immediateMarshalLevel,
+                          proof.buffer_proof, *code);
+    }
+    proof.buffer_proof.insert(proof.buffer_proof.cend(),
+                                auxStackProof.data.begin(),
+                                auxStackProof.data.end());
+    ::marshalState(proof.buffer_proof, *code, currentInstruction.nextHash,
+                   stackProof.bottom, auxStackProof.bottom, registerVal,
+                   static_val, arb_gas_remaining, errpc, *staged_message_tuple);
+
+    proof.buffer_proof.push_back(current_op.immediate ? 1 : 0);
+
+}
+
 MachineState MachineState::initialWasmMachine() const {
     auto currentInstruction = loadCurrentInstruction();
     auto& op = currentInstruction.op;
@@ -779,7 +834,7 @@ OneStepProof MachineState::marshalForProof() const {
 
     proof.standard_proof.push_back(current_op.immediate ? 1 : 0);
 
-    if (current_op.opcode == OpCode::WASM_TEST || current_op.opcode == OpCode::WASM_RUN || current_op.opcode == OpCode::WASM_COMPILE) {
+    if (current_op.opcode == OpCode::WASM_TEST || current_op.opcode == OpCode::WASM_RUN) {
 
         auto state = initialWasmMachine();
 
@@ -793,10 +848,21 @@ OneStepProof MachineState::marshalForProof() const {
         std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
         marshal_uint256_t(gasUsed, proof.buffer_proof);
 
-        if (current_op.opcode == OpCode::WASM_COMPILE) {
-            auto cp = compiledWasmCodePoint();
-            marshalWasmCodePoint(cp, proof.buffer_proof);
-        }
+        std::cerr << "state before " << *this << "\n";
+
+    } else if (current_op.opcode == OpCode::WASM_COMPILE) {
+
+        auto state = initialWasmMachine();
+
+        std::cerr << "Starting " << intx::to_string(state.hash().value(), 16) << "\n";
+
+        uint256_t gasUsed = runWasmMachine(state);
+
+        std::cerr << "Stopping " << intx::to_string(state.hash().value(), 16) << " gas used " << gasUsed << "\n";
+
+        state.marshalWasmCompileProof(proof);
+        std::cerr << "Made proof " << proof.buffer_proof.size() << "\n";
+        marshal_uint256_t(gasUsed, proof.buffer_proof);
 
         std::cerr << "state before " << *this << "\n";
 

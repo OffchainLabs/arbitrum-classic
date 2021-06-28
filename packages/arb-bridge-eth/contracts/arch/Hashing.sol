@@ -150,6 +150,27 @@ library Hashing {
         }
     }
 
+    function sizeOf(Value.Data memory val) internal pure returns (uint256) {
+        if (val.typeCode == Value.intTypeCode()) {
+            return 1;
+        } else if (val.typeCode == Value.codePointTypeCode()) {
+            return 1;
+        } else if (val.typeCode == Value.tuplePreImageTypeCode()) {
+            return val.size;
+        } else if (val.typeCode == Value.tupleTypeCode()) {
+            Value.Data memory preImage = getTuplePreImage(val.tupleVal);
+            return preImage.sizeOf();
+        } else if (val.typeCode == Value.hashOnlyTypeCode()) {
+            return val.size;
+        } else if (val.typeCode == Value.bufferTypeCode()) {
+            return 1;
+        } else if (val.typeCode == Value.wasmTypeCode()) {
+            return 1;
+        } else {
+            require(false, "Invalid type code");
+        }
+    }
+
     function getTuplePreImage(Value.Data[] memory vals) internal pure returns (Value.Data memory) {
         require(vals.length <= 8, "Invalid tuple length");
         bytes32[] memory hashes = new bytes32[](vals.length);
