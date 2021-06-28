@@ -32,6 +32,7 @@ import (
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/mailru/easygo/netpoll"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 )
 
 // MaxSendQueue is the maximum number of items in a clients out channel before client gets disconnected.
@@ -40,26 +41,28 @@ const MaxSendQueue = 1000
 
 // ClientConnection represents client connection.
 type ClientConnection struct {
-	clientVersion string
-	ioMutex       sync.Mutex
-	conn          io.ReadWriteCloser
-	desc          *netpoll.Desc
-	name          string
-	clientManager *ClientManager
-	lastHeardUnix int64
-	cancelFunc    context.CancelFunc
-	out           chan []byte
+	clientVersion   string
+	ioMutex         sync.Mutex
+	conn            io.ReadWriteCloser
+	desc            *netpoll.Desc
+	name            string
+	clientManager   *ClientManager
+	lastHeardUnix   int64
+	cancelFunc      context.CancelFunc
+	out             chan []byte
+	lastAccumulator *common.Hash
 }
 
-func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager, clientVersion string) *ClientConnection {
+func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager, clientVersion string, lastAccumulator *common.Hash) *ClientConnection {
 	return &ClientConnection{
-		clientVersion: clientVersion,
-		conn:          conn,
-		desc:          desc,
-		name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
-		clientManager: clientManager,
-		lastHeardUnix: time.Now().Unix(),
-		out:           make(chan []byte, MaxSendQueue),
+		clientVersion:   clientVersion,
+		conn:            conn,
+		desc:            desc,
+		name:            conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
+		clientManager:   clientManager,
+		lastHeardUnix:   time.Now().Unix(),
+		out:             make(chan []byte, MaxSendQueue),
+		lastAccumulator: lastAccumulator,
 	}
 }
 
@@ -151,25 +154,26 @@ func (cc *ClientConnection) writeV1(x interface{}) error {
 	return writer.Flush()
 }
 
-func (cc *ClientConnection) write(x interface{}) error {
+func (cc *ClientConnection) writeV2(x interface{}) error {
+	writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpBinary)
+	encoder := gob.NewEncoder(writer)
 
 	cc.ioMutex.Lock()
 	defer cc.ioMutex.Unlock()
 
+	if err := encoder.Encode(x); err != nil {
+		return err
+	}
+
+	return writer.Flush()
+}
+
+func (cc *ClientConnection) write(x interface{}) error {
+
 	if strings.Compare(cc.clientVersion, "2.0") == 0 {
-		writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpBinary)
-		encoder := gob.NewEncoder(writer)
-		if err := encoder.Encode(x); err != nil {
-			return err
-		}
-		return writer.Flush()
+		return cc.writeV2(x)
 	} else {
-		writer := wsutil.NewWriter(cc.conn, ws.StateServerSide, ws.OpText)
-		encoder := json.NewEncoder(writer)
-		if err := encoder.Encode(x); err != nil {
-			return err
-		}
-		return writer.Flush()
+		return cc.writeV1(x)
 	}
 
 }

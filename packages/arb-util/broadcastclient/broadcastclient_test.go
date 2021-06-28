@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
@@ -220,10 +221,16 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	hash3, feedItem3, signature3 := newBroadcastMessage()
+	err = b.BroadcastSingle(hash3, feedItem3.BatchItem, signature3.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	var wg sync.WaitGroup
 	for i := 0; i < 2; i++ {
 		wg.Add(1)
-		connectAndGetCachedMessages(ctx, t, i, &wg)
+		connectAndGetCachedMessages(ctx, t, i, &wg, 2, feedItem1.BatchItem.Accumulator)
 	}
 
 	wg.Wait()
@@ -236,7 +243,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 
 	updateTimeout := time.After(2 * time.Second)
 	for {
-		if b.MessageCacheCount() == 1 { // should have left the second message
+		if b.MessageCacheCount() == 2 { // should have left the second and third messages
 			break
 		}
 
@@ -251,7 +258,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 
 	updateTimeout = time.After(2 * time.Second)
 	for {
-		if b.MessageCacheCount() == 0 { // should have left the second message
+		if b.MessageCacheCount() == 1 { // should have left the third message
 			break
 		}
 
@@ -263,8 +270,8 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	}
 }
 
-func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex int, wg *sync.WaitGroup) {
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", nil, 60*time.Second, "2.0")
+func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex int, wg *sync.WaitGroup, expectedCount int, lastAccumulator common.Hash) {
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", &lastAccumulator, 60*time.Second, "2.0")
 	testClient, err := broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -280,6 +287,9 @@ func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex 
 		select {
 		case receivedMsg := <-testClient:
 			t.Logf("client %d received first message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
+			if receivedMsg.FeedItem.BatchItem.Accumulator == lastAccumulator {
+				t.Errorf("client %d should not have received lastAccumulator\n", clientIndex)
+			}
 		case <-time.After(10 * time.Second):
 			t.Errorf("client %d did not receive first batch item\n", clientIndex)
 			return
@@ -289,6 +299,9 @@ func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex 
 		select {
 		case receivedMsg := <-testClient:
 			t.Logf("client %d received second message: %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.SequencerMessage)
+			if receivedMsg.FeedItem.BatchItem.Accumulator == lastAccumulator {
+				t.Errorf("client %d should not have received lastAccumulator\n", clientIndex)
+			}
 		case <-time.After(10 * time.Second):
 			t.Errorf("client %d did not receive second batch item\n", clientIndex)
 			return

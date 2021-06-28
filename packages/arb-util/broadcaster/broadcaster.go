@@ -18,8 +18,6 @@ package broadcaster
 
 import (
 	"context"
-	"encoding/binary"
-	"math/big"
 	"net"
 	"strings"
 	"sync"
@@ -93,7 +91,7 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 
 		safeConn := deadliner{conn, b.settings.IOTimeout}
 		clientVersion := "1.0"
-		lastSequenceNumber := big.NewInt(0)
+		var lastAccumulator *common.Hash
 		u := ws.Upgrader{
 			OnHeader: func(key, value []byte) (err error) {
 				logger.
@@ -103,14 +101,16 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 				if strings.Compare(headerKey, "Client-Version") == 0 {
 					clientVersion = string(value)
 				} else if strings.Compare(headerKey, "Last-Accumulator") == 0 {
-					lastSequenceNumber = big.NewInt(int64(binary.BigEndian.Uint64(value)))
+					laStr := string(value)
+					laHash := common.HexToHash(laStr)
+					lastAccumulator = &laHash
 				}
 				return
 			},
 		}
 
 		logger.Info().Msgf("Client Version: %v", clientVersion)
-		logger.Info().Msgf("lastSequenceNumber: %v", lastSequenceNumber)
+		logger.Info().Msgf("lastAccumulator: %v", lastAccumulator)
 
 		hs, err := u.Upgrade(safeConn)
 		if err != nil {
@@ -133,7 +133,8 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 		}
 
 		// Register incoming client in clientManager.
-		client := clientManager.Register(safeConn, desc, clientVersion)
+		// client := clientManager.Register(safeConn, desc, clientVersion)
+		client := clientManager.Register(safeConn, desc, clientVersion, lastAccumulator)
 
 		// Subscribe to events about conn.
 		err = b.poller.Start(desc, func(ev netpoll.Event) {
