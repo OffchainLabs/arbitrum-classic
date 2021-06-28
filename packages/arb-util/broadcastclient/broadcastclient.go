@@ -171,6 +171,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 
 				if res.Version == 1 {
 					for _, message := range res.Messages {
+						bc.lastAccumulator = &message.FeedItem.BatchItem.Accumulator // There's an assumption that the messages are in order.
 						messageReceiver <- *message
 					}
 

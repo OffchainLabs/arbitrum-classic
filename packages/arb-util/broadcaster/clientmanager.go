@@ -70,10 +70,27 @@ func NewClientManager(pool *gopool.Pool, poller netpoll.Poller, settings configu
 func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *ClientConnection) error {
 	start := time.Now()
 	if len(cm.broadcastMessages) > 0 {
-		// send the newly connected client all the messages we've got...
+		broadcastMessages := cm.broadcastMessages
+
+		if clientConnection.lastAccumulator != nil {
+			found := false
+
+			cachedMessageCount := len(cm.broadcastMessages)
+			bm := make([]*BroadcastFeedMessage, 0)
+
+			for i := 0; i < cachedMessageCount; i++ {
+				if cm.broadcastMessages[i].FeedItem.BatchItem.Accumulator == *clientConnection.lastAccumulator {
+					found = true
+				} else if found {
+					bm = append(bm, cm.broadcastMessages[i])
+					broadcastMessages = bm
+				}
+			}
+		}
+
 		bm := BroadcastMessage{
 			Version:  1,
-			Messages: cm.broadcastMessages,
+			Messages: broadcastMessages,
 		}
 
 		err := clientConnection.write(bm)
@@ -93,9 +110,9 @@ func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *C
 }
 
 // Register registers new connection as a Client.
-func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc, clientVersion string) *ClientConnection {
+func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc, clientVersion string, lastAccumulator *common.Hash) *ClientConnection {
 	createClient := ClientConnectionAction{
-		NewClientConnection(conn, desc, cm, clientVersion),
+		NewClientConnection(conn, desc, cm, clientVersion, lastAccumulator),
 		true,
 	}
 
