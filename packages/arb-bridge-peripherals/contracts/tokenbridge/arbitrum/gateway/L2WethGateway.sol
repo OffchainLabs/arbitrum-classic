@@ -42,6 +42,11 @@ contract L2WethGateway is L2ArbitrumGateway {
         l2Weth = _l2Weth;
     }
 
+    function postUpgradeInit2() external {
+        require(l1Weth != 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, "ALREADY_INITTED");
+        l1Weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    }
+
     /**
      * @notice internal utility function used to handle when no contract is deployed at expected address
      * @param l1ERC20 L1 address of ERC20

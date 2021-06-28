@@ -45,7 +45,10 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         l2Weth = _l2Weth;
     }
 
-    function postUpgradeInit() external {}
+    function postUpgradeInit() external {
+        require(l1Weth != 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, "ALREADY_INITTED");
+        l1Weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    }
 
     function createOutboundTx(
         address _l1Token,
