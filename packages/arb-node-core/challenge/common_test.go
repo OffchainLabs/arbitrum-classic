@@ -47,10 +47,13 @@ func executeChallenge(
 	challenger := NewChallenger(challengerChallengeCon, correctLookup, challengedNode, challengerWallet.Address())
 	asserter := NewChallenger(asserterChallengeCon, falseLookup, challengedNode, asserterWallet.Address())
 
+	// challenger := NewChallenger(challengerChallengeCon, falseLookup, challengedNode, challengerWallet.Address())
+	// asserter := NewChallenger(asserterChallengeCon, correctLookup, challengedNode, asserterWallet.Address())
+
 	turn := ethbridge.CHALLENGER_TURN
 	rounds := 0
 	for {
-		t.Logf("executing challenge round %v", rounds)
+		t.Logf("####################################### executing challenge round %v", rounds)
 		checkTurn(t, challenge, turn)
 		if turn == ethbridge.CHALLENGER_TURN {
 			t.Logf("executing correct round %v", rounds)
@@ -70,6 +73,7 @@ func executeChallenge(
 		} else {
 			t.Logf("executing incorrect round %v", rounds)
 			err = asserter.HandleConflict(ctx)
+			t.Logf("\n\n\n*************************check error %v", err)
 			if asserterMayFail && err != nil {
 				t.Logf("Asserter failed challenge: %v", err.Error())
 				return rounds
@@ -79,6 +83,10 @@ func executeChallenge(
 				t.Fatal("should be able to transact")
 			}
 			tx, err := asserterWallet.ExecuteTransactions(ctx, asserterBackend)
+			if asserterMayFail && err != nil {
+				t.Logf("Asserter failed challenge: %v", err.Error())
+				return rounds
+			}
 			test.FailIfError(t, err)
 			client.Commit()
 			receipt, err := client.TransactionReceipt(ctx, tx.Hash())

@@ -67,7 +67,7 @@ contract Challenge is Cloneable, IChallenge {
 
     uint256 private constant INBOX_CONSISTENCY_BISECTION_DEGREE = 400;
     uint256 private constant INBOX_DELTA_BISECTION_DEGREE = 250;
-    uint256 private constant EXECUTION_BISECTION_DEGREE = 400;
+    uint256 private constant EXECUTION_BISECTION_DEGREE = 300;
     bytes32 private constant UNREACHABLE_ASSERTION = bytes32(uint256(0));
 
     IOneStepProof[] public executors;

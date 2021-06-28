@@ -64,7 +64,7 @@ func TestWasmRunChallenge(t *testing.T) {
 	startGas := big.NewInt(0)
 	endGas := big.NewInt(2005657)
 	arbCore, shutdown := test.PrepareArbCoreGen(t, messages, "/home/sami/arbitrum/wasm-run.mexe")
-	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(2000000)}
+	faultConfig := FaultConfig{DistortMachineAtGas: big.NewInt(1900000)}
 	defer shutdown()
 	faultyCore := NewFaultyCore(arbCore, faultConfig)
 
@@ -81,7 +81,7 @@ func TestWasmRunChallenge(t *testing.T) {
 		time,
 		arbCore,
 		faultyCore,
-		false,
+		true,
 	)
 }
 

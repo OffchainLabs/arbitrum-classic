@@ -15,7 +15,7 @@ type ExecutionImpl struct {
 }
 
 func (e *ExecutionImpl) SegmentTarget() int {
-	return 400
+	return 300
 }
 
 var unreachableCut core.SimpleCut = core.NewSimpleCut([32]byte{})

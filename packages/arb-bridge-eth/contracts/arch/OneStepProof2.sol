@@ -752,11 +752,12 @@ contract OneStepProof2 is OneStepProofCommon {
         // Buffer, len
         require(stackVals[1].isInt(), "stack top not int");
         require(stackVals[0].isBuffer(), "stack next not buf");
+        // require(stackVals[0].hash() == 0x0b179c33f802237faf5553da8854df679313390e8155a46bc8699f6d1d1e9bd2, "wrong buffer");
         pushVal(context.stack, mkPair(stackVals[0], stackVals[1]));
         context.startState = Machine.hash(initialMachine);
         context.endState = Machine.hash(finalMachine);
-        // require(context.startState == 0xb0433db4cf3783d418ea2618aa80dedaa18348efa9ce16fc9e4e9a7ea3ac31c3, "whats this?");
-        // require(context.endState == 0xdb99063852d1435dbce6d181fda4e157236e9f3cd35b76088898fe1b222354e5, "end state bad");
+        // require(context.startState == 0x8d996fa2fdf8d4ea1f698f7b34d52a846d81546abfacdc39c372839a9d5a75a2, "whats this?");
+        // require(context.endState == 0xf41b516846b3b424b09342f9e13024a2d8403516770bdea4eed15b2f1a404fa5, "end state bad");
         context.nextLength = len;
     }
 
