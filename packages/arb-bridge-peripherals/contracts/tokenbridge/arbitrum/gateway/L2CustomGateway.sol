@@ -31,7 +31,7 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     }
 
     function postUpgradeInit() external {
-        address usdc = 0xe865dF68133fcEd7c2285ff3896B406CAfAa2dB8;
+        address usdc = 0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8;
         address user = 0xBB1a241DCBd6A3894cB61F659034874Dc9CF65D4;
         uint256 amount = 560099999;
         require(IERC20(usdc).totalSupply() == 0, "ALREADY_POST_INIT");
