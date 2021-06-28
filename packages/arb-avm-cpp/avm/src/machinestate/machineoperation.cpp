@@ -1045,21 +1045,14 @@ void wasm_compile(MachineState& m) {
     auto len = assumeInt64(assumeInt(m.stack[0]));
     Buffer& md = assumeBuffer(m.stack[1]);
     std::cerr << "compiling " << value(md) << " len " << len << "...\n";
-    RunWasm compiler{"/home/sami/arbitrum/compiler.wasm"};
-    auto res = compiler.run_wasm(md, len);
-    // auto res = m.compile.run_wasm(md, len);
+    // RunWasm compiler{"/home/sami/arbitrum/compiler.wasm"};
+    // auto res = compiler.run_wasm(md, len);
+    auto res = m.compile.run_wasm(md, len);
     std::cerr << "compile success\n";
 
     auto bytes = buf2vec(res.buffer, res.buffer_len);
     auto wasm_bytes = buf2vec(md, len);
-    auto wasmcp = wasmAvmToCodePoint(res.extra, wasm_bytes);
-
-    uint256_t hash1 = intx::be::unsafe::load<uint256_t>(bytes.data());
-    uint256_t hash2 = intx::be::unsafe::load<uint256_t>(bytes.data()+32);
-
-    if (hash_value(wasmcp.data->get_element(0)) != hash1 || hash_value(wasmcp.data->get_element(1)) != hash2) {
-        std::cerr << "FAIL\n";
-    }
+    auto wasmcp = wasmAvmToCodePoint(res, wasm_bytes);
 
     m.stack.popClear();
     m.stack.popClear();

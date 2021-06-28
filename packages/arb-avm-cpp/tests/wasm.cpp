@@ -208,9 +208,9 @@ TEST_CASE("wasm_3") {
 
 TEST_CASE("wasm_4") {
     SECTION("Making compiler machine") {
-        // RunWasm runner("/home/sami/arbitrum/compiler.wasm");
+        RunWasm runner("/home/sami/arbitrum/compiler.wasm");
         // RunWasm runner("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
-        RunWasm runner("/home/sami/complete.wasm");
+        // RunWasm runner("/home/sami/complete.wasm");
         // auto buf = getFile("/home/sami/stripped.wasm");
         auto buf = getFile("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");
         // auto buf = getFile("/home/sami/simple-wasm/pkg/simple_wasm_bg.wasm");
@@ -238,6 +238,7 @@ TEST_CASE("wasm_4") {
 
 }
 
+/*
 TEST_CASE("wasm_2") {
     SECTION("Making compiler machine") {
         RunWasm runner("/home/sami/arbitrum/compiler.wasm");
@@ -280,8 +281,6 @@ TEST_CASE("wasm_2") {
 
 TEST_CASE("Wasm") {
     SECTION("Code to hash") {
-        /*
-
         auto res = run_wasm(Buffer(), 123);
 
         auto storage = ArbStorage("/home/sami/tmpstorage");
@@ -296,7 +295,6 @@ TEST_CASE("Wasm") {
         std::cerr << "Status: " << cursor.status.code() << "\n";
         std::cerr << "gas used: " << cursor.data->getOutput().arb_gas_used << "\n";
         std::cerr << "steps: " << cursor.data->getOutput().total_steps << "\n";
-*/
 
         auto storage = ArbStorage("/home/sami/tmpstorage");
         auto state = makeWasmMachine(123, Buffer());
@@ -316,3 +314,4 @@ TEST_CASE("Wasm") {
     }
 
 }
+*/

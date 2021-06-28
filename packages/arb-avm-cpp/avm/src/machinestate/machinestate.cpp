@@ -443,68 +443,38 @@ struct CodeResult {
     CodePointStub stub;
 };
 
-CodeResult wasmAvmToCode(std::vector<uint8_t>& bytes) {
-    // code to hash
+
+CodeResult wasmAvmToCode(WasmResult &res) {
     auto code = std::make_shared<Code>(0);
     CodePointStub stub = code->addSegment();
-    std::vector<value> labels;
-    int i = 0;
-    int num = 0;
-    while (bytes[i] != 255) {
-        OpCode opcode = static_cast<OpCode>(bytes[i]);
-        i++;
-        Operation op = {opcode};
-        auto immed = bytes[i];
-        i++;
-        if (immed == 1) {
-            op = {opcode, get_int_value(bytes, i)};
-            i += 32;
-        } else if (immed == 2) {
-            std::vector<value> v;
-            v.push_back(Buffer());
-            v.push_back(0);
-            v.push_back(Buffer());
-            v.push_back(0);
-            v.push_back(1000000);  // check that these are the same
-            op = {opcode, Tuple::createTuple(v)};
-        } else if (immed == 3) {
-            std::vector<value> v;
-            v.push_back(Buffer());
-            v.push_back(get_int_value(bytes, i));
-            i += 32;
-            op = {opcode, Tuple::createTuple(v)};
-        }
-        stub = code->addOperation(stub.pc, op);
-        /*
-        if (op.immediate) {
-            std::cerr << "Immed hash " << op << " hash "
-                      << intx::to_string(hash_value(*op.immediate), 16) << "\n";
-        }
-        std::cerr << num << " Loaded op " << op << " codept " << stub << "\n";
-        std::cerr << "Loaded op " << op << " hash "
-                  << intx::to_string(stub.hash, 16) << "\n";
-        */
-        if (bytes[i]) {
-            // std::cerr << "Label " << stub << " at " << labels.size() << "\n";
-            labels.push_back(stub);
-        }
-        i++;
-        num++;
+
+    std::vector<CodePointStub> points;
+    std::vector<value> tab_lst;
+
+    for (int i = 0; i < res.insn->size(); i++) {
+        points.push_back(stub);
+        stub = code->addOperation(stub.pc, (*res.insn)[i]);
+        // std::cerr << i << ": " << stub << " " << (*res.insn)[i] << "\n";
     }
 
-    std::reverse(labels.begin(), labels.end());
-    auto table = make_table(labels);
-    std::cerr << "Here " << intx::to_string(stub.hash, 16) << " "
-              << labels.size() << " \n";
-    // std::cerr << "Table " << table << " hash " <<
-    // intx::to_string(hash_value(table), 16) << "\n";
-    std::cerr << "Table hash " << intx::to_string(hash_value(table), 16)
-              << " size " << getSize(table) << "\n";
+    for (int i = 0; i < res.table.size(); i++) {
+        auto offset = res.table[i].first;
+        if (offset >= tab_lst.size()) {
+            tab_lst.resize(offset+1);
+        }
+        tab_lst[offset] = points[res.table[i].second];
+        // tab_lst[offset] = points[points.size() - res.table[i].second];
+    }
+    auto table = make_table(tab_lst);
+
+    std::cerr << "Made table " << hash_value(table) << " \n";
+    std::cerr << "Codepoint " << hash_value(stub) << " \n";
+
     return {std::move(code), table, stub};
 }
 
-WasmCodePoint wasmAvmToCodePoint(std::vector<uint8_t>& bytes, std::vector<uint8_t>& wasm_module) {
-    auto res = wasmAvmToCode(bytes);
+WasmCodePoint wasmAvmToCodePoint(WasmResult &wres, std::vector<uint8_t>& wasm_module) {
+    auto res = wasmAvmToCode(wres);
     std::shared_ptr<Tuple> tpl = std::make_shared<Tuple>(res.stub, res.table, vec2buf(wasm_module), wasm_module.size());
     std::shared_ptr<WasmRunner> runner = std::make_shared<RunWasm>(wasm_module);
     return {std::move(tpl), std::move(runner)};
@@ -565,8 +535,8 @@ MachineState makeWasmMachine(uint64_t len, Buffer buf) {
     return state;
 }
 
-MachineState makeWasmMachine(std::vector<uint8_t> arr, uint64_t len, Buffer buf) {
-    auto res = wasmAvmToCode(arr);
+MachineState makeWasmMachine(WasmResult &wres, uint64_t len, Buffer buf) {
+    auto res = wasmAvmToCode(wres);
     MachineState state(res.code, 0);
     state.stack.push(len);
     state.stack.push(buf);
@@ -706,7 +676,7 @@ MachineState MachineState::initialWasmMachine() const {
         RunWasm copy = compile;
         auto res = copy.run_wasm(code_buffer, code_len);
 
-        return makeWasmMachine(res.extra, len, buf);
+        return makeWasmMachine(res, len, buf);
     } else if (op.opcode == OpCode::WASM_COMPILE) {
         auto elem0 = getStackOrImmed(0, op);
         auto elem1 = getStackOrImmed(1, op);
@@ -720,7 +690,7 @@ MachineState MachineState::initialWasmMachine() const {
         RunWasm copy = compile;
         auto res = copy.run_wasm(vec2buf(bytes), bytes.size());
 
-        return makeWasmMachine(res.extra, len, buf);
+        return makeWasmMachine(res, len, buf);
     }
 }
 
@@ -735,7 +705,7 @@ WasmCodePoint MachineState::compiledWasmCodePoint() const {
     auto res = m.run_wasm(code_buf, code_len);
     auto bytes = buf2vec(res.buffer, res.buffer_len);
     auto wasm_bytes = buf2vec(code_buf, code_len);
-    return wasmAvmToCodePoint(res.extra, wasm_bytes);
+    return wasmAvmToCodePoint(res, wasm_bytes);
 }
 
 MachineState MachineState::finalWasmMachine() const {
