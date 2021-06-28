@@ -80,8 +80,8 @@ const main = async () => {
   await l1WethGatewayLogic.deployed()
 
   console.log('deploy L2 weth gateway logic')
-  const l2WethGateway = await L2WethGateway.deploy()
-  await l2WethGateway.deployed()
+  const l2WethGatewayLogic = await L2WethGateway.deploy()
+  await l2WethGatewayLogic.deployed()
 
   const upgradeL1Tx = await proxyAdminL1.upgrade(
     l1WethGWProxyAddress,
@@ -92,7 +92,7 @@ const main = async () => {
 
   const upgradeL2Tx = await proxyAdminL2.upgrade(
     l2WethGWProxyAddress,
-    l1WethGatewayLogic.address
+    l2WethGatewayLogic.address
   )
 
   const upgradeL2Rec = await upgradeL2Tx.wait()
