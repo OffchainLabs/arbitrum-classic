@@ -132,6 +132,7 @@ type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               string      `koanf:"conf"`
 	DumpConf           bool        `koanf:"dump-conf"`
+	EnvPrefix          string      `koanf:"env-prefix"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	GasPriceUrl        string      `koanf:"gas-price-url"`
@@ -193,6 +194,8 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
+
+	f.String("env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
@@ -426,14 +429,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		}
 	}
 
-	// Env var settings override config file
-	k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
-		// FOO__BAR -> foo-bar to handle dash in config names
-		s = strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
-		return strings.Replace(s, "_", ".", -1)
-	}), nil)
-
 	// Any settings provided on command line override items in configuration file
 	// Command line parameters will be applied again later
 	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
@@ -451,12 +446,17 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func loadEnvironmentVariables(k *koanf.Koanf) error {
-	return k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
-		// FOO__BAR -> foo-bar to handle dash in config names
-		s = strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
-		return strings.Replace(s, "_", ".", -1)
-	}), nil)
+	envPrefix := k.String("env-prefix")
+	if len(envPrefix) != 0 {
+		return k.Load(env.Provider(envPrefix+"_", ".", func(s string) string {
+			// FOO__BAR -> foo-bar to handle dash in config names
+			s = strings.Replace(strings.ToLower(
+				strings.TrimPrefix(s, envPrefix+"_")), "__", "-", -1)
+			return strings.Replace(s, "_", ".", -1)
+		}), nil)
+	}
+
+	return nil
 }
 
 func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
