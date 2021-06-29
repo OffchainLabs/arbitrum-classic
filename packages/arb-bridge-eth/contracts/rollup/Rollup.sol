@@ -99,6 +99,16 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 }
 
 contract Rollup is RollupBase {
+    constructor() public Cloneable() Pausable() {
+        // constructor is used so logic contract can't be init'ed
+        confirmPeriodBlocks = 1;
+        require(isInit(), "CONSTRUCTOR_NOT_INIT");
+    }
+
+    function isInit() internal view returns (bool) {
+        return confirmPeriodBlocks != 0;
+    }
+
     // _rollupParams = [ confirmPeriodBlocks, extraChallengeTimeBlocks, arbGasSpeedLimitPerBlock, baseStake ]
     // connectedContracts = [delayedBridge, sequencerInbox, outbox, rollupEventBridge, challengeFactory, nodeFactory]
     function initialize(
@@ -111,7 +121,7 @@ contract Rollup is RollupBase {
         address[2] calldata _facets,
         uint256[2] calldata sequencerInboxParams
     ) public {
-        require(confirmPeriodBlocks == 0, "ALREADY_INIT");
+        require(!isInit(), "ALREADY_INIT");
         require(_rollupParams[0] != 0, "BAD_CONF_PERIOD");
 
         delayedBridge = IBridge(connectedContracts[0]);
@@ -158,6 +168,7 @@ contract Rollup is RollupBase {
         require(success, "FAIL_INIT_FACET");
 
         emit RollupCreated(_machineHash);
+        require(isInit(), "INITIALIZE_NOT_INIT");
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
