@@ -162,7 +162,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         external
         override
     {
-        sequencerInboxMaxDelayBlocks = newSequencerInboxMaxDelayBlocks;
+        ISequencerInbox(sequencerBridge).setMaxDelayBlocks(newSequencerInboxMaxDelayBlocks);
         emit OwnerFunctionCalled(14);
     }
 
@@ -174,7 +174,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         external
         override
     {
-        sequencerInboxMaxDelaySeconds = newSequencerInboxMaxDelaySeconds;
+        ISequencerInbox(sequencerBridge).setMaxDelaySeconds(newSequencerInboxMaxDelaySeconds);
         emit OwnerFunctionCalled(15);
     }
 

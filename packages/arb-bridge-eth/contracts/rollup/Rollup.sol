@@ -54,8 +54,8 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     address public stakeToken;
     uint256 public minimumAssertionPeriod;
 
-    uint256 public sequencerInboxMaxDelayBlocks;
-    uint256 public sequencerInboxMaxDelaySeconds;
+    uint256 public STORAGE_GAP_1;
+    uint256 public STORAGE_GAP_2;
     uint256 public challengeExecutionBisectionDegree;
 
     address[] internal facets;
@@ -155,8 +155,9 @@ contract Rollup is RollupBase {
         minimumAssertionPeriod = 75;
         challengeExecutionBisectionDegree = 400;
 
-        sequencerInboxMaxDelayBlocks = sequencerInboxParams[0];
-        sequencerInboxMaxDelaySeconds = sequencerInboxParams[1];
+        // TODO: remove sequencerInboxParams and instead set these values in inbox's init
+        sequencerBridge.setMaxDelayBlocks(sequencerInboxParams[0]);
+        sequencerBridge.setMaxDelaySeconds(sequencerInboxParams[1]);
 
         // facets[0] == admin, facets[1] == user
         facets = _facets;
@@ -169,6 +170,26 @@ contract Rollup is RollupBase {
 
         emit RollupCreated(_machineHash);
         require(isInit(), "INITIALIZE_NOT_INIT");
+    }
+
+    function postUpgradeInit(address newAdminFacet) external {
+        // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
+        // because of that we need to update the admin facet logic to allow the owner to set
+        // these values in the sequencer inbox
+
+        uint256 oldDelayBlocks = STORAGE_GAP_1;
+        uint256 oldDelaySeconds = STORAGE_GAP_2;
+
+        require(oldDelayBlocks == 6545, "ALREADY_POST_INIT");
+        require(oldDelaySeconds == 86400, "ALREADY_POST_INIT");
+
+        sequencerBridge.setMaxDelayBlocks(oldDelayBlocks);
+        sequencerBridge.setMaxDelaySeconds(oldDelaySeconds);
+
+        STORAGE_GAP_1 = 0;
+        STORAGE_GAP_2 = 0;
+
+        facets[0] = newAdminFacet;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {

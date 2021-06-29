@@ -39,6 +39,9 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     address public sequencer;
     address public rollup;
 
+    uint256 public override maxDelayBlocks;
+    uint256 public override maxDelaySeconds;
+
     function initialize(
         IBridge _delayedInbox,
         address _sequencer,
@@ -48,6 +51,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         delayedInbox = _delayedInbox;
         sequencer = _sequencer;
         rollup = _rollup;
+        // TODO: set maxDelayBlocks and maxDelaySeconds
     }
 
     function setSequencer(address newSequencer) external override {
@@ -56,12 +60,16 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         emit SequencerAddressUpdated(newSequencer);
     }
 
-    function maxDelayBlocks() public view override returns (uint256) {
-        return RollupBase(rollup).sequencerInboxMaxDelayBlocks();
+    function setMaxDelayBlocks(uint256 newMaxDelayBlocks) external override {
+        require(msg.sender == rollup, "ONLY_ROLLUP");
+        maxDelayBlocks = newMaxDelayBlocks;
+        emit MaxDelayBlocksUpdated(newMaxDelayBlocks);
     }
 
-    function maxDelaySeconds() public view override returns (uint256) {
-        return RollupBase(rollup).sequencerInboxMaxDelaySeconds();
+    function setMaxDelaySeconds(uint256 newMaxDelaySeconds) external override {
+        require(msg.sender == rollup, "ONLY_ROLLUP");
+        maxDelaySeconds = newMaxDelaySeconds;
+        emit MaxDelaySecondsUpdated(newMaxDelaySeconds);
     }
 
     function getLastDelayedAcc() internal view returns (bytes32) {
@@ -94,8 +102,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                     gasPriceL1,
                     messageDataHash
                 );
-            require(l1BlockAndTimestamp[0] + maxDelayBlocks() < block.number, "MAX_DELAY_BLOCKS");
-            require(l1BlockAndTimestamp[1] + maxDelaySeconds() < block.timestamp, "MAX_DELAY_TIME");
+            require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
+            require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
             bytes32 prevDelayedAcc = 0;
             if (_totalDelayedMessagesRead > 1) {
@@ -201,12 +209,12 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             // [numItems, l1BlockNumber, l1Timestamp, newTotalDelayedMessagesRead, newDelayedAcc]
             {
                 uint256 l1BlockNumber = sectionsMetadata[i + 1];
-                require(l1BlockNumber + maxDelayBlocks() >= block.number, "BLOCK_TOO_OLD");
+                require(l1BlockNumber + maxDelayBlocks >= block.number, "BLOCK_TOO_OLD");
                 require(l1BlockNumber <= block.number, "BLOCK_TOO_NEW");
             }
             {
                 uint256 l1Timestamp = sectionsMetadata[i + 2];
-                require(l1Timestamp + maxDelaySeconds() >= block.timestamp, "TIME_TOO_OLD");
+                require(l1Timestamp + maxDelaySeconds >= block.timestamp, "TIME_TOO_OLD");
                 require(l1Timestamp <= block.timestamp, "TIME_TOO_NEW");
             }
 
