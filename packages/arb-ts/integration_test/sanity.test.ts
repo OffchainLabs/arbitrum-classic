@@ -82,7 +82,6 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('customtoken gateway properly set', async () => {
-    // @ts-ignore
     const { bridge, l1Network, l2Network } = await instantiateBridge()
 
     const l1customGatewayAddress = await bridge.l1Bridge.getGatewayAddress(
