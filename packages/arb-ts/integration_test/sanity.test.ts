@@ -17,6 +17,10 @@ import { instantiateBridge } from '../scripts/instantiate_bridge'
 import { existentTestERC20, existentTestCustomToken } from './testHelpers'
 import { constants } from 'ethers'
 
+const expectIgnoreCase = (expected: string, actual: string) => {
+  expect(expected.toLocaleLowerCase()).to.equal(actual.toLocaleLowerCase())
+}
+
 describe('sanity checks (read-only)', async () => {
   it('standard gateways public storage vars properly set', async () => {
     const { bridge, l1Network, l2Network } = await instantiateBridge()
@@ -155,22 +159,22 @@ describe('sanity checks (read-only)', async () => {
     )
 
     const l1Weth = await l1Gateway.l1Weth()
-    expect(l1Weth).to.equal(l1Network.tokenBridge.l1Weth)
+    expectIgnoreCase(l1Weth, l1Network.tokenBridge.l1Weth)
 
     const l2Weth = await l2Gateway.l2Weth()
-    expect(l2Weth).to.equal(l2Network.tokenBridge.l2Weth)
+    expectIgnoreCase(l2Weth, l1Network.tokenBridge.l2Weth)
 
     const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
-    expect(l1GatewayCounterParty).to.equal(l2Network.tokenBridge.l2WethGateway)
+    expectIgnoreCase(l1GatewayCounterParty, l2Network.tokenBridge.l2WethGateway)
 
     const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
-    expect(l2GatewayCounterParty).to.equal(l2Network.tokenBridge.l1WethGateway)
+    expectIgnoreCase(l2GatewayCounterParty, l2Network.tokenBridge.l1WethGateway)
 
     const l1Router = await l1Gateway.router()
-    expect(l1Router).to.equal(l1Network.tokenBridge.l1GatewayRouter)
+    expectIgnoreCase(l1Router, l2Network.tokenBridge.l1GatewayRouter)
 
     const l2Router = await l2Gateway.router()
-    expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
+    expectIgnoreCase(l2Router, l2Network.tokenBridge.l2GatewayRouter)
   })
 
   it('aeWETh public vars properly set', async () => {
@@ -182,10 +186,10 @@ describe('sanity checks (read-only)', async () => {
     )
 
     const l2GatewayOnAeWeth = await aeWeth.l2Gateway()
-    expect(l2GatewayOnAeWeth).to.equal(l2Network.tokenBridge.l2WethGateway)
+    expectIgnoreCase(l2GatewayOnAeWeth, l2Network.tokenBridge.l2WethGateway)
 
     const l1AddressOnAeWeth = await aeWeth.l1Address()
-    expect(l1AddressOnAeWeth).to.equal(l2Network.tokenBridge.l1Weth)
+    expectIgnoreCase(l1AddressOnAeWeth, l2Network.tokenBridge.l1Weth)
   })
 
   it('l1 gateway router points to right gateways', async () => {
