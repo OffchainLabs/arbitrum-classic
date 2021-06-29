@@ -666,7 +666,7 @@ export class BridgeHelper {
 
     console.log('got proof')
 
-    return await BridgeHelper.tryOutboxExecute(
+    return BridgeHelper.tryOutboxExecute(
       proofData,
       l1CoreBridgeAddress,
       l1Signer
