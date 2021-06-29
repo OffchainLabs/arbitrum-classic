@@ -1,4 +1,4 @@
-import { ContractReceipt, ethers } from 'ethers'
+import { ContractTransaction, ethers } from 'ethers'
 import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
@@ -577,7 +577,7 @@ export class BridgeHelper {
     outboxProofData: OutboxProofData,
     l1CoreBridgeAddress: string,
     l1Signer: Signer
-  ): Promise<ContractReceipt> => {
+  ): Promise<ContractTransaction> => {
     if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
 
     const activeOutboxAddress = await BridgeHelper.getActiveOutbox(
@@ -609,10 +609,7 @@ export class BridgeHelper {
         outboxProofData.calldataForL1
       )
       console.log(`Transaction hash: ${outboxExecute.hash}`)
-      console.log('Waiting for receipt')
-      const receipt = await outboxExecute.wait()
-      console.log('Receipt emitted')
-      return receipt
+      return outboxExecute
     } catch (e) {
       console.log('failed to execute tx in layer 1')
       console.log(e)
@@ -669,12 +666,11 @@ export class BridgeHelper {
 
     console.log('got proof')
 
-    const outboxExecuteTransactionReceipt = await BridgeHelper.tryOutboxExecute(
+    return await BridgeHelper.tryOutboxExecute(
       proofData,
       l1CoreBridgeAddress,
       l1Signer
     )
-    return outboxExecuteTransactionReceipt
   }
 
   static getL2ToL1EventData = async (
