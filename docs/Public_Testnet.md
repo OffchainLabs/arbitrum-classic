@@ -60,7 +60,6 @@ All contracts are deployed from https://github.com/OffchainLabs/arbitrum/tree/69
 
 - Main L1 Rollup Contract: [0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c](https://rinkeby.etherscan.io/address/0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c)
 - Ethereum Inbox Contract [0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e](https://rinkeby.etherscan.io/address/0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e)
-- 
 <!--
 ## Running your own node
 
