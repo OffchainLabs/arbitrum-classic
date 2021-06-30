@@ -187,7 +187,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, ArbitrumGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) external payable virtual override returns (bytes memory res) {
+    ) public payable virtual override returns (bytes memory res) {
         address _from;
         uint256 seqNum;
         {

@@ -1,4 +1,4 @@
-import { ContractReceipt, ethers } from 'ethers'
+import { ContractTransaction, ethers } from 'ethers'
 import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
@@ -10,6 +10,7 @@ import { Bridge__factory } from './abi/factories/Bridge__factory'
 import { Inbox__factory } from './abi/factories/Inbox__factory'
 import { ArbSys__factory } from './abi/factories/ArbSys__factory'
 import { Rollup__factory } from './abi/factories/Rollup__factory'
+import { TokenGateway__factory } from './abi/factories/TokenGateway__factory'
 
 import { OutboxEntry } from './abi/OutboxEntry'
 
@@ -111,30 +112,30 @@ export type ChainIdOrProvider = BigNumber | providers.Provider
  * Stateless helper methods; most wrapped / accessible (and documented) via {@link Bridge}
  */
 export class BridgeHelper {
-  static getTokenWithdrawEventData = async (
-    destinationAddress: string,
-    l2GatewayAddress: string,
-    l2Provider: providers.Provider
+  static getOutBoundTransferInitiatedLogs = async (
+    provider: providers.Provider,
+    gatewayAddress: string,
+    tokenAddress?: string,
+    destinationAddress?: string
   ) => {
-    const contract = L2ERC20Gateway__factory.connect(
-      l2GatewayAddress,
-      l2Provider
+    const gatewayContract = TokenGateway__factory.connect(
+      gatewayAddress,
+      provider
     )
     const topics = [
-      null,
-      // todo: I think this is still the right filter?
-      utils.hexZeroPad(destinationAddress, 32),
+      tokenAddress ? utils.hexZeroPad(tokenAddress, 32) : null,
+      destinationAddress ? utils.hexZeroPad(destinationAddress, 32) : null,
     ]
     const logs = await BridgeHelper.getEventLogs(
       'OutboundTransferInitiated',
-      contract,
+      gatewayContract,
       // @ts-ignore
       topics
     )
 
     return logs.map(log => {
       const data = {
-        ...contract.iface.parseLog(log).args,
+        ...gatewayContract.interface.parseLog(log).args,
         txHash: log.transactionHash,
       }
       return (data as unknown) as OutboundTransferInitiatedResult
@@ -251,7 +252,6 @@ export class BridgeHelper {
     l1GatewayAddress: string
   ): Promise<Array<OutboundTransferInitiatedResult>> => {
     const factory = new L1ERC20Gateway__factory()
-    // TODO: does this work?
     const contract = factory.attach(l1GatewayAddress)
     const iface = contract.interface
     const event = iface.getEvent('OutboundTransferInitiated')
@@ -261,6 +261,21 @@ export class BridgeHelper {
       log =>
         (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
     )
+  }
+
+  static getOutboundTransferData = async (
+    gatewayAddress: string,
+    provider: providers.Provider,
+    filter: ethers.providers.Filter = {}
+  ) => {
+    const contract = L1ERC20Gateway__factory.connect(gatewayAddress, provider)
+    const logs = await BridgeHelper.getEventLogs(
+      'OutboundTransferInitiated',
+      contract,
+      [],
+      filter
+    )
+    return logs
   }
 
   public static getEventLogs = (
@@ -562,7 +577,7 @@ export class BridgeHelper {
     outboxProofData: OutboxProofData,
     l1CoreBridgeAddress: string,
     l1Signer: Signer
-  ): Promise<ContractReceipt> => {
+  ): Promise<ContractTransaction> => {
     if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
 
     const activeOutboxAddress = await BridgeHelper.getActiveOutbox(
@@ -594,10 +609,7 @@ export class BridgeHelper {
         outboxProofData.calldataForL1
       )
       console.log(`Transaction hash: ${outboxExecute.hash}`)
-      console.log('Waiting for receipt')
-      const receipt = await outboxExecute.wait()
-      console.log('Receipt emitted')
-      return receipt
+      return outboxExecute
     } catch (e) {
       console.log('failed to execute tx in layer 1')
       console.log(e)
@@ -654,12 +666,11 @@ export class BridgeHelper {
 
     console.log('got proof')
 
-    const outboxExecuteTransactionReceipt = await BridgeHelper.tryOutboxExecute(
+    return BridgeHelper.tryOutboxExecute(
       proofData,
       l1CoreBridgeAddress,
       l1Signer
     )
-    return outboxExecuteTransactionReceipt
   }
 
   static getL2ToL1EventData = async (
