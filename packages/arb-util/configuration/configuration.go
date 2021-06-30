@@ -242,7 +242,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	if len(k.String("rollup.address")) == 0 {
+	rollupAddress := k.String("rollup.address")
+	if len(rollupAddress) != 0 {
+		logger.Info().Str("rollup", rollupAddress).Msg("using custom rollup address")
+	} else {
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
