@@ -18,6 +18,8 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
+	"github.com/knadh/koanf/providers/rawbytes"
+	"github.com/knadh/koanf/providers/s3"
 	"github.com/mitchellh/mapstructure"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
@@ -26,6 +28,14 @@ import (
 )
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
+
+type Conf struct {
+	Dump      bool   `koanf:"dump"`
+	EnvPrefix string `koanf:"env-prefix"`
+	File      string `koanf:"file"`
+	S3        S3     `koanf:"s3"`
+	String    string `koanf:"string"`
+}
 
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
@@ -74,6 +84,14 @@ type Aggregator struct {
 type RPC struct {
 	Addr string `koanf:"addr"`
 	Port string `koanf:"port"`
+}
+
+type S3 struct {
+	AccessKey string `koanf:"access-key"`
+	Bucket    string `koanf:"bucket"`
+	ObjectKey string `koanf:"object-key"`
+	Region    string `koanf:"region"`
+	SecretKey string `koanf:"secret-key"`
 }
 
 type Sequencer struct {
@@ -130,9 +148,7 @@ type Log struct {
 
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
-	Conf               string      `koanf:"conf"`
-	DumpConf           bool        `koanf:"dump-conf"`
-	EnvPrefix          string      `koanf:"env-prefix"`
+	Conf               Conf        `koanf:"conf"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	GasPriceUrl        string      `koanf:"gas-price-url"`
@@ -379,11 +395,15 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 }
 
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
-	f.String("conf", "", "name of configuration file")
-
-	f.Bool("dump-conf", false, "print out currently active configuration file")
-
-	f.String("env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
+	f.Bool("conf.dump", false, "print out currently active configuration file")
+	f.String("conf.env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
+	f.String("conf.file", "", "name of configuration file")
+	f.String("conf.s3.access-key", "", "S3 access key")
+	f.String("conf.s3.secret-key", "", "S3 secret key")
+	f.String("conf.s3.region", "", "S3 region")
+	f.String("conf.s3.bucket", "", "S3 bucket")
+	f.String("conf.s3.object-key", "", "S3 object key")
+	f.String("conf.string", "", "configuration as JSON string")
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
@@ -424,22 +444,44 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		return nil, errors.Wrap(err, "error applying default values")
 	}
 
-	// Load configuration file if provided
-	configFile, _ := f.GetString("conf")
+	// Initial application of command line parameters and environment variables so other methods can be applied
+	// Command line parameters and environment variables will be applied again to override other methods
+	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		return nil, errors.Wrap(err, "error loading config")
+	}
+	err = loadEnvironmentVariables(k)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading environment variables")
+	}
+
+	// Load configuration file from S3 if setup
+	err = loadS3Variables(k)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading S3 settings")
+	}
+
+	// Local config file overrides S3 config file
+	configFile := k.String("conf.file")
 	if len(configFile) > 0 {
 		if err = k.Load(file.Provider(configFile), json.Parser()); err != nil {
 			return nil, errors.Wrap(err, "error loading config file")
 		}
 	}
 
-	// Any settings provided on command line override items in configuration file
-	// Command line parameters will be applied again later
+	// Config string overrides any config file
+	configString := k.String("conf.string")
+	if len(configString) > 0 {
+		if err = k.Load(rawbytes.Provider([]byte(configString)), nil); err != nil {
+			return nil, errors.Wrap(err, "error loading config")
+		}
+	}
+
+	// Command line overrides config file or config string
 	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
 		return nil, errors.Wrap(err, "error loading config")
 	}
 
-	// Any settings provided through environment variables override all other custom settings
-	// Environment variable parameters will be applied again later
+	// Environment variables overrides config files or command line options
 	err = loadEnvironmentVariables(k)
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading environment variables")
@@ -449,7 +491,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func loadEnvironmentVariables(k *koanf.Koanf) error {
-	envPrefix := k.String("env-prefix")
+	envPrefix := k.String("conf.env-prefix")
 	if len(envPrefix) != 0 {
 		return k.Load(env.Provider(envPrefix+"_", ".", func(s string) string {
 			// FOO__BAR -> foo-bar to handle dash in config names
@@ -462,20 +504,21 @@ func loadEnvironmentVariables(k *koanf.Koanf) error {
 	return nil
 }
 
+func loadS3Variables(k *koanf.Koanf) error {
+	if len(k.String("conf.s3.secret-key")) != 0 {
+		return k.Load(s3.Provider(s3.Config{
+			AccessKey: k.String("conf.s3.access-key"),
+			SecretKey: k.String("conf.s3.secret-key"),
+			Region:    k.String("conf.s3.region"),
+			Bucket:    k.String("conf.s3.bucket"),
+			ObjectKey: k.String("conf.s3.object-key"),
+		}), nil)
+	}
+
+	return nil
+}
+
 func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
-	// Any settings provided on command line override any custom settings
-	// Second time command line parameters are applied so auto chain parameters can be overridden
-	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, nil, errors.Wrap(err, "error loading config")
-	}
-
-	// Any settings provided through environment variables override all other custom settings
-	// Second time environment variables are applied so auto chain parameters can be overridden
-	err := loadEnvironmentVariables(k)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error loading environment variables")
-	}
-
 	var out Config
 	decoderConfig := mapstructure.DecoderConfig{
 		ErrorUnused: true,
@@ -487,18 +530,18 @@ func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
 		Result:           &out,
 		WeaklyTypedInput: true,
 	}
-	err = k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
+	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
 
 		return nil, nil, err
 	}
 
-	if out.DumpConf {
+	if out.Conf.Dump {
 		// Print out current configuration
 
 		// Don't keep printing configuration file and don't print wallet password
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"dump-conf":       false,
+			"conf.dump":       false,
 			"wallet.password": "",
 		}, "."), nil)
 
