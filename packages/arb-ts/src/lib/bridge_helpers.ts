@@ -310,11 +310,10 @@ export class BridgeHelper {
     )
   }
 
-  static getWithdrawalsInL2Transaction = async (
+  static getWithdrawalsInL2Transaction = (
     l2Transaction: providers.TransactionReceipt,
     l2Provider: providers.Provider
-  ): Promise<Array<L2ToL1EventResult>> => {
-    // TODO: can we use dummies to get interface?
+  ): Array<L2ToL1EventResult> => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
