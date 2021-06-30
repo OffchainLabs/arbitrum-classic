@@ -195,8 +195,6 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.String("env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
-
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
@@ -381,6 +379,8 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("conf", "", "name of configuration file")
 
 	f.Bool("dump-conf", false, "print out currently active configuration file")
+
+	f.String("env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
