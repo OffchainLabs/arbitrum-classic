@@ -110,3 +110,29 @@ Note that in the system described above, one pair of Gateway contracts handles t
 Take our wrapped Ether implementation, for example: here, a single WETH contract on L1 is connected to a single WETH contract on L2. When transferring WETH from one domain to another, the L1/L2 Gateway architecture is used to unwrap the WETH on domain A, transfer the now-unwrapped Ether, and then re-wrap it on domain B. This ensures that WETH can behave on Arbitrum the way users are used to it behaving on Ethereum, while ensuring that all WETH tokens are always fully collateralized on the layer in which they reside.
 
 No matter the complexity of a particular token's bridging needs, a gateway can in principle be created it to accommodate it within our canonical bridging system.
+
+### The Arbitrum Generic Custom Gateway
+
+Just because a token has requirements beyond what are offered via the StandardERC20 gateway, that doesn't necessarily mean that a unique Gateway needs to be taylor-made for the token in question. Our Generic-Custom Gateway is designed to be flexible enough to be suitable for most (but not necessarily all) custom fungible token needs. As a general rule:
+
+**If your token's total supply on L2 only ever increases when tokens are deposited from L1 (i.e., no L2-interest accrual, no special L2 minting affordance, etc), but your token requires customization beyond what the StandardERC20 Gateway provides, the Generic-Custom Gateway is likely the right solution for you!**
+
+Some examples of token features suitable for the Generic-Custom Gateway:
+
+- L2 token contract upgradable via a proxy
+- L2 token contract includes address whitelisting /blacklisting
+- L2 token contract includes getter methods not in the ERC20 standard
+
+#### Setting Up Your Token With The Generic Custom Gateway
+
+Follow the following steps to get your token set up to use the Generic Custom Gateway
+
+**1. Deploy your token on Arbitrum**
+
+- Your token should conform to the minimum [IArbToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/IArbToken.md)
+  interface; i.e., it should have `bridgeMint` and `bridgeBurn` methods only callable by the L2CustomGateway contract, and the address of its corresponding Ethereum token accessible via `l1Address`. For an example implementation, see [TestArbCustomToken](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestArbCustomToken.sol).
+
+**2. Register Your Token on L1 to Your Token on L2 via the L1CustomGateway Contract**
+This can be done permissionlessly if your L1 token's contract can make an external call to `L1CustomGateway.registerTokenToL2` (see, i.e., [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol)), or via an admin call on our end.
+**2. Register Your Token on L1 To the L1Gateway Router**
+This too cam be done permissionlessly if your L1 token's contract can make a call to `L1GatewayRouter.setGateway` or via an admin call.
