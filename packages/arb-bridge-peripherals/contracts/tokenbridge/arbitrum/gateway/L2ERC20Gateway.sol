@@ -77,11 +77,10 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
     function handleNoContract(
         address l1ERC20,
         address expectedL2Address,
-        address _from,
         address _to,
         uint256 _amount,
         bytes memory deployData
-    ) internal virtual override returns (bool shouldHalt) {
+    ) internal virtual override returns (bool shouldWithdraw) {
         bytes32 userSalt = getUserSalt(l1ERC20);
         address createdContract = BeaconProxyFactory(beaconProxyFactory).createProxy(userSalt);
 
@@ -90,8 +89,6 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
         if (createdContract == expectedL2Address) {
             return false;
         } else {
-            // trigger withdrawal then halt
-            createOutboundTx(l1ERC20, address(this), _from, _amount, "");
             return true;
         }
     }

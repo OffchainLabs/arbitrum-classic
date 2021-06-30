@@ -51,14 +51,10 @@ contract L2WethGateway is L2ArbitrumGateway {
     function handleNoContract(
         address l1ERC20,
         address expectedL2Address,
-        address _from,
         address _to,
         uint256 _amount,
         bytes memory deployData
-    ) internal virtual override returns (bool shouldHalt) {
-        // it is assumed that the custom token is deployed in the L2 before deposits are made
-        // trigger withdrawal
-        createOutboundTx(l1ERC20, address(this), _from, _amount, "");
+    ) internal virtual override returns (bool shouldWithdraw) {
         return true;
     }
 

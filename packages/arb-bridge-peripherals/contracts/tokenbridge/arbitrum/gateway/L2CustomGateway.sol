@@ -38,14 +38,10 @@ contract L2CustomGateway is L2ArbitrumGateway, ICustomGateway {
     function handleNoContract(
         address _l1Token,
         address expectedL2Address,
-        address _from,
         address _to,
         uint256 _amount,
         bytes memory gatewayData
-    ) internal virtual override returns (bool shouldHalt) {
-        // it is assumed that the custom token is deployed in the L2 before deposits are made
-        // trigger withdrawal
-        createOutboundTx(_l1Token, address(this), _from, _amount, "");
+    ) internal virtual override returns (bool shouldWithdraw) {
         return true;
     }
 

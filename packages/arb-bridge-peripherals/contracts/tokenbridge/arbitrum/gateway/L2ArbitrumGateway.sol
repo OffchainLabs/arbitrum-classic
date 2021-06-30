@@ -187,19 +187,16 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
 
         address expectedAddress = _calculateL2TokenAddress(_token);
 
+        bool shouldWithdraw;
         if (!expectedAddress.isContract()) {
-            bool shouldHalt =
-                handleNoContract(_token, expectedAddress, _from, _to, _amount, gatewayData);
-            if (shouldHalt) return bytes("");
+            shouldWithdraw = handleNoContract(_token, expectedAddress, _to, _amount, gatewayData);
         }
-        // ignores gatewayData if token already deployed
 
         {
             // validate if L1 address supplied matches that of the expected L2 address
             (bool success, bytes memory _l1AddressData) =
                 expectedAddress.staticcall(abi.encodeWithSelector(IArbToken.l1Address.selector));
 
-            bool shouldWithdraw;
             if (!success || _l1AddressData.length < 32) {
                 shouldWithdraw = true;
             } else {
@@ -211,25 +208,25 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
                     shouldWithdraw = true;
                 }
             }
-
-            if (shouldWithdraw) {
-                createOutboundTx(_token, address(this), _from, _amount, "");
-                return bytes("");
-            }
         }
 
-        if (callHookData.length > 0) {
-            bool success;
-            try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookData) {
-                success = true;
-            } catch {
-                // if reverted, then credit _from's account
-                inboundEscrowTransfer(expectedAddress, _from, _amount);
-                // success default value is false
+        if (!shouldWithdraw) {
+            if (callHookData.length > 0) {
+                bool success;
+                try this.inboundEscrowAndCall(expectedAddress, _amount, _from, _to, callHookData) {
+                    success = true;
+                } catch {
+                    shouldWithdraw = true;
+                }
+                emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
+            } else {
+                inboundEscrowTransfer(expectedAddress, _to, _amount);
             }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
-        } else {
-            inboundEscrowTransfer(expectedAddress, _to, _amount);
+        }
+        // we don't use an else branch since `shouldWithdraw` can be set on the previous logic
+        if (shouldWithdraw) {
+            createOutboundTx(_token, address(this), _from, _amount, "");
+            return bytes("");
         }
 
         emit InboundTransferFinalized(
@@ -248,9 +245,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, ArbitrumGateway {
     function handleNoContract(
         address _l1Token,
         address expectedL2Address,
-        address _from,
         address _to,
         uint256 _amount,
         bytes memory gatewayData
-    ) internal virtual returns (bool shouldHalt);
+    ) internal virtual returns (bool shouldWithdraw);
 }

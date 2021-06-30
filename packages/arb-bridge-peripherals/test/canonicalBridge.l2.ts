@@ -292,8 +292,8 @@ describe('Bridge peripherals layer 2', () => {
     )
     assert.equal(
       (await erc20.balanceOf(sender)).toString(),
-      amount,
-      'Sender should hold coins'
+      0,
+      'coins should be withdrawn'
     )
   })
 
@@ -374,8 +374,8 @@ describe('Bridge peripherals layer 2', () => {
     )
     assert.equal(
       (await erc20.balanceOf(sender)).toString(),
-      amount,
-      'Sender should hold coins'
+      0,
+      'coins should be withdrawn'
     )
   })
 
