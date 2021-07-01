@@ -2,10 +2,11 @@ package broadcastclient
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 )
@@ -56,7 +57,7 @@ func TestReceiveMessages(t *testing.T) {
 }
 
 func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expectedCount int, wg *sync.WaitGroup) {
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9742/", nil, 20*time.Second)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9742/", nil, 20*time.Second, "2.0")
 	messageCount := 0
 
 	// connect returns
@@ -108,7 +109,7 @@ func TestServerClientDisconnect(t *testing.T) {
 	}
 	defer b.Stop()
 
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil, 20*time.Second)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil, 20*time.Second, "2.0")
 
 	client, err := broadcastClient.Connect(ctx)
 	if err != nil {
@@ -118,6 +119,9 @@ func TestServerClientDisconnect(t *testing.T) {
 	newBroadcastMessage := broadcaster.SequencedMessages()
 	hash1, feedItem1, signature1 := newBroadcastMessage()
 	err = b.BroadcastSingle(hash1, feedItem1.BatchItem, signature1.Bytes())
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Wait for client to receive batch to ensure it is connected
 	select {
@@ -164,7 +168,7 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	}
 	defer b1.Stop()
 
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil, 2*time.Second)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9743/", nil, 2*time.Second, "2.0")
 
 	// connect returns
 	_, err = broadcastClient.Connect(ctx)
@@ -260,7 +264,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 }
 
 func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex int, wg *sync.WaitGroup) {
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", nil, 60*time.Second)
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", nil, 60*time.Second, "2.0")
 	testClient, err := broadcastClient.Connect(ctx)
 	if err != nil {
 		t.Fatal(err)

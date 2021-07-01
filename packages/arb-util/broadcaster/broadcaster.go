@@ -100,9 +100,9 @@ func (b *Broadcaster) Start(ctx context.Context) error {
 					Info().
 					Msgf("non-websocket header: %q=%q", key, value)
 				headerKey := string(key)
-				if headerKey == "Accept" {
+				if strings.Compare(headerKey, "Client-Version") == 0 {
 					clientVersion = string(value)
-				} else if headerKey == "LastSequenceNumber" {
+				} else if strings.Compare(headerKey, "Last-Accumulator") == 0 {
 					lastSequenceNumber = big.NewInt(int64(binary.BigEndian.Uint64(value)))
 				}
 				return

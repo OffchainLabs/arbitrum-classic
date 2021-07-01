@@ -17,10 +17,11 @@
 package broadcastclient
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"io/ioutil"
-	"math/big"
 	"net"
 	"net/http"
 	"strings"
@@ -39,11 +40,10 @@ import (
 )
 
 type BroadcastClient struct {
-	websocketUrl    string
-	lastInboxSeqNum *big.Int
-
-	connMutex *sync.Mutex
-	conn      net.Conn
+	websocketUrl  string
+	connMutex     *sync.Mutex
+	conn          net.Conn
+	clientVersion string
 
 	retryMutex *sync.Mutex
 	retryCount int
@@ -51,25 +51,21 @@ type BroadcastClient struct {
 	retrying                     bool
 	shuttingDown                 bool
 	ConfirmedAccumulatorListener chan common.Hash
+	lastAccumulator              *common.Hash
 	idleTimeout                  time.Duration
 }
 
 var logger = log.With().Caller().Str("component", "broadcaster").Logger()
 
-func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int, idleTimeout time.Duration) *BroadcastClient {
-	var seqNum *big.Int
-	if lastInboxSeqNum == nil {
-		seqNum = big.NewInt(0)
-	} else {
-		seqNum = lastInboxSeqNum
-	}
+func NewBroadcastClient(websocketUrl string, lastAccumulator *common.Hash, idleTimeout time.Duration, clientVersion string) *BroadcastClient {
 
 	return &BroadcastClient{
 		websocketUrl:    websocketUrl,
-		lastInboxSeqNum: seqNum,
+		lastAccumulator: lastAccumulator,
 		connMutex:       &sync.Mutex{},
 		retryMutex:      &sync.Mutex{},
 		idleTimeout:     idleTimeout,
+		clientVersion:   clientVersion,
 	}
 }
 
@@ -98,14 +94,19 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	}
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
-	header := ws.HandshakeHeaderHTTP(http.Header{
-		"Accept":                  []string{"1.0"},                       // API Version
-		"LastInboxSequenceNumber": []string{bc.lastInboxSeqNum.String()}, // TODO: We probably want to use the last Accumulator here.
-	})
+	httpHeader := http.Header{
+		"Client-Version": []string{bc.clientVersion}, // API Version (It's conventional to use 'Accept-version' here)
+	}
+
+	if bc.lastAccumulator != nil {
+		httpHeader["Last-Accumulator"] = []string{bc.lastAccumulator.String()}
+	}
+
+	handshakeHeader := ws.HandshakeHeaderHTTP(httpHeader)
 
 	timeoutDialer := ws.Dialer{
 		Timeout: 10 * time.Second,
-		Header:  header,
+		Header:  handshakeHeader,
 	}
 
 	conn, _, _, err := timeoutDialer.Dial(ctx, bc.websocketUrl)
@@ -149,10 +150,20 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 
 			if msg != nil {
 				res := broadcaster.BroadcastMessage{}
-				err = json.Unmarshal(msg, &res)
-				if err != nil {
-					logger.Error().Err(err).Str("message", string(msg)).Msg("error unmarshalling message")
-					continue
+				if strings.Compare(bc.clientVersion, "2.0") == 0 {
+					msgBuffer := bytes.NewBuffer(msg)
+					decoder := gob.NewDecoder(msgBuffer)
+					err = decoder.Decode(&res)
+					if err != nil {
+						logger.Error().Err(err).Str("message", string(msg)).Msg("error unmarshalling binary message")
+						continue
+					}
+				} else {
+					err = json.Unmarshal(msg, &res)
+					if err != nil {
+						logger.Error().Err(err).Str("message", string(msg)).Msg("error unmarshalling json message")
+						continue
+					}
 				}
 
 				if len(res.Messages) > 0 {

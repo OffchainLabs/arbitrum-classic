@@ -195,7 +195,7 @@ func startup() error {
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 1)
 		for _, url := range config.Feed.Input.URLs {
-			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
+			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout, "2.0")
 			for {
 				err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
 				if err == nil {

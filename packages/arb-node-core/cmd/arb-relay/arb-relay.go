@@ -117,7 +117,7 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 	var broadcastClients []*broadcastclient.BroadcastClient
 	confirmedAccumulatorChan := make(chan common.Hash, 1)
 	for _, address := range settings.Input.URLs {
-		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout)
+		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout, "2.0")
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
 	}
