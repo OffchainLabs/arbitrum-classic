@@ -107,6 +107,7 @@ type WS struct {
 
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
+	ChainID    uint64     `koanf:"chain-id"`
 	Forwarder  struct {
 		Target string `koanf:"target"`
 	} `koanf:"forwarder"`
@@ -123,7 +124,6 @@ type Persistent struct {
 
 type Rollup struct {
 	Address   string `koanf:"address"`
-	ChainID   uint64 `koanf:"chain-id"`
 	FromBlock int64  `koanf:"from-block"`
 	Machine   struct {
 		Filename string `koanf:"filename"`
@@ -214,8 +214,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
+	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
+
 	f.String("rollup.address", "", "layer 2 rollup contract address")
-	f.Uint64("rollup.chain-id", 42161, "chain id of the arbitrum chain")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
@@ -266,10 +267,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
 				"feed.input.url":                   []string{"wss://arb1.arbitrum.io/feed"},
+				"node.chain-id":                    "42161",
 				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
 				"persistent.chain":                 "mainnet",
 				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-				"rollup.chain-id":                  "42161",
 				"rollup.from-block":                "12525700",
 				"rollup.machine.filename":          "mainnet.arb1.mexe",
 				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe",
@@ -284,10 +285,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
 				"feed.input.url":                   []string{"wss://rinkeby.arbitrum.io/feed"},
+				"node.chain-id":                    "421611",
 				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
 				"persistent.chain":                 "rinkeby",
 				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-				"rollup.chain-id":                  "421611",
 				"rollup.from-block":                "8700589",
 				"rollup.machine.filename":          "testnet.rinkeby.mexe",
 				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe",
