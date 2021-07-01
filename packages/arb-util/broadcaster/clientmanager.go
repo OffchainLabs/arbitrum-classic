@@ -20,10 +20,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/pkg/errors"
 	"net"
 	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
@@ -90,9 +91,9 @@ func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *C
 }
 
 // Register registers new connection as a Client.
-func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConnection {
+func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc, clientVersion string) *ClientConnection {
 	createClient := ClientConnectionAction{
-		NewClientConnection(conn, desc, cm),
+		NewClientConnection(conn, desc, cm, clientVersion),
 		true,
 	}
 
