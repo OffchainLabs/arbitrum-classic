@@ -115,7 +115,7 @@ func startup() error {
 		badConfig = true
 		fmt.Println("Missing --rollup.address")
 	}
-	if config.Rollup.ChainID == 0 {
+	if config.Node.ChainID == 0 {
 		badConfig = true
 		fmt.Println("Missing --rollup.chain-id")
 	}
@@ -159,7 +159,7 @@ func startup() error {
 		}()
 	}
 
-	l2ChainId := new(big.Int).SetUint64(config.Rollup.ChainID)
+	l2ChainId := new(big.Int).SetUint64(config.Node.ChainID)
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Str("type", config.Node.Type).Msg("Launching arbitrum node")
 
