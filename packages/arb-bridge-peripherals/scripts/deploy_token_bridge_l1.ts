@@ -5,20 +5,34 @@ import { L1ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L1ERC20Gat
 import { L2ERC20Gateway__factory } from 'arb-ts/src/lib/abi/factories/L2ERC20Gateway__factory'
 import { L1GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from 'arb-ts/src/lib/abi/factories/L2GatewayRouter__factory'
+import { instantiateBridge } from 'arb-ts/scripts/instantiate_bridge'
+import { MAINNET_WHITELIST_ADDRESS } from 'arb-ts/src/lib/networks'
 
 import { writeFileSync } from 'fs'
 // import { writeFileSync } from 'fs'
 // import { spawnSync } from 'child_process'
 
-const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
-const MAINNET_INBOX = '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f'
-const MAINNET_WHITELIST = '0xD485e5c28AA4985b23f6DF13dA03caa766dcd459'
+const ZERO_ADDR = ethers.constants.AddressZero
+const MAINNET_WHITELIST = MAINNET_WHITELIST_ADDRESS
+
+const l1PrivKey = process.env['L1_PRIVKEY']
+if (!l1PrivKey) throw new Error('Missing l1 priv key L1_PRIVKEY')
+
+const l2PrivKey = process.env['L2_PRIVKEY']
+if (!l2PrivKey) throw new Error('Missing l2 priv key L2_PRIVKEY')
 
 const main = async () => {
-  const accounts = await ethers.getSigners()
+  const { bridge, l1Network, l2Network } = await instantiateBridge(
+    l1PrivKey,
+    l2PrivKey
+  )
+  const { l1Signer, l2Signer, l2Provider } = bridge
+
+  const l1SignerAddress = await l1Signer.getAddress()
+  const l2SignerAddress = await l2Signer.getAddress()
 
   // parse needed vars
-  const inboxAddress = MAINNET_INBOX
+  const inboxAddress = l1Network.tokenBridge.inbox
   if (!inboxAddress) throw new Error('Please set inbox address! INBOX_ADDRESS')
 
   // set whitelistAddress to address(0) to disable whitelist
@@ -26,33 +40,32 @@ const main = async () => {
   if (!whitelistAddress)
     throw new Error('Please set whitelist address! WHITELIST_ADDRESS')
 
-  const l2PrivKey = process.env['L2_PRIVKEY']
-  if (!l2PrivKey) throw new Error('Missing l2 priv key DEVNET_PRIVKEY')
-
-  const l2ProviderRpc =
-    process.env['DEVNET_RPC'] || 'https://arb1.arbitrum.io/rpc'
-  if (!l2ProviderRpc) throw new Error('Missing l2 rpc DEVNET_RPC')
-
   // deploy L1 logic contracts
-  const L1GatewayRouter = await ethers.getContractFactory('L1GatewayRouter')
+  const L1GatewayRouter = (
+    await ethers.getContractFactory('L1GatewayRouter')
+  ).connect(l1Signer)
   const l1GatewayRouter = await L1GatewayRouter.deploy()
   await l1GatewayRouter.deployed()
   console.log('L1 GatewayRouter logic deployed to:', l1GatewayRouter.address)
 
-  const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
+  const L1ERC20Gateway = (
+    await ethers.getContractFactory('L1ERC20Gateway')
+  ).connect(l1Signer)
   const l1ERC20Gateway = await L1ERC20Gateway.deploy()
   await l1ERC20Gateway.deployed()
   console.log('L1 ERC20Gateway logic deployed to:', l1ERC20Gateway.address)
 
   // deploy L1 proxy contracts
-  const L1ProxyAdmin = await ethers.getContractFactory('ProxyAdmin')
+  const L1ProxyAdmin = (await ethers.getContractFactory('ProxyAdmin')).connect(
+    l1Signer
+  )
   const l1ProxyAdmin = await L1ProxyAdmin.deploy()
   await l1ProxyAdmin.deployed()
   console.log('L1 proxy admin at', l1ProxyAdmin.address)
 
-  const L1TransparentUpgradeableProxy = await ethers.getContractFactory(
-    'TransparentUpgradeableProxy'
-  )
+  const L1TransparentUpgradeableProxy = (
+    await ethers.getContractFactory('TransparentUpgradeableProxy')
+  ).connect(l1Signer)
 
   const l1GatewayRouterProxy = await L1TransparentUpgradeableProxy.deploy(
     l1GatewayRouter.address,
@@ -69,10 +82,6 @@ const main = async () => {
   )
   await l1ERC20GatewayProxy.deployed()
   console.log('L1 ERC20Gateway Proxy at', l1ERC20GatewayProxy.address)
-
-  // deploy L2 logic contracts
-  const l2Provider = new providers.JsonRpcProvider(l2ProviderRpc)
-  const l2Signer = ethers.Wallet.fromMnemonic(l2PrivKey).connect(l2Provider)
 
   const StandardArbERC20 = (
     await ethers.getContractFactory('StandardArbERC20')
@@ -147,7 +156,7 @@ const main = async () => {
 
   const l1ERC20GatewayConnectedAsProxy = L1ERC20Gateway__factory.connect(
     l1ERC20GatewayProxy.address,
-    accounts[0]
+    l1Signer
   )
 
   const initL1Bridge = await l1ERC20GatewayConnectedAsProxy.initialize(
@@ -184,10 +193,10 @@ const main = async () => {
 
   const l1GatewayRouterConnected = L1GatewayRouter__factory.connect(
     l1GatewayRouterProxy.address,
-    accounts[0]
+    l1Signer
   )
   const initL1RouterTx = await l1GatewayRouterConnected.initialize(
-    accounts[0].address,
+    l1SignerAddress,
     l1DefaultGateway,
     whitelistAddress,
     l2GatewayRouterProxy.address,
@@ -220,16 +229,15 @@ const main = async () => {
       l2ERC20GatewayProxy: l2ERC20GatewayProxy.address,
       l1ProxyAdmin: l1ProxyAdmin.address,
       l2ProxyAdmin: l2ProxyAdmin.address,
-      l1Deployer: accounts[0].address,
-      l2Deployer: l2Signer.address,
+      l1Deployer: l1SignerAddress,
+      l2Deployer: l2SignerAddress,
       inbox: inboxAddress,
     },
     null,
-    4
+    l1Network.chainID
   )
 
-  const chainId = l2Provider.network.chainId
-  const deployFilePath = `./deployment-${chainId}.json`
+  const deployFilePath = `./deployment-${l2Network.chainID}.json`
   console.log(`Writing to JSON at ${deployFilePath}`)
   writeFileSync(deployFilePath, contracts)
   console.log('Wrote to deployments.json')

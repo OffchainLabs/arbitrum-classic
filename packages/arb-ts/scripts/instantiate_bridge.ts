@@ -11,8 +11,11 @@ const verbose = process.env['VERBOSE'] as string
 
 const defaultNetworkId = 4
 
-export const instantiateBridge = async (pkParam?: string) => {
-  if (!pkParam) {
+export const instantiateBridge = async (
+  l1pkParam?: string,
+  l2PkParam?: string
+) => {
+  if (!l1pkParam) {
     if (!pk && !mnemonic)
       throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
 
@@ -47,8 +50,8 @@ export const instantiateBridge = async (pkParam?: string) => {
   const arbProvider = new providers.JsonRpcProvider(l2Network.rpcURL)
 
   const l1Signer = (() => {
-    if (pkParam) {
-      return new Wallet(pkParam, ethProvider)
+    if (l1pkParam) {
+      return new Wallet(l1pkParam, ethProvider)
     } else if (mnemonic) {
       return Wallet.fromMnemonic(mnemonic).connect(ethProvider)
     } else if (pk) {
@@ -59,8 +62,8 @@ export const instantiateBridge = async (pkParam?: string) => {
   })()
 
   const l2Signer = (() => {
-    if (pkParam) {
-      return new Wallet(pkParam, arbProvider)
+    if (l2PkParam) {
+      return new Wallet(l2PkParam, arbProvider)
     } else if (mnemonic) {
       return Wallet.fromMnemonic(mnemonic).connect(arbProvider)
     } else if (pk) {
