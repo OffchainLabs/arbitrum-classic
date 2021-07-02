@@ -32,6 +32,7 @@ interface RetryableGasArgs {
   maxSubmissionPriceIncreaseRatio?: BigNumber
 }
 
+const DEFAULT_SUBMISSION_FEE_BUMP = BigNumber.from(16)
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
@@ -175,7 +176,7 @@ export class Bridge {
     overrides?: PayableOverrides
   ) {
     const maxSubmissionPriceIncreaseRatio =
-      _maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+      _maxSubmissionPriceIncreaseRatio || DEFAULT_SUBMISSION_FEE_BUMP
 
     const maxSubmissionPrice = (await this.l2Bridge.getTxnSubmissionPrice(0))[0]
       .mul(maxSubmissionPriceIncreaseRatio)
@@ -230,7 +231,8 @@ export class Bridge {
     )
 
     const maxSubmissionPriceIncreaseRatio =
-      retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
+      retryableGasArgs.maxSubmissionPriceIncreaseRatio ||
+      DEFAULT_SUBMISSION_FEE_BUMP
 
     const maxSubmissionPrice = (
       await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
