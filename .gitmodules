@@ -11,11 +11,12 @@
     path = packages/arb-avm-cpp/external/json
     url = https://github.com/nlohmann/json
 [submodule "packages/arb-avm-cpp/cmake/cable"]
-	path = packages/arb-avm-cpp/cmake/cable
-	url = https://github.com/ethereum/cable
+    path = packages/arb-avm-cpp/cmake/cable
+    url = https://github.com/ethereum/cable
 [submodule "packages/arb-avm-cpp/external/PicoSHA2"]
-	path = packages/arb-avm-cpp/external/PicoSHA2
-	url = https://github.com/okdshin/PicoSHA2
+    path = packages/arb-avm-cpp/external/PicoSHA2
+    url = https://github.com/okdshin/PicoSHA2
 [submodule "packages/arb-os"]
-	path = packages/arb-os
-	url = https://github.com/ieigen/arb-os
+    path = packages/arb-os
+    url = https://github.com/ieigen/arb-os
+    branch = dev
