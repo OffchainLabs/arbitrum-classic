@@ -107,7 +107,7 @@ Note that arbSomeERC20Token is an instance of StandardArbERC20, which includes `
 
 Just because a token has requirements beyond what are offered via the StandardERC20 gateway, that doesn't necessarily mean that a unique Gateway needs to be taylor-made for the token in question. Our Generic-Custom Gateway is designed to be flexible enough to be suitable for most (but not necessarily all) custom fungible token needs. As a general rule:
 
-**If your token's total supply on L2 only ever increases when tokens are deposited from L1 (i.e., no L2-interest accrual, no special L2 minting affordance, etc), but your token requires customization beyond what the StandardERC20 Gateway provides, the Generic-Custom Gateway is likely the right solution for you!**
+**If your custom token has the ability to increase its supply (i.e, mint) directly on the L2, and you want the L2-minted tokens be withdrawable back to L1 and recognized by the L1 contract, it will probably require its own special gateway. Otherwise, the Generic-Custom Gateway is likely the right solution for you!**
 
 Some examples of token features suitable for the Generic-Custom Gateway:
 
