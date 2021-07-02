@@ -62,14 +62,8 @@ export class Bridge {
       throw new Error('Signer needs a provider')
     }
 
-    const ethSignerAddress = await ethSigner.getAddress()
-    const arbSignerAddress = await arbSigner.getAddress()
     const l1ChainId = await ethSigner.getChainId()
     const l2ChainId = await arbSigner.getChainId()
-
-    if (ethSignerAddress !== arbSignerAddress) {
-      throw new Error('L1 & L2 wallets must be of the same address')
-    }
 
     const l1Network = networks[l1ChainId]
     const l2Network = networks[l2ChainId]
