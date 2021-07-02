@@ -104,7 +104,8 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         address[] memory _gateway,
         uint256 _maxGas,
         uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) internal returns (uint256) {
         require(_token.length == _gateway.length, "WRONG_LENGTH");
 
@@ -120,14 +121,15 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         bytes memory data =
             abi.encodeWithSelector(L2GatewayRouter.setGateway.selector, _token, _gateway);
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
+        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, data);
     }
 
     function setGateway(
         address _gateway,
         uint256 _maxGas,
         uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) external payable returns (uint256) {
         require(address(msg.sender).isContract(), "NOT_FROM_CONTRACT");
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
@@ -138,7 +140,15 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         address[] memory _gatewayArr = new address[](1);
         _gatewayArr[0] = _gateway;
 
-        return _setGateways(_tokenArr, _gatewayArr, _maxGas, _gasPriceBid, _maxSubmissionCost);
+        return
+            _setGateways(
+                _tokenArr,
+                _gatewayArr,
+                _maxGas,
+                _gasPriceBid,
+                _maxSubmissionCost,
+                _creditBackAddress
+            );
     }
 
     function setGateways(
@@ -150,7 +160,8 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     ) external payable onlyOwner returns (uint256) {
         // it is assumed that token and gateway are both contracts
         // require(_token[i].isContract() && _gateway[i].isContract(), "NOT_CONTRACT");
-        return _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost);
+        return
+            _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
     function outboundTransfer(

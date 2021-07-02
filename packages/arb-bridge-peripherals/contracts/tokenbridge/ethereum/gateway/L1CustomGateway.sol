@@ -53,6 +53,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         whitelist = newSource;
         emit WhitelistSourceUpdated(newSource);
     }
+
     // end whitelist consumer
 
     function initialize(
@@ -67,14 +68,13 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         whitelist = address(0);
     }
 
-
     function postUpgradeInit() external {
         require(whitelist == address(0), "ALREADY_INIT");
         router = address(0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef);
         whitelist = address(0xD485e5c28AA4985b23f6DF13dA03caa766dcd459);
     }
 
-     /**
+    /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
      * @param _l1Token L1 address of ERC20
      * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
@@ -126,7 +126,8 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _l2Address,
         uint256 _maxGas,
         uint256 _gasPriceBid,
-        uint256 _maxSubmissionCost
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) external payable virtual returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
@@ -145,7 +146,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 l2Addresses
             );
 
-        return sendTxToL2(msg.sender, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
+        return sendTxToL2(_creditBackAddress, 0, _maxSubmissionCost, _maxGas, _gasPriceBid, _data);
     }
 
     /**
