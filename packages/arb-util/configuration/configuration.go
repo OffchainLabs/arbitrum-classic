@@ -240,7 +240,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 		case <-time.After(5 * time.Second):
 		}
 	}
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+	logger.Info().Str("l1url", l1URL).Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	rollupAddress := k.String("rollup.address")
 	if len(rollupAddress) != 0 {
