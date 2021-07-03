@@ -20,12 +20,11 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	lru "github.com/hashicorp/golang-lru"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -39,18 +38,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "txdb").Logger()
 
 type TxDB struct {
-	Lookup    core.ArbOutputLookup
-	as        machine.NodeStore
-	logReader *core.LogReader
+	Lookup          core.ArbOutputLookup
+	allowSlowLookup bool
+	as              machine.NodeStore
+	logReader       *core.LogReader
 
 	rmLogsFeed      event.Feed
 	chainFeed       event.Feed
@@ -68,8 +70,9 @@ func New(
 	arbCore core.ArbCore,
 	as machine.NodeStore,
 	updateFrequency time.Duration,
+	dbConfig *configuration.Database,
 ) (*TxDB, <-chan error, error) {
-	snapshotCache, err := lru.New(100)
+	snapshotCache, err := lru.New(dbConfig.BlockCacheSize)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -464,6 +467,10 @@ func (db *TxDB) getSnapshotForInfo(info *machine.BlockInfo) (*snapshot.Snapshot,
 	if found {
 		return cachedSnap.(*snapshot.Snapshot), nil
 	}
+	if !db.allowSlowLookup {
+		// Not in memory cache, so give up
+		return nil, errors.New("block not in cache")
+	}
 	mach, err := db.Lookup.GetMachineForSideload(info.Header.Number.Uint64())
 	if err != nil || mach == nil {
 		return nil, err
@@ -493,7 +500,16 @@ func (db *TxDB) LatestSnapshot() (*snapshot.Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	return db.getSnapshotForInfo(block)
+	snap, err := db.getSnapshotForInfo(block)
+	if err != nil {
+		if strings.Contains("block not in cache", err.Error()) {
+			logger.Error().Hex("block", block.Header.Number.Bytes()).Msg("latest block is not in cache")
+		}
+
+		return nil, err
+	}
+
+	return snap, nil
 }
 
 func (db *TxDB) SubscribeChainEvent(ch chan<- ethcore.ChainEvent) event.Subscription {
