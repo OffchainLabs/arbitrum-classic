@@ -217,7 +217,7 @@ func ParseValidator(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClie
 func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *ethutils.RPCEthClient, *big.Int, error) {
 	f.String("bridge-utils-address", "", "bridgeutils contract address")
 
-	f.Bool("database.allow-slow-lookup", false, "load L2 block from disk if not in cache")
+	f.Bool("database.allow-slow-lookup", true, "load L2 block from disk if not in cache")
 	f.Int("database.block-cache-size", 1000, "number of L2 blocks to hold in lru cache")
 
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
