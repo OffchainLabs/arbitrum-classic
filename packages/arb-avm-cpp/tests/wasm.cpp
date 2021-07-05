@@ -130,6 +130,12 @@ MachineState mkWasmMachine(WasmResult res) {
 
 }
 
+TEST_CASE("wasm_rlp") {
+    SECTION("Making compiler machine") {
+        RunWasm runner("/home/sami/rlp.wasm");
+    }
+}
+
 TEST_CASE("wasm_3") {
     SECTION("Making compiler machine") {
         RunWasm runner("/home/sami/wasm2avm/pkg/wasm2avm_bg.wasm");

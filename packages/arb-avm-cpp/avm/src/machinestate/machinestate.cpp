@@ -470,7 +470,7 @@ CodeResult wasmAvmToCode(WasmResult &res) {
     std::cerr << "Made table " << hash_value(table) << " \n";
     std::cerr << "Codepoint " << hash_value(stub) << " \n";
 
-    return {std::move(code), table, stub};
+    return {code, table, stub};
 }
 
 WasmCodePoint wasmAvmToCodePoint(WasmResult &wres, std::vector<uint8_t>& wasm_module) {

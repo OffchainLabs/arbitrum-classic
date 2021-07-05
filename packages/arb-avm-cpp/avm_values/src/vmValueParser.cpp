@@ -42,6 +42,14 @@ uint256_t int_value_from_json(const nlohmann::json& value_json) {
 }
 
 Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
+    if (buffer_json.contains("root")) {
+        std::vector<uint8_t> bytes;
+        auto& arr = buffer_json["root"];
+        for (auto it = arr.begin(); it != arr.end(); ++it) {
+            bytes.push_back(*it);
+        }
+        return Buffer::fromData(bytes);
+    }
     if (!buffer_json.is_string()) {
         return Buffer();
         // throw std::runtime_error("buffer must be hex");

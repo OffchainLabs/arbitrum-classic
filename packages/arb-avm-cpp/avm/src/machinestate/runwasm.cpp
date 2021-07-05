@@ -162,6 +162,57 @@ wasm_trap_t* cb_get_buffer(void* env,
     return NULL;
 }
 
+wasm_trap_t* cb_rvec(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    uint64_t offset;
+    uint64_t ptr;
+    uint64_t len;
+    // printf("read buf...\n");
+
+    if (args->data[0].kind == WASM_I32) {
+        auto mem = (uint8_t*)wasm_memory_data(dta->memory);
+        ptr = args->data[0].of.i32;
+        offset = args->data[1].of.i32;
+        len = args->data[2].of.i32;
+        for (int i = 0; i < len; i++) {
+            mem[ptr+i] = dta->buffer.get(offset+i);
+        }
+    }
+    return NULL;
+}
+
+wasm_trap_t* cb_wvec(void* env,
+                           const wasm_val_vec_t* args,
+                           wasm_val_vec_t* results) {
+    WasmEnvData* dta = (WasmEnvData*)env;
+    uint64_t offset;
+    uint64_t ptr;
+    uint64_t len;
+    // printf("write buf...\n");
+
+    if (args->data[0].kind == WASM_I32) {
+        auto mem = (uint8_t*)wasm_memory_data(dta->memory);
+        ptr = args->data[0].of.i32;
+        offset = args->data[1].of.i32;
+        len = args->data[2].of.i32;
+        Buffer b = dta->buffer;
+        std::vector<uint8_t> bytes;
+        for (int i = 0; i < len; i++) {
+            bytes.push_back(mem[ptr+i]);
+            if ((offset+i) % 32 == 31) {
+                // std::cerr << "offset " << offset << " i " << i << " size " << bytes.size() << "\n";
+                b = b.set_many(offset + i + 1 - bytes.size(), bytes);
+                bytes.clear();
+            }
+        }
+        b = b.set_many(offset + len - bytes.size(), bytes);
+        dta->buffer = b;
+    }
+    return NULL;
+}
+
 wasm_trap_t* cb_set_buffer(void* env,
                            const wasm_val_vec_t* args,
                            wasm_val_vec_t*) {
@@ -221,6 +272,7 @@ RunWasm::RunWasm(std::string fname) {
     wasm_byte_vec_new_uninitialized(&wasm, file_size);
     fread(wasm.data, file_size, 1, file);
     fclose(file);
+    // std::cerr << "File ????\n";
     init(wasm);
 }
 
@@ -231,6 +283,7 @@ RunWasm::RunWasm(std::vector<uint8_t> &buf) {
     for (int i = 0; i < buf.size(); i++) {
         wasm.data[i] = buf[i];
     }
+    // std::cerr << "Got size " << buf.size() << "\n";
     init(wasm);
 }
 
@@ -247,14 +300,13 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
     // printf("Store...%x \n", store);
 
     // Now that we've got our binary webassembly we can compile our module.
-    // printf("Compiling module...\n");
+    printf("Compiling module...\n");
     wasm_module_t* module = wasm_module_new(store, &wasm);
     wasm_byte_vec_delete(&wasm);
-    /*
-    if (error != NULL) {
+    if (module == NULL) {
         std::cerr << "failed to compile module\n";
-        exit_with_error(error, NULL);
-    }*/
+        return;
+    }
 
     WasmEnvData* env = this->data;
 
@@ -307,6 +359,14 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
         store, callback_type_setbuf, cb_write_extra, (void*)env, NULL);
     wasm_functype_delete(callback_type_setbuf);
 
+    wasm_functype_t* callback_type_rvec =
+        wasm_functype_new_3_0(wasm_valtype_new_i32(), wasm_valtype_new_i32(), wasm_valtype_new_i32());
+    wasm_func_t* callback_func_rvec = wasm_func_new_with_env(
+        store, callback_type_setbuf, cb_rvec, (void*)env, NULL);
+    wasm_func_t* callback_func_wvec = wasm_func_new_with_env(
+        store, callback_type_setbuf, cb_wvec, (void*)env, NULL);
+    wasm_functype_delete(callback_type_rvec);
+
     // printf("Instantiating module...\n");
 
     wasm_importtype_vec_t import_vec;
@@ -343,6 +403,10 @@ void RunWasm::init(wasm_byte_vec_t wasm) {
             imports[i] = wasm_func_as_extern(callback_func_push);
         } else if (str.find("cptable") != std::string::npos) {
             imports[i] = wasm_func_as_extern(callback_func_cptable);
+        } else if (str.find("rvec") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_rvec);
+        } else if (str.find("wvec") != std::string::npos) {
+            imports[i] = wasm_func_as_extern(callback_func_wvec);
         } else {
             imports[i] = wasm_func_as_extern(callback_func2);
         }
@@ -399,11 +463,11 @@ WasmResult RunWasm::run_wasm(Buffer buf, uint64_t len) {
     data->immed = std::make_shared<value>(0);
     data->insn = std::make_shared<std::vector<Operation>>();
 
-    std::cerr << "Running wasm\n";
+    // std::cerr << "Running wasm\n";
     if (wasm_func_call(run, &args_vec, &results_vec)) {
         std::cerr << "Error running wasm\n";
     }
-    std::cerr << "Ran wasm\n";
+    // std::cerr << "Ran wasm\n";
 
     return {data->buffer_len, data->buffer, data->extra, data->gas_left, data->immed, data->insn, data->table};
 
