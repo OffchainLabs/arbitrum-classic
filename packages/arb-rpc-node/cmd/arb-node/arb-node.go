@@ -196,20 +196,22 @@ func startup() error {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 1)
 		for _, url := range config.Feed.Input.URLs {
 			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
-			for {
-				err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
-				if err == nil {
-					break
-				}
-				logger.Warn().Err(err).
-					Msg("failed connect to sequencer broadcast, waiting and retrying")
+			go (func() {
+				for {
+					err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
+					if err == nil {
+						break
+					}
+					logger.Warn().Err(err).
+						Msg("failed connect to sequencer broadcast, waiting and retrying")
 
-				select {
-				case <-ctx.Done():
-					return errors.New("ctx cancelled broadcast client connect")
-				case <-time.After(5 * time.Second):
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(5 * time.Second):
+					}
 				}
-			}
+			})()
 		}
 	}
 	var inboxReader *monitor.InboxReader
