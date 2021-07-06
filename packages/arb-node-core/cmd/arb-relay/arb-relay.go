@@ -141,21 +141,7 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	// connect returns
 	messages := make(chan broadcaster.BroadcastFeedMessage)
 	for _, client := range ar.broadcastClients {
-		go (func() {
-			for {
-				err := client.ConnectWithChannel(ctx, messages)
-				if err == nil {
-					break
-				}
-				logger.Warn().Err(err).
-					Msg("failed connect to sequencer broadcast, waiting and retrying")
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(5 * time.Second):
-				}
-			}
-		})()
+		client.ConnectInBackground(ctx, messages)
 	}
 
 	recentFeedItems := make(map[common.Hash]time.Time)
