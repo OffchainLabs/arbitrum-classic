@@ -143,7 +143,7 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	for _, client := range ar.broadcastClients {
 		go (func() {
 			for {
-				err = client.ConnectWithChannel(ctx, messages)
+				err := client.ConnectWithChannel(ctx, messages)
 				if err == nil {
 					break
 				}

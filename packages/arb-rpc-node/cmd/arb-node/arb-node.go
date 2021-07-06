@@ -198,7 +198,7 @@ func startup() error {
 			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
 			go (func() {
 				for {
-					err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
+					err := broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
 					if err == nil {
 						break
 					}
