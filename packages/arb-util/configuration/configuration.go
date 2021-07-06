@@ -132,6 +132,7 @@ type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               string      `koanf:"conf"`
 	DumpConf           bool        `koanf:"dump-conf"`
+	EnvPrefix          string      `koanf:"env-prefix"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	GasPriceUrl        string      `koanf:"gas-price-url"`
@@ -241,7 +242,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	}
 	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	if len(k.String("rollup.address")) == 0 {
+	rollupAddress := k.String("rollup.address")
+	if len(rollupAddress) != 0 {
+		logger.Info().Str("rollup", rollupAddress).Msg("using custom rollup address")
+	} else {
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
@@ -379,6 +383,8 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 
 	f.Bool("dump-conf", false, "print out currently active configuration file")
 
+	f.String("env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
+
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
 
@@ -426,14 +432,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		}
 	}
 
-	// Env var settings override config file
-	k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
-		// FOO__BAR -> foo-bar to handle dash in config names
-		s = strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
-		return strings.Replace(s, "_", ".", -1)
-	}), nil)
-
 	// Any settings provided on command line override items in configuration file
 	// Command line parameters will be applied again later
 	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
@@ -451,12 +449,17 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func loadEnvironmentVariables(k *koanf.Koanf) error {
-	return k.Load(env.Provider("ARBITRUM_", ".", func(s string) string {
-		// FOO__BAR -> foo-bar to handle dash in config names
-		s = strings.Replace(strings.ToLower(
-			strings.TrimPrefix(s, "ARBITRUM_")), "__", "-", -1)
-		return strings.Replace(s, "_", ".", -1)
-	}), nil)
+	envPrefix := k.String("env-prefix")
+	if len(envPrefix) != 0 {
+		return k.Load(env.Provider(envPrefix+"_", ".", func(s string) string {
+			// FOO__BAR -> foo-bar to handle dash in config names
+			s = strings.Replace(strings.ToLower(
+				strings.TrimPrefix(s, envPrefix+"_")), "__", "-", -1)
+			return strings.Replace(s, "_", ".", -1)
+		}), nil)
+	}
+
+	return nil
 }
 
 func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
