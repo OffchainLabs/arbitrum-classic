@@ -36,7 +36,7 @@ function assertionHash(
   )
 }
 
-function nodeHash(
+export function nodeHash(
   hasSibling: boolean,
   lastHash: BytesLike,
   assertionExecHash: BytesLike,

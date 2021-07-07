@@ -182,4 +182,29 @@ interface IRollupAdmin {
      * @param newImplementation new address of implementation
      */
     function upgradeBeacon(address beacon, address newImplementation) external;
+
+    function forceResolveChallenge(address[] memory stackerA, address[] memory stackerB) external;
+
+    function forceRefundStaker(address[] memory stacker) external;
+
+    function forceCreateNode(
+        bytes32 expectedNodeHash,
+        bytes32[3][2] calldata assertionBytes32Fields,
+        uint256[4][2] calldata assertionIntFields,
+        uint256 beforeProposedBlock,
+        uint256 beforeInboxMaxCount,
+        uint256 prevNode,
+        uint256 sequencerBatchEnd,
+        bytes32 sequencerBatchAcc
+    ) external;
+
+    function forceConfirmNode(
+        uint256 nodeNum,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
+    ) external;
 }

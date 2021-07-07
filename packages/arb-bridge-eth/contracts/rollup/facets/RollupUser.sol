@@ -150,15 +150,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         stakeOnNode(msg.sender, nodeNum, confirmPeriodBlocks);
     }
 
-    struct StakeOnNewNodeFrame {
-        uint256 sequencerBatchEnd;
-        bytes32 sequencerBatchAcc;
-        uint256 currentInboxSize;
-        INode node;
-        bytes32 executionHash;
-        INode prevNode;
-    }
-
     /**
      * @notice Move stake onto a new node
      * @param expectedNodeHash The hash of the node being created (protects against reorgs)
@@ -282,47 +273,6 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
             assertionBytes32Fields,
             assertionIntFields
         );
-    }
-
-    function createNewNode(
-        RollupLib.Assertion memory assertion,
-        uint256 deadlineBlock,
-        uint256 sequencerBatchEnd,
-        bytes32 sequencerBatchAcc,
-        uint256 prevNode,
-        bytes32 prevHash,
-        bool hasSibling
-    ) internal returns (bytes32, StakeOnNewNodeFrame memory) {
-        StakeOnNewNodeFrame memory frame;
-        frame.currentInboxSize = sequencerBridge.messageCount();
-        frame.prevNode = getNode(prevNode);
-        {
-            uint256 nodeNum = latestNodeCreated() + 1;
-            frame.executionHash = RollupLib.executionHash(assertion);
-
-            frame.sequencerBatchEnd = sequencerBatchEnd;
-            frame.sequencerBatchAcc = sequencerBatchAcc;
-
-            rollupEventBridge.nodeCreated(nodeNum, prevNode, deadlineBlock, msg.sender);
-
-            frame.node = INode(
-                nodeFactory.createNode(
-                    RollupLib.stateHash(assertion.afterState),
-                    RollupLib.challengeRoot(assertion, frame.executionHash, block.number),
-                    RollupLib.confirmHash(assertion),
-                    prevNode,
-                    deadlineBlock
-                )
-            );
-        }
-
-        bytes32 nodeHash =
-            RollupLib.nodeHash(hasSibling, prevHash, frame.executionHash, frame.sequencerBatchAcc);
-
-        nodeCreated(frame.node, nodeHash);
-        frame.prevNode.childCreated(latestNodeCreated());
-
-        return (nodeHash, frame);
     }
 
     /**
