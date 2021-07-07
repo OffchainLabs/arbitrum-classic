@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	golog "log"
-	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -29,7 +28,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -214,19 +212,6 @@ func startup() error {
 	stakerManager, _, err := staker.NewStaker(ctx, mon.Core, l1Client, val, config.Rollup.FromBlock, common.NewAddressFromEth(validatorUtilsAddr), strategy)
 	if err != nil {
 		return errors.Wrap(err, "error setting up staker")
-	}
-
-	chainMachineHash, err := stakerManager.GetInitialMachineHash(ctx)
-	if err != nil {
-		return errors.Wrap(err, "error checking initial chain state")
-	}
-	initialExecutionCursor, err := mon.Core.GetExecutionCursor(big.NewInt(0))
-	if err != nil {
-		return errors.Wrap(err, "error loading initial ArbCore machine")
-	}
-	initialMachineHash := initialExecutionCursor.MachineHash()
-	if initialMachineHash != chainMachineHash {
-		return errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(chainMachineHash[:]), initialMachineHash)
 	}
 
 	_, err = mon.StartInboxReader(ctx, l1Client, common.NewAddressFromEth(rollupAddr), config.Rollup.FromBlock, common.NewAddressFromEth(bridgeUtilsAddr), healthChan, dummySequencerFeed)
