@@ -249,20 +249,22 @@ export class Bridge {
 
     const l2Dest = await l1Gateway.counterpartGateway()
 
-    const maxGas = (
-      await nodeInterface.estimateRetryableTicket(
-        expectedL1GatewayAddress,
-        ethers.utils.parseEther('0.05').add(estimateGasCallValue),
-        l2Dest,
-        estimateGasCallValue,
-        maxSubmissionPrice,
-        sender,
-        sender,
-        0,
-        0,
-        depositCalldata
-      )
-    )[0]
+    const maxGas =
+      retryableGasArgs.maxGas ||
+      (
+        await nodeInterface.estimateRetryableTicket(
+          expectedL1GatewayAddress,
+          ethers.utils.parseEther('0.05').add(estimateGasCallValue),
+          l2Dest,
+          estimateGasCallValue,
+          maxSubmissionPrice,
+          sender,
+          sender,
+          0,
+          0,
+          depositCalldata
+        )
+      )[0]
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
