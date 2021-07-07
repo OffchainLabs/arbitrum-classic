@@ -205,7 +205,6 @@ contract Rollup is RollupBase {
         minimumAssertionPeriod = 75;
         challengeExecutionBisectionDegree = 400;
 
-        // TODO: remove sequencerInboxParams and instead set these values in inbox's init
         sequencerBridge.setMaxDelayBlocks(sequencerInboxParams[0]);
         sequencerBridge.setMaxDelaySeconds(sequencerInboxParams[1]);
 
