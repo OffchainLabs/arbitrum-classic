@@ -18,6 +18,8 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/posflag"
+	"github.com/knadh/koanf/providers/rawbytes"
+	"github.com/knadh/koanf/providers/s3"
 	"github.com/mitchellh/mapstructure"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
@@ -26,6 +28,14 @@ import (
 )
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
+
+type Conf struct {
+	Dump      bool   `koanf:"dump"`
+	EnvPrefix string `koanf:"env-prefix"`
+	File      string `koanf:"file"`
+	S3        S3     `koanf:"s3"`
+	String    string `koanf:"string"`
+}
 
 type FeedInput struct {
 	Timeout time.Duration `koanf:"timeout"`
@@ -76,6 +86,14 @@ type RPC struct {
 	Port string `koanf:"port"`
 }
 
+type S3 struct {
+	AccessKey string `koanf:"access-key"`
+	Bucket    string `koanf:"bucket"`
+	ObjectKey string `koanf:"object-key"`
+	Region    string `koanf:"region"`
+	SecretKey string `koanf:"secret-key"`
+}
+
 type Sequencer struct {
 	CreateBatchBlockInterval   int64   `koanf:"create-batch-block-interval"`
 	DelayedMessagesTargetDelay int64   `koanf:"delayed-messages-target-delay"`
@@ -89,6 +107,7 @@ type WS struct {
 
 type Node struct {
 	Aggregator Aggregator `koanf:"aggregator"`
+	ChainID    uint64     `koanf:"chain-id"`
 	Forwarder  struct {
 		Target string `koanf:"target"`
 	} `koanf:"forwarder"`
@@ -105,7 +124,6 @@ type Persistent struct {
 
 type Rollup struct {
 	Address   string `koanf:"address"`
-	ChainID   uint64 `koanf:"chain-id"`
 	FromBlock int64  `koanf:"from-block"`
 	Machine   struct {
 		Filename string `koanf:"filename"`
@@ -130,9 +148,7 @@ type Log struct {
 
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
-	Conf               string      `koanf:"conf"`
-	DumpConf           bool        `koanf:"dump-conf"`
-	EnvPrefix          string      `koanf:"env-prefix"`
+	Conf               Conf        `koanf:"conf"`
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	GasPriceUrl        string      `koanf:"gas-price-url"`
@@ -198,8 +214,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 	f.Float64("gas-price", 4.5, "gasprice=FloatInGwei")
 	f.String("gas-price-url", "", "gas price rpc url (etherscan compatible)")
 
+	f.Uint64("node.chain-id", 42161, "chain id of the arbitrum chain")
+
 	f.String("rollup.address", "", "layer 2 rollup contract address")
-	f.Uint64("rollup.chain-id", 42161, "chain id of the arbitrum chain")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
@@ -223,7 +240,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 
 	l1Client, err := ethutils.NewRPCEthClient(l1URL)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error running NewRPCEthClient")
+		return nil, nil, nil, nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
 	}
 
 	var l1ChainId *big.Int
@@ -240,17 +257,20 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 		case <-time.After(5 * time.Second):
 		}
 	}
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+	logger.Info().Str("l1url", l1URL).Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
-	if len(k.String("rollup.address")) == 0 {
+	rollupAddress := k.String("rollup.address")
+	if len(rollupAddress) != 0 {
+		logger.Info().Str("rollup", rollupAddress).Msg("using custom rollup address")
+	} else {
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
 				"feed.input.url":                   []string{"wss://arb1.arbitrum.io/feed"},
+				"node.chain-id":                    "42161",
 				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
 				"persistent.chain":                 "mainnet",
 				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
-				"rollup.chain-id":                  "42161",
 				"rollup.from-block":                "12525700",
 				"rollup.machine.filename":          "mainnet.arb1.mexe",
 				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/48bdb999a703575d26a856499e6eb3e17691e99d/arb_os/arbos.mexe",
@@ -265,10 +285,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
 				"feed.input.url":                   []string{"wss://rinkeby.arbitrum.io/feed"},
+				"node.chain-id":                    "421611",
 				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
 				"persistent.chain":                 "rinkeby",
 				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
-				"rollup.chain-id":                  "421611",
 				"rollup.from-block":                "8700589",
 				"rollup.machine.filename":          "testnet.rinkeby.mexe",
 				"rollup.machine.url":               "https://raw.githubusercontent.com/OffchainLabs/arb-os/26ab8d7c818681c4ee40792aeb12981a8f2c3dfa/arb_os/arbos.mexe",
@@ -376,11 +396,15 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 }
 
 func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
-	f.String("conf", "", "name of configuration file")
-
-	f.Bool("dump-conf", false, "print out currently active configuration file")
-
-	f.String("env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
+	f.Bool("conf.dump", false, "print out currently active configuration file")
+	f.String("conf.env-prefix", "", "environment variables with given prefix will be loaded as configuration values")
+	f.String("conf.file", "", "name of configuration file")
+	f.String("conf.s3.access-key", "", "S3 access key")
+	f.String("conf.s3.secret-key", "", "S3 secret key")
+	f.String("conf.s3.region", "", "S3 region")
+	f.String("conf.s3.bucket", "", "S3 bucket")
+	f.String("conf.s3.object-key", "", "S3 object key")
+	f.String("conf.string", "", "configuration as JSON string")
 
 	f.Duration("feed.input.timeout", 20*time.Second, "duration to wait before timing out connection to server")
 	f.StringSlice("feed.input.url", []string{}, "URL of sequencer feed source")
@@ -421,22 +445,44 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 		return nil, errors.Wrap(err, "error applying default values")
 	}
 
-	// Load configuration file if provided
-	configFile, _ := f.GetString("conf")
+	// Initial application of command line parameters and environment variables so other methods can be applied
+	// Command line parameters and environment variables will be applied again to override other methods
+	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
+		return nil, errors.Wrap(err, "error loading config")
+	}
+	err = loadEnvironmentVariables(k)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading environment variables")
+	}
+
+	// Load configuration file from S3 if setup
+	err = loadS3Variables(k)
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading S3 settings")
+	}
+
+	// Local config file overrides S3 config file
+	configFile := k.String("conf.file")
 	if len(configFile) > 0 {
 		if err = k.Load(file.Provider(configFile), json.Parser()); err != nil {
 			return nil, errors.Wrap(err, "error loading config file")
 		}
 	}
 
-	// Any settings provided on command line override items in configuration file
-	// Command line parameters will be applied again later
+	// Config string overrides any config file
+	configString := k.String("conf.string")
+	if len(configString) > 0 {
+		if err = k.Load(rawbytes.Provider([]byte(configString)), nil); err != nil {
+			return nil, errors.Wrap(err, "error loading config")
+		}
+	}
+
+	// Command line overrides config file or config string
 	if err = k.Load(posflag.Provider(f, ".", k), nil); err != nil {
 		return nil, errors.Wrap(err, "error loading config")
 	}
 
-	// Any settings provided through environment variables override all other custom settings
-	// Environment variable parameters will be applied again later
+	// Environment variables overrides config files or command line options
 	err = loadEnvironmentVariables(k)
 	if err != nil {
 		return nil, errors.Wrap(err, "error loading environment variables")
@@ -446,7 +492,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 }
 
 func loadEnvironmentVariables(k *koanf.Koanf) error {
-	envPrefix := k.String("env-prefix")
+	envPrefix := k.String("conf.env-prefix")
 	if len(envPrefix) != 0 {
 		return k.Load(env.Provider(envPrefix+"_", ".", func(s string) string {
 			// FOO__BAR -> foo-bar to handle dash in config names
@@ -459,20 +505,21 @@ func loadEnvironmentVariables(k *koanf.Koanf) error {
 	return nil
 }
 
+func loadS3Variables(k *koanf.Koanf) error {
+	if len(k.String("conf.s3.secret-key")) != 0 {
+		return k.Load(s3.Provider(s3.Config{
+			AccessKey: k.String("conf.s3.access-key"),
+			SecretKey: k.String("conf.s3.secret-key"),
+			Region:    k.String("conf.s3.region"),
+			Bucket:    k.String("conf.s3.bucket"),
+			ObjectKey: k.String("conf.s3.object-key"),
+		}), nil)
+	}
+
+	return nil
+}
+
 func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
-	// Any settings provided on command line override any custom settings
-	// Second time command line parameters are applied so auto chain parameters can be overridden
-	if err := k.Load(posflag.Provider(f, ".", k), nil); err != nil {
-		return nil, nil, errors.Wrap(err, "error loading config")
-	}
-
-	// Any settings provided through environment variables override all other custom settings
-	// Second time environment variables are applied so auto chain parameters can be overridden
-	err := loadEnvironmentVariables(k)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error loading environment variables")
-	}
-
 	var out Config
 	decoderConfig := mapstructure.DecoderConfig{
 		ErrorUnused: true,
@@ -484,18 +531,18 @@ func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
 		Result:           &out,
 		WeaklyTypedInput: true,
 	}
-	err = k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
+	err := k.UnmarshalWithConf("", &out, koanf.UnmarshalConf{DecoderConfig: &decoderConfig})
 	if err != nil {
 
 		return nil, nil, err
 	}
 
-	if out.DumpConf {
+	if out.Conf.Dump {
 		// Print out current configuration
 
 		// Don't keep printing configuration file and don't print wallet password
 		err := k.Load(confmap.Provider(map[string]interface{}{
-			"dump-conf":       false,
+			"conf.dump":       false,
 			"wallet.password": "",
 		}, "."), nil)
 

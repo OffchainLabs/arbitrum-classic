@@ -624,8 +624,8 @@ export class BridgeHelper {
     l1Signer: Signer,
     singleAttempt = false
   ) => {
-    if (!l1Signer.provider)
-      throw new Error('Signer must be connected to L2 provider')
+    const l1Provider = l1Signer.provider
+    if (!l1Provider) throw new Error('Signer must be connected to L2 provider')
 
     console.log('going to get proof')
     let res: {
@@ -641,15 +641,44 @@ export class BridgeHelper {
     }
 
     if (singleAttempt) {
-      const _res = await BridgeHelper.tryGetProofOnce(
+      const outBoxAddress = await BridgeHelper.getActiveOutbox(
+        l1CoreBridgeAddress,
+        l1Provider
+      )
+
+      const outGoingMessageState = await BridgeHelper.getOutgoingMessageState(
         batchNumber,
         indexInBatch,
+        outBoxAddress,
+        l1Provider,
         l2Provider
       )
-      if (_res === null) {
-        throw new Error('Proof not found')
+
+      const infoString = `batchNumber: ${batchNumber.toNumber()} indexInBatch: ${indexInBatch.toNumber()}`
+
+      switch (outGoingMessageState) {
+        case OutgoingMessageState.NOT_FOUND:
+          throw new Error(`Outgoing message not found. ${infoString}`)
+        case OutgoingMessageState.UNCONFIRMED:
+          throw new Error(
+            `Attempting to execute message that isn't yet confirmed. ${infoString}`
+          )
+        case OutgoingMessageState.EXECUTED:
+          throw new Error(`Message already executed ${infoString}`)
+        case OutgoingMessageState.CONFIRMED: {
+          const _res = await BridgeHelper.tryGetProofOnce(
+            batchNumber,
+            indexInBatch,
+            l2Provider
+          )
+          if (_res === null)
+            throw new Error(
+              `666: message is in a confirmed node but lookupMessageBatchProof returned null (!) ${infoString}`
+            )
+          res = _res
+          break
+        }
       }
-      res = _res
     } else {
       res = await BridgeHelper.tryGetProof(
         batchNumber,
