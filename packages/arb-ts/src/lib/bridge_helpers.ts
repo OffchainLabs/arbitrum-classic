@@ -837,4 +837,8 @@ export class BridgeHelper {
     const whiteList = Whitelist__factory.connect(whiteListAddress, l1Provider)
     return whiteList.isAllowed(address)
   }
+
+  static percentIncrease(num: BigNumber, increase: BigNumber) {
+    return num.mul(increase).div(100)
+  }
 }

@@ -29,10 +29,10 @@ interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
   maxGas?: BigNumber
   gasPriceBid?: BigNumber
-  maxSubmissionPriceIncreaseRatio?: BigNumber
+  maxSubmissionPricePercentIncrease?: BigNumber
 }
 
-const DEFAULT_SUBMISSION_FEE_BUMP = BigNumber.from(16)
+const DEFAULT_SUBMISSION_PERCENT_INCREASE = BigNumber.from(400)
 /**
  * Main class for accessing token bridge methods; inherits methods from {@link L1Bridge} and {@link L2Bridge}
  */
@@ -172,15 +172,16 @@ export class Bridge {
    */
   public async depositETH(
     value: BigNumber,
-    _maxSubmissionPriceIncreaseRatio?: BigNumber,
+    _maxSubmissionPricePercentIncrease?: BigNumber,
     overrides?: PayableOverrides
   ) {
-    const maxSubmissionPriceIncreaseRatio =
-      _maxSubmissionPriceIncreaseRatio || DEFAULT_SUBMISSION_FEE_BUMP
+    const maxSubmissionPricePercentIncrease =
+      _maxSubmissionPricePercentIncrease || DEFAULT_SUBMISSION_PERCENT_INCREASE
 
-    const maxSubmissionPrice = (await this.l2Bridge.getTxnSubmissionPrice(0))[0]
-      .mul(maxSubmissionPriceIncreaseRatio)
-      .div(BigNumber.from(10))
+    const maxSubmissionPrice = BridgeHelper.percentIncrease(
+      (await this.l2Bridge.getTxnSubmissionPrice(0))[0],
+      maxSubmissionPricePercentIncrease
+    )
 
     return this.l1Bridge.depositETH(value, maxSubmissionPrice, overrides)
   }
@@ -230,15 +231,16 @@ export class Bridge {
       '0x'
     )
 
-    const maxSubmissionPriceIncreaseRatio =
-      retryableGasArgs.maxSubmissionPriceIncreaseRatio ||
-      DEFAULT_SUBMISSION_FEE_BUMP
+    const maxSubmissionPricePercentIncrease =
+      retryableGasArgs.maxSubmissionPricePercentIncrease ||
+      DEFAULT_SUBMISSION_PERCENT_INCREASE
 
-    const maxSubmissionPrice = (
-      await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
-    )[0]
-      .mul(maxSubmissionPriceIncreaseRatio)
-      .div(BigNumber.from(10))
+    const maxSubmissionPrice = BridgeHelper.percentIncrease(
+      (
+        await this.l2Bridge.getTxnSubmissionPrice(depositCalldata.length - 2)
+      )[0],
+      maxSubmissionPricePercentIncrease
+    )
 
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
