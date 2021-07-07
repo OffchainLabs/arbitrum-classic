@@ -114,12 +114,37 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     }
 
     /**
+     * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart. (other registerTokenToL2 method allows excess eth recovery from _maxSubmissionCost and is recommended)
+     * @param _l2Address counterpart address of L1 token
+     * @param _maxGas max gas for L2 retryable exrecution
+     * @param _gasPriceBid gas price for L2 retryable ticket
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et
+     * @return Retryable ticket ID
+     */
+    function registerTokenToL2(
+        address _l2Address,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost
+    ) external payable virtual returns (uint256) {
+        return
+            this.registerTokenToL2(
+                _l2Address,
+                _maxGas,
+                _gasPriceBid,
+                _maxSubmissionCost,
+                msg.sender
+            );
+    }
+
+    /**
      * @notice Allows L1 Token contract to trustlessly register its custom L2 counterpart.
 
      * @param _l2Address counterpart address of L1 token
      * @param _maxGas max gas for L2 retryable exrecution 
      * @param _gasPriceBid gas price for L2 retryable ticket 
      * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
+     * @param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
      * @return Retryable ticket ID
      */
     function registerTokenToL2(
