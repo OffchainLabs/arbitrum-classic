@@ -439,7 +439,9 @@ export class Bridge {
       inboxSeqNum[0],
       this.l2Provider
     )
-    const redemptionRec = await this.l1Provider.getTransactionReceipt(
+    console.log(`Ensuring txn hasn't been redeemed:`)
+
+    const redemptionRec = await this.l2Provider.getTransactionReceipt(
       redemptionTxHash
     )
     if (redemptionRec && redemptionRec.status === 1) {
@@ -447,7 +449,7 @@ export class Bridge {
         `Can't cancel retryable, it's already been redeemed: ${redemptionTxHash}`
       )
     }
-
+    console.log(`Hasn't been redeemed yet, calling cancel now`)
     return this.l2Bridge.arbRetryableTx.cancel(redemptionTxHash)
   }
 
