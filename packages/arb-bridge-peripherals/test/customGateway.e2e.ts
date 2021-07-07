@@ -98,7 +98,13 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       l1CustomToken.address
     )
 
-    await l1CustomToken.registerTokenOnL2(l2Token.address, 0, 0, 0)
+    await l1CustomToken.registerTokenOnL2(
+      l2Token.address,
+      0,
+      0,
+      0,
+      accounts[0].address
+    )
 
     // send escrowed tokens to bridge
     const tokenAmount = 100
@@ -143,7 +149,13 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       l1CustomToken.address
     )
 
-    await l1CustomToken.registerTokenOnL2(l2Token.address, 0, 0, 0)
+    await l1CustomToken.registerTokenOnL2(
+      l2Token.address,
+      0,
+      0,
+      0,
+      accounts[0].address
+    )
 
     // send escrowed tokens to bridge
     const tokenAmount = 100
@@ -190,7 +202,8 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
       '0x0000000000000000000000000000000000000000',
       0,
       0,
-      0
+      0,
+      accounts[0].address
     )
 
     // send escrowed tokens to bridge
