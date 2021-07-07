@@ -871,32 +871,20 @@ void ecall(MachineState& m) {
     m.stack.prepForMod(1);
     std::cerr << "[INFO] ecall called: " << m.stack[0] << std::endl;
     const Tuple* tuple = &assumeTuple(m.stack[0]);
-    value val = tuple->get_element(2);
-    value vlen = tuple->get_element(0);
-    value voffset = tuple->get_element(1);
-    uint256_t len = assumeInt(vlen);
-    uint256_t offset = assumeInt(voffset);
-    Buffer buf = assumeBuffer(val);
-    std::cerr << "buf size: " << buf.size() << " " << buf.data_length() << ": "
-              << len << " " << offset << std::endl;
-    std::vector<uint8_t> data;
-    if (len < RawBuffer::leaf_size) {
-        data = buf.get_many(uint64_t(offset), size_t(len));
-    } else {
-        for (uint64_t i = 0; i < len; i++) {
-            data.push_back(buf.get(i + uint64_t(offset)));
-        }
-    }
-    for (auto i : data)
-        std::cerr << "Data: " << i << std::endl;
+    uint256_t arg1 = assumeInt(tuple->get_element(0));
+    uint256_t arg2 = assumeInt(tuple->get_element(1));
+    uint256_t arg3 = assumeInt(tuple->get_element(2));
+    uint256_t arg4 = assumeInt(tuple->get_element(3));
 
-    uint256_t res = 0;
-    for (int i = 0; i < len; i++) {
-        res = res << 8;
-        res = res | data[i];
-    }
+    std::cerr << "ECALL arg1 = " << arg1 << ", arg2 = " << arg2
+              << ", arg3 = " << arg3 << ", arg4 = " << arg4 << std::endl;
 
     m.stack.popClear();
+
+    // TODO: something is calculated here
+
+    Tuple res = Tuple(arg1 + 100, arg2 + 100, arg3 + 100, arg4 + 100);
+
     m.stack.push(res);
     ++m.pc;
     std::cerr << "ecall done: " << res << std::endl;
