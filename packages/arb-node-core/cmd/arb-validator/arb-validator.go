@@ -127,8 +127,6 @@ func startup() error {
 	healthChan <- nodehealth.Log{Config: true, Var: "openethereumHealthcheckRPC", ValStr: config.L1.URL}
 	nodehealth.Init(healthChan)
 
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
-
 	rollupAddr := ethcommon.HexToAddress(config.Rollup.Address)
 	bridgeUtilsAddr := ethcommon.HexToAddress(config.BridgeUtilsAddress)
 	validatorUtilsAddr := ethcommon.HexToAddress(config.Validator.UtilsAddress)

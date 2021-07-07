@@ -240,7 +240,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 
 	l1Client, err := ethutils.NewRPCEthClient(l1URL)
 	if err != nil {
-		return nil, nil, nil, nil, errors.Wrap(err, "error running NewRPCEthClient")
+		return nil, nil, nil, nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
 	}
 
 	var l1ChainId *big.Int
@@ -257,7 +257,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 		case <-time.After(5 * time.Second):
 		}
 	}
-	logger.Debug().Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
+	logger.Info().Str("l1url", l1URL).Str("chainid", l1ChainId.String()).Msg("connected to l1 chain")
 
 	rollupAddress := k.String("rollup.address")
 	if len(rollupAddress) != 0 {
