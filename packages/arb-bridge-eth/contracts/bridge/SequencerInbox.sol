@@ -51,7 +51,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         delayedInbox = _delayedInbox;
         sequencer = _sequencer;
         rollup = _rollup;
-        // TODO: set maxDelayBlocks and maxDelaySeconds
+        // it is assumed that maxDelayBlocks and maxDelaySeconds are set by the rollup
     }
 
     function setSequencer(address newSequencer) external override {
