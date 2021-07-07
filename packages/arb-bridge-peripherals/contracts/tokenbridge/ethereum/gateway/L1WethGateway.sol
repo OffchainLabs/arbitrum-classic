@@ -126,7 +126,10 @@ contract L1WethGateway is L1ArbitrumExtendedGateway {
         override
         returns (address)
     {
-        require(l1ERC20 == l1Weth, "WRONG_L1WETH");
+        if (l1ERC20 != l1Weth) {
+            // invalid L1 weth address
+            return address(0);
+        }
         return l2Weth;
     }
 
