@@ -139,27 +139,27 @@ void deleteMachineState(ReadWriteTransaction& tx,
     auto delete_code_status = deleteCode(tx, segment_counts);
 
     if (!delete_static_res.status.ok()) {
-        std::cout << "error deleting static in checkpoint: "
+        std::cerr << "error deleting static in checkpoint: "
                   << delete_static_res.status.ToString() << std::endl;
     }
 
     if (!delete_register_res.status.ok()) {
-        std::cout << "error deleting register in checkpoint: "
+        std::cerr << "error deleting register in checkpoint: "
                   << delete_register_res.status.ToString() << std::endl;
     }
 
     if (!delete_datastack_res.status.ok()) {
-        std::cout << "error deleting datastack in checkpoint"
+        std::cerr << "error deleting datastack in checkpoint"
                   << delete_datastack_res.status.ToString() << std::endl;
     }
 
     if (!delete_auxstack_res.status.ok()) {
-        std::cout << "error deleting auxstack in checkpoint: "
+        std::cerr << "error deleting auxstack in checkpoint: "
                   << delete_auxstack_res.status.ToString() << std::endl;
     }
 
     if (!delete_code_status.ok()) {
-        std::cout << "error deleting auxstack in checkpoint: "
+        std::cerr << "error deleting auxstack in checkpoint: "
                   << delete_code_status.ToString() << std::endl;
     }
 }

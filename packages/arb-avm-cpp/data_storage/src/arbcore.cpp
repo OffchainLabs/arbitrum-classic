@@ -405,11 +405,6 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
             tx.checkpointDelete(checkpoint_it->key());
 
             checkpoint_it->Prev();
-            if (!checkpoint_it->status().ok()) {
-                std::cerr << "Error: SeekToLast failed during reorg"
-                          << checkpoint_it->status().ToString() << std::endl;
-                return checkpoint_it->status();
-            }
         }
         if (!checkpoint_it->Valid()) {
             setup = checkpoint_it->status();
@@ -423,7 +418,7 @@ rocksdb::Status ArbCore::reorgToMessageCountOrBefore(
         auto status = tx.commit();
         if (!status.ok()) {
             std::cerr << "Error: unable to commit during reorg"
-                      << checkpoint_it->status().ToString() << std::endl;
+                      << status.ToString() << std::endl;
             return status;
         }
     }
