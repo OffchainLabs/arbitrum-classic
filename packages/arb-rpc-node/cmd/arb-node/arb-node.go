@@ -115,7 +115,7 @@ func startup() error {
 		badConfig = true
 		fmt.Println("Missing --rollup.address")
 	}
-	if config.Rollup.ChainID == 0 {
+	if config.Node.ChainID == 0 {
 		badConfig = true
 		fmt.Println("Missing --rollup.chain-id")
 	}
@@ -159,7 +159,7 @@ func startup() error {
 		}()
 	}
 
-	l2ChainId := new(big.Int).SetUint64(config.Rollup.ChainID)
+	l2ChainId := new(big.Int).SetUint64(config.Node.ChainID)
 	rollupAddress := common.HexToAddress(config.Rollup.Address)
 	logger.Info().Hex("chainaddress", rollupAddress.Bytes()).Hex("chainid", l2ChainId.Bytes()).Str("type", config.Node.Type).Msg("Launching arbitrum node")
 
@@ -196,20 +196,7 @@ func startup() error {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 1)
 		for _, url := range config.Feed.Input.URLs {
 			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
-			for {
-				err = broadcastClient.ConnectWithChannel(ctx, sequencerFeed)
-				if err == nil {
-					break
-				}
-				logger.Warn().Err(err).
-					Msg("failed connect to sequencer broadcast, waiting and retrying")
-
-				select {
-				case <-ctx.Done():
-					return errors.New("ctx cancelled broadcast client connect")
-				case <-time.After(5 * time.Second):
-				}
-			}
+			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
 	var inboxReader *monitor.InboxReader
