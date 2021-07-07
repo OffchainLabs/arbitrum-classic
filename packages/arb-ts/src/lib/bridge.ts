@@ -436,7 +436,7 @@ export class Bridge {
     if (!inboxSeqNum) throw new Error('Inbox not triggered')
 
     const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
-    console.log('waiting for retryable ticket...', l2TxnHash)
+    console.log('waiting for retryable ticket...', l2TxnHash) 
 
     const l2Txn = await this.l2Provider.waitForTransaction(
       l2TxnHash,
@@ -451,12 +451,15 @@ export class Bridge {
     }
     const redemptionTxHash = await BridgeHelper.calculateL2RetryableTransactionHash(
       inboxSeqNum[0],
-      this.l2Provider
+      this.l2Provider 
     )
     const redemptionRec = await this.l1Provider.getTransactionReceipt(
       redemptionTxHash
-    )
-    if (redemptionRec && redemptionRec.status === 1) {
+    ) 
+   
+    const redemptionRecL2 = await this.l2Bridge.arbRetryableTx.getTimeout(redemptionTxHash) 
+    
+    if ((redemptionRec && redemptionRec.status === 1) || redemptionRecL2 == BigNumber.from(0)) {
       throw new Error(
         `Can't cancel retryable, it's already been redeemed: ${redemptionTxHash}`
       )
@@ -469,7 +472,7 @@ export class Bridge {
     l2Transaction: ethers.providers.TransactionReceipt
   ) {
     return BridgeHelper.getBuddyDeployInL2Transaction(l2Transaction)
-  }
+  } 
 
   public getWithdrawalsInL2Transaction(
     l2Transaction: ethers.providers.TransactionReceipt
@@ -662,12 +665,12 @@ export class Bridge {
       batchNumber,
       indexInBatch,
       outboxAddress,
-      this.l1Provider,
+      this.l1Provider, 
       this.l2Provider
     )
   }
 
-  public async getERC20L2Address(erc20L1Address: string) {
+  public async getERC20L2Address(erc20L1Address: string) {   
     return this.l1Bridge.getERC20L2Address(erc20L1Address)
   }
 
@@ -699,8 +702,7 @@ export class Bridge {
       whiteListAddress,
       this.l1Provider
     )
-  } 
-  
+  }  
   public async setGateways(
     tokenAddresses: string[],
     gatewayAddresses: string[]
