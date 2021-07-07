@@ -30,7 +30,7 @@ export interface L2ToL1EventResult {
   caller: string
   destination: string
   uniqueId: BigNumber
-  batchNumber: BigNumber
+  batchNumber: BigNumber 
   indexInBatch: BigNumber
   arbBlockNum: BigNumber
   ethBlockNum: BigNumber
@@ -47,6 +47,15 @@ export interface OutboundTransferInitiatedResult {
   _amount: BigNumber
   bytes: string
   txHash: string
+} 
+
+export interface InboundTransferFinalizedResult {
+  token: string, 
+  _from: string, 
+  _to: string, 
+  _amount: BigNumber, 
+  bytes: string 
+  txHash: string 
 }
 
 export interface BuddyDeployEventResult {
@@ -253,15 +262,32 @@ export class BridgeHelper {
   ): Promise<Array<OutboundTransferInitiatedResult>> => {
     const factory = new L1ERC20Gateway__factory()
     const contract = factory.attach(l1GatewayAddress)
-    const iface = contract.interface
-    const event = iface.getEvent('OutboundTransferInitiated')
+    const iface = contract.interface 
+    const event = iface.getEvent('OutboundTransferInitiated') 
     const eventTopic = iface.getEventTopic(event)
     const logs = l1Transaction.logs.filter(log => log.topics[0] === eventTopic)
     return logs.map(
       log =>
         (iface.parseLog(log).args as unknown) as OutboundTransferInitiatedResult
     )
-  }
+  } 
+  
+  static getDepositTokenEventDataL2 = async (  
+    l2Transaction: providers.TransactionReceipt, 
+    l2GatewayAddress: string 
+  ): Promise<Array<InboundTransferFinalizedResult>> => {
+    const factory = new L2ERC20Gateway__factory()
+    const contract = factory.attach(l2GatewayAddress) 
+    const iface = contract.interface 
+    const event = iface.getEvent('InboundTransferFinalized')  
+    const eventTopic =  iface.getEventTopic(event)  
+    const logs = l2Transaction.logs.filter(log => log.topics[0] === eventTopic)
+    return logs.map(
+      log =>
+        (iface.parseLog(log).args as unknown) as InboundTransferFinalizedResult
+    )
+    
+  } 
 
   static getOutboundTransferData = async (
     gatewayAddress: string,
@@ -307,7 +333,7 @@ export class BridgeHelper {
     const logs = await BridgeHelper.getEventLogs('GatewaySet', contract)
     return logs.map(
       log => (contract.interface.parseLog(log).args as unknown) as GatewaySet
-    )
+    )  
   }
 
   static getWithdrawalsInL2Transaction = async (

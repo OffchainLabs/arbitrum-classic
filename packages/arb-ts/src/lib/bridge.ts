@@ -24,6 +24,8 @@ import { NODE_INTERFACE_ADDRESS } from './precompile_addresses'
 import { NodeInterface__factory } from './abi/factories/NodeInterface__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import networks from './networks'
+import { L2ERC20Gateway, L2ERC20Gateway__factory } from './abi'
+import { EthBatchTokenReceiverLibraryAddresses } from './abi/factories/EthBatchTokenReceiver__factory'
 
 interface RetryableGasArgs {
   maxSubmissionPrice?: BigNumber
@@ -154,7 +156,7 @@ export class Bridge {
   get l2Signer() {
     return this.l2Bridge.l2Signer
   }
-
+  
   /**
    * Set allowance for L1 router contract
    */
@@ -194,10 +196,16 @@ export class Bridge {
     destinationAddress?: string,
     overrides?: PayableOverrides
   ) {
-    const l1ChainId = await this.l1Signer.getChainId()
+    const l1ChainId = await this.l1Signer.getChainId() 
+    const l2ChainId = await this.l2Signer.getChainId() 
+    
     const { l1WethGateway: l1WethGatewayAddress } = networks[
       l1ChainId
     ].tokenBridge
+ 
+    const { l2WethGateway: l2WethGatewayAddress } = networks[
+      l2ChainId
+    ].tokenBridge 
 
     const gasPriceBid =
       retryableGasArgs.gasPriceBid || (await this.l2Provider.getGasPrice())
@@ -206,28 +214,37 @@ export class Bridge {
 
     const expectedL1GatewayAddress = await this.l1Bridge.getGatewayAddress(
       erc20L1Address
+    ) 
+
+    const expectedL2GatewayAddress = await this.l2Bridge.getGatewayAddress(
+      erc20L1Address
     )
 
     let estimateGasCallValue = constants.Zero
 
-    if (l1WethGatewayAddress === expectedL1GatewayAddress) {
-      // forwarded deposited eth as call value for weth deposit
-
+    if (l1WethGatewayAddress === expectedL1GatewayAddress && l2WethGatewayAddress == expectedL2GatewayAddress) {
+      // forwarded deposited eth as call value for weth deposit 
       estimateGasCallValue = amount
-    }
+    } 
 
     const l1Gateway = L1ERC20Gateway__factory.connect(
       expectedL1GatewayAddress,
       this.l1Provider
-    )
-
+    )  
+ 
+    const l2Gateway = L2ERC20Gateway__factory.connect(
+      expectedL2GatewayAddress, 
+      this.l2Provider
+    )  
+    
+    
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       sender,
       destinationAddress ? destinationAddress : sender,
       amount,
       '0x'
-    )
+    ) 
 
     const maxSubmissionPriceIncreaseRatio =
       retryableGasArgs.maxSubmissionPriceIncreaseRatio || BigNumber.from(13)
@@ -243,9 +260,13 @@ export class Bridge {
       this.l2Provider
     )
 
-    const l2Dest = await l1Gateway.counterpartGateway()
-
-    const maxGas = (
+    const l2Dest = await l1Gateway.counterpartGateway() 
+     
+    if (l2Dest != expectedL2GatewayAddress) {
+      throw new Error("Gateway contracts not configured correectly")
+    }
+     
+    const maxGas = ( 
       await nodeInterface.estimateRetryableTicket(
         expectedL1GatewayAddress,
         ethers.utils.parseEther('0.05').add(estimateGasCallValue),
@@ -258,7 +279,7 @@ export class Bridge {
         0,
         depositCalldata
       )
-    )[0]
+    )[0] 
 
     // calculate required forwarding gas
     let ethDeposit = overrides && (await overrides.value)
@@ -312,7 +333,7 @@ export class Bridge {
     return BridgeHelper.calculateL2TransactionHash(
       inboxSequenceNumber,
       l2ChainId || this.l2Provider
-    )
+    ) 
   }
   /**
    * Hash of L2 side of retryable txn; txn gets generated automatically and is formatted as tho user submitted
@@ -342,15 +363,14 @@ export class Bridge {
 
   public async getInboxSeqNumFromContractTransaction(
     l1Transaction: ethers.providers.TransactionReceipt
-  ): Promise<BigNumber[] | undefined> {
+  ): Promise<BigNumber[] | undefined> { 
     return BridgeHelper.getInboxSeqNumFromContractTransaction(
       l1Transaction,
       // TODO: we don't need to actually make this query if random address fetches interface
       (await this.l1Bridge.getInbox()).address
     )
-  }
-
-  /**
+  } 
+  /*
    * Convenience method to directly retrieve retryable hash from an l1 transaction
    */
   public async getL2TxHashByRetryableTicket(
@@ -373,11 +393,11 @@ export class Bridge {
     overrides?: PayableOverrides
   ) {
     if (typeof l1Transaction == 'string') {
-      l1Transaction = await this.getL1Transaction(l1Transaction)
+      l1Transaction = await this.getL1Transaction(l1Transaction) 
     }
     const inboxSeqNum = await this.getInboxSeqNumFromContractTransaction(
       l1Transaction
-    )
+    ) 
     if (!inboxSeqNum) throw new Error('Inbox not triggered')
 
     const l2TxnHash = await this.calculateL2TransactionHash(inboxSeqNum[0])
@@ -458,17 +478,29 @@ export class Bridge {
       l2Transaction,
       this.l2Provider
     )
-  }
-
+  } 
   public async getDepositTokenEventData(
-    l1Transaction: ethers.providers.TransactionReceipt
-  ) {
+    l1Transaction: ethers.providers.TransactionReceipt 
+  ) {   
     const defaultGatewayAddress = (await this.l1Bridge.getDefaultL1Gateway())
-      .address
-    return BridgeHelper.getDepositTokenEventData(
+      .address 
+
+    return BridgeHelper.getDepositTokenEventData( 
       l1Transaction,
       defaultGatewayAddress
     )
+  }  
+
+  public async getDepositTokenEventDataL2 ( 
+    l2Transaction: ethers.providers.TransactionReceipt, 
+    l1TokenAddress: string
+  ) {  
+    const l2GatewayAddress = (await this.l2Bridge.getGatewayAddress(l1TokenAddress))
+    //finalize inboudnd transfer event data
+    return BridgeHelper.getDepositTokenEventDataL2(  
+      l2Transaction, 
+      l2GatewayAddress
+    ) 
   }
 
   /**
@@ -667,8 +699,8 @@ export class Bridge {
       whiteListAddress,
       this.l1Provider
     )
-  }
-
+  } 
+  
   public async setGateways(
     tokenAddresses: string[],
     gatewayAddresses: string[]
