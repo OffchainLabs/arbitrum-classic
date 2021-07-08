@@ -312,7 +312,7 @@ func startup() error {
 		return err
 	}
 	go func() {
-		err := rpc.LaunchPublicServer(ctx, web3Server, config.Node.RPC.Addr, config.Node.RPC.Port, config.Node.WS.Addr, config.Node.WS.Port)
+		err := rpc.LaunchPublicServer(ctx, web3Server, config.Node.RPC, config.Node.WS)
 		if err != nil {
 			errChan <- err
 		}

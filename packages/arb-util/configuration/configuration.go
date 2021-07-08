@@ -21,10 +21,11 @@ import (
 	"github.com/knadh/koanf/providers/rawbytes"
 	"github.com/knadh/koanf/providers/s3"
 	"github.com/mitchellh/mapstructure"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	flag "github.com/spf13/pflag"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 var logger = log.With().Caller().Stack().Str("component", "configuration").Logger()
@@ -84,6 +85,7 @@ type Aggregator struct {
 type RPC struct {
 	Addr string `koanf:"addr"`
 	Port string `koanf:"port"`
+	Path string `koanf:"path"`
 }
 
 type S3 struct {
@@ -103,6 +105,7 @@ type Sequencer struct {
 type WS struct {
 	Addr string `koanf:"addr"`
 	Port string `koanf:"port"`
+	Path string `koanf:"path"`
 }
 
 type Node struct {
@@ -185,6 +188,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.forwarder.target", "", "url of another node to send transactions through")
 	f.String("node.rpc.addr", "0.0.0.0", "RPC address")
 	f.Int("node.rpc.port", 8547, "RPC port")
+	f.String("node.rpc.path", "/", "RPC path")
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
 	f.String("node.sequencer.lockout.redis", "", "sequencer lockout redis instance URL")
@@ -192,7 +196,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
-
+	f.String("node.ws.path", "/", "websocket path")
 	return ParseNonRelay(ctx, f)
 }
 
