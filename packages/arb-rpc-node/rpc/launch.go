@@ -151,16 +151,26 @@ func SetupBatcher(
 	}
 }
 
-func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, web3RPCAddr string, web3RPCPort string, web3WSAddr, web3WSPort string) error {
+func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, rpc configuration.RPC, ws configuration.WS) error {
+	if rpc.Port == ws.Port && rpc.Port != "" {
+		if rpc.Addr != ws.Addr {
+			return errors.New("if serving on same port, rpc and ws addreses must be the same")
+		}
+		if rpc.Path == ws.Path {
+			return errors.New("if serving on same port, ws and rpc path must be different")
+		}
+		return utils2.LaunchRPCAndWS(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path, ws.Path)
+	}
+
 	errChan := make(chan error, 1)
-	if web3RPCPort != "" {
+	if rpc.Port != "" {
 		go func() {
-			errChan <- utils2.LaunchRPC(ctx, web3Server, web3RPCAddr, web3RPCPort)
+			errChan <- utils2.LaunchRPC(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path)
 		}()
 	}
-	if web3WSPort != "" {
+	if ws.Port != "" {
 		go func() {
-			errChan <- utils2.LaunchWS(ctx, web3Server, web3WSAddr, web3WSPort)
+			errChan <- utils2.LaunchWS(ctx, web3Server, ws.Addr, ws.Port, ws.Path)
 		}()
 	}
 	return <-errChan
