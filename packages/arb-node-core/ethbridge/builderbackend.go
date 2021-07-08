@@ -25,8 +25,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 )
 
 type BuilderBackend struct {
@@ -57,6 +58,14 @@ func (b *BuilderBackend) TransactionCount() int {
 
 func (b *BuilderBackend) ClearTransactions() {
 	b.transactions = nil
+}
+
+func (b *BuilderBackend) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	return &types.Header{}, nil
+}
+
+func (b *BuilderBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	return big.NewInt(0), nil
 }
 
 func (b *BuilderBackend) CodeAt(ctx context.Context, contract common.Address, blockNumber *big.Int) ([]byte, error) {
