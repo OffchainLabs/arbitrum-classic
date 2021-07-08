@@ -152,6 +152,16 @@ func SetupBatcher(
 }
 
 func LaunchPublicServer(ctx context.Context, web3Server *rpc.Server, rpc configuration.RPC, ws configuration.WS) error {
+	if rpc.Port == ws.Port && rpc.Port != "" {
+		if rpc.Addr != ws.Addr {
+			return errors.New("if serving on same port, rpc and ws addreses must be the same")
+		}
+		if rpc.Path == ws.Path {
+			return errors.New("if serving on same port, ws and rpc path must be different")
+		}
+		return utils2.LaunchRPCAndWS(ctx, web3Server, rpc.Addr, rpc.Port, rpc.Path, ws.Path)
+	}
+
 	errChan := make(chan error, 1)
 	if rpc.Port != "" {
 		go func() {

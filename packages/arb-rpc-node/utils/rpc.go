@@ -41,6 +41,13 @@ func LaunchWS(ctx context.Context, server *rpc.Server, addr, port, path string) 
 	return launchServer(ctx, r, addr, port, "websocket")
 }
 
+func LaunchRPCAndWS(ctx context.Context, server *rpc.Server, addr, port, rpcPath, wsPath string) error {
+	r := mux.NewRouter()
+	r.Handle(rpcPath, server).Methods("GET", "POST", "OPTIONS")
+	r.Handle(wsPath, server.WebsocketHandler([]string{"*"}))
+	return launchServer(ctx, r, addr, port, "websocket")
+}
+
 func launchServer(ctx context.Context, handler http.Handler, addr string, port string, serverType string) error {
 	headersOk := handlers.AllowedHeaders(
 		[]string{"X-Requested-With", "Content-Type", "Authorization"},
