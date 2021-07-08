@@ -53,27 +53,6 @@ export const getRetryableTicket = async (bridge: Bridge, seqNum: BigNumber) => {
   return retryableTicket
 }
 
-export const testRetryableTicketNoAutoRedeem = async (
-  bridge: Bridge,
-  rec: ContractReceipt
-) => {
-  prettyLog(`testing retryable for ${rec.transactionHash}`)
-
-  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(rec)
-  const seqNum = seqNums && seqNums[0]
-  if (!seqNum) {
-    throw new Error('Seq num not found')
-  }
-
-  const retryableTicket = await getRetryableTicket(bridge, seqNum)
-  const _retryableTicketReceipt = await retryableTicketReceipt(
-    bridge,
-    retryableTicket
-  )
-
-  return retryableTicket
-}
-
 export const autoRedeemReceipt = async (bridge: Bridge, seqNum: BigNumber) => {
   prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
   const autoRedeem = await bridge.calculateRetryableAutoRedeemTxnHash(seqNum)
@@ -100,6 +79,27 @@ export const autoRedeemReceipt = async (bridge: Bridge, seqNum: BigNumber) => {
   return redemptionReceipt
 }
 
+export const testRetryableTicketNoAutoRedeem = async (
+  bridge: Bridge,
+  rec: ContractReceipt
+) => {
+  prettyLog(`testing retryable for ${rec.transactionHash}`)
+
+  const seqNums = await bridge.getInboxSeqNumFromContractTransaction(rec)
+  const seqNum = seqNums && seqNums[0]
+  if (!seqNum) {
+    throw new Error('Seq num not found')
+  }
+
+  const retryableTicket = await getRetryableTicket(bridge, seqNum)
+  const _retryableTicketReceipt = await retryableTicketReceipt(
+    bridge,
+    retryableTicket
+  )
+
+  return retryableTicket
+}
+
 export const testRetryableTicket = async (
   bridge: Bridge,
   rec: ContractReceipt
@@ -116,8 +116,8 @@ export const testRetryableTicket = async (
     bridge,
     retryableTicket
   )
-
-  const redeemReceipt = await autoRedeemReceipt(bridge, seqNum) //auto redeem
+  //auto redeem
+  const redeemReceipt = await autoRedeemReceipt(bridge, seqNum)
 
   return retryableTicket
 }
@@ -153,6 +153,11 @@ console.warn('using prefunded wallet ', _preFundedWallet.address)
 export const fundL1 = async (bridge: Bridge) => {
   const testWalletAddress = await bridge.l1Bridge.getWalletAddress()
   const preFundedWallet = _preFundedWallet.connect(bridge.l1Provider)
+  // const balanceWallet = (await preFundedWallet.getBalance())
+  // console.log(balanceWallet)
+  // if (balanceWallet == BigNumber.from(0)) {
+  //   throw new Error("balance in L1 wallet is insufficient")
+  // }
   const res = await preFundedWallet.sendTransaction({
     to: testWalletAddress,
     value: preFundAmount,
@@ -163,6 +168,13 @@ export const fundL1 = async (bridge: Bridge) => {
 export const fundL2 = async (bridge: Bridge) => {
   const testWalletAddress = await bridge.l2Bridge.getWalletAddress()
   const preFundedL2Wallet = _preFundedL2Wallet.connect(bridge.l2Provider)
+  console.log('inside fund l2')
+  //const balanceWallet = await preFundedL2Wallet.getBalance()
+  // if (balanceWallet < BigNumber.from(.001)) {
+  //   console.log("pre-funded wallet balance " + balanceWallet)
+  //   throw new Error ("insufficient balance on l2 to complete tx")
+  // }
+
   const res = await preFundedL2Wallet.sendTransaction({
     to: testWalletAddress,
     value: preFundAmount,

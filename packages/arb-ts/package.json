@@ -35,9 +35,12 @@
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
+    "@typechain/ethers-v5": "6.0.5",
     "@types/promise-poller": "^1.7.0",
     "@uniswap/token-lists": "^1.0.0-beta.24",
-    "ethers": "^5.0.24"
+    "ethers": "5.0.24",
+    "mocha": "^9.0.2",
+    "typescript": "4.1"
   },
   "resolutions": {
     "@ethersproject/bignumber": "^5.1.1"
@@ -57,7 +60,7 @@
     "dot-env": "^0.0.1",
     "ethereum-waffle": "^2.3.0",
     "install-peers-cli": "^2.2.0",
-    "mocha": "^7.2.0",
+    "mocha": "^9.0.2",
     "nyc": "^15.1.0",
     "typedoc": "^0.20.35",
     "typedoc-plugin-markdown": "^3.8.1",
