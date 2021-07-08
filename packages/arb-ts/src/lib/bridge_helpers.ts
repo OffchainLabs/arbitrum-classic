@@ -1,4 +1,4 @@
-import { ContractReceipt, ethers } from 'ethers'
+import { ContractTransaction, ethers } from 'ethers'
 import { L2ERC20Gateway__factory } from './abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from './abi/factories/L1ERC20Gateway__factory'
 import { L1GatewayRouter__factory } from './abi/factories/L1GatewayRouter__factory'
@@ -310,11 +310,10 @@ export class BridgeHelper {
     )
   }
 
-  static getWithdrawalsInL2Transaction = async (
+  static getWithdrawalsInL2Transaction = (
     l2Transaction: providers.TransactionReceipt,
     l2Provider: providers.Provider
-  ): Promise<Array<L2ToL1EventResult>> => {
-    // TODO: can we use dummies to get interface?
+  ): Array<L2ToL1EventResult> => {
     const contract = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
     const iface = contract.interface
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
@@ -577,7 +576,7 @@ export class BridgeHelper {
     outboxProofData: OutboxProofData,
     l1CoreBridgeAddress: string,
     l1Signer: Signer
-  ): Promise<ContractReceipt> => {
+  ): Promise<ContractTransaction> => {
     if (!l1Signer.provider) throw new Error('No L1 provider in L1 signer')
 
     const activeOutboxAddress = await BridgeHelper.getActiveOutbox(
@@ -609,10 +608,7 @@ export class BridgeHelper {
         outboxProofData.calldataForL1
       )
       console.log(`Transaction hash: ${outboxExecute.hash}`)
-      console.log('Waiting for receipt')
-      const receipt = await outboxExecute.wait()
-      console.log('Receipt emitted')
-      return receipt
+      return outboxExecute
     } catch (e) {
       console.log('failed to execute tx in layer 1')
       console.log(e)
@@ -628,8 +624,8 @@ export class BridgeHelper {
     l1Signer: Signer,
     singleAttempt = false
   ) => {
-    if (!l1Signer.provider)
-      throw new Error('Signer must be connected to L2 provider')
+    const l1Provider = l1Signer.provider
+    if (!l1Provider) throw new Error('Signer must be connected to L2 provider')
 
     console.log('going to get proof')
     let res: {
@@ -645,15 +641,44 @@ export class BridgeHelper {
     }
 
     if (singleAttempt) {
-      const _res = await BridgeHelper.tryGetProofOnce(
+      const outBoxAddress = await BridgeHelper.getActiveOutbox(
+        l1CoreBridgeAddress,
+        l1Provider
+      )
+
+      const outGoingMessageState = await BridgeHelper.getOutgoingMessageState(
         batchNumber,
         indexInBatch,
+        outBoxAddress,
+        l1Provider,
         l2Provider
       )
-      if (_res === null) {
-        throw new Error('Proof not found')
+
+      const infoString = `batchNumber: ${batchNumber.toNumber()} indexInBatch: ${indexInBatch.toNumber()}`
+
+      switch (outGoingMessageState) {
+        case OutgoingMessageState.NOT_FOUND:
+          throw new Error(`Outgoing message not found. ${infoString}`)
+        case OutgoingMessageState.UNCONFIRMED:
+          throw new Error(
+            `Attempting to execute message that isn't yet confirmed. ${infoString}`
+          )
+        case OutgoingMessageState.EXECUTED:
+          throw new Error(`Message already executed ${infoString}`)
+        case OutgoingMessageState.CONFIRMED: {
+          const _res = await BridgeHelper.tryGetProofOnce(
+            batchNumber,
+            indexInBatch,
+            l2Provider
+          )
+          if (_res === null)
+            throw new Error(
+              `666: message is in a confirmed node but lookupMessageBatchProof returned null (!) ${infoString}`
+            )
+          res = _res
+          break
+        }
       }
-      res = _res
     } else {
       res = await BridgeHelper.tryGetProof(
         batchNumber,
@@ -669,12 +694,11 @@ export class BridgeHelper {
 
     console.log('got proof')
 
-    const outboxExecuteTransactionReceipt = await BridgeHelper.tryOutboxExecute(
+    return BridgeHelper.tryOutboxExecute(
       proofData,
       l1CoreBridgeAddress,
       l1Signer
     )
-    return outboxExecuteTransactionReceipt
   }
 
   static getL2ToL1EventData = async (

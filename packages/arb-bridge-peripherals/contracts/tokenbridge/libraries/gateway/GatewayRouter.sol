@@ -29,7 +29,7 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
-    address internal constant BLACKLISTED = address(1);
+    address internal constant DISABLED = address(1);
 
     mapping(address => address) public l1TokenToGateway;
     address public defaultGateway;
@@ -107,13 +107,16 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
 
     function getGateway(address _token) public view virtual returns (address gateway) {
         gateway = l1TokenToGateway[_token];
-        require(gateway != BLACKLISTED, "BLACKLIST");
 
         if (gateway == ZERO_ADDR) {
+            // if no gateway value set, use default gateway
             gateway = defaultGateway;
         }
 
-        require(gateway.isContract(), "NO_GATEWAY_DEPLOYED");
+        if (gateway == DISABLED || !gateway.isContract()) {
+            // not a valid gateway
+            return ZERO_ADDR;
+        }
 
         return gateway;
     }
@@ -125,6 +128,10 @@ abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
         override
         returns (address)
     {
-        return TokenGateway(getGateway(l1ERC20)).calculateL2TokenAddress(l1ERC20);
+        address gateway = getGateway(l1ERC20);
+        if (gateway == ZERO_ADDR) {
+            return ZERO_ADDR;
+        }
+        return TokenGateway(gateway).calculateL2TokenAddress(l1ERC20);
     }
 }

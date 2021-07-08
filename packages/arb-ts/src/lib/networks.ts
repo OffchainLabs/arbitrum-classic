@@ -26,6 +26,8 @@ export interface TokenBridge {
   l2Weth: string
   l1Weth: string
   inbox: string
+  l1ProxyAdmin: string
+  l2ProxyAdmin: string
 }
 
 export interface Networks {
@@ -42,11 +44,13 @@ const mainnetBridge: TokenBridge = {
   l2ERC20Gateway: '0x09e9222E96E7B4AE2a407B98d48e330053351EEe',
   l1CustomGateway: '0xcEe284F754E854890e311e3280b767F80797180d',
   l2CustomGateway: '0x096760F208390250649E3e8763348E783AEF5562',
-  l1WethGateway: '',
-  l2WethGateway: '',
+  l1WethGateway: '0xd92023E9d9911199a6711321D1277285e6d4e2db',
+  l2WethGateway: '0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B',
   l2Weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
-  l1Weth: '',
+  l1Weth: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
+  l1ProxyAdmin: '0x9aD46fac0Cf7f790E5be05A0F15223935A0c0aDa',
+  l2ProxyAdmin: '0xd570aCE65C43af47101fC6250FD6fC63D1c22a86',
 }
 
 const RinkebyBridge: TokenBridge = {
@@ -61,6 +65,8 @@ const RinkebyBridge: TokenBridge = {
   l2Weth: '0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681',
   l1Weth: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
+  l1ProxyAdmin: '0x0DbAF24efA2bc9Dd1a6c0530DD252BCcF883B89A',
+  l2ProxyAdmin: '0x58816566EB91815Cc07f3Ad5230eE0820fe1A19a',
 }
 
 export const networks: Networks = {
