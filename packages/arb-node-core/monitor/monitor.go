@@ -18,7 +18,9 @@ package monitor
 
 import (
 	"context"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 
 	"github.com/pkg/errors"
@@ -85,6 +87,19 @@ func (m *Monitor) StartInboxReader(
 	if err != nil {
 		return nil, err
 	}
+	creationEvent, err := rollup.LookupCreation(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "error checking initial chain state")
+	}
+	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0))
+	if err != nil {
+		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
+	}
+	initialMachineHash := initialExecutionCursor.MachineHash()
+	if initialMachineHash != creationEvent.MachineHash {
+		return nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
+	}
+
 	delayedBridgeAddress, err := rollup.DelayedBridge(ctx)
 	if err != nil {
 		return nil, err
