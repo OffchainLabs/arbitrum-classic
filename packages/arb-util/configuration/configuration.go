@@ -312,7 +312,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet) (*Config, *Wallet, *eth
 		return nil, nil, nil, nil, err
 	}
 
-	out, wallet, err := endCommonParse(f, k)
+	out, wallet, err := endCommonParse(k)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -386,7 +386,7 @@ func ParseRelay() (*Config, error) {
 		return nil, err
 	}
 
-	out, _, err := endCommonParse(f, k)
+	out, _, err := endCommonParse(k)
 	if err != nil {
 		return nil, err
 	}
@@ -535,7 +535,7 @@ func loadS3Variables(k *koanf.Koanf) error {
 	return nil
 }
 
-func endCommonParse(f *flag.FlagSet, k *koanf.Koanf) (*Config, *Wallet, error) {
+func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 	var out Config
 	decoderConfig := mapstructure.DecoderConfig{
 		ErrorUnused: true,
