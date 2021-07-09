@@ -199,7 +199,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
 
     // register a non-existent L2 token so we can test the force withdrawal
     await l1CustomToken.registerTokenOnL2(
-      '0x0000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000001',
       0,
       0,
       0,
