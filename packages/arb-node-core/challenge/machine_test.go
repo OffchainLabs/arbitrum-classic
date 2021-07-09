@@ -34,7 +34,8 @@ import (
 func getTester(t *testing.T) *ethbridgetestcontracts.MachineTester {
 	backend, pks := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
+	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
+	test.FailIfError(t, err)
 	_, _, machineTester, err := ethbridgetestcontracts.DeployMachineTester(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()

@@ -189,10 +189,14 @@ func initializeChallengeTest(
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, ethcommon.Address, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, func(nd *core.NodeInfo)) {
 	ctx := context.Background()
 	clnt, pks := test.SimulatedBackend(t)
-	deployer := bind.NewKeyedTransactor(pks[0])
-	asserter := bind.NewKeyedTransactor(pks[1])
-	challenger := bind.NewKeyedTransactor(pks[2])
-	sequencer := bind.NewKeyedTransactor(pks[3])
+	deployer, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
+	test.FailIfError(t, err)
+	asserter, err := bind.NewKeyedTransactorWithChainID(pks[1], big.NewInt(1337))
+	test.FailIfError(t, err)
+	challenger, err := bind.NewKeyedTransactorWithChainID(pks[2], big.NewInt(1337))
+	test.FailIfError(t, err)
+	sequencer, err := bind.NewKeyedTransactorWithChainID(pks[3], big.NewInt(1337))
+	test.FailIfError(t, err)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(deployer, client)
 	test.FailIfError(t, err)

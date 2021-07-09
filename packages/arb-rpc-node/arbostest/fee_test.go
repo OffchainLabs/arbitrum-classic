@@ -133,7 +133,8 @@ func TestFees(t *testing.T) {
 	var conDeployedLength int
 	{
 		client, keys := test.SimulatedBackend(t)
-		auth := bind.NewKeyedTransactor(keys[0])
+		auth, err := bind.NewKeyedTransactorWithChainID(keys[0], big.NewInt(1337))
+		failIfError(t, err)
 		addr, _, _, err := arbostestcontracts.DeployGasUsed(auth, client, false)
 		failIfError(t, err)
 		client.Commit()
