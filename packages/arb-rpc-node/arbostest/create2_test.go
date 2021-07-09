@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
@@ -35,10 +34,9 @@ import (
 )
 
 func TestCreate2(t *testing.T) {
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	failIfError(t, err)
+	auth := auths[0]
 	factoryConnAddress, _, cf, err := arbostestcontracts.DeployCloneFactory(auth, client)
 	failIfError(t, err)
 

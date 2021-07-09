@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -132,10 +131,8 @@ func TestFees(t *testing.T) {
 
 	var conDeployedLength int
 	{
-		client, keys := test.SimulatedBackend(t)
-		auth, err := bind.NewKeyedTransactorWithChainID(keys[0], big.NewInt(1337))
-		failIfError(t, err)
-		addr, _, _, err := arbostestcontracts.DeployGasUsed(auth, client, false)
+		client, auths := test.SimulatedBackend(t)
+		addr, _, _, err := arbostestcontracts.DeployGasUsed(auths[0], client, false)
 		failIfError(t, err)
 		client.Commit()
 		deployedCode, err := client.CodeAt(context.Background(), addr, nil)

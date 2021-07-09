@@ -154,9 +154,8 @@ func TestSequencerBatcher(t *testing.T) {
 	test.FailIfError(t, err)
 	extraConfig := init.ExtraConfig
 
-	clnt, pks := test.SimulatedBackend(t)
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
+	clnt, auths := test.SimulatedBackend(t)
+	auth := auths[0]
 	sequencer := common.NewAddressFromEth(auth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 

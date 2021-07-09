@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -39,7 +38,8 @@ import (
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 
 func TestConstructor(t *testing.T) {
-	client, pks := test.SimulatedBackend(t)
+	client, auths := test.SimulatedBackend(t)
+	auth := auths[0]
 	tx := types.NewTx(&types.LegacyTx{
 		Nonce:    0,
 		Value:    big.NewInt(0),
@@ -47,10 +47,10 @@ func TestConstructor(t *testing.T) {
 		GasPrice: big.NewInt(875000000),
 		Data:     constructorData,
 	})
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
+	signedTx, err := auth.Signer(auth.From, tx)
 	failIfError(t, err)
 
-	sender := crypto.PubkeyToAddress(pks[0].PublicKey)
+	sender := auth.From
 	targetAddress := crypto.CreateAddress(sender, 0)
 
 	ctx := context.Background()
@@ -80,6 +80,8 @@ func TestConstructor(t *testing.T) {
 		}),
 	}
 
+	// Set arbos chain id to match simulated backend so that the sig on the tx is valid in both
+	chainId = big.NewInt(1337)
 	messages := []message.Message{deposit, l2Message}
 	results, snap := runSimpleTxAssertion(t, messages)
 
@@ -152,9 +154,8 @@ func TestConstructorExistingBalance(t *testing.T) {
 func TestConstructorCallback(t *testing.T) {
 	skipBelowVersion(t, 18)
 
-	client, pks := test.SimulatedBackend(t)
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
+	client, auths := test.SimulatedBackend(t)
+	auth := auths[0]
 	_, _, con, err := arbostestcontracts.DeployConstructorCallback2(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()

@@ -64,10 +64,8 @@ func TestL2ToL1Tx(t *testing.T) {
 	}
 	auth := bind.NewKeyedTransactor(privkey)
 
-	clnt, pks := test.SimulatedBackend(t)
-	ethAuth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
-
+	clnt, auths := test.SimulatedBackend(t)
+	ethAuth := auths[0]
 	deposit := message.EthDepositTx{
 		L2Message: message.NewSafeL2Message(message.ContractTransaction{
 			BasicTx: message.BasicTx{
