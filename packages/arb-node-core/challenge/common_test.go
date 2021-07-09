@@ -186,6 +186,9 @@ func initializeChallengeData(t *testing.T, lookup core.ArbCoreLookup, startGas *
 }
 
 func gasPrice(tx *types.Transaction, baseFee *big.Int) *big.Int {
+	if baseFee == nil {
+		return tx.GasPrice()
+	}
 	return math.BigMin(new(big.Int).Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
 }
 
@@ -197,15 +200,11 @@ func initializeChallengeTest(
 ) (*ethutils.SimulatedEthClient, *ethbridgetestcontracts.ChallengeTester, ethcommon.Address, *ethbridge.ValidatorWallet, *ethbridge.ValidatorWallet, func(nd *core.NodeInfo)) {
 	rand.Seed(100000)
 	ctx := context.Background()
-	clnt, pks := test.SimulatedBackend(t)
-	deployer, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
-	asserter, err := bind.NewKeyedTransactorWithChainID(pks[1], big.NewInt(1337))
-	test.FailIfError(t, err)
-	challenger, err := bind.NewKeyedTransactorWithChainID(pks[2], big.NewInt(1337))
-	test.FailIfError(t, err)
-	sequencer, err := bind.NewKeyedTransactorWithChainID(pks[3], big.NewInt(1337))
-	test.FailIfError(t, err)
+	clnt, auths := test.SimulatedBackend(t)
+	deployer := auths[0]
+	asserter := auths[1]
+	challenger := auths[2]
+	sequencer := auths[3]
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 	osp1Addr, _, _, err := ethbridgetestcontracts.DeployOneStepProof(deployer, client)
 	test.FailIfError(t, err)

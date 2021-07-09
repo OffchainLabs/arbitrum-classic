@@ -148,15 +148,11 @@ func runStakersTest(t *testing.T, faultConfig challenge.FaultConfig, maxGasPerNo
 	sequencerDelaySeconds := big.NewInt(900)
 	var extraConfig []byte
 
-	clnt, pks := test.SimulatedBackend(t)
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
-	auth2, err := bind.NewKeyedTransactorWithChainID(pks[1], big.NewInt(1337))
-	test.FailIfError(t, err)
-	seqAuth, err := bind.NewKeyedTransactorWithChainID(pks[2], big.NewInt(1337))
-	test.FailIfError(t, err)
-	ownerAuth, err := bind.NewKeyedTransactorWithChainID(pks[2], big.NewInt(1337))
-	test.FailIfError(t, err)
+	clnt, auths := test.SimulatedBackend(t)
+	auth := auths[0]
+	auth2 := auths[1]
+	seqAuth := auths[2]
+	ownerAuth := auths[3]
 	sequencer := common.NewAddressFromEth(seqAuth.From)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: clnt}
 

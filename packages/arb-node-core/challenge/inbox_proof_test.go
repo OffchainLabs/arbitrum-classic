@@ -28,11 +28,10 @@ func TestInboxProof(t *testing.T) {
 	testDir, err := gotest.OpCodeTestDir()
 	test.FailIfError(t, err)
 	mexe := filepath.Join(testDir, "inbox.mexe")
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
+	auth := auths[0]
 	sequencer := auth.From
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)

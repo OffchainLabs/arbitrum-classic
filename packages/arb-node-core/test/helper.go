@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -30,9 +31,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.PrivateKey) {
+func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*bind.TransactOpts) {
 	genesisAlloc := make(map[ethcommon.Address]ethcore.GenesisAccount)
-	pks := make([]*ecdsa.PrivateKey, 0)
+	auths := make([]*bind.TransactOpts, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
 	for i := 0; i < 15; i++ {
 		// Intentionally use weak randomness since this is for testing and we
@@ -43,7 +44,9 @@ func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.Privat
 		reader := bytes.NewReader(randBytes)
 		privateKey, err := ecdsa.GenerateKey(crypto.S256(), reader)
 		FailIfError(t, err)
-		pks = append(pks, privateKey)
+		auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1337))
+		FailIfError(t, err)
+		auths = append(auths, auth)
 		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = ethcore.GenesisAccount{
 			Balance: balance,
 		}
@@ -51,7 +54,8 @@ func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.Privat
 
 	blockGasLimit := uint64(1000000000)
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
-	return client, pks
+	//client.Blockchain().Config().LondonBlock.SetUint64(10000000000)
+	return client, auths
 }
 
 func FailIfError(t *testing.T, err error) {
