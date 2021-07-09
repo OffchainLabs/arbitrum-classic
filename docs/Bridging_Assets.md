@@ -103,6 +103,39 @@ Note that arbSomeERC20Token is an instance of StandardArbERC20, which includes `
 
 ![img](assets/bridge_withdrawals.png)
 
+### The Arbitrum Generic Custom Gateway
+
+Just because a token has requirements beyond what are offered via the StandardERC20 gateway, that doesn't necessarily mean that a unique Gateway needs to be taylor-made for the token in question. Our Generic-Custom Gateway is designed to be flexible enough to be suitable for most (but not necessarily all) custom fungible token needs. As a general rule:
+
+**If your custom token has the ability to increase its supply (i.e, mint) directly on the L2, and you want the L2-minted tokens be withdrawable back to L1 and recognized by the L1 contract, it will probably require its own special gateway. Otherwise, the Generic-Custom Gateway is likely the right solution for you!**
+
+Some examples of token features suitable for the Generic-Custom Gateway:
+
+- L2 token contract upgradable via a proxy
+- L2 token contract includes address whitelisting /blacklisting
+- Deployer determines address of L2 token contract
+
+#### Setting Up Your Token With The Generic Custom Gateway
+
+Follow the following steps to get your token set up to use the Generic Custom Gateway
+
+**1. Deploy your token on Arbitrum**
+
+- Your token should conform to the minimum [IArbToken](./sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/IArbToken.md)
+  interface; i.e., it should have `bridgeMint` and `bridgeBurn` methods only callable by the L2CustomGateway contract, and the address of its corresponding Ethereum token accessible via `l1Address`. For an example implementation, see [TestArbCustomToken](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestArbCustomToken.sol).
+
+**2. Register Your Token on L1 to Your Token on L2 via the L1CustomGateway Contract**
+Have your L1 token's contract make an external call to `L1CustomGateway.registerTokenToL2` (see, i.e., [TestCustomTokenL1](https://github.com/OffchainLabs/arbitrum/blob/master/packages/arb-bridge-peripherals/contracts/tokenbridge/test/TestCustomTokenL1.sol)).
+
+**3. Register Your Token on L1 To the L1Gateway Router**
+Have your L1 token's contract make an external to `L1GatewayRouter.setGateway`.
+
+For steps 2 and 3: if you'd like perform a Generic Custom Gateway registration for a token that is already deployed on L1 (and thus doesn't have affordances to make external calls to the L1GatewayRouter and the L1CustomGateway) you have 3 options:
+
+- Create an ERC20 wrapper for your token on L1 that has the affordances to call the registration method, and bridge to Arbitrum via this wrapper
+- Deploy to Arbitrum via the standard gateway, and handle custom behavior by creating an ERC20 wrapper for the L2 contract
+- Deploy your L2 token and have us perform an admin registration (note: this admin ability is only a temporary measure to cleanly support previously-deployed tokens)
+
 #### Other Flavors of Gateways
 
 Note that in the system described above, one pair of Gateway contracts handles the bridging of many ERC20s; i.e., many ERC20s on L1 are each paired with their own ERC20s on Arbitrum via a single gateway contract pairing. Other gateways may well bear different relations with the contracts that they bridge.
