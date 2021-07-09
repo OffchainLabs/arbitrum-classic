@@ -139,7 +139,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
     ) external payable returns (uint256) {
-        this.setGateway(_gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
+        return setGateway(_gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
     /**
@@ -158,7 +158,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         address _creditBackAddress
-    ) external payable returns (uint256) {
+    ) public payable returns (uint256) {
         require(address(msg.sender).isContract(), "NOT_FROM_CONTRACT");
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
 

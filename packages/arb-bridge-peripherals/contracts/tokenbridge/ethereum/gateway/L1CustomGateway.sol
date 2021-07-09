@@ -127,14 +127,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
     ) external payable virtual returns (uint256) {
-        return
-            this.registerTokenToL2(
-                _l2Address,
-                _maxGas,
-                _gasPriceBid,
-                _maxSubmissionCost,
-                msg.sender
-            );
+        return registerTokenToL2(_l2Address, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
     /**
@@ -153,7 +146,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         address _creditBackAddress
-    ) external payable virtual returns (uint256) {
+    ) public payable virtual returns (uint256) {
         require(address(msg.sender).isContract(), "MUST_BE_CONTRACT");
         l1ToL2Token[msg.sender] = _l2Address;
 
