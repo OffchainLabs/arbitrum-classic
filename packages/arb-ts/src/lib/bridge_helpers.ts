@@ -839,6 +839,6 @@ export class BridgeHelper {
   }
 
   static percentIncrease(num: BigNumber, increase: BigNumber) {
-    return num.mul(increase).div(100)
+    return num.add(num.mul(increase).div(100))
   }
 }
