@@ -31,6 +31,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var preLondon = false
+
 func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*bind.TransactOpts) {
 	genesisAlloc := make(map[ethcommon.Address]ethcore.GenesisAccount)
 	auths := make([]*bind.TransactOpts, 0)
@@ -54,7 +56,12 @@ func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*bind.Transac
 
 	blockGasLimit := uint64(1000000000)
 	client := backends.NewSimulatedBackend(genesisAlloc, blockGasLimit)
-	//client.Blockchain().Config().LondonBlock.SetUint64(10000000000)
+	if preLondon {
+		for _, auth := range auths {
+			auth.GasPrice = big.NewInt(0)
+		}
+		client.Blockchain().Config().LondonBlock.SetUint64(10000000000)
+	}
 	return client, auths
 }
 
