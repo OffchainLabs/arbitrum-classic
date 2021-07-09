@@ -51,6 +51,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 )
 
@@ -365,7 +366,17 @@ func startup() error {
 	}
 
 	go func() {
-		errChan <- rpc.LaunchPublicServer(ctx, web3Server, "0.0.0.0", "8547", "0.0.0.0", "8548")
+		rpcConfig := configuration.RPC{
+			Addr: "0.0.0.0",
+			Port: "8547",
+			Path: "/",
+		}
+		wsConfig := configuration.WS{
+			Addr: "0.0.0.0",
+			Port: "8548",
+			Path: "/",
+		}
+		errChan <- rpc.LaunchPublicServer(ctx, web3Server, rpcConfig, wsConfig)
 	}()
 
 	err = <-errChan
