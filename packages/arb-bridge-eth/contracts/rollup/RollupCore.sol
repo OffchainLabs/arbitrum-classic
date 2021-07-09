@@ -69,7 +69,7 @@ contract RollupCore is IRollupCore {
      * @param stakerNum Index of the staker
      * @return Address of the staker
      */
-    function getStakerAddress(uint256 stakerNum) public view override returns (address) {
+    function getStakerAddress(uint256 stakerNum) external view override returns (address) {
         return _stakerList[stakerNum];
     }
 
@@ -146,7 +146,7 @@ contract RollupCore is IRollupCore {
      * @param owner Address to check the funds of
      * @return Amount of funds withdrawable by owner
      */
-    function withdrawableFunds(address owner) public view override returns (uint256) {
+    function withdrawableFunds(address owner) external view override returns (uint256) {
         return _withdrawableFunds[owner];
     }
 
@@ -169,7 +169,7 @@ contract RollupCore is IRollupCore {
     }
 
     /// @return Ethereum block that the most recent stake was created
-    function lastStakeBlock() public view override returns (uint256) {
+    function lastStakeBlock() external view override returns (uint256) {
         return _lastStakeBlock;
     }
 

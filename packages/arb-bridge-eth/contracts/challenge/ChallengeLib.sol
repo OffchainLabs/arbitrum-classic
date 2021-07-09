@@ -49,10 +49,6 @@ library ChallengeLib {
         return keccak256(abi.encodePacked(_segmentStart, _segmentLength, _startHash, _endHash));
     }
 
-    function inboxDeltaHash(bytes32 _inboxAcc, bytes32 _deltaAcc) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_inboxAcc, _deltaAcc));
-    }
-
     function assertionHash(uint256 _arbGasUsed, bytes32 _restHash) internal pure returns (bytes32) {
         // Note: make sure this doesn't return Challenge.UNREACHABLE_ASSERTION (currently 0)
         return keccak256(abi.encodePacked(_arbGasUsed, _restHash));

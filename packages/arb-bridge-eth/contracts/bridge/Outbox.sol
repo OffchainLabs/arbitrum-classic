@@ -244,7 +244,7 @@ contract Outbox is IOutbox, Cloneable {
         return MerkleLib.calculateRoot(proof, path, keccak256(abi.encodePacked(item)));
     }
 
-    function outboxesLength() public view returns (uint256) {
+    function outboxesLength() external view returns (uint256) {
         return outboxes.length;
     }
 }

@@ -488,19 +488,19 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     {
         require(zombieNum <= zombieCount(), "NO_SUCH_ZOMBIE");
         address zombieStakerAddress = zombieAddress(zombieNum);
-        uint256 latestStakedNode = zombieLatestStakedNode(zombieNum);
+        uint256 latestNodeStaked = zombieLatestStakedNode(zombieNum);
         uint256 nodesRemoved = 0;
         uint256 firstUnresolved = firstUnresolvedNode();
-        while (latestStakedNode >= firstUnresolved && nodesRemoved < maxNodes) {
-            INode node = getNode(latestStakedNode);
+        while (latestNodeStaked >= firstUnresolved && nodesRemoved < maxNodes) {
+            INode node = getNode(latestNodeStaked);
             node.removeStaker(zombieStakerAddress);
-            latestStakedNode = node.prev();
+            latestNodeStaked = node.prev();
             nodesRemoved++;
         }
-        if (latestStakedNode < firstUnresolved) {
+        if (latestNodeStaked < firstUnresolved) {
             removeZombie(zombieNum);
         } else {
-            zombieUpdateLatestStakedNode(zombieNum, latestStakedNode);
+            zombieUpdateLatestStakedNode(zombieNum, latestNodeStaked);
         }
     }
 
@@ -531,10 +531,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function currentRequiredStake(
         uint256 _blockNumber,
         uint256 _firstUnresolvedNodeNum,
-        uint256 _latestNodeCreated
+        uint256 _latestCreatedNode
     ) internal view returns (uint256) {
         // If there are no unresolved nodes, then you can use the base stake
-        if (_firstUnresolvedNodeNum - 1 == _latestNodeCreated) {
+        if (_firstUnresolvedNodeNum - 1 == _latestCreatedNode) {
             return baseStake;
         }
         uint256 firstUnresolvedDeadline = getNode(_firstUnresolvedNodeNum).deadlineBlock();
@@ -578,9 +578,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function requiredStake(
         uint256 blockNumber,
         uint256 firstUnresolvedNodeNum,
-        uint256 latestNodeCreated
-    ) public view returns (uint256) {
-        return currentRequiredStake(blockNumber, firstUnresolvedNodeNum, latestNodeCreated);
+        uint256 latestCreatedNode
+    ) external view returns (uint256) {
+        return currentRequiredStake(blockNumber, firstUnresolvedNodeNum, latestCreatedNode);
     }
 
     function currentRequiredStake() public view returns (uint256) {

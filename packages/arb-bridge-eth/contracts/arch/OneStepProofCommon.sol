@@ -39,7 +39,6 @@ abstract contract OneStepProofCommon is IOneStepProof {
     string internal constant AUX_MISSING = "AUX_MISSING";
     string internal constant STACK_MANY = "STACK_MANY";
     string internal constant AUX_MANY = "AUX_MANY";
-    string internal constant INBOX_VAL = "INBOX_VAL";
 
     // Stop and arithmetic ops
     uint8 internal constant OP_ADD = 0x01;

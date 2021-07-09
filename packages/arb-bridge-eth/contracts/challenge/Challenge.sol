@@ -268,7 +268,7 @@ contract Challenge is Cloneable, IChallenge {
         bytes memory _executionProof,
         bytes memory _bufferProof,
         uint8 prover
-    ) public onlyOnTurn {
+    ) external onlyOnTurn {
         bytes32 rootHash;
         {
             (uint64 gasUsed, uint256 totalMessagesRead, bytes32[4] memory proofFields) =

@@ -110,7 +110,7 @@ contract Rollup is RollupBase {
         address[6] calldata connectedContracts,
         address[2] calldata _facets,
         uint256[2] calldata sequencerInboxParams
-    ) public {
+    ) external {
         require(confirmPeriodBlocks == 0, "ALREADY_INIT");
         require(_rollupParams[0] != 0, "BAD_CONF_PERIOD");
 
@@ -193,7 +193,7 @@ contract Rollup is RollupBase {
      * And dispatch pattern from EIP-2535: Diamonds
      */
 
-    function getFacets() public view returns (address, address) {
+    function getFacets() external view returns (address, address) {
         return (getAdminFacet(), getUserFacet());
     }
 

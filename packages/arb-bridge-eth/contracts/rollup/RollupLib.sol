@@ -216,8 +216,4 @@ library RollupLib {
         uint8 hasSiblingInt = hasSibling ? 1 : 0;
         return keccak256(abi.encodePacked(hasSiblingInt, lastHash, assertionExecHash, inboxAcc));
     }
-
-    function nodeAccumulator(bytes32 prevAcc, bytes32 newNodeHash) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(prevAcc, newNodeHash));
-    }
 }
