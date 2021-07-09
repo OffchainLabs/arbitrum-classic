@@ -37,8 +37,8 @@ import (
 func TestCreate2(t *testing.T) {
 	backend, pks := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
-	auth := bind.NewKeyedTransactor(pks[0])
-
+	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
+	failIfError(t, err)
 	factoryConnAddress, _, cf, err := arbostestcontracts.DeployCloneFactory(auth, client)
 	failIfError(t, err)
 
