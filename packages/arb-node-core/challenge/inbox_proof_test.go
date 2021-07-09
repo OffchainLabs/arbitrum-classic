@@ -79,7 +79,7 @@ func TestInboxProof(t *testing.T) {
 		test.FailIfError(t, err)
 		header, err := client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
 		test.FailIfError(t, err)
-		delayedMsg := message.NewInboxMessage(msg, sender, ev.MessageIndex, tx.GasPrice(), inbox.ChainTime{
+		delayedMsg := message.NewInboxMessage(msg, sender, ev.MessageIndex, gasPrice(tx, header.BaseFee), inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(int64(ev.Raw.BlockNumber)),
 			Timestamp: new(big.Int).SetUint64(header.Time),
 		})

@@ -20,10 +20,12 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
 	"github.com/pkg/errors"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
@@ -73,6 +75,17 @@ func NewChallenge(address ethcommon.Address, fromBlock int64, client ethutils.Et
 	}, nil
 }
 
+func addStackTrace(err error) error {
+	type stackTracer interface {
+		StackTrace() errors.StackTrace
+	}
+	_, ok := err.(stackTracer)
+	if ok {
+		return err
+	}
+	return errors.WithStack(err)
+}
+
 func (c *Challenge) BisectExecution(
 	ctx context.Context,
 	prevBisection *core.Bisection,
@@ -94,7 +107,8 @@ func (c *Challenge) BisectExecution(
 		subCuts[0].(*core.ExecutionState).RestHash(),
 		subCutHashes,
 	)
-	return errors.WithStack(err)
+
+	return addStackTrace(err)
 }
 
 func (c *Challenge) OneStepProveExecution(

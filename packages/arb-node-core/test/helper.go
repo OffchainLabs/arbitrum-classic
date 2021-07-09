@@ -17,8 +17,10 @@
 package test
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
@@ -33,10 +35,15 @@ func SimulatedBackend(t *testing.T) (*backends.SimulatedBackend, []*ecdsa.Privat
 	pks := make([]*ecdsa.PrivateKey, 0)
 	balance, _ := new(big.Int).SetString("10000000000000000000", 10) // 10 eth in wei
 	for i := 0; i < 15; i++ {
-		privateKey, err := crypto.GenerateKey()
+		// Intentionally use weak randomness since this is for testing and we
+		// want to be able to reproduce
+		randBytes := make([]byte, 64)
+		_, err := rand.Read(randBytes)
+		FailIfError(t, err)
+		reader := bytes.NewReader(randBytes)
+		privateKey, err := ecdsa.GenerateKey(crypto.S256(), reader)
 		FailIfError(t, err)
 		pks = append(pks, privateKey)
-
 		genesisAlloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = ethcore.GenesisAccount{
 			Balance: balance,
 		}

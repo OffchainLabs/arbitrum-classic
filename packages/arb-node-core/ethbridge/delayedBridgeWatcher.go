@@ -29,12 +29,13 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridgecontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
-	"github.com/pkg/errors"
 )
 
 var delayedBridgeABI abi.ABI
@@ -154,6 +155,18 @@ func (d DeliveredInboxMessageList) Less(i, j int) bool {
 	return d[i].Message.InboxSeqNum.Cmp(d[j].Message.InboxSeqNum) < 0
 }
 
+type blockInfo struct {
+	blockTime *big.Int
+	baseFee   *big.Int
+}
+
+func (b *blockInfo) txGasPrice(tx *types.Transaction) *big.Int {
+	if b.baseFee == nil {
+		return tx.GasPrice()
+	}
+	return math.BigMin(new(big.Int).Add(tx.GasTipCap(), b.baseFee), tx.GasFeeCap())
+}
+
 func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs []types.Log) ([]*DeliveredInboxMessage, error) {
 	if len(logs) == 0 {
 		return nil, nil
@@ -196,7 +209,7 @@ func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs
 		}
 	}
 
-	blockTimes := make(map[ethcommon.Hash]*big.Int)
+	blockInfos := make(map[ethcommon.Hash]*blockInfo)
 
 	messages := make([]*DeliveredInboxMessage, 0, len(logs))
 	for msgNum, rawMsg := range rawMessages {
@@ -208,16 +221,20 @@ func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs
 			return nil, errors.New("found message data with mismatched hash")
 		}
 
-		blockTime, ok := blockTimes[rawMsg.Raw.BlockHash]
+		info, ok := blockInfos[rawMsg.Raw.BlockHash]
 		if !ok {
 			header, err := r.client.HeaderByHash(ctx, rawMsg.Raw.BlockHash)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
-			blockTime = new(big.Int).SetUint64(header.Time)
-			blockTimes[rawMsg.Raw.BlockHash] = blockTime
+			info = &blockInfo{
+				blockTime: new(big.Int).SetUint64(header.Time),
+				baseFee:   header.BaseFee,
+			}
+			blockInfos[rawMsg.Raw.BlockHash] = info
 		}
 
+		tx := rawTransactions[string(rawMsg.MessageIndex.Bytes())]
 		msg := &DeliveredInboxMessage{
 			BlockHash:      common.NewHashFromEth(rawMsg.Raw.BlockHash),
 			BeforeInboxAcc: rawMsg.BeforeInboxAcc,
@@ -225,13 +242,13 @@ func (r *DelayedBridgeWatcher) logsToDeliveredMessages(ctx context.Context, logs
 				Kind:        inbox.Type(rawMsg.Kind),
 				Sender:      common.NewAddressFromEth(rawMsg.Sender),
 				InboxSeqNum: rawMsg.MessageIndex,
-				GasPrice:    rawTransactions[string(rawMsg.MessageIndex.Bytes())].GasPrice(),
+				GasPrice:    info.txGasPrice(tx),
 				Data:        data,
 				ChainTime: inbox.ChainTime{
 					BlockNum: common.NewTimeBlocks(
 						new(big.Int).SetUint64(rawMsg.Raw.BlockNumber),
 					),
-					Timestamp: blockTime,
+					Timestamp: info.blockTime,
 				},
 			},
 		}
