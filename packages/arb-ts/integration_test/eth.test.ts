@@ -107,9 +107,10 @@ describe('Ether', async () => {
     const inWei = await arbGasInfo.getPricesInWei({
       blockTag: withdrawEthRec.blockNumber,
     })
-    const withdrawEventData = (
-      await bridge.getWithdrawalsInL2Transaction(withdrawEthRec)
+    const withdrawEventData = bridge.getWithdrawalsInL2Transaction(
+      withdrawEthRec
     )[0]
+
     expect(withdrawEventData).to.exist
 
     const etherBalance = await bridge.getL2EthBalance()
