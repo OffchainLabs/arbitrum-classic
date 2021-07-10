@@ -63,6 +63,7 @@ COPY --chown=user arb-rpc-node/ /home/user/arb-rpc-node/
 
 COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/build/lib /home/user/arb-avm-cpp/build/lib
 COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/cmachine/flags.go /home/user/arb-avm-cpp/cmachine/
+COPY --from=arb-avm-cpp /home/user/arb-avm-cpp/external/teesdk /home/user/arb-avm-cpp/external/teesdk
 COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 
 # Build arb-validator
@@ -71,8 +72,20 @@ RUN cd arb-node-core && go install -v ./cmd/arb-validator && go install -v ./cmd
 
 FROM offchainlabs/cpp-base:0.3.2 as arb-validator
 # Export binary
+##########################################################################################################
+# Set these to use TEESDK, further better way maybe provided
+ENV LD_LIBRARY_PATH /home/user/arb-avm-cpp/external/teesdk
+ENV TEESDK_PUB /home/user/arb-avm-cpp/external/teesdk/examples/auditors/godzilla/godzilla.public.der
+ENV TEESDK_PRI /home/user/arb-avm-cpp/external/teesdk/examples/auditors/godzilla/godzilla.sign.sha256
+ENV TEESDK_CONF /home/user/arb-avm-cpp/external/teesdk/examples/enclave_info.toml
+ENV TEESDK_METHOD echo
+ENV TEESDK_ARGS "Hello Eigen"
+ENV TEESDK_UID "uid";
+ENV TEESDK_TOKEN "token"
+##########################################################################################################
 
 COPY --chown=user --from=arb-validator-builder /home/user/go/bin /home/user/go/bin
+COPY --chown=user --from=arb-validator-builder /home/user/arb-avm-cpp/external/teesdk /home/user/arb-avm-cpp/external/teesdk
 
 ENTRYPOINT ["/home/user/go/bin/arb-validator"]
 EXPOSE 8547 8548

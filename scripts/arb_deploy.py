@@ -52,10 +52,21 @@ services:
         image: arb-validator
         entrypoint: '/home/user/go/bin/arb-node'
         command: --sequencer %s state %s %s
+        links:
+            - 'fns'
         ports:
             - '1235:1235'
             - '8547:8547'
             - '8548:8548'
+
+    fns:
+        image: eigen:fns
+        working_dir: '/app/release/services'
+        entrypoint: './fns'
+        env_file:
+            - source /opt/sgxsdk/environment
+        ports:
+            - '8082:8082'
 """
 
 

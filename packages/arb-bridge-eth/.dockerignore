@@ -117,7 +117,8 @@ arb-validator.Dockerfile
 **/*.exe
 **/*.exe~
 **/*.dll
-**/*.so
+# TODO: We should use a better way to copy so files, e.g., rename *.so into *.so_rename, then in an image, we rename them back into *.so
+## **/*.so
 **/*.dylib
 
 # Test binary, built with `go test -c`
@@ -143,7 +144,8 @@ arb-validator.Dockerfile
 *.pch
 
 # Compiled Dynamic libraries
-**/*.so
+# TODO: We should use a better way to copy so files, e.g., rename *.so into *.so_rename, then in an image, we rename them back into *.so
+## **/*.so
 **/*.dylib
 **/*.dll
 
@@ -168,7 +170,8 @@ arb-validator.Dockerfile
 **/*$py.class
 
 # C extensions
-**/*.so
+# TODO: We should use a better way to copy so files, e.g., rename *.so into *.so_rename, then in an image, we rename them back into *.so
+## **/*.so
 
 # Distribution / packaging
 **/.Python

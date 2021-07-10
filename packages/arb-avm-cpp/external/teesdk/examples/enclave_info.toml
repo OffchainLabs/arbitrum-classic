@@ -1,0 +1,6 @@
+[fns]
+mr_enclave = "6418a3b08e468067a53f89a63a31b61d0cd0aad45332a233253f434ab09da37b"
+mr_signer  = "83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e"
+[unit_test]
+mr_enclave = "97f3a4c73764bcc5b7facc8bf435f255f8f1f7a34a637608ab8c79c768e09d18"
+mr_signer  = "83d719e77deaca1470f6baf62a4d774303c899db69020f9c70ee1dfc08c7ce9e"
