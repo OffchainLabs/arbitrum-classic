@@ -77,12 +77,13 @@ func WaitForReceiptWithResults(ctx context.Context, client ethutils.EthClient, f
 	if receipt.Status != 1 {
 		logger.Warn().Hex("tx", tx.Hash().Bytes()).Msg("failed transaction")
 		callMsg := ethereum.CallMsg{
-			From:     from,
-			To:       tx.To(),
-			Gas:      tx.Gas(),
-			GasPrice: tx.GasPrice(),
-			Value:    tx.Value(),
-			Data:     tx.Data(),
+			From:      from,
+			To:        tx.To(),
+			Gas:       tx.Gas(),
+			GasTipCap: tx.GasTipCap(),
+			GasFeeCap: tx.GasFeeCap(),
+			Value:     tx.Value(),
+			Data:      tx.Data(),
 		}
 		data, err := client.CallContract(ctx, callMsg, receipt.BlockNumber)
 		if err != nil {

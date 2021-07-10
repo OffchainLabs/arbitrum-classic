@@ -28,11 +28,10 @@ func TestInboxProof(t *testing.T) {
 	testDir, err := gotest.OpCodeTestDir()
 	test.FailIfError(t, err)
 	mexe := filepath.Join(testDir, "inbox.mexe")
-	backend, pks := test.SimulatedBackend(t)
+	backend, auths := test.SimulatedBackend(t)
 	client := &ethutils.SimulatedEthClient{SimulatedBackend: backend}
 
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
+	auth := auths[0]
 	sequencer := auth.From
 	maxDelayBlocks := big.NewInt(60)
 	maxDelaySeconds := big.NewInt(900)
@@ -79,7 +78,7 @@ func TestInboxProof(t *testing.T) {
 		test.FailIfError(t, err)
 		header, err := client.HeaderByHash(context.Background(), ev.Raw.BlockHash)
 		test.FailIfError(t, err)
-		delayedMsg := message.NewInboxMessage(msg, sender, ev.MessageIndex, tx.GasPrice(), inbox.ChainTime{
+		delayedMsg := message.NewInboxMessage(msg, sender, ev.MessageIndex, gasPrice(tx, header.BaseFee), inbox.ChainTime{
 			BlockNum:  common.NewTimeBlocksInt(int64(ev.Raw.BlockNumber)),
 			Timestamp: new(big.Int).SetUint64(header.Time),
 		})
