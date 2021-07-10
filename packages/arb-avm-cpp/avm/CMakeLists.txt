@@ -86,6 +86,7 @@ PUBLIC
         ${LIBATOMIC_LIBRARY}
 PRIVATE
         Boost::boost
+        ${LIBRARIES}
 )
 
 target_code_coverage(avm AUTO ALL)

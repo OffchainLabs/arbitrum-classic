@@ -19,12 +19,92 @@
 #include <avm/machinestate/ecops.hpp>
 #include <avm/machinestate/machinestate.hpp>
 
+#include <tee/tee_task.hpp>
+
 #include <PicoSHA2/picosha2.h>
 #include <ethash/keccak.h>
 #include <secp256k1_recovery.h>
 #include <ethash/keccak.hpp>
 
 #include <iostream>
+#include <stdlib.h>
+
+#include "tee/eigentee.h"
+#include "tee/tee_task.hpp"
+
+
+eigen_enclave_info_t *g_enclave_info = NULL;
+eigen_auditor_set_t *g_auditors = NULL;
+int32_t g_tms_port = 8082;
+
+int submit_task(const char* method, const char* args, const char* uid,
+  const char* token, char** output, size_t* output_size) {
+
+  struct sockaddr_in tms_addr;
+  char recvbuf[2048] = {0};
+  int ret;
+
+  tms_addr.sin_family = AF_INET;
+  tms_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  tms_addr.sin_port = htons(g_tms_port);
+
+  printf("[+] This is a single-party task: %s\n", method);
+
+  eigen_t *context = eigen_context_new(g_enclave_info, uid, token,
+                                           (struct sockaddr *)&tms_addr);
+  if (context == NULL) {
+    return EXIT_FAILURE;
+  }
+
+  eigen_task_t *task = eigen_create_task(context, method);
+  if (task == NULL) {
+    return EXIT_FAILURE;
+  }
+  printf("args: %s, size=%lu\n", args, strlen(args));
+  // BUG result truncating
+  ret = eigen_task_invoke_with_payload(task, args, strlen(args),
+	recvbuf, sizeof(recvbuf));
+  if (ret <= 0) {
+    return EXIT_FAILURE;
+  }
+
+  printf("Response: %s\n", recvbuf);
+  *output_size = strlen(recvbuf);
+  *output = (char*)malloc(strlen(recvbuf) + 1);
+  memset(*output, 0, *output_size);
+  memcpy(*output, recvbuf, *output_size);
+
+  eigen_task_free(task);
+  eigen_context_free(context);
+  return 0;
+}
+
+int init(const char* pub, const char* pri, const char* conf, int32_t port1) {
+  eigen_init();
+
+  g_auditors = eigen_auditor_set_new();
+  eigen_auditor_set_add_auditor(
+      g_auditors, pub, pri);
+
+  if (g_auditors == NULL) {
+    return EXIT_FAILURE;
+  }
+
+  g_enclave_info = eigen_enclave_info_load(g_auditors, conf);
+
+  if (g_enclave_info ==  NULL) {
+    return EXIT_FAILURE;
+  }
+  g_tms_port = port1;
+
+  return 0;
+}
+
+int release() {
+  eigen_enclave_info_free(g_enclave_info);
+  eigen_auditor_set_free(g_auditors);
+  return 0;
+}
 
 // Many opcode implementations were inspired from the Apache 2.0 licensed EVM
 // implementation https://github.com/ethereum/evmone
@@ -878,7 +958,58 @@ void ecall(MachineState& m) {
 
     std::cerr << "ECALL arg1 = " << arg1 << ", arg2 = " << arg2
               << ", arg3 = " << arg3 << ", arg4 = " << arg4 << std::endl;
+#if 0
+    // FIXME: This code wiil be removed in the future, it is used for early debug
+    const char *pub = "/app/release/services/auditors/godzilla/godzilla.public.der";
+    const char *pri = "/app/release/services/auditors/godzilla/godzilla.sign.sha256";
+    const char *conf = "/app/release/services/enclave_info.toml";
+    const char *method = "echo";
+    const char *args = "Hello Eigen";
+    const char *uid = "uid";
+    const char *token = "token";
+#else
+    const char *pub = getenv("TEESDK_PUB");
+    const char *pri = getenv("TEESDK_PRI");
+    const char *conf = getenv("TEESDK_CONF");
+    const char *method = getenv("TEESDK_METHOD");
+    const char *args = getenv("TEESDK_ARGS");
+    const char *uid = getenv("TEESDK_UID");
+    const char *token = getenv("TEESDK_TOKEN");
+#endif
+    char *output = NULL; // malloc from `submit_task`
+    size_t outputsize = 0;
+    int32_t port = 8082;
+    int result = 0;
+    static bool init_flag = false;
 
+    if (!init_flag) {
+        result = init(pub, pri, conf, port);
+        init_flag = true;
+    }
+
+    if (result != 0) {
+        std::cerr << "[TEESDK] init fail: " << result << std::endl;
+    }
+
+    if (result == 0) {
+        result = submit_task(method, args, uid, token, &output, &outputsize);
+
+        if (result != 0) {
+            std::cerr << "[TEESDK] submit_task fail: " << result << std::endl;
+        }
+    }
+	
+	// TODO: Release should be called when it should be called.
+    // if (result == 0) {
+    //     // XXX: the string should end with '\0'
+    //     std::cerr << "[TEESDK] submit_task output " << "[" << outputsize << "]: " << output << std::endl;
+
+    //     result = release();
+
+    //     if (result != 0) {
+    //         std::cerr << "[TEESDK] release fail: " << result << std::endl;
+    //     }
+    // }
     m.stack.popClear();
 
     // TODO: something is calculated here

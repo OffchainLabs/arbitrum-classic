@@ -143,6 +143,7 @@ get_filename_component(ETHASH_LIB_FOLDER "${ETHASH_LIB}" DIRECTORY)
 add_subdirectory(external)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/external/Catch2/contrib)
 
+file(GLOB LIBRARIES "${CMAKE_CURRENT_SOURCE_DIR}/external/teesdk/*.so")
 
 if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/avm_values")
     add_subdirectory(avm_values)
@@ -167,12 +168,17 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
         string(CONCAT LDFLAGS
             " -L${C_LIBRARY_PATH}"
             " -L${ETHASH_LIB_FOLDER}"
+            # " ${CMAKE_CURRENT_SOURCE_DIR}/external/teesdk/libsdk_c.so"
             " $<TARGET_LINKER_FILE:cavm>"
             " $<TARGET_LINKER_FILE:data_storage>"
             " $<TARGET_LINKER_FILE:avm>"
             " $<TARGET_LINKER_FILE:avm_values>"
             " $<TARGET_LINKER_FILE:ff>"
             " ${JEMALLOC_LINK_LIBRARIES}"
+        )
+        string(CONCAT TEESDK_LDFLAGS
+          " -L${CMAKE_CURRENT_SOURCE_DIR}/external/teesdk/"
+          " ${CMAKE_CURRENT_SOURCE_DIR}/external/teesdk/libsdk_c.so"
         )
         configure_file( ${INFILE} ${MIDDLEFILE} )
         file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
