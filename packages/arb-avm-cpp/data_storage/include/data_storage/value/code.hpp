@@ -27,16 +27,17 @@
 #include <set>
 
 class Transaction;
-class CodeSegment;
+class UnsafeCodeSegment;
 class Code;
 
 uint64_t getNextSegmentID(std::shared_ptr<DataStorage> store);
 void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id);
 
-std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
-                                            uint64_t segment_id,
-                                            std::set<uint64_t>& segment_ids,
-                                            ValueCache& value_cache);
+std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
+    const ReadTransaction& tx,
+    uint64_t segment_id,
+    std::set<uint64_t>& segment_ids,
+    ValueCache& value_cache);
 rocksdb::Status saveCode(ReadWriteTransaction& tx,
                          const Code& code,
                          std::map<uint64_t, uint64_t>& segment_counts);

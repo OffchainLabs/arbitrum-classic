@@ -258,10 +258,11 @@ std::vector<uint256_t> loadHashes(const ReadTransaction& tx,
 }
 }  // namespace
 
-std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
-                                            uint64_t segment_id,
-                                            std::set<uint64_t>& segment_ids,
-                                            ValueCache& value_cache) {
+std::shared_ptr<UnsafeCodeSegment> getCodeSegment(
+    const ReadTransaction& tx,
+    uint64_t segment_id,
+    std::set<uint64_t>& segment_ids,
+    ValueCache& value_cache) {
     auto key_vec = segment_metadata_key(segment_id);
     rocksdb::PinnableSlice val;
     auto s = tx.refCountedGet(vecToSlice(key_vec), &val);
@@ -289,7 +290,7 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
     }
 
     auto next_hashes = loadHashes(tx, segment_id, metadata);
-    return std::make_shared<CodeSegment>(
+    return std::make_shared<UnsafeCodeSegment>(
         segment_id, CodeSegmentData{std::move(ops), std::move(next_hashes)});
 }
 

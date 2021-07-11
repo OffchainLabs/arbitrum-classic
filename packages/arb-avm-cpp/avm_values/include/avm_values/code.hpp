@@ -26,15 +26,7 @@
 #include <unordered_map>
 #include <vector>
 
-template <typename T>
-class CodeBase;
-
-struct CoreCodeImpl;
-class CoreCode;
-struct RunningCodeImpl;
 class RunningCode;
-class Transaction;
-struct LoadedExecutable;
 
 struct CodeSegmentData {
     static_assert(std::is_nothrow_move_constructible<Operation>::value,
@@ -99,51 +91,19 @@ struct CodeSegmentData {
     }
 };
 
-// The public interface of CodeSegment is thread safe assuming that the indexes
-// used to access the segment are less than or equal to the size of the segment
-// when you initially load it
-class CodeSegment {
+class UnsafeCodeSegment {
+   public:
     uint64_t segment_id;
     CodeSegmentData data;
 
-    friend class CoreCode;
-    friend class CodeBase<CoreCodeImpl>;
-
-    friend class RunningCode;
-    friend class CodeBase<RunningCodeImpl>;
-
-    friend LoadedExecutable loadExecutable(
-        const std::string& executable_filename);
-
-    size_t capacity() const { return data.operations.capacity(); }
-
-    size_t size() const { return data.operations.size(); }
-
-    CodePointStub addOperation(Operation op) {
-        data.addOperation(std::move(op));
-        return {{segment_id, data.operations.size() - 1}, data.prev_hash};
-    }
-
-    CodePointStub lastCodePointStubAdded() const {
-        return {{segment_id, data.operations.size() - 1}, data.prev_hash};
-    }
-
-    // Return the subset of this code segment starting in the given pc
-    std::shared_ptr<CodeSegment> getSubset(uint64_t new_segment_id,
-                                           uint64_t pc) const {
-        return std::make_shared<CodeSegment>(new_segment_id,
-                                             data.getSubset(pc));
-    }
-
-   public:
-    CodeSegment(uint64_t segment_id_) : segment_id(segment_id_) {
+    UnsafeCodeSegment(uint64_t segment_id_) : segment_id(segment_id_) {
         addOperation(getErrOperation());
     }
 
-    CodeSegment(uint64_t segment_id_, CodeSegmentData data_)
+    UnsafeCodeSegment(uint64_t segment_id_, CodeSegmentData data_)
         : segment_id(segment_id_), data(std::move(data_)) {}
 
-    CodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
+    UnsafeCodeSegment(uint64_t segment_id_, std::vector<Operation> ops)
         : segment_id(segment_id_), data(std::move(ops)) {}
 
     uint64_t segmentID() const { return segment_id; }
@@ -159,25 +119,46 @@ class CodeSegment {
         return data.cached_hashes[i];
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const CodeSegment& code);
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const UnsafeCodeSegment& code);
 
     CodePointStub initialCodePointStub() const {
         return {{segment_id, 0}, getErrCodePointHash()};
     }
 
     void reserve(size_t size) { data.reserve(size); }
+
+    size_t capacity() const { return data.operations.capacity(); }
+
+    size_t size() const { return data.operations.size(); }
+
+    CodePointStub addOperation(Operation op) {
+        data.addOperation(std::move(op));
+        return {{segment_id, data.operations.size() - 1}, data.prev_hash};
+    }
+
+    CodePointStub lastCodePointStubAdded() const {
+        return {{segment_id, data.operations.size() - 1}, data.prev_hash};
+    }
+
+    // Return the subset of this code segment starting in the given pc
+    std::shared_ptr<UnsafeCodeSegment> getSubset(uint64_t new_segment_id,
+                                                 uint64_t pc) const {
+        return std::make_shared<UnsafeCodeSegment>(new_segment_id,
+                                                   data.getSubset(pc));
+    }
 };
 
 struct CodeSegmentSnapshot {
    private:
-    std::shared_ptr<const CodeSegment> segment;
+    std::shared_ptr<const UnsafeCodeSegment> segment;
 
    public:
     uint64_t op_count;
     uint64_t cached_hash_count;
 
     CodeSegmentSnapshot() = default;
-    CodeSegmentSnapshot(std::shared_ptr<const CodeSegment> segment_,
+    CodeSegmentSnapshot(std::shared_ptr<const UnsafeCodeSegment> segment_,
                         uint64_t op_count_,
                         uint64_t cached_hash_count_)
         : segment(std::move(segment_)),
@@ -254,13 +235,13 @@ class CodeBase {
 
     CodePointStub addSegmentImpl() {
         uint64_t segment_num = impl->nextSegmentNum();
-        auto new_segment = std::make_shared<CodeSegment>(segment_num);
+        auto new_segment = std::make_shared<UnsafeCodeSegment>(segment_num);
         auto stub = new_segment->initialCodePointStub();
         impl->storeSegment(std::move(new_segment));
         return stub;
     }
 
-    bool canAppendOperation(const std::shared_ptr<CodeSegment>& segment,
+    bool canAppendOperation(const std::shared_ptr<UnsafeCodeSegment>& segment,
                             const CodePointRef& ref) {
         auto initial_pc = segment->size() - 1;
         if (ref.pc != initial_pc) {
@@ -313,16 +294,17 @@ class CodeBase {
 };
 
 struct CoreCodeImpl {
-    std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
+    std::unordered_map<uint64_t, std::shared_ptr<UnsafeCodeSegment>> segments;
     uint64_t next_segment_num;
 
-    const std::shared_ptr<CodeSegment>& getSegment(uint64_t segment_num) const {
+    const std::shared_ptr<UnsafeCodeSegment>& getSegment(
+        uint64_t segment_num) const {
         return segments.at(segment_num);
     }
 
     uint64_t nextSegmentNum() { return next_segment_num++; }
 
-    void storeSegment(std::shared_ptr<CodeSegment> segment) {
+    void storeSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
         segments[segment->segmentID()] = std::move(segment);
     }
 
@@ -358,7 +340,7 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
     void commitChanges(RunningCode& code,
                        const std::map<uint64_t, uint64_t>& segment_counts);
 
-    void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
+    void restoreExistingSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_id = segment->segmentID();
         if (segment_id >= impl->next_segment_num) {
@@ -390,7 +372,7 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         return addSegmentImpl();
     }
 
-    void addSegment(std::shared_ptr<CodeSegment> segment) {
+    void addSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         assert(segment->segmentID() == impl->next_segment_num);
         impl->segments[impl->next_segment_num] = std::move(segment);
@@ -417,11 +399,12 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
 
 struct RunningCodeImpl {
     uint64_t first_segment;
-    std::vector<std::shared_ptr<CodeSegment>> segment_list;
+    std::vector<std::shared_ptr<UnsafeCodeSegment>> segment_list;
 
     RunningCodeImpl(uint64_t first_segment_) : first_segment(first_segment_) {}
 
-    const std::shared_ptr<CodeSegment>& getSegment(uint64_t segment_num) const {
+    const std::shared_ptr<UnsafeCodeSegment>& getSegment(
+        uint64_t segment_num) const {
         return segment_list.at(segment_num - first_segment);
     }
 
@@ -429,7 +412,7 @@ struct RunningCodeImpl {
         return first_segment + segment_list.size();
     }
 
-    void storeSegment(std::shared_ptr<CodeSegment> segment) {
+    void storeSegment(std::shared_ptr<UnsafeCodeSegment> segment) {
         segment_list.push_back(std::move(segment));
     }
 };
@@ -445,7 +428,7 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
           parent(std::move(parent_)) {}
 
     uint64_t fillInCode(
-        std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>>&
+        std::unordered_map<uint64_t, std::shared_ptr<UnsafeCodeSegment>>&
             parent_segments,
         const std::map<uint64_t, uint64_t>& segment_counts) const {
         const std::lock_guard<std::mutex> lock(mutex);
@@ -511,7 +494,7 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
                 return std::get<CodePointStub>(add_var);
             } else {
                 auto& added = std::get<CodeSegmentData>(add_var);
-                auto new_segment = std::make_shared<CodeSegment>(
+                auto new_segment = std::make_shared<UnsafeCodeSegment>(
                     impl->nextSegmentNum(), std::move(added));
                 auto stub = new_segment->lastCodePointStubAdded();
                 impl->storeSegment(std::move(new_segment));

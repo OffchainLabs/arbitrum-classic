@@ -54,7 +54,7 @@ Buffer buffer_value_from_json(const nlohmann::json& buffer_json) {
 
 value value_from_json(const nlohmann::json& full_value_json,
                       size_t op_count,
-                      const CodeSegment& code) {
+                      const UnsafeCodeSegment& code) {
     std::vector<DeserializedValue> values;
     std::vector<std::reference_wrapper<const nlohmann::json>> json_values{
         full_value_json};
@@ -103,7 +103,7 @@ value value_from_json(const nlohmann::json& full_value_json,
 
 Operation operation_from_json(const nlohmann::json& op_json,
                               size_t op_count,
-                              const CodeSegment& code) {
+                              const UnsafeCodeSegment& code) {
     auto opcode_json = op_json.at(OPCODE_LABEL);
     if (opcode_json.contains(OPCODE_SUB_LABEL)) {
         opcode_json = opcode_json.at(OPCODE_SUB_LABEL);
@@ -177,7 +177,7 @@ LoadedExecutable loadExecutable(const std::string& executable_filename) {
         throw std::runtime_error("expected code to be array");
     }
     auto op_count = json_code.size();
-    auto segment = std::make_shared<CodeSegment>(0);
+    auto segment = std::make_shared<UnsafeCodeSegment>(0);
     for (auto it = json_code.rbegin(); it != json_code.rend(); ++it) {
         segment->addOperation(operation_from_json(*it, op_count, *segment));
     }
