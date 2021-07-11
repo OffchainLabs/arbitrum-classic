@@ -171,7 +171,7 @@ RawCodeSegmentData prepareToSaveCodeSegment(
     ReadWriteTransaction& tx,
     const CodeSegmentSnapshot& snapshot,
     std::map<uint64_t, uint64_t>& segment_counts) {
-    uint64_t segment_id = snapshot.segment->segmentID();
+    uint64_t segment_id = snapshot.segmentID();
     auto key = segment_metadata_key(segment_id);
     CodeSegmentMetadata metadata{};
     rocksdb::PinnableSlice val;
@@ -190,7 +190,7 @@ RawCodeSegmentData prepareToSaveCodeSegment(
     std::vector<unsigned char> op_data;
     marshal_uint64_t(snapshot.op_count - metadata.op_count, op_data);
     for (uint64_t i = metadata.op_count; i < snapshot.op_count; ++i) {
-        auto& op = snapshot.segment->loadOperation(i);
+        auto& op = snapshot.loadOperation(i);
         op_data.push_back(op.immediate ? 1 : 0);
         op_data.push_back(static_cast<unsigned char>(op.opcode));
         if (op.immediate) {
@@ -211,7 +211,7 @@ RawCodeSegmentData prepareToSaveCodeSegment(
                      hash_data);
     for (uint64_t i = metadata.hash_count; i < snapshot.cached_hash_count;
          i++) {
-        marshal_uint256_t(snapshot.segment->loadCachedHash(i), hash_data);
+        marshal_uint256_t(snapshot.loadCachedHash(i), hash_data);
     }
     metadata.op_count = snapshot.op_count;
     metadata.hash_count = snapshot.cached_hash_count;

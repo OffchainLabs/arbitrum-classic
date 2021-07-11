@@ -169,9 +169,34 @@ class CodeSegment {
 };
 
 struct CodeSegmentSnapshot {
+   private:
     std::shared_ptr<const CodeSegment> segment;
+
+   public:
     uint64_t op_count;
     uint64_t cached_hash_count;
+
+    CodeSegmentSnapshot() = default;
+    CodeSegmentSnapshot(std::shared_ptr<const CodeSegment> segment_,
+                        uint64_t op_count_,
+                        uint64_t cached_hash_count_)
+        : segment(std::move(segment_)),
+          op_count(op_count_),
+          cached_hash_count(cached_hash_count_) {}
+
+    uint64_t segmentID() const { return segment->segmentID(); }
+
+    CodePoint loadCodePoint(uint64_t pc) const {
+        return segment->loadCodePoint(pc);
+    }
+
+    const Operation& loadOperation(uint64_t pc) const {
+        return segment->loadOperation(pc);
+    }
+
+    const uint256_t& loadCachedHash(uint64_t i) const {
+        return segment->loadCachedHash(i);
+    }
 };
 
 struct CodeSnapshot {
@@ -211,10 +236,12 @@ class CodeBase {
    protected:
     std::unique_ptr<T> impl;
 
+   public:
     template <typename... Args>
     CodeBase(Args&&... args)
         : impl(std::make_unique<T>(std::forward<Args>(args)...)) {}
 
+   protected:
     CodeSegmentSnapshot loadCodeSegmentImpl(uint64_t segment_num) const {
         auto& segment = impl->getSegment(segment_num);
         return {segment, segment->size(), segment->data.cached_hashes.size()};
@@ -308,6 +335,10 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
     mutable std::mutex mutex;
 
    public:
+    CoreCode() : CodeBase<CoreCodeImpl>(0) {}
+    CoreCode(uint64_t next_segment_num_)
+        : CodeBase<CoreCodeImpl>(next_segment_num_) {}
+
     uint64_t initialSegmentForChildCode() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return impl->next_segment_num;

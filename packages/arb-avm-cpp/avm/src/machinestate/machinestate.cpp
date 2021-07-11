@@ -437,17 +437,17 @@ BlockReason MachineState::isBlocked(bool newMessages) const {
 }
 
 CodePoint MachineState::loadCurrentInstruction() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return loaded_segment->segment->loadCodePoint(pc.pc);
+    return loaded_segment->loadCodePoint(pc.pc);
 }
 
 const Operation& MachineState::loadCurrentOperation() const {
-    if (!loaded_segment || loaded_segment->segment->segmentID() != pc.segment) {
+    if (!loaded_segment || loaded_segment->segmentID() != pc.segment) {
         loaded_segment = std::make_optional(code->loadCodeSegment(pc.segment));
     }
-    return loaded_segment->segment->loadOperation(pc.pc);
+    return loaded_segment->loadOperation(pc.pc);
 }
 
 uint256_t MachineState::nextGasCost() const {
