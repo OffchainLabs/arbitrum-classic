@@ -236,6 +236,9 @@ class CodeBase {
         return stub;
     }
 
+    // If ref refers to a position in a code segment that can be appended to
+    // without reallocation then just add to that segment, otherwise prepare a
+    // new segment with the op added to it after ref
     std::variant<CodePointStub, CopiedSegment> tryAddOperationImpl(
         const CodePointRef& ref,
         Operation op,
@@ -383,7 +386,14 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
         auto it = segment_counts.lower_bound(first_segment);
         auto end = segment_counts.end();
         for (; it != end; ++it) {
-            parent_segments[it->first] = getSegment(it->first);
+            auto inserted = parent_segments.insert(
+                std::make_pair(it->first, getSegment(it->first)));
+            // Verify that the element didn't exist previously
+            assert(inserted.second);
+            if (!inserted.second) {
+                throw std::runtime_error(
+                    "code segment id collision when filling in code");
+            }
         }
         return nextSegmentNum();
     }
