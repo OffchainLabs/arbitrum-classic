@@ -186,7 +186,7 @@ class Code {
    public:
     virtual ~Code();
 
-    virtual uint64_t getNextSegmentNum() const = 0;
+    virtual uint64_t initialSegmentForChildCode() const = 0;
 
     virtual CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const = 0;
 
@@ -303,7 +303,7 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
     CoreCode(uint64_t next_segment_num_)
         : next_segment_num(next_segment_num_) {}
 
-    uint64_t getNextSegmentNum() const {
+    uint64_t initialSegmentForChildCode() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return next_segment_num;
     }
@@ -402,7 +402,7 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
 
    public:
     RunningCode(std::shared_ptr<Code> parent_)
-        : first_segment(parent_->getNextSegmentNum()),
+        : first_segment(parent_->initialSegmentForChildCode()),
           parent(std::move(parent_)) {}
 
     uint64_t fillInCode(
@@ -427,7 +427,7 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
 
     std::shared_ptr<Code> getParent() const { return parent; }
 
-    uint64_t getNextSegmentNum() const {
+    uint64_t initialSegmentForChildCode() const {
         const std::lock_guard<std::mutex> lock(mutex);
         return first_segment + segment_list.size();
     }
@@ -473,7 +473,7 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
             } else {
                 auto& added = std::get<CodeSegmentData>(add_var);
                 auto new_segment = std::make_shared<CodeSegment>(
-                    getNextSegmentNum(), std::move(added));
+                    nextSegmentNum(), std::move(added));
                 auto stub = new_segment->lastCodePointStubAdded();
                 storeSegment(std::move(new_segment));
                 return stub;
