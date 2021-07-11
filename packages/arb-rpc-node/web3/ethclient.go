@@ -181,3 +181,18 @@ func (c *EthClient) BlockByHash(_ context.Context, hash common.Hash) (*types.Blo
 	}
 	return types.NewBlock(info.Header, txes, nil, receipts, new(trie.Trie)), nil
 }
+
+func (c *EthClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
+	if number == nil {
+		return c.srv.srv.LatestBlockHeader()
+	}
+	info, err := c.srv.srv.BlockInfoByNumber(number.Uint64())
+	if err != nil || info == nil {
+		return nil, err
+	}
+	return info.Header, nil
+}
+
+func (c *EthClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
+	return big.NewInt(0), nil
+}

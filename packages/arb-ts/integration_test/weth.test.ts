@@ -46,8 +46,8 @@ describe('WETH', async () => {
     )
     const withdrawRec = await withdrawRes.wait()
     expect(withdrawRec.status).to.equal(1)
-    const withdrawEventData = (
-      await bridge.getWithdrawalsInL2Transaction(withdrawRec)
+    const withdrawEventData = bridge.getWithdrawalsInL2Transaction(
+      withdrawRec
     )[0]
 
     expect(withdrawEventData).to.exist
