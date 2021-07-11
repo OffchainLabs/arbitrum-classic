@@ -168,7 +168,6 @@ if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/cavm")
         string(CONCAT LDFLAGS
             " -L${C_LIBRARY_PATH}"
             " -L${ETHASH_LIB_FOLDER}"
-            # " ${CMAKE_CURRENT_SOURCE_DIR}/external/teesdk/libsdk_c.so"
             " $<TARGET_LINKER_FILE:cavm>"
             " $<TARGET_LINKER_FILE:data_storage>"
             " $<TARGET_LINKER_FILE:avm>"
