@@ -322,7 +322,7 @@ TEST_CASE("Checkpoint Benchmark") {
 }
 
 void saveState(ReadWriteTransaction& transaction,
-               const Machine& machine,
+               Machine& machine,
                uint256_t expected_ref_count) {
     auto results = saveTestMachine(transaction, machine);
     REQUIRE(results.status.ok());

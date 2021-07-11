@@ -244,7 +244,7 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
 }
 
 SaveResults saveTestMachine(ReadWriteTransaction& transaction,
-                            const Machine& machine) {
+                            Machine& machine) {
     std::vector<unsigned char> checkpoint_name;
     auto machine_hash = machine.hash();
     if (!machine_hash) {
@@ -265,10 +265,12 @@ SaveResults saveTestMachine(ReadWriteTransaction& transaction,
     auto machine_code =
         dynamic_cast<RunningCode*>(machine.machine_state.code.get());
     assert(machine_code != nullptr);
-    auto core_code = dynamic_cast<CoreCode*>(machine_code->getParent().get());
+    auto parent_code = machine_code->getParent();
+    auto core_code = dynamic_cast<CoreCode*>(parent_code.get());
     assert(core_code != nullptr);
 
     core_code->commitChanges(*machine_code, machine_save_res.second);
+    machine.machine_state.code = std::make_shared<RunningCode>(parent_code);
     std::vector<unsigned char> serialized_state;
     serializeMachineStateKeys(MachineStateKeys(machine.machine_state),
                               serialized_state);

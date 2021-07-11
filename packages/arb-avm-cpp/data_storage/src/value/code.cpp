@@ -161,13 +161,13 @@ void extractRawHashes(std::vector<uint256_t>& hashes, const char* ptr) {
     }
 }
 
-struct CodeSegmentData {
+struct RawCodeSegmentData {
     CodeSegmentMetadata metadata;
     std::vector<unsigned char> op_data;
     std::vector<unsigned char> hash_data;
 };
 
-CodeSegmentData prepareToSaveCodeSegment(
+RawCodeSegmentData prepareToSaveCodeSegment(
     ReadWriteTransaction& tx,
     const CodeSegmentSnapshot& snapshot,
     std::map<uint64_t, uint64_t>& segment_counts) {
@@ -214,7 +214,7 @@ CodeSegmentData prepareToSaveCodeSegment(
         marshal_uint256_t(snapshot.segment->loadCachedHash(i), hash_data);
     }
     metadata.op_count = snapshot.op_count;
-    return CodeSegmentData{metadata, std::move(op_data), std::move(hash_data)};
+    return {metadata, std::move(op_data), std::move(hash_data)};
 }
 
 std::vector<RawOperation> loadRawOperations(
@@ -288,8 +288,8 @@ std::shared_ptr<CodeSegment> getCodeSegment(const ReadTransaction& tx,
     }
 
     auto next_hashes = loadHashes(tx, segment_id, metadata);
-    return std::make_shared<CodeSegment>(segment_id, std::move(ops),
-                                         std::move(next_hashes));
+    return std::make_shared<CodeSegment>(
+        segment_id, CodeSegmentData{std::move(ops), std::move(next_hashes)});
 }
 
 void saveNextSegmentID(ReadWriteTransaction& tx, uint64_t next_segment_id) {
@@ -427,7 +427,7 @@ rocksdb::Status saveCode(ReadWriteTransaction& tx,
     auto snapshots = code.snapshot();
     saveNextSegmentID(tx, snapshots.next_segment_num);
 
-    std::unordered_map<uint64_t, CodeSegmentData> code_segments_to_save{};
+    std::unordered_map<uint64_t, RawCodeSegmentData> code_segments_to_save{};
 
     auto total_segment_counts =
         breadthFirstSearch<std::map<uint64_t, uint64_t>>(

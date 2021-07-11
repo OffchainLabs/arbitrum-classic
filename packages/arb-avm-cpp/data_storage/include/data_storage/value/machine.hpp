@@ -45,7 +45,7 @@ std::pair<rocksdb::Status, std::map<uint64_t, uint64_t>> saveMachineState(
     ReadWriteTransaction& transaction,
     const Machine& machine);
 SaveResults saveTestMachine(ReadWriteTransaction& transaction,
-                            const Machine& machine);
+                            Machine& machine);
 void deleteMachineState(ReadWriteTransaction& transaction,
                         MachineStateKeys& parsed_state);
 DeleteResults deleteMachine(ReadWriteTransaction& tx, uint256_t machine_hash);

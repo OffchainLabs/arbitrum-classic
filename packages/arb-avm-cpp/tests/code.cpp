@@ -101,13 +101,14 @@ TEST_CASE("Code serialization") {
     }
 
     SECTION("Save different and load") {
+        auto save_ret = saveTestMachine(*tx, *mach);
+        REQUIRE(save_ret.status.ok());
+
         auto mach2 = *mach;
         MachineExecutionConfig execConfig;
         execConfig.max_gas = 7;
         mach2.machine_state.context = AssertionContext(execConfig);
         mach2.run();
-        auto save_ret = saveTestMachine(*tx, *mach);
-        REQUIRE(save_ret.status.ok());
         save_ret = saveTestMachine(*tx, mach2);
         REQUIRE(save_ret.status.ok());
 
