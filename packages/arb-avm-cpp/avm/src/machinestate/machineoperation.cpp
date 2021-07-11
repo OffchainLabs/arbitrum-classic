@@ -28,6 +28,7 @@
 
 #include <iostream>
 #include <stdlib.h>
+#include <netdb.h>
 
 #include "tee/eigentee.h"
 #include "tee/tee_task.hpp"
@@ -43,9 +44,24 @@ int submit_task(const char* method, const char* args, const char* uid,
   struct sockaddr_in tms_addr;
   char recvbuf[2048] = {0};
   int ret;
+  struct hostent *hptr;
+  const char* fns_hostname = "fns";
+    
+  if((hptr = gethostbyname(fns_hostname)) == NULL) {
+    printf("[TEESDK] gethostbyname error for host: %s\n", fns_hostname);
+    return EXIT_FAILURE;
+  }
+  
+  printf("[TEESDK] official hostname:%s\n",hptr->h_name);
+    
+  if (!hptr->h_addr_list[0]) {
+    printf("[TEESDK] empty address\n");
+    return EXIT_FAILURE;
+  }
 
   tms_addr.sin_family = AF_INET;
-  tms_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  // tms_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+  tms_addr.sin_addr.s_addr = *(u_long *) hptr->h_addr_list[0];
   tms_addr.sin_port = htons(g_tms_port);
 
   printf("[+] This is a single-party task: %s\n", method);
