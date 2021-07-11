@@ -29,7 +29,9 @@
 template <typename T>
 class CodeBase;
 
+struct CoreCodeImpl;
 class CoreCode;
+struct RunningCodeImpl;
 class RunningCode;
 class Transaction;
 struct LoadedExecutable;
@@ -105,10 +107,10 @@ class CodeSegment {
     CodeSegmentData data;
 
     friend class CoreCode;
-    friend class CodeBase<CoreCode>;
+    friend class CodeBase<CoreCodeImpl>;
 
     friend class RunningCode;
-    friend class CodeBase<RunningCode>;
+    friend class CodeBase<RunningCodeImpl>;
 
     friend LoadedExecutable loadExecutable(
         const std::string& executable_filename);
@@ -206,26 +208,28 @@ class Code {
 
 template <typename T>
 class CodeBase {
-    const T* getThis() const { return static_cast<const T*>(this); }
-
-    T* getThis() { return static_cast<T*>(this); }
-
    protected:
+    std::unique_ptr<T> impl;
+
+    template <typename... Args>
+    CodeBase(Args&&... args)
+        : impl(std::make_unique<T>(std::forward<Args>(args)...)) {}
+
     CodeSegmentSnapshot loadCodeSegmentImpl(uint64_t segment_num) const {
-        auto& segment = getThis()->getSegment(segment_num);
+        auto& segment = impl->getSegment(segment_num);
         return {segment, segment->size(), segment->data.cached_hashes.size()};
     }
 
     CodePoint loadCodePointImpl(const CodePointRef& ref) const {
-        auto& segment = getThis()->getSegment(ref.segment);
+        auto& segment = impl->getSegment(ref.segment);
         return segment->loadCodePoint(ref.pc);
     }
 
     CodePointStub addSegmentImpl() {
-        uint64_t segment_num = getThis()->nextSegmentNum();
+        uint64_t segment_num = impl->nextSegmentNum();
         auto new_segment = std::make_shared<CodeSegment>(segment_num);
         auto stub = new_segment->initialCodePointStub();
-        getThis()->storeSegment(std::move(new_segment));
+        impl->storeSegment(std::move(new_segment));
         return stub;
     }
 
@@ -253,15 +257,15 @@ class CodeBase {
     }
 
     CodePointStub addOperationImpl(const CodePointRef& ref, Operation op) {
-        auto& segment = getThis()->getSegment(ref.segment);
+        auto& segment = impl->getSegment(ref.segment);
         if (canAppendOperation(segment, ref)) {
             return segment->addOperation(std::move(op));
         }
 
-        uint64_t new_segment_num = getThis()->nextSegmentNum();
+        uint64_t new_segment_num = impl->nextSegmentNum();
         auto new_segment = segment->getSubset(new_segment_num, ref.pc);
         auto stub = new_segment->addOperation(std::move(op));
-        getThis()->storeSegment(std::move(new_segment));
+        impl->storeSegment(std::move(new_segment));
         return stub;
     }
 
@@ -271,7 +275,7 @@ class CodeBase {
     std::variant<CodePointStub, CodeSegmentData> tryAddOperationImpl(
         const CodePointRef& ref,
         Operation op) {
-        auto& segment = getThis()->getSegment(ref.segment);
+        auto& segment = impl->getSegment(ref.segment);
         if (canAppendOperation(segment, ref)) {
             return segment->addOperation(std::move(op));
         }
@@ -281,10 +285,7 @@ class CodeBase {
     }
 };
 
-class CoreCode : public CodeBase<CoreCode>, public Code {
-    friend CodeBase<CoreCode>;
-
-    mutable std::mutex mutex;
+struct CoreCodeImpl {
     std::unordered_map<uint64_t, std::shared_ptr<CodeSegment>> segments;
     uint64_t next_segment_num;
 
@@ -298,25 +299,29 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
         segments[segment->segmentID()] = std::move(segment);
     }
 
-   public:
-    CoreCode() : CoreCode(0) {}
-    CoreCode(uint64_t next_segment_num_)
+    CoreCodeImpl() : CoreCodeImpl(0) {}
+    CoreCodeImpl(uint64_t next_segment_num_)
         : next_segment_num(next_segment_num_) {}
+};
 
+class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
+    mutable std::mutex mutex;
+
+   public:
     uint64_t initialSegmentForChildCode() const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return next_segment_num;
+        return impl->next_segment_num;
     }
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        auto& segment = segments.at(segment_num);
+        auto& segment = impl->segments.at(segment_num);
         return {segment, segment->size(), segment->data.cached_hashes.size()};
     }
 
     bool containsSegment(uint64_t segment_id) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return segments.find(segment_id) != segments.end();
+        return impl->segments.find(segment_id) != impl->segments.end();
     }
 
     void commitChanges(RunningCode& code,
@@ -325,23 +330,23 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
     void restoreExistingSegment(std::shared_ptr<CodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
         uint64_t segment_id = segment->segmentID();
-        if (segment_id >= next_segment_num) {
+        if (segment_id >= impl->next_segment_num) {
             throw std::runtime_error("code segment loaded incorrectly");
         }
-        if (segments.find(segment->segmentID()) == segments.end()) {
-            segments[segment_id] = std::move(segment);
+        if (impl->segments.find(segment->segmentID()) == impl->segments.end()) {
+            impl->segments[segment_id] = std::move(segment);
         }
     }
 
     CodeSnapshot snapshot() const {
         const std::lock_guard<std::mutex> lock(mutex);
         std::unordered_map<uint64_t, CodeSegmentSnapshot> copied_segments;
-        for (const auto& key_val : segments) {
+        for (const auto& key_val : impl->segments) {
             copied_segments[key_val.first] = {
                 key_val.second, key_val.second->size(),
                 key_val.second->data.cached_hashes.size()};
         }
-        return {std::move(copied_segments), next_segment_num};
+        return {std::move(copied_segments), impl->next_segment_num};
     }
 
     CodePoint loadCodePoint(const CodePointRef& ref) const {
@@ -356,9 +361,9 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
 
     void addSegment(std::shared_ptr<CodeSegment> segment) {
         const std::lock_guard<std::mutex> lock(mutex);
-        assert(segment->segmentID() == next_segment_num);
-        segments[next_segment_num] = std::move(segment);
-        next_segment_num++;
+        assert(segment->segmentID() == impl->next_segment_num);
+        impl->segments[impl->next_segment_num] = std::move(segment);
+        impl->next_segment_num++;
     }
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
@@ -375,18 +380,15 @@ class CoreCode : public CodeBase<CoreCode>, public Code {
 
     CodePointRef initialCodePointRef() const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return {0, segments.at(0)->size() - 1};
+        return {0, impl->segments.at(0)->size() - 1};
     }
 };
 
-class RunningCode : public CodeBase<RunningCode>, public Code {
-    friend CodeBase<RunningCode>;
-
-    mutable std::mutex mutex;
+struct RunningCodeImpl {
     uint64_t first_segment;
     std::vector<std::shared_ptr<CodeSegment>> segment_list;
 
-    std::shared_ptr<Code> parent;
+    RunningCodeImpl(uint64_t first_segment_) : first_segment(first_segment_) {}
 
     const std::shared_ptr<CodeSegment>& getSegment(uint64_t segment_num) const {
         return segment_list.at(segment_num - first_segment);
@@ -399,10 +401,16 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
     void storeSegment(std::shared_ptr<CodeSegment> segment) {
         segment_list.push_back(std::move(segment));
     }
+};
+
+class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
+    mutable std::mutex mutex;
+
+    std::shared_ptr<Code> parent;
 
    public:
     RunningCode(std::shared_ptr<Code> parent_)
-        : first_segment(parent_->initialSegmentForChildCode()),
+        : CodeBase<RunningCodeImpl>(parent_->initialSegmentForChildCode()),
           parent(std::move(parent_)) {}
 
     uint64_t fillInCode(
@@ -410,11 +418,11 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
             parent_segments,
         const std::map<uint64_t, uint64_t>& segment_counts) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        auto it = segment_counts.lower_bound(first_segment);
+        auto it = segment_counts.lower_bound(impl->first_segment);
         auto end = segment_counts.end();
         for (; it != end; ++it) {
             auto inserted = parent_segments.insert(
-                std::make_pair(it->first, getSegment(it->first)));
+                std::make_pair(it->first, impl->getSegment(it->first)));
             // Verify that the element didn't exist previously
             assert(inserted.second);
             if (!inserted.second) {
@@ -422,30 +430,30 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
                     "code segment id collision when filling in code");
             }
         }
-        return nextSegmentNum();
+        return impl->nextSegmentNum();
     }
 
     std::shared_ptr<Code> getParent() const { return parent; }
 
     uint64_t initialSegmentForChildCode() const {
         const std::lock_guard<std::mutex> lock(mutex);
-        return first_segment + segment_list.size();
+        return impl->first_segment + impl->segment_list.size();
     }
 
     CodeSnapshot snapshot() const {
         auto snap = parent->snapshot();
         const std::lock_guard<std::mutex> lock(mutex);
-        for (const auto& segment : segment_list) {
+        for (const auto& segment : impl->segment_list) {
             snap.segments[segment->segmentID()] = {
                 segment, segment->size(), segment->data.cached_hashes.size()};
         }
-        snap.next_segment_num = first_segment + segment_list.size();
+        snap.next_segment_num = impl->first_segment + impl->segment_list.size();
         return snap;
     }
 
     CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        if (segment_num < first_segment) {
+        if (segment_num < impl->first_segment) {
             return parent->loadCodeSegment(segment_num);
         }
         return loadCodeSegmentImpl(segment_num);
@@ -453,7 +461,7 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
 
     CodePoint loadCodePoint(const CodePointRef& ref) const {
         const std::lock_guard<std::mutex> lock(mutex);
-        if (ref.segment < first_segment) {
+        if (ref.segment < impl->first_segment) {
             return parent->loadCodePoint(ref);
         }
         return loadCodePointImpl(ref);
@@ -466,16 +474,16 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
 
     CodePointStub addOperation(const CodePointRef& ref, Operation op) {
         const std::lock_guard<std::mutex> lock(mutex);
-        if (ref.segment < first_segment) {
+        if (ref.segment < impl->first_segment) {
             auto add_var = parent->tryAddOperation(ref, std::move(op));
             if (std::holds_alternative<CodePointStub>(add_var)) {
                 return std::get<CodePointStub>(add_var);
             } else {
                 auto& added = std::get<CodeSegmentData>(add_var);
                 auto new_segment = std::make_shared<CodeSegment>(
-                    nextSegmentNum(), std::move(added));
+                    impl->nextSegmentNum(), std::move(added));
                 auto stub = new_segment->lastCodePointStubAdded();
-                storeSegment(std::move(new_segment));
+                impl->storeSegment(std::move(new_segment));
                 return stub;
             }
         }
@@ -486,7 +494,7 @@ class RunningCode : public CodeBase<RunningCode>, public Code {
         const CodePointRef& ref,
         Operation op) {
         const std::lock_guard<std::mutex> lock(mutex);
-        if (ref.segment < first_segment) {
+        if (ref.segment < impl->first_segment) {
             return parent->tryAddOperation(ref, std::move(op));
         }
         return tryAddOperationImpl(ref, std::move(op));

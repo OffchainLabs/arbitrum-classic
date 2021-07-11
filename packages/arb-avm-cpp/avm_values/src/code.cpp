@@ -22,5 +22,5 @@ void CoreCode::commitChanges(
     RunningCode& code,
     const std::map<uint64_t, uint64_t>& segment_counts) {
     const std::lock_guard<std::mutex> lock(mutex);
-    next_segment_num = code.fillInCode(segments, segment_counts);
+    impl->next_segment_num = code.fillInCode(impl->segments, segment_counts);
 }
