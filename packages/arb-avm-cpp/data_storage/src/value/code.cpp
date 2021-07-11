@@ -154,7 +154,7 @@ void extractRawOperations(std::vector<RawOperation>& cps, const char*& buf) {
     }
 }
 
-void extractRawHashes(std::vector<uint256_t>& hashes, const char* ptr) {
+void extractRawHashes(std::vector<uint256_t>& hashes, const char*& ptr) {
     auto hash_count = deserialize_uint64_t(ptr);
     for (uint64_t i = 0; i < hash_count; i++) {
         hashes.push_back(deserializeUint256t(ptr));
@@ -214,6 +214,7 @@ RawCodeSegmentData prepareToSaveCodeSegment(
         marshal_uint256_t(snapshot.segment->loadCachedHash(i), hash_data);
     }
     metadata.op_count = snapshot.op_count;
+    metadata.hash_count = snapshot.cached_hash_count;
     return {metadata, std::move(op_data), std::move(hash_data)};
 }
 
@@ -249,8 +250,8 @@ std::vector<uint256_t> loadHashes(const ReadTransaction& tx,
         if (!s.ok()) {
             throw std::runtime_error("failed to load segment hash chunk");
         }
-        std::vector<unsigned char> data{val.data(), val.data() + val.size()};
-        extractRawHashes(hashes, val.data());
+        auto hashes_data = val.data();
+        extractRawHashes(hashes, hashes_data);
         val.Reset();
     }
     return hashes;
