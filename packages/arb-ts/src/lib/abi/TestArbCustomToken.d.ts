@@ -26,13 +26,13 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     'allowance(address,address)': FunctionFragment
     'approve(address,uint256)': FunctionFragment
     'balanceOf(address)': FunctionFragment
-    'bridge()': FunctionFragment
     'bridgeBurn(address,uint256)': FunctionFragment
     'bridgeMint(address,uint256)': FunctionFragment
     'decimals()': FunctionFragment
     'decreaseAllowance(address,uint256)': FunctionFragment
     'increaseAllowance(address,uint256)': FunctionFragment
     'l1Address()': FunctionFragment
+    'l2Gateway()': FunctionFragment
     'name()': FunctionFragment
     'nonces(address)': FunctionFragment
     'permit(address,address,uint256,uint256,uint8,bytes32,bytes32)': FunctionFragment
@@ -57,7 +57,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'balanceOf', values: [string]): string
-  encodeFunctionData(functionFragment: 'bridge', values?: undefined): string
   encodeFunctionData(
     functionFragment: 'bridgeBurn',
     values: [string, BigNumberish]
@@ -76,6 +75,7 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     values: [string, BigNumberish]
   ): string
   encodeFunctionData(functionFragment: 'l1Address', values?: undefined): string
+  encodeFunctionData(functionFragment: 'l2Gateway', values?: undefined): string
   encodeFunctionData(functionFragment: 'name', values?: undefined): string
   encodeFunctionData(functionFragment: 'nonces', values: [string]): string
   encodeFunctionData(
@@ -119,7 +119,6 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
   decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result
-  decodeFunctionResult(functionFragment: 'bridge', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeBurn', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'bridgeMint', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result
@@ -132,6 +131,7 @@ interface TestArbCustomTokenInterface extends ethers.utils.Interface {
     data: BytesLike
   ): Result
   decodeFunctionResult(functionFragment: 'l1Address', data: BytesLike): Result
+  decodeFunctionResult(functionFragment: 'l2Gateway', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'nonces', data: BytesLike): Result
   decodeFunctionResult(functionFragment: 'permit', data: BytesLike): Result
@@ -209,10 +209,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>
 
-    bridge(overrides?: CallOverrides): Promise<[string]>
-
-    'bridge()'(overrides?: CallOverrides): Promise<[string]>
-
     bridgeBurn(
       account: string,
       amount: BigNumberish,
@@ -268,6 +264,10 @@ export class TestArbCustomToken extends Contract {
     l1Address(overrides?: CallOverrides): Promise<[string]>
 
     'l1Address()'(overrides?: CallOverrides): Promise<[string]>
+
+    l2Gateway(overrides?: CallOverrides): Promise<[string]>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<[string]>
 
     name(overrides?: CallOverrides): Promise<[string]>
 
@@ -392,10 +392,6 @@ export class TestArbCustomToken extends Contract {
     overrides?: CallOverrides
   ): Promise<BigNumber>
 
-  bridge(overrides?: CallOverrides): Promise<string>
-
-  'bridge()'(overrides?: CallOverrides): Promise<string>
-
   bridgeBurn(
     account: string,
     amount: BigNumberish,
@@ -451,6 +447,10 @@ export class TestArbCustomToken extends Contract {
   l1Address(overrides?: CallOverrides): Promise<string>
 
   'l1Address()'(overrides?: CallOverrides): Promise<string>
+
+  l2Gateway(overrides?: CallOverrides): Promise<string>
+
+  'l2Gateway()'(overrides?: CallOverrides): Promise<string>
 
   name(overrides?: CallOverrides): Promise<string>
 
@@ -573,10 +573,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<string>
-
-    'bridge()'(overrides?: CallOverrides): Promise<string>
-
     bridgeBurn(
       account: string,
       amount: BigNumberish,
@@ -632,6 +628,10 @@ export class TestArbCustomToken extends Contract {
     l1Address(overrides?: CallOverrides): Promise<string>
 
     'l1Address()'(overrides?: CallOverrides): Promise<string>
+
+    l2Gateway(overrides?: CallOverrides): Promise<string>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<string>
 
     name(overrides?: CallOverrides): Promise<string>
 
@@ -770,10 +770,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<BigNumber>
 
-    bridge(overrides?: CallOverrides): Promise<BigNumber>
-
-    'bridge()'(overrides?: CallOverrides): Promise<BigNumber>
-
     bridgeBurn(
       account: string,
       amount: BigNumberish,
@@ -829,6 +825,10 @@ export class TestArbCustomToken extends Contract {
     l1Address(overrides?: CallOverrides): Promise<BigNumber>
 
     'l1Address()'(overrides?: CallOverrides): Promise<BigNumber>
+
+    l2Gateway(overrides?: CallOverrides): Promise<BigNumber>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<BigNumber>
 
     name(overrides?: CallOverrides): Promise<BigNumber>
 
@@ -957,10 +957,6 @@ export class TestArbCustomToken extends Contract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>
 
-    bridge(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
-    'bridge()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
-
     bridgeBurn(
       account: string,
       amount: BigNumberish,
@@ -1016,6 +1012,10 @@ export class TestArbCustomToken extends Contract {
     l1Address(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     'l1Address()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    l2Gateway(overrides?: CallOverrides): Promise<PopulatedTransaction>
+
+    'l2Gateway()'(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
     name(overrides?: CallOverrides): Promise<PopulatedTransaction>
 
