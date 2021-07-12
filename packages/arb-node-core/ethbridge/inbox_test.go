@@ -31,8 +31,8 @@ import (
 )
 
 func TestRetryable(t *testing.T) {
-	clnt, pks := test.SimulatedBackend(t)
-	auth := bind.NewKeyedTransactor(pks[0])
+	clnt, auths := test.SimulatedBackend(t)
+	auth := auths[0]
 	bridgeAddress, _, bridge, err := ethbridgecontracts.DeployBridge(auth, clnt)
 	test.FailIfError(t, err)
 	inboxAddress, _, inbox, err := ethbridgecontracts.DeployInbox(auth, clnt)

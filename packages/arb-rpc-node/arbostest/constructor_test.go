@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -39,13 +38,20 @@ import (
 var constructorData = hexutil.MustDecode(arbostestcontracts.FibonacciBin)
 
 func TestConstructor(t *testing.T) {
-	client, pks := test.SimulatedBackend(t)
-
-	tx := types.NewContractCreation(0, big.NewInt(0), 5000000, big.NewInt(0), constructorData)
-	signedTx, err := types.SignTx(tx, types.HomesteadSigner{}, pks[0])
+	client, auths := test.SimulatedBackend(t)
+	auth := auths[0]
+	tx := types.NewTx(&types.LegacyTx{
+		Nonce:    0,
+		Value:    big.NewInt(0),
+		Gas:      5000000,
+		GasPrice: big.NewInt(875000000),
+		Data:     constructorData,
+	})
+	signedTx, err := auth.Signer(auth.From, tx)
 	failIfError(t, err)
 
-	targetAddress := crypto.CreateAddress(crypto.PubkeyToAddress(pks[0].PublicKey), 0)
+	sender := auth.From
+	targetAddress := crypto.CreateAddress(sender, 0)
 
 	ctx := context.Background()
 	if err := client.SendTransaction(ctx, signedTx); err != nil {
@@ -62,10 +68,24 @@ func TestConstructor(t *testing.T) {
 	l2Message, err := message.NewL2Message(message.NewCompressedECDSAFromEth(signedTx))
 	failIfError(t, err)
 
-	messages := []message.Message{l2Message}
+	deposit := message.EthDepositTx{
+		L2Message: message.NewSafeL2Message(message.ContractTransaction{
+			BasicTx: message.BasicTx{
+				MaxGas:      big.NewInt(1000000),
+				GasPriceBid: big.NewInt(0),
+				DestAddress: common.NewAddressFromEth(sender),
+				Payment:     big.NewInt(10000000000000000),
+				Data:        nil,
+			},
+		}),
+	}
+
+	// Set arbos chain id to match simulated backend so that the sig on the tx is valid in both
+	chainId = big.NewInt(1337)
+	messages := []message.Message{deposit, l2Message}
 	results, snap := runSimpleTxAssertion(t, messages)
 
-	res := results[0]
+	res := results[1]
 
 	if res.ResultCode == evm.ReturnCode {
 		if ethReceipt.Status != 1 {
@@ -134,9 +154,8 @@ func TestConstructorExistingBalance(t *testing.T) {
 func TestConstructorCallback(t *testing.T) {
 	skipBelowVersion(t, 18)
 
-	client, pks := test.SimulatedBackend(t)
-	auth, err := bind.NewKeyedTransactorWithChainID(pks[0], big.NewInt(1337))
-	test.FailIfError(t, err)
+	client, auths := test.SimulatedBackend(t)
+	auth := auths[0]
 	_, _, con, err := arbostestcontracts.DeployConstructorCallback2(auth, client)
 	test.FailIfError(t, err)
 	client.Commit()
