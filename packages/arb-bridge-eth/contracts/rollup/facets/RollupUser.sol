@@ -673,7 +673,6 @@ contract RollupUserFacet is AbsRollupUserFacet {
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
-        // Note: This is an unsafe external call and could be used for reentrency
         // This is safe because it occurs after all checks and effects
         destination.transfer(amount);
         return amount;
