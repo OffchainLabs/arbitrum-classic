@@ -27,9 +27,6 @@ import "../rollup/Rollup.sol";
 import "./Messages.sol";
 
 contract SequencerInbox is ISequencerInbox, Cloneable {
-    uint8 internal constant L2_MSG = 3;
-    uint8 internal constant END_OF_BLOCK = 6;
-
     bytes32[] public override inboxAccs;
     uint256 public override messageCount;
 

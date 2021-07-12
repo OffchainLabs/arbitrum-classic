@@ -46,16 +46,12 @@ contract Challenge is Cloneable, IChallenge {
 
     // Can only initialize once
     string private constant CHAL_INIT_STATE = "CHAL_INIT_STATE";
-    // Can only bisect assertion in response to a challenge
-    string private constant BIS_STATE = "BIS_STATE";
     // deadline expired
     string private constant BIS_DEADLINE = "BIS_DEADLINE";
     // Only original asserter can continue bisect
     string private constant BIS_SENDER = "BIS_SENDER";
     // Incorrect previous state
     string private constant BIS_PREV = "BIS_PREV";
-    // Invalid assertion selected
-    string private constant CON_PROOF = "CON_PROOF";
     // Can't timeout before deadline
     string private constant TIMEOUT_DEADLINE = "TIMEOUT_DEADLINE";
 
