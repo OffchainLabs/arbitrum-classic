@@ -37,25 +37,25 @@ abstract contract L2GatewayToken is aeERC20, IArbToken {
     /**
      * @notice initialize the token
      * @dev the L2 bridge assumes this does not fail or revert
-     * @param _name ERC20 token name
-     * @param _symbol ERC20 token symbol
-     * @param _decimals ERC20 decimals
-     * @param _l2Gateway L2 gateway this token communicates with
-     * @param _l1Counterpart L1 address of ERC20
+     * @param name_ ERC20 token name
+     * @param symbol_ ERC20 token symbol
+     * @param decimals_ ERC20 decimals
+     * @param l2Gateway_ L2 gateway this token communicates with
+     * @param l1Counterpart_ L1 address of ERC20
      */
     function _initialize(
-        string memory _name,
-        string memory _symbol,
-        uint8 _decimals,
-        address _l2Gateway,
-        address _l1Counterpart
+        string memory name_,
+        string memory symbol_,
+        uint8 decimals_,
+        address l2Gateway_,
+        address l1Counterpart_
     ) internal virtual {
-        require(_l2Gateway != address(0), "INVALID_GATEWAY");
+        require(l2Gateway_ != address(0), "INVALID_GATEWAY");
         require(l2Gateway == address(0), "ALREADY_INIT");
-        l2Gateway = _l2Gateway;
-        l1Address = _l1Counterpart;
+        l2Gateway = l2Gateway_;
+        l1Address = l1Counterpart_;
 
-        aeERC20._initialize(_name, _symbol, _decimals);
+        aeERC20._initialize(name_, symbol_, decimals_);
     }
 
     /**

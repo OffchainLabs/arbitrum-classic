@@ -59,7 +59,7 @@ contract L2ERC20Gateway is L2ArbitrumGateway {
     }
 
     function cloneableProxyHash() public view returns (bytes32) {
-        return BeaconProxyFactory(beaconProxyFactory).cloneableProxyHash();
+        return BeaconProxyFactory(beaconProxyFactory).CLONABLE_PROXY_HASH();
     }
 
     function getUserSalt(address l1ERC20) public pure returns (bytes32) {

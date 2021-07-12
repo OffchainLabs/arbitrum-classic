@@ -28,7 +28,7 @@ import "arb-bridge-eth/contracts/libraries/MerkleLib.sol";
 
 contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
     uint256 internal constant SendType_sendTxToL1 = 0;
-    uint256 public constant fee_div = 100;
+    uint256 public constant FEE_DIV = 100;
 
     address tokenBridge;
     ConfirmRoots confirmRoots;
@@ -83,7 +83,7 @@ contract StakedLiquidityProvider is Ownable, IExitLiquidityProvider {
             require(rollup.getNode(nodeNum).stakers(trustedStaker), "NOT_TRUSTED");
         }
 
-        uint256 fee = amount / fee_div;
+        uint256 fee = amount / FEE_DIV;
         require(IERC20(erc20).transfer(dest, amount - fee), "INSUFFICIENT_LIQUIDITIY");
         return "";
     }

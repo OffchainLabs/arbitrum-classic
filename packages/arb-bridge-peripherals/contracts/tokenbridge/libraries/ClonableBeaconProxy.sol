@@ -15,7 +15,7 @@ contract ClonableBeaconProxy is BeaconProxy {
 }
 
 contract BeaconProxyFactory is ProxySetter {
-    bytes32 public constant cloneableProxyHash = keccak256(type(ClonableBeaconProxy).creationCode);
+    bytes32 public constant CLONABLE_PROXY_HASH = keccak256(type(ClonableBeaconProxy).creationCode);
 
     /**
      * @notice utility function used in ClonableBeaconProxy.
@@ -47,10 +47,10 @@ contract BeaconProxyFactory is ProxySetter {
         returns (address)
     {
         bytes32 salt = getSalt(user, userSalt);
-        return Create2.computeAddress(salt, cloneableProxyHash, address(this));
+        return Create2.computeAddress(salt, CLONABLE_PROXY_HASH, address(this));
     }
 
     function calculateExpectedAddress(bytes32 salt) public view returns (address) {
-        return Create2.computeAddress(salt, cloneableProxyHash, address(this));
+        return Create2.computeAddress(salt, CLONABLE_PROXY_HASH, address(this));
     }
 }
