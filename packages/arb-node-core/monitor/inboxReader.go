@@ -405,6 +405,8 @@ func (ir *InboxReader) deliverQueueItems() {
 		for _, item := range ir.sequencerFeedQueue {
 			queueItems = append(queueItems, item.BatchItem)
 		}
+		ir.MessageDeliveryMutex.Lock()
+		defer ir.MessageDeliveryMutex.Unlock()
 		prevAcc := ir.sequencerFeedQueue[0].PrevAcc
 		logger.Debug().Str("prevAcc", prevAcc.String()).Str("acc", queueItems[len(queueItems)-1].Accumulator.String()).Int("count", len(queueItems)).Msg("delivering broadcast feed items")
 		ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
